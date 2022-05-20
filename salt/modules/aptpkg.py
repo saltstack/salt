@@ -136,6 +136,7 @@ if not HAS_APT:
             self.uri = ""
             self.line = line
             self.architectures = []
+            self.signed_by = ""
             self.file = file
             if not self.file:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
@@ -152,8 +153,13 @@ if not HAS_APT:
                 repo_line.append("#")
 
             repo_line.append(self.type)
+            inside_brackets = []
             if self.architectures:
-                repo_line.append("[arch={}]".format(" ".join(self.architectures)))
+                inside_brackets.append("arch={}".format(" ".join(self.architectures)))
+            if self.signed_by:
+                inside_brackets.append("signed-by={}".format(self.signed_by))
+            if inside_brackets:
+                repo_line.append("[{}]".format(" ".join(inside_brackets)))
 
             repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
@@ -181,6 +187,8 @@ if not HAS_APT:
                 for opt in opts.split():
                     if opt.startswith("arch"):
                         self.architectures.extend(opt.split("=", 1)[1].split(","))
+                    if opt.startswith("signed-by"):
+                        self.signed_by = opt.split("=")[1]
                     try:
                         repo_line.pop(repo_line.index(opt))
                     except ValueError:
