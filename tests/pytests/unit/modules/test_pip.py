@@ -1773,3 +1773,34 @@ def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_run
             cwd=None,
             python_shell=False,
         )
+
+
+def test_install_target_from_VENV_PIP_TARGET_in_resulting_command():
+    pkg = "pep8"
+    target = "/tmp/foo"
+    target_env = "/tmp/bar"
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    environment = os.environ.copy()
+    environment["VENV_PIP_TARGET"] = target_env
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}), patch.object(
+        os, "environ", environment
+    ):
+        pip.install(pkg)
+        expected = [sys.executable, "-m", "pip", "install", "--target", target_env, pkg]
+        mock.assert_called_with(
+            expected,
+            saltenv="base",
+            runas=None,
+            use_vt=False,
+            python_shell=False,
+        )
+        mock.reset_mock()
+        pip.install(pkg, target=target)
+        expected = [sys.executable, "-m", "pip", "install", "--target", target, pkg]
+        mock.assert_called_with(
+            expected,
+            saltenv="base",
+            runas=None,
+            use_vt=False,
+            python_shell=False,
+        )
