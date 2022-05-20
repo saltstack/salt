@@ -1,0 +1,1 @@
+Stop trigering the `GLIBC race condition <https://sourceware.org/bugzilla/show_bug.cgi?id=19329>`_ when parallelizing the resolution of the fqnds.
