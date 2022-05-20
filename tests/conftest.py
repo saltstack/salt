@@ -1094,7 +1094,7 @@ def sshd_config_dir(salt_factories):
 
 
 @pytest.fixture(scope="module")
-def sshd_server(salt_factories, sshd_config_dir, salt_master):
+def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp
@@ -1125,6 +1125,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
         "Subsystem": "sftp /usr/lib/openssh/sftp-server",
         "UsePAM": "yes",
     }
+    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        sshd_config_dict["Subsystem"] = "sftp /usr/libexec/openssh/sftp-server"
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
