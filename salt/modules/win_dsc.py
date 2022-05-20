@@ -144,6 +144,8 @@ def run_config(
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
+            Note that these are passed to the script (the outermost scope), and
+            not to the dsc configuration inside the script (the inner scope).
 
             .. versionadded:: 2017.7.0
 
@@ -166,6 +168,12 @@ def run_config(
     .. code-block:: bash
 
         salt '*' dsc.run_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
+
+    To cache a config script to the system from the master and compile it, passing in `script_parameters`:
+
+    .. code-block:: bash
+
+        salt '*' dsc.run_config path=C:\\DSC\\WebsiteConfig.ps1 source=salt://dsc/configs/WebsiteConfig.ps1 script_parameters="-hostname 'my-computer' -ip '192.168.1.10' -DnsArray '192.168.1.3','192.168.1.4','1.1.1.1'"
     """
     ret = compile_config(
         path=path,
@@ -290,8 +298,9 @@ def compile_config(
     # Add any script parameters
     if script_parameters:
         cmd.append(script_parameters)
-    # Select fields to return
+    # Select properties of the generated .mof file to return, avoiding the .meta.mof
     cmd.append(
+        "| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
         "-Format g}}"
@@ -316,6 +325,7 @@ def compile_config(
     if config_data:
         cmd.extend(["-ConfigurationData", config_data])
     cmd.append(
+        "| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
         "-Format g}}"
