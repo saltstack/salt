@@ -22,7 +22,7 @@
 # Get Minor Version
 OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
 MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
-PY_DOT_VERSION="3.7.12"
+PY_DOT_VERSION=3.9.12
 # Path Variables
 INSTALL_DIR="/opt/salt"
 BIN_DIR="$INSTALL_DIR/bin"

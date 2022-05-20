@@ -93,6 +93,8 @@ echo "**** Setting Variables"
 
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
+PY_VERSION=3.9
+PY_DOT_VERSION=3.9.12
 
 ################################################################################
 # Make sure this is the Salt Repository
@@ -144,10 +146,10 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaem
 echo "**** Trimming Unneeded Files"
 
 rm -rdf $PKGDIR/opt/salt/.pyenv/lib/pkgconfig
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/engines*
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/test
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/site-packages/Cryptodome/SelfTest
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/site-packages/libcloud/test
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/engines*
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/test
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/site-packages/Cryptodome/SelfTest
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/site-packages/libcloud/test
 
 echo "**** Removing pkgconfig directories"
 find $PKGDIR/opt/salt -name 'pkgconfig' -type d -prune -exec rm -rf {} \;
