@@ -6,6 +6,8 @@ config file or for the minion via config or pillar).
 
 Detailed tutorial about scheduling jobs can be found :ref:`here
 <scheduling-jobs>`.
+
+Requires that python-dateutil is installed on the minion.
 """
 
 

@@ -488,6 +488,8 @@ def shutdown_temp_handler():
     if temp_handler is not None:
         for handler in logging.root.handlers[:]:
             if handler is temp_handler:
+                logging.root.handlers.remove(handler)
+                handler.sync_with_handlers(logging.root.handlers)
                 handler.close()
                 break
         # Redefine the handler to None so it can be garbage collected
@@ -970,8 +972,13 @@ def setup_logging():
     if opts.get("configure_granular_levels", True):
         setup_log_granular_levels(opts["log_granular_levels"])
 
+    # Any logging that should be configured, is configured by now. Shutdown the temporary logging handler.
+    shutdown_temp_handler()
+
 
 def shutdown_logging():
+    if is_temp_handler_configured():
+        shutdown_temp_handler()
     if is_extended_logging_configured():
         shutdown_extended_logging()
     if is_logfile_handler_configured():

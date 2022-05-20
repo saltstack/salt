@@ -330,4 +330,46 @@ def test_tar_list_no_explicit_top_level_directory_member(archive, tmp_path):
     ret = archive.list(
         str(tmp_path / "tld_test.tar.gz"), archive_format="tar", verbose=True
     )
-    assert ret["top_level_dirs"] == expected["top_level_dirs"]
+    assert ret == expected
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_if_binaries_missing("tar")
+def test_tar_list_with_similar_top_level_dirs(archive, tmp_path):
+    rel_paths = (
+        "archive_top/second_level/file.txt",
+        "archives/second_level/file.txt",
+    )
+
+    for rel_path in rel_paths:
+        srcfile = tmp_path / str(pathlib.Path(rel_path))
+        srcfile.parent.mkdir(parents=True, exist_ok=True)
+        srcfile.write_text("hey there")
+
+    archive.tar(
+        "-cvzf",
+        str(tmp_path / "tld_test.tar.gz"),
+        sources=["archive_top", "archives"],
+        cwd=str(tmp_path),
+    )
+
+    expected = {
+        "dirs": [
+            "archive_top/",
+            "archive_top/second_level/",
+            "archives/",
+            "archives/second_level/",
+        ],
+        "files": [
+            "archive_top/second_level/file.txt",
+            "archives/second_level/file.txt",
+        ],
+        "links": [],
+        "top_level_dirs": ["archive_top/", "archives/"],
+        "top_level_files": [],
+        "top_level_links": [],
+    }
+    ret = archive.list(
+        str(tmp_path / "tld_test.tar.gz"), archive_format="tar", verbose=True
+    )
+    assert ret == expected
