@@ -67,14 +67,16 @@ quit_on_error() {
 ################################################################################
 echo "**** Setting Variables"
 INSTALL_DIR=/opt/salt
+PY_VERSION=3.9
+PY_DOT_VERSION=3.9.12
 
 ################################################################################
 # Add rpath to the Python binaries before signing
 ################################################################################
 echo "**** Setting rpath in binaries"
-install_name_tool $INSTALL_DIR/bin/python3.7m \
-    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/lib \
-    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib || echo "already present"
+install_name_tool $INSTALL_DIR/bin/python${PY_VERSION}m \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/lib \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl/lib || echo "already present"
 
 ################################################################################
 # Sign python binaries in `bin` and `lib`
