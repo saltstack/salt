@@ -255,6 +255,8 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -284,6 +286,7 @@ pytest-timeout==1.4.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities
