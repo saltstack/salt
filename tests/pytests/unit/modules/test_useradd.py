@@ -405,7 +405,7 @@ def test_chfullname():
             useradd, "_get_gecos", MagicMock(return_value={"fullname": "Salt"})
         ), patch.dict(useradd.__salt__, {"cmd.run": mock}):
             with pytest.raises(CommandExecutionError):
-                useradd.chhome("salt", "Saltstack")
+                useradd.chfullname("salt", "Saltstack")
         mock.assert_not_called()
 
     # command found
