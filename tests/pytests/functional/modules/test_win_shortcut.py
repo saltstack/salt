@@ -30,6 +30,9 @@ def shortcut(modules):
 
 @pytest.fixture(scope="function")
 def tmp_dir(tmp_path_factory):
+    """
+    Create a temp testing directory
+    """
     test_dir = tmp_path_factory.mktemp("test_dir")
     yield test_dir
     if test_dir.exists():
@@ -38,6 +41,9 @@ def tmp_dir(tmp_path_factory):
 
 @pytest.fixture(scope="function")
 def tmp_lnk(tmp_path_factory):
+    """
+    Create an lnk shortcut for testing
+    """
     tmp_dir = tmp_path_factory.mktemp("test_dir")
     tmp_lnk = tmp_dir / "test.lnk"
     # https://docs.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-ishelllinkw
@@ -68,6 +74,9 @@ def tmp_lnk(tmp_path_factory):
 
 @pytest.fixture(scope="function")
 def tmp_url(shortcut, tmp_path_factory):
+    """
+    Create a url shortcut for testing
+    """
     tmp_dir = tmp_path_factory.mktemp("test_dir")
     tmp_url = tmp_dir / "test.url"
     shortcut.create(
@@ -82,7 +91,28 @@ def tmp_url(shortcut, tmp_path_factory):
 
 
 @pytest.fixture(scope="function")
+def non_lnk():
+    """
+    Create a file with the correct extension, but is not an actual shortcut
+    """
+    with pytest.helpers.temp_file("non.lnk", contents="some text") as file:
+        yield file
+
+
+@pytest.fixture(scope="function")
+def bad_ext():
+    """
+    Create a temporary file with a bad file extension
+    """
+    with pytest.helpers.temp_file("bad.ext", contents="some text") as file:
+        yield file
+
+
+@pytest.fixture(scope="function")
 def tmp_share():
+    """
+    Create a Samba Share for testing. For some reason, this is really slow...
+    """
     share_dir = r"C:\Windows\Temp"
     share_name = "TmpShare"
     create_cmd = [
@@ -110,11 +140,35 @@ def test_get_missing(shortcut, tmp_dir):
     exist
     """
     fake_shortcut = tmp_dir / "fake.lnk"
-    with pytest.raises(CommandExecutionError):
+    with pytest.raises(CommandExecutionError) as exc:
         shortcut.get(path=str(fake_shortcut))
+    assert "Shortcut not found" in exc.value.message
+
+
+def test_get_invalid_file_extension(shortcut, bad_ext):
+    """
+    Make sure that a CommandExecutionError is raised if the shortcut has a non
+    shortcut file extension
+    """
+    with pytest.raises(CommandExecutionError) as exc:
+        shortcut.get(path=str(bad_ext))
+    assert exc.value.message == "Invalid file extension: .ext"
+
+
+def test_get_invalid_shortcut(shortcut, non_lnk):
+    """
+    Make sure that a CommandExecutionError is raised if the shortcut isn't
+    actually a shortcut
+    """
+    with pytest.raises(CommandExecutionError) as exc:
+        shortcut.get(path=str(non_lnk))
+    assert "Not a valid shortcut" in exc.value.message
 
 
 def test_get_lnk(shortcut, tmp_lnk):
+    """
+    Make sure that we return information about a valid lnk shortcut
+    """
     expected = {
         "arguments": "some args",
         "description": "Test description",
@@ -130,6 +184,9 @@ def test_get_lnk(shortcut, tmp_lnk):
 
 
 def test_get_url(shortcut, tmp_url):
+    """
+    Make sure that we return information about a valid url shortcut
+    """
     expected = {
         "arguments": "",
         "description": "",
@@ -150,11 +207,25 @@ def test_modify_missing(shortcut, tmp_dir):
     exist
     """
     fake_shortcut = tmp_dir / "fake.lnk"
-    with pytest.raises(CommandExecutionError):
-        shortcut.modify(path=str(fake_shortcut), target=r"C:\fake\path.lnk")
+    with pytest.raises(CommandExecutionError) as exc:
+        shortcut.modify(path=str(fake_shortcut), target=r"C:\fake\path.txt")
+    assert "Shortcut not found" in exc.value.message
+
+
+def test_modify_invalid_file_extension(shortcut, bad_ext):
+    """
+    Make sure that a CommandExecutionError is raised if the shortcut has an
+    invalid file extension
+    """
+    with pytest.raises(CommandExecutionError) as exc:
+        shortcut.modify(path=str(bad_ext), target=r"C:\fake\path.txt")
+    assert exc.value.message == "Invalid file extension: .ext"
 
 
 def test_modify_lnk(shortcut, tmp_lnk):
+    """
+    Make sure that we are able to modify an lnk shortcut
+    """
     expected = {
         "arguments": "different args",
         "description": "different description",
@@ -182,6 +253,9 @@ def test_modify_lnk(shortcut, tmp_lnk):
 
 
 def test_modify_url(shortcut, tmp_url):
+    """
+    Make sure that we are able to modify a url shortcut
+    """
     expected = {
         "arguments": "",
         "description": "",
@@ -201,12 +275,30 @@ def test_modify_url(shortcut, tmp_url):
     assert result == expected
 
 
+def test_create_invalid_file_extension(shortcut, bad_ext):
+    """
+    Make sure that a CommandExecutionError is raised if the shortcut file
+    extension is invalid
+    """
+    with pytest.raises(CommandExecutionError) as exc:
+        shortcut.create(path=str(bad_ext), target=r"C:\fake\path.txt")
+    assert exc.value.message == "Invalid file extension: .ext"
+
+
 def test_create_existing(shortcut, tmp_lnk):
-    with pytest.raises(CommandExecutionError):
-        shortcut.create(path=str(tmp_lnk), target=r"C:\fake\path.lnk")
+    """
+    Make sure that a CommandExecutionError is raised if there is an existing
+    shortcut with the same name and neither backup nor force is True
+    """
+    with pytest.raises(CommandExecutionError) as exc:
+        shortcut.create(path=str(tmp_lnk), target=r"C:\fake\path.txt")
+    assert "Found existing shortcut" in exc.value.message
 
 
 def test_create_lnk(shortcut, tmp_dir):
+    """
+    Make sure we can create lnk type shortcut
+    """
     test_link = str(os.path.join(str(tmp_dir / "test_link.lnk")))
     shortcut.create(
         path=test_link,
@@ -235,7 +327,11 @@ def test_create_lnk(shortcut, tmp_dir):
     assert result == expected
 
 
-def test_create_lnk_dfs_issue_61170(shortcut, tmp_dir, tmp_share):
+@pytest.mark.slow_test
+def test_create_lnk_smb_issue_61170(shortcut, tmp_dir, tmp_share):
+    """
+    Make sure we can create shortcuts to Samba shares
+    """
     test_link = str(os.path.join(str(tmp_dir / "test_link.lnk")))
     shortcut.create(
         path=test_link,
@@ -265,6 +361,9 @@ def test_create_lnk_dfs_issue_61170(shortcut, tmp_dir, tmp_share):
 
 
 def test_create_url(shortcut, tmp_dir):
+    """
+    Make sure we can create url type shortcuts
+    """
     test_link = str(os.path.join(str(tmp_dir / "test_link.url")))
     shortcut.create(
         path=test_link,
@@ -287,6 +386,9 @@ def test_create_url(shortcut, tmp_dir):
 
 
 def test_create_force(shortcut, tmp_lnk):
+    """
+    Make sure we can "force" create a shortcut if it already exists
+    """
     shortcut.create(
         path=str(tmp_lnk),
         arguments="create args",
@@ -316,6 +418,9 @@ def test_create_force(shortcut, tmp_lnk):
 
 
 def test_create_backup(shortcut, tmp_lnk):
+    """
+    Make sure we can backup a shortcut if it already exists
+    """
     shortcut.create(
         path=str(tmp_lnk),
         arguments="create args",
@@ -346,6 +451,10 @@ def test_create_backup(shortcut, tmp_lnk):
 
 
 def test_create_make_dirs(shortcut, tmp_dir):
+    """
+    Make sure we can create the parent directories of a shortcut if they do not
+    already exist
+    """
     file_shortcut = tmp_dir / "subdir" / "test.lnk"
     shortcut.create(
         path=str(file_shortcut),

@@ -3,6 +3,8 @@ State module for creating shortcuts on Windows. Handles file shortcuts (`.lnk`)
 and url shortcuts (`.url`). Allows for the configuration of icons and hot keys
 on file shortcuts. Changing the icon and hot keys are unsupported for url
 shortcuts.
+
+.. versionadded:: 3005
 """
 import salt.utils.data
 import salt.utils.path

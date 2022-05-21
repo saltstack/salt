@@ -1,8 +1,11 @@
 """
+.. versionadded:: 3005
 Execution module for creating shortcuts on Windows. Handles file shortcuts
 (`.lnk`) and url shortcuts (`.url`). Allows for the configuration of icons and
 hot keys on file shortcuts. Changing the icon and hot keys are unsupported for
 url shortcuts.
+
+.. versionadded:: 3005
 """
 # https://docs.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh
 # https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/windows-scripting/f5y78918(v=vs.84)
@@ -58,7 +61,8 @@ def get(path):
     Gets the properties for a shortcut
 
     Args:
-        path (str): The path to the shortcut
+        path (str): The path to the shortcut. Must have a `.lnk` or `.url` file
+            extension.
 
     Returns:
         dict: A dictionary containing all available properties for the specified
@@ -74,6 +78,10 @@ def get(path):
     if not os.path.exists(path):
         raise CommandExecutionError("Shortcut not found: {}".format(path))
 
+    if not path.endswith((".lnk", ".url")):
+        _, ext = os.path.splitext(path)
+        raise CommandExecutionError("Invalid file extension: {}".format(ext))
+
     # This will load the existing shortcut
     with salt.utils.winapi.Com():
         shell = win32com.client.Dispatch("WScript.Shell")
@@ -88,10 +96,16 @@ def get(path):
         working_dir = ""
 
         path = salt.utils.path.expand(shortcut.FullName)
-        # A shortcut can have either a .lnk or a .url exension. We only want to
+        # A shortcut can have either a .lnk or a .url extension. We only want to
         # expand the target if it is a .lnk
         if path.endswith(".lnk"):
-            target = salt.utils.path.expand(shortcut.TargetPath)
+            target = shortcut.TargetPath
+            if target:
+                target = salt.utils.path.expand(target)
+            else:
+                msg = "Not a valid shortcut: {}".format(path)
+                log.debug(msg)
+                raise CommandExecutionError(msg)
             if shortcut.Arguments:
                 arguments = shortcut.Arguments
             if shortcut.Description:
@@ -100,7 +114,8 @@ def get(path):
                 hot_key = shortcut.Hotkey
             if shortcut.IconLocation:
                 icon_location, icon_index = shortcut.IconLocation.split(",")
-                icon_location = salt.utils.path.expand(icon_location)
+                if icon_location:
+                    icon_location = salt.utils.path.expand(icon_location)
             if shortcut.WindowStyle:
                 window_style = WINDOW_STYLE[shortcut.WindowStyle]
             if shortcut.WorkingDirectory:
@@ -123,7 +138,7 @@ def get(path):
 
 def _set_info(
     path,
-    target,
+    target="",
     arguments="",
     description="",
     hot_key="",
@@ -190,10 +205,11 @@ def _set_info(
         shell = win32com.client.Dispatch("WScript.Shell")
         shortcut = shell.CreateShortcut(path)
 
-        # A shortcut can have either a .lnk or a .url exension. We only want to
+        # A shortcut can have either a .lnk or a .url extension. We only want to
         # expand the target if it is a .lnk
         if path.endswith(".lnk"):
-            target = salt.utils.path.expand(target)
+            if target:
+                target = salt.utils.path.expand(target)
 
             # These settings only apply to lnk shortcuts
             if arguments:
@@ -217,7 +233,7 @@ def _set_info(
 
 def modify(
     path,
-    target,
+    target="",
     arguments="",
     description="",
     hot_key="",
@@ -232,9 +248,10 @@ def modify(
 
     Args:
 
-        path (str): The full path to the shortcut
+        path (str): The full path to the shortcut. Must have a `.lnk` or `.url`
+            file extension.
 
-        target (str): The full path to the target
+        target (str, optional): The full path to the target
 
         arguments (str, optional): Any arguments to be passed to the target
 
@@ -286,6 +303,10 @@ def modify(
     if not os.path.exists(path):
         raise CommandExecutionError("Shortcut not found: {}".format(path))
 
+    if not path.endswith((".lnk", ".url")):
+        _, ext = os.path.splitext(path)
+        raise CommandExecutionError("Invalid file extension: {}".format(ext))
+
     return _set_info(
         path=path,
         arguments=arguments,
@@ -320,7 +341,8 @@ def create(
 
     Args:
 
-        path (str): The full path to the shortcut
+        path (str): The full path to the shortcut. Must have a `.lnk` or `.url`
+            file extension.
 
         target (str): The full path to the target
 

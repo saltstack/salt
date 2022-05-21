@@ -372,7 +372,7 @@ def os_walk(top, *args, **kwargs):
 def expand(path):
     """
     Expands all user and environment variables
-    .. versionadded:: 3006
+    .. versionadded:: 3005
 
     Args:
 
