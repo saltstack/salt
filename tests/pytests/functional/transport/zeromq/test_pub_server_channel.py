@@ -37,7 +37,7 @@ class RecvError(Exception):
 
 class Collector(salt.utils.process.SignalHandlingProcess):
     def __init__(
-        self, minion_config, interface, port, aes_key, timeout=30, zmq_filtering=False
+        self, minion_config, interface, port, aes_key, timeout=300, zmq_filtering=False
     ):
         super().__init__()
         self.minion_config = minion_config
@@ -87,9 +87,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             pub_uri = "tcp://{}:{}".format(self.interface, self.port)
             self.sock.connect(pub_uri)
         else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            end = time.time() + 60
+            end = time.time() + 300
             while True:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
                     sock.connect((self.interface, self.port))
                 except ConnectionRefusedError:
@@ -102,6 +102,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
 
     @salt.ext.tornado.gen.coroutine
     def _recv(self):
+        exc = None
         if self.transport == "zeromq":
             # test_zeromq_filtering requires catching the
             # SaltDeserializationError in order to pass.
@@ -110,7 +111,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 serial_payload = salt.payload.Serial({}).loads(payload)
                 raise salt.ext.tornado.gen.Return(serial_payload)
             except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
-                raise RecvError("ZMQ Error")
+                exc = RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
                 serial_payload = salt.payload.Serial({}).loads(msg["body"])
@@ -120,19 +121,27 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             for msg in self.unpacker:
                 serial_payload = salt.payload.Serial({}).loads(msg["body"])
                 raise salt.ext.tornado.gen.Return(serial_payload)
-            raise RecvError("TCP Error")
+            exc = RecvError("TCP Error")
+        raise exc
 
     @salt.ext.tornado.gen.coroutine
     def _run(self, loop):
-        self._setup_listener()
+        try:
+            self._setup_listener()
+        except Exception:  # pylint: disable=broad-except
+            self.started.set()
+            log.exception("Failed to start listening")
+            return
+        self.started.set()
         last_msg = time.time()
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
-        self.started.set()
         while True:
             curr_time = time.time()
             if time.time() > self.hard_timeout:
+                log.error("Hard timeout reaced in test collector!")
                 break
             if curr_time - last_msg >= self.timeout:
+                log.error("Receive timeout reaced in test collector!")
                 break
             try:
                 payload = yield self._recv()
@@ -144,13 +153,16 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     if not payload:
                         continue
                     if "start" in payload:
+                        log.info("Collector started")
                         self.running.set()
                         continue
                     if "stop" in payload:
+                        log.info("Collector stopped")
                         break
                     last_msg = time.time()
                     self.results.append(payload["jid"])
                 except salt.exceptions.SaltDeserializationError:
+                    log.error("Deserializer Error")
                     if not self.zmq_filtering:
                         log.exception("Failed to deserialize...")
                         break
@@ -261,7 +273,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __enter__(self):
         self.start()
         self.collector.__enter__()
-        attempts = 60
+        attempts = 300
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
@@ -279,12 +291,14 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         # We can safely wait here without a timeout because the Collector instance has a
         # hard timeout set, so eventually Collector.stopped will be set
         self.collector.stopped.wait()
+        self.collector.join()
         # Stop our own processing
         self.queue.put(None)
         # Wait at most 10 secs for the above `None` in the queue to be processed
         self.stopped.wait(10)
         self.close()
         self.terminate()
+        self.join()
         log.info("The PubServerChannelProcess has terminated")
 
 
