@@ -1,0 +1,1 @@
+Add grains_refresh_pre_exec option to allow grains to be refreshed before any operation

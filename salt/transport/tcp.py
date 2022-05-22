@@ -403,7 +403,12 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         self.message_handler = message_handler
 
     @salt.ext.tornado.gen.coroutine
-    def handle_stream(self, stream, address):
+    def handle_stream(  # pylint: disable=arguments-differ
+        self,
+        stream,
+        address,
+        _StreamClosedError=salt.ext.tornado.iostream.StreamClosedError,
+    ):
         """
         Handle incoming streams and add messages to the incoming queue
         """
@@ -420,7 +425,7 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
                     self.io_loop.spawn_callback(
                         self.message_handler, stream, framed_msg["body"], header
                     )
-        except salt.ext.tornado.iostream.StreamClosedError:
+        except _StreamClosedError:
             log.trace("req client disconnected %s", address)
             self.remove_client((stream, address))
         except Exception as e:  # pylint: disable=broad-except
@@ -433,18 +438,6 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
             self.clients.remove(client)
         except ValueError:
             log.trace("Message server client was not in list to remove")
-
-    def shutdown(self):
-        """
-        Shutdown the whole server
-        """
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "Please stop calling {0}.{1}.shutdown() and instead call {0}.{1}.close()".format(
-                __name__, self.__class__.__name__
-            ),
-        )
-        self.close()
 
     def close(self):
         """
@@ -480,15 +473,6 @@ if USE_LOAD_BALANCER:
             self._stop = threading.Event()
             self.thread = threading.Thread(target=self.socket_queue_thread)
             self.thread.start()
-
-        def stop(self):
-            salt.utils.versions.warn_until(
-                "Phosphorus",
-                "Please stop calling {0}.{1}.stop() and instead call {0}.{1}.close()".format(
-                    __name__, self.__class__.__name__
-                ),
-            )
-            self.close()
 
         def close(self):
             self._stop.set()
@@ -1006,7 +990,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         )
 
         # Securely create socket
-        log.warn("Starting the Salt Puller on %s", pull_uri)
+        log.warning("Starting the Salt Puller on %s", pull_uri)
         with salt.utils.files.set_umask(0o177):
             pull_sock.start()
 

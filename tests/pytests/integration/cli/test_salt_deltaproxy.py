@@ -7,11 +7,20 @@ import os
 
 import pytest
 import salt.defaults.exitcodes
+import salt.utils.platform
 from saltfactories.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        salt.utils.platform.spawning_platform(),
+        reason="Deltaproxy minions do not currently work on spawning platforms.",
+    )
+]
 
 
 @pytest.fixture(scope="package", autouse=True)
@@ -109,7 +118,6 @@ def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(
-    base_env_pillar_tree_root_dir,
     salt_master,
     salt_cli,
     proxy_minion_id,
@@ -127,25 +135,31 @@ def test_exit_status_correct_usage(
     config_defaults = {
         "metaproxy": "deltaproxy",
     }
+    proxy_one = "dummy_proxy_one"
+    proxy_two = "dummy_proxy_two"
 
     top_file = """
     base:
-      '{}':
+      {control}:
         - controlproxy
-      dummy_proxy_one:
-        - dummy_proxy_one
-      dummy_proxy_two:
-        - dummy_proxy_two
+      {one}:
+        - {one}
+      {two}:
+        - {two}
     """.format(
-        proxy_minion_id
+        control=proxy_minion_id,
+        one=proxy_one,
+        two=proxy_two,
     )
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
         ids:
-          - dummy_proxy_one
-          - dummy_proxy_two
-    """
+          - {}
+          - {}
+    """.format(
+        proxy_one, proxy_two
+    )
 
     dummy_proxy_one_pillar_file = """
     proxy:
@@ -157,21 +171,17 @@ def test_exit_status_correct_usage(
       proxytype: dummy
     """
 
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
+    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
+    controlproxy_tempfile = salt_master.pillar_tree.base.temp_file(
+        "controlproxy.sls", controlproxy_pillar_file
     )
-    controlproxy_tempfile = pytest.helpers.temp_file(
-        "controlproxy.sls", controlproxy_pillar_file, base_env_pillar_tree_root_dir
-    )
-    dummy_proxy_one_tempfile = pytest.helpers.temp_file(
-        "dummy_proxy_one.sls",
+    dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
+        "{}.sls".format(proxy_one),
         dummy_proxy_one_pillar_file,
-        base_env_pillar_tree_root_dir,
     )
-    dummy_proxy_two_tempfile = pytest.helpers.temp_file(
-        "dummy_proxy_two.sls",
+    dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
+        "{}.sls".format(proxy_two),
         dummy_proxy_two_pillar_file,
-        base_env_pillar_tree_root_dir,
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
@@ -181,25 +191,34 @@ def test_exit_status_correct_usage(
             start_timeout=240,
         )
 
-        factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
+        for minion_id in (proxy_minion_id, proxy_one, proxy_two):
+            factory.before_start(
+                pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+            )
+            factory.after_terminate(
+                pytest.helpers.remove_stale_minion_key, salt_master, minion_id
+            )
+            factory.after_terminate(
+                pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+            )
 
-        factory.start()
-        assert factory.is_running()
+        with factory.started():
+            assert factory.is_running()
 
-        # Let's issue a ping the control proxy
-        ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
-        assert ret.exitcode == 0
-        assert ret.json is True
+            # Let's issue a ping the control proxy
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
+            assert ret.exitcode == 0
+            assert ret.json is True
 
-        # Let's issue a ping to one of the controlled proxies
-        ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
-        assert ret.exitcode == 0
-        assert ret.json is True
+            # Let's issue a ping to one of the controlled proxies
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_one)
+            assert ret.exitcode == 0
+            assert ret.json is True
 
-        # Let's issue a ping to one of the controlled proxies
-        ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_two")
-        assert ret.exitcode == 0
-        assert ret.json is True
+            # Let's issue a ping to one of the controlled proxies
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_two)
+            assert ret.exitcode == 0
+            assert ret.json is True
 
         # Terminate the proxy minion
         ret = factory.terminate()
@@ -210,8 +229,6 @@ def test_exit_status_correct_usage(
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_missing_pillar_file(
-    salt_factories,
-    base_env_pillar_tree_root_dir,
     salt_master,
     salt_cli,
     proxy_minion_id,
@@ -226,39 +243,41 @@ def test_missing_pillar_file(
     config_defaults = {
         "metaproxy": "deltaproxy",
     }
+    proxy_one = "dummy_proxy_one"
+    proxy_two = "dummy_proxy_two"
 
     top_file = """
     base:
-      '{}':
+      {control}:
         - controlproxy
-      dummy_proxy_one:
-        - dummy_proxy_one
+      {one}:
+        - {one}
     """.format(
-        proxy_minion_id
+        control=proxy_minion_id,
+        one=proxy_one,
     )
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
         ids:
-          - dummy_proxy_one
-          - dummy_proxy_two
-    """
+          - {}
+          - {}
+    """.format(
+        proxy_one, proxy_two
+    )
 
     dummy_proxy_one_pillar_file = """
     proxy:
       proxytype: dummy
     """
 
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
+    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
+    controlproxy_tempfile = salt_master.pillar_tree.base.temp_file(
+        "controlproxy.sls", controlproxy_pillar_file
     )
-    controlproxy_tempfile = pytest.helpers.temp_file(
-        "controlproxy.sls", controlproxy_pillar_file, base_env_pillar_tree_root_dir
-    )
-    dummy_proxy_one_tempfile = pytest.helpers.temp_file(
-        "dummy_proxy_one.sls",
+    dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
+        "{}.sls".format(proxy_one),
         dummy_proxy_one_pillar_file,
-        base_env_pillar_tree_root_dir,
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
@@ -268,20 +287,29 @@ def test_missing_pillar_file(
             start_timeout=240,
         )
 
-        factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
+        for minion_id in (proxy_minion_id, proxy_one, proxy_two):
+            factory.before_start(
+                pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+            )
+            factory.after_terminate(
+                pytest.helpers.remove_stale_minion_key, salt_master, minion_id
+            )
+            factory.after_terminate(
+                pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+            )
 
-        factory.start()
-        assert factory.is_running()
+        with factory.started():
+            assert factory.is_running()
 
-        # Let's issue a ping the control proxy
-        ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
-        assert ret.exitcode == 0
-        assert ret.json is True
+            # Let's issue a ping the control proxy
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
+            assert ret.exitcode == 0
+            assert ret.json is True
 
-        # Let's issue a ping to one of the controlled proxies
-        ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
-        assert ret.exitcode == 0
-        assert ret.json is True
+            # Let's issue a ping to one of the controlled proxies
+            ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
+            assert ret.exitcode == 0
+            assert ret.json is True
 
         # Terminate the proxy minion
         ret = factory.terminate()
@@ -292,8 +320,6 @@ def test_missing_pillar_file(
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_invalid_connection(
-    salt_factories,
-    base_env_pillar_tree_root_dir,
     salt_master,
     salt_cli,
     proxy_minion_id,
@@ -308,28 +334,36 @@ def test_invalid_connection(
     config_defaults = {
         "metaproxy": "deltaproxy",
     }
+    proxy_one = "dummy_proxy_one"
+    broken_proxy_one = "broken_proxy_one"
+    broken_proxy_two = "broken_proxy_two"
 
     top_file = """
     base:
-      '{}':
+      {control}:
         - controlproxy
-      dummy_proxy_one:
-        - dummy_proxy_one
-      broken_proxy_one:
-        - broken_proxy_one
-      broken_proxy_two:
-        - broken_proxy_two
+      {one}:
+        - {one}
+      {broken_proxy_one}:
+        - {broken_proxy_one}
+      {broken_proxy_two}:
+        - {broken_proxy_two}
     """.format(
-        proxy_minion_id
+        control=proxy_minion_id,
+        one=proxy_one,
+        broken_proxy_one=broken_proxy_one,
+        broken_proxy_two=broken_proxy_two,
     )
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
         ids:
-          - broken_proxy_one
-          - broken_proxy_two
-          - dummy_proxy_one
-    """
+          - {}
+          - {}
+          - {}
+    """.format(
+        broken_proxy_one, broken_proxy_two, proxy_one
+    )
 
     dummy_proxy_one_pillar_file = """
     proxy:
@@ -353,13 +387,14 @@ def test_invalid_connection(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "dummy_proxy_one.sls", dummy_proxy_one_pillar_file
+        "{}.sls".format(proxy_one),
+        dummy_proxy_one_pillar_file,
     )
     broken_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "broken_proxy_one.sls", broken_proxy_one_pillar_file
+        "{}.sls".format(broken_proxy_one), broken_proxy_one_pillar_file
     )
     broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "broken_proxy_two.sls", broken_proxy_two_pillar_file
+        "{}.sls".format(broken_proxy_two), broken_proxy_two_pillar_file
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
@@ -369,7 +404,21 @@ def test_invalid_connection(
             start_timeout=240,
         )
 
-        factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
+        for minion_id in (
+            proxy_minion_id,
+            proxy_one,
+            broken_proxy_one,
+            broken_proxy_two,
+        ):
+            factory.before_start(
+                pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+            )
+            factory.after_terminate(
+                pytest.helpers.remove_stale_minion_key, salt_master, minion_id
+            )
+            factory.after_terminate(
+                pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+            )
 
         with factory.started():
             # Let's issue a ping the control proxy
@@ -377,7 +426,7 @@ def test_invalid_connection(
             assert ret.exitcode == 0
             assert ret.json is True
             # Let's issue a ping to one of the controlled proxies
-            ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_one)
             assert ret.exitcode == 0
             assert ret.json is True
 

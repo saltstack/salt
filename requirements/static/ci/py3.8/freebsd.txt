@@ -445,7 +445,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.0.3
+jinja2==3.1.0
     # via
     #   -r requirements/base.txt
     #   junos-eznc
@@ -593,7 +593,7 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
-napalm==3.1.0 ; sys_platform != "win32" and python_version > "3.6"
+napalm==3.1.0 ; sys_platform != "win32" and python_version > "3.6" and python_version < "3.10"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.4
     # via junos-eznc
@@ -612,7 +612,7 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via pytest
-paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -624,6 +624,8 @@ passlib==1.7.2 ; sys_platform != "win32"
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
+pathspec==0.9.0
+    # via yamllint
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -676,6 +678,8 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.4
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
 pytest-skip-markers==1.2.0
@@ -710,7 +714,7 @@ python-dateutil==2.8.1
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/freebsd.in
 pytz==2021.1
     # via
@@ -725,6 +729,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   napalm
+    #   yamllint
     #   yamlordereddictloader
 pyzmq==19.0.0 ; python_version < "3.9"
     # via
@@ -789,6 +794,7 @@ six==1.16.0
     #   msrestazure
     #   ncclient
     #   packaging
+    #   paramiko
     #   pynacl
     #   pyopenssl
     #   python-dateutil
@@ -840,10 +846,14 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==0.15.6
-    # via moto
+werkzeug==2.0.3
+    # via
+    #   moto
+    #   pytest-httpserver
 xmltodict==0.12.0
     # via moto
+yamllint==1.26.3
+    # via -r requirements/static/ci/freebsd.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
 zc.lockfile==1.4

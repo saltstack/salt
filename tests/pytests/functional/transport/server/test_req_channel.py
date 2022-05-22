@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import multiprocessing
 
@@ -7,13 +8,22 @@ import salt.channel.server
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
-import salt.log.setup
+import salt.master
+import salt.transport.client
+import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 from saltfactories.utils.processes import terminate_process
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.skip_on_spawning_platform(
+        reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
+    )
+]
 
 
 class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
@@ -33,6 +43,18 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.running = multiprocessing.Event()
 
     def run(self):
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+        }
+
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.req_server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
@@ -121,7 +143,7 @@ def test_basic(push_channel):
         {"baz": "qux", "list": [1, 2, 3]},
     ]
     for msg in msgs:
-        ret = push_channel.send(msg, timeout=5, tries=1)
+        ret = push_channel.send(dict(msg), timeout=5, tries=1)
         assert ret["load"] == msg
 
 

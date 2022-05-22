@@ -86,7 +86,7 @@ class Beacon:
                     )
                     continue
             else:
-                log.warn(
+                log.warning(
                     "No validate function found for %s, running basic beacon validation.",
                     mod,
                 )

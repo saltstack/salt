@@ -400,6 +400,7 @@ execution modules
     rest_sample_utils
     rest_service
     restartcheck
+    restconf
     ret
     rh_ip
     rh_service
@@ -542,6 +543,7 @@ execution modules
     xfs
     xml
     xmpp
+    yaml
     yumpkg
     zabbix
     zcbuildout

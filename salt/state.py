@@ -737,6 +737,17 @@ class State:
         loader="states",
         initial_pillar=None,
     ):
+        self._init_kwargs = {
+            "opts": opts,
+            "pillar_override": pillar_override,
+            "jid": jid,
+            "pillar_enc": pillar_enc,
+            "proxy": proxy,
+            "context": context,
+            "mocked": mocked,
+            "loader": loader,
+            "initial_pillar": initial_pillar,
+        }
         self.states_loader = loader
         if "grains" not in opts:
             opts["grains"] = salt.loader.grains(opts)
@@ -1989,18 +2000,21 @@ class State:
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def _call_parallel_target(self, name, cdata, low):
+    @classmethod
+    def _call_parallel_target(cls, instance, init_kwargs, name, cdata, low):
         """
         The target function to call that will create the parallel thread/process
         """
+        if instance is None:
+            instance = cls(**init_kwargs)
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
-        self.format_slots(cdata)
+        instance.format_slots(cdata)
         tag = _gen_tag(low)
         try:
-            ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
+            ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -2020,8 +2034,9 @@ class State:
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
+        ret["__parallel__"] = True
 
-        troot = os.path.join(self.opts["cachedir"], self.jid)
+        troot = os.path.join(instance.opts["cachedir"], instance.jid)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
@@ -2046,9 +2061,14 @@ class State:
         if not name:
             name = low.get("name", low.get("__id__"))
 
+        if salt.utils.platform.spawning_platform():
+            instance = None
+        else:
+            instance = self
+
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
-            args=(name, cdata, low),
+            args=(instance, self._init_kwargs, name, cdata, low),
             name="ParallelState({})".format(name),
         )
         proc.start()
@@ -2864,7 +2884,7 @@ class State:
             preload = {"jid": self.jid}
             ev_func(ret, tag, preload=preload)
 
-    def call_chunk(self, low, running, chunks):
+    def call_chunk(self, low, running, chunks, depth=0):
         """
         Check if a chunk has any requires, execute the requires and then
         the chunk
@@ -3004,7 +3024,20 @@ class State:
                     self.pre[tag]["changes"] = {"watch": "watch"}
                     self.pre[tag]["result"] = None
             else:
-                running = self.call_chunk(low, running, chunks)
+                depth += 1
+                # even this depth is being generous. This shouldn't exceed 1 no
+                # matter how the loops are happening
+                if depth >= 20:
+                    log.error("Recursive requisite found")
+                    running[tag] = {
+                        "changes": {},
+                        "result": False,
+                        "comment": "Recursive requisite found",
+                        "__run_num__": self.__run_num,
+                        "__sls__": low["__sls__"],
+                    }
+                else:
+                    running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
                 running["__FAILHARD__"] = True
                 return running

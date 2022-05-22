@@ -291,3 +291,58 @@ def test_directory():
                             assert (
                                 filestate.directory(name, user=user, group=group) == ret
                             )
+
+
+def test_directory_test_mode_user_group_not_present():
+    name = "/etc/testdir"
+    user = "salt"
+    group = "saltstack"
+    if salt.utils.platform.is_windows():
+        name = name.replace("/", "\\")
+
+    ret = {
+        "name": name,
+        "result": None,
+        "comment": "",
+        "changes": {name: {"directory": "new"}},
+    }
+
+    if salt.utils.platform.is_windows():
+        comt = 'The directory "{}" will be changed' "".format(name)
+    else:
+        comt = "The following files will be changed:\n{}:" " directory - new\n".format(
+            name
+        )
+    ret["comment"] = comt
+
+    mock_f = MagicMock(return_value=False)
+    mock_uid = MagicMock(
+        side_effect=[
+            "",
+            "U12",
+            "",
+        ]
+    )
+    mock_gid = MagicMock(
+        side_effect=[
+            "G12",
+            "",
+            "",
+        ]
+    )
+    mock_error = CommandExecutionError
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "file.user_to_uid": mock_uid,
+            "file.group_to_gid": mock_gid,
+            "file.stats": mock_f,
+        },
+    ), patch("salt.utils.win_dacl.get_sid", mock_error), patch.object(
+        os.path, "isdir", mock_f
+    ), patch.dict(
+        filestate.__opts__, {"test": True}
+    ):
+        assert filestate.directory(name, user=user, group=group) == ret
+        assert filestate.directory(name, user=user, group=group) == ret
+        assert filestate.directory(name, user=user, group=group) == ret

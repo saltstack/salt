@@ -8,9 +8,8 @@ Nox configuration script
 
 
 import datetime
-import glob
 import os
-import shutil
+import pathlib
 import sys
 import tempfile
 
@@ -39,8 +38,10 @@ SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 
 # Global Path Definitions
-REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
-SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
+REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
+SITECUSTOMIZE_DIR = str(REPO_ROOT / "tests" / "support" / "coverage")
+ARTIFACTS_DIR = REPO_ROOT / "artifacts"
+COVERAGE_OUTPUT_DIR = ARTIFACTS_DIR / "coverage"
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
@@ -54,10 +55,9 @@ nox.options.reuse_existing_virtualenvs = True
 nox.options.error_on_missing_interpreters = False
 
 # Change current directory to REPO_ROOT
-os.chdir(REPO_ROOT)
+os.chdir(str(REPO_ROOT))
 
-RUNTESTS_LOGFILE = os.path.join(
-    "artifacts",
+RUNTESTS_LOGFILE = ARTIFACTS_DIR.joinpath(
     "logs",
     "runtests-{}.log".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S.%f")),
 )
@@ -89,10 +89,14 @@ def find_session_runner(session, name, **kwargs):
 
 
 def _create_ci_directories():
-    for dirname in ("logs", "coverage", "xml-unittests-output"):
-        path = os.path.join("artifacts", dirname)
-        if not os.path.exists(path):
-            os.makedirs(path)
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    # Allow other users to write to this directory.
+    # This helps when some tests run under a different name and yet
+    # they need access to this path, for example, code coverage.
+    ARTIFACTS_DIR.chmod(0o777)
+    COVERAGE_OUTPUT_DIR.mkdir(exist_ok=True)
+    COVERAGE_OUTPUT_DIR.chmod(0o777)
+    ARTIFACTS_DIR.joinpath("xml-unittests-output").mkdir(exist_ok=True)
 
 
 def _get_session_python_version_info(session):
@@ -121,29 +125,6 @@ def _get_session_python_version_info(session):
     return version_info
 
 
-def _get_session_python_site_packages_dir(session):
-    try:
-        site_packages_dir = session._runner._site_packages_dir
-    except AttributeError:
-        old_install_only_value = session._runner.global_config.install_only
-        try:
-            # Force install only to be false for the following chunk of code
-            # For additional information as to why see:
-            #   https://github.com/theacodes/nox/pull/181
-            session._runner.global_config.install_only = False
-            site_packages_dir = session.run(
-                "python",
-                "-c",
-                "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
-                silent=True,
-                log=False,
-            )
-            session._runner._site_packages_dir = site_packages_dir
-        finally:
-            session._runner.global_config.install_only = old_install_only_value
-    return site_packages_dir
-
-
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
     if version_info < (3, 5):
@@ -151,34 +132,6 @@ def _get_pydir(session):
     if IS_WINDOWS and version_info < (3, 6):
         session.error("Only Python >= 3.6 is supported on Windows")
     return "py{}.{}".format(*version_info)
-
-
-def _install_system_packages(session):
-    """
-    Because some python packages are provided by the distribution and cannot
-    be pip installed, and because we don't want the whole system python packages
-    on our virtualenvs, we copy the required system python packages into
-    the virtualenv
-    """
-    version_info = _get_session_python_version_info(session)
-    py_version_keys = ["{}".format(*version_info), "{}.{}".format(*version_info)]
-    session_site_packages_dir = _get_session_python_site_packages_dir(session)
-    session_site_packages_dir = os.path.relpath(session_site_packages_dir, REPO_ROOT)
-    for py_version in py_version_keys:
-        dist_packages_path = "/usr/lib/python{}/dist-packages".format(py_version)
-        if not os.path.isdir(dist_packages_path):
-            continue
-        for aptpkg in glob.glob(os.path.join(dist_packages_path, "*apt*")):
-            src = os.path.realpath(aptpkg)
-            dst = os.path.join(session_site_packages_dir, os.path.basename(src))
-            if os.path.exists(dst):
-                session.log("Not overwritting already existing %s with %s", dst, src)
-                continue
-            session.log("Copying %s into %s", src, dst)
-            if os.path.isdir(src):
-                shutil.copytree(src, dst)
-            else:
-                shutil.copyfile(src, dst)
 
 
 def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
@@ -252,7 +205,6 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
             return _requirements_file
         session.error("Could not find a freebsd requirements file for {}".format(pydir))
     else:
-        _install_system_packages(session)
         if crypto is None:
             _requirements_file = os.path.join(
                 "requirements",
@@ -359,6 +311,11 @@ def _run_with_coverage(session, *test_cmd, env=None):
         python_path_entries.insert(0, SITECUSTOMIZE_DIR)
         python_path_env_var = os.pathsep.join(python_path_entries)
 
+    coverage_base_env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage")
+    }
     if env is None:
         env = {}
 
@@ -366,12 +323,10 @@ def _run_with_coverage(session, *test_cmd, env=None):
         {
             # The updated python path so that sitecustomize is importable
             "PYTHONPATH": python_path_env_var,
-            # The full path to the .coverage data file. Makes sure we always write
-            # them to the same directory
-            "COVERAGE_FILE": os.path.abspath(os.path.join(REPO_ROOT, ".coverage")),
             # Instruct sub processes to also run under coverage
-            "COVERAGE_PROCESS_START": os.path.join(REPO_ROOT, ".coveragerc"),
-        }
+            "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
+        },
+        **coverage_base_env,
     )
 
     try:
@@ -379,7 +334,7 @@ def _run_with_coverage(session, *test_cmd, env=None):
     finally:
         # Always combine and generate the XML coverage report
         try:
-            session.run("coverage", "combine")
+            session.run("coverage", "combine", env=coverage_base_env)
         except CommandFailed:
             # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
             # exception
@@ -389,21 +344,21 @@ def _run_with_coverage(session, *test_cmd, env=None):
             "coverage",
             "xml",
             "-o",
-            os.path.join("artifacts", "coverage", "salt.xml"),
+            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
             "--omit=tests/*",
             "--include=salt/*",
+            env=coverage_base_env,
         )
         # Generate report for tests code coverage
         session.run(
             "coverage",
             "xml",
             "-o",
-            os.path.join("artifacts", "coverage", "tests.xml"),
+            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
             "--omit=salt/*",
             "--include=tests/*",
+            env=coverage_base_env,
         )
-        # Move the coverage DB to artifacts/coverage in order for it to be archived by CI
-        shutil.move(".coverage", os.path.join("artifacts", "coverage", ".coverage"))
 
 
 def _runtests(session):
@@ -559,7 +514,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
 
     cmd_args = [
         "--rootdir",
-        REPO_ROOT,
+        str(REPO_ROOT),
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
@@ -745,7 +700,7 @@ def pytest_cloud(session, coverage):
 
     cmd_args = [
         "--rootdir",
-        REPO_ROOT,
+        str(REPO_ROOT),
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
@@ -776,7 +731,7 @@ def pytest_tornado(session, coverage):
 
     cmd_args = [
         "--rootdir",
-        REPO_ROOT,
+        str(REPO_ROOT),
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
@@ -791,10 +746,6 @@ def _pytest(session, coverage, cmd_args):
     _create_ci_directories()
 
     env = {"CI_RUN": "1" if CI_RUN else "0"}
-    if IS_DARWIN:
-        # Don't nuke our multiprocessing efforts objc!
-        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
-        env["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
     if CI_RUN:
         # We'll print out the collected tests on CI runs.
@@ -816,7 +767,7 @@ def _pytest(session, coverage, cmd_args):
                 "pytest",
                 "--showlocals",
                 *cmd_args,
-                env=env
+                env=env,
             )
         else:
             session.run("python", "-m", "pytest", *cmd_args, env=env)
@@ -842,10 +793,10 @@ def _pytest(session, coverage, cmd_args):
                 "-m",
                 "pytest",
                 "--showlocals",
-                *cmd_args
+                *cmd_args,
             )
         else:
-            session.run("python", "-m", "pytest", *cmd_args, env=env)
+            session.run("python", "-m", "pytest", *cmd_args)
         # pylint: enable=unreachable
 
 
