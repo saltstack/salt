@@ -1,5 +1,4 @@
 """
-.. versionadded:: 3005
 Execution module for creating shortcuts on Windows. Handles file shortcuts
 (`.lnk`) and url shortcuts (`.url`). Allows for the configuration of icons and
 hot keys on file shortcuts. Changing the icon and hot keys are unsupported for
@@ -73,7 +72,6 @@ def get(path):
     .. code-block:: bash
 
         salt * shortcut.get path="C:\path\to\shortcut.lnk"
-    ..
     """
     if not os.path.exists(path):
         raise CommandExecutionError("Shortcut not found: {}".format(path))
