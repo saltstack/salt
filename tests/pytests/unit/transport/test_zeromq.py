@@ -353,6 +353,15 @@ class MockSaltMinionMaster:
     mock = MagicMock()
 
     def __init__(self, temp_salt_minion, temp_salt_master):
+        SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
         self.process_manager = salt.utils.process.ProcessManager(
             name="ReqServer_ProcessManager"
         )
@@ -375,8 +384,10 @@ class MockSaltMinionMaster:
             minion_opts, crypt="clear"
         )
 
-    # pylint: disable=W1701
-    def __del__(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
         self.channel.close()
         del self.channel
         # Attempting to kill the children hangs the test suite.
@@ -389,6 +400,7 @@ class MockSaltMinionMaster:
             2
         )  # Give the procs a chance to fully close before we stop the io_loop
         self.server_channel.close()
+        SMaster.secrets.pop("aes")
         del self.server_channel
         del self.io_loop
         del self.process_manager
@@ -409,33 +421,33 @@ def test_badload(temp_salt_minion, temp_salt_master):
     """
     Test a variety of bad requests, make sure that we get some sort of error
     """
-    minion_master = MockSaltMinionMaster(temp_salt_minion, temp_salt_master)
-    msgs = ["", [], tuple()]
-    for msg in msgs:
-        ret = minion_master.channel.send(msg, timeout=2, tries=1)
-        assert ret == "payload and load must be a dict"
+    with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
+        msgs = ["", [], tuple()]
+        for msg in msgs:
+            ret = minion_master.channel.send(msg, timeout=2, tries=1)
+            assert ret == "payload and load must be a dict"
 
 
 def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
     """
     test of getting exception on payload handling
     """
-    minion_master = MockSaltMinionMaster(temp_salt_minion, temp_salt_master)
-    with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
-        _mock.side_effect = Exception()
-        ret = minion_master.channel.send({}, timeout=2, tries=1)
-        assert ret == "Some exception handling minion payload"
+    with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
+        with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
+            _mock.side_effect = Exception()
+            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            assert ret == "Some exception handling minion payload"
 
 
 def test_serverside_exception(temp_salt_minion, temp_salt_master):
     """
     test of getting server side exception on payload handling
     """
-    minion_master = MockSaltMinionMaster(temp_salt_minion, temp_salt_master)
-    with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
-        _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
-        ret = minion_master.channel.send({}, timeout=2, tries=1)
-        assert ret == "Server-side exception handling payload"
+    with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
+        with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
+            _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
+            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            assert ret == "Server-side exception handling payload"
 
 
 def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
