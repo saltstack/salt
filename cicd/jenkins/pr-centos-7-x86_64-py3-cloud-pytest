@@ -1,4 +1,4 @@
-@Library('salt@master-1.11') _
+@Library('salt@master-2.0') _
 
 runTestSuite(
     concurrent_builds: 0,  // Don't cancel builds still running. Wait until they end.
