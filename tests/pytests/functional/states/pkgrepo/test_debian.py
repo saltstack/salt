@@ -187,7 +187,7 @@ def ubuntu_state_tree(system_aptsources, state_tree, grains):
     pkgrepo-deps:
       pkg.installed:
         - pkgs:
-          - python-apt
+          - python3-apt
           - software-properties-common
     {%- for repo in ubuntu_repos -%}
     {% if loop.first %}
