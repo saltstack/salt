@@ -283,7 +283,7 @@ def compile_config(
 
     # Make sure the path exists
     if not os.path.exists(path):
-        error = '"{}" not found'.format(path)
+        error = "{} not found".format(path)
         log.error("DSC: %s", error)
         raise CommandExecutionError(error)
 
@@ -453,17 +453,23 @@ def get_config():
 
     config = dict()
     if raw_config:
-        # Get DSC Configuration Name
-        if "ConfigurationName" in raw_config[0]:
-            config[raw_config[0]["ConfigurationName"]] = {}
-        # Add all DSC Configurations by ResourceId
-        for item in raw_config:
-            config[item["ConfigurationName"]][item["ResourceId"]] = {}
-            for key in item:
-                if key not in ["ConfigurationName", "ResourceId"]:
-                    config[item["ConfigurationName"]][item["ResourceId"]][key] = item[
-                        key
-                    ]
+        # Does this Configuration contain a single resource
+        if "ConfigurationName" in raw_config:
+            # Load the single resource
+            config_name = raw_config.pop("ConfigurationName")
+            resource_id = raw_config.pop("ResourceId")
+            config.setdefault(config_name, {resource_id: raw_config})
+        else:
+            # Load multiple resources by Id
+            for item in raw_config:
+                if "ConfigurationName" in item:
+                    config_name = item.pop("ConfigurationName")
+                    resource_id = item.pop("ResourceId")
+                    config.setdefault(config_name, {})
+                    config[config_name].setdefault(resource_id, item)
+
+    if not config:
+        raise CommandExecutionError("Unable to parse config")
 
     return config
 
@@ -606,6 +612,7 @@ def test_config():
         if "Current configuration does not exist" in exc.info["stderr"]:
             raise CommandExecutionError("Not Configured")
         raise
+    return True
 
 
 def get_config_status():
