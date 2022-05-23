@@ -5568,6 +5568,8 @@ def list_default_vsan_policy(service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_storage_policies
@@ -7018,8 +7020,6 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
-
-    CLI Example:
 
     CLI Example:
 
@@ -11461,6 +11461,8 @@ def power_on_vm(name, datacenter=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.power_on_vm name=my_vm
@@ -11501,6 +11503,8 @@ def power_off_vm(name, datacenter=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -11589,6 +11593,8 @@ def delete_vm(name, datacenter, placement=None, power_off=False, service_instanc
     service_instance
         vCenter service instance for connection and configuration
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.delete_vm name=my_vm datacenter=my_datacenter
@@ -11634,6 +11640,8 @@ def unregister_vm(
 
     service_instance
         vCenter service instance for connection and configuration
+
+    CLI Example:
 
     .. code-block:: bash
 
