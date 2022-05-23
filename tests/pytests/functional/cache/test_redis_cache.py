@@ -11,16 +11,6 @@ def redis_cluster_cache(minion_opts):
     yield cache
 
 
-@pytest.fixture(scope="module", autouse="true")
-def ensure_deps(states):
-    installation_result = states.pip.installed(
-        name="fnord", pkgs=["redis", "redis-py-cluster"]
-    )
-    assert (
-        installation_result.result is True
-    ), "unable to pip install requirements {}".format(installation_result.comment)
-
-
 def test_redis_cluster_cache_should_import_correctly(redis_cluster_cache):
     import rediscluster.exceptions
 
