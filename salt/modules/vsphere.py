@@ -6808,8 +6808,8 @@ def assign_license(
 
     .. code-block:: bash
 
-        salt '*' vsphere.assign_license license_key=00000:00000
-            license name=test entity={type:cluster,datacenter:dc,cluster:cl}
+        salt '*' vsphere.assign_license license_key=AAAAA-11111-AAAAA-11111-AAAAA
+            license_name=test entity={type:cluster,datacenter:dc,cluster:cl}
     """
     log.trace("Assigning license %s to entity %s", license_key, entity)
     _validate_entity(entity)
