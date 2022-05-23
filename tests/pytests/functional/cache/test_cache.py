@@ -345,17 +345,6 @@ def redis_cache(minion_opts, redis_port, redis_container):
     yield cache
 
 
-@pytest.fixture(scope="module", autouse="true")
-def ensure_deps(states):
-    installation_result = states.pip.installed(
-        name="fnord",
-        pkgs=["python-etcd", "redis", "redis-py-cluster", "python-consul", "pymysql"],
-    )
-    assert (
-        installation_result.result is True
-    ), "unable to pip install requirements {}".format(installation_result.comment)
-
-
 @pytest.fixture
 def etcd_cache(minion_opts, etcd_port, etcd_apiv2_container):
     opts = minion_opts.copy()
