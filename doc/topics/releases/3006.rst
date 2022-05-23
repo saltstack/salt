@@ -1,7 +1,7 @@
 .. _release-3006:
 
 =========================================
-Salt 3006 Release Notes - Codename Sulfur
+Salt 3006 release notes - Codename Sulfur
 =========================================
 
 Salt 3006 is currently under development.
@@ -34,7 +34,7 @@ Python 3.5 and 3.6 will no longer be supported by Salt since they
 are end of life. Going forward our policy will be to align with Python's
 supported versions.
 
-Platform Package Support
+Platform package support
 ------------------------
 
 +--------------+---------------------+---------------------+
@@ -58,11 +58,11 @@ Platform Package Support
 +--------------+---------------------+---------------------+
 | Debian 11    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
-| Raspbian 9   |         yes         |        no           |
+| Raspbian 9   |         no          |        no           |
 +--------------+---------------------+---------------------+
-| Raspbian 10  |         yes         |        no           |
+| Raspbian 10  |         no          |        no           |
 +--------------+---------------------+---------------------+
-| Raspbian 11  |         yes         |        yes          |
+| Raspbian 11  |         no          |        yes          |
 +--------------+---------------------+---------------------+
 | Fedora 35    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
@@ -74,7 +74,7 @@ Platform Package Support
 +--------------+---------------------+---------------------+
 
 
-Repo Paths
+Repo paths
 ----------
 
 +----------+-----------------------------------------------+-----------------------------------------+
