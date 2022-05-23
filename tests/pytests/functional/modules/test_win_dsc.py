@@ -81,7 +81,9 @@ def ps1_file_multiple():
     }
     """
 
-    with pytest.helpers.temp_file("hello_world_multiple.ps1", contents=ps1_contents) as file:
+    with pytest.helpers.temp_file(
+        "hello_world_multiple.ps1", contents=ps1_contents
+    ) as file:
         yield file
     if os.path.exists(file.parent / "HelloWorldMultiple"):
         shutil.rmtree(file.parent / "HelloWorldMultiple")
@@ -268,8 +270,7 @@ def test_get_config_status(dsc, ps1_file, psd1_file):
 
 def test_test_config_not_configured(dsc):
     subprocess.run(
-        ["winrm", "quickconfig", "-quiet"],
-        shell=True,
+        ["cmd", "/c", "winrm", "quickconfig", "-quiet"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
