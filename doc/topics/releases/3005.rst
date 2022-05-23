@@ -1,7 +1,7 @@
 .. _release-3005:
 
 =============================================
-Salt 3005 Release Notes - Codename Phosphorus
+Salt 3005 release notes - Codename Phosphorus
 =============================================
 
 Salt 3005 is currently under development.
@@ -11,8 +11,8 @@ Python 3.5 and 3.6 Deprecation
 ------------------------------
 
 This will be the last release we will support Python versions 3.5 and 3.6.
-In Salt release 3006 we will only support Python versions 3.7 and higher.
-Going forward our policy will be to align with Python's supported versions.
+In Salt release 3006, we will only support Python versions 3.7 and higher.
+Going forward, our policy will be to align with Python's supported versions.
 
 
 New packages available
@@ -45,7 +45,7 @@ only be avilable for two more releases. Please see the :ref:`release-3006` notes
 details on the availablility of Non-Tiamat packaging for the 3006 release.
 The 3007 release and those going forward will only provide the Tiamat packages.
 
-Platform Package Support
+Platform package support
 ------------------------
 
 +--------------+---------------------+---------------------+
@@ -69,11 +69,11 @@ Platform Package Support
 +--------------+---------------------+---------------------+
 | Debian 11    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
-| Raspbian 9   |         yes         |        yes          |
+| Raspbian 9   |         no          |        yes          |
 +--------------+---------------------+---------------------+
-| Raspbian 10  |         yes         |        yes          |
+| Raspbian 10  |         no          |        yes          |
 +--------------+---------------------+---------------------+
-| Raspbian 11  |         yes         |        yes          |
+| Raspbian 11  |         no          |        yes          |
 +--------------+---------------------+---------------------+
 | Fedora 35    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
@@ -85,7 +85,7 @@ Platform Package Support
 +--------------+---------------------+---------------------+
 
 
-Repo Paths
+Repo paths
 ----------
 
 +----------+-----------------------------------------------+-----------------------------------------+
@@ -117,5 +117,5 @@ The migration path from the non-Tiamat packages to the Tiamat packages will incl
   file is updated, upgrade your Salt packages.
 * Pip packages: You need to ensure any 3rd party pip packages are installed in the correct Tiamat path.
   This can be accomplished in two ways:
-  * ``salt pip install <packag name>``
+  * ``salt pip install <package name>``
   * Using the ``pip.installed`` Salt state.
