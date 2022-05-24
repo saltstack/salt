@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="function")
 def schedule(tmp_path):
+    subprocess_list = None
     try:
 
         subprocess_list = SubprocessList()
@@ -49,22 +50,23 @@ def schedule(tmp_path):
         yield _schedule
 
     finally:
-        processes = subprocess_list.processes
-        _schedule.reset()
-        del _schedule
-        for proc in processes:
-            if proc.is_alive():
-                terminate_process(proc.pid, kill_children=True, slow_stop=True)
-        subprocess_list.cleanup()
-        processes = subprocess_list.processes
-        if processes:
+        if subprocess_list:
+            processes = subprocess_list.processes
+            _schedule.reset()
+            del _schedule
             for proc in processes:
                 if proc.is_alive():
-                    terminate_process(proc.pid, kill_children=True, slow_stop=False)
+                    terminate_process(proc.pid, kill_children=True, slow_stop=True)
             subprocess_list.cleanup()
-        processes = subprocess_list.processes
-        if processes:
-            log.warning("Processes left running: %s", processes)
+            processes = subprocess_list.processes
+            if processes:
+                for proc in processes:
+                    if proc.is_alive():
+                        terminate_process(proc.pid, kill_children=True, slow_stop=False)
+                subprocess_list.cleanup()
+            processes = subprocess_list.processes
+            if processes:
+                log.warning("Processes left running: %s", processes)
 
-        del default_config
-        del subprocess_list
+            del default_config
+            del subprocess_list
