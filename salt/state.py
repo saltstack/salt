@@ -2099,6 +2099,7 @@ class State:
                     ]
                 )
 
+
         troot = os.path.join(instance.opts["cachedir"], instance.jid)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
