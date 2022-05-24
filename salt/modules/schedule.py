@@ -1,6 +1,8 @@
 """
 Module for managing the Salt schedule on a minion
 
+Requires that python-dateutil is installed on the minion.
+
 .. versionadded:: 2014.7.0
 
 """

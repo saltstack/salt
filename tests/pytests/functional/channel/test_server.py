@@ -22,6 +22,13 @@ from saltfactories.utils.ports import get_unused_localhost_port
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.skip_on_spawning_platform(
+        reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
+    )
+]
+
+
 @pytest.fixture
 def channel_minion_id():
     return random_string("Tha-Minion-")

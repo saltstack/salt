@@ -28,10 +28,10 @@ def start_engines(opts, proc_mgr, proxy=None):
     if isinstance(engines_opt, dict):
         engines_opt = [{k: v} for k, v in engines_opt.items()]
 
-    # Function references are not picklable. Windows needs to pickle when
-    # spawning processes. On Windows, these will need to be recalculated
+    # Function references are not picklable. Spawning platforms, Windows
+    # and macOS, need to pickle when spawning, these will need to be recalculated
     # in the spawned child process.
-    if salt.utils.platform.is_windows():
+    if salt.utils.platform.spawning_platform():
         runners = None
         utils = None
         funcs = None
@@ -84,7 +84,7 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         Run the master service!
         """
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
-        if salt.utils.platform.is_windows():
+        if salt.utils.platform.spawning_platform():
             # Calculate function references since they can't be pickled.
             if self.opts["__role"] == "master":
                 self.runners = salt.loader.runner(self.opts, utils=self.utils)
