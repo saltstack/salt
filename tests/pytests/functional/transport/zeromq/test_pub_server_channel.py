@@ -257,7 +257,6 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             return
         self.process_manager.stop_restarting()
         self.process_manager.send_signal_to_processes(signal.SIGTERM)
-        self.process_manager.kill_children()
         if hasattr(self.pub_server_channel, "pub_close"):
             self.pub_server_channel.pub_close()
         # Really terminate any process still left behind
