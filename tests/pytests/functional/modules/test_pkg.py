@@ -118,7 +118,8 @@ def test_mod_del_repo(grains, modules):
     repo = None
 
     try:
-        if grains["os"] == "Ubuntu":
+        # ppa:otto-kesselgulasch/gimp-edge has no Ubuntu 22.04 repo
+        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] != 22:
             repo = "ppa:otto-kesselgulasch/gimp-edge"
             uri = "http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu"
             ret = modules.pkg.mod_repo(repo, "comps=main")

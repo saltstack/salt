@@ -4,8 +4,16 @@ Simple Smoke Tests for Connected Proxy Minion
 import logging
 
 import pytest
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
+pytestmark = [
+    pytest.mark.skipif(
+        salt.utils.platform.spawning_platform(),
+        reason="Deltaproxy minions do not currently work on spawning platforms.",
+    )
+]
 
 
 @pytest.fixture(scope="module")

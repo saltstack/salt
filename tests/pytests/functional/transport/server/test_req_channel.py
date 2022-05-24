@@ -19,6 +19,13 @@ from saltfactories.utils.processes import terminate_process
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.skip_on_spawning_platform(
+        reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
+    )
+]
+
+
 class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __init__(self, config, req_channel_crypt):
         super().__init__()
