@@ -942,7 +942,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     ):
                         warnings += 1
                         utils.warn(
-                            "The function '{}' on '{}' does not have a 'CLI Example:' in it's docstring",
+                            "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                             funcname,
                             relpath,
                         )
@@ -950,7 +950,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     errors += 1
                     exitcode = 1
                     utils.error(
-                        "The function '{}' on '{}' does not have a 'CLI Example:' in it's docstring",
+                        "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                         funcname,
                         relpath,
                     )
@@ -978,7 +978,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     exitcode = 1
                     utils.error(
                         "The function {!r} on '{}' does not have a proper 'CLI Example:' section in "
-                        "it's docstring. The proper format is:\n"
+                        "its docstring. The proper format is:\n"
                         "CLI Example:\n"
                         "\n"
                         ".. code-block:: bash\n"
