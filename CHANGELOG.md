@@ -7,6 +7,23 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3003.5 (2022-07-05)
+========================
+
+Fixed
+-----
+
+- Update Markup and contextfunction imports for jinja versions >=3.1. (#61848)
+- Fix bug in tcp transport (#61865)
+- Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
+
+
+Security
+--------
+
+- Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
+
+
 Salt 3003.4 (2022-02-25)
 ========================
 
