@@ -494,8 +494,9 @@ def remove_config(reset=False):
 
             .. warning::
                 ``remove_config`` may fail to reset the DSC environment if any
-                of the files in the ``ConfigurationStatus`` directory. If you
-                wait a few minutes and run again, it may complete successfully.
+                of the files in the ``ConfigurationStatus`` directory are in
+                use. If you wait a few minutes and run again, it may complete
+                successfully.
 
     Returns:
         bool: True if successful
