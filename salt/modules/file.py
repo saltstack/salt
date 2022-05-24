@@ -2563,7 +2563,7 @@ def replace(
             else:
                 result, nrepl = re.subn(
                     cpattern,
-                    repl.replace("\\", "\\\\") if backslash_literal else repl,
+                    repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                     r_data,
                     count,
                 )
@@ -2624,7 +2624,7 @@ def replace(
                         r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
                         result, nrepl = re.subn(
                             cpattern,
-                            repl.replace("\\", "\\\\") if backslash_literal else repl,
+                            repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                             r_data,
                             count,
                         )
