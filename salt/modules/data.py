@@ -168,7 +168,7 @@ def keys():
         salt '*' data.keys
     """
     store = load()
-    return store.keys()
+    return [k for k in store.keys()]
 
 
 def values():
@@ -184,7 +184,7 @@ def values():
         salt '*' data.values
     """
     store = load()
-    return store.values()
+    return [v for v in store.values()]
 
 
 def items():
@@ -200,7 +200,7 @@ def items():
         salt '*' data.items
     """
     store = load()
-    return store.items()
+    return store
 
 
 def has_key(key):
