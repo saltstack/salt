@@ -1512,7 +1512,7 @@ def reset_syslog_config(
 
     .. note::
 
-    ``syslog_config`` can be passed as a quoted, comma-separated string. See CLI Example for details.
+        ``syslog_config`` can be passed as a quoted, comma-separated string. See CLI Example for details.
 
     CLI Example:
 
