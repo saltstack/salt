@@ -34,6 +34,7 @@ from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
+import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -119,6 +120,7 @@ from salt.utils.functools import namespaced_function as _namespaced_function
 HAS_WINDOWS_MODULES = False
 try:
     if salt.utils.platform.is_windows():
+        import pywintypes
         import win32api
         import win32con
         import win32file
@@ -942,6 +944,241 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     if stat.S_ISSOCK(pstat.st_mode):
         ret["type"] = "socket"
     ret["target"] = os.path.realpath(path)
+    return ret
+
+
+def _get_version_os(flags):
+    """
+    Helper function to parse the OS data
+
+    Args:
+        flags: The flags as returned by the GetFileVersionInfo function
+
+    Returns:
+        list: A list of Operating system properties found in the flag
+    """
+    file_os = []
+    file_os_flags = {
+        0x00000001: "16-bit Windows",
+        0x00000002: "16-bit Presentation Manager",
+        0x00000003: "32-bit Presentation Manager",
+        0x00000004: "32-bit Windows",
+        0x00010000: "MS-DOS",
+        0x00020000: "16-bit OS/2",
+        0x00030000: "32-bit OS/2",
+        0x00040000: "Windows NT",
+    }
+    for item in file_os_flags:
+        if item & flags == item:
+            file_os.append(file_os_flags[item])
+    return file_os
+
+
+def _get_version_type(file_type, file_subtype):
+    ret_type = None
+    file_types = {
+        0x00000001: "Application",
+        0x00000002: "DLL",
+        0x00000003: "Driver",
+        0x00000004: "Font",
+        0x00000005: "Virtual Device",
+        0x00000007: "Static Link Library",
+    }
+    driver_subtypes = {
+        0x00000001: "Printer",
+        0x00000002: "Keyboard",
+        0x00000003: "Language",
+        0x00000004: "Display",
+        0x00000005: "Mouse",
+        0x00000006: "Network",
+        0x00000007: "System",
+        0x00000008: "Installable",
+        0x00000009: "Sound",
+        0x0000000A: "Communications",
+        0x0000000C: "Versioned Printer",
+    }
+    font_subtypes = {
+        0x00000001: "Raster",
+        0x00000002: "Vector",
+        0x00000003: "TrueType",
+    }
+    if file_type in file_types:
+        ret_type = file_types[file_type]
+
+    if ret_type == "Driver":
+        if file_subtype in driver_subtypes:
+            ret_type = "{} Driver".format(driver_subtypes[file_subtype])
+    if ret_type == "Font":
+        if file_subtype in font_subtypes:
+            ret_type = "{} Font".format(font_subtypes[file_subtype])
+    if ret_type == "Virtual Device":
+        # The Virtual Device Identifier
+        ret_type = "Virtual Device: {}".format(file_subtype)
+    return ret_type
+
+
+def _get_version(path, fixed_info=None):
+    """
+    Get's the version of the file passed in path, or the fixed_info object if
+    passed.
+
+    Args:
+
+        path (str): The path to the file
+
+        fixed_info (obj): The fixed info object returned by the
+            GetFileVersionInfo function
+
+    Returns:
+        str: The version of the file
+    """
+    if not fixed_info:
+        try:
+            # Backslash returns a VS_FIXEDFILEINFO structure
+            # https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+            fixed_info = win32api.GetFileVersionInfo(path, "\\")
+        except pywintypes.error:
+            log.debug("No version info found: %s", path)
+            return ""
+
+    return "{}.{}.{}.{}".format(
+        win32api.HIWORD(fixed_info["FileVersionMS"]),
+        win32api.LOWORD(fixed_info["FileVersionMS"]),
+        win32api.HIWORD(fixed_info["FileVersionLS"]),
+        win32api.LOWORD(fixed_info["FileVersionLS"]),
+    )
+
+
+def version(path):
+    r"""
+    .. versionadded:: 3005
+
+    Get the version of a file.
+
+    .. note::
+        Not all files have version information. The following are common file
+        types that contain version information:
+
+            - .exe
+            - .dll
+            - .sys
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        str: The version of the file if the file contains it. Otherwise, an
+            empty string will be returned.
+
+    Raises:
+        CommandExecutionError: If the file does not exist
+        CommandExecutionError: If the path is not a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * file.version C:\Windows\notepad.exe
+    """
+    # Input validation
+    if not os.path.exists(path):
+        raise CommandExecutionError("File not found: {}".format(path))
+    if os.path.isdir(path):
+        raise CommandExecutionError("Not a file: {}".format(path))
+    return _get_version(path)
+
+
+def version_details(path):
+    r"""
+    .. versionadded:: 3005
+
+    Get file details for a file. Similar to what's in the details tab on the
+    file properties.
+
+    .. note::
+        Not all files have version information. The following are common file
+        types that contain version information:
+
+            - .exe
+            - .dll
+            - .sys
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        dict: A dictionary containing details about the file related to version.
+            An empty dictionary if the file contains no version information.
+
+    Raises:
+        CommandExecutionError: If the file does not exist
+        CommandExecutionError: If the path is not a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * file.version_details C:\Windows\notepad.exe
+    """
+    # Input validation
+    if not os.path.exists(path):
+        raise CommandExecutionError("File not found: {}".format(path))
+    if os.path.isdir(path):
+        raise CommandExecutionError("Not a file: {}".format(path))
+
+    ret = {}
+    try:
+        # Backslash returns a VS_FIXEDFILEINFO structure
+        # https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+        fixed_info = win32api.GetFileVersionInfo(path, "\\")
+    except pywintypes.error:
+        log.debug("No version info found: %s", path)
+        return ret
+
+    ret["Version"] = _get_version(path, fixed_info)
+    ret["OperatingSystem"] = _get_version_os(fixed_info["FileOS"])
+    ret["FileType"] = _get_version_type(
+        fixed_info["FileType"], fixed_info["FileSubtype"]
+    )
+
+    try:
+        # \VarFileInfo\Translation returns a list of available
+        # (language, codepage) pairs that can be used to retrieve string info.
+        # We only care about the first pair.
+        # https://docs.microsoft.com/en-us/windows/win32/menurc/varfileinfo-block
+        language, codepage = win32api.GetFileVersionInfo(
+            path, "\\VarFileInfo\\Translation"
+        )[0]
+    except pywintypes.error:
+        log.debug("No extended version info found: %s", path)
+        return ret
+
+    # All other properties are in the StringFileInfo block
+    # \StringFileInfo\<hex language><hex codepage>\<property name>
+    # https://docs.microsoft.com/en-us/windows/win32/menurc/stringfileinfo-block
+    property_names = (
+        "Comments",
+        "CompanyName",
+        "FileDescription",
+        "FileVersion",
+        "InternalName",
+        "LegalCopyright",
+        "LegalTrademarks",
+        "OriginalFilename",
+        "PrivateBuild",
+        "ProductName",
+        "ProductVersion",
+        "SpecialBuild",
+    )
+    for prop_name in property_names:
+        str_info_path = "\\StringFileInfo\\{:04X}{:04X}\\{}".format(
+            language, codepage, prop_name
+        )
+        try:
+            ret[prop_name] = win32api.GetFileVersionInfo(path, str_info_path)
+        except pywintypes.error:
+            pass
+
     return ret
 
 

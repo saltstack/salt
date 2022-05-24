@@ -140,34 +140,6 @@ repos:
           - requirements/static/pkg/freebsd.in
 
       - id: pip-tools-compile
-        alias: compile-pkg-darwin-3.7-zmq-requirements
-        name: Darwin Packaging Py3.7 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.7
-          - --platform=darwin
-          - --include=requirements/darwin.txt
-          - --include=requirements/pyobjc.txt
-          - --passthrough-line-from-input=^pyobjc(.*)$
-          - requirements/static/pkg/darwin.in
-
-      - id: pip-tools-compile
-        alias: compile-pkg-darwin-3.8-zmq-requirements
-        name: Darwin Packaging Py3.8 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.8
-          - --platform=darwin
-          - --include=requirements/darwin.txt
-          - --include=requirements/pyobjc.txt
-          - --passthrough-line-from-input=^pyobjc(.*)$
-          - requirements/static/pkg/darwin.in
-
-      - id: pip-tools-compile
         alias: compile-pkg-darwin-3.9-zmq-requirements
         name: Darwin Packaging Py3.9 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
@@ -550,43 +522,6 @@ repos:
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/freebsd.txt
           - requirements/static/ci/crypto.in
 
-
-      - id: pip-tools-compile
-        alias: compile-ci-darwin-py3.7-zmq-requirements
-        name: Darwin CI Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.7/darwin\.txt)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.7
-          - --platform=darwin
-          - --include=requirements/darwin.txt
-          - --include=requirements/pyobjc.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/darwin.in
-          - --include=requirements/static/ci/common.in
-          - --passthrough-line-from-input=^pyobjc(.*)$
-          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
-          - requirements/static/ci/darwin.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-darwin-py3.8-zmq-requirements
-        name: Darwin CI Py3.8 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.8/darwin\.txt)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.8
-          - --platform=darwin
-          - --include=requirements/darwin.txt
-          - --include=requirements/pyobjc.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/darwin.in
-          - --include=requirements/static/ci/common.in
-          - --passthrough-line-from-input=^pyobjc(.*)$
-          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
-          - requirements/static/ci/darwin.in
-
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.9-zmq-requirements
         name: Darwin CI Py3.9 ZeroMQ Requirements
@@ -622,32 +557,6 @@ repos:
           - --passthrough-line-from-input=^pyobjc(.*)$
           - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
           - requirements/static/ci/darwin.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-darwin-crypto-py3.7-requirements
-        name: Darwin CI Py3.7 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/darwin-crypto\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.7
-          - --platform=darwin
-          - --out-prefix=darwin
-          - --pip-args=--constraint=requirements/static/ci/py{py_version}/darwin.txt
-          - requirements/static/ci/crypto.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-darwin-crypto-py3.8-requirements
-        name: Darwin CI Py3.8 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/darwin-crypto\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.8
-          - --platform=darwin
-          - --out-prefix=darwin
-          - --pip-args=--constraint=requirements/static/ci/py{py_version}/darwin.txt
-          - requirements/static/ci/crypto.in
 
       - id: pip-tools-compile
         alias: compile-ci-darwin-crypto-py3.9-requirements
@@ -1263,6 +1172,8 @@ repos:
                 salt/ext/.*|
                 tests/kitchen/.*
             )$
+        additional_dependencies:
+          - click<8.1.0
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.10.0
@@ -1270,7 +1181,9 @@ repos:
       - id: blacken-docs
         args: [--skip-errors]
         files: ^doc/.*\.rst
-        additional_dependencies: [black==21.7b0]
+        additional_dependencies:
+          - click<8.1.0
+          - black==21.7b0
 
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
@@ -1310,11 +1223,11 @@ repos:
         args:
           - docs.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1327,11 +1240,11 @@ repos:
         args:
           - filemap.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1348,11 +1261,11 @@ repos:
         args:
           - loader.check-virtual
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1369,11 +1282,11 @@ repos:
         args:
           - docstrings.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1392,11 +1305,11 @@ repos:
           - docstrings.check
           - --error-on-known-failures
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22

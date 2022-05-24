@@ -8,11 +8,18 @@ setup.py:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 
+salt/_logging/(impl|handlers).py:
+  - pytests.integration._logging.test_jid_logging
+  - pytests.integration._logging.test_multiple_processes_logging
+  - pytests.unit._logging.handlers.test_deferred_stream_handler
+
+
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
   - pytests.functional.modules.test_pkg
   - pytests.functional.states.test_pkg
-  - integration.states.test_pkgrepo
+  - pytests.functional.states.pkgrepo.test_centos
+  - pytests.functional.states.pkgrepo.test_debian
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
   - pytests.unit.states.test_user
@@ -193,6 +200,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
 
 salt/config/*:
   - unit.test_config
+  - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
   - integration.loader.test_ext_grains
@@ -284,6 +292,10 @@ salt/(minion\.py|channel/.+|transport/.+):
 
 tests/support/mock.py:
   - unit.test_mock
+
+tests/support/pytest/mysql.py:
+  - pytests.integration.states.test_mysql
+  - pytests.integration.modules.test_mysql
 
 tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.test_multimaster

@@ -6,7 +6,6 @@ import ast
 import itertools
 import os
 import pprint
-import random
 import re
 
 import pytest
@@ -752,7 +751,7 @@ def test_network_size(minion_opts, local_salt):
 
 @pytest.mark.requires_network
 @pytest.mark.parametrize("backend", ["requests", "tornado", "urllib2"])
-def test_http_query(minion_opts, local_salt, backend):
+def test_http_query(minion_opts, local_salt, backend, httpserver):
     """
     Test the `http_query` Jinja filter.
     """
@@ -762,8 +761,19 @@ def test_http_query(minion_opts, local_salt, backend):
         "http://google.com",
         "http://duckduckgo.com",
     )
+    response = {
+        "backend": backend,
+        "body": "Hey, this isn't http://google.com!",
+    }
+    httpserver.expect_request("/{}".format(backend)).respond_with_data(
+        salt.utils.json.dumps(response), content_type="text/plain"
+    )
     rendered = render_jinja_tmpl(
-        "{{ '" + random.choice(urls) + "' | http_query(backend='" + backend + "') }}",
+        "{{ '"
+        + httpserver.url_for("/{}".format(backend))
+        + "' | http_query(backend='"
+        + backend
+        + "') }}",
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert isinstance(rendered, str), "Failed with rendered template: {}".format(

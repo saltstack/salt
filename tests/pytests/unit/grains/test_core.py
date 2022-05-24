@@ -348,31 +348,6 @@ def test_missing_os_release():
     assert os_release == {}
 
 
-@pytest.mark.skip_unless_on_windows
-def test__windows_platform_data():
-    grains = core._windows_platform_data()
-    keys = [
-        "biosversion",
-        "osrelease",
-        "kernelrelease",
-        "motherboard",
-        "serialnumber",
-        "timezone",
-        "uuid",
-        "manufacturer",
-        "kernelversion",
-        "osservicepack",
-        "virtual",
-        "productname",
-        "osfullname",
-        "osmanufacturer",
-        "osversion",
-        "windowsdomain",
-    ]
-    for key in keys:
-        assert key in grains
-
-
 @pytest.mark.skip_unless_on_linux
 def test_gnu_slash_linux_in_os_name():
     """
@@ -1163,7 +1138,7 @@ def test_windows_platform_data():
         "productname",
         "serialnumber",
         "timezone",
-        "virtual",
+        # "virtual", <-- only present on VMs
         "windowsdomain",
         "windowsdomaintype",
     ]
@@ -1179,12 +1154,14 @@ def test_windows_platform_data():
         "8",
         "8.1",
         "10",
+        "11",
         "2008Server",
         "2008ServerR2",
         "2012Server",
         "2012ServerR2",
         "2016Server",
         "2019Server",
+        "2022Server",
     ]
     assert returned_grains["osrelease"] in valid_releases
 
@@ -2427,6 +2404,64 @@ def test_virtual_has_virtual_grain():
 
     assert "virtual" in virtual_grains
     assert virtual_grains["virtual"] != "physical"
+
+
+@pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    ("osdata", "expected"),
+    [
+        ({"kernel": "Not Windows"}, {}),
+        ({"kernel": "Windows"}, {"virtual": "physical"}),
+        ({"kernel": "Windows", "manufacturer": "QEMU"}, {"virtual": "kvm"}),
+        ({"kernel": "Windows", "manufacturer": "Bochs"}, {"virtual": "kvm"}),
+        (
+            {"kernel": "Windows", "productname": "oVirt"},
+            {"virtual": "kvm", "virtual_subtype": "oVirt"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "RHEV Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "rhev"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "VirtualBox"},
+            {"virtual": "VirtualBox"},
+        ),
+        (
+            # Old value
+            {"kernel": "Windows", "productname": "VMware Virtual Platform"},
+            {"virtual": "VMware"},
+        ),
+        (
+            # Server 2019 Value
+            {"kernel": "Windows", "productname": "VMware7,1"},
+            {"virtual": "VMware"},
+        ),
+        (
+            # Shorter value
+            {"kernel": "Windows", "productname": "VMware"},
+            {"virtual": "VMware"},
+        ),
+        (
+            {
+                "kernel": "Windows",
+                "manufacturer": "Microsoft",
+                "productname": "Virtual Machine",
+            },
+            {"virtual": "VirtualPC"},
+        ),
+        (
+            {"kernel": "Windows", "manufacturer": "Parallels Software"},
+            {"virtual": "Parallels"},
+        ),
+    ],
+)
+def test__windows_virtual(osdata, expected):
+    result = core._windows_virtual(osdata)
+    assert result == expected
 
 
 @pytest.mark.skip_unless_on_windows

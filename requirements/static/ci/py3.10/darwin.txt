@@ -441,7 +441,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.0.3
+jinja2==3.1.0
     # via
     #   -r requirements/base.txt
     #   junos-eznc
@@ -595,13 +595,15 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via pytest
-paramiko==2.7.1
+paramiko==2.10.1
     # via
     #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.2 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+pathspec==0.9.0
+    # via yamllint
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -651,6 +653,8 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.4
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
 pytest-skip-markers==1.2.0
@@ -685,7 +689,7 @@ python-dateutil==2.8.0
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/darwin.txt
 pytz==2021.1
     # via
@@ -699,6 +703,7 @@ pyyaml==5.4.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
+    #   yamllint
     #   yamlordereddictloader
 pyzmq==21.0.2 ; python_version >= "3.9"
     # via
@@ -758,6 +763,7 @@ six==1.16.0
     #   msrestazure
     #   ncclient
     #   packaging
+    #   paramiko
     #   pynacl
     #   pyopenssl
     #   python-dateutil
@@ -803,10 +809,14 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==0.15.6
-    # via moto
+werkzeug==2.0.3
+    # via
+    #   moto
+    #   pytest-httpserver
 xmltodict==0.12.0
     # via moto
+yamllint==1.26.3
+    # via -r requirements/static/ci/darwin.in
 yamlordereddictloader==0.4.0
     # via
     #   -r requirements/static/ci/darwin.in

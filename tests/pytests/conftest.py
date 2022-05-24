@@ -6,9 +6,11 @@ import functools
 import inspect
 import logging
 import os
+import pathlib
 import shutil
 import stat
 import sys
+import tempfile
 
 import attr
 import pytest
@@ -441,6 +443,21 @@ def get_python_executable():
     return python_binary
 
 
+@pytest.fixture
+def tmp_path_world_rw(request):
+    """
+    Temporary path which is world read/write for tests that run under a different account
+    """
+    tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
+    path = tempdir_path / "world-rw-{}".format(id(request.node))
+    path.mkdir(exist_ok=True)
+    path.chmod(0o777)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(str(path), ignore_errors=True)
+
+
 @pytest.fixture(scope="session")
 def bridge_pytest_and_runtests():
     """
@@ -456,8 +473,13 @@ def bridge_pytest_and_runtests():
 
 def get_test_timeout(pyfuncitem):
     default_timeout = 30
-    marker = pyfuncitem.get_closest_marker("timeout")
+    marker = pyfuncitem.get_closest_marker("async_timeout")
     if marker:
+        if marker.args:
+            raise pytest.UsageError(
+                "The 'async_timeout' marker does not accept any arguments "
+                "only 'seconds' as a keyword argument"
+            )
         return marker.kwargs.get("seconds") or default_timeout
     return default_timeout
 
@@ -499,6 +521,8 @@ def pytest_pyfunc_call(pyfuncitem):
         loop = funcargs["io_loop"]
     except KeyError:
         loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    __tracebackhide__ = True
 
     loop.run_sync(
         CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
