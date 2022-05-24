@@ -5572,9 +5572,7 @@ def list_default_vsan_policy(service_instance=None):
 
     .. code-block:: bash
 
-        salt '*' vsphere.list_storage_policies
-
-        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+        salt '*' vsphere.list_default_vsan_policy
     """
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(
