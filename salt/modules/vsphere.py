@@ -5545,7 +5545,7 @@ def list_storage_policies(policy_names=None, service_instance=None):
 
         salt '*' vsphere.list_storage_policies
 
-        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+        salt '*' vsphere.list_storage_policies policy_names=[policy_name]
     """
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     if not policy_names:
