@@ -1,6 +1,7 @@
 import os.path
 import shutil
 import subprocess
+import time
 
 import pytest
 import salt.exceptions
@@ -165,7 +166,7 @@ def test_compile_config(dsc, ps1_file, psd1_file):
     """
     Test compiling a simple config
     """
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     result = dsc.compile_config(
         path=str(ps1_file),
         config_name="HelloWorld",
@@ -180,7 +181,7 @@ def test_compile_config_issue_61261(dsc, ps1_file_meta, psd1_file):
     """
     Test compiling a config that includes meta data
     """
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     result = dsc.compile_config(
         path=str(ps1_file_meta),
         config_name="HelloWorld",
@@ -202,7 +203,7 @@ def test_apply_config(dsc, ps1_file, psd1_file):
     """
     Test applying a simple config
     """
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     dsc.compile_config(
         path=str(ps1_file),
         config_name="HelloWorld",
@@ -213,14 +214,14 @@ def test_apply_config(dsc, ps1_file, psd1_file):
 
 
 def test_get_config_not_configured(dsc):
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
         dsc.get_config()
     assert exc.value.message == "Not Configured"
 
 
 def test_get_config_single(dsc, ps1_file, psd1_file):
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     dsc.run_config(
         path=str(ps1_file),
         config_name="HelloWorld",
@@ -233,7 +234,7 @@ def test_get_config_single(dsc, ps1_file, psd1_file):
 
 
 def test_get_config_multiple(dsc, ps1_file_multiple, psd1_file):
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     dsc.run_config(
         path=str(ps1_file_multiple),
         config_name="HelloWorldMultiple",
@@ -248,14 +249,25 @@ def test_get_config_multiple(dsc, ps1_file_multiple, psd1_file):
 
 
 def test_get_config_status_not_configured(dsc):
-    dsc.remove_config(reset=True)
+    tries = 1
+    while True:
+        try:
+            tries += 1
+            dsc.remove_config(reset=True)
+            break
+        except salt.exceptions.CommandExecutionError:
+            if tries > 12:
+                raise
+            time.sleep(10)
+            continue
+
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
         dsc.get_config_status()
     assert exc.value.message == "Not Configured"
 
 
 def test_get_config_status(dsc, ps1_file, psd1_file):
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     dsc.run_config(
         path=str(ps1_file),
         config_name="HelloWorld",
@@ -274,14 +286,14 @@ def test_test_config_not_configured(dsc):
         stderr=subprocess.DEVNULL,
         check=True,
     )
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
         dsc.test_config()
     assert exc.value.message == "Not Configured"
 
 
 def test_test_config(dsc, ps1_file, psd1_file):
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     dsc.run_config(
         path=str(ps1_file),
         config_name="HelloWorld",
@@ -306,7 +318,7 @@ def test_get_lcm_config(dsc):
         "DebugMode",
         "StatusRetentionTimeInDays",
     ]
-    dsc.remove_config(reset=True)
+    dsc.remove_config(reset=False)
     result = dsc.get_lcm_config()
     for item in config_items:
         assert item in result
