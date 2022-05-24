@@ -15,5 +15,6 @@ photon-3-x86_64: ami-080bc696fab4f5840
 ubuntu-1804-amd64: ami-0decb138fa5e24979
 ubuntu-2004-amd64: ami-0468248e8ecfacd5c
 ubuntu-2004-arm64: ami-07dcde5a6a61ce72a
+ubuntu-2204-amd64: ami-0b039e5f5e96232f6
 windows-2016-x64: ami-03dce76a35067f8fd
 windows-2019-x64: ami-08fe22a79bd743e34
