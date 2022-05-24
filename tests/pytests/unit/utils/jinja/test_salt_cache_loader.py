@@ -110,6 +110,7 @@ def get_loader(mock_file_client, minion_opts):
         """
         if opts is None:
             opts = minion_opts
+        mock_file_client.opts = opts
         loader = SaltCacheLoader(opts, saltenv, _file_client=mock_file_client)
         # Create a mock file client and attach it to the loader
         return loader
@@ -221,6 +222,7 @@ def test_file_client_kwarg(minion_opts, mock_file_client):
     A file client can be passed to SaltCacheLoader overriding the any
     cached file client
     """
+    mock_file_client.opts = minion_opts
     loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
     assert loader._file_client is mock_file_client
 
@@ -231,6 +233,7 @@ def test_cache_loader_shutdown(minion_opts, mock_file_client):
     file_client does not have a destroy method
     """
     assert not hasattr(mock_file_client, "destroy")
+    mock_file_client.opts = minion_opts
     loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
     assert loader._file_client is mock_file_client
     # Shutdown method should not raise any exceptions

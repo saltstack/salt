@@ -400,6 +400,7 @@ execution modules
     rest_sample_utils
     rest_service
     restartcheck
+    restconf
     ret
     rh_ip
     rh_service

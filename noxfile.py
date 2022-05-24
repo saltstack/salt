@@ -326,7 +326,7 @@ def _run_with_coverage(session, *test_cmd, env=None):
             # Instruct sub processes to also run under coverage
             "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
         },
-        **coverage_base_env
+        **coverage_base_env,
     )
 
     try:
@@ -746,10 +746,6 @@ def _pytest(session, coverage, cmd_args):
     _create_ci_directories()
 
     env = {"CI_RUN": "1" if CI_RUN else "0"}
-    if IS_DARWIN:
-        # Don't nuke our multiprocessing efforts objc!
-        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
-        env["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
     if CI_RUN:
         # We'll print out the collected tests on CI runs.
@@ -771,7 +767,7 @@ def _pytest(session, coverage, cmd_args):
                 "pytest",
                 "--showlocals",
                 *cmd_args,
-                env=env
+                env=env,
             )
         else:
             session.run("python", "-m", "pytest", *cmd_args, env=env)
@@ -797,10 +793,10 @@ def _pytest(session, coverage, cmd_args):
                 "-m",
                 "pytest",
                 "--showlocals",
-                *cmd_args
+                *cmd_args,
             )
         else:
-            session.run("python", "-m", "pytest", *cmd_args, env=env)
+            session.run("python", "-m", "pytest", *cmd_args)
         # pylint: enable=unreachable
 
 

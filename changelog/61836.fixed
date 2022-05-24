@@ -1,0 +1,1 @@
+Do not raise a UnicodeDecodeError when pillar cache cannot decode binary data.
