@@ -1510,9 +1510,11 @@ def reset_syslog_config(
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed, per host.
 
-    CLI Example:
+    .. note::
 
-    ``syslog_config`` can be passed as a quoted, comma-separated string, e.g.
+    ``syslog_config`` can be passed as a quoted, comma-separated string. See CLI Example for details.
+
+    CLI Example:
 
     .. code-block:: bash
 
