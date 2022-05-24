@@ -1,7 +1,6 @@
 import os.path
 import shutil
 import subprocess
-import time
 
 import pytest
 import salt.exceptions
@@ -273,6 +272,7 @@ def test_test_config_not_configured(dsc):
         ["cmd", "/c", "winrm", "quickconfig", "-quiet"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        check=True,
     )
     dsc.remove_config(reset=True)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
