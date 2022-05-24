@@ -230,15 +230,21 @@ if not HAS_APT:
                 log.debug("The apt sources file %s does not exist", file)
 
         def add(self, type, uri, dist, orig_comps, architectures, signedby):
+            opts_count = []
+            opts_line = ""
             if architectures:
                 architectures = "arch={}".format(" ".join(architectures))
+                opts_count.append(architectures)
             if signedby:
                 signedby = "signed-by={}".format(signedby)
+                opts_count.append(signedby)
+            if len(opts_count) > 1:
+                opts_line = "[" + " ".join(opts_count) + "]"
+            elif len(opts_count) == 1:
+                opts_line = "[" + "".join(opts_count) + "]"
             repo_line = [
                 type,
-                "[{}{}]".format(architectures, " " + signedby if signedby else "")
-                if architectures or signedby
-                else "",
+                opts_line,
                 uri,
                 dist,
                 " ".join(orig_comps),
