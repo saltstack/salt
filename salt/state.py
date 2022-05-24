@@ -2043,7 +2043,9 @@ class State:
         if "retry" in low:
             retries = 1
             low["retry"] = instance.verify_retry_data(low["retry"])
-            if not sys.modules[instance.states[cdata["full"]].__module__].__opts__["test"]:
+            if not sys.modules[instance.states[cdata["full"]].__module__].__opts__[
+                "test"
+            ]:
                 while low["retry"]["attempts"] >= retries:
 
                     if low["retry"]["until"] == ret["result"]:
