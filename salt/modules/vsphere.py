@@ -5061,7 +5061,7 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
 
     .. code-block:: bash
 
-        salt '*' vsphere.list_dvporgroups
+        salt '*' vsphere.list_dvportgroups
 
         salt '*' vsphere.list_dvportgroups dvs=dvs1
 
