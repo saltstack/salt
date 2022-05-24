@@ -1,8 +1,8 @@
 import os.path
 import shutil
 import subprocess
-import time
 
+import psutil
 import pytest
 import salt.exceptions
 
@@ -248,7 +248,11 @@ def test_get_config_multiple(dsc, ps1_file_multiple, psd1_file):
     assert "DestinationPath" in result["HelloWorldMultiple"]["[File]HelloWorld2"]
 
 
-def test_get_config_status_not_configured(dsc):
+def _reset_config(dsc):
+    """
+    Resets the DSC config. If files are locked, this will attempt to kill the
+    all running WmiPrvSE processes. Windows will respawn the ones it needs
+    """
     tries = 1
     while True:
         try:
@@ -258,9 +262,18 @@ def test_get_config_status_not_configured(dsc):
         except salt.exceptions.CommandExecutionError:
             if tries > 12:
                 raise
-            time.sleep(10)
+
+            # Kill the processes
+            proc_name = "wmiprvse.exe"
+            for proc in psutil.process_iter():
+                if proc.name().lower() == proc_name:
+                    proc.kill()
+
             continue
 
+
+def test_get_config_status_not_configured(dsc):
+    _reset_config(dsc)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
         dsc.get_config_status()
     assert exc.value.message == "Not Configured"
