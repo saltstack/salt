@@ -3,6 +3,7 @@ Unit tests for the docker module
 """
 
 import logging
+import sys
 
 import pytest
 import salt.config
@@ -26,6 +27,7 @@ def configure_loader_modules():
         whitelist=[
             "args",
             "docker",
+            "files",
             "json",
             "state",
             "thin",
@@ -880,13 +882,16 @@ def test_call_success():
     client = Mock()
     client.put_archive = Mock()
     get_client_mock = MagicMock(return_value=client)
+    gen_venv_tar_mock = MagicMock(return_value=None)
 
     context = {"docker.exec_driver": "docker-exec"}
     salt_dunder = {"config.option": docker_config_mock}
 
     with patch.object(docker_mod, "run_all", docker_run_all_mock), patch.object(
         docker_mod, "copy_to", docker_copy_to_mock
-    ), patch.object(docker_mod, "_get_client", get_client_mock), patch.dict(
+    ), patch.object(docker_mod, "_get_client", get_client_mock), patch.object(
+        docker_mod, "_gen_venv_tar", gen_venv_tar_mock
+    ), patch.dict(
         docker_mod.__opts__, {"cachedir": "/tmp"}
     ), patch.dict(
         docker_mod.__salt__, salt_dunder
@@ -930,6 +935,11 @@ def test_call_success():
         docker_run_all_mock.mock_calls[4][1][1]
         != docker_run_all_mock.mock_calls[9][1][1]
     )
+
+    # check the parameters of _gen_venv_tar call
+    assert gen_venv_tar_mock.mock_calls[0][1][0] == "/tmp"
+    assert gen_venv_tar_mock.mock_calls[0][1][1] == "/var/tmp"
+    assert gen_venv_tar_mock.mock_calls[0][1][2] == "venv-salt-minion"
 
     assert {"retcode": 0, "comment": "container cmd"} == ret
 
@@ -1352,3 +1362,69 @@ def test_port():
             "bar": {"6666/tcp": ports["bar"]["6666/tcp"]},
             "baz": {},
         }
+
+
+@pytest.mark.slow_test
+def test_call_with_gen_venv_tar():
+    """
+    test module calling inside containers with the Salt Bundle
+    """
+    ret = None
+    docker_run_all_mock = MagicMock(
+        return_value={
+            "retcode": 0,
+            "stdout": '{"retcode": 0, "comment": "container cmd"}',
+            "stderr": "err",
+        }
+    )
+    docker_copy_to_mock = MagicMock(return_value={"retcode": 0})
+    docker_config_mock = MagicMock(return_value="")
+    docker_cmd_run_mock = MagicMock(
+        return_value={
+            "retcode": 0,
+            "stdout": "test",
+        }
+    )
+    client = Mock()
+    client.put_archive = Mock()
+    get_client_mock = MagicMock(return_value=client)
+
+    context = {"docker.exec_driver": "docker-exec"}
+    salt_dunder = {
+        "config.option": docker_config_mock,
+        "cmd.run_all": docker_cmd_run_mock,
+    }
+
+    with patch.object(docker_mod, "run_all", docker_run_all_mock), patch.object(
+        docker_mod, "copy_to", docker_copy_to_mock
+    ), patch.object(docker_mod, "_get_client", get_client_mock), patch.object(
+        sys, "executable", "/tmp/venv-salt-minion/bin/python"
+    ), patch.dict(
+        docker_mod.__opts__, {"cachedir": "/tmp"}
+    ), patch.dict(
+        docker_mod.__salt__, salt_dunder
+    ), patch.dict(
+        docker_mod.__context__, context
+    ):
+        ret = docker_mod.call("ID", "test.arg", 1, 2, arg1="val1")
+
+    # Check that the directory is different each time
+    # [ call(name, [args]), ...
+    assert "mkdir" in docker_run_all_mock.mock_calls[0][1][1]
+
+    assert (
+        "tar zxf /var/tmp/venv-salt.tgz -C /var/tmp"
+        == docker_run_all_mock.mock_calls[1][1][1]
+    )
+
+    assert docker_run_all_mock.mock_calls[3][1][1].startswith(
+        "/var/tmp/venv-salt-minion/bin/python /var/tmp/venv-salt-minion/bin/salt-call "
+    )
+
+    # check remove the salt bundle tarball
+    assert docker_run_all_mock.mock_calls[2][1][1] == "rm -f /var/tmp/venv-salt.tgz"
+
+    # check directory cleanup
+    assert docker_run_all_mock.mock_calls[4][1][1] == "rm -rf /var/tmp/venv-salt-minion"
+
+    assert {"retcode": 0, "comment": "container cmd"} == ret
