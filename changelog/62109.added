@@ -1,0 +1,1 @@
+Use the Salt Bundle to handle calls inside a container with dockermod if the call is performing with the Salt Bundle on the host
