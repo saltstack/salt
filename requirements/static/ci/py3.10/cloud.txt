@@ -348,7 +348,7 @@ cachetools==4.2.2
     # via google-auth
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -727,7 +727,7 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-pytz==2021.1
+pytz==2022.1
     # via
     #   moto
     #   tempora
