@@ -690,7 +690,7 @@ def test_retry_option_success(state, state_tree, tmp_path):
         testfile
     )
     duration = 4
-    if salt.utils.platform.is_windows():
+    if salt.utils.platform.spawning_platform():
         duration = 16
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
@@ -725,8 +725,8 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
         testfile
     )
     duration = 4
-    if salt.utils.platform.is_windows():
-        duration = 16
+    if salt.utils.platform.spawning_platform():
+        duration = 30
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls(
