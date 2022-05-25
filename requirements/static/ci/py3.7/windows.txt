@@ -31,7 +31,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -263,7 +263,7 @@ python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via
     #   moto
     #   tempora

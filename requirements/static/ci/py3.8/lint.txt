@@ -345,7 +345,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -707,7 +707,7 @@ python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-pytz==2021.1
+pytz==2022.1
     # via
     #   apscheduler
     #   moto
