@@ -6719,7 +6719,7 @@ def _gen_venv_tar(cachedir, venv_dest_dir, venv_name):
         try:
             with __utils__["files.fopen"](venv_hash_file, "r") as fh:
                 venv_hash_src = fh.readline().strip()
-        except:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             # It makes no sense what caused the exception
             # Just calculate the hash different way
             for cmd in ("rpm -qi venv-salt-minion", "dpkg -s venv-salt-minion"):
@@ -6737,11 +6737,10 @@ def _gen_venv_tar(cachedir, venv_dest_dir, venv_name):
         try:
             with __utils__["files.fopen"](venv_hash, "r") as fh:
                 venv_hash_dest = fh.readline().strip()
-        except:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             # It makes no sense what caused the exception
             # Set the hash to impossible value to force new tarball creation
             venv_hash_dest = "UNKNOWN"
-            pass
         if venv_hash_src == venv_hash_dest and os.path.isfile(venv_tar):
             return venv_tar
         try:
