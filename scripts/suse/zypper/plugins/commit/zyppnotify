@@ -20,7 +20,9 @@ class DriftDetector(Plugin):
     def __init__(self):
         Plugin.__init__(self)
         self.ck_path = "/var/cache/salt/minion/rpmdb.cookie"
-        self.rpm_path = "/var/lib/rpm/Packages"
+        self.rpm_path = "/var/lib/rpm/Packages.db"
+        if not os.path.exists(self.rpm_path):
+            self.rpm_path = "/var/lib/rpm/Packages"
 
     def _get_mtime(self):
         """
