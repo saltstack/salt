@@ -1,7 +1,3 @@
-"""
-    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
-"""
-
 import copy
 import os
 
