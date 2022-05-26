@@ -117,5 +117,19 @@ The migration path from the non-Tiamat packages to the Tiamat packages will incl
   file is updated, upgrade your Salt packages.
 * Pip packages: You need to ensure any 3rd party pip packages are installed in the correct Tiamat path.
   This can be accomplished in two ways:
+
   * ``salt pip install <package name>``
   * Using the ``pip.installed`` Salt state.
+
+To install python packages into the system python environment, user's must now provide the ``pip_bin`` or ``bin_env`` to the pip state module.
+
+For example:
+
+.. code-block:: yaml
+
+    lib-foo:
+      pip.installed:
+        - pip_bin: /usr/bin/pip3
+    lib-bar:
+      pip.installed:
+        - bin_env: /usr/bin/python3
