@@ -6,7 +6,7 @@
 # Date: December 2015
 #
 # Description: This script stops the salt minion service before attempting to
-#              install Salt on macOS. It also removes the /opt/salt/bin
+#              install Salt on macOS. It also removes the /opt/salt
 #              directory, symlink to salt-config, and salt from paths.d.
 #
 # Requirements:
@@ -39,7 +39,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2" >> "$TEMP_DIR/preinstall.txt"
-    exit -1
+    exit 1
 }
 
 OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
@@ -48,67 +48,33 @@ MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
 ###############################################################################
 # Stop the service
 ###############################################################################
-stop_service_maverick() {
-    echo "Service: Using old (< 10.10) launchctl interface" >> "$TEMP_DIR/preinstall.txt"
-    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service: Unloading minion..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-    if /bin/launchctl list "com.saltstack.salt.master" &> /dev/null; then
-        echo "Service: Unloading master..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
-        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-    if /bin/launchctl list "com.saltstack.salt.syndic" &> /dev/null; then
-        echo "Service: Unloading syndic..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
-        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-    if /bin/launchctl list "com.saltstack.salt.api" &> /dev/null; then
-        echo "Service: Unloading api..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
-        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-}
-
-stop_service_yosemite_and_later() {
-    echo "Service: Using new (>= 10.10) launchctl interface" >> "$TEMP_DIR/preinstall.txt"
-    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service: Stopping minion..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl disable system/com.saltstack.salt.minion
-        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-    if /bin/launchctl list "com.saltstack.salt.master" &> /dev/null; then
-        echo "Service: Stopping master..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl disable system/com.saltstack.salt.master
-        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.master.plist
-        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-    if /bin/launchctl list "com.saltstack.salt.syndic" &> /dev/null; then
-        echo "Service: Stopping syndic..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl disable system/com.saltstack.salt.syndic
-        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
-        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-    if /bin/launchctl list "com.saltstack.salt.api" &> /dev/null; then
-        echo "Service: Stopping api..." >> "$TEMP_DIR/preinstall.txt"
-        launchctl disable system/com.saltstack.salt.api
-        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.api.plist
-        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
-    fi
-}
-
 echo "Service: Configuring..." >> "$TEMP_DIR/preinstall.txt"
-case $MINOR in
-        9 )
-                stop_service_maverick;
-                ;;
-        * )
-                stop_service_yosemite_and_later;
-                ;;
-esac
+
+if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+    echo "Service: Stopping minion..." >> "$TEMP_DIR/preinstall.txt"
+    launchctl disable system/com.saltstack.salt.minion
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+    echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+fi
+if /bin/launchctl list "com.saltstack.salt.master" &> /dev/null; then
+    echo "Service: Stopping master..." >> "$TEMP_DIR/preinstall.txt"
+    launchctl disable system/com.saltstack.salt.master
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.master.plist
+    echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+fi
+if /bin/launchctl list "com.saltstack.salt.syndic" &> /dev/null; then
+    echo "Service: Stopping syndic..." >> "$TEMP_DIR/preinstall.txt"
+    launchctl disable system/com.saltstack.salt.syndic
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+    echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+fi
+if /bin/launchctl list "com.saltstack.salt.api" &> /dev/null; then
+    echo "Service: Stopping api..." >> "$TEMP_DIR/preinstall.txt"
+    launchctl disable system/com.saltstack.salt.api
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.api.plist
+    echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+fi
+
 echo "Service: Configured Successfully" >> "$TEMP_DIR/preinstall.txt"
 
 ###############################################################################

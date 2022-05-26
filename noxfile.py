@@ -1068,7 +1068,8 @@ def invoke(session):
 
 @nox.session(name="changelog", python="3")
 @nox.parametrize("draft", [False, True])
-def changelog(session, draft):
+@nox.parametrize("force", [False, True])
+def changelog(session, draft, force):
     """
     Generate salt's changelog
     """
@@ -1082,4 +1083,7 @@ def changelog(session, draft):
     town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
     if draft:
         town_cmd.append("--draft")
+    if force:
+        # Do not ask, just remove news fragments
+        town_cmd.append("--yes")
     session.run(*town_cmd)
