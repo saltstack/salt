@@ -1,8 +1,39 @@
+import json
+
 import pytest
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
 ]
+
+
+@pytest.fixture(scope="module")
+def test_opts_state_tree(base_env_state_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - test_opts
+    """
+    state_file = """
+    {%- set is_test = salt['config.get']('test') %}
+
+    config.get check for is_test:
+      cmd.run:
+        - name: echo '{{ is_test }}'
+
+    opts.get check for test:
+      cmd.run:
+        - name: echo '{{ opts.get('test') }}'
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_state_tree_root_dir
+    )
+    state_tempfile = pytest.helpers.temp_file(
+        "test_opts.sls", state_file, base_env_state_tree_root_dir
+    )
+
+    with top_tempfile, state_tempfile:
+        yield
 
 
 @pytest.fixture(scope="module")
@@ -92,3 +123,60 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     )
     assert ret.exitcode == 0
     assert ret.json
+
+
+@pytest.mark.slow_test
+def test_state_opts_test(salt_ssh_cli, test_opts_state_tree):
+    """
+    verify salt-ssh can get the value of test correctly
+    """
+
+    def _verify_output(ret):
+        assert ret.exitcode == 0
+        assert (
+            ret.json["cmd_|-config.get check for is_test_|-echo 'True'_|-run"]["name"]
+            == "echo 'True'"
+        )
+        assert (
+            ret.json["cmd_|-opts.get check for test_|-echo 'True'_|-run"]["name"]
+            == "echo 'True'"
+        )
+
+    ret = salt_ssh_cli.run("state.apply", "test_opts", "test=True")
+    _verify_output(ret)
+
+    ret = salt_ssh_cli.run("state.highstate", "test=True")
+    _verify_output(ret)
+
+    ret = salt_ssh_cli.run("state.top", "top.sls", "test=True")
+    _verify_output(ret)
+
+
+@pytest.mark.slow_test
+def test_state_low(salt_ssh_cli):
+    """
+    test state.low with salt-ssh
+    """
+    ret = salt_ssh_cli.run(
+        "state.low", '{"state": "cmd", "fun": "run", "name": "echo blah"}'
+    )
+    assert (
+        json.loads(ret.stdout)["localhost"]["cmd_|-echo blah_|-echo blah_|-run"][
+            "changes"
+        ]["stdout"]
+        == "blah"
+    )
+
+
+@pytest.mark.slow_test
+def test_state_high(salt_ssh_cli):
+    """
+    test state.high with salt-ssh
+    """
+    ret = salt_ssh_cli.run("state.high", '{"echo blah": {"cmd": ["run"]}}')
+    assert (
+        json.loads(ret.stdout)["localhost"]["cmd_|-echo blah_|-echo blah_|-run"][
+            "changes"
+        ]["stdout"]
+        == "blah"
+    )

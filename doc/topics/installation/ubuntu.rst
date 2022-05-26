@@ -9,8 +9,8 @@ Ubuntu
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for Ubuntu 20.04 (Focal), Ubuntu 18.04 (Bionic), and Ubuntu 16
-(Xenial) are available in the SaltStack repository.
+Packages for Ubuntu 20.04 (Focal) and 18.04 (Bionic)
+are available in the SaltStack repository.
 
 Instructions are at https://repo.saltproject.io/#ubuntu.
 

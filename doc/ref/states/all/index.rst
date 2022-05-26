@@ -277,6 +277,7 @@ state modules
     rdp
     redismod
     reg
+    restconf
     rsync
     rvm
     salt_proxy

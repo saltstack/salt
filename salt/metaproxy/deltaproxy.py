@@ -5,12 +5,13 @@
 import copy
 import logging
 import os
-import sys
+import signal
 import threading
 import traceback
 import types
 
 import salt
+import salt._logging
 import salt.beacons
 import salt.cli.daemons
 import salt.client
@@ -21,7 +22,6 @@ import salt.engines
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -53,7 +53,7 @@ from salt.exceptions import (
 )
 from salt.minion import ProxyMinion
 from salt.utils.event import tagify
-from salt.utils.process import SignalHandlingProcess
+from salt.utils.process import SignalHandlingProcess, default_signals
 
 log = logging.getLogger(__name__)
 
@@ -349,7 +349,7 @@ def post_master_init(self, master):
 
         proxyopts["proxy"] = self.proxy_pillar[_id].get("proxy", {})
         if not proxyopts["proxy"]:
-            log.warn(
+            log.warning(
                 "Pillar data for proxy minion %s could not be loaded, skipping.", _id
             )
             continue
@@ -511,13 +511,15 @@ def thread_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    if opts["multiprocessing"] and not salt.utils.platform.is_windows():
+    if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
 
         # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
+        salt._logging.shutdown_logging()
+
+        salt.utils.process.daemonize_if(opts)
 
         # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
+        salt._logging.setup_logging()
 
     salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
@@ -758,14 +760,14 @@ def thread_multi_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    if opts["multiprocessing"] and not salt.utils.platform.is_windows():
+    if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
         # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
+        salt._logging.shutdown_logging()
 
         salt.utils.process.daemonize_if(opts)
 
         # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
+        salt._logging.setup_logging()
 
     salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
 
@@ -888,7 +890,7 @@ def handle_payload(self, payload):
                 if instance._target_load(payload["load"]):
                     instance._handle_decoded_payload(payload["load"])
             else:
-                log.warn("Proxy minion %s is not loaded, skipping.", _id)
+                log.warning("Proxy minion %s is not loaded, skipping.", _id)
 
     elif self.opts["zmq_filtering"]:
         # In the filtering enabled case, we"d like to know when minion sees something it shouldnt
@@ -959,24 +961,30 @@ def handle_decoded_payload(self, data):
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
     name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
-        if sys.platform.startswith("win"):
+        if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we"re
-            # running on windows
+            # running on spawning platforms
             instance = None
-        process = SignalHandlingProcess(
-            target=target,
-            args=(self, instance, instance.opts, data, self.connected),
-            name=name,
-        )
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            process = SignalHandlingProcess(
+                target=target,
+                args=(self, instance, self.opts, data, self.connected),
+                name=name,
+            )
     else:
         process = threading.Thread(
             target=target,
-            args=(self, instance, instance.opts, data, self.connected),
+            args=(self, instance, self.opts, data, self.connected),
             name=name,
         )
 
-    process.start()
-    process.name = "{}-Job-{}".format(process.name, data["jid"])
+    if multiprocessing_enabled:
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            # Reset current signals before starting the process in
+            # order not to inherit the current signal handlers
+            process.start()
+    else:
+        process.start()
     self.subprocess_list.add(process)
 
 
