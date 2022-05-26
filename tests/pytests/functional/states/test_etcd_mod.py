@@ -197,3 +197,26 @@ def test_basic_operations(subtests, profile_name, prefix, use_v2):
             "changes": {"{}/2/3".format(prefix): "Deleted"},
         }
         assert etcd_state.rm("{}/2/3".format(prefix), profile=profile_name) == expected
+
+
+def test_with_missing_profile(subtests, prefix, use_v2, etcd_port):
+    """
+    Test the correct response when the profile is missing and we can't connect
+    """
+    if use_v2 and etcd_port != 2379:
+        # Only need to run this once
+        with subtests.test("Test no profile and bad connection in set_"):
+            ret = etcd_state.set_("{}/1".format(prefix), "one")
+            assert not ret["result"]
+            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
+
+        with subtests.test("Test no profile and bad connection in directory"):
+            ret = etcd_state.directory("{}/2".format(prefix))
+            assert not ret["result"]
+            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
+
+        with subtests.test("Test no profile and bad connection in rm"):
+            ret = etcd_state.rm("{}/2/3".format(prefix))
+            assert not ret["result"]
+            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
+

@@ -192,3 +192,31 @@ def test_basic_operations(subtests, profile_name, prefix, use_v2):
         modified = return_list.pop()
         assert modified["key"] == "{}/1".format(prefix)
         assert modified["value"] == "one"
+
+
+def test_with_missing_profile(subtests, prefix, use_v2, etcd_port):
+    """
+    Test the correct response when the profile is missing and we can't connect
+    """
+    if use_v2 and etcd_port != 2379:
+        # Only need to run this once
+        with subtests.test("Test no profile and bad connection in get_"):
+            assert etcd_mod.get_("{}/1".format(prefix)) is None
+
+        with subtests.test("Test no profile and bad connection in set_"):
+            assert etcd_mod.set_("{}/1".format(prefix), "lol") is None
+
+        with subtests.test("Test no profile and bad connection in update"):
+            assert etcd_mod.update({"{}/1".format(prefix): "SIUUU"}) is None
+
+        with subtests.test("Test no profile and bad connection in watch"):
+            assert etcd_mod.watch("{}/1".format(prefix)) is None
+
+        with subtests.test("Test no profile and bad connection in ls_"):
+            assert etcd_mod.ls_() is None
+
+        with subtests.test("Test no profile and bad connection in rm"):
+            assert etcd_mod.rm_("{}/1".format(prefix)) is None
+
+        with subtests.test("Test no profile and bad connection in tree"):
+            assert etcd_mod.tree() is None

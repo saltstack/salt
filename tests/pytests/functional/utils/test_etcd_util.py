@@ -596,14 +596,14 @@ def test_watch(subtests, etcd_client, prefix, use_v2):
     etcd_client.update(updated, path="{}/watch".format(prefix))
 
     with subtests.test(
-        "watching an invalid key should timeout and return an empty dict"
+        "watching an invalid key should timeout and return None"
     ):
-        assert etcd_client.watch("{}/invalid".format(prefix), timeout=3) == {}
+        assert etcd_client.watch("{}/invalid".format(prefix), timeout=3) is None
 
     with subtests.test(
-        "watching an valid key with no changes should timeout and return an empty dict"
+        "watching an valid key with no changes should timeout and return None"
     ):
-        assert etcd_client.watch("{}/watch/1".format(prefix), timeout=3) == {}
+        assert etcd_client.watch("{}/watch/1".format(prefix), timeout=3) is None
 
     # Wait for an update
     with subtests.test("updates should be able to be caught by waiting in read"):

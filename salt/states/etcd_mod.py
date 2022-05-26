@@ -173,6 +173,7 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+NO_PROFILE_MSG = "No profile found, using a profile is always recommended"
 
 def __virtual__():
     """
@@ -214,6 +215,12 @@ def set_(name, value, profile=None, **kwargs):
     }
 
     current = __salt__["etcd.get"](name, profile=profile, **kwargs)
+
+    if current is None and profile is None:
+        rtn["comment"] = NO_PROFILE_MSG
+        rtn["result"] = False
+        return rtn
+
     if not current:
         created = True
 
@@ -275,6 +282,12 @@ def directory(name, profile=None, **kwargs):
     rtn = {"name": name, "comment": "Directory exists", "result": True, "changes": {}}
 
     current = __salt__["etcd.get"](name, profile=profile, recurse=True, **kwargs)
+
+    if current is None and profile is None:
+        rtn["comment"] = NO_PROFILE_MSG
+        rtn["result"] = False
+        return rtn
+
     if not current:
         created = True
 
@@ -311,7 +324,14 @@ def rm(name, recurse=False, profile=None, **kwargs):
 
     rtn = {"name": name, "result": True, "changes": {}}
 
-    if not __salt__["etcd.get"](name, profile=profile, **kwargs):
+    current = __salt__["etcd.get"](name, profile=profile, recurse=True, **kwargs)
+
+    if current is None and profile is None:
+        rtn["comment"] = NO_PROFILE_MSG
+        rtn["result"] = False
+        return rtn
+
+    if not current:
         rtn["comment"] = "Key does not exist"
         return rtn
 

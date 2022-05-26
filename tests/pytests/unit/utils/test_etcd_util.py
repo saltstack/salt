@@ -499,7 +499,7 @@ def test_watch(use_v2, client_name):
                 assert client.watch("/some-key") == {}
 
                 mock.side_effect = iter([etcd.EtcdConnectionFailed()])
-                assert client.watch("/some-key") == {}
+                assert client.watch("/some-key") is None
 
                 mock.side_effect = None
                 mock.return_value = None
@@ -541,7 +541,7 @@ def test_watch(use_v2, client_name):
 
                 mock.side_effect = None
                 mock.return_value = None
-                assert client.watch("/some-key") == {}
+                assert client.watch("/some-key") is None
 
 
 def test_expand(use_v2, client_name):

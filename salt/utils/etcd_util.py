@@ -151,6 +151,10 @@ class EtcdBase:
         self.conf = etcd_opts
         self.host = host or self.conf.get("etcd.host", "127.0.0.1")
         self.port = port or self.conf.get("etcd.port", 2379)
+
+        if self.host == "127.0.0.1" and self.port == 2379:
+            log.warning("Using default etcd host and port, use a profile if needed.")
+
         username = username or self.conf.get("etcd.username")
         password = password or self.conf.get("etcd.password")
         ca_cert = ca or self.conf.get("etcd.ca")
@@ -381,7 +385,7 @@ class EtcdClient(EtcdBase):
             ret["value"] = getattr(result, "value")
             ret["mIndex"] = getattr(result, "modifiedIndex")
             return ret
-        except (etcd.EtcdConnectionFailed, MaxRetryError):
+        except MaxRetryError:
             # This gets raised when we can't contact etcd at all
             log.error(
                 "etcd: failed to perform 'watch' operation on key %s due to connection"
@@ -389,6 +393,9 @@ class EtcdClient(EtcdBase):
                 key,
             )
             return {}
+        except etcd.EtcdConnectionFailed as err:
+            log.error("etcd: %s", err)
+            return None
         except ValueError:
             return {}
 
@@ -515,7 +522,21 @@ class EtcdClient(EtcdBase):
             if isinstance(v, dict):
                 is_dir = True
             keys[k] = self.write(k, v, directory=is_dir)
+            if keys[k] is None:
+                return None
         return keys
+
+    def write(self, key, value, ttl=None, directory=False):
+        """
+        Write a file or directory depending on directory flag
+        """
+        try:
+            if directory:
+                return self.write_directory(key, value, ttl)
+            return self.write_file(key, value, ttl)
+        except etcd.EtcdConnectionFailed as err:
+            log.error("etcd: %s", err)
+            return None
 
     def write_file(self, key, value, ttl=None):
         try:
@@ -606,6 +627,7 @@ class EtcdClient(EtcdBase):
             etcd.EtcdRootReadOnly,
             etcd.EtcdDirNotEmpty,
             etcd.EtcdKeyNotFound,
+            etcd.EtcdConnectionFailed,
             ValueError,
         ) as err:
             log.error("etcd: %s", err)
@@ -623,12 +645,8 @@ class EtcdClient(EtcdBase):
             items = self.read(path)
         except (etcd.EtcdKeyNotFound, ValueError):
             return None
-        except etcd.EtcdConnectionFailed:
-            log.error(
-                "etcd: failed to perform 'tree' operation on path %s due to connection"
-                " error",
-                path,
-            )
+        except etcd.EtcdConnectionFailed as err:
+            log.error("etcd: %s", err)
             return None
 
         for item in items.children:
@@ -740,7 +758,7 @@ class EtcdClientV3(EtcdBase):
             ret["mIndex"] = getattr(result, "mod_revision", 0)
             ret["changed"] = True
         else:
-            return {}
+            return None
         return ret
 
     def get(self, key, recurse=False):
