@@ -1,7 +1,7 @@
 """
 The networking module for SUSE based distros
 
-.. versionadded:: Phosphorus
+.. versionadded:: 3005
 
 """
 
@@ -143,10 +143,8 @@ def _parse_suse_config(path):
 
 def _parse_ethtool_opts(opts, iface):
     """
-    Filters given options and outputs valid settings for ETHTOOLS_OPTIONS
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for ETHTOOL_OPTIONS of the interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     config = {}
 
@@ -227,10 +225,8 @@ def _parse_ethtool_opts(opts, iface):
 
 def _parse_settings_bond(opts, iface):
     """
-    Filters given options and outputs valid settings for requested
-    operation. If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     if opts["mode"] in ("balance-rr", "0"):
         log.info("Device: %s Bonding Mode: load balancing (round-robin)", iface)
@@ -350,10 +346,8 @@ def _parse_settings_arp(opts, iface):
 
 def _parse_settings_bond_0(opts, iface):
     """
-    Filters given options and outputs valid settings for bond0.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for balance-rr (type 0) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "0"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -368,12 +362,9 @@ def _parse_settings_bond_0(opts, iface):
 
 
 def _parse_settings_bond_1(opts, iface):
-
     """
-    Filters given options and outputs valid settings for bond1.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for active-backup (type 1) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "1"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -389,10 +380,8 @@ def _parse_settings_bond_1(opts, iface):
 
 def _parse_settings_bond_2(opts, iface):
     """
-    Filters given options and outputs valid settings for bond2.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for balance-xor (type 2) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "2"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -414,12 +403,9 @@ def _parse_settings_bond_2(opts, iface):
 
 
 def _parse_settings_bond_3(opts, iface):
-
     """
-    Filters given options and outputs valid settings for bond3.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for broadcast (type 3) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "3"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -432,10 +418,8 @@ def _parse_settings_bond_3(opts, iface):
 
 def _parse_settings_bond_4(opts, iface):
     """
-    Filters given options and outputs valid settings for bond4.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for 802.3ad (type 4) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "4"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -475,12 +459,9 @@ def _parse_settings_bond_4(opts, iface):
 
 
 def _parse_settings_bond_5(opts, iface):
-
     """
-    Filters given options and outputs valid settings for bond5.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for balance-tlb (type 5) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "5"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -495,12 +476,9 @@ def _parse_settings_bond_5(opts, iface):
 
 
 def _parse_settings_bond_6(opts, iface):
-
     """
-    Filters given options and outputs valid settings for bond6.
-    If an option has a value that is not expected, this
-    function will log what the Interface, Setting and what it was
-    expecting.
+    Parses valid options for balance-alb (type 6) bonding interface
+    Logs the error and raises AttributeError in case of getting invalid options
     """
     bond = {"mode": "6"}
     bond.update(_parse_settings_miimon(opts, iface))
@@ -515,7 +493,6 @@ def _parse_settings_bond_6(opts, iface):
 
 
 def _parse_settings_vlan(opts, iface):
-
     """
     Filters given options and outputs valid settings for a vlan
     """
