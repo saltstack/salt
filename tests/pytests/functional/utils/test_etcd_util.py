@@ -595,9 +595,7 @@ def test_watch(subtests, etcd_client, prefix, use_v2):
     }
     etcd_client.update(updated, path="{}/watch".format(prefix))
 
-    with subtests.test(
-        "watching an invalid key should timeout and return None"
-    ):
+    with subtests.test("watching an invalid key should timeout and return None"):
         assert etcd_client.watch("{}/invalid".format(prefix), timeout=3) is None
 
     with subtests.test(

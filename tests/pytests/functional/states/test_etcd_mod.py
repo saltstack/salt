@@ -219,4 +219,3 @@ def test_with_missing_profile(subtests, prefix, use_v2, etcd_port):
             ret = etcd_state.rm("{}/2/3".format(prefix))
             assert not ret["result"]
             assert ret["comment"] == etcd_state.NO_PROFILE_MSG
-

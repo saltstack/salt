@@ -175,6 +175,7 @@ except ImportError:
 
 NO_PROFILE_MSG = "No profile found, using a profile is always recommended"
 
+
 def __virtual__():
     """
     Only return if python-etcd is installed
