@@ -34,9 +34,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.service_name = "sshd"
             cmd_name = "systemctl"
         elif os_family == "MacOS":
-            self.service_name = "org.ntp.ntpd"
-            if int(os_release.split(".")[1]) >= 13:
-                self.service_name = "com.apple.AirPlayXPCHelper"
+            self.service_name = "com.apple.AirPlayXPCHelper"
         elif os_family == "Windows":
             self.service_name = "Spooler"
 

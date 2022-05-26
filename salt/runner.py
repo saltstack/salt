@@ -298,6 +298,8 @@ class Runner(RunnerClient):
                     display_output(ret, outputter, self.opts)
                 else:
                     ret = self._proc_function(
+                        instance=self,
+                        opts=self.opts,
                         fun=self.opts["fun"],
                         low=low,
                         user=user,
