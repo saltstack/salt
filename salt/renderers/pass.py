@@ -84,7 +84,12 @@ def _fetch_secret(pass_path):
     cmd = ["pass", "show", pass_path]
     log.debug("Fetching secret: %s", " ".join(cmd))
 
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
+    # Make sure environment variable HOME is set, since Pass looks for the
+    # password-store under ~/.password-store.
+    env = os.environ.copy()
+    env["HOME"] = expanduser("~")
+
+    proc = Popen(cmd, stdout=PIPE, stderr=PIPE, env=env)
     pass_data, pass_error = proc.communicate()
 
     # The version of pass used during development sent output to
@@ -115,8 +120,4 @@ def render(pass_info, saltenv="base", sls="", argline="", **kwargs):
     Fetch secret from pass based on pass_path
     """
     _get_pass_exec()
-
-    # Make sure environment variable HOME is set, since Pass looks for the
-    # password-store under ~/.password-store.
-    os.environ["HOME"] = expanduser("~")
     return _decrypt_object(pass_info)
