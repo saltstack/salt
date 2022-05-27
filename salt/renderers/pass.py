@@ -75,6 +75,9 @@ def _fetch_secret(pass_path):
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
     """
+    # Make a backup in case we want to return the original value without stripped whitespaces
+    original_pass_path = pass_path
+
     # Remove whitespaces from the pass_path
     pass_path = pass_path.strip()
 
@@ -88,8 +91,8 @@ def _fetch_secret(pass_path):
     # stdout instead of stderr even though its returncode was non zero.
     if proc.returncode or not pass_data:
         log.warning("Could not fetch secret: %s %s", pass_data, pass_error)
-        pass_data = pass_path
-    return pass_data.strip()
+        return original_pass_path
+    return pass_data.rstrip("\r\n")
 
 
 def _decrypt_object(obj):
