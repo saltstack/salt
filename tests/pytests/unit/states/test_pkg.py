@@ -613,11 +613,21 @@ def test_held_unheld(package_manager):
     elif package_manager == "YUM/DNF":
         list_holds_func = "pkg.list_holds"
         list_holds_mock = MagicMock(
-            return_value=["bar-0:1.2.3-1.1.*", "baz-0:2.3.4-2.1.*",]
+            return_value=[
+                "bar-0:1.2.3-1.1.*",
+                "baz-0:2.3.4-2.1.*",
+            ]
         )
     elif package_manager == "APT":
         list_holds_func = "pkg.get_selections"
-        list_holds_mock = MagicMock(return_value={"hold": ["bar", "baz",]})
+        list_holds_mock = MagicMock(
+            return_value={
+                "hold": [
+                    "bar",
+                    "baz",
+                ]
+            }
+        )
 
     def pkg_hold(name, pkgs=None, *_args, **__kwargs):
         if name and pkgs is None:
