@@ -1,2 +1,3 @@
+The $HOME env is no longer modified globally.
 Only trailing newlines are stripped from the fetched secret.
 Pass process arguments are handled in a secure way.
