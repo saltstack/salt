@@ -3646,6 +3646,8 @@ def mod_beacon(name, **kwargs):
 
 def held(name, version=None, pkgs=None, replace=False, **kwargs):
     """
+    .. versionadded:: 3005
+
     Set package in 'hold' state, meaning it will not be changed.
 
     :param str name:
@@ -3823,6 +3825,8 @@ def held(name, version=None, pkgs=None, replace=False, **kwargs):
 
 def unheld(name, version=None, pkgs=None, all=False, **kwargs):
     """
+    .. versionadded:: 3005
+
     Unset package from 'hold' state, to allow operations with the package.
 
     :param str name:

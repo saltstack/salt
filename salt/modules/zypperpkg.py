@@ -2018,6 +2018,8 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
 
 def list_holds(pattern=None, full=True, root=None, **kwargs):
     """
+    .. versionadded:: 3005
+
     List information on locked packages.
 
     .. note::
