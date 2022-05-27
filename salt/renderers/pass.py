@@ -75,10 +75,13 @@ def _fetch_secret(pass_path):
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
     """
-    cmd = "pass show {}".format(pass_path.strip())
-    log.debug("Fetching secret: %s", cmd)
+    # Remove whitespaces from the pass_path
+    pass_path = pass_path.strip()
 
-    proc = Popen(cmd.split(" "), stdout=PIPE, stderr=PIPE)
+    cmd = ["pass", "show", pass_path]
+    log.debug("Fetching secret: %s", " ".join(cmd))
+
+    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
     pass_data, pass_error = proc.communicate()
 
     # The version of pass used during development sent output to
