@@ -966,7 +966,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
             channel.close()
-        self.clear_funcs.destroy()
+        clear_funcs = getattr(self, "clear_funcs", None)
+        if clear_funcs is not None:
+            clear_funcs.destroy()
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
