@@ -64,6 +64,8 @@ V2 API
     client = salt.utils.etcd_utils.EtcdClient(__opts__, profile='my_etcd_config')
 
 V3 API
+.. versionadded:: 3005
+
 .. code-block:: python
 
     import salt.utils.etcd_utils
@@ -662,6 +664,8 @@ class EtcdClient(EtcdBase):
 
 class EtcdClientV3(EtcdBase):
     """
+    .. versionadded:: 3005
+
     Since etcd3 has no concept of directories, this class leaves write_directory unimplemented.
     """
 
