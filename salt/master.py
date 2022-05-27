@@ -965,10 +965,19 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
-            channel.close()
+            try:
+                channel.close()
+            except Exception:  # pylint: disable=broad-except
+                # Don't stop closing additional channels because an
+                # exception occurred.
+                pass
         clear_funcs = getattr(self, "clear_funcs", None)
         if clear_funcs is not None:
-            clear_funcs.destroy()
+            try:
+                clear_funcs.destroy()
+            except Exception:  # pylint: disable=broad-except
+                # Don't stop signal handling because an exception occurred.
+                pass
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
