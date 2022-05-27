@@ -22,7 +22,7 @@ pytestmark = [
 ]
 
 # TODO: add out-of-band (i.e. not via the API) additions to the cache -W. Werner, 2021-09-28
-
+#
 # TODO: in PR request opinion: is it better to double serialize the data, e.g.
 # store -> __context__['serial'].dumps({"timestamp": tstamp, "value": __context__['serial'].dumps(value)})
 # or is the existing approach of storing timestamp as a secondary key a good one???
