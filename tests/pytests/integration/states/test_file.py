@@ -1257,3 +1257,44 @@ def test_recurse_keep_symlinks_outside_fileserver_root(
                 assert target_path.joinpath(_dir, str(_file)).is_file()
 
         assert target_path.joinpath("test4").is_symlink()
+
+
+def test_issue_62117(
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
+):
+    name = "test_jinja/issue-62117"
+
+    yaml_contents = "{%- set grains = grains.get('os', '') %}"
+
+    jinja_contents = '{%- import_yaml "./issue-62117.yaml" as grains %}'
+
+    sls_contents = """
+    {%- from "./issue-62117.jinja" import grains with context %}
+
+    test_jinja/issue-62117/cmd.run:
+      cmd.run:
+        - name: pwd
+    """
+
+    yaml_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.yaml".format(name), yaml_contents
+    )
+
+    jinja_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.jinja".format(name), jinja_contents
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(name), sls_contents
+    )
+
+    with yaml_tempfile, jinja_tempfile, sls_tempfile:
+        ret = salt_call_cli.run("--local", "state.apply", name.replace("/", "."))
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True

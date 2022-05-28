@@ -176,7 +176,10 @@ class SaltCacheLoader(BaseLoader):
                 )
                 raise TemplateNotFound(template)
             # local file clients should pass the dot-expanded relative path
-            if environment.globals.get("opts", {}).get("file_client") == "local":
+            # when it's an absolute local filesystem location
+            if environment.globals.get("opts", {}).get(
+                "file_client"
+            ) == "local" and os.path.isabs(base_path):
                 _template = os.path.relpath(_template, base_path)
 
         self.check_cache(_template)
