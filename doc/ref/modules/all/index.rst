@@ -458,6 +458,7 @@ execution modules
     statuspage
     supervisord
     suse_apache
+    suse_ip
     svn
     swarm
     swift
