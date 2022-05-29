@@ -21,8 +21,10 @@ pytestmark = [
 @pytest.fixture(scope="module")
 def salt_call_cli_wrapper(salt_call_cli, mysql_container):
     def run_command(*command, **kwargs):
-        connection_user = kwargs.pop("connection_user", mysql_container.mysql_user)
-        connection_pass = kwargs.pop("connection_pass", mysql_container.mysql_passwd)
+        connection_user = kwargs.pop("connection_user", mysql_container.mysql_root_user)
+        connection_pass = kwargs.pop(
+            "connection_pass", mysql_container.mysql_root_passwd
+        )
         connection_db = kwargs.pop("connection_db", "mysql")
         connection_port = kwargs.pop("connection_port", mysql_container.mysql_port)
 
@@ -79,14 +81,22 @@ def test_db_create_alter_remove(salt_call_cli_wrapper):
     assert ret.data
 
 
-def test_user_list(salt_call_cli_wrapper):
+def test_user_list(salt_call_cli_wrapper, mysql_combo):
     ret = salt_call_cli_wrapper("mysql.user_list")
     assert ret.data
-    assert {"User": "root", "Host": "%"} in ret.data
+    assert {
+        "User": mysql_combo.mysql_root_user,
+        "Host": mysql_combo.mysql_host,
+    } in ret.data
 
 
-def test_user_exists(salt_call_cli_wrapper):
-    ret = salt_call_cli_wrapper("mysql.user_exists", "root", "%", "password")
+def test_user_exists(salt_call_cli_wrapper, mysql_combo):
+    ret = salt_call_cli_wrapper(
+        "mysql.user_exists",
+        mysql_combo.mysql_root_user,
+        host=mysql_combo.mysql_host,
+        password=mysql_combo.mysql_passwd,
+    )
     assert ret.data
 
     ret = salt_call_cli_wrapper(
@@ -98,15 +108,17 @@ def test_user_exists(salt_call_cli_wrapper):
     assert not ret.data
 
 
-def test_user_info(salt_call_cli_wrapper):
-    ret = salt_call_cli_wrapper("mysql.user_info", "root", "%")
+def test_user_info(salt_call_cli_wrapper, mysql_combo):
+    ret = salt_call_cli_wrapper(
+        "mysql.user_info", mysql_combo.mysql_root_user, host=mysql_combo.mysql_host
+    )
     assert ret.data
 
     # Check that a subset of the information
     # is available in the returned user information.
     expected = {
-        "Host": "%",
-        "User": "root",
+        "Host": mysql_combo.mysql_host,
+        "User": mysql_combo.mysql_root_user,
         "Select_priv": "Y",
         "Insert_priv": "Y",
         "Update_priv": "Y",
@@ -137,7 +149,12 @@ def test_user_info(salt_call_cli_wrapper):
         "Trigger_priv": "Y",
         "Create_tablespace_priv": "Y",
     }
-    assert all(ret.data.get(key, None) == val for key, val in expected.items())
+    data = ret.data.copy()
+    for key in list(data):
+        if key not in expected:
+            data.pop(key)
+    assert data == expected
+    # assert all(ret.data.get(key, None) == val for key, val in expected.items())
 
 
 def test_user_create_chpass_delete(salt_call_cli_wrapper):
@@ -161,8 +178,10 @@ def test_user_create_chpass_delete(salt_call_cli_wrapper):
     assert ret.data
 
 
-def test_user_grants(salt_call_cli_wrapper):
-    ret = salt_call_cli_wrapper("mysql.user_grants", "root", host="%")
+def test_user_grants(salt_call_cli_wrapper, mysql_combo):
+    ret = salt_call_cli_wrapper(
+        "mysql.user_grants", mysql_combo.mysql_root_user, host=mysql_combo.mysql_host
+    )
     assert ret.data
 
 
@@ -269,27 +288,33 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
     assert ret.data
 
 
-def test_plugin_add_status_remove(salt_call_cli_wrapper, mysql_container):
+def test_plugin_add_status_remove(salt_call_cli_wrapper, mysql_combo):
 
-    if "mariadb" in mysql_container.mysql_name:
+    if "mariadb" in mysql_combo.mysql_name:
         plugin = "simple_password_check"
     else:
         plugin = "auth_socket"
 
-    ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
+    ret = salt_call_cli_wrapper(
+        "mysql.plugin_status", plugin, host=mysql_combo.mysql_host
+    )
     assert not ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugin_add", plugin)
     assert ret.data
 
-    ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
+    ret = salt_call_cli_wrapper(
+        "mysql.plugin_status", plugin, host=mysql_combo.mysql_host
+    )
     assert ret.data
     assert ret.data == "ACTIVE"
 
     ret = salt_call_cli_wrapper("mysql.plugin_remove", plugin)
     assert ret.data
 
-    ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
+    ret = salt_call_cli_wrapper(
+        "mysql.plugin_status", plugin, host=mysql_combo.mysql_host
+    )
     assert not ret.data
 
 
