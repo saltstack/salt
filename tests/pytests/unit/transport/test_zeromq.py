@@ -366,9 +366,9 @@ class MockSaltMinionMaster:
             name="ReqServer_ProcessManager"
         )
 
-        self.server_channel = salt.channel.server.ReqServerChannel.factory(
-            temp_salt_master.config.copy()
-        )
+        master_opts = temp_salt_master.config.copy()
+        master_opts.update({"transport": "zeromq"})
+        self.server_channel = salt.channel.server.ReqServerChannel.factory(master_opts)
         self.server_channel.pre_fork(self.process_manager)
 
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
@@ -380,6 +380,7 @@ class MockSaltMinionMaster:
         self.server_thread.start()
         minion_opts = temp_salt_minion.config.copy()
         minion_opts.update({"master_ip": "127.0.0.1"})
+        minion_opts.update({"transport": "zeromq"})
         self.channel = salt.channel.client.ReqChannel.factory(
             minion_opts, crypt="clear"
         )
