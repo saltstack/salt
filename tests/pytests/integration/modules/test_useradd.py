@@ -3,7 +3,6 @@ Integration tests for modules/useradd.py and modules/win_useradd.py
 """
 import pytest
 from saltfactories.utils import random_string
-from tests.support.helpers import requires_system_grains
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -26,7 +25,6 @@ def setup_teardown_vars(salt_call_cli):
 @pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
-@requires_system_grains
 def test_groups_includes_primary(setup_teardown_vars, grains, salt_call_cli):
     # Let's create a user, which usually creates the group matching the
     # name
