@@ -513,13 +513,6 @@ def pytest_parametrized(session, coverage, transport, crypto):
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        "--rootdir",
-        str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
-        "--log-file-level=debug",
-        "--show-capture=no",
-        "-ra",
-        "-s",
         "--transport={}".format(transport),
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
@@ -699,13 +692,6 @@ def pytest_cloud(session, coverage):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        "--rootdir",
-        str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
-        "--log-file-level=debug",
-        "--show-capture=no",
-        "-ra",
-        "-s",
         "--run-expensive",
         "-k",
         "cloud",
@@ -728,17 +714,7 @@ def pytest_tornado(session, coverage):
         session.install(
             "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
         )
-
-    cmd_args = [
-        "--rootdir",
-        str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
-        "--log-file-level=debug",
-        "--show-capture=no",
-        "-ra",
-        "-s",
-    ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage, session.posargs)
 
 
 def _pytest(session, coverage, cmd_args):
@@ -747,57 +723,40 @@ def _pytest(session, coverage, cmd_args):
 
     env = {"CI_RUN": "1" if CI_RUN else "0"}
 
+    args = [
+        "--rootdir",
+        str(REPO_ROOT),
+        "--log-file={}".format(RUNTESTS_LOGFILE),
+        "--log-file-level=debug",
+        "--show-capture=no",
+        "-ra",
+        "-s",
+        "--showlocals",
+    ]
+    args.extend(cmd_args)
+
     if CI_RUN:
         # We'll print out the collected tests on CI runs.
         # This will show a full list of what tests are going to run, in the right order, which, in case
         # of a test suite hang, helps us pinpoint which test is hanging
         session.run(
-            "python", "-m", "pytest", *(cmd_args + ["--collect-only", "-qqq"]), env=env
+            "python", "-m", "pytest", *(args + ["--collect-only", "-qqq"]), env=env
         )
 
-    try:
-        if coverage is True:
-            _run_with_coverage(
-                session,
-                "python",
-                "-m",
-                "coverage",
-                "run",
-                "-m",
-                "pytest",
-                "--showlocals",
-                *cmd_args,
-                env=env,
-            )
-        else:
-            session.run("python", "-m", "pytest", "--showlocals", *cmd_args, env=env)
-    except CommandFailed:  # pylint: disable=try-except-raise
-        # Not rerunning failed tests for now
-        raise
-
-        # pylint: disable=unreachable
-        # Re-run failed tests
-        session.log("Re-running failed tests")
-
-        for idx, parg in enumerate(cmd_args):
-            if parg.startswith("--junitxml="):
-                cmd_args[idx] = parg.replace(".xml", "-rerun-failed.xml")
-        cmd_args.append("--lf")
-        if coverage is True:
-            _run_with_coverage(
-                session,
-                "python",
-                "-m",
-                "coverage",
-                "run",
-                "-m",
-                "pytest",
-                "--showlocals",
-                *cmd_args,
-            )
-        else:
-            session.run("python", "-m", "pytest", *cmd_args)
-        # pylint: enable=unreachable
+    if coverage is True:
+        _run_with_coverage(
+            session,
+            "python",
+            "-m",
+            "coverage",
+            "run",
+            "-m",
+            "pytest",
+            *args,
+            env=env,
+        )
+    else:
+        session.run("python", "-m", "pytest", *args, env=env)
 
 
 class Tee:
