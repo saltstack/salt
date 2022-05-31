@@ -281,7 +281,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==6.1.2 ; python_version <= "3.9"
+pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
@@ -389,9 +389,9 @@ tempora==4.1.1
 timelib==0.2.5
     # via -r requirements/windows.txt
 toml==0.10.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   pytest
+    # via -r requirements/static/ci/common.in
+tomli==2.0.1
+    # via pytest
 typing-extensions==3.10.0.0
     # via
     #   aiohttp
