@@ -46,7 +46,7 @@ def test_orchestrate_output(salt_run_cli, salt_minion, base_env_state_tree_root_
         "simple-ping.sls", simple_ping_sls, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("--out=highstate", "state.orchestrate", "orch-test")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         ret_output = ret.stdout.splitlines()
 
         # First, check that we don't have the "bad" output that was displaying in
@@ -93,7 +93,7 @@ def test_orchestrate_state_output_with_salt_function(
         ret = salt_run_cli.run(
             "--out=highstate", "state.orchestrate", "orch-function-test"
         )
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         ret_output = [line.strip() for line in ret.stdout.splitlines()]
 
         assert "args:" in ret_output
@@ -140,7 +140,7 @@ def test_orchestrate_nested(
         "nested/outer.sls", outer_sls, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("state.orchestrate", "nested.outer")
-        assert ret.exitcode != 0
+        assert ret.returncode != 0
         assert testfile.exists() is False
 
 
@@ -165,16 +165,16 @@ def test_orchestrate_with_mine(
     """
     )
     ret = salt_run_cli.run("mine.update", salt_minion.id)
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
 
     with pytest.helpers.temp_file(
         "orch/mine.sls", sls_contents, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("state.orchestrate", "orch.mine")
-        assert ret.exitcode == 0
-        assert ret.json
-        assert ret.json["data"][salt_master.id]
-        for state_data in ret.json["data"][salt_master.id].values():
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data["data"][salt_master.id]
+        for state_data in ret.data["data"][salt_master.id].values():
             assert state_data["changes"]["ret"]
             assert state_data["changes"]["ret"][salt_minion.id] is True
 
@@ -213,13 +213,13 @@ def test_orchestrate_state_and_function_failure(
         "orch/issue43204/fail_with_changes.sls", fail_sls, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("saltutil.sync_modules")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         ret = salt_run_cli.run("state.orchestrate", "orch.issue43204")
-        assert ret.exitcode != 0
+        assert ret.returncode != 0
 
     # Drill down to the changes dict
-    data = ret.json["data"][salt_master.id]
+    data = ret.data["data"][salt_master.id]
     state_ret = data["salt_|-Step01_|-Step01_|-state"]["changes"]
     func_ret = data[
         "salt_|-Step02_|-runtests_helpers.nonzero_retcode_return_false_|-function"
@@ -278,13 +278,13 @@ def test_orchestrate_salt_function_return_false_failure(
         "orch/issue30367.sls", sls_contents, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("saltutil.sync_modules")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         ret = salt_run_cli.run("state.orchestrate", "orch.issue30367")
-        assert ret.exitcode != 0
+        assert ret.returncode != 0
 
     # Drill down to the changes dict
-    data = ret.json["data"][salt_master.id]
+    data = ret.data["data"][salt_master.id]
     state_result = data["salt_|-deploy_check_|-test.false_|-function"]["result"]
     func_ret = data["salt_|-deploy_check_|-test.false_|-function"]["changes"]
 
@@ -331,10 +331,10 @@ def test_orchestrate_target_exists(
         "core.sls", target_test_sls, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("state.orchestrate", "orch.target-exists")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
-    data = ret.json["data"][salt_master.id]
+    data = ret.data["data"][salt_master.id]
     to_check = {"core", "test-state", "cmd.run"}
     for state_data in data.values():
         if state_data["name"] == "core":
@@ -391,10 +391,10 @@ def test_orchestrate_target_does_not_exist(
         "core.sls", target_test_sls, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("state.orchestrate", "orch.target-does-not-exist")
-        assert ret.exitcode != 0
-        assert ret.json
+        assert ret.returncode != 0
+        assert ret.data
 
-    data = ret.json["data"][salt_master.id]
+    data = ret.data["data"][salt_master.id]
     to_check = {"core", "test-state", "cmd.run"}
     for state_data in data.values():
         if state_data["name"] == "core":
@@ -438,15 +438,15 @@ def test_orchestrate_retcode(salt_run_cli, salt_master, base_env_state_tree_root
         "orch/retcode.sls", sls_contents, base_env_state_tree_root_dir
     ):
         ret = salt_run_cli.run("saltutil.sync_runners")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         ret = salt_run_cli.run("saltutil.sync_wheel")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         ret = salt_run_cli.run("state.orchestrate", "orch.retcode")
-        assert ret.exitcode != 0
-        assert ret.json
+        assert ret.returncode != 0
+        assert ret.data
 
-    data = ret.json["data"][salt_master.id]
+    data = ret.data["data"][salt_master.id]
     to_check = {
         "test_runner_success",
         "test_runner_failure",
@@ -493,9 +493,9 @@ def test_orchestrate_batch_with_failhard_error(
         "orch/batch.sls", sls_contents, base_env_state_tree_root_dir
     ), pytest.helpers.temp_file("fail.sls", fail_sls, base_env_state_tree_root_dir):
         ret = salt_run_cli.run("state.orchestrate", "orch.batch")
-        assert ret.exitcode != 0
+        assert ret.returncode != 0
 
-    data = ret.json["data"][salt_master.id]
+    data = ret.data["data"][salt_master.id]
     result = data["salt_|-call_fail_state_|-call_fail_state_|-state"]["result"]
     changes = data["salt_|-call_fail_state_|-call_fail_state_|-state"]["changes"]
 
@@ -530,9 +530,9 @@ def test_orchestrate_subset(
         "orch/subset.sls", sls_contents, base_env_state_tree_root_dir
     ), pytest.helpers.temp_file("test.sls", test_sls, base_env_state_tree_root_dir):
         ret = salt_run_cli.run("state.orchestrate", "orch.subset")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
-    for state_data in ret.json["data"][salt_master.id].values():
+    for state_data in ret.data["data"][salt_master.id].values():
         # Should only run in one of the minions
         comment = state_data["comment"]
         if salt_minion.id in comment:

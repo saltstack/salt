@@ -20,9 +20,9 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
         ret = salt_call_cli.run(
             "state.single", "docker_image.present", name="bitnami/etcd", tag="latest"
         )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         ret = salt_call_cli.run(
             "state.single",
@@ -33,9 +33,9 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
             cap_add="IPC_LOCK",
         )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         container_started = True
         tries_left = 10
@@ -44,7 +44,7 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             ret = salt_call_cli.run(
                 "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/fnord", value="bar"
             )
-            if ret.exitcode == 0:
+            if ret.returncode == 0:
                 break
         else:
             pytest.skip(
@@ -56,16 +56,16 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             ret = salt_call_cli.run(
                 "state.single", "docker_container.stopped", name="etcd"
             )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
             assert state_run["result"] is True
             ret = salt_call_cli.run(
                 "state.single", "docker_container.absent", name="etcd"
             )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
             assert state_run["result"] is True
 
 
@@ -98,14 +98,14 @@ def test_sdb(salt_call_cli):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/foo", value="bar"
     )
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "bar"
 
     ret = salt_call_cli.run("sdb.get", uri="sdb://sdbetcd/secret/test/test_sdb/foo")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "bar"
 
 
 @pytest.mark.slow_test
@@ -113,13 +113,13 @@ def test_sdb_runner(salt_run_cli):
     ret = salt_run_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb_runner/foo", value="bar"
     )
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     assert ret.stdout == "bar"
 
     ret = salt_run_cli.run(
         "sdb.get", uri="sdb://sdbetcd/secret/test/test_sdb_runner/foo"
     )
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     assert ret.stdout == "bar"
 
 
@@ -128,11 +128,11 @@ def test_config(salt_call_cli, pillar_tree):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_pillar_sdb/foo", value="bar"
     )
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "bar"
 
     ret = salt_call_cli.run("config.get", "test_etcd_pillar_sdb")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "bar"

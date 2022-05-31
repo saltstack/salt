@@ -9,7 +9,7 @@ import time
 
 import pytest
 import salt.utils.path
-from saltfactories.utils.processes import ProcessResult
+from pytestshellutils.utils.processes import ProcessResult
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -67,9 +67,9 @@ def vault_container_version(request, salt_call_cli, vault_port):
         ret = salt_call_cli.run(
             "state.single", "docker_image.present", name="vault", tag=vault_version
         )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
 
         container_started = True
@@ -90,9 +90,9 @@ def vault_container_version(request, salt_call_cli, vault_port):
                 },
                 cap_add="IPC_LOCK",
             )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
             assert state_run["result"] is True
 
             time.sleep(1)
@@ -107,7 +107,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
             if proc.returncode == 0:
                 break
             ret = ProcessResult(
-                exitcode=proc.returncode,
+                returncode=proc.returncode,
                 stdout=proc.stdout,
                 stderr=proc.stderr,
                 cmdline=proc.args,
@@ -133,7 +133,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
         )
         if proc.returncode != 0:
             ret = ProcessResult(
-                exitcode=proc.returncode,
+                returncode=proc.returncode,
                 stdout=proc.stdout,
                 stderr=proc.stderr,
                 cmdline=proc.args,
@@ -150,7 +150,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
                 universal_newlines=True,
             )
             ret = ProcessResult(
-                exitcode=proc.returncode,
+                returncode=proc.returncode,
                 stdout=proc.stdout,
                 stderr=proc.stderr,
                 cmdline=proc.args,
@@ -267,16 +267,16 @@ def vault_container_version(request, salt_call_cli, vault_port):
             ret = salt_call_cli.run(
                 "state.single", "docker_container.stopped", name="vault"
             )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
             assert state_run["result"] is True
             ret = salt_call_cli.run(
                 "state.single", "docker_container.absent", name="vault"
             )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
             assert state_run["result"] is True
 
 
@@ -285,12 +285,12 @@ def test_sdb(salt_call_cli):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
     )
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     ret = salt_call_cli.run("sdb.get", uri="sdb://sdbvault/secret/test/test_sdb/foo")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "bar"
 
 
 @pytest.mark.slow_test
@@ -298,12 +298,12 @@ def test_sdb_runner(salt_run_cli):
     ret = salt_run_cli.run(
         "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb_runner/foo", value="bar"
     )
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     ret = salt_run_cli.run(
         "sdb.get", uri="sdb://sdbvault/secret/test/test_sdb_runner/foo"
     )
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     assert ret.stdout
     assert ret.stdout == "bar"
 
@@ -313,12 +313,12 @@ def test_config(salt_call_cli, pillar_tree):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"
     )
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     ret = salt_call_cli.run("config.get", "test_vault_pillar_sdb")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "bar"
 
 
 @pytest.mark.slow_test
@@ -328,13 +328,13 @@ def test_sdb_kv2_kvv2_path_local(salt_call_cli, vault_container_version):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/kv-v2/test/test_sdb/foo", value="bar"
     )
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     ret = salt_call_cli.run(
         "--local", "sdb.get", "sdb://sdbvault/kv-v2/test/test_sdb/foo"
     )
-    assert ret.json
-    assert ret.json == "bar"
+    assert ret.data
+    assert ret.data == "bar"
 
 
 @pytest.mark.slow_test
@@ -342,5 +342,5 @@ def test_sdb_kv_dual_item(salt_call_cli, vault_container_version):
     if vault_container_version not in ["latest"]:
         pytest.skip("Test not applicable to vault {}".format(vault_container_version))
     ret = salt_call_cli.run("--local", "sdb.get", "sdb://sdbvault/salt/data/user1")
-    # assert ret.json
-    assert ret.json == {"desc": "test user", "password": "p4ssw0rd"}
+    assert ret.data
+    assert ret.data == {"desc": "test user", "password": "p4ssw0rd"}

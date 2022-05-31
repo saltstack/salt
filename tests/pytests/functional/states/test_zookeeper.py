@@ -5,12 +5,11 @@ Integration tests for the zookeeper states
 import logging
 
 import pytest
-from saltfactories.daemons.container import Container
+from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
 pytest.importorskip("kazoo")
-docker = pytest.importorskip("docker")
+pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
@@ -21,20 +20,8 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
-@pytest.fixture(scope="module")
 def zookeeper_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
@@ -75,23 +62,19 @@ def minion_config_overrides(zookeeper_port):
 
 
 @pytest.fixture(scope="module")
-def zookeeper_image(docker_client):
-    image_name = "zookeeper"
-    try:
-        docker_client.images.pull(image_name)
-    except docker.errors.APIError as exc:
-        pytest.skip("Failed to pull docker image '{}': {}".format(image_name, exc))
-    return image_name
-
-
-@pytest.fixture(scope="module")
-def zookeeper_container(salt_factories, docker_client, zookeeper_port, zookeeper_image):
+def zookeeper_container(salt_factories, zookeeper_port):
     container = salt_factories.get_container(
         random_string("zookeeper-"),
-        zookeeper_image,
-        docker_client=docker_client,
+        "zookeeper",
         check_ports=[zookeeper_port],
-        container_run_kwargs={"ports": {"2181/tcp": zookeeper_port}},
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
+        container_run_kwargs={
+            "ports": {
+                "2181/tcp": zookeeper_port,
+            }
+        },
     )
     with container.started() as factory:
         yield factory

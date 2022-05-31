@@ -55,8 +55,8 @@ def test_database_present_absent(salt_cli_wrapper):
         "mysql_database.present",
         name="test_database",
     )
-    state = ret.json["mysql_database_|-test_database_|-test_database_|-present"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_database_|-test_database_|-test_database_|-present"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"test_database": "Present"}
@@ -69,9 +69,9 @@ def test_database_present_absent(salt_cli_wrapper):
         "mysql_database.absent",
         name="test_database",
     )
-    state = ret.json["mysql_database_|-test_database_|-test_database_|-absent"]
+    state = ret.data["mysql_database_|-test_database_|-test_database_|-absent"]
 
-    assert ret.exitcode == 0, ret
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"test_database": "Absent"}
@@ -84,7 +84,7 @@ def test_grants_present_absent(salt_cli_wrapper, salt_call_cli_wrapper):
 
     # Create the database
     ret = salt_call_cli_wrapper("mysql.db_create", "salt")
-    assert ret.json
+    assert ret.data
 
     # Create a user
     ret = salt_call_cli_wrapper(
@@ -93,7 +93,7 @@ def test_grants_present_absent(salt_cli_wrapper, salt_call_cli_wrapper):
         host="localhost",
         password="badpassword",
     )
-    assert ret.json
+    assert ret.data
 
     ret = salt_cli_wrapper(
         "state.single",
@@ -104,8 +104,8 @@ def test_grants_present_absent(salt_cli_wrapper, salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    state = ret.json["mysql_grants_|-add_salt_grants_|-add_salt_grants_|-present"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_grants_|-add_salt_grants_|-add_salt_grants_|-present"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"add_salt_grants": "Present"}
@@ -125,8 +125,8 @@ def test_grants_present_absent(salt_cli_wrapper, salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    state = ret.json["mysql_grants_|-delete_salt_grants_|-delete_salt_grants_|-absent"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_grants_|-delete_salt_grants_|-delete_salt_grants_|-absent"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"delete_salt_grants": "Absent"}
@@ -139,11 +139,11 @@ def test_grants_present_absent(salt_cli_wrapper, salt_call_cli_wrapper):
 
     # Remove the user
     ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="localhost")
-    assert ret.json
+    assert ret.data
 
     # Remove the database
     ret = salt_call_cli_wrapper("mysql.db_remove", "salt")
-    assert ret.json
+    assert ret.data
 
 
 def test_user_present_absent(salt_cli_wrapper):
@@ -155,8 +155,8 @@ def test_user_present_absent(salt_cli_wrapper):
         host="localhost",
         password="password",
     )
-    state = ret.json["mysql_user_|-george_|-george_|-present"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_user_|-george_|-george_|-present"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"george": "Present"}
@@ -170,8 +170,8 @@ def test_user_present_absent(salt_cli_wrapper):
         name="george",
         host="localhost",
     )
-    state = ret.json["mysql_user_|-george_|-george_|-absent"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_user_|-george_|-george_|-absent"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"george": "Absent"}
@@ -189,8 +189,8 @@ def test_user_present_absent_passwordless(salt_cli_wrapper):
         host="localhost",
         allow_passwordless=True,
     )
-    state = ret.json["mysql_user_|-george_|-george_|-present"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_user_|-george_|-george_|-present"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"george": "Present"}
@@ -208,8 +208,8 @@ def test_user_present_absent_passwordless(salt_cli_wrapper):
         name="george",
         host="localhost",
     )
-    state = ret.json["mysql_user_|-george_|-george_|-absent"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_user_|-george_|-george_|-absent"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"george": "Absent"}
@@ -235,7 +235,7 @@ def test_user_present_absent_unixsocket(salt_cli_wrapper, mysql_container):
     # already enabled on MariaDB > 10.3
     if "mariadb" not in mysql_container.mysql_name:
         ret = salt_cli_wrapper("mysql.plugin_add", "auth_socket")
-        assert ret.json
+        assert ret.data
 
     ret = salt_cli_wrapper(
         "state.single",
@@ -245,8 +245,8 @@ def test_user_present_absent_unixsocket(salt_cli_wrapper, mysql_container):
         unix_socket=True,
         allow_passwordless=False,
     )
-    state = ret.json["mysql_user_|-george_|-george_|-present"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_user_|-george_|-george_|-present"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"george": "Present"}
@@ -262,8 +262,8 @@ def test_user_present_absent_unixsocket(salt_cli_wrapper, mysql_container):
         name="george",
         host="localhost",
     )
-    state = ret.json["mysql_user_|-george_|-george_|-absent"]
-    assert ret.exitcode == 0, ret
+    state = ret.data["mysql_user_|-george_|-george_|-absent"]
+    assert ret.returncode == 0, ret
 
     assert "changes" in state
     assert state["changes"] == {"george": "Absent"}
@@ -273,4 +273,4 @@ def test_user_present_absent_unixsocket(salt_cli_wrapper, mysql_container):
 
     if "mariadb" not in mysql_container.mysql_name:
         ret = salt_cli_wrapper("mysql.plugin_remove", "auth_socket")
-        assert ret.json
+        assert ret.data
