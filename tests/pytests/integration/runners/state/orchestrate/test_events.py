@@ -149,7 +149,10 @@ def test_parallel_orchestrations(
         start_time = time.time()
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
-        ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
+        salt_run_cli_args = ["--jid", jid, "state.orchestrate", "test-orch"]
+        if salt.utils.platform.is_freebsd() is True:
+            salt_run_cli_args.insert(0, "--timeout=220")
+        ret = salt_run_cli.run(*salt_run_cli_args)
         assert ret.returncode == 0
         orch_job_data = ret.data
         for step_data in orch_job_data["data"][salt_master.id].values():
