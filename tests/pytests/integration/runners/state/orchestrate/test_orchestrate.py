@@ -1,10 +1,9 @@
 """
 Tests for state.orchestrate
 """
-import sys
+import os
 
 import pytest
-import salt.utils.platform
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -485,25 +484,12 @@ def test_orchestrate_batch_with_failhard_error(
     assert len(changes["ret"]) == 1
 
 
-# This test is flaky on Fedora 35 - Don't really know why  because. of course,
-# this test module passes when running locally on a Fedora 35 container.
-def _retry_on_fedora_35(*_):
-    # We limit the retries to Fedora, and under Py3.10 because that's
-    # what Fedora 35 uses and we don't have access to grains on this
-    # callback.
-    if salt.utils.platform.is_fedora() is False:
-        return False
-    if sys.version_info < (3, 10):
-        return False
-    return True
-
-
-@pytest.mark.flaky(max_runs=4, rerun_filter=_retry_on_fedora_35)
 def test_orchestrate_subset(
     salt_run_cli,
     salt_master,
     salt_minion,
     salt_sub_minion,
+    grains,
 ):
     """
     test orchestration state using subset
@@ -520,6 +506,13 @@ def test_orchestrate_subset(
       test.succeed_without_changes:
         - name: test
     """
+    if os.environ.get("CI_RUN", "0") == "1":
+        if grains["os"] == "Fedora" and int(grains["osrelease"]) == 35:
+            # This test is flaky on Fedora 35 - Don't really know why, because,
+            # of course, this test module passes when running locally on a
+            # Fedora 35 container.
+            pytest.skip("Skipping flaky Fedora 35 test for now, on CI runs.")
+
     with salt_master.state_tree.base.temp_file(
         "orch/subset.sls", sls_contents
     ), salt_master.state_tree.base.temp_file("test.sls", test_sls):
