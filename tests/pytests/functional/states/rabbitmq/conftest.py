@@ -3,12 +3,10 @@ import time
 
 import attr
 import pytest
-from saltfactories.daemons.container import Container
+from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
-docker = pytest.importorskip("docker")
-docker_errors = pytest.importorskip("docker.errors")
+pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
@@ -31,19 +29,7 @@ class RabbitMQCombo:
 
     @rabbitmq_port.default
     def _rabbitmq_port(self):
-        return get_unused_localhost_port()
-
-
-@pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
+        return ports.get_unused_localhost_port()
 
 
 def get_test_versions():
@@ -68,19 +54,12 @@ def get_test_version_id(value):
 
 
 @pytest.fixture(scope="module", params=get_test_versions(), ids=get_test_version_id)
-def rabbitmq_image(request, docker_client):
-    image = request.param
-    try:
-        docker_client.images.pull(image.name, tag=image.tag)
-    except docker.errors.APIError as exc:
-        pytest.skip(
-            "Failed to pull docker image '{}:{}': {}".format(image.name, image.tag, exc)
-        )
-    return image
+def rabbitmq_image(request):
+    return request.param
 
 
 @pytest.fixture(scope="module")
-def rabbitmq_container(salt_factories, docker_client, rabbitmq_image):
+def rabbitmq_container(salt_factories, rabbitmq_image):
 
     combo = RabbitMQCombo(
         rabbitmq_name=rabbitmq_image.name,
@@ -89,7 +68,9 @@ def rabbitmq_container(salt_factories, docker_client, rabbitmq_image):
     container = salt_factories.get_container(
         rabbitmq_image.container_id,
         "{}:{}".format(combo.rabbitmq_name, combo.rabbitmq_version),
-        docker_client=docker_client,
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     with container.started():
         # Sleep
@@ -100,7 +81,7 @@ def rabbitmq_container(salt_factories, docker_client, rabbitmq_image):
         while login_attempts:
             login_attempts -= 1
             ret = container.run("rabbitmqctl status --formatter=json")
-            authenticated = ret.exitcode == 0
+            authenticated = ret.returncode == 0
             if authenticated:
                 break
 
@@ -124,7 +105,7 @@ def docker_cmd_run_all_wrapper(rabbitmq_container):
             cmd[0] = "/opt/rabbitmq/sbin/rabbitmqctl"
 
         ret = rabbitmq_container.run(cmd)
-        res = {"retcode": ret.exitcode, "stdout": ret.stdout, "stderr": ret.stderr}
+        res = {"retcode": ret.returncode, "stdout": ret.stdout, "stderr": ret.stderr}
         return res
 
     return run_command

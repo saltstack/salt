@@ -2,11 +2,10 @@ import time
 
 import attr
 import pytest
-from saltfactories.daemons.container import Container
+from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
-docker = pytest.importorskip("docker")
+pytest.importorskip("docker")
 
 
 @attr.s(kw_only=True, slots=True)
@@ -29,7 +28,7 @@ class MySQLCombo:
 
     @mysql_port.default
     def _mysql_port(self):
-        return get_unused_localhost_port()
+        return ports.get_unused_localhost_port()
 
 
 def get_test_versions():
@@ -64,36 +63,17 @@ def get_test_versions():
     return test_versions
 
 
-@pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
 def get_test_version_id(value):
     return "container={}".format(value)
 
 
 @pytest.fixture(scope="module", params=get_test_versions(), ids=get_test_version_id)
-def mysql_image(request, docker_client):
-    image = request.param
-    try:
-        docker_client.images.pull(image.name, tag=image.tag)
-    except docker.errors.APIError as exc:
-        pytest.skip(
-            "Failed to pull docker image '{}:{}': {}".format(image.name, image.tag, exc)
-        )
-    return image
+def mysql_image(request):
+    return request.param
 
 
 @pytest.fixture(scope="module")
-def mysql_container(salt_factories, docker_client, salt_call_cli, mysql_image):
+def mysql_container(salt_factories, salt_call_cli, mysql_image):
 
     mysql_user = "root"
     mysql_passwd = "password"
@@ -107,8 +87,10 @@ def mysql_container(salt_factories, docker_client, salt_call_cli, mysql_image):
     container = salt_factories.get_container(
         mysql_image.container_id,
         "{}:{}".format(combo.mysql_name, combo.mysql_version),
-        docker_client=docker_client,
         check_ports=[combo.mysql_port],
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
         container_run_kwargs={
             "ports": {"3306/tcp": combo.mysql_port},
             "environment": {
@@ -128,7 +110,7 @@ def mysql_container(salt_factories, docker_client, salt_call_cli, mysql_image):
                 name=mysql_image.container_id,
                 cmd="mysql --user=root --password=password -e 'SELECT 1'",
             )
-            authenticated = ret.exitcode == 0
+            authenticated = ret.returncode == 0
             if authenticated:
                 break
 

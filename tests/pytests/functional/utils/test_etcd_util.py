@@ -4,6 +4,7 @@ import threading
 import time
 
 import pytest
+from pytestshellutils.utils import ports
 from salt.utils.etcd_util import (
     HAS_ETCD_V2,
     HAS_ETCD_V3,
@@ -11,11 +12,9 @@ from salt.utils.etcd_util import (
     EtcdClientV3,
     get_conn,
 )
-from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
-docker = pytest.importorskip("docker")
+pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
@@ -27,39 +26,16 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
-@pytest.fixture(scope="module")
-def docker_image_name(docker_client):
-    image_name = "bitnami/etcd:3"
-    try:
-        docker_client.images.pull(image_name)
-    except docker.errors.APIError as exc:
-        pytest.skip("Failed to pull docker image '{}': {}".format(image_name, exc))
-    return image_name
-
-
-@pytest.fixture(scope="module")
 def etcd_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 # TODO: Use our own etcd image to avoid reliance on a third party
 @pytest.fixture(scope="module", autouse=True)
-def etcd_container(salt_factories, docker_client, etcd_port, docker_image_name):
+def etcd_container(salt_factories, etcd_port):
     container = salt_factories.get_container(
         random_string("etcd-server-"),
-        image_name=docker_image_name,
-        docker_client=docker_client,
+        image_name="elcolio/etcd",
         check_ports=[etcd_port],
         container_run_kwargs={
             "environment": {
@@ -68,6 +44,9 @@ def etcd_container(salt_factories, docker_client, etcd_port, docker_image_name):
             },
             "ports": {"2379/tcp": etcd_port},
         },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     with container.started() as factory:
         yield factory

@@ -6,11 +6,10 @@ import shutil
 import subprocess
 
 import pytest
-from saltfactories.daemons.container import Container
+from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
-docker = pytest.importorskip("docker")
+pytest.importorskip("docker")
 
 
 log = logging.getLogger(__name__)
@@ -56,18 +55,6 @@ class Keys:
 
 
 @pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
-@pytest.fixture(scope="module")
 def ssh_keys(tmp_path_factory):
     """
     Temporary ssh key fixture
@@ -81,7 +68,7 @@ def ssh_port():
     """
     Temporary ssh port fixture
     """
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
@@ -108,33 +95,25 @@ def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
 
 
 @pytest.fixture(scope="module")
-def docker_image_name(docker_client):
-    image_name = "dwoz1/cicd"
-    image_tag = "ssh"
-    try:
-        docker_client.images.pull(image_name, tag=image_tag)
-    except docker.errors.APIError as exc:
-        pytest.skip(
-            "Failed to pull docker image '{}:{}': {}".format(image_name, image_tag, exc)
-        )
-    return "{}:{}".format(image_name, image_tag)
-
-
-@pytest.fixture(scope="module")
-def ssh_docker_container(
-    salt_factories, docker_client, ssh_port, ssh_keys, docker_image_name
-):
+def ssh_docker_container(salt_factories, ssh_port, ssh_keys):
     """
     Temporary docker container with python 3.6 and ssh enabled
     """
     container = salt_factories.get_container(
         random_string("ssh-py_versions-"),
-        docker_image_name,
-        docker_client=docker_client,
+        "dwoz1/cicd:ssh",
         check_ports=[ssh_port],
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
         container_run_kwargs={
-            "ports": {"22/tcp": ssh_port},
-            "environment": {"SSH_USER": "centos", "SSH_AUTHORIZED_KEYS": ssh_keys.pub},
+            "ports": {
+                "22/tcp": ssh_port,
+            },
+            "environment": {
+                "SSH_USER": "centos",
+                "SSH_AUTHORIZED_KEYS": ssh_keys.pub,
+            },
             "cap_add": "IPC_LOCK",
         },
     )
@@ -161,6 +140,6 @@ def test_py36_target(salt_ssh_cli):
     Test that a python >3.6 master can salt ssh to a <3.6 target
     """
     ret = salt_ssh_cli.run("test.ping", minion_tgt="pyvertest")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data is True

@@ -29,15 +29,15 @@ def test_state_event(salt_run_cli, salt_cli, salt_minion):
 
         while not runner_future.done():
             ret = salt_cli.run("--static", "test.ping", minion_tgt=salt_minion.id)
-            assert ret.exitcode == 0
-            assert ret.json is True
+            assert ret.returncode == 0
+            assert ret.data is True
 
         # Wait for the runner command which should now have data to return to us
         exc = runner_future.exception()
         if exc:
             raise exc
         ret = runner_future.result()
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         # We have to parse the JSON ourselves since we have regular output mixed with JSON output
         data = None
         for line in ret.stdout.splitlines():
@@ -90,8 +90,8 @@ def test_jid_in_ret_event(
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
         ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
-        assert ret.exitcode == 0
-        orch_job_data = ret.json
+        assert ret.returncode == 0
+        orch_job_data = ret.data
         for step_data in orch_job_data["data"][salt_master.id].values():
             assert "__jid__" in step_data
 
@@ -147,8 +147,8 @@ def test_parallel_orchestrations(
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
         ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
-        assert ret.exitcode == 0
-        orch_job_data = ret.json
+        assert ret.returncode == 0
+        orch_job_data = ret.data
         for step_data in orch_job_data["data"][salt_master.id].values():
             # we expect each duration to be greater than 10s
             assert step_data["duration"] > 10 * 1000
@@ -201,8 +201,8 @@ def test_orchestration_soft_kill(
 
         # Without soft kill, the orchestration will fail because stage_two is set to fail
         ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
-        assert ret.exitcode == 1
-        for state_data in ret.json["data"][salt_master.id].values():
+        assert ret.returncode == 1
+        for state_data in ret.data["data"][salt_master.id].values():
             if state_data["__id__"] == "stage_two":
                 assert state_data["result"] is False
             else:
@@ -212,10 +212,10 @@ def test_orchestration_soft_kill(
         # and 'stage_two' will not be present in the returned data
         jid = salt.utils.jid.gen_jid(salt_master.config)
         ret = salt_run_cli.run("state.soft_kill", jid, "stage_two")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
-        assert ret.exitcode == 0
-        for state_data in ret.json["data"][salt_master.id].values():
+        assert ret.returncode == 0
+        for state_data in ret.data["data"][salt_master.id].values():
             if state_data["__id__"] == "stage_two":
                 pytest.fail("'stage_two' was present in the ochestration return data")
             else:
@@ -262,8 +262,8 @@ def test_orchestration_with_pillar_dot_items(
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
         ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
-        assert ret.exitcode == 0
-        for state_data in ret.json["data"][salt_master.id].values():
+        assert ret.returncode == 0
+        for state_data in ret.data["data"][salt_master.id].values():
             # Each state should be successful
             assert state_data["result"] is True
 
@@ -315,20 +315,20 @@ def test_orchestration_onchanges_and_prereq(
         ret = salt_run_cli.run(
             "--jid", jid1, "state.orchestrate", "test-orch", test=True
         )
-        assert ret.exitcode == 0
-        ret1 = ret.json
+        assert ret.returncode == 0
+        ret1 = ret.data
 
         # Now run without test mode to actually create the file
         ret = salt_run_cli.run("state.orchestrate", "test-orch")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         # Run again in test mode. Since there were no changes, the requisites should not fire.
         jid2 = salt.utils.jid.gen_jid(salt_master.config)
         ret = salt_run_cli.run(
             "--jid", jid2, "state.orchestrate", "test-orch", test=True
         )
-        assert ret.exitcode == 0
-        ret2 = ret.json
+        assert ret.returncode == 0
+        ret2 = ret.data
 
         # The first time through, all three states should have a None result
         for state_data in ret1["data"][salt_master.id].values():
