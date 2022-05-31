@@ -8,7 +8,7 @@ pytestmark = [
 ]
 
 
-def test_orchestrate_output(salt_run_cli, salt_minion, base_env_state_tree_root_dir):
+def test_orchestrate_output(salt_run_cli, salt_minion, salt_master):
     """
     Ensure the orchestrate runner outputs useful state data.
 
@@ -40,11 +40,9 @@ def test_orchestrate_output(salt_run_cli, salt_minion, base_env_state_tree_root_
       module.run:
         - name: test.ping
     """
-    with pytest.helpers.temp_file(
-        "orch-test.sls", sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "simple-ping.sls", simple_ping_sls, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file(
+        "orch-test.sls", sls_contents
+    ), salt_master.state_tree.base.temp_file("simple-ping.sls", simple_ping_sls):
         ret = salt_run_cli.run("--out=highstate", "state.orchestrate", "orch-test")
         assert ret.returncode == 0
         ret_output = ret.stdout.splitlines()
@@ -60,7 +58,7 @@ def test_orchestrate_output(salt_run_cli, salt_minion, base_env_state_tree_root_
 
 
 def test_orchestrate_state_output_with_salt_function(
-    salt_run_cli, salt_minion, base_env_state_tree_root_dir
+    salt_run_cli, salt_minion, salt_master
 ):
     """
     Ensure that orchestration produces the correct output with salt.function.
@@ -87,9 +85,7 @@ def test_orchestrate_state_output_with_salt_function(
     """.format(
         minion_id=salt_minion.id
     )
-    with pytest.helpers.temp_file(
-        "orch-function-test.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("orch-function-test.sls", sls_contents):
         ret = salt_run_cli.run(
             "--out=highstate", "state.orchestrate", "orch-function-test"
         )
@@ -102,9 +98,7 @@ def test_orchestrate_state_output_with_salt_function(
         assert "True" in ret_output
 
 
-def test_orchestrate_nested(
-    salt_run_cli, salt_minion, base_env_state_tree_root_dir, tmp_path
-):
+def test_orchestrate_nested(salt_run_cli, salt_minion, salt_master, tmp_path):
     """
     test salt-run state.orchestrate and failhard with nested orchestration
     """
@@ -134,19 +128,15 @@ def test_orchestrate_nested(
         salt_minion.id, testfile
     )
 
-    with pytest.helpers.temp_file(
-        "nested/inner.sls", inner_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "nested/outer.sls", outer_sls, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file(
+        "nested/inner.sls", inner_sls
+    ), salt_master.state_tree.base.temp_file("nested/outer.sls", outer_sls):
         ret = salt_run_cli.run("state.orchestrate", "nested.outer")
         assert ret.returncode != 0
         assert testfile.exists() is False
 
 
-def test_orchestrate_with_mine(
-    salt_run_cli, salt_minion, salt_master, base_env_state_tree_root_dir
-):
+def test_orchestrate_with_mine(salt_run_cli, salt_minion, salt_master):
     """
     test salt-run state.orchestrate with mine.get call in sls
     """
@@ -167,9 +157,7 @@ def test_orchestrate_with_mine(
     ret = salt_run_cli.run("mine.update", salt_minion.id)
     assert ret.returncode == 0
 
-    with pytest.helpers.temp_file(
-        "orch/mine.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("orch/mine.sls", sls_contents):
         ret = salt_run_cli.run("state.orchestrate", "orch.mine")
         assert ret.returncode == 0
         assert ret.data
@@ -179,9 +167,7 @@ def test_orchestrate_with_mine(
             assert state_data["changes"]["ret"][salt_minion.id] is True
 
 
-def test_orchestrate_state_and_function_failure(
-    salt_run_cli, salt_master, salt_minion, base_env_state_tree_root_dir
-):
+def test_orchestrate_state_and_function_failure(salt_run_cli, salt_master, salt_minion):
     """
     Ensure that returns from failed minions are in the changes dict where
     they belong, so they can be programmatically analyzed.
@@ -207,10 +193,10 @@ def test_orchestrate_state_and_function_failure(
     test fail with changes:
       test.fail_with_changes
     """
-    with pytest.helpers.temp_file(
-        "orch/issue43204/init.sls", init_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "orch/issue43204/fail_with_changes.sls", fail_sls, base_env_state_tree_root_dir
+    with salt_master.state_tree.base.temp_file(
+        "orch/issue43204/init.sls", init_sls
+    ), salt_master.state_tree.base.temp_file(
+        "orch/issue43204/fail_with_changes.sls", fail_sls
     ):
         ret = salt_run_cli.run("saltutil.sync_modules")
         assert ret.returncode == 0
@@ -258,7 +244,7 @@ def test_orchestrate_state_and_function_failure(
 
 
 def test_orchestrate_salt_function_return_false_failure(
-    salt_run_cli, salt_minion, salt_master, base_env_state_tree_root_dir
+    salt_run_cli, salt_minion, salt_master
 ):
     """
     Ensure that functions that only return False in the return
@@ -274,9 +260,7 @@ def test_orchestrate_salt_function_return_false_failure(
     """.format(
         salt_minion.id
     )
-    with pytest.helpers.temp_file(
-        "orch/issue30367.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("orch/issue30367.sls", sls_contents):
         ret = salt_run_cli.run("saltutil.sync_modules")
         assert ret.returncode == 0
 
@@ -292,9 +276,7 @@ def test_orchestrate_salt_function_return_false_failure(
     assert func_ret == {"ret": {salt_minion.id: False}}
 
 
-def test_orchestrate_target_exists(
-    salt_run_cli, salt_minion, salt_master, base_env_state_tree_root_dir
-):
+def test_orchestrate_target_exists(salt_run_cli, salt_minion, salt_master):
     """
     test orchestration when target exists while using multiple states
     """
@@ -323,12 +305,12 @@ def test_orchestrate_target_exists(
     always_true:
       test.succeed_without_changes
     """
-    with pytest.helpers.temp_file(
-        "orch/target-exists.sls", sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "orch/target-test.sls", target_test_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "core.sls", target_test_sls, base_env_state_tree_root_dir
+    with salt_master.state_tree.base.temp_file(
+        "orch/target-exists.sls", sls_contents
+    ), salt_master.state_tree.base.temp_file(
+        "orch/target-test.sls", target_test_sls
+    ), salt_master.state_tree.base.temp_file(
+        "core.sls", target_test_sls
     ):
         ret = salt_run_cli.run("state.orchestrate", "orch.target-exists")
         assert ret.returncode == 0
@@ -352,9 +334,7 @@ def test_orchestrate_target_exists(
     assert not to_check
 
 
-def test_orchestrate_target_does_not_exist(
-    salt_run_cli, salt_minion, salt_master, base_env_state_tree_root_dir
-):
+def test_orchestrate_target_does_not_exist(salt_run_cli, salt_minion, salt_master):
     """
     test orchestration when target does not exist while using multiple states
     """
@@ -383,12 +363,12 @@ def test_orchestrate_target_does_not_exist(
     always_true:
       test.succeed_without_changes
     """
-    with pytest.helpers.temp_file(
-        "orch/target-does-not-exist.sls", sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "orch/target-test.sls", target_test_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "core.sls", target_test_sls, base_env_state_tree_root_dir
+    with salt_master.state_tree.base.temp_file(
+        "orch/target-does-not-exist.sls", sls_contents
+    ), salt_master.state_tree.base.temp_file(
+        "orch/target-test.sls", target_test_sls
+    ), salt_master.state_tree.base.temp_file(
+        "core.sls", target_test_sls
     ):
         ret = salt_run_cli.run("state.orchestrate", "orch.target-does-not-exist")
         assert ret.returncode != 0
@@ -413,7 +393,7 @@ def test_orchestrate_target_does_not_exist(
     assert not to_check
 
 
-def test_orchestrate_retcode(salt_run_cli, salt_master, base_env_state_tree_root_dir):
+def test_orchestrate_retcode(salt_run_cli, salt_master):
     """
     Test orchestration with nonzero retcode set in __context__
     """
@@ -434,9 +414,7 @@ def test_orchestrate_retcode(salt_run_cli, salt_master, base_env_state_tree_root
       salt.wheel:
         - name: runtests_helpers.failure
     """
-    with pytest.helpers.temp_file(
-        "orch/retcode.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("orch/retcode.sls", sls_contents):
         ret = salt_run_cli.run("saltutil.sync_runners")
         assert ret.returncode == 0
         ret = salt_run_cli.run("saltutil.sync_wheel")
@@ -466,7 +444,7 @@ def test_orchestrate_retcode(salt_run_cli, salt_master, base_env_state_tree_root
 
 
 def test_orchestrate_batch_with_failhard_error(
-    salt_run_cli, salt_master, salt_minion, base_env_state_tree_root_dir, tmp_path
+    salt_run_cli, salt_master, salt_minion, tmp_path
 ):
     """
     test orchestration properly stops with failhard and batch.
@@ -489,9 +467,9 @@ def test_orchestrate_batch_with_failhard_error(
     """.format(
         testfile
     )
-    with pytest.helpers.temp_file(
-        "orch/batch.sls", sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file("fail.sls", fail_sls, base_env_state_tree_root_dir):
+    with salt_master.state_tree.base.temp_file(
+        "orch/batch.sls", sls_contents
+    ), salt_master.state_tree.base.temp_file("fail.sls", fail_sls):
         ret = salt_run_cli.run("state.orchestrate", "orch.batch")
         assert ret.returncode != 0
 
@@ -509,7 +487,6 @@ def test_orchestrate_subset(
     salt_master,
     salt_minion,
     salt_sub_minion,
-    base_env_state_tree_root_dir,
 ):
     """
     test orchestration state using subset
@@ -526,9 +503,9 @@ def test_orchestrate_subset(
       test.succeed_without_changes:
         - name: test
     """
-    with pytest.helpers.temp_file(
-        "orch/subset.sls", sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file("test.sls", test_sls, base_env_state_tree_root_dir):
+    with salt_master.state_tree.base.temp_file(
+        "orch/subset.sls", sls_contents
+    ), salt_master.state_tree.base.temp_file("test.sls", test_sls):
         ret = salt_run_cli.run("state.orchestrate", "orch.subset")
         assert ret.returncode == 0
 

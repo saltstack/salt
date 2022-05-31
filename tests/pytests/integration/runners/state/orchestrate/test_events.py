@@ -51,9 +51,7 @@ def test_state_event(salt_run_cli, salt_cli, salt_minion):
         assert salt_minion.id in data["minions"]
 
 
-def test_jid_in_ret_event(
-    salt_run_cli, salt_master, salt_minion, event_listener, base_env_state_tree_root_dir
-):
+def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener):
     """
     Test to confirm that the ret event for the orchestration contains the
     jid for the jobs spawned.
@@ -81,11 +79,9 @@ def test_jid_in_ret_event(
     """.format(
         minion_id=salt_minion.id
     )
-    with pytest.helpers.temp_file(
-        "test-state.sls", test_state_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "test-orch.sls", test_orch_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file(
+        "test-state.sls", test_state_contents
+    ), salt_master.state_tree.base.temp_file("test-orch.sls", test_orch_contents):
         start_time = time.time()
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
@@ -113,7 +109,7 @@ def test_jid_in_ret_event(
     reason="The '__low__' global is not populated on spawning platforms"
 )
 def test_parallel_orchestrations(
-    salt_run_cli, salt_master, salt_minion, event_listener, base_env_state_tree_root_dir
+    salt_run_cli, salt_master, salt_minion, event_listener
 ):
     """
     Test to confirm that the parallel state requisite works in orch
@@ -140,9 +136,7 @@ def test_parallel_orchestrations(
             - require:
                 - module: sleep 1
     """
-    with pytest.helpers.temp_file(
-        "test-orch.sls", test_orch_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("test-orch.sls", test_orch_contents):
         start_time = time.time()
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
@@ -184,9 +178,7 @@ def test_parallel_orchestrations(
         assert duration < 19 * 10 / 2
 
 
-def test_orchestration_soft_kill(
-    salt_run_cli, salt_master, base_env_state_tree_root_dir
-):
+def test_orchestration_soft_kill(salt_run_cli, salt_master):
     sls_contents = """
     stage_one:
         test.succeed_without_changes
@@ -194,9 +186,7 @@ def test_orchestration_soft_kill(
     stage_two:
         test.fail_without_changes
     """
-    with pytest.helpers.temp_file(
-        "test-orch.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("test-orch.sls", sls_contents):
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
         # Without soft kill, the orchestration will fail because stage_two is set to fail
@@ -222,9 +212,7 @@ def test_orchestration_soft_kill(
                 assert state_data["result"] is True
 
 
-def test_orchestration_with_pillar_dot_items(
-    salt_run_cli, salt_master, base_env_state_tree_root_dir
-):
+def test_orchestration_with_pillar_dot_items(salt_run_cli, salt_master):
     """
     Test to confirm when using a state file that includes other state file, if
     one of those state files includes pillar related functions that will not
@@ -250,14 +238,14 @@ def test_orchestration_with_pillar_dot_items(
     placeholder_three:
       test.succeed_without_changes
     """
-    with pytest.helpers.temp_file(
-        "test-orch.sls", main_sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "one.sls", one_sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "two.sls", two_sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "three.sls", three_sls_contents, base_env_state_tree_root_dir
+    with salt_master.state_tree.base.temp_file(
+        "test-orch.sls", main_sls_contents
+    ), salt_master.state_tree.base.temp_file(
+        "one.sls", one_sls_contents
+    ), salt_master.state_tree.base.temp_file(
+        "two.sls", two_sls_contents
+    ), salt_master.state_tree.base.temp_file(
+        "three.sls", three_sls_contents
     ):
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
@@ -269,7 +257,7 @@ def test_orchestration_with_pillar_dot_items(
 
 
 def test_orchestration_onchanges_and_prereq(
-    salt_run_cli, salt_master, salt_minion, base_env_state_tree_root_dir, tmp_path
+    salt_run_cli, salt_master, salt_minion, tmp_path
 ):
     sls_contents = """
     manage_a_file:
@@ -304,11 +292,9 @@ def test_orchestration_onchanges_and_prereq(
         orch_test_file
     )
 
-    with pytest.helpers.temp_file(
-        "test-orch.sls", sls_contents, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "orch-req-test.sls", req_sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file(
+        "test-orch.sls", sls_contents
+    ), salt_master.state_tree.base.temp_file("orch-req-test.sls", req_sls_contents):
         jid1 = salt.utils.jid.gen_jid(salt_master.config)
 
         # Run in test mode, will describe what changes would occur
