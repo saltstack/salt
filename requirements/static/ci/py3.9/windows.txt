@@ -18,7 +18,9 @@ attrs==20.3.0
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
+    #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 boto3==1.17.80 ; python_version >= "3.6"
@@ -208,6 +210,8 @@ psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
@@ -246,14 +250,22 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories==1.0.0rc16 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.2.0
+pytest-shell-utilities==1.4.0
     # via pytest-salt-factories
+pytest-skip-markers==1.2.0
+    # via
+    #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
+pytest-system-statistics==1.0.2
+    # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
@@ -265,8 +277,10 @@ pytest==6.1.2 ; python_version <= "3.9"
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-subtests
+    #   pytest-system-statistics
     #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.1
@@ -369,6 +383,10 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+typing-extensions==4.2.0
+    # via
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 urllib3==1.26.6
     # via
     #   botocore
