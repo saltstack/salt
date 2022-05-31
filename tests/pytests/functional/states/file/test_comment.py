@@ -43,12 +43,12 @@ def test_issue_62121(file, source):
     cmt_regex = r"^#port\s*=.+"
     cmt_cmp = re.compile(cmt_regex, re.MULTILINE)
 
-    with salt.utils.files.fopen(source) as _fp:
+    with salt.utils.files.fopen(str(source)) as _fp:
         assert reg_cmp.findall(_fp.read())
 
     file.comment(name=str(source), regex=regex)
 
-    with salt.utils.files.fopen(source) as _fp:
+    with salt.utils.files.fopen(str(source)) as _fp:
         assert not reg_cmp.findall(_fp.read())
         _fp.seek(0)
         assert cmt_cmp.findall(_fp.read())
