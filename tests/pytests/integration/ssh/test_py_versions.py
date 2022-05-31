@@ -161,6 +161,8 @@ def test_py36_target(salt_ssh_cli):
     Test that a python >3.6 master can salt ssh to a <3.6 target
     """
     ret = salt_ssh_cli.run("test.ping", minion_tgt="pyvertest")
+    if "kex_exchange_identification" in ret.stderr:
+        pytest.skip("Container reset ssh connection, skipping for now")
     assert ret.exitcode == 0
     assert ret.json
     assert ret.json is True
