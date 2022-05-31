@@ -8,6 +8,7 @@ import time
 
 import pytest
 import salt.utils.jid
+import salt.utils.platform
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -105,6 +106,14 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
                 assert "__jid__" in job_data
 
 
+def _retry_on_freebsd(*_):
+    if salt.utils.platform.is_freebsd() is False:
+        return False
+    return True
+
+
+# This test is flaky on FreeBSD
+@pytest.mark.flaky(max_runs=4, rerun_filter=_retry_on_freebsd)
 @pytest.mark.skip_on_spawning_platform(
     reason="The '__low__' global is not populated on spawning platforms"
 )
