@@ -6,39 +6,16 @@ from numbers import Number
 from xml.etree import ElementTree
 
 import pytest
-from saltfactories.utils import cli_scripts
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
-
-@pytest.fixture(scope="module")
-def docker_client():
-    urllib3_connectionpool_handler = logging.getLogger("urllib3.connectionpool")
-    urllib3_connectionpool_handler_level = urllib3_connectionpool_handler.level
-    urllib3_connectionpool_handler.setLevel(logging.INFO)
-    try:
-        client = docker.from_env()
-        connectable = SaltVirtMinionContainerFactory.client_connectable(client)
-        if connectable is not True:  # pragma: no cover
-            pytest.skip(connectable)
-        client.images.pull("quay.io/rst0git/virt-minion")
-        yield client
-    finally:
-        urllib3_connectionpool_handler.setLevel(urllib3_connectionpool_handler_level)
-
-
-@pytest.fixture(scope="module")
-def salt_minion_script_path(salt_factories):
-    return cli_scripts.generate_script(
-        salt_factories.scripts_dir,
-        "salt-minion",
-        code_dir=salt_factories.code_dir,
-        inject_coverage=salt_factories.inject_coverage,
-        inject_sitecustomize=salt_factories.inject_sitecustomize,
-    )
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -53,46 +30,32 @@ def virt_minion_1_id():
 
 @pytest.fixture(scope="module")
 def virt_minion_0(
-    salt_factories,
     salt_master,
-    docker_client,
-    salt_minion_script_path,
     virt_minion_0_id,
     virt_minion_1_id,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon(virt_minion_0_id)
     config_defaults = {
-        "root_dir": str(root_dir),
         "id": virt_minion_0_id,
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
     config_overrides = {"user": "root"}
-    config = SaltVirtMinionContainerFactory.configure(
-        factories_manager=salt_factories,
-        daemon_id=virt_minion_0_id,
-        root_dir=root_dir,
-        defaults=config_defaults,
-        overrides=config_overrides,
-        master=salt_master,
-    )
-    salt_factories.final_minion_config_tweaks(config)
-    loaded_config = SaltVirtMinionContainerFactory.write_config(config)
-    factory = SaltVirtMinionContainerFactory(
+    factory = salt_master.salt_minion_daemon(
+        virt_minion_0_id,
         name=virt_minion_0_id,
         image="quay.io/rst0git/virt-minion",
-        docker_client=docker_client,
-        config=loaded_config,
-        script_name=salt_minion_script_path,
-        start_timeout=60,
-        factories_manager=salt_factories,
-        event_listener=salt_factories.event_listener,
+        factory_class=SaltVirtMinionContainerFactory,
+        defaults=config_defaults,
+        overrides=config_overrides,
         container_run_kwargs={
             "extra_hosts": {
                 virt_minion_0_id: "127.0.0.1",
                 virt_minion_1_id: "127.0.0.1",
             }
         },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
@@ -103,46 +66,32 @@ def virt_minion_0(
 
 @pytest.fixture(scope="module")
 def virt_minion_1(
-    salt_factories,
     salt_master,
-    docker_client,
-    salt_minion_script_path,
     virt_minion_0_id,
     virt_minion_1_id,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon(virt_minion_1_id)
     config_defaults = {
-        "root_dir": str(root_dir),
         "id": virt_minion_1_id,
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
     config_overrides = {"user": "root"}
-    config = SaltVirtMinionContainerFactory.configure(
-        factories_manager=salt_factories,
-        daemon_id=virt_minion_1_id,
-        root_dir=root_dir,
-        defaults=config_defaults,
-        overrides=config_overrides,
-        master=salt_master,
-    )
-    salt_factories.final_minion_config_tweaks(config)
-    loaded_config = SaltVirtMinionContainerFactory.write_config(config)
-    factory = SaltVirtMinionContainerFactory(
+    factory = salt_master.salt_minion_daemon(
+        virt_minion_1_id,
         name=virt_minion_1_id,
         image="quay.io/rst0git/virt-minion",
-        docker_client=docker_client,
-        config=loaded_config,
-        script_name=salt_minion_script_path,
-        start_timeout=60,
-        factories_manager=salt_factories,
-        event_listener=salt_factories.event_listener,
+        factory_class=SaltVirtMinionContainerFactory,
+        defaults=config_defaults,
+        overrides=config_overrides,
         container_run_kwargs={
             "extra_hosts": {
                 virt_minion_0_id: "127.0.0.1",
                 virt_minion_1_id: "127.0.0.1",
             }
         },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
@@ -156,8 +105,6 @@ def salt_cli(salt_master, virt_minion_0, virt_minion_1):
     return salt_master.salt_cli()
 
 
-@pytest.mark.slow_test
-@pytest.mark.skip_if_binaries_missing("docker")
 class TestVirtTest:
     """
     Test virt routines

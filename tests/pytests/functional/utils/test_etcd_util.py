@@ -4,7 +4,6 @@ import threading
 import time
 
 import pytest
-from pytestshellutils.utils import ports
 from salt.utils.etcd_util import (
     HAS_ETCD_V2,
     HAS_ETCD_V3,
@@ -25,24 +24,15 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
-def etcd_port():
-    return ports.get_unused_localhost_port()
-
-
 # TODO: Use our own etcd image to avoid reliance on a third party
-@pytest.fixture(scope="module", autouse=True)
-def etcd_container(salt_factories, etcd_port):
+@pytest.fixture(scope="module")
+def etcd_apiv2_container(salt_factories):
     container = salt_factories.get_container(
         random_string("etcd-server-"),
         image_name="elcolio/etcd",
-        check_ports=[etcd_port],
         container_run_kwargs={
-            "environment": {
-                "ALLOW_NONE_AUTHENTICATION": "yes",
-                "ETCD_ENABLE_V2": "true",
-            },
-            "ports": {"2379/tcp": etcd_port},
+            "environment": {"ALLOW_NONE_AUTHENTICATION": "yes"},
+            "ports": {"2379/tcp": None},
         },
         pull_before_start=True,
         skip_on_pull_failure=True,
@@ -59,6 +49,11 @@ def use_v2(request):
     if not request.param and not HAS_ETCD_V3:
         pytest.skip("No etcd3 library installed")
     return request.param
+
+
+@pytest.fixture(scope="module")
+def etcd_port(etcd_apiv2_container):
+    return etcd_apiv2_container.get_host_port_binding(2379, protocol="tcp", ipv6=False)
 
 
 @pytest.fixture(scope="module")

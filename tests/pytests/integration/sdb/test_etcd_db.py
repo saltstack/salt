@@ -3,8 +3,14 @@ Integration tests for the etcd modules
 """
 
 import logging
+import time
 
 import pytest
+import requests
+import requests.exceptions
+
+etcd = pytest.importorskip("etcd")
+
 
 log = logging.getLogger(__name__)
 
@@ -12,6 +18,40 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
+
+
+def check_etcd_responsive(timeout_at, etcd_port):
+    sleeptime = 1
+    while time.time() <= timeout_at:
+        try:
+            response = requests.get("http://localhost:{}/health".format(etcd_port))
+            if response.json()["health"]:
+                break
+        except requests.exceptions.ConnectionError:
+            pass
+        time.sleep(sleeptime)
+        sleeptime *= 2
+    else:
+        return False
+    return True
+
+
+def check_successful_salt_interaction(timeout_at, salt_call_cli):
+    sleeptime = 1
+    while time.time() <= timeout_at:
+        try:
+            ret = salt_call_cli.run(
+                "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/fnord", value="bar"
+            )
+            if ret.returncode == 0:
+                break
+        except etcd.EtcdConnectionFailed:
+            pass
+        time.sleep(sleeptime)
+        sleeptime *= 2
+    else:
+        return False
+    return True
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -34,19 +74,9 @@ def etc_docker_container(salt_factories, salt_call_cli, sdb_etcd_port):
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    factory.container_start_check(check_etcd_responsive, sdb_etcd_port)
+    factory.container_start_check(check_successful_salt_interaction, salt_call_cli)
     with factory.started() as container:
-        tries_left = 10
-        while tries_left > 0:
-            tries_left -= 1
-            ret = salt_call_cli.run(
-                "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/fnord", value="bar"
-            )
-            if ret.returncode == 0:
-                break
-        else:
-            pytest.skip(
-                "Failed to actually connect to etcd inside the running container - skipping test today"
-            )
         yield container
 
 

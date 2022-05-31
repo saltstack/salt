@@ -24,8 +24,8 @@ def salt_cli_wrapper(salt_minion, salt_cli, mysql_container):
         return salt_cli.run(
             *command,
             minion_tgt=salt_minion.id,
-            connection_user=mysql_container.mysql_user,
-            connection_pass=mysql_container.mysql_passwd,
+            connection_user=mysql_container.mysql_root_user,
+            connection_pass=mysql_container.mysql_root_passwd,
             connection_db="mysql",
             connection_port=mysql_container.mysql_port,
             **kwargs
@@ -39,8 +39,8 @@ def salt_call_cli_wrapper(salt_call_cli, mysql_container):
     def run_command(*command, **kwargs):
         return salt_call_cli.run(
             *command,
-            connection_user=mysql_container.mysql_user,
-            connection_pass=mysql_container.mysql_passwd,
+            connection_user=mysql_container.mysql_root_user,
+            connection_pass=mysql_container.mysql_root_passwd,
             connection_db="mysql",
             connection_port=mysql_container.mysql_port,
             **kwargs
