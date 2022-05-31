@@ -106,14 +106,8 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
                 assert "__jid__" in job_data
 
 
-def _retry_on_freebsd(*_):
-    if salt.utils.platform.is_freebsd() is False:
-        return False
-    return True
-
-
 # This test is flaky on FreeBSD
-@pytest.mark.flaky(max_runs=4, rerun_filter=_retry_on_freebsd)
+@pytest.mark.skip_on_freebsd
 @pytest.mark.skip_on_spawning_platform(
     reason="The '__low__' global is not populated on spawning platforms"
 )
@@ -149,10 +143,7 @@ def test_parallel_orchestrations(
         start_time = time.time()
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
-        salt_run_cli_args = ["--jid", jid, "state.orchestrate", "test-orch"]
-        if salt.utils.platform.is_freebsd() is True:
-            salt_run_cli_args.insert(0, "--timeout=220")
-        ret = salt_run_cli.run(*salt_run_cli_args)
+        ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
         assert ret.returncode == 0
         orch_job_data = ret.data
         for step_data in orch_job_data["data"][salt_master.id].values():
