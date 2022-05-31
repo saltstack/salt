@@ -17,7 +17,7 @@ def configure_loader_modules():
 
 @pytest.fixture
 def instance():
-    return create_autospec(etcd_util.EtcdClient)
+    return create_autospec(etcd_util.EtcdBase)
 
 
 @pytest.fixture
