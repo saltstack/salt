@@ -5,7 +5,6 @@ Integration tests for the zookeeper states
 import logging
 
 import pytest
-from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 pytest.importorskip("kazoo")
@@ -17,11 +16,6 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
-
-
-@pytest.fixture(scope="module")
-def zookeeper_port():
-    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
@@ -62,22 +56,26 @@ def minion_config_overrides(zookeeper_port):
 
 
 @pytest.fixture(scope="module")
-def zookeeper_container(salt_factories, zookeeper_port):
+def zookeeper_container(salt_factories):
     container = salt_factories.get_container(
         random_string("zookeeper-"),
         "zookeeper",
-        check_ports=[zookeeper_port],
+        container_run_kwargs={
+            "ports": {
+                "2181/tcp": None,
+            }
+        },
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
-        container_run_kwargs={
-            "ports": {
-                "2181/tcp": zookeeper_port,
-            }
-        },
     )
     with container.started() as factory:
         yield factory
+
+
+@pytest.fixture(scope="module")
+def zookeeper_port(zookeeper_container):
+    return zookeeper_container.get_host_port_binding(2181, protocol="tcp", ipv6=False)
 
 
 @pytest.fixture(scope="module")

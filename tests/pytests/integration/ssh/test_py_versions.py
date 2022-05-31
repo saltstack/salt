@@ -6,7 +6,6 @@ import shutil
 import subprocess
 
 import pytest
-from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 pytest.importorskip("docker")
@@ -64,11 +63,34 @@ def ssh_keys(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def ssh_port():
+def ssh_docker_container(salt_factories, ssh_keys):
     """
-    Temporary ssh port fixture
+    Temporary docker container with python 3.6 and ssh enabled
     """
-    return ports.get_unused_localhost_port()
+    container = salt_factories.get_container(
+        random_string("ssh-py_versions-"),
+        "dwoz1/cicd:ssh",
+        container_run_kwargs={
+            "ports": {
+                "22/tcp": None,
+            },
+            "environment": {
+                "SSH_USER": "centos",
+                "SSH_AUTHORIZED_KEYS": ssh_keys.pub,
+            },
+            "cap_add": "IPC_LOCK",
+        },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
+    )
+    with container.started() as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def ssh_port(ssh_docker_container):
+    return ssh_docker_container.get_host_port_binding(22, protocol="tcp")
 
 
 @pytest.fixture(scope="module")
@@ -92,33 +114,6 @@ def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
         "py_versions_roster", roster, salt_master.config_dir
     ) as roster_file:
         yield roster_file
-
-
-@pytest.fixture(scope="module")
-def ssh_docker_container(salt_factories, ssh_port, ssh_keys):
-    """
-    Temporary docker container with python 3.6 and ssh enabled
-    """
-    container = salt_factories.get_container(
-        random_string("ssh-py_versions-"),
-        "dwoz1/cicd:ssh",
-        check_ports=[ssh_port],
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
-        container_run_kwargs={
-            "ports": {
-                "22/tcp": ssh_port,
-            },
-            "environment": {
-                "SSH_USER": "centos",
-                "SSH_AUTHORIZED_KEYS": ssh_keys.pub,
-            },
-            "cap_add": "IPC_LOCK",
-        },
-    )
-    with container.started() as factory:
-        yield factory
 
 
 @pytest.fixture(scope="module")

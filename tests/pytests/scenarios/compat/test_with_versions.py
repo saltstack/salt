@@ -19,9 +19,13 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.skipif(
-    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
-)
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker"),
+    pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+    ),
+]
 
 
 DOCKERFILE = """
