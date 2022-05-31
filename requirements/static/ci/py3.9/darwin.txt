@@ -736,7 +736,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==6.1.2 ; python_version <= "3.9"
+pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
@@ -870,9 +870,9 @@ textfsm==1.1.0
 timelib==0.2.5
     # via -r requirements/darwin.txt
 toml==0.10.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   pytest
+    # via -r requirements/static/ci/common.in
+tomli==2.0.1
+    # via pytest
 transitions==0.8.1
     # via junos-eznc
 typing-extensions==4.2.0

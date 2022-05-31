@@ -752,7 +752,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==6.1.2 ; python_version <= "3.9"
+pytest==6.1.2 ; python_version < "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
