@@ -7,9 +7,9 @@ import time
 import pytest
 import salt.cache
 import salt.loader
+from pytestshellutils.utils import ports
 from salt.exceptions import SaltCacheError
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.mock import MagicMock, patch
 
 docker = pytest.importorskip("docker")
@@ -42,17 +42,17 @@ class Timer:
 
 @pytest.fixture(scope="module")
 def etcd_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def redis_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def consul_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 # GIVE ME FIXTURES ON FIXTURES NOW
@@ -60,62 +60,62 @@ def consul_port():
 
 @pytest.fixture(scope="module")
 def mysql_5_6_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mysql_5_7_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mysql_8_0_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mariadb_10_1_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mariadb_10_2_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mariadb_10_3_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mariadb_10_4_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def mariadb_10_5_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def percona_5_5_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def percona_5_6_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def percona_5_7_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
 def percona_8_0_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 # TODO: We should probably be building our own etcd docker image - fine to base it off of this one (or... others) -W. Werner, 2021-07-27

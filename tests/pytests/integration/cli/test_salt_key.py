@@ -63,13 +63,13 @@ def test_remove_key(salt_master, salt_key_cli):
     try:
         # Check Key
         ret = salt_key_cli.run("-p", min_name)
-        assert ret.exitcode == 0
-        assert "minions" in ret.json
-        assert min_name in ret.json["minions"]
-        assert "-----BEGIN PUBLIC KEY-----" in ret.json["minions"][min_name]
+        assert ret.returncode == 0
+        assert "minions" in ret.data
+        assert min_name in ret.data["minions"]
+        assert "-----BEGIN PUBLIC KEY-----" in ret.data["minions"][min_name]
         # Remove Key
         ret = salt_key_cli.run("-d", min_name, "-y")
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         # We can't load JSON because we print to stdout!
         # >>>>> STDOUT >>>>>
         # The following keys are going to be deleted:
@@ -84,8 +84,8 @@ def test_remove_key(salt_master, salt_key_cli):
         assert min_name in ret.stdout
         # Check Key
         ret = salt_key_cli.run("-p", min_name)
-        assert ret.exitcode == 0
-        assert ret.json == {}
+        assert ret.returncode == 0
+        assert ret.data == {}
     finally:
         if os.path.exists(key):
             os.unlink(key)
@@ -108,10 +108,10 @@ def test_remove_key_eauth(salt_key_cli, salt_master, saltdev_account):
     try:
         # Check Key
         ret = salt_key_cli.run("-p", min_name)
-        assert ret.exitcode == 0
-        assert "minions" in ret.json
-        assert min_name in ret.json["minions"]
-        assert "-----BEGIN PUBLIC KEY-----" in ret.json["minions"][min_name]
+        assert ret.returncode == 0
+        assert "minions" in ret.data
+        assert min_name in ret.data["minions"]
+        assert "-----BEGIN PUBLIC KEY-----" in ret.data["minions"][min_name]
         # Remove Key
         ret = salt_key_cli.run(
             "-d",
@@ -124,7 +124,7 @@ def test_remove_key_eauth(salt_key_cli, salt_master, saltdev_account):
             "--password",
             USERA_PWD,
         )
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         # We can't load JSON because we print to stdout!
         # >>>>> STDOUT >>>>>
         # The following keys are going to be deleted:
@@ -139,8 +139,8 @@ def test_remove_key_eauth(salt_key_cli, salt_master, saltdev_account):
         assert min_name in ret.stdout
         # Check Key
         ret = salt_key_cli.run("-p", min_name)
-        assert ret.exitcode == 0
-        assert ret.json == {}
+        assert ret.returncode == 0
+        assert ret.data == {}
     finally:
         if os.path.exists(key):
             os.unlink(key)
@@ -153,11 +153,11 @@ def test_list_accepted_args(salt_key_cli, key_type):
     """
     # Should not trigger any error
     ret = salt_key_cli.run("-l", key_type)
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     assert "error:" not in ret.stdout
     # Should throw an error now
     ret = salt_key_cli.run("-l", "foo-{}".format(key_type))
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "error:" in ret.stderr
 
 
@@ -166,14 +166,14 @@ def test_list_all(salt_key_cli, salt_minion, salt_sub_minion):
     test salt-key -L
     """
     ret = salt_key_cli.run("-L")
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     expected = {
         "minions_rejected": [],
         "minions_denied": [],
         "minions_pre": [],
         "minions": [salt_minion.id, salt_sub_minion.id],
     }
-    assert ret.json == expected
+    assert ret.data == expected
 
 
 def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
@@ -181,8 +181,8 @@ def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
     test salt-key -L --out=yaml
     """
     ret = salt_key_cli.run("-L", "--out=yaml")
-    assert ret.exitcode == 0
-    output = salt.utils.yaml.safe_load(ret.stdout)
+    assert ret.returncode == 0
+    output = salt.utils.yaml.safe_load(str(ret.stdout))
     expected = {
         "minions_rejected": [],
         "minions_denied": [],
@@ -197,7 +197,7 @@ def test_list_all_raw_out(salt_key_cli, salt_minion, salt_sub_minion):
     test salt-key -L --out=raw
     """
     ret = salt_key_cli.run("-L", "--out=raw")
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     output = ast.literal_eval(ret.stdout)
     expected = {
         "minions_rejected": [],
@@ -213,9 +213,9 @@ def test_list_acc(salt_key_cli, salt_minion, salt_sub_minion):
     test salt-key -l acc
     """
     ret = salt_key_cli.run("-l", "acc")
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     expected = {"minions": [salt_minion.id, salt_sub_minion.id]}
-    assert ret.json == expected
+    assert ret.data == expected
 
 
 @pytest.mark.skip_if_not_root
@@ -228,9 +228,9 @@ def test_list_acc_eauth(salt_key_cli, saltdev_account, salt_minion, salt_sub_min
     ret = salt_key_cli.run(
         "-l", "acc", "--eauth", "pam", "--username", USERA, "--password", USERA_PWD
     )
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     expected = {"minions": [salt_minion.id, salt_sub_minion.id]}
-    assert ret.json == expected
+    assert ret.data == expected
 
 
 @pytest.mark.skip_if_not_root
@@ -270,7 +270,7 @@ def test_list_acc_wrong_eauth(salt_key_cli):
         "--password",
         USERA_PWD,
     )
-    assert ret.exitcode == 0, ret
+    assert ret.returncode == 0, ret
     assert re.search(
         r"^The specified external authentication system \"wrongeauth\" is not"
         r" available\nAvailable eauth types: auto, .*",
@@ -283,14 +283,14 @@ def test_list_un(salt_key_cli):
     test salt-key -l un
     """
     ret = salt_key_cli.run("-l", "un")
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     expected = {"minions_pre": []}
-    assert ret.json == expected
+    assert ret.data == expected
 
 
 def test_keys_generation(salt_key_cli, tmp_path):
     ret = salt_key_cli.run("--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path))
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     try:
         key_names = ("minibar.pub", "minibar.pem")
         for fname in key_names:
@@ -305,7 +305,7 @@ def test_keys_generation_keysize_min(salt_key_cli, tmp_path):
     ret = salt_key_cli.run(
         "--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path), "--keysize", "1024"
     )
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "error: The minimum value for keysize is 2048" in ret.stderr
 
 
@@ -313,7 +313,7 @@ def test_keys_generation_keysize_max(salt_key_cli, tmp_path):
     ret = salt_key_cli.run(
         "--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path), "--keysize", "32769"
     )
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "error: The maximum value for keysize is 32768" in ret.stderr
 
 
@@ -331,7 +331,7 @@ def test_accept_bad_key(salt_master, salt_key_cli):
     try:
         # Check Key
         ret = salt_key_cli.run("-y", "-a", min_name)
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert "invalid key for {}".format(min_name) in ret.stderr
     finally:
         if os.path.exists(key):

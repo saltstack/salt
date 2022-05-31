@@ -40,32 +40,32 @@ def salt_call_cli_wrapper(salt_call_cli, mysql_container):
 
 def test_query(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.query", "mysql", "SELECT 1")
-    assert ret.json
-    assert ret.json["results"] == [["1"]]
+    assert ret.data
+    assert ret.data["results"] == [["1"]]
 
 
 def test_version(salt_call_cli_wrapper, mysql_container):
     ret = salt_call_cli_wrapper("mysql.version")
 
-    assert ret.json
-    assert mysql_container.mysql_version in ret.json
+    assert ret.data
+    assert mysql_container.mysql_version in ret.data
 
 
 def test_status(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.status")
-    assert ret.json
+    assert ret.data
 
 
 def test_db_list(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.db_list")
 
-    assert ret.json
-    assert "mysql" in ret.json
+    assert ret.data
+    assert "mysql" in ret.data
 
 
 def test_db_create_alter_remove(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.db_create", "salt")
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper(
         "mysql.alter_db",
@@ -73,21 +73,21 @@ def test_db_create_alter_remove(salt_call_cli_wrapper):
         character_set="latin1",
         collate="latin1_general_ci",
     )
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper("mysql.db_remove", name="salt")
-    assert ret.json
+    assert ret.data
 
 
 def test_user_list(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.user_list")
-    assert ret.json
-    assert {"User": "root", "Host": "%"} in ret.json
+    assert ret.data
+    assert {"User": "root", "Host": "%"} in ret.data
 
 
 def test_user_exists(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.user_exists", "root", "%", "password")
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper(
         "mysql.user_exists",
@@ -95,12 +95,12 @@ def test_user_exists(salt_call_cli_wrapper):
         "hostname",
         "badpassword",
     )
-    assert not ret.json
+    assert not ret.data
 
 
 def test_user_info(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.user_info", "root", "%")
-    assert ret.json
+    assert ret.data
 
     # Check that a subset of the information
     # is available in the returned user information.
@@ -137,7 +137,7 @@ def test_user_info(salt_call_cli_wrapper):
         "Trigger_priv": "Y",
         "Create_tablespace_priv": "Y",
     }
-    assert all(ret.json.get(key, None) == val for key, val in expected.items())
+    assert all(ret.data.get(key, None) == val for key, val in expected.items())
 
 
 def test_user_create_chpass_delete(salt_call_cli_wrapper):
@@ -147,7 +147,7 @@ def test_user_create_chpass_delete(salt_call_cli_wrapper):
         host="localhost",
         password="badpassword",
     )
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper(
         "mysql.user_chpass",
@@ -155,21 +155,21 @@ def test_user_create_chpass_delete(salt_call_cli_wrapper):
         host="localhost",
         password="different_password",
     )
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="localhost")
-    assert ret.json
+    assert ret.data
 
 
 def test_user_grants(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.user_grants", "root", host="%")
-    assert ret.json
+    assert ret.data
 
 
 def test_grant_add_revoke(salt_call_cli_wrapper):
     # Create the database
     ret = salt_call_cli_wrapper("mysql.db_create", "salt")
-    assert ret.json
+    assert ret.data
 
     # Create a user
     ret = salt_call_cli_wrapper(
@@ -178,7 +178,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         host="localhost",
         password="badpassword",
     )
-    assert ret.json
+    assert ret.data
 
     # Grant privileges to user to specific table
     ret = salt_call_cli_wrapper(
@@ -188,7 +188,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant exists
     ret = salt_call_cli_wrapper(
@@ -198,7 +198,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert ret.json
+    assert ret.data
 
     # Revoke the grant
     ret = salt_call_cli_wrapper(
@@ -208,7 +208,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant does not exist
     ret = salt_call_cli_wrapper(
@@ -218,7 +218,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert not ret.json
+    assert not ret.data
 
     # Grant privileges to user globally
     ret = salt_call_cli_wrapper(
@@ -228,7 +228,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the global exists
     ret = salt_call_cli_wrapper(
@@ -238,7 +238,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert ret.json
+    assert ret.data
 
     # Revoke the global grant
     ret = salt_call_cli_wrapper(
@@ -248,7 +248,7 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant does not exist
     ret = salt_call_cli_wrapper(
@@ -258,15 +258,15 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
         user="george",
         host="localhost",
     )
-    assert not ret.json
+    assert not ret.data
 
     # Remove the user
     ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="localhost")
-    assert ret.json
+    assert ret.data
 
     # Remove the database
     ret = salt_call_cli_wrapper("mysql.db_remove", "salt")
-    assert ret.json
+    assert ret.data
 
 
 def test_plugin_add_status_remove(salt_call_cli_wrapper, mysql_container):
@@ -277,20 +277,20 @@ def test_plugin_add_status_remove(salt_call_cli_wrapper, mysql_container):
         plugin = "auth_socket"
 
     ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
-    assert not ret.json
+    assert not ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugin_add", plugin)
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
-    assert ret.json
-    assert ret.json == "ACTIVE"
+    assert ret.data
+    assert ret.data == "ACTIVE"
 
     ret = salt_call_cli_wrapper("mysql.plugin_remove", plugin)
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
-    assert not ret.json
+    assert not ret.data
 
 
 def test_plugin_list(salt_call_cli_wrapper, mysql_container):
@@ -300,24 +300,24 @@ def test_plugin_list(salt_call_cli_wrapper, mysql_container):
         plugin = "auth_socket"
 
     ret = salt_call_cli_wrapper("mysql.plugins_list")
-    assert {"name": plugin, "status": "ACTIVE"} not in ret.json
-    assert ret.json
+    assert {"name": plugin, "status": "ACTIVE"} not in ret.data
+    assert ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugin_add", plugin)
-    assert ret.json
+    assert ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugins_list")
-    assert ret.json
-    assert {"name": plugin, "status": "ACTIVE"} in ret.json
+    assert ret.data
+    assert {"name": plugin, "status": "ACTIVE"} in ret.data
 
     ret = salt_call_cli_wrapper("mysql.plugin_remove", plugin)
-    assert ret.json
+    assert ret.data
 
 
 def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
     # Create the database
     ret = salt_call_cli_wrapper("mysql.db_create", "salt")
-    assert ret.json
+    assert ret.data
 
     # Create a user
     ret = salt_call_cli_wrapper(
@@ -326,7 +326,7 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         host="%",
         password_hash="*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19",
     )
-    assert ret.json
+    assert ret.data
 
     # Grant privileges to user to specific table
     ret = salt_call_cli_wrapper(
@@ -336,7 +336,7 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant exists
     ret = salt_call_cli_wrapper(
@@ -346,7 +346,7 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant exists via a query
     ret = salt_call_cli_wrapper(
@@ -357,7 +357,7 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         connection_pass="password",
         connection_db="salt",
     )
-    assert ret.json
+    assert ret.data
 
     # Revoke the grant
     ret = salt_call_cli_wrapper(
@@ -367,7 +367,7 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant does not exist
     ret = salt_call_cli_wrapper(
@@ -377,21 +377,21 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert not ret.json
+    assert not ret.data
 
     # Remove the user
     ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="%")
-    assert ret.json
+    assert ret.data
 
     # Remove the database
     ret = salt_call_cli_wrapper("mysql.db_remove", "salt")
-    assert ret.json
+    assert ret.data
 
 
 def test_create_alter_password_hash(salt_call_cli_wrapper):
     # Create the database
     ret = salt_call_cli_wrapper("mysql.db_create", "salt")
-    assert ret.json
+    assert ret.data
 
     # Create a user
     ret = salt_call_cli_wrapper(
@@ -400,7 +400,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         host="%",
         password_hash="*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19",
     )
-    assert ret.json
+    assert ret.data
 
     # Grant privileges to user to specific table
     ret = salt_call_cli_wrapper(
@@ -410,7 +410,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant exists
     ret = salt_call_cli_wrapper(
@@ -420,7 +420,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert ret.json
+    assert ret.data
 
     # Check we can query as the new user
     ret = salt_call_cli_wrapper(
@@ -431,7 +431,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         connection_pass="password",
         connection_db="salt",
     )
-    assert ret.json
+    assert ret.data
 
     # Change the user password
     ret = salt_call_cli_wrapper(
@@ -440,7 +440,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         host="%",
         password_hash="*F4A5147613F01DEC0C5226BF24CD1D5762E6AAF2",
     )
-    assert ret.json
+    assert ret.data
 
     # Check we can query with the new password
     ret = salt_call_cli_wrapper(
@@ -451,7 +451,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         connection_pass="badpassword",
         connection_db="salt",
     )
-    assert ret.json
+    assert ret.data
 
     # Revoke the grant
     ret = salt_call_cli_wrapper(
@@ -461,7 +461,7 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert ret.json
+    assert ret.data
 
     # Check the grant does not exist
     ret = salt_call_cli_wrapper(
@@ -471,12 +471,12 @@ def test_create_alter_password_hash(salt_call_cli_wrapper):
         user="george",
         host="%",
     )
-    assert not ret.json
+    assert not ret.data
 
     # Remove the user
     ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="%")
-    assert ret.json
+    assert ret.data
 
     # Remove the database
     ret = salt_call_cli_wrapper("mysql.db_remove", "salt")
-    assert ret.json
+    assert ret.data

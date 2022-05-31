@@ -2,8 +2,8 @@ import time
 import uuid
 
 import attr
+from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
-from saltfactories.utils import ports
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -82,7 +82,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         # Once we're able to ls the salt-minion script it means the container
         # has salt installed
         ret = self.run("ls", "-lah", self.get_script_path())
-        if ret.exitcode == 0:
+        if ret.returncode == 0:
             return True
         time.sleep(1)
         return False
