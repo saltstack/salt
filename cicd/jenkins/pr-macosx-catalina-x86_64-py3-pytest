@@ -8,12 +8,13 @@ runTestSuite(
     distro_arch: 'x86-64',
     env: env,
     jenkins_slave_label: 'kitchen-slave-mac',
-    kitchen_platforms_file: '/var/jenkins/workspace/pre-golden-platforms-new.yml',
+    kitchen_platforms_file: '/var/jenkins/workspace/pre-golden-platforms-new.3.9.yml',
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
-    testrun_timeout: 6,
+    testrun_timeout: 10,
     use_spot_instances: false,
+    macos_python_version: '3.9',
 )
 
 // vim: ft=groovy

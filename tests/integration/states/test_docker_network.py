@@ -465,3 +465,34 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             ret["comment"],
             "Network '{}' was replaced with updated config".format(ipv4_net.name),
         )
+
+    @with_network(subnet="10.247.197.96/27")
+    @pytest.mark.slow_test
+    def test_bridge_dupname_update(self, net):
+        # com.docker.network.bridge.name can not have names over 15 chars. so grab the last 8
+        self.assertSaltTrueReturn(
+            self.run_state(
+                "docker_network.present",
+                name=net.name,
+                subnet=net.subnet,
+                driver="bridge",
+                driver_opts=[{"com.docker.network.bridge.name": net.name[-8:]}],
+            )
+        )
+        # Second run to make sure everything is still fine.
+        ret = self.run_state(
+            "docker_network.present",
+            name=net.name,
+            subnet=net.subnet,
+            driver="bridge",
+            driver_opts=[{"com.docker.network.bridge.name": net.name[-8:]}],
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret["changes"], {})
+        self.assertEqual(
+            ret["comment"],
+            "Network '{}' already exists, and is configured as specified".format(
+                net.name
+            ),
+        )

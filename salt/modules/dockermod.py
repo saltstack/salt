@@ -1331,6 +1331,17 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
                         "old": subval1,
                         "new": subval2,
                     }
+        elif item == "Options":
+            for subkey in val1:
+                subval1 = val1[subkey]
+                subval2 = val2.get(subkey)
+                if subkey == "com.docker.network.bridge.name":
+                    continue
+                elif subval1 != subval2:
+                    ret.setdefault("Options", {})[subkey] = {
+                        "old": subval1,
+                        "new": subval2,
+                    }
         elif val1 != val2:
             ret[item] = {"old": val1, "new": val2}
 

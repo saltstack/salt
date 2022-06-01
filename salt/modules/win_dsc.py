@@ -144,6 +144,8 @@ def run_config(
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
+            Note that these are passed to the script (the outermost scope), and
+            not to the dsc configuration inside the script (the inner scope).
 
             .. versionadded:: 2017.7.0
 
@@ -166,6 +168,12 @@ def run_config(
     .. code-block:: bash
 
         salt '*' dsc.run_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
+
+    To cache a config script to the system from the master and compile it, passing in `script_parameters`:
+
+    .. code-block:: bash
+
+        salt '*' dsc.run_config path=C:\\DSC\\WebsiteConfig.ps1 source=salt://dsc/configs/WebsiteConfig.ps1 script_parameters="-hostname 'my-computer' -ip '192.168.1.10' -DnsArray '192.168.1.3','192.168.1.4','1.1.1.1'"
     """
     ret = compile_config(
         path=path,
@@ -275,7 +283,7 @@ def compile_config(
 
     # Make sure the path exists
     if not os.path.exists(path):
-        error = '"{}" not found'.format(path)
+        error = "{} not found".format(path)
         log.error("DSC: %s", error)
         raise CommandExecutionError(error)
 
@@ -290,8 +298,9 @@ def compile_config(
     # Add any script parameters
     if script_parameters:
         cmd.append(script_parameters)
-    # Select fields to return
+    # Select properties of the generated .mof file to return, avoiding the .meta.mof
     cmd.append(
+        r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
         "-Format g}}"
@@ -316,6 +325,7 @@ def compile_config(
     if config_data:
         cmd.extend(["-ConfigurationData", config_data])
     cmd.append(
+        r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
         "-Format g}}"
@@ -443,17 +453,23 @@ def get_config():
 
     config = dict()
     if raw_config:
-        # Get DSC Configuration Name
-        if "ConfigurationName" in raw_config[0]:
-            config[raw_config[0]["ConfigurationName"]] = {}
-        # Add all DSC Configurations by ResourceId
-        for item in raw_config:
-            config[item["ConfigurationName"]][item["ResourceId"]] = {}
-            for key in item:
-                if key not in ["ConfigurationName", "ResourceId"]:
-                    config[item["ConfigurationName"]][item["ResourceId"]][key] = item[
-                        key
-                    ]
+        # Does this Configuration contain a single resource
+        if "ConfigurationName" in raw_config:
+            # Load the single resource
+            config_name = raw_config.pop("ConfigurationName")
+            resource_id = raw_config.pop("ResourceId")
+            config.setdefault(config_name, {resource_id: raw_config})
+        else:
+            # Load multiple resources by Id
+            for item in raw_config:
+                if "ConfigurationName" in item:
+                    config_name = item.pop("ConfigurationName")
+                    resource_id = item.pop("ResourceId")
+                    config.setdefault(config_name, {})
+                    config[config_name].setdefault(resource_id, item)
+
+    if not config:
+        raise CommandExecutionError("Unable to parse config")
 
     return config
 
@@ -478,8 +494,9 @@ def remove_config(reset=False):
 
             .. warning::
                 ``remove_config`` may fail to reset the DSC environment if any
-                of the files in the ``ConfigurationStatus`` directory. If you
-                wait a few minutes and run again, it may complete successfully.
+                of the files in the ``ConfigurationStatus`` directory are in
+                use. If you wait a few minutes and run again, it may complete
+                successfully.
 
     Returns:
         bool: True if successful
@@ -596,6 +613,7 @@ def test_config():
         if "Current configuration does not exist" in exc.info["stderr"]:
             raise CommandExecutionError("Not Configured")
         raise
+    return True
 
 
 def get_config_status():

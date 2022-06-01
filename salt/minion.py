@@ -31,7 +31,6 @@ import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.loader
 import salt.loader.lazy
-import salt.log.setup
 import salt.payload
 import salt.pillar
 import salt.serializers.msgpack
@@ -124,7 +123,6 @@ def resolve_dns(opts, fallback=True):
         "use_master_when_local", False
     ):
         check_dns = False
-    # Since salt.log is imported below, salt.utils.network needs to be imported here as well
     import salt.utils.network
 
     if check_dns is True:
@@ -142,18 +140,12 @@ def resolve_dns(opts, fallback=True):
                         if retry_dns_count == 0:
                             raise SaltMasterUnresolvableError
                         retry_dns_count -= 1
-                    import salt.log
-
-                    msg = (
-                        "Master hostname: '{}' not found or not responsive. "
-                        "Retrying in {} seconds".format(
-                            opts["master"], opts["retry_dns"]
-                        )
+                    log.error(
+                        "Master hostname: '%s' not found or not responsive. "
+                        "Retrying in %s seconds",
+                        opts["master"],
+                        opts["retry_dns"],
                     )
-                    if salt.log.setup.is_console_configured():
-                        log.error(msg)
-                    else:
-                        print("WARNING: {}".format(msg))
                     time.sleep(opts["retry_dns"])
                     try:
                         ret["master_ip"] = salt.utils.network.dns_check(
@@ -1245,7 +1237,6 @@ class Minion(MinionBase):
         self.safe = safe
 
         self._running = None
-        self.win_proc = []
         self.subprocess_list = salt.utils.process.SubprocessList()
         self.loaded_base_name = loaded_base_name
         self.connected = False
@@ -1711,6 +1702,7 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
+
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if "user" in data:
             log.info(
@@ -1773,7 +1765,7 @@ class Minion(MinionBase):
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
         name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
-            if sys.platform.startswith("win"):
+            if salt.utils.platform.spawning_platform():
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None

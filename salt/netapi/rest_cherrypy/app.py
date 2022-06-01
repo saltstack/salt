@@ -616,13 +616,13 @@ try:
     )
 except AttributeError:
     cpstats = None
-    logger.warn(
+    logger.warning(
         "Import of cherrypy.cpstats failed. Possible upstream bug: "
         "https://github.com/cherrypy/cherrypy/issues/1444"
     )
 except ImportError:
     cpstats = None
-    logger.warn("Import of cherrypy.cpstats failed.")
+    logger.warning("Import of cherrypy.cpstats failed.")
 
 try:
     # Imports related to websocket

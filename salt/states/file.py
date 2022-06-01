@@ -1935,14 +1935,31 @@ def absent(name, **kwargs):
     return ret
 
 
-def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
+def tidied(
+    name,
+    age=0,
+    matches=None,
+    rmdirs=False,
+    size=0,
+    exclude=None,
+    full_path_match=False,
+    followlinks=False,
+    time_comparison="atime",
+    **kwargs
+):
     """
+    .. versionchanged:: 3005
+
     Remove unwanted files based on specific criteria. Multiple criteria
     are OR’d together, so a file that is too large but is not old enough
     will still get tidied.
 
     If neither age nor size is given all files which match a pattern in
     matches will be removed.
+
+    NOTE: The regex patterns in this function are used in ``re.match()``, so
+    there is an implicit "beginning of string" anchor (``^``) in the regex and
+    it is unanchored at the other end unless explicitly entered (``$``).
 
     name
         The directory tree that should be tidied
@@ -1959,6 +1976,35 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     size
         Maximum allowed file size. Files greater or equal to this size are
         removed. Doesn't apply to directories or symbolic links
+
+    exclude
+        List of regular expressions to filter the ``matches`` parameter and better
+        control what gets removed.
+
+        .. versionadded:: 3005
+
+    full_path_match
+        Match the ``matches`` and ``exclude`` regex patterns against the entire
+        file path instead of just the file or directory name. Default: ``False``
+
+        .. versionadded:: 3005
+
+    followlinks
+        This module will not descend into subdirectories which are pointed to by
+        symbolic links. If you wish to force it to do so, you may give this
+        option the value ``True``. Default: ``False``
+
+        .. versionadded:: 3005
+
+    time_comparison
+        Default: ``atime``. Options: ``atime``/``mtime``/``ctime``. This value
+        is used to set the type of time comparison made using ``age``. The
+        default is to compare access times (atime) or the last time the file was
+        read. A comparison by modification time (mtime) uses the last time the
+        contents of the file was changed. The ctime parameter is the last time
+        the contents, owner,  or permissions of the file were changed.
+
+        .. versionadded:: 3005
 
     .. code-block:: yaml
 
@@ -1980,6 +2026,17 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     if not os.path.isdir(name):
         return _error(ret, "{} does not exist or is not a directory.".format(name))
 
+    # Check time_comparison parameter
+    poss_comp = ["atime", "ctime", "mtime"]
+    if not isinstance(time_comparison, str) or time_comparison.lower() not in poss_comp:
+        time_comparison = "atime"
+    time_comparison = time_comparison.lower()
+
+    # Convert size with human units to bytes
+    if isinstance(size, str):
+        # add handle_metric=True when #61833 is merged
+        size = salt.utils.stringutils.human_to_bytes(size)
+
     # Define some variables
     todelete = []
     today = date.today()
@@ -1990,17 +2047,23 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     progs = []
     for regex in matches:
         progs.append(re.compile(regex))
+    exes = []
+    for regex in exclude or []:
+        exes.append(re.compile(regex))
 
     # Helper to match a given name against one or more pre-compiled regular
-    # expressions
+    # expressions and also allow for excluding matched names by regex
     def _matches(name):
         for prog in progs:
             if prog.match(name):
+                for _ex in exes:
+                    if _ex.match(name):
+                        return False
                 return True
         return False
 
     # Iterate over given directory tree, depth-first
-    for root, dirs, files in os.walk(top=name, topdown=False):
+    for root, dirs, files in os.walk(top=name, topdown=False, followlinks=followlinks):
         # Check criteria for the found files and directories
         for elem in files + dirs:
             myage = 0
@@ -2008,20 +2071,39 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
             deleteme = True
             path = os.path.join(root, elem)
             if os.path.islink(path):
-                # Get age of symlink (not symlinked file)
-                myage = abs(today - date.fromtimestamp(os.lstat(path).st_atime))
-            elif elem in dirs:
-                # Get age of directory, check if directories should be deleted at all
-                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
-                deleteme = rmdirs
+                # Get timestamp of symlink (not symlinked file)
+                if time_comparison == "ctime":
+                    mytimestamp = os.lstat(path).st_ctime
+                elif time_comparison == "mtime":
+                    mytimestamp = os.lstat(path).st_mtime
+                else:
+                    mytimestamp = os.lstat(path).st_atime
             else:
-                # Get age and size of regular file
-                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
-                mysize = os.path.getsize(path)
+                # Get timestamp of file or directory
+                if time_comparison == "ctime":
+                    mytimestamp = os.path.getctime(path)
+                elif time_comparison == "mtime":
+                    mytimestamp = os.path.getmtime(path)
+                else:
+                    mytimestamp = os.path.getatime(path)
+
+                if elem in dirs:
+                    # Check if directories should be deleted at all
+                    deleteme = rmdirs
+                else:
+                    # Get size of regular file
+                    mysize = os.path.getsize(path)
+
+            # Calculate the age and set the name to match
+            myage = abs(today - date.fromtimestamp(mytimestamp))
+            filename = elem
+            if full_path_match:
+                filename = path
+
             # Verify against given criteria, collect all elements that should be removed
             if (
                 (mysize >= size or myage.days >= age)
-                and _matches(name=elem)
+                and _matches(name=filename)
                 and deleteme
             ):
                 todelete.append(path)
@@ -3701,7 +3783,10 @@ def directory(
         u_check = _check_user(user, group)
         if u_check:
             # The specified user or group do not exist
-            return _error(ret, u_check)
+            if __opts__["test"]:
+                log.warning(u_check)
+            else:
+                return _error(ret, u_check)
 
     # Must be an absolute path
     if not os.path.isabs(name):
@@ -5919,8 +6004,11 @@ def blockreplace(
     return ret
 
 
-def comment(name, regex, char="#", backup=".bak"):
+def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     """
+    .. versionadded:: 0.9.5
+    .. versionchanged:: 3005
+
     Comment out specified lines in a file.
 
     name
@@ -5945,6 +6033,12 @@ def comment(name, regex, char="#", backup=".bak"):
             after the first invocation.
 
         Set to False/None to not keep a backup.
+    ignore_missing
+        Ignore a failure to find the regex in the file. This is useful for
+        scenarios where a line must only be commented if it is found in the
+        file.
+
+        .. versionadded:: 3005
 
     Usage:
 
@@ -5954,7 +6048,6 @@ def comment(name, regex, char="#", backup=".bak"):
           file.comment:
             - regex: ^bind 127.0.0.1
 
-    .. versionadded:: 0.9.5
     """
     name = os.path.expanduser(name)
 
@@ -5969,12 +6062,17 @@ def comment(name, regex, char="#", backup=".bak"):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
+    uncomment_regex = r"^(?!\s*{}).*".format(char) + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__["file.search"](name, regex, multiline=True):
+    if not __salt__["file.search"](name, uncomment_regex, multiline=True):
         if __salt__["file.search"](name, comment_regex, multiline=True):
             ret["comment"] = "Pattern already commented"
+            ret["result"] = True
+            return ret
+        elif ignore_missing:
+            ret["comment"] = "Pattern not found and ignore_missing set to True"
             ret["result"] = True
             return ret
         else:
@@ -5985,6 +6083,7 @@ def comment(name, regex, char="#", backup=".bak"):
         ret["comment"] = "File {} is set to be updated".format(name)
         ret["result"] = None
         return ret
+
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
         slines = slines.decode(__salt_system_encoding__)
@@ -5999,7 +6098,7 @@ def comment(name, regex, char="#", backup=".bak"):
         nlines = nlines.splitlines(True)
 
     # Check the result
-    ret["result"] = __salt__["file.search"](name, unanchor_regex, multiline=True)
+    ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
         if not __utils__["files.is_text"](name):
