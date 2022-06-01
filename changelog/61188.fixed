@@ -1,3 +1,2 @@
-Add "--no-return-event" option to salt-call to prevent sending return event back to master.
 Make "state.highstate" to acts on concurrent flag.
 Simplify "transactional_update" module to not use SSH wrapper and allow more flexible execution
