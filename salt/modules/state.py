@@ -1013,6 +1013,15 @@ def highstate(test=None, queue=False, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
+    concurrent : False
+        Execute state runs concurrently instead of serially
+
+        .. warning::
+
+            This flag is potentially dangerous. It is designed for use when
+            multiple state runs can safely be run at the same time. Do *not*
+            use this flag for performance optimization.
+
     localconfig
         Optionally, instead of using the minion config, load minion opts from
         the file specified by this argument, and then merge them with the
