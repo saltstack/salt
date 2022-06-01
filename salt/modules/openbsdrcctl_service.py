@@ -57,7 +57,7 @@ def available(name):
         salt '*' service.available sshd
     """
     cmd = "{} get {}".format(_cmd(), name)
-    if __salt__["cmd.retcode"](cmd) == 2:
+    if __salt__["cmd.retcode"](cmd, ignore_retcode=True) == 2:
         return False
     return True
 
@@ -198,7 +198,7 @@ def status(name, sig=None):
         return bool(__salt__["status.pid"](sig))
 
     cmd = "{} check {}".format(_cmd(), name)
-    return not __salt__["cmd.retcode"](cmd)
+    return not __salt__["cmd.retcode"](cmd, ignore_retcode=True)
 
 
 def enable(name, **kwargs):
@@ -255,7 +255,7 @@ def disabled(name):
         salt '*' service.disabled <service name>
     """
     cmd = "{} get {} status".format(_cmd(), name)
-    return not __salt__["cmd.retcode"](cmd) == 0
+    return not __salt__["cmd.retcode"](cmd, ignore_retcode=True) == 0
 
 
 def enabled(name, **kwargs):
@@ -274,7 +274,7 @@ def enabled(name, **kwargs):
         salt '*' service.enabled <service name> flags=<flags>
     """
     cmd = "{} get {} status".format(_cmd(), name)
-    if not __salt__["cmd.retcode"](cmd):
+    if not __salt__["cmd.retcode"](cmd, ignore_retcode=True):
         # also consider a service disabled if the current flags are different
         # than the configured ones so we have a chance to update them
         flags = _get_flags(**kwargs)
