@@ -27,26 +27,6 @@ def patched_environ(vault_port):
         yield
 
 
-@pytest.fixture(scope="module")
-def pillar_tree(salt_master, salt_minion):
-    top_file = """
-    base:
-      '{}':
-        - sdb
-    """.format(
-        salt_minion.id
-    )
-    sdb_pillar_file = """
-    test_vault_pillar_sdb: sdb://sdbvault/secret/test/test_pillar_sdb/foo
-    test_etcd_pillar_sdb: sdb://sdbetcd/secret/test/test_pillar_sdb/foo
-    """
-    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
-    sdb_tempfile = salt_master.pillar_tree.base.temp_file("sdb.sls", sdb_pillar_file)
-
-    with top_tempfile, sdb_tempfile:
-        yield
-
-
 def vault_container_version_id(value):
     return "vault=={}".format(value)
 
