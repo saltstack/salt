@@ -371,7 +371,9 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
        running of ``apt-get update`` prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
 
-    aptkey: Use the binary apt-key
+    aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
+       in the path, aptkey will be False, regardless of what is passed into
+       this argument.
 
     signedby:
         On apt-based systems, ``signedby`` is the the path to the key file
