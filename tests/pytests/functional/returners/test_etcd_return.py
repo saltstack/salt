@@ -3,8 +3,8 @@ import logging
 import pytest
 import salt.returners.etcd_return as etcd_return
 import salt.utils.json
-from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3, get_conn
-from saltfactories.utils import random_string
+from salt.utils.etcd_util import get_conn
+from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 docker = pytest.importorskip("docker")
 
@@ -25,64 +25,21 @@ def configure_loader_modules(minion_opts):
     }
 
 
-# TODO: Use our own etcd image to avoid reliance on a third party
 @pytest.fixture(scope="module")
-def etcd_apiv2_container(salt_factories):
-    container = salt_factories.get_container(
-        random_string("etcd-server-"),
-        image_name="bitnami/etcd:3",
-        container_run_kwargs={
-            "environment": {
-                "ALLOW_NONE_AUTHENTICATION": "yes",
-                "ETCD_ENABLE_V2": "true",
-            },
-            "ports": {"2379/tcp": None},
-        },
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
+def update_etcd_profile(profile_name, prefix, etcd_profile):
+    etcd_profile.update(
+        {
+            "etcd.returner": profile_name,
+            "etcd.returner_root": prefix,
+        }
     )
-    with container.started() as factory:
-        yield factory
 
-
-@pytest.fixture(scope="module", params=(True, False))
-def use_v2(request):
-    if request.param and not HAS_ETCD_V2:
-        pytest.skip("No etcd library installed")
-    if not request.param and not HAS_ETCD_V3:
-        pytest.skip("No etcd3 library installed")
-    return request.param
-
-
-@pytest.fixture(scope="module")
-def etcd_port(etcd_apiv2_container):
-    return etcd_apiv2_container.get_host_port_binding(2379, protocol="tcp", ipv6=False)
-
-
-@pytest.fixture(scope="module")
-def profile_name():
-    return "etcd_util_profile"
-
-
-@pytest.fixture(scope="module")
-def etcd_profile(profile_name, etcd_port, prefix, use_v2):
-    profile = {
-        profile_name: {
-            "etcd.host": "127.0.0.1",
-            "etcd.port": etcd_port,
-            "etcd.require_v2": use_v2,
-        },
-        "etcd.returner": profile_name,
-        "etcd.returner_root": prefix,
-    }
-
-    return profile
-
-
-@pytest.fixture(scope="module")
-def minion_config_overrides(etcd_profile):
     return etcd_profile
+
+
+@pytest.fixture(scope="module")
+def minion_config_overrides(update_etcd_profile):
+    return update_etcd_profile
 
 
 @pytest.fixture(scope="module")

@@ -3,8 +3,8 @@ import logging
 import pytest
 import salt.cache
 import salt.loader
-from saltfactories.utils import random_string
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
+from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 docker = pytest.importorskip("docker")
 
@@ -15,33 +15,28 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
 
-# TODO: We should probably be building our own etcd docker image - fine to
-# base it off of this one (or... others) -W. Werner, 2021-07-27
-@pytest.fixture(scope="module")
-def etcd_apiv2_container(salt_factories):
-    container = salt_factories.get_container(
-        random_string("etcd-server-"),
-        image_name="elcolio/etcd",
-        container_run_kwargs={
-            "environment": {"ALLOW_NONE_AUTHENTICATION": "yes"},
-            "ports": {"2379/tcp": None},
-        },
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
-    )
-    with container.started() as factory:
-        yield factory
+
+@pytest.fixture(
+    scope="module",
+    params=(EtcdVersion.v2, EtcdVersion.v3_v2_mode),
+    ids=etcd_version_ids,
+)  # pylint: disable=function-redefined
+def etcd_version(request):
+    # The only parameter is True because the salt cache does not use
+    # salt/utils/etcd_util.py and if coded for etcd v2
+    if request.param and not HAS_ETCD_V2:
+        pytest.skip("No etcd library installed")
+    if not request.param and not HAS_ETCD_V3:
+        pytest.skip("No etcd3 library installed")
+    return request.param
 
 
 @pytest.fixture
-def cache(minion_opts, etcd_apiv2_container):
+def cache(minion_opts, etcd_port):
     opts = minion_opts.copy()
     opts["cache"] = "etcd"
     opts["etcd.host"] = "127.0.0.1"
-    opts["etcd.port"] = etcd_apiv2_container.get_host_port_binding(
-        2379, protocol="tcp", ipv6=False
-    )
+    opts["etcd.port"] = etcd_port
     opts["etcd.protocol"] = "http"
     # NOTE: If you would like to ensure that alternate suffixes are properly
     # tested, simply change this value and re-run the tests.
