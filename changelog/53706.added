@@ -1,0 +1,1 @@
+Added win_shortcut execution and state module that does not prepend the current working directory to paths. Use shortcut.create and shortcut.present instead of file.shortcut.

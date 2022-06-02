@@ -16,4 +16,4 @@ pytestmark = [
 @contextmanager
 def test_exec(salt_call_cli):
     ret = salt_call_cli.run("--local", "idem.exec", "test.ping")
-    assert ret.json is True
+    assert ret.data is True
