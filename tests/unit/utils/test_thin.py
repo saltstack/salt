@@ -1371,4 +1371,4 @@ class SSHThinTestCase(TestCase):
                 "--version",
                 check=False,
             )
-            assert ret.exitcode == 0, ret
+            assert ret.returncode == 0, ret

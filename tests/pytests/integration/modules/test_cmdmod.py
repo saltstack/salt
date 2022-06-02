@@ -12,4 +12,4 @@ def test_exec_code_all(salt_call_cli, non_root_account):
     ret = salt_call_cli.run(
         "cmd.exec_code_all", "bash", "echo good", runas=non_root_account.username
     )
-    assert ret.exitcode == 0
+    assert ret.returncode == 0

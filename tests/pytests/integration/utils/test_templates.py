@@ -32,8 +32,8 @@ def test_issue_60083(
             "state.apply", sls_name, pillar={"target-path": str(target_path)}
         )
         assert ret.stdout.find("Jinja error") == -1
-        assert ret.json
-        keys = list(ret.json.keys())
+        assert ret.data
+        keys = list(ret.data.keys())
         assert len(keys) == 1
         key = keys[0]
-        assert ret.json[key]["changes"]["diff"] == "New file"
+        assert ret.data[key]["changes"]["diff"] == "New file"
