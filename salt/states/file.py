@@ -8484,6 +8484,10 @@ def shortcut(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     """
+    salt.utils.versions.warn_until(
+        version="Argon",
+        message="This function is being deprecated in favor of 'shortcut.present'",
+    )
     user = _test_owner(kwargs, user=user)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not salt.utils.platform.is_windows():

@@ -16,7 +16,7 @@ import salt.transport.zeromq
 import salt.utils.process
 import salt.utils.stringutils
 import zmq
-from saltfactories.utils.processes import terminate_process
+from pytestshellutils.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)

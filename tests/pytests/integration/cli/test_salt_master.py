@@ -26,4 +26,4 @@ def test_exit_status_correct_usage(salt_factories, master_id):
     assert factory.is_running()
     time.sleep(0.5)
     ret = factory.terminate()
-    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret
