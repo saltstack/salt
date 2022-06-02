@@ -1,0 +1,2 @@
+Make "state.highstate" to acts on concurrent flag.
+Simplify "transactional_update" module to not use SSH wrapper and allow more flexible execution

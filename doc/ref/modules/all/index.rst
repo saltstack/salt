@@ -527,6 +527,7 @@ execution modules
     win_servermanager
     win_service
     win_shadow
+    win_shortcut
     win_smtp_server
     win_snmp
     win_status

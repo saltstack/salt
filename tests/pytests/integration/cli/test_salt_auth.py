@@ -89,8 +89,8 @@ def test_pam_auth_valid_user(salt_minion, salt_cli, saltdev_account):
         "test.ping",
         minion_tgt=salt_minion.id,
     )
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
 
 
 def test_pam_auth_invalid_user(salt_minion, salt_cli, saltdev_account):
@@ -126,5 +126,5 @@ def test_pam_auth_valid_group(salt_minion, salt_cli, saltadm_account):
         "test.ping",
         minion_tgt=salt_minion.id,
     )
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True

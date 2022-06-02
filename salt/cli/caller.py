@@ -277,7 +277,7 @@ class BaseCaller:
                 pass
 
         # return the job infos back up to the respective minion's master
-        if not is_local:
+        if not is_local and not self.opts.get("no_return_event", False):
             try:
                 mret = ret.copy()
                 mret["jid"] = "req"

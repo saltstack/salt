@@ -195,7 +195,7 @@ def test_extension_discovery_without_reload_with_importlib_metadata_installed(
     # Exitcode 1 - Extension was already installed
     # Exitcode 2 - Failed to install the extension
     # Exitcode 3 - Extension was not found within the same python process after being installed
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name in installed_packages
 
@@ -259,7 +259,7 @@ def test_extension_discovery_without_reload_with_bundled_importlib_metadata(
     # Exitcode 1 - Extension was already installed
     # Exitcode 2 - Failed to install the extension
     # Exitcode 3 - Extension was not found within the same python process after being installed
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name in installed_packages
 

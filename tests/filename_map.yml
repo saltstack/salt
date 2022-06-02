@@ -114,6 +114,12 @@ salt/auth/*:
 
 salt/cache/*:
   - unit.cache.test_cache
+  - pytests.functional.cache.test_consul
+  - pytests.functional.cache.test_etcd
+  - pytests.functional.cache.test_localfs
+  - pytests.functional.cache.test_memcache
+  - pytests.functional.cache.test_mysql
+  - pytests.functional.cache.test_redis
 
 salt/cli/*:
   - integration.shell.test_arguments
