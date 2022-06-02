@@ -162,7 +162,7 @@ def test_py36_target(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("test.ping", minion_tgt="pyvertest")
     assert ret.json
-    if "Connection closed by remote host" in ret.stdout:
+    if "kex_exchange_identification" in ret.stdout:
         pytest.skip("Container closed ssh connection, skipping for now")
     assert ret.exitcode == 0
     assert ret.json is True
