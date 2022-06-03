@@ -106,7 +106,7 @@ def test_add():
 
 
 @pytest.mark.slow_test
-def test_save(tmpdir):
+def test_save():
     """
     Test saving beacons.
     """
