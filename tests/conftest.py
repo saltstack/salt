@@ -632,6 +632,15 @@ def salt_factories_config():
     }
 
 
+@pytest.fixture
+def tmpdir(tmpdir):
+    raise pytest.UsageError(
+        "The `tmpdir` fixture uses Pytest's `pypath` implementation which "
+        "is getting deprecated in favor of `pathlib`. Please use the "
+        "`tmp_path` fixture instead."
+    )
+
+
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
 
 
