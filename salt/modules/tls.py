@@ -43,8 +43,8 @@ Creating a client request and its signed certificate
 .. code-block:: bash
 
     # salt-call tls.create_csr my_little CN=DBReplica_No.1 cert_type=client
-    Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.csr."
+    Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.csr"
 
     # salt-call tls.create_ca_signed_cert my_little CN=DBReplica_No.1
     Created Certificate for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.crt"
@@ -56,8 +56,8 @@ Creating both a server and client req + cert for the same CN
 
     # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2  \
         cert_type=client
-    Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/MasterDBReplica_No.2.csr."
+    Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/MasterDBReplica_No.2.csr"
 
     # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2
     Created Certificate for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.crt"
@@ -70,8 +70,8 @@ Creating both a server and client req + cert for the same CN
 
     # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2 \
         cert_type=server type_ext=True
-    Created Private Key: "/etc/pki/my_little/certs/DBReplica_No.1_client.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1_client.csr."
+    Created Private Key: "/etc/pki/my_little/certs/DBReplica_No.1_client.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1_client.csr"
 
     # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2
     Certificate "MasterDBReplica_No.2" already exists
@@ -90,8 +90,8 @@ Create a server req + cert with non-CN filename for the cert
 
     # salt-call tls.create_csr my_little CN=www.anothersometh.ing \
         cert_type=server type_ext=True
-    Created Private Key: "/etc/pki/my_little/certs/www.anothersometh.ing_server.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/www.anothersometh.ing_server.csr."
+    Created Private Key: "/etc/pki/my_little/certs/www.anothersometh.ing_server.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/www.anothersometh.ing_server.csr"
 
     # salt-call tls_create_ca_signed_cert my_little CN=www.anothersometh.ing \
         cert_type=server cert_filename="something_completely_different"
@@ -842,10 +842,10 @@ def create_ca(
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = 'Created Private Key: "{}/{}/{}.key." '.format(
+    ret = 'Created Private Key: "{}/{}/{}.key" '.format(
         cert_base_path(), ca_name, ca_filename
     )
-    ret += 'Created CA "{0}": "{1}/{0}/{2}.crt."'.format(
+    ret += 'Created CA "{0}": "{1}/{0}/{2}.crt"'.format(
         ca_name, cert_base_path(), ca_filename
     )
 
@@ -1168,8 +1168,8 @@ def create_csr(
             )
         )
 
-    ret = 'Created Private Key: "{}{}.key." '.format(csr_path, csr_filename)
-    ret += 'Created CSR for "{}": "{}{}.csr."'.format(CN, csr_path, csr_filename)
+    ret = 'Created Private Key: "{}{}.key" '.format(csr_path, csr_filename)
+    ret += 'Created CSR for "{}": "{}{}.csr"'.format(CN, csr_path, csr_filename)
 
     return ret
 
@@ -1310,10 +1310,10 @@ def create_self_signed_cert(
 
     _write_cert_to_database(tls_dir, cert)
 
-    ret = 'Created Private Key: "{}/{}/certs/{}.key." '.format(
+    ret = 'Created Private Key: "{}/{}/certs/{}.key" '.format(
         cert_base_path(), tls_dir, cert_filename
     )
-    ret += 'Created Certificate: "{}/{}/certs/{}.crt."'.format(
+    ret += 'Created Certificate: "{}/{}/certs/{}.crt"'.format(
         cert_base_path(), tls_dir, cert_filename
     )
 
