@@ -16,14 +16,14 @@ def refresh_pillar(salt_call_cli, salt_minion, salt_sub_minion):
         "modules": [],
     }
     ret = salt_call_cli.run("saltutil.sync_all", extmod_whitelist=whitelist)
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
     try:
         yield
     finally:
         ret = salt_call_cli.run("saltutil.sync_all")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
 
 @pytest.mark.slow_test
@@ -59,9 +59,9 @@ def test_sync_all(salt_call_cli):
         "serializers": [],
     }
     ret = salt_call_cli.run("saltutil.sync_all")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == expected_return
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == expected_return
 
 
 @pytest.mark.slow_test
@@ -91,9 +91,9 @@ def test_sync_all_whitelist(salt_call_cli):
     ret = salt_call_cli.run(
         "saltutil.sync_all", extmod_whitelist={"modules": ["salttest"]}
     )
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == expected_return
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == expected_return
 
 
 @pytest.mark.slow_test
@@ -135,9 +135,9 @@ def test_sync_all_blacklist(salt_call_cli):
             ]
         },
     )
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == expected_return
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == expected_return
 
 
 @pytest.mark.slow_test
@@ -169,6 +169,6 @@ def test_sync_all_blacklist_and_whitelist(salt_call_cli):
         extmod_whitelist={"modules": ["runtests_decorators"]},
         extmod_blacklist={"modules": ["runtests_decorators"]},
     )
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == expected_return
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == expected_return

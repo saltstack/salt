@@ -2,7 +2,7 @@ import logging
 import time
 
 import pytest
-from saltfactories.exceptions import FactoryNotStarted
+from pytestshellutils.exceptions import FactoryNotStarted
 
 log = logging.getLogger(__name__)
 

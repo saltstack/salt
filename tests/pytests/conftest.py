@@ -17,9 +17,9 @@ import pytest
 import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
+from pytestshellutils.utils import ports
 from salt.serializers import yaml
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.runtests import RUNTIME_VARS
 
@@ -38,12 +38,12 @@ def salt_sub_minion_id():
 
 @pytest.fixture(scope="session")
 def sdb_etcd_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="session")
 def vault_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @attr.s(slots=True, frozen=True)

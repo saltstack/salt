@@ -24,10 +24,10 @@ def test_get_source_sum_verify_ssl_false(
     )
     if not verify_ssl:
         assert (
-            ret.json["hsum"]
+            ret.data["hsum"]
             == "f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2"
         )
-        assert ret.json["hash_type"] == "sha256"
+        assert ret.data["hash_type"] == "sha256"
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
 
@@ -58,7 +58,7 @@ def test_get_managed_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
         "verify_ssl={}".format(verify_ssl),
     )
     if not verify_ssl:
-        assert "this.txt" in ret.json[0]
+        assert "this.txt" in ret.data[0]
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stdout
 
@@ -88,8 +88,8 @@ def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
         "verify_ssl={}".format(verify_ssl),
     )
     if not verify_ssl:
-        assert ret.json["changes"] == {"diff": "New file", "mode": "0000"}
-        assert ret.json["comment"] == "File {} updated".format(test_file)
+        assert ret.data["changes"] == {"diff": "New file", "mode": "0000"}
+        assert ret.data["comment"] == "File {} updated".format(test_file)
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
 
@@ -123,7 +123,7 @@ def test_check_managed_changes_verify_ssl(
     )
 
     if not verify_ssl:
-        assert ret.json["newfile"] == test_file
+        assert ret.data["newfile"] == test_file
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
 
@@ -156,7 +156,7 @@ def test_check_file_meta_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify
 
     if not verify_ssl:
         assert (
-            len([x for x in ["diff", "user", "group", "mode"] if x in ret.json.keys()])
+            len([x for x in ["diff", "user", "group", "mode"] if x in ret.data.keys()])
             == 4
         )
     else:

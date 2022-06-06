@@ -650,25 +650,31 @@ def managed(name, enabled=True, **kwargs):
             present_slaves = __salt__["cmd.run"](
                 ["cat", "/sys/class/net/{}/bonding/slaves".format(name)]
             ).split()
-            desired_slaves = kwargs["slaves"].split()
+            if isinstance(kwargs["slaves"], list):
+                desired_slaves = kwargs["slaves"]
+            else:
+                desired_slaves = kwargs["slaves"].split()
             missing_slaves = set(desired_slaves) - set(present_slaves)
 
             # Enslave only slaves missing in master
             if missing_slaves:
-                ifenslave_path = __salt__["cmd.run"](["which", "ifenslave"]).strip()
-                if ifenslave_path:
-                    log.info(
-                        "Adding slaves '%s' to the master %s",
-                        " ".join(missing_slaves),
-                        name,
+                if __grains__["os_family"] != "Suse":
+                    ifenslave_path = __salt__["cmd.run"](["which", "ifenslave"]).strip()
+                    if ifenslave_path:
+                        log.info(
+                            "Adding slaves '%s' to the master %s",
+                            " ".join(missing_slaves),
+                            name,
+                        )
+                        cmd = [ifenslave_path, name] + list(missing_slaves)
+                        __salt__["cmd.run"](cmd, python_shell=False)
+                    else:
+                        log.error("Command 'ifenslave' not found")
+                    ret["changes"][
+                        "enslave"
+                    ] = "Added slaves '{}' to master '{}'".format(
+                        " ".join(missing_slaves), name
                     )
-                    cmd = [ifenslave_path, name] + list(missing_slaves)
-                    __salt__["cmd.run"](cmd, python_shell=False)
-                else:
-                    log.error("Command 'ifenslave' not found")
-                ret["changes"]["enslave"] = "Added slaves '{}' to master '{}'".format(
-                    " ".join(missing_slaves), name
-                )
             else:
                 log.info(
                     "All slaves '%s' are already added to the master %s"

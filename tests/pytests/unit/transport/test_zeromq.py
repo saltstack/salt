@@ -7,6 +7,8 @@ import hashlib
 import logging
 import multiprocessing
 import os
+import threading
+import time
 import uuid
 
 import pytest
@@ -324,6 +326,129 @@ def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_maste
     )
     with salt.channel.client.ReqChannel.factory(opts, master_uri=master_uri) as channel:
         assert "127.0.0.1" in channel.transport.message_client.addr
+
+
+def run_loop_in_thread(loop, evt):
+    """
+    Run the provided loop until an event is set
+    """
+    loop.make_current()
+
+    @salt.ext.tornado.gen.coroutine
+    def stopper():
+        while True:
+            if evt.is_set():
+                loop.stop()
+                break
+            yield salt.ext.tornado.gen.sleep(0.3)
+
+    loop.add_callback(stopper)
+    try:
+        loop.start()
+    finally:
+        loop.close()
+
+
+class MockSaltMinionMaster:
+    mock = MagicMock()
+
+    def __init__(self, temp_salt_minion, temp_salt_master):
+        SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
+        self.process_manager = salt.utils.process.ProcessManager(
+            name="ReqServer_ProcessManager"
+        )
+
+        master_opts = temp_salt_master.config.copy()
+        master_opts.update({"transport": "zeromq"})
+        self.server_channel = salt.channel.server.ReqServerChannel.factory(master_opts)
+        self.server_channel.pre_fork(self.process_manager)
+
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.evt = threading.Event()
+        self.server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
+        self.server_thread = threading.Thread(
+            target=run_loop_in_thread, args=(self.io_loop, self.evt)
+        )
+        self.server_thread.start()
+        minion_opts = temp_salt_minion.config.copy()
+        minion_opts.update({"master_ip": "127.0.0.1"})
+        minion_opts.update({"transport": "zeromq"})
+        self.channel = salt.channel.client.ReqChannel.factory(
+            minion_opts, crypt="clear"
+        )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.channel.close()
+        del self.channel
+        # Attempting to kill the children hangs the test suite.
+        # Let the test suite handle this instead.
+        self.process_manager.stop_restarting()
+        self.process_manager.kill_children()
+        self.evt.set()
+        self.server_thread.join()
+        time.sleep(
+            2
+        )  # Give the procs a chance to fully close before we stop the io_loop
+        self.server_channel.close()
+        SMaster.secrets.pop("aes")
+        del self.server_channel
+        del self.io_loop
+        del self.process_manager
+        del self.server_thread
+
+    # pylint: enable=W1701
+    @classmethod
+    @salt.ext.tornado.gen.coroutine
+    def _handle_payload(cls, payload):
+        """
+        TODO: something besides echo
+        """
+        cls.mock._handle_payload_hook()
+        raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
+
+
+def test_badload(temp_salt_minion, temp_salt_master):
+    """
+    Test a variety of bad requests, make sure that we get some sort of error
+    """
+    with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
+        msgs = ["", [], tuple()]
+        for msg in msgs:
+            ret = minion_master.channel.send(msg, timeout=2, tries=1)
+            assert ret == "payload and load must be a dict"
+
+
+def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
+    """
+    test of getting exception on payload handling
+    """
+    with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
+        with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
+            _mock.side_effect = Exception()
+            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            assert ret == "Some exception handling minion payload"
+
+
+def test_serverside_exception(temp_salt_minion, temp_salt_master):
+    """
+    test of getting server side exception on payload handling
+    """
+    with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
+        with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
+            _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
+            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            assert ret == "Server-side exception handling payload"
 
 
 def test_zeromq_async_pub_channel_publish_port(temp_salt_master):

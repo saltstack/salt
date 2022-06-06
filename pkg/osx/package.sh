@@ -1,15 +1,17 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Package Script for the macOS installer
+# Title: Build Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This creates a signed macOS package for Salt from the contents of
-#              /opt/salt
+# Description: This creates a macOS package for Salt from the contents of
+#              /opt/salt and signs it
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#       or
+#     - Xcode
 #
 # Usage:
 #     This script can be passed 2 parameters
@@ -19,10 +21,10 @@
 #              /tmp/salt_pkg
 #
 #     Example:
-#         The following will build Salt version 2017.7.0 with Python 3 and
-#         stage all files in /tmp/salt_pkg:
+#         The following will build Salt version 2017.7.0 and stage all files in
+#         /tmp/salt_pkg:
 #
-#         ./package.sh 2017.7.0 /tmp/salt_pkg
+#         ./build_pkg.sh 2017.7.0 /tmp/salt_pkg
 #
 # Environment Setup:
 #
@@ -44,15 +46,15 @@
 #         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "#########################################################################"
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Building Salt Package"
 
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -62,7 +64,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit -1
+    exit 1
 }
 
 ################################################################################
@@ -91,6 +93,8 @@ echo "**** Setting Variables"
 
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
+PY_VERSION=3.9
+PY_DOT_VERSION=3.9.12
 
 ################################################################################
 # Make sure this is the Salt Repository
@@ -99,7 +103,7 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the 'pkg/osx' directory of the Git checkout."
-    exit -1
+    exit 1
 fi
 
 ################################################################################
@@ -122,10 +126,13 @@ cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 ################################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
 ################################################################################
-echo "**** Copying Service Definitions"
 
-mkdir -p $PKGDIR/opt
-cp -r /opt/salt $PKGDIR/opt
+echo "**** Copying Build Files"
+mkdir -p $PKGDIR/opt/salt
+# -r: Recursive, Symbolic Links are preserved
+cp -R /opt/salt/.pyenv $PKGDIR/opt/salt/.pyenv
+
+echo "**** Copying Service Definitions"
 mkdir -p $PKGDIR/Library/LaunchDaemons $PKGDIR/etc
 
 cp $PKGRESOURCES/scripts/com.saltstack.salt.minion.plist $PKGDIR/Library/LaunchDaemons
@@ -138,17 +145,24 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaem
 ################################################################################
 echo "**** Trimming Unneeded Files"
 
-rm -rdf $PKGDIR/opt/salt/bin/pkg-config
-rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
-rm -rdf $PKGDIR/opt/salt/lib/engines
-rm -rdf $PKGDIR/opt/salt/share/aclocal
-rm -rdf $PKGDIR/opt/salt/share/doc
-rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
-rm -rdf $PKGDIR/opt/salt/lib/python3.7/test
+rm -rdf $PKGDIR/opt/salt/.pyenv/lib/pkgconfig
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/engines*
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/test
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/site-packages/Cryptodome/SelfTest
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/site-packages/libcloud/test
 
+echo "**** Removing pkgconfig directories"
+find $PKGDIR/opt/salt -name 'pkgconfig' -type d -prune -exec rm -rf {} \;
 
-echo "**** Removing Compiled Python Files (.pyc)"
+echo "**** Removing Unneeded documentation"
+find $PKGDIR/opt/salt -name 'share' -type d -prune -exec rm -rf {} \;
+
+echo "**** Removing pyenv shims"
+find $PKGDIR/opt/salt -name 'shims' -type d -prune -exec rm -rf {} \;
+
+echo "**** Removing Compiled Python Files (.pyc/__pycache__)"
 find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
+find $PKGDIR/opt/salt -name '__pycache__' -type d -prune -exec rm -rf {} \;
 
 ################################################################################
 # Copy Config Files from Salt Repo to the Package Directory
@@ -183,7 +197,7 @@ SEDSTR="s/@CPUARCH@/$CPUARCH/g"
 sed -i '' "$SEDSTR" distribution.xml
 
 ################################################################################
-# Build the Package
+# Build and Sign the Package
 ################################################################################
 echo "**** Building the Source Package"
 
@@ -193,7 +207,7 @@ pkgbuild --root=$PKGDIR \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
          --ownership=recommended \
-         salt-src-$VERSION-py3-$CPUARCH.pkg
+         salt-src-$VERSION-py3-$CPUARCH.pkg > /dev/null
 
 echo "**** Building and Signing the Product Package with Timestamp"
 productbuild --resources=pkg-resources \
@@ -202,7 +216,7 @@ productbuild --resources=pkg-resources \
              --version=$VERSION \
              --sign "$DEV_INSTALL_CERT" \
              --timestamp \
-             salt-$VERSION-py3-$CPUARCH-signed.pkg
+             salt-$VERSION-py3-$CPUARCH-signed.pkg > /dev/null
 
 echo "Building Salt Package Completed Successfully"
-echo "#########################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

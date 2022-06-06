@@ -2,14 +2,15 @@
 Module for gathering and managing network information
 """
 
+import concurrent.futures
 import datetime
 import hashlib
 import logging
 import os
+import random
 import re
 import socket
 import time
-from concurrent.futures import ThreadPoolExecutor
 
 import salt.utils.decorators.path
 import salt.utils.functools
@@ -2076,6 +2077,12 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.fqdns
     """
     # Provides:
     # fqdns
@@ -2084,10 +2091,14 @@ def fqdns():
     HOST_NOT_FOUND = 1
     NO_DATA = 4
 
-    grains = {}
     fqdns = set()
 
     def _lookup_fqdn(ip):
+        # Random sleep between 0.005 and 0.025 to avoid hitting
+        # the GLIBC race condition.
+        # For more info, see:
+        #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
+        time.sleep(random.randint(5, 25) / 1000)
         try:
             return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
@@ -2115,14 +2126,23 @@ def fqdns():
     # when the "fqdn" is not defined for certains IP addresses, which was
     # causing that "socket.timeout" was reached multiple times sequentially,
     # blocking execution for several seconds.
-
     try:
-        with ThreadPoolExecutor(8) as pool:
-            for item in pool.map(_lookup_fqdn, addresses):
-                if item:
-                    fqdns.update(item)
+        with concurrent.futures.ThreadPoolExecutor(8) as pool:
+            future_lookups = {
+                pool.submit(_lookup_fqdn, address): address for address in addresses
+            }
+            for future in concurrent.futures.as_completed(future_lookups):
+                try:
+                    resolved_fqdn = future.result()
+                    if resolved_fqdn:
+                        fqdns.update(resolved_fqdn)
+                except Exception as exc:  # pylint: disable=broad-except
+                    address = future_lookups[future]
+                    log.error("Failed to resolve address %s: %s", address, exc)
     except Exception as exc:  # pylint: disable=broad-except
-        log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
+        log.error(
+            "Exception while creating a ThreadPoolExecutor for resolving FQDNs: %s", exc
+        )
 
     elapsed = time.time() - start
     log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
