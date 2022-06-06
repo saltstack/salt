@@ -753,57 +753,17 @@ MISSING_EXAMPLES = {
     ],
     "salt/modules/virtualenv_mod.py": ["virtualenv_ver"],
     "salt/modules/vsphere.py": [
-        "create_storage_policy",
-        "power_off_vm",
-        "list_diskgroups",
-        "list_default_vsan_policy",
-        "create_diskgroup",
-        "list_dvportgroups",
-        "assign_license",
         "update_vm",
-        "list_cluster",
-        "update_dvportgroup",
-        "update_cluster",
-        "list_dvss",
         "set_advanced_configs",
-        "add_license",
-        "list_capability_definitions",
         "register_vm",
-        "list_disk_partitions",
-        "remove_datastore",
-        "update_storage_policy",
-        "erase_disk_partitions",
         "get_vm_config",
-        "remove_dvportgroup",
-        "delete_vm",
-        "create_datacenter",
-        "add_capacity_to_diskgroup",
         "get_vm_config_file",
-        "list_datacenters_via_proxy",
-        "power_on_vm",
-        "rename_datastore",
         "list_licenses",
-        "configure_host_cache",
         "compare_vm_configs",
-        "get_host_cache",
-        "unregister_vm",
-        "create_cluster",
-        "update_dvs",
-        "list_uplink_dvportgroup",
         "get_advanced_configs",
         "delete_advanced_configs",
-        "create_dvportgroup",
-        "list_disks",
-        "assign_default_storage_policy_to_datastore",
-        "create_dvs",
-        "list_datastores_via_proxy",
-        "list_default_storage_policy_of_datastore",
         "create_vmfs_datastore",
-        "list_assigned_licenses",
         "get_vm",
-        "remove_diskgroup",
-        "remove_capacity_from_diskgroup",
-        "list_storage_policies",
     ],
     "salt/modules/win_pkg.py": ["get_package_info"],
     "salt/modules/win_timezone.py": ["zone_compare"],
@@ -942,7 +902,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     ):
                         warnings += 1
                         utils.warn(
-                            "The function '{}' on '{}' does not have a 'CLI Example:' in it's docstring",
+                            "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                             funcname,
                             relpath,
                         )
@@ -950,7 +910,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     errors += 1
                     exitcode = 1
                     utils.error(
-                        "The function '{}' on '{}' does not have a 'CLI Example:' in it's docstring",
+                        "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                         funcname,
                         relpath,
                     )
@@ -978,7 +938,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     exitcode = 1
                     utils.error(
                         "The function {!r} on '{}' does not have a proper 'CLI Example:' section in "
-                        "it's docstring. The proper format is:\n"
+                        "its docstring. The proper format is:\n"
                         "CLI Example:\n"
                         "\n"
                         ".. code-block:: bash\n"

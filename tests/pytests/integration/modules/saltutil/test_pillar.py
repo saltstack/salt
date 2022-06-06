@@ -19,14 +19,14 @@ pytestmark = [
 @pytest.fixture(autouse=True)
 def refresh_pillar(salt_call_cli, salt_minion):
     ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
     try:
         yield
     finally:
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
 
 @pytest.mark.slow_test
@@ -56,9 +56,9 @@ def test_pillar_refresh(
     )
 
     ret = salt_call_cli.run("pillar.raw")
-    assert ret.exitcode == 0
-    assert ret.json
-    pre_pillar = ret.json
+    assert ret.returncode == 0
+    assert ret.data
+    pre_pillar = ret.data
     # Remove keys which are not important and consume too much output when reading through failures
     for key in ("master", "ext_pillar_opts"):
         pre_pillar.pop(key, None)
@@ -78,7 +78,7 @@ def test_pillar_refresh(
             "saltutil.refresh_pillar",
             wait=sync_refresh,
         )
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         expected_tag = salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE
         event_pattern = (salt_minion.id, expected_tag)
@@ -91,9 +91,9 @@ def test_pillar_refresh(
         log.debug("Refresh pillar complete event received: %s", matched_events.matches)
 
         ret = salt_call_cli.run("pillar.raw")
-        assert ret.exitcode == 0
-        assert ret.json
-        post_pillar = ret.json
+        assert ret.returncode == 0
+        assert ret.data
+        post_pillar = ret.data
         # Remove keys which are not important and consume too much output when reading through failures
         for key in ("master", "ext_pillar_opts"):
             post_pillar.pop(key, None)

@@ -74,8 +74,8 @@ def test_state_with_import(salt_ssh_cli, state_tree):
     verify salt-ssh can use imported map files in states
     """
     ret = salt_ssh_cli.run("state.sls", "test")
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
 
 @pytest.fixture
@@ -121,8 +121,8 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     ret = salt_ssh_cli.run(
         "--extra-filerefs=salt://foo/map.jinja", "state.apply", "foo"
     )
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
 
 @pytest.mark.slow_test
@@ -132,13 +132,13 @@ def test_state_opts_test(salt_ssh_cli, test_opts_state_tree):
     """
 
     def _verify_output(ret):
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert (
-            ret.json["cmd_|-config.get check for is_test_|-echo 'True'_|-run"]["name"]
+            ret.data["cmd_|-config.get check for is_test_|-echo 'True'_|-run"]["name"]
             == "echo 'True'"
         )
         assert (
-            ret.json["cmd_|-opts.get check for test_|-echo 'True'_|-run"]["name"]
+            ret.data["cmd_|-opts.get check for test_|-echo 'True'_|-run"]["name"]
             == "echo 'True'"
         )
 

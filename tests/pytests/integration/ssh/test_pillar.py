@@ -39,9 +39,9 @@ def test_pillar_items(salt_ssh_cli, pillar_tree):
     test pillar.items with salt-ssh
     """
     ret = salt_ssh_cli.run("pillar.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    pillar_items = ret.json
+    assert ret.returncode == 0
+    assert ret.data
+    pillar_items = ret.data
     assert "monty" in pillar_items
     assert pillar_items["monty"] == "python"
     assert "knights" in pillar_items
@@ -54,9 +54,9 @@ def test_pillar_get(salt_ssh_cli, pillar_tree):
     test pillar.get with salt-ssh
     """
     ret = salt_ssh_cli.run("pillar.get", "monty")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "python"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "python"
 
 
 @pytest.mark.slow_test
@@ -65,5 +65,5 @@ def test_pillar_get_doesnotexist(salt_ssh_cli, pillar_tree):
     test pillar.get when pillar does not exist with salt-ssh
     """
     ret = salt_ssh_cli.run("pillar.get", "doesnotexist")
-    assert ret.exitcode == 0
-    assert ret.json == ""
+    assert ret.returncode == 0
+    assert ret.data == ""

@@ -6,7 +6,7 @@ import time
 
 import pytest
 import salt.utils.platform
-from saltfactories.exceptions import FactoryNotStarted, FactoryTimeout
+from pytestshellutils.exceptions import FactoryNotStarted, FactoryTimeout
 
 log = logging.getLogger(__name__)
 
@@ -177,7 +177,7 @@ def run_salt_cmds():
                             "test.ping",
                             minion_tgt=minion,
                         )
-                        if ret.exitcode == 0 and ret.json is True:
+                        if ret.returncode == 0 and ret.data is True:
                             returned_minions.append((cli, minions_to_check[minion]))
                             minions_to_check.pop(minion)
                     except FactoryTimeout:
