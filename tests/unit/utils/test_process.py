@@ -350,6 +350,7 @@ class TestSignalHandlingProcess(TestCase):
         "Validate SignalHandlingProcess handles signals"
         # Gloobal event to stop all processes we're creating
         evt = multiprocessing.Event()
+        sig_handled = multiprocessing.Event()
 
         # Create a process to test signal handler
         val = multiprocessing.Value("i", 0)
@@ -357,6 +358,7 @@ class TestSignalHandlingProcess(TestCase):
             target=self.pid_setting_target,
             args=(self.run_forever_sub_target, val, evt),
         )
+        proc.register_finalize_method(sig_handled.set)
         proc.start()
 
         # Create a second process that should not respond to SIGINT or SIGTERM
@@ -370,7 +372,7 @@ class TestSignalHandlingProcess(TestCase):
         while not val.value:
             time.sleep(0.3)
 
-        assert not proc.signal_handled()
+        assert not sig_handled.is_set()
 
         # Send a signal that should get handled by the subprocess
         os.kill(val.value, signal.SIGTERM)
@@ -378,13 +380,13 @@ class TestSignalHandlingProcess(TestCase):
         # wait up to 10 seconds for signal handler:
         start = time.time()
         while time.time() - start < 10:
-            if proc.signal_handled():
+            if sig_handled.is_set():
                 break
             time.sleep(0.3)
 
         try:
             # Allow some time for the signal handler to do its thing
-            assert proc.signal_handled()
+            assert sig_handled.is_set()
             # Reap the signaled process
             proc.join(1)
             assert proc2.is_alive()

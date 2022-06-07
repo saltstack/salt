@@ -8,6 +8,8 @@ import pytest
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_cluster as rabbitmq_cluster
 
+pytest.importorskip("docker")
+
 log = logging.getLogger(__name__)
 
 pytestmark = [
@@ -38,7 +40,6 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
     }
 
 
-@pytest.mark.slow_test
 def test_joined(rabbitmq_container):
     """
     Test rabbitmq_cluster.joined

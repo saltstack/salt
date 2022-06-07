@@ -1,0 +1,1 @@
+Don't rely on ``importlib.metadata``, even on Py3.10, use ``importlib_metadata`` instead.

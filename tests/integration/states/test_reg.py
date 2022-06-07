@@ -7,8 +7,8 @@ import logging
 import pytest
 import salt.utils.platform
 import salt.utils.win_reg as reg
+from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 

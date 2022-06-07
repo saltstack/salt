@@ -87,6 +87,5 @@ def redirect(argv):
 
 
 if __name__ == "__main__":
-    if sys.platform.startswith("win"):
-        multiprocessing.freeze_support()
+    multiprocessing.freeze_support()
     redirect(sys.argv)

@@ -5,8 +5,8 @@ integration tests for mac_system
 import logging
 
 import pytest
+from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
