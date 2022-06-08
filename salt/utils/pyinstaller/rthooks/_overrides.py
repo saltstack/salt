@@ -1,6 +1,7 @@
 """
 This package contains the runtime hooks support code for when Salt is pacakged with PyInstaller.
 """
+import io
 import logging
 import os
 import subprocess
@@ -62,6 +63,19 @@ class PyinstallerPopen(subprocess.Popen):
     def __init__(self, *args, **kwargs):
         kwargs["env"] = clean_pyinstaller_vars(kwargs.pop("env", None))
         super().__init__(*args, **kwargs)
+
+    # From https://github.com/pyinstaller/pyinstaller/blob/v5.1/PyInstaller/hooks/rthooks/pyi_rth_subprocess.py
+    #
+    # In windowed mode, force any unused pipes (stdin, stdout and stderr) to be DEVNULL instead of inheriting the
+    # invalid corresponding handles from this parent process.
+    if sys.platform == "win32" and not isinstance(sys.stdout, io.IOBase):
+
+        def _get_handles(self, stdin, stdout, stderr):
+            stdin, stdout, stderr = (
+                subprocess.DEVNULL if pipe is None else pipe
+                for pipe in (stdin, stdout, stderr)
+            )
+            return super()._get_handles(stdin, stdout, stderr)
 
 
 class PyinstallerTerminal(salt.utils.vt.Terminal):  # pylint: disable=abstract-method
