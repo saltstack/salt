@@ -20,3 +20,4 @@ recursive-include salt *.jinja
 recursive-include templates *
 include salt/templates/git/*
 include salt/templates/lxc/*
+include salt/utils/pyinstaller/rthooks.dat
