@@ -690,7 +690,7 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==1.7.1
+pyjwt==2.4.0
     # via
     #   adal
     #   twilio
