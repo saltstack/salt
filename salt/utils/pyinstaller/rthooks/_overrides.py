@@ -27,7 +27,7 @@ def clean_pyinstaller_vars(environ):
         if varname in environ and environ[varname] == sys._MEIPASS:
             # If we find the varname on the user provided environment we need to at least
             # check if it's not the value set by PyInstaller, if it is, remove it.
-            log.trace(
+            log.debug(
                 "User provided environment variable %r with value %r which is "
                 "the value that PyInstaller set's. Removing it",
                 varname,
@@ -38,7 +38,7 @@ def clean_pyinstaller_vars(environ):
         if original_varname in environ and varname not in environ:
             # We found the original variable set by PyInstaller, and we didn't find
             # any user provided variable, let's rename it.
-            log.trace(
+            log.debug(
                 "The %r variable was found in the passed environment, renaming it to %r",
                 original_varname,
                 varname,
@@ -47,13 +47,13 @@ def clean_pyinstaller_vars(environ):
 
         if varname not in environ:
             if original_varname in os.environ:
-                log.trace(
+                log.debug(
                     "Renaming environment variable %r to %r", original_varname, varname
                 )
                 environ[varname] = os.environ[original_varname]
             elif varname in os.environ:
                 # Override the system environ variable with an empty one
-                log.trace("Setting environment variable %r to an empty string", varname)
+                log.debug("Setting environment variable %r to an empty string", varname)
                 environ[varname] = ""
     return environ
 
