@@ -3118,6 +3118,7 @@ def managed(
                     setype=setype,
                     serange=serange,
                     verify_ssl=verify_ssl,
+                    follow_symlinks=follow_symlinks,
                     **kwargs
                 )
 
