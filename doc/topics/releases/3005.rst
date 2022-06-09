@@ -26,8 +26,7 @@ and the required dependencies of Salt. The Tiamat packages allow users
 to use Salt without Python being installed on the box.
 
 Any new OS platforms we support going forward from version 3005 will only
-include Tiamat packages. For this release, this includes Centos 8 Stream,
-Centos 9 Stream and Ubuntu 22.04.
+include Tiamat packages. For this release, this includes Redhat 9 and Ubuntu 22.04.
 
 On the day of the Phosphorus release, the instructions on how to install the
 new Tiamat packages will be available on https://repo.saltproject.io for each
@@ -55,7 +54,7 @@ Platform package support
 +--------------+---------------------+---------------------+
 | RHEL 8       |         yes         |        yes          |
 +--------------+---------------------+---------------------+
-| RHEL 9       |         yes         |        yes          |
+| RHEL 9       |         yes         |        no           |
 +--------------+---------------------+---------------------+
 | Ubuntu 18.04 |         yes         |        yes          |
 +--------------+---------------------+---------------------+
