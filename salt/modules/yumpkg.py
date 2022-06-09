@@ -2980,7 +2980,6 @@ def mod_repo(repo, basedir=None, **kwargs):
         todelete.append("mirrorlist")
         todelete.append("baseurl")
 
-
     # Fail if the user tried to delete the name
     if "name" in todelete:
         raise SaltInvocationError("The repo name cannot be deleted")
