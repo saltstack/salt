@@ -124,6 +124,25 @@ ESTAB       0      0                                                            
 ESTAB       0      0                                                                 192.168.122.1:4506                                                                       192.168.122.177:24545
 """
 
+AIX_NETSTAT = """\
+Proto Recv-Q Send-Q  Local Address          Foreign Address        (state)
+tcp        0      0  127.0.0.1.5678         127.0.0.1.4506         ESTABLISHED
+"""
+
+SUNOS_NETSTAT = """\
+TCP: IPv4
+   Local Address        Remote Address    Swind Send-Q Rwind Recv-Q    State
+   -------------------- -------------------- ----- ------ ----- ------ -----------
+   127.0.0.1.5678       127.0.0.1.4506        1064800      0 1055864      0 ESTABLISHED
+"""
+
+WINDOWS_NETSTAT = """\
+Active Connections
+
+   Proto  Local Address          Foreign Address        State
+   TCP    127.0.0.1:5678         127.0.0.1:4506         ESTABLISHED
+"""
+
 IPV4_SUBNETS = {
     True: ("10.10.0.0/24",),
     False: ("10.10.0.0", "10.10.0.0/33", "FOO", 9, "0.9.800.1000/24"),
@@ -610,12 +629,48 @@ class NetworkTestCase(TestCase):
             },
         )
 
+    def test_windows_remotes_on(self):
+        with patch("salt.utils.platform.is_windows", lambda: True):
+            with patch("subprocess.check_output", return_value=WINDOWS_NETSTAT):
+                remotes = network._windows_remotes_on(4506, "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+                remotes = network._windows_remotes_on("4506", "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+
+    def test_sunos_remotes_on(self):
+        with patch("salt.utils.platform.is_sunos", lambda: True):
+            with patch("subprocess.check_output", return_value=SUNOS_NETSTAT):
+                remotes = network._sunos_remotes_on(4506, "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+                remotes = network._sunos_remotes_on("4506", "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+
+    def test_openbsd_remotes_on(self):
+        with patch("salt.utils.platform.is_openbsd", lambda: True):
+            # Seems like OpenBSD is using the same netstat format like AIX,
+            # so I'm reusing that.
+            with patch("subprocess.check_output", return_value=AIX_NETSTAT):
+                remotes = network._openbsd_remotes_on(4506, "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+                remotes = network._openbsd_remotes_on("4506", "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+
+    def test_aix_remotes_on(self):
+        with patch("salt.utils.platform.is_aix", lambda: True):
+            with patch("subprocess.check_output", return_value=AIX_NETSTAT):
+                remotes = network._aix_remotes_on(4506, "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+                remotes = network._aix_remotes_on("4506", "remote_port")
+                self.assertEqual(remotes, set(["127.0.0.1"]))
+
     def test_freebsd_remotes_on(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
             with patch("salt.utils.platform.is_freebsd", lambda: True):
                 with patch("subprocess.check_output", return_value=FREEBSD_SOCKSTAT):
+                    remotes = network._freebsd_remotes_on(4506, "remote")
+                    self.assertEqual(remotes, set(["127.0.0.1"]))
                     remotes = network._freebsd_remotes_on("4506", "remote")
-                    self.assertEqual(remotes, {"127.0.0.1"})
+                    self.assertEqual(remotes, set(["127.0.0.1"]))
 
     def test_freebsd_remotes_on_with_fat_pid(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
@@ -624,8 +679,10 @@ class NetworkTestCase(TestCase):
                     "subprocess.check_output",
                     return_value=FREEBSD_SOCKSTAT_WITH_FAT_PID,
                 ):
+                    remotes = network._freebsd_remotes_on(4506, "remote")
+                    self.assertEqual(remotes, set(["127.0.0.1"]))
                     remotes = network._freebsd_remotes_on("4506", "remote")
-                    self.assertEqual(remotes, {"127.0.0.1"})
+                    self.assertEqual(remotes, set(["127.0.0.1"]))
 
     def test_netlink_tool_remote_on_a(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
@@ -633,6 +690,10 @@ class NetworkTestCase(TestCase):
                 with patch(
                     "subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT
                 ):
+                    remotes = network._netlink_tool_remote_on(4506, "local")
+                    self.assertEqual(
+                        remotes, set(["192.168.122.177", "::ffff:127.0.0.1"])
+                    )
                     remotes = network._netlink_tool_remote_on("4506", "local")
                     self.assertEqual(remotes, {"192.168.122.177", "::ffff:127.0.0.1"})
 

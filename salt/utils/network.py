@@ -1746,6 +1746,7 @@ def _sunos_remotes_on(port, which_end):
        10.0.0.101.4505      10.0.0.1.45329       1064800      0 1055864      0 ESTABLISHED
        10.0.0.101.4505      10.0.0.100.50798     1064800      0 1055864      0 ESTABLISHED
     """
+    port = int(port)
     remotes = set()
     try:
         data = subprocess.check_output(
@@ -1908,6 +1909,7 @@ def _openbsd_remotes_on(port, which_end):
     tcp          0      0  10.0.0.101.4505        10.0.0.1.45329         ESTABLISHED
     tcp          0      0  10.0.0.101.4505        10.0.0.100.50798       ESTABLISHED
     """
+    port = int(port)
     remotes = set()
     try:
         data = subprocess.check_output(
@@ -1949,6 +1951,7 @@ def _windows_remotes_on(port, which_end):
        TCP    10.2.33.17:3007        130.164.12.233:10123   ESTABLISHED
        TCP    10.2.33.17:3389        130.164.30.5:10378     ESTABLISHED
     """
+    port = int(port)
     remotes = set()
     try:
         data = subprocess.check_output(
@@ -1990,6 +1993,7 @@ def _linux_remotes_on(port, which_end):
     Python  10153 root   22u  IPv4 0x18a8464a29c8cab5      0t0  TCP [fe80::249a]:4505->[fe80::150]:59367 (ESTABLISHED)
 
     """
+    port = int(port)
     remotes = set()
 
     try:
@@ -2062,6 +2066,7 @@ def _aix_remotes_on(port, which_end):
     tcp4       0      0  127.0.0.1.32771        127.0.0.1.32778        ESTABLISHED
     tcp        0      0  127.0.0.1.32778        127.0.0.1.32771        ESTABLISHED
     """
+    port = int(port)
     remotes = set()
     try:
         data = subprocess.check_output(
