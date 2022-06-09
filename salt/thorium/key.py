@@ -63,12 +63,14 @@ def timeout(name, delete=0, reject=0):
                     remove.add(id_)
                 if reject and (now - __context__[ktr][id_]) > reject:
                     reject_set.add(id_)
-    for id_ in remove:
-        keyapi.delete_key(id_)
-        __reg__["status"]["val"].pop(id_, None)
-        __context__[ktr].pop(id_, None)
-    for id_ in reject_set:
-        keyapi.reject(id_)
-        __reg__["status"]["val"].pop(id_, None)
-        __context__[ktr].pop(id_, None)
+    if remove:
+        keyapi.delete_key(match_dict={"minions": list(remove))
+        for id_ in remove:
+            __reg__["status"]["val"].pop(id_, None)
+            __context__[ktr].pop(id_, None)
+    if reject_set:
+        keyapi.reject(match_dict={"minions": list(reject_set))
+        for id_ in reject_set:
+            __reg__["status"]["val"].pop(id_, None)
+            __context__[ktr].pop(id_, None)
     return ret
