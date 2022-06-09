@@ -282,7 +282,7 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
             json_data = salt.utils.json.dumps(load)
         except TypeError:
             # https://github.com/saltstack/salt/issues/55226
-            # convert returned data from binary string to actual string 
+            # convert returned data from binary string to actual string
             if "return" in load.keys() and "return" in load["return"].keys():
                 if isinstance(load["return"]["return"], (bytes, bytearray)):
                     load["return"]["return"] = load["return"]["return"].decode("utf-8", "strict")
