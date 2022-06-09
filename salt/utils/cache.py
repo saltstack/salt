@@ -143,8 +143,8 @@ class CacheDisk(CacheDict):
         if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
             return
         with salt.utils.files.fopen(self._path, "rb") as fp_:
-            cache = salt.utils.data.decode(
-                salt.utils.msgpack.load(fp_, encoding=__salt_system_encoding__)
+            cache = salt.utils.msgpack.load(
+                fp_, encoding=__salt_system_encoding__, raw=False
             )
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
@@ -170,7 +170,7 @@ class CacheDisk(CacheDict):
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time,
             }
-            salt.utils.msgpack.dump(cache, fp_, use_bin_type=True)
+            salt.utils.msgpack.dump(cache, fp_)
 
 
 class CacheCli:

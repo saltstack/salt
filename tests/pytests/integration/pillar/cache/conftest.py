@@ -36,7 +36,7 @@ def pillar_salt_minion(pillar_salt_master):
         # Sync All
         salt_call_cli = factory.salt_call_cli()
         ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
-        assert ret.exitcode == 0, ret
+        assert ret.returncode == 0, ret
         yield factory
 
 

@@ -1,0 +1,1 @@
+Salt now correctly handles macOS after Py3.8 where python defaults to spawn instead of fork.
