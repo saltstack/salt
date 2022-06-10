@@ -14,6 +14,10 @@ This will be the last release we will support Python versions 3.5 and 3.6.
 In Salt release 3006, we will only support Python versions 3.7 and higher.
 Going forward, our policy will be to align with Python's supported versions.
 
+OS Support End of Life
+----------------------
+Debian and Raspbian 9 are now EOL, therefore we will no longer be building
+packages for these platforms.
 
 New packages available
 ----------------------
@@ -62,13 +66,9 @@ Platform package support
 +--------------+---------------------+---------------------+
 | Ubuntu 22.04 |         yes         |        no           |
 +--------------+---------------------+---------------------+
-| Debian 9     |         yes         |        yes          |
-+--------------+---------------------+---------------------+
 | Debian 10    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
 | Debian 11    |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Raspbian 9   |         no          |        yes          |
 +--------------+---------------------+---------------------+
 | Raspbian 10  |         no          |        yes          |
 +--------------+---------------------+---------------------+
