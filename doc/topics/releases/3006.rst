@@ -16,7 +16,6 @@ This policy change will require users to update their repo files to point to
 the new repo path to use the new Tiamat packages. The full installation instructions
 can be found at https://repo.saltproject.io. This change impacts various OS platforms, including:
 
-* Debian 9
 * Ubuntu 18.04
 * CentOS 7
 * CentOS 8
@@ -52,13 +51,9 @@ Platform package support
 +--------------+---------------------+---------------------+
 | Ubuntu 22.04 |         yes         |        no           |
 +--------------+---------------------+---------------------+
-| Debian 9     |         yes         |        no           |
-+--------------+---------------------+---------------------+
 | Debian 10    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
 | Debian 11    |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Raspbian 9   |         no          |        no           |
 +--------------+---------------------+---------------------+
 | Raspbian 10  |         no          |        no           |
 +--------------+---------------------+---------------------+
