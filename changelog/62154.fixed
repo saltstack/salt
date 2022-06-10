@@ -1,0 +1,1 @@
+Fixed an incompatibility preventing salt-cloud from deploying VMs on Proxmox VE 7
