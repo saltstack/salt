@@ -247,6 +247,10 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
 
 
 def test_versions_report(salt_cli):
+    """
+    Test that we can re-parse the version report back into
+    a similar format with the necessary headers
+    """
     expected = salt.version.versions_information()
     # sanitize expected of unnnecessary whitespace
     for _, section in expected.items():
@@ -266,12 +270,16 @@ def test_versions_report(salt_cli):
         assert "{}:".format(header) in ret_lines
 
     ret_dict = {}
+    expected_keys = set()
     for line in ret_lines:
         if not line:
             continue
         if line.endswith(":"):
+            assert not expected_keys
             current_header = line.rstrip(":")
+            assert current_header in expected
             ret_dict[current_header] = {}
+            expected_keys = set(expected[current_header].keys())
         else:
             key, *value_list = line.split(":", 1)
             assert value_list
@@ -280,5 +288,6 @@ def test_versions_report(salt_cli):
             if value == "Not Installed":
                 value = None
             ret_dict[current_header][key] = value
-
-    assert ret_dict == expected
+            assert key in expected_keys
+            expected_keys.remove(key)
+    assert not expected_keys
