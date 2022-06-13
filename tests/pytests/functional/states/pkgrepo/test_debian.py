@@ -512,6 +512,7 @@ def test_repo_present_absent_trailing_slash_uri(pkgrepo, trailing_slash_repo_fil
 @pytest.fixture
 def key_path():
     key_file = pathlib.Path("/usr", "share", "keyrings", "salt-archive-keyring.gpg")
+    key_file.parent.mkdir(exist_ok=True)
     assert not key_file.is_file()
     yield key_file
     key_file.unlink()
