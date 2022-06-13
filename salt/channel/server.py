@@ -183,7 +183,7 @@ class ReqServerChannel:
             )
         log.error("Unknown req_fun %s", req_fun)
         # always attempt to return an error to the minion
-        salt.ext.tornado.Return("Server-side exception handling payload")
+        raise salt.ext.tornado.gen.Return("Server-side exception handling payload")
 
     def _encrypt_private(self, ret, dictkey, target, nonce=None, sign_messages=True):
         """

@@ -6,14 +6,14 @@ import salt.channel.server
 import salt.exceptions
 import salt.ext.tornado
 import salt.transport.tcp
-from saltfactories.utils.ports import get_unused_localhost_port
+from pytestshellutils.utils import ports
 from tests.support.mock import MagicMock, patch
 
 
 @attr.s(frozen=True, slots=True)
 class ClientSocket:
     listen_on = attr.ib(init=False, default="127.0.0.1")
-    port = attr.ib(init=False, default=attr.Factory(get_unused_localhost_port))
+    port = attr.ib(init=False, default=attr.Factory(ports.get_unused_localhost_port))
     sock = attr.ib(init=False, repr=False)
 
     @sock.default
@@ -200,7 +200,7 @@ def salt_message_client():
     io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
 
     client = salt.transport.tcp.MessageClient(
-        {}, "127.0.0.1", get_unused_localhost_port(), io_loop=io_loop_mock
+        {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop_mock
     )
 
     try:

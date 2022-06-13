@@ -14,7 +14,7 @@ import pytest
 import salt.defaults.exitcodes
 import salt.utils.path
 import salt.version
-from saltfactories.utils.processes import ProcessResult, terminate_process
+from pytestshellutils.utils.processes import ProcessResult, terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -31,9 +31,9 @@ def test_context_retcode_salt(salt_cli, salt_minion):
     """
     # test.retcode will set the retcode in the context dunder
     ret = salt_cli.run("test.retcode", "0", minion_tgt=salt_minion.id)
-    assert ret.exitcode == 0, ret
+    assert ret.returncode == 0, ret
     ret = salt_cli.run("test.retcode", "42", minion_tgt=salt_minion.id)
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
 
 def test_salt_error(salt_cli, salt_minion):
@@ -42,28 +42,28 @@ def test_salt_error(salt_cli, salt_minion):
     an exception.
     """
     ret = salt_cli.run("test.raise_exception", "TypeError", minion_tgt=salt_minion.id)
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_cli.run(
         "test.raise_exception",
         "salt.exceptions.CommandNotFoundError",
         minion_tgt=salt_minion.id,
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_cli.run(
         "test.raise_exception",
         "salt.exceptions.CommandExecutionError",
         minion_tgt=salt_minion.id,
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_cli.run(
         "test.raise_exception",
         "salt.exceptions.SaltInvocationError",
         minion_tgt=salt_minion.id,
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_cli.run(
         "test.raise_exception",
@@ -72,17 +72,17 @@ def test_salt_error(salt_cli, salt_minion):
         '"No such file or directory" /tmp/foo.txt',
         minion_tgt=salt_minion.id,
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_cli.run(
         "test.echo", "{foo: bar, result: False}", minion_tgt=salt_minion.id
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_cli.run(
         "test.echo", "{foo: bar, success: False}", minion_tgt=salt_minion.id
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
 
 def test_missing_minion(salt_cli, salt_master, salt_minion):
@@ -99,7 +99,7 @@ def test_missing_minion(salt_cli, salt_master, salt_minion):
         ret = salt_cli.run(
             "--timeout=5", "test.ping", minion_tgt="minion2", _timeout=120
         )
-        assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+        assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
     finally:
         # Now get rid of it
         try:
@@ -118,7 +118,7 @@ def test_exit_status_unknown_argument(salt_cli):
     ret = salt_cli.run(
         "--unknown-argument", minion_tgt="minion-tgt-is-mandatory-by-salt-factories"
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_USAGE, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_USAGE, ret
     assert "Usage" in ret.stderr
     assert "no such option: --unknown-argument" in ret.stderr
 
@@ -129,7 +129,7 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
 
     """
     ret = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
-    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret
 
 
 @pytest.mark.slow_test
@@ -145,8 +145,8 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     start = time.time()
     ret = salt_cli.run("test.sleep", "1", minion_tgt=salt_minion.id)
     stop = time.time()
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     assert stop - start > 1, "The command should have taken more than 1 second"
 
     # Now the real test
@@ -229,7 +229,9 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
             terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
         )
     terminal_stderr.close()
-    ret = ProcessResult(proc.returncode, stdout, stderr, cmdline=proc.args)
+    ret = ProcessResult(
+        returncode=proc.returncode, stdout=stdout, stderr=stderr, cmdline=proc.args
+    )
     log.debug(ret)
     # If the minion ID is on stdout it means that the command finished and wasn't terminated
     assert (
