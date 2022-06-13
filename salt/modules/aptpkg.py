@@ -2168,7 +2168,7 @@ def get_repo_keys(aptkey=True, keydir=None):
     List known repo key details.
     :param bool aptkey: Use the binary apt-key.
     :param str keydir: The directory path to save keys. The default directory
-    is /usr/share/keyrings/ which is the recommended path
+    is /etc/apt/keyrings/ which is the recommended path
     for adding third party keys. This argument is only used
     when aptkey is False.
 
@@ -2186,9 +2186,16 @@ def get_repo_keys(aptkey=True, keydir=None):
 
     if not aptkey:
         if not keydir:
-            keydir = pathlib.Path("/usr", "share", "keyrings")
+            keydir = pathlib.Path("/etc", "apt", "keyrings")
         if not isinstance(keydir, pathlib.Path):
             keydir = pathlib.Path(keydir)
+
+        if not keydir.is_dir():
+            log.error(
+                "The directory %s does not exist. Please create this directory only writable by root",
+                keydir,
+            )
+            return False
 
         ret_output = []
         for file in os.listdir(str(keydir)):
@@ -2275,7 +2282,7 @@ def add_repo_key(
     :param str saltenv: The environment the key file resides in.
     :param bool aptkey: Use the binary apt-key.
     :param str keydir: The directory path to save keys. The default directory
-                       is /usr/share/keyrings/ which is the recommended path
+                       is /etc/apt/keyrings/ which is the recommended path
                        for adding third party keys. This argument is only used
                        when aptkey is False.
 
@@ -2302,9 +2309,15 @@ def add_repo_key(
         salt '*' pkg.add_repo_key keyserver='keyserver.example' keyid='0000AAAA'
     """
     if not keydir:
-        keydir = pathlib.Path("/usr", "share", "keyrings")
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
     if not isinstance(keydir, pathlib.Path):
         keydir = pathlib.Path(keydir)
+    if not aptkey and not keydir.is_dir():
+        log.error(
+            "The directory %s does not exist. Please create this directory only writable by root",
+            keydir,
+        )
+        return False
 
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -2434,7 +2447,7 @@ def del_repo_key(name=None, aptkey=True, keydir=None, **kwargs):
 
     keydir
         The directory path to save keys. The default directory
-        is /usr/share/keyrings/ which is the recommended path
+        is /etc/apt/keyrings/ which is the recommended path
         for adding third party keys.
 
     .. warning::
@@ -2450,9 +2463,15 @@ def del_repo_key(name=None, aptkey=True, keydir=None, **kwargs):
         salt '*' pkg.del_repo_key name='ppa:foo/bar' keyid_ppa=True
     """
     if not keydir:
-        keydir = pathlib.Path("/usr", "share", "keyrings")
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
     if not isinstance(keydir, pathlib.Path):
         keydir = pathlib.Path(keydir)
+    if not aptkey and not keydir.is_dir():
+        log.error(
+            "The directory %s does not exist. Please create this directory only writable by root",
+            keydir,
+        )
+        return False
 
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -2785,7 +2804,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             fn_ = new_path
 
         if not aptkey:
-            if not add_repo_key(path=str(fn_), aptkey=False):
+            func_kwargs = {}
+            if kwargs.get("signedby"):
+                func_kwargs["keydir"] = kwargs.get("signedby").parent
+
+            if not add_repo_key(path=str(fn_), aptkey=False, **func_kwargs):
                 return False
         else:
             cmd = ["apt-key", "add", str(fn_)]
