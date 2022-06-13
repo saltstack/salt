@@ -661,7 +661,7 @@ pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/darwin.in
-pyjwt==2.0.0
+pyjwt==2.4.0
     # via adal
 pynacl==1.3.0
     # via paramiko

@@ -79,7 +79,7 @@ def test_state_with_import(salt_ssh_cli, state_tree):
 
 
 @pytest.fixture
-def nested_state_tree(base_env_state_tree_root_dir, tmpdir):
+def nested_state_tree(base_env_state_tree_root_dir, tmp_path):
     top_file = """
     base:
       'localhost':
@@ -93,7 +93,7 @@ def nested_state_tree(base_env_state_tree_root_dir, tmpdir):
         - source: salt://foo/file.jinja
         - template: jinja
     """.format(
-        tmpdir
+        tmp_path
     )
     file_jinja = """
     {% from 'foo/map.jinja' import comment %}{{ comment }}
