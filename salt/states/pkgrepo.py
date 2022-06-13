@@ -216,6 +216,8 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     metalink
         A URL for a curated list of non-stale mirrors
 
+        .. versionadded:: 3006
+
     comments
         Sometimes you want to supply additional information, but not as
         enabled configuration. Anything supplied for this list will be saved

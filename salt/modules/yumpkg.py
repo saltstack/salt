@@ -2925,6 +2925,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     metalink
         the URL for yum to reference
+        .. versionadded:: 3006
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and one
