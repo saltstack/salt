@@ -350,7 +350,7 @@ def zone_compare(timezone):
     if "Solaris" in __grains__["os_family"] or "AIX" in __grains__["os_family"]:
         return timezone == get_zone()
 
-    if "Arch" or "FreeBSD" in __grains__["os_family"]:
+    if __grains__["os_family"] in {"Arch", "FreeBSD"}:
         if not os.path.isfile(_get_localtime_path()):
             return timezone == get_zone()
 
