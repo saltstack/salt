@@ -244,7 +244,7 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     assert "This job's jid is" in ret.stderr
 
 
-def test_versions_report(salt_run_cli):
+def test_versions_report(salt_cli):
     expected = salt.version.versions_information()
     # sanitize expected of unnnecessary whitespace
     for _, section in expected.items():
@@ -252,7 +252,7 @@ def test_versions_report(salt_run_cli):
             if isinstance(section[key], str):
                 section[key] = section[key].strip()
 
-    ret = salt_run_cli.run("--versions-report")
+    ret = salt_cli.run("--versions-report")
     assert ret.stdout
     ret_lines = ret.stdout.split("\n")
 
