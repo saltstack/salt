@@ -1,0 +1,1 @@
+Replace deprecated threading.currentThread with current_thread.
