@@ -348,9 +348,19 @@ def save_load(jid, load, minions=None):
     with _get_serv(commit=True) as cur:
 
         sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
-
         try:
-            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
+            json_data = salt.utils.json.dumps(load)
+        except TypeError:
+            # https://github.com/saltstack/salt/issues/55226
+            # convert returned data from binary string to actual string
+            if "return" in load.keys() and "return" in load["return"].keys():
+                if isinstance(load["return"]["return"], (bytes, bytearray)):
+                    load["return"]["return"] = load["return"]["return"].decode(
+                        "utf-8", "strict"
+                    )
+            json_data = salt.utils.json.dumps(load)
+        try:
+            cur.execute(sql, (jid, json_data))
         except MySQLdb.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try/except we get tons of duplicate entry errors
