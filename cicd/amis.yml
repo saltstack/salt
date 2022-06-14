@@ -3,7 +3,6 @@ amazon-2-x86_64: ami-01226819a514516fe
 arch-lts-x86_64: ami-018a6b479dcb87969
 centos-7-x86_64: ami-05764f27cdf8f99e0
 centosstream-8-x86_64: ami-02fc0a57f9b1fa4ed
-centosstream-9-x86_64: ami-00012ca6ca819671f
 debian-10-amd64: ami-0eb32b3297dc438d0
 debian-11-amd64: ami-08bf6df84b4488e8a
 debian-11-arm64: ami-085ff5dc42735c52e
