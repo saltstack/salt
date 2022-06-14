@@ -10,6 +10,10 @@ import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, mock_open, patch
 
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="sysctl not available on Windows"),
+]
+
 
 @pytest.fixture
 def configure_loader_modules():
