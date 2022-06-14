@@ -342,6 +342,13 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     """
     with _get_serv(commit=True) as cur:
+        # https://github.com/saltstack/salt/issues/55226
+        # convert returned data from binary string to actual string
+        if "return" in load.keys() and "return" in load["return"].keys():
+            if isinstance(load["return"]["return"], (bytes, bytearray)):
+                load["return"]["return"] = load["return"]["return"].decode(
+                    "utf-8", "strict"
+                )
         try:
             cur.execute(
                 PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
