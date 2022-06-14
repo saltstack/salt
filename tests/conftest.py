@@ -261,6 +261,16 @@ def pytest_configure(config):
         "markers",
         "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
     )
+    config.addinivalue_line(
+        "markers",
+        "requires_random_entropy(minimum={}, timeout={}, skip=True): Mark test as "
+        "requiring a minimum value of random entropy. In the case where the value is lower "
+        "than the provided 'minimum', an attempt will be made to raise that value up until "
+        "the provided 'timeout' minutes have passed, at which time, depending on the value "
+        "of 'skip' the test will skip or fail.".format(
+            EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
+        ),
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
@@ -545,6 +555,55 @@ def pytest_runtest_setup(item):
                 )
             )
 
+    requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
+    if requires_random_entropy_marker is not None:
+        if requires_random_entropy_marker.args:
+            raise pytest.UsageError(
+                "'requires_random_entropy' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        skip = requires_random_entropy_marker.kwargs.pop("skip", None)
+        if skip and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'requires_random_entropy' marker "
+                "requires a boolean not '{}'.".format(type(skip))
+            )
+        minimum_entropy = requires_random_entropy_marker.kwargs.pop("minimum", None)
+        if minimum_entropy is not None:
+            if not isinstance(minimum_entropy, int):
+                raise pytest.UsageError(
+                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an integer not '{}'.".format(type(minimum_entropy))
+                )
+            if minimum_entropy <= 0:
+                raise pytest.UsageError(
+                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an positive integer not '{}'.".format(minimum_entropy)
+                )
+        max_minutes = requires_random_entropy_marker.kwargs.pop("timeout", None)
+        if max_minutes is not None:
+            if not isinstance(max_minutes, int):
+                raise pytest.UsageError(
+                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an integer not '{}'.".format(type(max_minutes))
+                )
+            if max_minutes <= 0:
+                raise pytest.UsageError(
+                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an positive integer not '{}'.".format(max_minutes)
+                )
+        if requires_random_entropy_marker.kwargs:
+            raise pytest.UsageError(
+                "Unsupported keyword arguments passed to the 'requires_random_entropy' "
+                "marker: {}".format(
+                    ", ".join(list(requires_random_entropy_marker.kwargs))
+                )
+            )
+        entropy_generator = EntropyGenerator(
+            minimum_entropy=minimum_entropy, max_minutes=max_minutes, skip=skip
+        )
+        entropy_generator.generate_entropy()
+
     if salt.utils.platform.is_windows():
         unit_tests_paths = (
             str(TESTS_DIR / "unit"),
@@ -630,6 +689,15 @@ def salt_factories_config():
         if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
         else 60,
     }
+
+
+@pytest.fixture
+def tmpdir(tmpdir):
+    raise pytest.UsageError(
+        "The `tmpdir` fixture uses Pytest's `pypath` implementation which "
+        "is getting deprecated in favor of `pathlib`. Please use the "
+        "`tmp_path` fixture instead."
+    )
 
 
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
@@ -873,6 +941,7 @@ def salt_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
+    salt_api_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -910,6 +979,16 @@ def salt_master_factory(
         }
     )
     config_overrides["pillar_opts"] = True
+    config_overrides["external_auth"] = {
+        "auto": {
+            salt_api_account_factory.username: [
+                "@wheel",
+                "@runner",
+                "test.*",
+                "grains.*",
+            ],
+        }
+    }
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
@@ -1463,6 +1542,11 @@ def _disable_salt_logging():
     salt._logging.set_logging_options_dict(logging_config)
     # Run the test suite
     yield
+
+
+@pytest.fixture(scope="session")
+def salt_api_account_factory():
+    return TestAccount(username="saltdev_api", password="saltdev")
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

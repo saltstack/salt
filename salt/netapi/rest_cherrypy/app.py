@@ -601,6 +601,7 @@ import salt
 import salt.auth
 import salt.exceptions
 import salt.netapi
+import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
@@ -976,6 +977,15 @@ def urlencoded_processor(entity):
             unserialized_data[key] = val[0]
         if len(val) == 0:
             unserialized_data[key] = ""
+
+    # Parse `arg` and `kwarg` just like we do it on the CLI
+    if "kwarg" in unserialized_data:
+        unserialized_data["kwarg"] = salt.utils.args.yamlify_arg(
+            unserialized_data["kwarg"]
+        )
+    if "arg" in unserialized_data:
+        for idx, value in enumerate(unserialized_data["arg"]):
+            unserialized_data["arg"][idx] = salt.utils.args.yamlify_arg(value)
     cherrypy.serving.request.unserialized_data = unserialized_data
 
 

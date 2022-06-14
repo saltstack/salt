@@ -2,13 +2,12 @@
 Tests for the file state
 """
 import pytest
-import salt.states.file
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
 @pytest.mark.slow_test
 def test_get_source_sum_verify_ssl_false(
-    salt_call_cli, tmpdir, ssl_webserver, verify_ssl
+    salt_call_cli, tmp_path, ssl_webserver, verify_ssl
 ):
     """
     test verify_ssl with get_source_sum
@@ -17,7 +16,7 @@ def test_get_source_sum_verify_ssl_false(
     ret = salt_call_cli.run(
         "--local",
         "file.get_source_sum",
-        tmpdir.join("test_source_sum.txt").strpath,
+        str(tmp_path / "test_source_sum.txt"),
         web_file,
         web_file + ".sha256",
         "verify_ssl={}".format(verify_ssl),
@@ -34,7 +33,7 @@ def test_get_source_sum_verify_ssl_false(
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
 @pytest.mark.slow_test
-def test_get_managed_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl):
+def test_get_managed_verify_ssl(salt_call_cli, tmp_path, ssl_webserver, verify_ssl):
     """
     test verify_ssl with get_managed
     """
@@ -42,7 +41,7 @@ def test_get_managed_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
     ret = salt_call_cli.run(
         "--local",
         "file.get_managed",
-        tmpdir.join("test_managed.txt").strpath,
+        str(tmp_path / "test_managed.txt"),
         "",
         web_file,
         web_file + ".sha256",
@@ -65,15 +64,15 @@ def test_get_managed_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
 @pytest.mark.slow_test
-def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl):
+def test_manage_file_verify_ssl(salt_call_cli, tmp_path, ssl_webserver, verify_ssl):
     """
     test verify_ssl with manage_file
     """
-    test_file = tmpdir.join("test_manage_file.txt").strpath
+    test_file = tmp_path / "test_manage_file.txt"
     ret = salt_call_cli.run(
         "--local",
         "file.manage_file",
-        test_file,
+        str(test_file),
         "",
         "",
         ssl_webserver.url("this.txt"),
@@ -97,17 +96,17 @@ def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
 @pytest.mark.parametrize("verify_ssl", [True, False])
 @pytest.mark.slow_test
 def test_check_managed_changes_verify_ssl(
-    salt_call_cli, tmpdir, ssl_webserver, verify_ssl
+    salt_call_cli, tmp_path, ssl_webserver, verify_ssl
 ):
     """
     test verify_ssl with check_managed_changes
     """
-    test_file = tmpdir.join("test_managed_changes.txt").strpath
+    test_file = tmp_path / "test_managed_changes.txt"
     web_url = ssl_webserver.url("this.txt")
     ret = salt_call_cli.run(
         "--local",
         "file.check_managed_changes",
-        test_file,
+        str(test_file),
         web_url,
         web_url + ".sha256",
         "",
@@ -123,25 +122,24 @@ def test_check_managed_changes_verify_ssl(
     )
 
     if not verify_ssl:
-        assert ret.data["newfile"] == test_file
+        assert ret.data["newfile"] == str(test_file)
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
 @pytest.mark.slow_test
-def test_check_file_meta_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl):
+def test_check_file_meta_verify_ssl(salt_call_cli, tmp_path, ssl_webserver, verify_ssl):
     """
     test verify_ssl with check_file_meta
     """
-    test_file = tmpdir.join("test_check_file_meta.txt").strpath
-    with salt.utils.files.fopen(test_file, "w") as fh_:
-        fh_.write("test check_file_meta")
+    test_file = tmp_path / "test_check_file_meta.txt"
+    test_file.write_text("test check_file_meta")
     web_url = ssl_webserver.url("this.txt")
     ret = salt_call_cli.run(
         "--local",
         "file.check_file_meta",
-        test_file,
+        str(test_file),
         "",
         web_url,
         "{hash_type: 'sha256', 'hsum':"
