@@ -1567,6 +1567,13 @@ class Webserver:
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
 
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stop()
+
 
 class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
     """
