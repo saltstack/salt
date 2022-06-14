@@ -25,6 +25,15 @@ def test_get():
         assert linux_sysctl.get("net.ipv4.ip_forward") == 1
 
 
+def test_get_no_sysctl_binary():
+    """
+    Tests the failure of get function when no binary exists
+    """
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        with pytest.raises(CommandExecutionError):
+            linux_sysctl.get("net.ipv4.ip_forward")
+
+
 def test_assign_proc_sys_failed():
     """
     Tests if /proc/sys/<kernel-subsystem> exists or not
@@ -105,7 +114,7 @@ def test_persist_no_conf_success():
     config = "/etc/sysctl.conf"
     with patch("os.path.isfile", MagicMock(return_value=False)), patch(
         "os.path.exists", MagicMock(return_value=True)
-    ):
+    ), patch("salt.utils.path.which", MagicMock(return_value="/bin/sysctl")):
         asn_cmd = {
             "pid": 1337,
             "retcode": 0,
