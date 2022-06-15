@@ -2815,7 +2815,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if not fn_:
             raise CommandExecutionError("Error: file not found: {}".format(key_url))
 
-        if fn_.name != kwargs["signedby"].name:
+        if kwargs["signedby"] and fn_.name != kwargs["signedby"].name:
             # override the signedby defined in the name with the
             # one defined in kwargs.
             new_path = fn_.parent / kwargs["signedby"].name
