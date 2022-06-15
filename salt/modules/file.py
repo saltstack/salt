@@ -4128,11 +4128,25 @@ def stats(path, hash_type=None, follow_symlinks=True):
     return ret
 
 
-def rmdir(path):
+def rmdir(path, recurse=False, verbose=False):
     """
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 3006.0
+        Changed return value for failure to a boolean.
 
     Remove the specified directory. Fails if a directory is not empty.
+
+    recurse
+        When ``recurse`` is set to ``True``, all empty directories
+        within the path are pruned.
+
+        .. versionadded:: 3006.0
+
+    verbose
+        When ``verbose`` is set to ``True``, a dictionary is returned
+        which contains more information about the removal process.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -4140,6 +4154,9 @@ def rmdir(path):
 
         salt '*' file.rmdir /tmp/foo/
     """
+    ret = False
+    deleted = []
+    errors = []
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
@@ -4148,11 +4165,32 @@ def rmdir(path):
     if not os.path.isdir(path):
         raise SaltInvocationError("A valid directory was not specified.")
 
+    if recurse:
+        for root, dirs, _ in os.walk(path, topdown=False):
+            for subdir in dirs:
+                subdir_path = os.path.join(root, subdir)
+                try:
+                    log.debug("Removing '%s'", subdir_path)
+                    os.rmdir(subdir_path)
+                    deleted.append(subdir_path)
+                except OSError as exc:
+                    errors.append([subdir_path, str(exc)])
+                    log.error("Could not remove '%s': %s", subdir_path, exc)
+        ret = not errors
+
     try:
         os.rmdir(path)
-        return True
+        deleted.append(path)
+        ret = True if ret or not recurse else False
     except OSError as exc:
-        return exc.strerror
+        ret = False
+        errors.append([path, str(exc)])
+        log.error("Could not remove '%s': %s", path, exc)
+
+    if verbose:
+        return {"deleted": deleted, "errors": errors, "result": ret}
+    else:
+        return ret
 
 
 def remove(path):

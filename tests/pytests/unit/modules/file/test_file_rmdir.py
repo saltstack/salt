@@ -47,4 +47,4 @@ def test_file_rmdir_failure_return():
     with patch(
         "os.rmdir", MagicMock(side_effect=OSError(39, "Directory not empty"))
     ), patch("os.path.isdir", MagicMock(return_value=True)):
-        assert filemod.rmdir("/tmp/salt_test_return") == "Directory not empty"
+        assert filemod.rmdir("/tmp/salt_test_return") is False
