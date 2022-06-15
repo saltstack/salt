@@ -66,6 +66,26 @@ RUNTESTS_LOGFILE = ARTIFACTS_DIR.joinpath(
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
+def session_run_always(session, *command, **kwargs):
+    """
+    Patch nox to allow running some commands which would be skipped if --install-only is passed.
+    """
+    try:
+        # Guess we weren't the only ones wanting this
+        # https://github.com/theacodes/nox/pull/331
+        return session.run_always(*command, **kwargs)
+    except AttributeError:
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            return session.run(*command, **kwargs)
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
+
+
 def find_session_runner(session, name, **kwargs):
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
@@ -103,25 +123,18 @@ def _get_session_python_version_info(session):
     try:
         version_info = session._runner._real_python_version_info
     except AttributeError:
-        old_install_only_value = session._runner.global_config.install_only
-        try:
-            # Force install only to be false for the following chunk of code
-            # For additional information as to why see:
-            #   https://github.com/theacodes/nox/pull/181
-            session._runner.global_config.install_only = False
-            session_py_version = session.run(
-                "python",
-                "-c",
-                'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
-                silent=True,
-                log=False,
-            )
-            version_info = tuple(
-                int(part) for part in session_py_version.split(".") if part.isdigit()
-            )
-            session._runner._real_python_version_info = version_info
-        finally:
-            session._runner.global_config.install_only = old_install_only_value
+        session_py_version = session_run_always(
+            session,
+            "python",
+            "-c",
+            'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
+            silent=True,
+            log=False,
+        )
+        version_info = tuple(
+            int(part) for part in session_py_version.split(".") if part.isdigit()
+        )
+        session._runner._real_python_version_info = version_info
     return version_info
 
 
@@ -251,15 +264,8 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
             "wheel",
         ]
     )
-    session.run(*install_command, silent=PIP_INSTALL_SILENT)
+    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT)
     return True
-
-
-def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
-):
-    if not _upgrade_pip_setuptools_and_wheel(session):
-        return
 
 
 def _install_requirements(
