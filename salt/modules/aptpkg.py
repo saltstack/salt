@@ -1703,7 +1703,10 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[.*\]", line)
-    ret = {"arch": {"full": "", "value": ""}, "signedby": {"full": "", "value": ""}}
+    ret = {
+        "arch": {"full": "", "value": "", "index": 0},
+        "signedby": {"full": "", "value": "", "index": 0},
+    }
 
     if not get_opts:
         return ret
