@@ -393,9 +393,6 @@ def managed(name, ppa=None, copr=None, **kwargs):
             else salt.utils.data.is_true(enabled)
         )
 
-    if __grains__["os_family"] == "Debian":
-        repo = salt.utils.pkg.deb.strip_uri(repo)
-
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
@@ -437,22 +434,23 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
-                # split the line and sort everything after the URL
-                sanitizedsplit = sanitizedkwargs[kwarg].split()
-                sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = (
-                    x.strip() for x in pre[kwarg].partition("#")
-                )
-                reposplit = reposplit.split()
-                reposplit[3:] = sorted(reposplit[3:])
-                if sanitizedsplit != reposplit:
-                    break
-                if "comments" in kwargs:
-                    post_comments = salt.utils.pkg.deb.combine_comments(
-                        kwargs["comments"]
+                if not sanitizedkwargs["disabled"]:
+                    # split the line and sort everything after the URL
+                    sanitizedsplit = sanitizedkwargs[kwarg].split()
+                    sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
+                    reposplit, _, pre_comments = (
+                        x.strip() for x in pre[kwarg].partition("#")
                     )
-                    if pre_comments != post_comments:
+                    reposplit = reposplit.split()
+                    reposplit[3:] = sorted(reposplit[3:])
+                    if sanitizedsplit != reposplit:
                         break
+                    if "comments" in kwargs:
+                        post_comments = salt.utils.pkg.deb.combine_comments(
+                            kwargs["comments"]
+                        )
+                        if pre_comments != post_comments:
+                            break
             elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(

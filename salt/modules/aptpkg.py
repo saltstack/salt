@@ -2561,26 +2561,26 @@ def mod_repo(repo, saltenv="base", **kwargs):
     kw_type = kwargs.get("type")
     kw_dist = kwargs.get("dist")
 
-    for source in repos:
+    for apt_source in repos:
         # This series of checks will identify the starting source line
         # and the resulting source line.  The idea here is to ensure
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            source.type == repo_type
-            and source.uri.rstrip("/") == repo_uri.rstrip("/")
-            and source.dist == repo_dist
+            apt_source.type == repo_type
+            and apt_source.uri.rstrip("/") == repo_uri.rstrip("/")
+            and apt_source.dist == repo_dist
         )
-        kw_matches = source.dist == kw_dist and source.type == kw_type
+        kw_matches = apt_source.dist == kw_dist and apt_source.type == kw_type
 
         if repo_matches or kw_matches:
             for comp in full_comp_list:
-                if comp in getattr(source, "comps", []):
-                    mod_source = source
-            if not source.comps:
-                mod_source = source
-            if kwargs["architectures"] != source.architectures:
-                mod_source = source
+                if comp in getattr(apt_source, "comps", []):
+                    mod_source = apt_source
+            if not apt_source.comps:
+                mod_source = apt_source
+            if kwargs["architectures"] != apt_source.architectures:
+                mod_source = apt_source
             if mod_source:
                 break
 
@@ -2598,6 +2598,11 @@ def mod_repo(repo, saltenv="base", **kwargs):
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
+
+    if mod_source.uri != repo_uri:
+        mod_source.uri = repo_uri
+        mod_source.line = mod_source.repo_line()
+
     sources.save()
     # on changes, explicitly refresh
     if refresh:
@@ -2695,22 +2700,23 @@ def expand_repo_def(**kwargs):
             setattr(source_entry, kwarg, kwargs[kwarg])
 
     source_list = SourcesList()
-    source_entry = source_list.add(
+    _source_entry = source_list.add(
         type=source_entry.type,
         uri=source_entry.uri,
         dist=source_entry.dist,
         orig_comps=getattr(source_entry, "comps", []),
         architectures=getattr(source_entry, "architectures", []),
     )
+    _source_entry.disabled = source_entry.disabled
 
-    sanitized["file"] = source_entry.file
-    sanitized["comps"] = getattr(source_entry, "comps", [])
-    sanitized["disabled"] = source_entry.disabled
-    sanitized["dist"] = source_entry.dist
-    sanitized["type"] = source_entry.type
-    sanitized["uri"] = source_entry.uri
-    sanitized["line"] = source_entry.line.strip()
-    sanitized["architectures"] = getattr(source_entry, "architectures", [])
+    sanitized["file"] = _source_entry.file
+    sanitized["comps"] = getattr(_source_entry, "comps", [])
+    sanitized["disabled"] = _source_entry.disabled
+    sanitized["dist"] = _source_entry.dist
+    sanitized["type"] = _source_entry.type
+    sanitized["uri"] = _source_entry.uri
+    sanitized["line"] = _source_entry.repo_line().strip()
+    sanitized["architectures"] = getattr(_source_entry, "architectures", [])
 
     return sanitized
 
