@@ -81,7 +81,7 @@ def test_full_data():
     assert publish.publish("*", "publish.salt") == {}
 
 
-def test_runner(tmpdir):
+def test_runner():
     """
     Test if it execute a runner on the master and return the data
     from the runner function

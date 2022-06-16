@@ -37,7 +37,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
@@ -300,7 +300,7 @@ python-jose[cryptography]==3.2.0
     # via moto
 pythonnet==2.5.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   moto

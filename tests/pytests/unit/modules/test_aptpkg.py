@@ -23,6 +23,16 @@ from salt.exceptions import (
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 
 try:
+    from aptsources.sourceslist import (  # pylint: disable=unused-import
+        SourceEntry,
+        SourcesList,
+    )
+
+    HAS_APT = True
+except ImportError:
+    HAS_APT = False
+
+try:
     from aptsources import sourceslist  # pylint: disable=unused-import
 
     HAS_APTSOURCES = True
@@ -202,6 +212,7 @@ class MockSourceEntry:
         self.dist = dist
         self.comps = []
         self.architectures = []
+        self.signedby = ""
 
     def mysplit(self, line):
         return line.split()
@@ -252,7 +263,11 @@ def test_add_repo_key(repo_keys_var):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
         with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
             assert (
-                aptpkg.add_repo_key(keyserver="keyserver.ubuntu.com", keyid="FBB75451")
+                aptpkg.add_repo_key(
+                    keyserver="keyserver.ubuntu.com",
+                    keyid="FBB75451",
+                    keyfile="test-key.gpg",
+                )
                 is True
             )
 
@@ -282,8 +297,13 @@ def test_get_repo_keys(repo_keys_var):
     """
 
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
+
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        assert aptpkg.get_repo_keys() == repo_keys_var
+        if not HAS_APT:
+            with patch("os.listdir", return_value="/tmp/keys"):
+                assert aptpkg.get_repo_keys() == repo_keys_var
+        else:
+            assert aptpkg.get_repo_keys() == repo_keys_var
 
 
 def test_file_dict(lowpkg_files_var):
@@ -681,20 +701,21 @@ def test_mod_repo_enabled():
                     with patch(
                         "salt.modules.aptpkg.SourceEntry", MagicMock(), create=True
                     ):
-                        repo = aptpkg.mod_repo("foo", enabled=False)
-                        data_is_true.assert_called_with(False)
-                        # with disabled=True; should call salt.utils.data.is_true True
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo("foo", disabled=True)
-                        data_is_true.assert_called_with(True)
-                        # with enabled=True; should call salt.utils.data.is_true with False
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo("foo", enabled=True)
-                        data_is_true.assert_called_with(True)
-                        # with disabled=True; should call salt.utils.data.is_true False
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo("foo", disabled=False)
-                        data_is_true.assert_called_with(False)
+                        with patch("pathlib.Path", MagicMock()):
+                            repo = aptpkg.mod_repo("foo", enabled=False)
+                            data_is_true.assert_called_with(False)
+                            # with disabled=True; should call salt.utils.data.is_true True
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo("foo", disabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with enabled=True; should call salt.utils.data.is_true with False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo("foo", enabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with disabled=True; should call salt.utils.data.is_true False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo("foo", disabled=False)
+                            data_is_true.assert_called_with(False)
 
 
 def test_mod_repo_match():
@@ -732,6 +753,7 @@ def test_mod_repo_match():
                                     "http://cdn-aws.deb.debian.org/debian/",
                                     "stretch",
                                     ["main"],
+                                    "",
                                 )
                             ),
                         ):

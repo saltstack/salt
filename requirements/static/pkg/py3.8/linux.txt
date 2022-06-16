@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.8/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via requests
 cffi==1.14.6
     # via cryptography
@@ -65,7 +65,7 @@ python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-pytz==2021.1
+pytz==2022.1
     # via tempora
 pyyaml==5.4.1
     # via -r requirements/base.txt
