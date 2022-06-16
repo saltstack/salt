@@ -1,0 +1,1 @@
+Fixed salt.states.file.managed() for follow_symlinks=True and test=True
