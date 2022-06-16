@@ -4,7 +4,6 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Any, Dict
 
 import _pytest._version
 import attr
@@ -513,15 +512,15 @@ def test_repo_present_absent_trailing_slash_uri(pkgrepo, trailing_slash_repo_fil
 
 @attr.s(kw_only=True)
 class Repo:
-    key_root: pathlib.Path = attr.ib(default=pathlib.Path("/usr", "share", "keyrings"))
-    grains: Dict[str, Any] = attr.ib()
-    fullname: str = attr.ib()
-    alt_repo = bool = attr.ib(init=False)
-    key_file: pathlib.Path = attr.ib()
-    tmp_path: pathlib.Path = attr.ib()
-    repo_file: pathlib.Path = attr.ib()
-    repo_content: str = attr.ib()
-    key_url: str = attr.ib()
+    key_root = attr.ib(default=pathlib.Path("/usr", "share", "keyrings"))
+    grains = attr.ib()
+    fullname = attr.ib()
+    alt_repo = attr.ib(init=False)
+    key_file = attr.ib()
+    tmp_path = attr.ib()
+    repo_file = attr.ib()
+    repo_content = attr.ib()
+    key_url = attr.ib()
 
     @fullname.default
     def _default_fullname(self):
@@ -561,13 +560,13 @@ class Repo:
             self.grains["oscodename"],
             arch=self.grains["osarch"],
         )
-
-        repo_content = "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main"
+        if self.alt_repo:
+            repo_content = "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main"
         return repo_content
 
     @key_url.default
     def _default_key_url(self):
-        key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
+        key_url = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
             self.fullname, self.grains["lsb_distrib_release"], self.grains["osarch"]
         )
 
@@ -590,13 +589,13 @@ def test_adding_repo_file_signedby(pkgrepo, states, repo):
     """
     ret = states.pkgrepo.managed(
         name=repo.repo_content,
-        file=repo.repo_file,
+        file=str(repo.repo_file),
         clean_file=True,
         signedby=str(repo.key_file),
         key_url=repo.key_url,
         aptkey=False,
     )
-    with salt.utils.files.fopen(repo.repo_file, "r") as fp:
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
     assert repo.key_file.is_file()
