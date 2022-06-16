@@ -2707,7 +2707,11 @@ def expand_repo_def(**kwargs):
         orig_comps=getattr(source_entry, "comps", []),
         architectures=getattr(source_entry, "architectures", []),
     )
-    _source_entry.disabled = source_entry.disabled
+    if hasattr(_source_entry, "set_enabled"):
+        _source_entry.set_enabled(not source_entry.disabled)
+    else:
+        _source_entry.disabled = source_entry.disabled
+        _source_entry.line = _source_entry.repo_line()
 
     sanitized["file"] = _source_entry.file
     sanitized["comps"] = getattr(_source_entry, "comps", [])
@@ -2715,7 +2719,7 @@ def expand_repo_def(**kwargs):
     sanitized["dist"] = _source_entry.dist
     sanitized["type"] = _source_entry.type
     sanitized["uri"] = _source_entry.uri
-    sanitized["line"] = _source_entry.repo_line().strip()
+    sanitized["line"] = _source_entry.line.strip()
     sanitized["architectures"] = getattr(_source_entry, "architectures", [])
 
     return sanitized
