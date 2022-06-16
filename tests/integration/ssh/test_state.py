@@ -281,15 +281,16 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
     def test_state_running(self):
         """
         test state.running with salt-ssh
         """
 
+        retval = []
+
         def _run_in_background():
-            self.run_function("state.sls", ["running"], wipe=False)
+            retval.append(self.run_function("state.sls", ["running"], wipe=False))
 
         bg_thread = threading.Thread(target=_run_in_background)
         bg_thread.start()
@@ -297,13 +298,19 @@ class SSHStateTest(SSHCase):
         expected = 'The function "state.pkg" is running as'
         state_ret = []
         for _ in range(30):
+            if not bg_thread.is_alive():
+                continue
             get_sls = self.run_function("state.running", wipe=False)
             state_ret.append(get_sls)
             if expected in " ".join(get_sls):
                 # We found the expected return
                 break
-            time.sleep(0.3)
+            time.sleep(1)
         else:
+            if not bg_thread.is_alive():
+                bg_failed_msg = "Failed to return clean data"
+                if retval and bg_failed_msg in retval.pop().get("_error", ""):
+                    pytest.skip("Background state run failed, skipping")
             self.fail(
                 "Did not find '{}' in state.running return: {}".format(
                     expected, state_ret

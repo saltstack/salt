@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Notarize Package Script for the macOS installer
+# Title: Notarize Package Script for macOS
 # Author: Shane Lee
 # Date: December 2020
 #
@@ -10,7 +10,7 @@
 #              Xcode package. It is not available in Command Line Tools.
 #
 #              This script will upload a copy of the package to apple and wait
-#.             for the notarization to return. This can take several minutes.
+#              for the notarization to return. This can take several minutes.
 #
 # Requirements:
 #     - Full Xcode Installation
@@ -19,7 +19,7 @@
 #       The Xcode installation includes the Command Line Tools.
 #
 # Usage:
-#     This script must be passed 2 parameters
+#     This script must be passed 1 parameter
 #
 #         $1 : <package>
 #             The package that will be notarized (must be signed)
@@ -40,7 +40,7 @@
 #         export APP_SPEC_PWD="abcd-efgh-ijkl-mnop"
 #
 ################################################################################
-echo "#########################################################################"
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Notarize Salt Package"
 
 ################################################################################
@@ -48,6 +48,7 @@ echo "Notarize Salt Package"
 ################################################################################
 if [ "$1" == "" ]; then
     echo "Must supply a package to notarize"
+    exit 1
 else
     PACKAGE=$1
 fi
@@ -64,7 +65,7 @@ NOTARIZE_INFO_LOG=$(mktemp -t notarize-info)
 # Delete temporary files on exit
 ################################################################################
 function finish {
-	rm "$NOTARIZE_APP_LOG" "$NOTARIZE_INFO_LOG"
+    rm "$NOTARIZE_APP_LOG" "$NOTARIZE_INFO_LOG"
 }
 trap finish EXIT
 
@@ -82,34 +83,42 @@ if ! xcrun altool --notarize-app \
 fi
 
 # Get RequestUUID from the APP LOG
-cat "$NOTARIZE_APP_LOG"
+# Uncomment for debugging
+# cat "$NOTARIZE_APP_LOG"
+
+if ! grep -q "No errors uploading" "$NOTARIZE_APP_LOG"; then
+    echo ">>>>>> Failed Uploading Package <<<<<<"
+    exit 1
+fi
 RequestUUID=$(awk -F ' = ' '/RequestUUID/ {print $2}' "$NOTARIZE_APP_LOG")
 
-echo "**** Checking Notarization Status"
+echo "**** Checking Notarization Status (every 30 seconds)"
+echo -n "**** "
 # Check status every 30 seconds
-while sleep 30 && date; do
-echo "Waiting for Apple to approve the notarization so it can be stapled.
-      This can take a few minutes or more. Script auto checks every 30 sec"
+while sleep 30; do
+    echo -n "."
 
-	  # check notarization status
-	  if ! xcrun altool --notarization-info "$RequestUUID" \
-	                    --username "$APPLE_ACCT" \
-	                    --password "$APP_SPEC_PWD" > "$NOTARIZE_INFO_LOG" 2>&1; then
-		    cat "$NOTARIZE_INFO_LOG" 1>&2
-		    exit 1
-	  fi
+    # check notarization status
+    if ! xcrun altool --notarization-info "$RequestUUID" \
+                      --username "$APPLE_ACCT" \
+                      --password "$APP_SPEC_PWD" > "$NOTARIZE_INFO_LOG" 2>&1; then
+        cat "$NOTARIZE_INFO_LOG" 1>&2
+        exit 1
+    fi
 
-	  # Look for Status in the INFO LOG
-	  cat "$NOTARIZE_INFO_LOG"
+    # Look for Status in the INFO LOG
+    # Uncomment for debugging
+    # cat "$NOTARIZE_INFO_LOG"
 
-	  # once notarization is complete, run stapler and exit
-	  if ! grep -q "Status: in progress" "$NOTARIZE_INFO_LOG"; then
-	      echo "**** Stapling Notarization to the Package"
-    		xcrun stapler staple "$PACKAGE"
-    		exit $?
-	  fi
+    # once notarization is complete, run stapler and exit
+    if ! grep -q "Status: in progress" "$NOTARIZE_INFO_LOG"; then
+        echo ""
+        echo "**** Stapling Notarization to the Package"
+        xcrun stapler staple "$PACKAGE" > /dev/null
+        break
+    fi
 
 done
 
 echo "Notarize Salt Package Completed Successfully"
-echo "#########################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

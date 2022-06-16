@@ -1,0 +1,1 @@
+Added `pkg.held` and `pkg.unheld` state functions for Zypper, YUM/DNF and APT. Improved `zypperpkg.hold` and `zypperpkg.unhold` functions.
