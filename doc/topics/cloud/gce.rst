@@ -244,6 +244,8 @@ This setting allows you to set labels on your GCE instances. It
 should be a dictionary and must be parse-able by the python
 ast.literal_eval() function to convert it to a python dictionary.
 
+.. versionadded:: 3006
+
 tags
 ----
 
