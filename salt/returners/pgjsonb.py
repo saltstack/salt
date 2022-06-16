@@ -342,8 +342,6 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     """
     with _get_serv(commit=True) as cur:
-        # https://github.com/saltstack/salt/issues/55226
-        # convert returned data from binary string to actual string
         load = salt.returners._return_obj_string_safe(load)
         try:
             cur.execute(
