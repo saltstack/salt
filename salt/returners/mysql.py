@@ -348,17 +348,8 @@ def save_load(jid, load, minions=None):
     with _get_serv(commit=True) as cur:
 
         sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
-        try:
-            json_data = salt.utils.json.dumps(load)
-        except TypeError:
-            # https://github.com/saltstack/salt/issues/55226
-            # convert returned data from binary string to actual string
-            if "return" in load.keys() and "return" in load["return"].keys():
-                if isinstance(load["return"]["return"], (bytes, bytearray)):
-                    load["return"]["return"] = load["return"]["return"].decode(
-                        "utf-8", "strict"
-                    )
-            json_data = salt.utils.json.dumps(load)
+
+        json_data = salt.utils.json.dumps(salt.returners._return_obj_string_safe(load))
         try:
             cur.execute(sql, (jid, json_data))
         except MySQLdb.IntegrityError:
