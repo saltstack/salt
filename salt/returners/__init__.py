@@ -7,6 +7,8 @@ use to fetch their configuration options.
 
 import logging
 
+import salt.utils.json
+
 log = logging.getLogger(__name__)
 
 
@@ -212,3 +214,15 @@ def _fetch_profile_opts(
         pattr: creds.get("{}.{}".format(virtualname, profile_attrs[pattr]))
         for pattr in profile_attrs
     }
+
+
+def _return_obj_string_safe(response):
+    """
+    Cleans jid returned response for non-binary-storable returners
+    """
+    if "return" in response.keys() and "return" in response["return"].keys():
+        if isinstance(response["return"]["return"], (bytes, bytearray)):
+            response["return"]["return"] = response["return"]["return"].decode(
+                "utf-8", "strict"
+            )
+    return response
