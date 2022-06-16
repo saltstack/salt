@@ -47,6 +47,7 @@ EXCLUDED_FILES = [
     os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "pytests", "functional", "cache", "helpers.py"),
     os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
@@ -135,9 +136,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.modules.test_service",
             "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
-            "integration.netapi.rest_cherrypy.test_app_pam",
             "integration.netapi.rest_tornado.test_app",
-            "integration.netapi.test_client",
             "integration.output.test_output",
             "integration.pillar.test_pillar_include",
             "integration.proxy.test_shell",

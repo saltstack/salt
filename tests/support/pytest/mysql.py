@@ -1,12 +1,16 @@
+import logging
 import time
 
 import attr
 import pytest
-from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
-docker = pytest.importorskip("docker")
+# This `pytest.importorskip` here actually works because this module
+# is imported into test modules, otherwise, the skipping would just fail
+pytest.importorskip("docker")
+import docker.errors  # isort:skip  pylint: disable=3rd-party-module-not-gated
+
+log = logging.getLogger(__name__)
 
 
 @attr.s(kw_only=True, slots=True)
@@ -23,13 +27,28 @@ class MySQLImage:
 class MySQLCombo:
     mysql_name = attr.ib()
     mysql_version = attr.ib()
-    mysql_port = attr.ib()
+    mysql_port = attr.ib(default=None)
+    mysql_host = attr.ib(default="%")
     mysql_user = attr.ib()
     mysql_passwd = attr.ib()
+    mysql_database = attr.ib(default=None)
+    mysql_root_user = attr.ib(default="root")
+    mysql_root_passwd = attr.ib()
+    container = attr.ib(default=None)
+    container_id = attr.ib()
 
-    @mysql_port.default
-    def _mysql_port(self):
-        return get_unused_localhost_port()
+    @container_id.default
+    def _default_container_id(self):
+        return random_string(
+            "{}-{}-".format(
+                self.mysql_name.replace("/", "-"),
+                self.mysql_version,
+            )
+        )
+
+    @mysql_root_passwd.default
+    def _default_mysql_root_user_passwd(self):
+        return self.mysql_passwd
 
 
 def get_test_versions():
@@ -64,81 +83,94 @@ def get_test_versions():
     return test_versions
 
 
-@pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
 def get_test_version_id(value):
     return "container={}".format(value)
 
 
 @pytest.fixture(scope="module", params=get_test_versions(), ids=get_test_version_id)
-def mysql_image(request, docker_client):
-    image = request.param
-    try:
-        docker_client.images.pull(image.name, tag=image.tag)
-    except docker.errors.APIError as exc:
-        pytest.skip(
-            "Failed to pull docker image '{}:{}': {}".format(image.name, image.tag, exc)
-        )
-    return image
+def mysql_image(request):
+    return request.param
 
 
 @pytest.fixture(scope="module")
-def mysql_container(salt_factories, docker_client, salt_call_cli, mysql_image):
-
-    mysql_user = "root"
-    mysql_passwd = "password"
-
-    combo = MySQLCombo(
+def create_mysql_combo(mysql_image):
+    return MySQLCombo(
         mysql_name=mysql_image.name,
         mysql_version=mysql_image.tag,
-        mysql_user=mysql_user,
-        mysql_passwd=mysql_passwd,
+        mysql_user="salt-mysql-user",
+        mysql_passwd="Pa55w0rd!",
+        container_id=mysql_image.container_id,
     )
+
+
+@pytest.fixture(scope="module")
+def mysql_combo(create_mysql_combo):
+    return create_mysql_combo
+
+
+def check_container_started(timeout_at, container, combo):
+    sleeptime = 0.5
+    while time.time() <= timeout_at:
+        try:
+            if not container.is_running():
+                log.warning("%s is no longer running", container)
+                return False
+            ret = container.run(
+                "mysql",
+                "--user={}".format(combo.mysql_user),
+                "--password={}".format(combo.mysql_passwd),
+                "-e",
+                "SELECT 1",
+            )
+            if ret.returncode == 0:
+                break
+        except docker.errors.APIError:
+            log.exception("Failed to run start check")
+        time.sleep(sleeptime)
+        sleeptime *= 2
+    else:
+        return False
+    return True
+
+
+def set_container_name_before_start(container):
+    """
+    This is useful if the container has to be restared and the old
+    container, under the same name was left running, but in a bad shape.
+    """
+    container.name = random_string("{}-".format(container.name.rsplit("-", 1)[0]))
+    container.display_name = None
+    return container
+
+
+@pytest.fixture(scope="module")
+def mysql_container(salt_factories, mysql_combo):
+
+    container_environment = {
+        "MYSQL_ROOT_PASSWORD": mysql_combo.mysql_passwd,
+        "MYSQL_ROOT_HOST": mysql_combo.mysql_host,
+        "MYSQL_USER": mysql_combo.mysql_user,
+        "MYSQL_PASSWORD": mysql_combo.mysql_passwd,
+    }
+    if mysql_combo.mysql_database:
+        container_environment["MYSQL_DATABASE"] = mysql_combo.mysql_database
+
     container = salt_factories.get_container(
-        mysql_image.container_id,
-        "{}:{}".format(combo.mysql_name, combo.mysql_version),
-        docker_client=docker_client,
-        check_ports=[combo.mysql_port],
+        mysql_combo.container_id,
+        "{}:{}".format(mysql_combo.mysql_name, mysql_combo.mysql_version),
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
         container_run_kwargs={
-            "ports": {"3306/tcp": combo.mysql_port},
-            "environment": {
-                "MYSQL_ROOT_PASSWORD": mysql_passwd,
-                "MYSQL_ROOT_HOST": "%",
-            },
+            "ports": {"3306/tcp": None},
+            "environment": container_environment,
         },
     )
+    container.before_start(set_container_name_before_start, container)
+    container.container_start_check(check_container_started, container, mysql_combo)
     with container.started():
-        authenticated = False
-        login_attempts = 6
-        while login_attempts:
-            login_attempts -= 1
-            # Make sure "MYSQL" is ready
-            ret = salt_call_cli.run(
-                "docker.run",
-                name=mysql_image.container_id,
-                cmd="mysql --user=root --password=password -e 'SELECT 1'",
-            )
-            authenticated = ret.exitcode == 0
-            if authenticated:
-                break
-
-            time.sleep(2)
-
-        if authenticated:
-            yield combo
-        else:
-            pytest.fail(
-                "Failed to login into mysql server running in container(id: {})".format(
-                    mysql_image.container_id
-                )
-            )
+        mysql_combo.container = container
+        mysql_combo.mysql_port = container.get_host_port_binding(
+            3306, protocol="tcp", ipv6=False
+        )
+        yield mysql_combo

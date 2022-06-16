@@ -41,9 +41,9 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from saltfactories.exceptions import FactoryFailure as ProcessFailed
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes import ProcessResult
+from pytestshellutils.exceptions import ProcessFailed
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -1539,7 +1539,7 @@ class Webserver:
         Starts the webserver
         """
         if self.port is None:
-            self.port = get_unused_localhost_port()
+            self.port = ports.get_unused_localhost_port()
 
         self.web_root = "http{}://127.0.0.1:{}".format(
             "s" if self.ssl_opts else "", self.port
@@ -1566,6 +1566,13 @@ class Webserver:
         """
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stop()
 
 
 class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
@@ -1727,7 +1734,7 @@ class VirtualEnv:
         kwargs.setdefault("env", self.environ)
         proc = subprocess.run(args, check=False, **kwargs)
         ret = ProcessResult(
-            exitcode=proc.returncode,
+            returncode=proc.returncode,
             stdout=proc.stdout,
             stderr=proc.stderr,
             cmdline=proc.args,
@@ -1738,11 +1745,7 @@ class VirtualEnv:
                 proc.check_returncode()
             except subprocess.CalledProcessError:
                 raise ProcessFailed(
-                    "Command failed return code check",
-                    cmdline=proc.args,
-                    stdout=proc.stdout,
-                    stderr=proc.stderr,
-                    exitcode=proc.returncode,
+                    "Command failed return code check", process_result=proc
                 )
         return ret
 
