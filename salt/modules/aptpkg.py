@@ -2250,8 +2250,10 @@ def _decrypt_key(key):
                         key,
                     )
                     return False
-                encrypted_key = key + ".gpg"
-                cmd = ["gpg", "--output", encrypted_key, "--dearmor", key]
+                encrypted_key = key
+                if not pathlib.Path(key).suffix:
+                    encrypted_key = key + ".gpg"
+                cmd = ["gpg", "--yes", "--output", encrypted_key, "--dearmor", key]
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
                 return encrypted_key
