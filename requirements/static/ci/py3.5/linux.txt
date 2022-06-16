@@ -920,7 +920,7 @@ tornado==6.1
     # via python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
-twilio==6.63.0
+twilio==6.63.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.2
     # via

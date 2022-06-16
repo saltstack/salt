@@ -1,52 +1,37 @@
-.. _release-3005:
+.. _release-3006:
 
-=============================================
-Salt 3005 release notes - Codename Phosphorus
-=============================================
+=========================================
+Salt 3006 release notes - Codename Sulfur
+=========================================
 
-Salt 3005 is currently under development.
-
-
-Python 3.5 and 3.6 Deprecation
-------------------------------
-
-This will be the last release we will support Python versions 3.5 and 3.6.
-In Salt release 3006, we will only support Python versions 3.7 and higher.
-Going forward, our policy will be to align with Python's supported versions.
-
-OS Support End of Life
-----------------------
-Debian and Raspbian 9 are now EOL, therefore we will no longer be building
-packages for these platforms.
-
-New packages available
-----------------------
-
-With the release of Salt 3005, we are pleased to announce the
-new packages using Tiamat and pyinstaller are now out of beta
-and ready for production. These new packages are self-contained
-binaries of Salt, which includes the version of Python needed by Salt
-and the required dependencies of Salt. The Tiamat packages allow users
-to use Salt without Python being installed on the box.
-
-Any new OS platforms we support going forward from version 3005 will only
-include Tiamat packages. For this release, this includes Redhat 9 and Ubuntu 22.04.
-
-On the day of the Phosphorus release, the instructions on how to install the
-new Tiamat packages will be available on https://repo.saltproject.io for each
-platform. If you want to test out the packages today you can install them
-from https://repo.saltproject.io/salt-dev/py3/ using the correct directory
-for your platform. If you find any issues with the packages, please open an
-issue on this repo: https://gitlab.com/saltstack/open/salt-pkg
+Salt 3006 is currently under development.
 
 
 Non-Tiamat packaging support
 ----------------------------
-The non-Tiamat packaging system previously used for Salt will also be provided
-for platforms supported in previous Salt versions. The non-Tiamat packaging will
-only be avilable for two more releases. Please see the :ref:`release-3006` notes for more
-details on the availablility of Non-Tiamat packaging for the 3006 release.
-The 3007 release and those going forward will only provide the Tiamat packages.
+The non-Tiamat packaging system previously used for Salt will only be provided
+for platforms that support Python 3.7 and above. If a platform is using
+Python 3.5 or 3.6, only Tiamat packages will be available for that platform.
+This policy change will require users to update their repo files to point to
+the new repo path to use the new Tiamat packages. The full installation instructions
+can be found at https://repo.saltproject.io. This change impacts various OS platforms, including:
+
+* Ubuntu 18.04
+* CentOS 7
+* CentOS 8
+
+
+These platforms will only have Tiamat packages avalable.
+
+This is the last release we will provide non-Tiamat packaging. The 3007 release and
+those going forward will only provide the Tiamat packages.
+
+Dropping support for Python 3.5 and 3.6
+---------------------------------------
+
+Python 3.5 and 3.6 will no longer be supported by Salt since they
+are end of life. Going forward our policy will be to align with Python's
+supported versions.
 
 Platform package support
 ------------------------
@@ -54,13 +39,13 @@ Platform package support
 +--------------+---------------------+---------------------+
 |     OS       | New Tiamat Packages | Non-Tiamat Packages |
 +==============+=====================+=====================+
-| RHEL 7       |         yes         |        yes          |
+| RHEL 7       |         yes         |        no           |
 +--------------+---------------------+---------------------+
-| RHEL 8       |         yes         |        yes          |
+| RHEL 8       |         yes         |        no           |
 +--------------+---------------------+---------------------+
 | RHEL 9       |         yes         |        no           |
 +--------------+---------------------+---------------------+
-| Ubuntu 18.04 |         yes         |        yes          |
+| Ubuntu 18.04 |         yes         |        no           |
 +--------------+---------------------+---------------------+
 | Ubuntu 20.04 |         yes         |        yes          |
 +--------------+---------------------+---------------------+
@@ -70,7 +55,7 @@ Platform package support
 +--------------+---------------------+---------------------+
 | Debian 11    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
-| Raspbian 10  |         no          |        yes          |
+| Raspbian 10  |         no          |        no           |
 +--------------+---------------------+---------------------+
 | Raspbian 11  |         no          |        yes          |
 +--------------+---------------------+---------------------+
@@ -106,6 +91,19 @@ Repo paths
 +----------+-----------------------------------------------+-----------------------------------------+
 
 Note that the Tiamat paths above will not be available until the day of the Phosphorus release.
+
+
+My OS only provides Tiamat packages. What do I do?
+--------------------------------------------------
+If you are using a platform that no longer provides the non-Tiamat packages as shown
+in the previous tables, you will need to update your repo files to point to the new Tiamat packages.
+The new repo paths are provided in the previous tables, but the full instructions will be included
+at https://repo.saltproject.io.
+
+
+My OS uses an unsupported version of Python. What do I do?
+----------------------------------------------------------
+If your OS is using an unsupported version of Python, you will need to use the Tiamat packages.
 
 
 How do I migrate to the Tiamat packages?
