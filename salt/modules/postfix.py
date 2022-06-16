@@ -56,9 +56,11 @@ def _parse_master(path=MASTER_CF):
     conf_list = []
     conf_dict = {}
     for line in full_conf.splitlines():
-        if not line.strip() or line.strip().startswith("#"):
-            conf_list.append(line)
-            continue
+        if (not line.strip() or
+            line.strip().startswith("#") or
+            line.startswith((' ', '\t', '\n', '\r', '\x0b', '\x0c'))):
+                conf_list.append(line)
+                continue
         comps = line.strip().split()
         conf_line = {
             "service": comps[0],
