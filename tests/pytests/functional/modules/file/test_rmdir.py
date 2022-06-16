@@ -32,7 +32,12 @@ def nested_empty_dirs(tmp_path):
     for root in range(1, num_root + 1):
         for mid in range(1, num_mid + 1):
             for last in range(1, num_last + 1):
-                nest = tmp_path / f"root{root}" / f"mid{mid}" / f"last{last}"
+                nest = (
+                    tmp_path
+                    / "root{}".format(root)
+                    / "mid{}".format(mid)
+                    / "last{}".format(last)
+                )
                 nest.mkdir(parents=True, exist_ok=True)
     yield str(tmp_path)
 
@@ -45,7 +50,12 @@ def nested_dirs_with_files(tmp_path):
     for root in range(1, num_root + 1):
         for mid in range(1, num_mid + 1):
             for last in range(1, num_last + 1):
-                nest = tmp_path / f"root{root}" / f"mid{mid}" / f"last{last}"
+                nest = (
+                    tmp_path
+                    / "root{}".format(root)
+                    / "mid{}".format(mid)
+                    / "last{}".format(last)
+                )
                 nest.mkdir(parents=True, exist_ok=True)
                 if last % 2:
                     last_file = nest / "stuff.txt"
