@@ -14,7 +14,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from saltfactories.utils.ports import get_unused_localhost_port
+from pytestshellutils.utils import ports
 from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
@@ -314,13 +314,13 @@ class CPModuleTest(ModuleCase):
         self.run_function(
             "cp.get_url",
             [
-                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST",
+                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT",
                 tgt,
             ],
         )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Base system", data)
+        self.assertIn("The official FreeBSD", data)
 
     # cp.get_file_str tests
 
@@ -423,7 +423,7 @@ class CPModuleTest(ModuleCase):
         """
         cp.cache_file
         """
-        nginx_port = get_unused_localhost_port()
+        nginx_port = ports.get_unused_localhost_port()
         url_prefix = "http://localhost:{}/".format(nginx_port)
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)

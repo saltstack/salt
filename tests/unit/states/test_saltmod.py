@@ -216,7 +216,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         ret.update(
             {
                 "result": True,
-                "changes": {"out": "highstate", "ret": {tgt: ""}},
+                "changes": {"ret": {tgt: ""}},
                 "comment": (
                     "Function ran successfully. Function state ran on {}.".format(tgt)
                 ),

@@ -30,6 +30,7 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     ../tutorials/cron
     ../hardening
     ../../security/index
+    ../channels/index
     ../transports/index
     ../master_tops/index
     ../../ref/returners/index

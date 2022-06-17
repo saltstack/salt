@@ -6,8 +6,8 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as reg
+from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 

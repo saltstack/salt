@@ -187,9 +187,9 @@ def is_fedora():
     """
     Simple function to return if host is Fedora or not
     """
-    (osname, osrelease, oscodename) = [
+    (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
-    ]
+    )
     return osname == "Fedora"
 
 
@@ -198,9 +198,9 @@ def is_photonos():
     """
     Simple function to return if host is Photon OS or not
     """
-    (osname, osrelease, oscodename) = [
+    (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
-    ]
+    )
     return osname == "VMware Photon OS"
 
 
@@ -217,5 +217,6 @@ def spawning_platform():
     Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
 
     This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
+    Salt, however, will force macOS to spawning by default on all python versions
     """
     return multiprocessing.get_start_method(allow_none=False) == "spawn"

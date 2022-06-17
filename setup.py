@@ -269,7 +269,7 @@ def _parse_requirements_file(requirements_file):
                     platform.python_version(), _parse_op(op), _parse_ver(ver)
                 ):
                     continue
-            parsed_requirements.append(pkg)
+            parsed_requirements.append(line)
     return parsed_requirements
 
 
@@ -1115,6 +1115,7 @@ class SaltDistribution(distutils.dist.Distribution):
         package_data = {
             "salt.templates": [
                 "rh_ip/*.jinja",
+                "suse_ip/*.jinja",
                 "debian_ip/*.jinja",
                 "virt/*.jinja",
                 "git/*",
@@ -1258,6 +1259,11 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_entry_points(self):
+        entrypoints = {
+            "pyinstaller40": [
+                "hook-dirs = salt.utils.pyinstaller:get_hook_dirs",
+            ],
+        }
         # console scripts common to all scenarios
         scripts = [
             "salt-call = salt.scripts:salt_call",
@@ -1268,7 +1274,8 @@ class SaltDistribution(distutils.dist.Distribution):
             if IS_WINDOWS_PLATFORM:
                 return {"console_scripts": scripts}
             scripts.append("salt-cloud = salt.scripts:salt_cloud")
-            return {"console_scripts": scripts}
+            entrypoints["console_scripts"] = scripts
+            return entrypoints
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
@@ -1281,7 +1288,8 @@ class SaltDistribution(distutils.dist.Distribution):
                     "spm = salt.scripts:salt_spm",
                 ]
             )
-            return {"console_scripts": scripts}
+            entrypoints["console_scripts"] = scripts
+            return entrypoints
 
         # *nix, so, we need all scripts
         scripts.extend(
@@ -1298,7 +1306,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 "spm = salt.scripts:salt_spm",
             ]
         )
-        return {"console_scripts": scripts}
+        entrypoints["console_scripts"] = scripts
+        return entrypoints
 
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 

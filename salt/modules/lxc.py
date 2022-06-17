@@ -983,7 +983,7 @@ def _get_veths(net_data):
             if sitem.startswith("#") or not sitem:
                 continue
             elif "=" in item:
-                item = tuple([a.strip() for a in item.split("=", 1)])
+                item = tuple(a.strip() for a in item.split("=", 1))
         if item[0] == "lxc.network.type":
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == "lxc.network.name":

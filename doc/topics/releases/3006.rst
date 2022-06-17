@@ -1,0 +1,132 @@
+.. _release-3006:
+
+=========================================
+Salt 3006 release notes - Codename Sulfur
+=========================================
+
+Salt 3006 is currently under development.
+
+
+Non-Tiamat packaging support
+----------------------------
+The non-Tiamat packaging system previously used for Salt will only be provided
+for platforms that support Python 3.7 and above. If a platform is using
+Python 3.5 or 3.6, only Tiamat packages will be available for that platform.
+This policy change will require users to update their repo files to point to
+the new repo path to use the new Tiamat packages. The full installation instructions
+can be found at https://repo.saltproject.io. This change impacts various OS platforms, including:
+
+* Ubuntu 18.04
+* CentOS 7
+* CentOS 8
+
+
+These platforms will only have Tiamat packages avalable.
+
+This is the last release we will provide non-Tiamat packaging. The 3007 release and
+those going forward will only provide the Tiamat packages.
+
+Dropping support for Python 3.5 and 3.6
+---------------------------------------
+
+Python 3.5 and 3.6 will no longer be supported by Salt since they
+are end of life. Going forward our policy will be to align with Python's
+supported versions.
+
+Platform package support
+------------------------
+
++--------------+---------------------+---------------------+
+|     OS       | New Tiamat Packages | Non-Tiamat Packages |
++==============+=====================+=====================+
+| RHEL 7       |         yes         |        no           |
++--------------+---------------------+---------------------+
+| RHEL 8       |         yes         |        no           |
++--------------+---------------------+---------------------+
+| RHEL 9       |         yes         |        no           |
++--------------+---------------------+---------------------+
+| Ubuntu 18.04 |         yes         |        no           |
++--------------+---------------------+---------------------+
+| Ubuntu 20.04 |         yes         |        yes          |
++--------------+---------------------+---------------------+
+| Ubuntu 22.04 |         yes         |        no           |
++--------------+---------------------+---------------------+
+| Debian 10    |         yes         |        yes          |
++--------------+---------------------+---------------------+
+| Debian 11    |         yes         |        yes          |
++--------------+---------------------+---------------------+
+| Raspbian 10  |         no          |        no           |
++--------------+---------------------+---------------------+
+| Raspbian 11  |         no          |        yes          |
++--------------+---------------------+---------------------+
+| Fedora 35    |         yes         |        yes          |
++--------------+---------------------+---------------------+
+| Fedora 36    |         yes         |        yes          |
++--------------+---------------------+---------------------+
+| MacOS        |         yes         |        yes          |
++--------------+---------------------+---------------------+
+| Windows      |         yes         |        yes          |
++--------------+---------------------+---------------------+
+
+
+Repo paths
+----------
+
++----------+-----------------------------------------------+-----------------------------------------+
+|     OS   | Tiamat Path                                   | Non-Tiamat Path                         |
++==========+===============================================+=========================================+
+| RHEL     | https://repo.saltproject.io/salt/py3/redhat/  | https://repo.saltproject.io/py3/redhat/ |
++----------+-----------------------------------------------+-----------------------------------------+
+| Ubuntu   | https://repo.saltproject.io/salt/py3/ubuntu/  | https://repo.saltproject.io/py3/ubuntu/ |
++----------+-----------------------------------------------+-----------------------------------------+
+| Debian   | https://repo.saltproject.io/salt/py3/debian/  | https://repo.saltproject.io/py3/debian/ |
++----------+-----------------------------------------------+-----------------------------------------+
+| Raspbian | https://repo.saltproject.io/salt/py3/debian/  | https://repo.saltproject.io/py3/debian/ |
++----------+-----------------------------------------------+-----------------------------------------+
+| Fedora   | Hosted on Fedora Repos                        | Hosted on Fedora Repos                  |
++----------+-----------------------------------------------+-----------------------------------------+
+| MacOS    | https://repo.saltproject.io/salt/py3/osx/     | https://repo.saltproject.io/osx/        |
++----------+-----------------------------------------------+-----------------------------------------+
+| Windows  | https://repo.saltproject.io/salt/py3/windows/ |  https://repo.saltproject.io/windows/   |
++----------+-----------------------------------------------+-----------------------------------------+
+
+Note that the Tiamat paths above will not be available until the day of the Phosphorus release.
+
+
+My OS only provides Tiamat packages. What do I do?
+--------------------------------------------------
+If you are using a platform that no longer provides the non-Tiamat packages as shown
+in the previous tables, you will need to update your repo files to point to the new Tiamat packages.
+The new repo paths are provided in the previous tables, but the full instructions will be included
+at https://repo.saltproject.io.
+
+
+My OS uses an unsupported version of Python. What do I do?
+----------------------------------------------------------
+If your OS is using an unsupported version of Python, you will need to use the Tiamat packages.
+
+
+How do I migrate to the Tiamat packages?
+----------------------------------------
+The migration path from the non-Tiamat packages to the Tiamat packages will include:
+
+* Repo File: You need to update your repo file to point to the new repo paths for your platform. After the repo
+  file is updated, upgrade your Salt packages.
+* Pip packages: You need to ensure any 3rd party pip packages are installed in the correct Tiamat path.
+  This can be accomplished in two ways:
+
+  * ``salt pip install <package name>``
+  * Using the ``pip.installed`` Salt state.
+
+To install python packages into the system python environment, user's must now provide the ``pip_bin`` or ``bin_env`` to the pip state module.
+
+For example:
+
+.. code-block:: yaml
+
+    lib-foo:
+      pip.installed:
+        - pip_bin: /usr/bin/pip3
+    lib-bar:
+      pip.installed:
+        - bin_env: /usr/bin/python3

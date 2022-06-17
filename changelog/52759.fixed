@@ -1,0 +1,1 @@
+Fix runit module failing to find service if it is not symlinked.

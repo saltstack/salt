@@ -10,6 +10,7 @@ import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
+import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
@@ -53,46 +54,68 @@ def test_minion_load_grains_default():
 
 
 @pytest.mark.parametrize(
-    "req_channel",
+    "event",
     [
         (
-            "salt.transport.client.AsyncReqChannel.factory",
-            lambda load, timeout, tries: salt.ext.tornado.gen.maybe_future(tries),
+            "fire_event",
+            lambda data, tag, cb=None, timeout=60: True,
         ),
         (
-            "salt.transport.client.ReqChannel.factory",
-            lambda load, timeout, tries: tries,
+            "fire_event_async",
+            lambda data, tag, cb=None, timeout=60: salt.ext.tornado.gen.maybe_future(
+                True
+            ),
         ),
     ],
 )
-def test_send_req_tries(req_channel):
-    channel_enter = MagicMock()
-    channel_enter.send.side_effect = req_channel[1]
-    channel = MagicMock()
-    channel.__enter__.return_value = channel_enter
+def test_send_req_fires_completion_event(event):
+    event_enter = MagicMock()
+    event_enter.send.side_effect = event[1]
+    event = MagicMock()
+    event.__enter__.return_value = event_enter
 
-    with patch(req_channel[0], return_value=channel):
-        opts = {
-            "random_startup_delay": 0,
-            "grains": {},
-            "return_retry_tries": 30,
-            "minion_sign_messages": False,
-        }
+    with patch("salt.utils.event.get_event", return_value=event):
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        opts["random_startup_delay"] = 0
+        opts["return_retry_tries"] = 30
+        opts["grains"] = {}
         with patch("salt.loader.grains"):
             minion = salt.minion.Minion(opts)
 
             load = {"load": "value"}
             timeout = 60
 
-            if "Async" in req_channel[0]:
+            if "async" in event[0]:
                 rtn = minion._send_req_async(load, timeout).result()
             else:
                 rtn = minion._send_req_sync(load, timeout)
 
-            assert rtn == 30
+            # get the
+            for idx, call in enumerate(event.mock_calls, 1):
+                if "fire_event" in call[0]:
+                    condition_event_tag = (
+                        len(call.args) > 1
+                        and call.args[1] == "__master_req_channel_payload"
+                    )
+                    condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
+                        idx, call, call.args[1], "__master_req_channel_payload"
+                    )
+                    condition_timeout = (
+                        len(call.kwargs) == 1 and call.kwargs["timeout"] == timeout
+                    )
+                    condition_timeout_error = "{} != {}; Call(number={}): {}".format(
+                        idx, call, call.kwargs["timeout"], timeout
+                    )
+
+                    fire_event_called = True
+                    assert condition_event_tag, condition_event_tag_error
+                    assert condition_timeout, condition_timeout_error
+
+            assert fire_event_called
+            assert rtn
 
 
-@patch("salt.transport.client.ReqChannel.factory")
+@patch("salt.channel.client.ReqChannel.factory")
 def test_mine_send_tries(req_channel_factory):
     channel_enter = MagicMock()
     channel_enter.send.side_effect = lambda load, timeout, tries: tries
@@ -724,10 +747,10 @@ def test_minion_manage_schedule():
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.start",
+        "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.join",
+        "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
@@ -782,10 +805,10 @@ def test_minion_manage_beacons():
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.start",
+        "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.join",
+        "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
         try:
@@ -871,7 +894,7 @@ def test_sock_path_len():
 
 
 @pytest.mark.skip_on_windows(reason="Skippin, no Salt master running on Windows.")
-def test_master_type_failover():
+async def test_master_type_failover():
     """
     Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
     """
@@ -903,19 +926,19 @@ def test_master_type_failover():
             "master_uri": "tcp://192.168.2.1:4505",
         }
 
-    def mock_transport_factory(opts, **kwargs):
+    def mock_channel_factory(opts, **kwargs):
         assert opts["master"] == "master2"
         return MockPubChannel()
 
     with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
-        "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
+        "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
     ), patch("salt.loader.grains", MagicMock(return_value=[])):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(mock_opts)
-            yield minion.connect_master()
+            await minion.connect_master()
 
 
-def test_master_type_failover_no_masters():
+async def test_master_type_failover_no_masters():
     """
     Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
     """
@@ -938,7 +961,7 @@ def test_master_type_failover_no_masters():
     ):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(mock_opts)
-            yield minion.connect_master()
+            await minion.connect_master()
 
 
 def test_config_cache_path_overrides():
@@ -947,3 +970,95 @@ def test_config_cache_path_overrides():
 
     mminion = salt.minion.MasterMinion(opts)
     assert mminion.opts["cachedir"] == cachedir
+
+
+def test_minion_grains_refresh_pre_exec_false():
+    """
+    Minion does not refresh grains when grains_refresh_pre_exec is False
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = False
+    mock_opts["grains_refresh_pre_exec"] = False
+    mock_data = {"fun": "foo.bar", "jid": 123}
+    with patch("salt.loader.grains") as grainsfunc, patch(
+        "salt.minion.Minion._target", MagicMock(return_value=True)
+    ):
+        minion = salt.minion.Minion(
+            mock_opts,
+            jid_queue=None,
+            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            load_grains=False,
+        )
+        try:
+            ret = minion._handle_decoded_payload(mock_data).result()
+            grainsfunc.assert_not_called()
+        finally:
+            minion.destroy()
+
+
+def test_minion_grains_refresh_pre_exec_true():
+    """
+    Minion refreshes grains when grains_refresh_pre_exec is True
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = False
+    mock_opts["grains_refresh_pre_exec"] = True
+    mock_data = {"fun": "foo.bar", "jid": 123}
+    with patch("salt.loader.grains") as grainsfunc, patch(
+        "salt.minion.Minion._target", MagicMock(return_value=True)
+    ):
+        minion = salt.minion.Minion(
+            mock_opts,
+            jid_queue=None,
+            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            load_grains=False,
+        )
+        try:
+            ret = minion._handle_decoded_payload(mock_data).result()
+            grainsfunc.assert_called()
+        finally:
+            minion.destroy()
+
+
+@pytest.mark.skip_on_darwin(
+    reason="Skip on MacOS, where this does not raise an exception."
+)
+def test_valid_ipv4_master_address_ipv6_enabled():
+    """
+    Tests that the lookups fail back to ipv4 when ipv6 fails.
+    """
+    interfaces = {
+        "bond0.1234": {
+            "hwaddr": "01:01:01:d0:d0:d0",
+            "up": False,
+            "inet": [
+                {
+                    "broadcast": "111.1.111.255",
+                    "netmask": "111.1.0.0",
+                    "label": "bond0",
+                    "address": "111.1.0.1",
+                }
+            ],
+        }
+    }
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
+        {
+            "ipv6": True,
+            "master": "127.0.0.1",
+            "master_port": "4555",
+            "retry_dns": False,
+            "source_address": "111.1.0.1",
+            "source_interface_name": "bond0.1234",
+            "source_ret_port": 49017,
+            "source_publish_port": 49018,
+        },
+    ), patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
+        expected = {
+            "source_publish_port": 49018,
+            "master_uri": "tcp://127.0.0.1:4555",
+            "source_ret_port": 49017,
+            "master_ip": "127.0.0.1",
+        }
+        assert salt.minion.resolve_dns(opts) == expected

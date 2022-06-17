@@ -4,6 +4,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 
 
 import atexit
+import itertools
 import logging
 import os.path
 import pipes
@@ -25,7 +26,7 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
-from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
+from jinja2 import BaseLoader, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
@@ -33,6 +34,12 @@ from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
+
+try:
+    from markupsafe import Markup
+except ImportError:
+    # jinja < 3.1
+    from jinja2 import Markup
 
 log = logging.getLogger(__name__)
 
@@ -96,10 +103,18 @@ class SaltCacheLoader(BaseLoader):
         # If there was no file_client passed to the class, create a cache_client
         # and use that. This avoids opening a new file_client every time this
         # class is instantiated
-        if self._file_client is None:
+        if (
+            self._file_client is None
+            or not hasattr(self._file_client, "opts")
+            or self._file_client.opts["file_roots"] != self.opts["file_roots"]
+        ):
             attr = "_cached_pillar_client" if self.pillar_rend else "_cached_client"
             cached_client = getattr(self, attr, None)
-            if cached_client is None:
+            if (
+                cached_client is None
+                or not hasattr(cached_client, "opts")
+                or cached_client.opts["file_roots"] != self.opts["file_roots"]
+            ):
                 cached_client = salt.fileclient.get_file_client(
                     self.opts, self.pillar_rend
                 )
@@ -112,15 +127,17 @@ class SaltCacheLoader(BaseLoader):
         Cache a file from the salt master
         """
         saltpath = salt.utils.url.create(template)
-        self.file_client().get_file(saltpath, "", True, self.saltenv)
+        fcl = self.file_client()
+        return fcl.get_file(saltpath, "", True, self.saltenv)
 
     def check_cache(self, template):
         """
         Cache a file only once
         """
         if template not in self.cached:
-            self.cache_file(template)
-            self.cached.append(template)
+            ret = self.cache_file(template)
+            if ret is not False:
+                self.cached.append(template)
 
     def get_source(self, environment, template):
         """
@@ -158,6 +175,12 @@ class SaltCacheLoader(BaseLoader):
                     template,
                 )
                 raise TemplateNotFound(template)
+            # local file clients should pass the dot-expanded relative path
+            # when it's an absolute local filesystem location
+            if environment.globals.get("opts", {}).get(
+                "file_client"
+            ) == "local" and os.path.isabs(base_path):
+                _template = os.path.relpath(_template, base_path)
 
         self.check_cache(_template)
 
@@ -174,25 +197,26 @@ class SaltCacheLoader(BaseLoader):
             }
             environment.globals.update(tpldata)
 
-        # pylint: disable=cell-var-from-loop
-        for spath in self.searchpath:
-            filepath = os.path.join(spath, _template)
-            try:
-                with salt.utils.files.fopen(filepath, "rb") as ifile:
-                    contents = ifile.read().decode(self.encoding)
-                    mtime = os.path.getmtime(filepath)
+        if _template in self.cached:
+            # pylint: disable=cell-var-from-loop
+            for spath in self.searchpath:
+                filepath = os.path.join(spath, _template)
+                try:
+                    with salt.utils.files.fopen(filepath, "rb") as ifile:
+                        contents = ifile.read().decode(self.encoding)
+                        mtime = os.path.getmtime(filepath)
 
-                    def uptodate():
-                        try:
-                            return os.path.getmtime(filepath) == mtime
-                        except OSError:
-                            return False
+                        def uptodate():
+                            try:
+                                return os.path.getmtime(filepath) == mtime
+                            except OSError:
+                                return False
 
-                    return contents, filepath, uptodate
-            except OSError:
-                # there is no file under current path
-                continue
-        # pylint: enable=cell-var-from-loop
+                        return contents, filepath, uptodate
+                except OSError:
+                    # there is no file under current path
+                    continue
+            # pylint: enable=cell-var-from-loop
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
@@ -706,7 +730,13 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
     return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 
 
-@jinja2.contextfunction
+try:
+    contextfunction = jinja2.contextfunction
+except AttributeError:
+    contextfunction = jinja2.pass_context
+
+
+@contextfunction
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter(
         {key: value for key, value in ctx.items()}
@@ -877,6 +907,39 @@ class SerializerExtension(Extension):
 
         unique = ['foo', 'bar']
 
+    ** Salt State Parameter Format Filters **
+
+    .. versionadded:: 3005
+
+    Renders a formatted multi-line YAML string from a Python dictionary. Each
+    key/value pair in the dictionary will be added as a single-key dictionary
+    to a list that will then be sent to the YAML formatter.
+
+    For example:
+
+    .. code-block:: jinja
+
+        {% set thing_params = {
+            "name": "thing",
+            "changes": True,
+            "warnings": "OMG! Stuff is happening!"
+           }
+        %}
+
+        thing:
+          test.configurable_test_state:
+            {{ thing_params | dict_to_sls_yaml_params | indent }}
+
+    will be rendered as::
+
+    .. code-block:: yaml
+
+        thing:
+          test.configurable_test_state:
+            - name: thing
+            - changes: true
+            - warnings: OMG! Stuff is happening!
+
     .. _`import tag`: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
     '''
 
@@ -901,6 +964,14 @@ class SerializerExtension(Extension):
                 "load_yaml": self.load_yaml,
                 "load_json": self.load_json,
                 "load_text": self.load_text,
+                "dict_to_sls_yaml_params": self.dict_to_sls_yaml_params,
+                "combinations": itertools.combinations,
+                "combinations_with_replacement": itertools.combinations_with_replacement,
+                "compress": itertools.compress,
+                "permutations": itertools.permutations,
+                "product": itertools.product,
+                "zip": zip,
+                "zip_longest": itertools.zip_longest,
             }
         )
 
@@ -1169,4 +1240,22 @@ class SerializerExtension(Extension):
             parser, import_node.template, "import_{}".format(converter), body, lineno
         )
 
-    # pylint: enable=E1120,E1121
+    def dict_to_sls_yaml_params(self, value, flow_style=False):
+        """
+        .. versionadded:: 3005
+
+        Render a formatted multi-line YAML string from a Python dictionary. Each
+        key/value pair in the dictionary will be added as a single-key dictionary
+        to a list that will then be sent to the YAML formatter.
+
+        :param value: Python dictionary representing Salt state parameters
+
+        :param flow_style: Setting flow_style to False will enforce indentation
+                           mode
+
+        :returns: Formatted SLS YAML string rendered with newlines and
+                  indentation
+        """
+        return self.format_yaml(
+            [{key: val} for key, val in value.items()], flow_style=flow_style
+        )

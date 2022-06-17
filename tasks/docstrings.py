@@ -28,22 +28,12 @@ MISSING_DOCSTRINGS = {
     "salt/beacons/salt_monitor.py": ["validate", "beacon"],
     "salt/beacons/watchdog.py": ["close", "to_salt_event"],
     "salt/cache/localfs.py": ["get_storage_id", "init_kwargs"],
-    "salt/cache/redis_cache.py": ["init_kwargs"],
     "salt/cloud/clouds/clc.py": [
         "get_creds",
         "get_configured_provider",
         "get_queue_data",
     ],
     "salt/cloud/clouds/ec2.py": ["query", "sign"],
-    "salt/cloud/clouds/hetzner.py": [
-        "show_instance",
-        "avail_sizes",
-        "avail_images",
-        "avail_locations",
-        "list_ssh_keys",
-        "list_nodes",
-        "list_nodes_full",
-    ],
     "salt/cloud/clouds/libvirt.py": [
         "get_domain_ips",
         "destroy_domain",
@@ -87,15 +77,9 @@ MISSING_DOCSTRINGS = {
     "salt/grains/philips_hue.py": ["vendor", "kernel", "os", "os_family", "product"],
     "salt/grains/rest_sample.py": ["kernel", "os", "os_family", "location", "os_data"],
     "salt/grains/ssh_sample.py": ["location", "os_data", "kernel"],
-    "salt/log/handlers/fluent_mod.py": ["setup", "setup_handlers", "get_global_sender"],
-    "salt/log/handlers/log4mongo_mod.py": ["setup_handlers"],
-    "salt/log/handlers/logstash_mod.py": ["setup_handlers"],
-    "salt/metaproxy/proxy.py": [
-        "post_master_init",
-        "target",
-        "handle_payload",
-        "target_load",
-    ],
+    "salt/log_handlers/fluent_mod.py": ["setup", "setup_handlers", "get_global_sender"],
+    "salt/log_handlers/log4mongo_mod.py": ["setup_handlers"],
+    "salt/log_handlers/logstash_mod.py": ["setup_handlers"],
     "salt/modules/chassis.py": ["chassis_credentials", "cmd"],
     "salt/modules/csf.py": [
         "disable_testing_mode",
@@ -769,57 +753,17 @@ MISSING_EXAMPLES = {
     ],
     "salt/modules/virtualenv_mod.py": ["virtualenv_ver"],
     "salt/modules/vsphere.py": [
-        "create_storage_policy",
-        "power_off_vm",
-        "list_diskgroups",
-        "list_default_vsan_policy",
-        "create_diskgroup",
-        "list_dvportgroups",
-        "assign_license",
         "update_vm",
-        "list_cluster",
-        "update_dvportgroup",
-        "update_cluster",
-        "list_dvss",
         "set_advanced_configs",
-        "add_license",
-        "list_capability_definitions",
         "register_vm",
-        "list_disk_partitions",
-        "remove_datastore",
-        "update_storage_policy",
-        "erase_disk_partitions",
         "get_vm_config",
-        "remove_dvportgroup",
-        "delete_vm",
-        "create_datacenter",
-        "add_capacity_to_diskgroup",
         "get_vm_config_file",
-        "list_datacenters_via_proxy",
-        "power_on_vm",
-        "rename_datastore",
         "list_licenses",
-        "configure_host_cache",
         "compare_vm_configs",
-        "get_host_cache",
-        "unregister_vm",
-        "create_cluster",
-        "update_dvs",
-        "list_uplink_dvportgroup",
         "get_advanced_configs",
         "delete_advanced_configs",
-        "create_dvportgroup",
-        "list_disks",
-        "assign_default_storage_policy_to_datastore",
-        "create_dvs",
-        "list_datastores_via_proxy",
-        "list_default_storage_policy_of_datastore",
         "create_vmfs_datastore",
-        "list_assigned_licenses",
         "get_vm",
-        "remove_diskgroup",
-        "remove_capacity_from_diskgroup",
-        "list_storage_policies",
     ],
     "salt/modules/win_pkg.py": ["get_package_info"],
     "salt/modules/win_timezone.py": ["zone_compare"],
@@ -958,7 +902,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     ):
                         warnings += 1
                         utils.warn(
-                            "The function '{}' on '{}' does not have a 'CLI Example:' in it's docstring",
+                            "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                             funcname,
                             relpath,
                         )
@@ -966,7 +910,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     errors += 1
                     exitcode = 1
                     utils.error(
-                        "The function '{}' on '{}' does not have a 'CLI Example:' in it's docstring",
+                        "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                         funcname,
                         relpath,
                     )
@@ -994,7 +938,7 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                     exitcode = 1
                     utils.error(
                         "The function {!r} on '{}' does not have a proper 'CLI Example:' section in "
-                        "it's docstring. The proper format is:\n"
+                        "its docstring. The proper format is:\n"
                         "CLI Example:\n"
                         "\n"
                         ".. code-block:: bash\n"

@@ -6,7 +6,7 @@ import logging
 
 import pytest
 import salt.defaults.exitcodes
-from saltfactories.exceptions import FactoryNotStarted
+from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
@@ -35,9 +35,9 @@ def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
-    assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
-    assert "Usage" in exc.value.stderr, exc.value
-    assert "error: salt-proxy requires --proxyid" in exc.value.stderr, exc.value
+    assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_USAGE
+    assert "Usage" in exc.value.process_result.stderr
+    assert "error: salt-proxy requires --proxyid" in exc.value.process_result.stderr
 
 
 @pytest.mark.skip_on_windows(reason="Windows does not do user checks")
@@ -52,8 +52,8 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
-    assert exc.value.exitcode == salt.defaults.exitcodes.EX_NOUSER, exc.value
-    assert "The user is not available." in exc.value.stderr, exc.value
+    assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_NOUSER
+    assert "The user is not available." in exc.value.process_result.stderr
 
 
 @pytest.mark.slow_test
@@ -66,9 +66,9 @@ def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
         factory = salt_master.salt_proxy_minion_daemon(proxy_minion_id)
         factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
 
-    assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
-    assert "Usage" in exc.value.stderr, exc.value
-    assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
+    assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_USAGE
+    assert "Usage" in exc.value.process_result.stderr
+    assert "no such option: --unknown-argument" in exc.value.process_result.stderr
 
 
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
@@ -89,8 +89,8 @@ def test_exit_status_correct_usage(salt_master, proxy_minion_id, salt_cli):
     assert factory.is_running()
     # Let's issue a ping before terminating
     ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     # Terminate the proxy minion
     ret = factory.terminate()
-    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret

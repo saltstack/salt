@@ -34,14 +34,12 @@ def test_new_entry_points_passing_module(venv, salt_extension, salt_minion_facto
     code = """
     import sys
     import json
-
-    # If the test fails, for debugging purposes, comment out the following 2 lines
-    #import salt.log.setup
-    #salt.log.setup.setup_console_logger(log_level="debug")
-
+    import salt._logging
     import salt.loader
 
     minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
     loader = salt.loader.minion_mods(minion_config)
     print(json.dumps(list(loader)))
     """
@@ -66,14 +64,12 @@ def test_new_entry_points_passing_func_returning_a_dict(
     code = """
     import sys
     import json
-
-    # If the test fails, for debugging purposes, comment out the following 2 lines
-    #import salt.log.setup
-    #salt.log.setup.setup_console_logger(log_level="debug")
-
+    import salt._logging
     import salt.loader
 
     minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
     loader = salt.loader.runner(minion_config)
     print(json.dumps(list(loader)))
     """
@@ -96,14 +92,12 @@ def test_old_entry_points_yielding_paths(venv, salt_extension, salt_minion_facto
     code = """
     import sys
     import json
-
-    # If the test fails, for debugging purposes, comment out the following 2 lines
-    import salt.log.setup
-    salt.log.setup.setup_console_logger(log_level="debug")
-
+    import salt._logging
     import salt.loader
 
     minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
     functions = salt.loader.minion_mods(minion_config)
     utils = salt.loader.utils(minion_config)
     serializers = salt.loader.serializers(minion_config)
@@ -130,14 +124,12 @@ def test_utils_loader_does_not_load_extensions(
     code = """
     import sys
     import json
-
-    # If the test fails, for debugging purposes, comment out the following 2 lines
-    #import salt.log.setup
-    #salt.log.setup.setup_console_logger(log_level="debug")
-
+    import salt._logging
     import salt.loader
 
     minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
     loader = salt.loader.utils(minion_config)
     print(json.dumps(list(loader)))
     """
@@ -166,17 +158,16 @@ def test_extension_discovery_without_reload_with_importlib_metadata_installed(
     import sys
     import json
     import subprocess
-
-    # If the test fails, for debugging purposes, comment out the following 2 lines
-    import salt.log.setup
-    salt.log.setup.setup_console_logger(log_level="debug")
+    import salt._logging
+    import salt.loader
 
     extension_path = "{}"
 
-    import salt.loader
-
     minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
     loader = salt.loader.minion_mods(minion_config)
+
     if "foobar.echo1" in loader:
         sys.exit(1)
 
@@ -204,7 +195,7 @@ def test_extension_discovery_without_reload_with_importlib_metadata_installed(
     # Exitcode 1 - Extension was already installed
     # Exitcode 2 - Failed to install the extension
     # Exitcode 3 - Extension was not found within the same python process after being installed
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name in installed_packages
 
@@ -232,16 +223,14 @@ def test_extension_discovery_without_reload_with_bundled_importlib_metadata(
     import sys
     import json
     import subprocess
-
-    # If the test fails, for debugging purposes, comment out the following 2 lines
-    import salt.log.setup
-    salt.log.setup.setup_console_logger(log_level="debug")
+    import salt._logging
+    import salt.loader
 
     extension_path = "{}"
 
-    import salt.loader
-
     minion_config = json.loads(sys.stdin.read())
+    salt._logging.set_logging_options_dict(minion_config)
+    salt._logging.setup_logging()
     loader = salt.loader.minion_mods(minion_config)
     if "foobar.echo1" in loader:
         sys.exit(1)
@@ -270,7 +259,7 @@ def test_extension_discovery_without_reload_with_bundled_importlib_metadata(
     # Exitcode 1 - Extension was already installed
     # Exitcode 2 - Failed to install the extension
     # Exitcode 3 - Extension was not found within the same python process after being installed
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name in installed_packages
 

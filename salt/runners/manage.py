@@ -578,7 +578,9 @@ def versions():
     ret = {}
     client = salt.client.get_local_client(__opts__["conf_file"])
     try:
-        minions = client.cmd("*", "test.version", timeout=__opts__["timeout"])
+        minions = client.cmd(
+            "*", "test.version", full_return=True, timeout=__opts__["timeout"]
+        )
     except SaltClientError as client_error:
         print(client_error)
         return ret
@@ -596,11 +598,11 @@ def versions():
     master_version = salt.version.__saltstack_version__
 
     for minion in minions:
-        if not minions[minion]:
+        if not minions[minion] or minions[minion]["retcode"]:
             minion_version = False
             ver_diff = -2
         else:
-            minion_version = salt.version.SaltStackVersion.parse(minions[minion])
+            minion_version = salt.version.SaltStackVersion.parse(minions[minion]["ret"])
             ver_diff = salt.utils.compat.cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
@@ -797,10 +799,10 @@ def bootstrap_psexec(
             '>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<'
         )
         source_list = sorted(
-            [
+            (
                 [path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
                 for path, ver, plat, date in salty_rx.findall(source)
-            ],
+            ),
             key=operator.itemgetter(3),
             reverse=True,
         )

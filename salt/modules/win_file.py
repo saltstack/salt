@@ -34,6 +34,7 @@ from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
+import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -100,6 +101,7 @@ from salt.modules.file import (
     psed,
     read,
     readdir,
+    readlink,
     rename,
     replace,
     restore_backup,
@@ -118,6 +120,7 @@ from salt.utils.functools import namespaced_function as _namespaced_function
 HAS_WINDOWS_MODULES = False
 try:
     if salt.utils.platform.is_windows():
+        import pywintypes
         import win32api
         import win32con
         import win32file
@@ -159,7 +162,7 @@ def __virtual__():
             global get_diff, line, _get_flags, extract_hash, comment_line
             global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
-            global _splitlines_preserving_trailing_newline
+            global _splitlines_preserving_trailing_newline, readlink
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
@@ -208,6 +211,7 @@ def __virtual__():
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
+            readlink = _namespaced_function(readlink, globals())
             read = _namespaced_function(read, globals())
             rmdir = _namespaced_function(rmdir, globals())
             truncate = _namespaced_function(truncate, globals())
@@ -943,6 +947,241 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     return ret
 
 
+def _get_version_os(flags):
+    """
+    Helper function to parse the OS data
+
+    Args:
+        flags: The flags as returned by the GetFileVersionInfo function
+
+    Returns:
+        list: A list of Operating system properties found in the flag
+    """
+    file_os = []
+    file_os_flags = {
+        0x00000001: "16-bit Windows",
+        0x00000002: "16-bit Presentation Manager",
+        0x00000003: "32-bit Presentation Manager",
+        0x00000004: "32-bit Windows",
+        0x00010000: "MS-DOS",
+        0x00020000: "16-bit OS/2",
+        0x00030000: "32-bit OS/2",
+        0x00040000: "Windows NT",
+    }
+    for item in file_os_flags:
+        if item & flags == item:
+            file_os.append(file_os_flags[item])
+    return file_os
+
+
+def _get_version_type(file_type, file_subtype):
+    ret_type = None
+    file_types = {
+        0x00000001: "Application",
+        0x00000002: "DLL",
+        0x00000003: "Driver",
+        0x00000004: "Font",
+        0x00000005: "Virtual Device",
+        0x00000007: "Static Link Library",
+    }
+    driver_subtypes = {
+        0x00000001: "Printer",
+        0x00000002: "Keyboard",
+        0x00000003: "Language",
+        0x00000004: "Display",
+        0x00000005: "Mouse",
+        0x00000006: "Network",
+        0x00000007: "System",
+        0x00000008: "Installable",
+        0x00000009: "Sound",
+        0x0000000A: "Communications",
+        0x0000000C: "Versioned Printer",
+    }
+    font_subtypes = {
+        0x00000001: "Raster",
+        0x00000002: "Vector",
+        0x00000003: "TrueType",
+    }
+    if file_type in file_types:
+        ret_type = file_types[file_type]
+
+    if ret_type == "Driver":
+        if file_subtype in driver_subtypes:
+            ret_type = "{} Driver".format(driver_subtypes[file_subtype])
+    if ret_type == "Font":
+        if file_subtype in font_subtypes:
+            ret_type = "{} Font".format(font_subtypes[file_subtype])
+    if ret_type == "Virtual Device":
+        # The Virtual Device Identifier
+        ret_type = "Virtual Device: {}".format(file_subtype)
+    return ret_type
+
+
+def _get_version(path, fixed_info=None):
+    """
+    Get's the version of the file passed in path, or the fixed_info object if
+    passed.
+
+    Args:
+
+        path (str): The path to the file
+
+        fixed_info (obj): The fixed info object returned by the
+            GetFileVersionInfo function
+
+    Returns:
+        str: The version of the file
+    """
+    if not fixed_info:
+        try:
+            # Backslash returns a VS_FIXEDFILEINFO structure
+            # https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+            fixed_info = win32api.GetFileVersionInfo(path, "\\")
+        except pywintypes.error:
+            log.debug("No version info found: %s", path)
+            return ""
+
+    return "{}.{}.{}.{}".format(
+        win32api.HIWORD(fixed_info["FileVersionMS"]),
+        win32api.LOWORD(fixed_info["FileVersionMS"]),
+        win32api.HIWORD(fixed_info["FileVersionLS"]),
+        win32api.LOWORD(fixed_info["FileVersionLS"]),
+    )
+
+
+def version(path):
+    r"""
+    .. versionadded:: 3005
+
+    Get the version of a file.
+
+    .. note::
+        Not all files have version information. The following are common file
+        types that contain version information:
+
+            - .exe
+            - .dll
+            - .sys
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        str: The version of the file if the file contains it. Otherwise, an
+            empty string will be returned.
+
+    Raises:
+        CommandExecutionError: If the file does not exist
+        CommandExecutionError: If the path is not a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * file.version C:\Windows\notepad.exe
+    """
+    # Input validation
+    if not os.path.exists(path):
+        raise CommandExecutionError("File not found: {}".format(path))
+    if os.path.isdir(path):
+        raise CommandExecutionError("Not a file: {}".format(path))
+    return _get_version(path)
+
+
+def version_details(path):
+    r"""
+    .. versionadded:: 3005
+
+    Get file details for a file. Similar to what's in the details tab on the
+    file properties.
+
+    .. note::
+        Not all files have version information. The following are common file
+        types that contain version information:
+
+            - .exe
+            - .dll
+            - .sys
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        dict: A dictionary containing details about the file related to version.
+            An empty dictionary if the file contains no version information.
+
+    Raises:
+        CommandExecutionError: If the file does not exist
+        CommandExecutionError: If the path is not a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * file.version_details C:\Windows\notepad.exe
+    """
+    # Input validation
+    if not os.path.exists(path):
+        raise CommandExecutionError("File not found: {}".format(path))
+    if os.path.isdir(path):
+        raise CommandExecutionError("Not a file: {}".format(path))
+
+    ret = {}
+    try:
+        # Backslash returns a VS_FIXEDFILEINFO structure
+        # https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+        fixed_info = win32api.GetFileVersionInfo(path, "\\")
+    except pywintypes.error:
+        log.debug("No version info found: %s", path)
+        return ret
+
+    ret["Version"] = _get_version(path, fixed_info)
+    ret["OperatingSystem"] = _get_version_os(fixed_info["FileOS"])
+    ret["FileType"] = _get_version_type(
+        fixed_info["FileType"], fixed_info["FileSubtype"]
+    )
+
+    try:
+        # \VarFileInfo\Translation returns a list of available
+        # (language, codepage) pairs that can be used to retrieve string info.
+        # We only care about the first pair.
+        # https://docs.microsoft.com/en-us/windows/win32/menurc/varfileinfo-block
+        language, codepage = win32api.GetFileVersionInfo(
+            path, "\\VarFileInfo\\Translation"
+        )[0]
+    except pywintypes.error:
+        log.debug("No extended version info found: %s", path)
+        return ret
+
+    # All other properties are in the StringFileInfo block
+    # \StringFileInfo\<hex language><hex codepage>\<property name>
+    # https://docs.microsoft.com/en-us/windows/win32/menurc/stringfileinfo-block
+    property_names = (
+        "Comments",
+        "CompanyName",
+        "FileDescription",
+        "FileVersion",
+        "InternalName",
+        "LegalCopyright",
+        "LegalTrademarks",
+        "OriginalFilename",
+        "PrivateBuild",
+        "ProductName",
+        "ProductVersion",
+        "SpecialBuild",
+    )
+    for prop_name in property_names:
+        str_info_path = "\\StringFileInfo\\{:04X}{:04X}\\{}".format(
+            language, codepage, prop_name
+        )
+        try:
+            ret[prop_name] = win32api.GetFileVersionInfo(path, str_info_path)
+        except pywintypes.error:
+            pass
+
+    return ret
+
+
 def get_attributes(path):
     """
     Return a dictionary object with the Windows
@@ -1184,7 +1423,7 @@ def remove(path, force=False):
     return True
 
 
-def symlink(src, link):
+def symlink(src, link, force=False):
     """
     Create a symbolic link to a file
 
@@ -1196,10 +1435,17 @@ def symlink(src, link):
     If it doesn't, an error will be raised.
 
     Args:
+
         src (str): The path to a file or directory
-        link (str): The path to the link
+
+        link (str): The path to the link. Must be an absolute path
+
+        force (bool):
+            Overwrite an existing symlink with the same name
+            .. versionadded:: 3005
 
     Returns:
+
         bool: True if successful, otherwise False
 
     CLI Example:
@@ -1215,11 +1461,28 @@ def symlink(src, link):
             "Symlinks are only supported on Windows Vista or later."
         )
 
-    if not os.path.exists(src):
-        raise SaltInvocationError("The given source path does not exist.")
+    if os.path.islink(link):
+        try:
+            if os.path.normpath(salt.utils.path.readlink(link)) == os.path.normpath(
+                src
+            ):
+                log.debug("link already in correct state: %s -> %s", link, src)
+                return True
+        except OSError:
+            pass
 
-    if not os.path.isabs(src):
-        raise SaltInvocationError("File path must be absolute.")
+        if force:
+            os.unlink(link)
+        else:
+            msg = "Found existing symlink: {}".format(link)
+            raise CommandExecutionError(msg)
+
+    if os.path.exists(link):
+        msg = "Existing path is not a symlink: {}".format(link)
+        raise CommandExecutionError(msg)
+
+    if not os.path.isabs(link):
+        raise SaltInvocationError("Link path must be absolute: {}".format(link))
 
     # ensure paths are using the right slashes
     src = os.path.normpath(src)
@@ -1270,43 +1533,6 @@ def is_link(path):
 
     try:
         return __utils__["path.islink"](path)
-    except Exception as exc:  # pylint: disable=broad-except
-        raise CommandExecutionError(exc)
-
-
-def readlink(path):
-    """
-    Return the path that a symlink points to
-
-    This is only supported on Windows Vista or later.
-
-    Inline with Unix behavior, this function will raise an error if the path is
-    not a symlink, however, the error raised will be a SaltInvocationError, not
-    an OSError.
-
-    Args:
-        path (str): The path to the symlink
-
-    Returns:
-        str: The path that the symlink points to
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.readlink /path/to/link
-    """
-    if sys.getwindowsversion().major < 6:
-        raise SaltInvocationError(
-            "Symlinks are only supported on Windows Vista or later."
-        )
-
-    try:
-        return __utils__["path.readlink"](path)
-    except OSError as exc:
-        if exc.errno == errno.EINVAL:
-            raise CommandExecutionError("{} is not a symbolic link".format(path))
-        raise CommandExecutionError(exc.__str__())
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
@@ -1743,9 +1969,9 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
         grant_perms (dict):
             A dictionary containing the user/group and the basic permissions to
             grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
-            set the ``applies_to`` setting here. The default for ``applise_to``
-            is ``this_folder_subfolders_files``. Specify another ``applies_to``
-            setting like this:
+            set the ``applies_to`` setting here for directories. The default for
+            ``applies_to`` is ``this_folder_subfolders_files``. Specify another
+            ``applies_to`` setting like this:
 
             .. code-block:: yaml
 
