@@ -739,7 +739,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc16 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.4.0
     # via pytest-salt-factories
