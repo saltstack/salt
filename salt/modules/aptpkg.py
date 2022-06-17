@@ -197,9 +197,10 @@ if not HAS_APT:
                 self.invalid = True
                 return False
 
-            if repo_line[1].startswith("[") and any(
-                x.endswith("]") for x in repo_line[1:]
-            ):
+            if repo_line[1].startswith("["):
+                if not any(x.endswith("]") for x in repo_line[1:]):
+                    self.invalid = True
+                    return False
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
                 self.architectures.extend(opts["arch"]["value"])
