@@ -23,11 +23,14 @@ Azure (ARM) Utilities
 import importlib
 import logging
 import sys
+from functools import wraps
 from operator import itemgetter
 
 import salt.config
 import salt.loader
+import salt.utils.args
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.version
 from salt.exceptions import SaltInvocationError, SaltSystemExit
 
@@ -334,3 +337,24 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
                 return ret
 
     return ret
+
+
+def deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
