@@ -77,6 +77,75 @@ def test_service_running():
             }
         ]
 
+        # When onchangeonly is True and emitatstartup is False ,
+        # we should not see a return when the beacon is run.
+        config = [
+            {
+                "services": {
+                    "salt-master": {"emitatstartup": False, "onchangeonly": True}
+                }
+            }
+        ]
+
+        ret = service_beacon.validate(config)
+
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = service_beacon.beacon(config)
+        assert ret == []
+
+        # When onchangeonly is True and emitatstartup is
+        # the default value True, we should see a return
+        # when the beacon is run.
+        config = [{"services": {"salt-master": {"onchangeonly": True}}}]
+
+        ret = service_beacon.validate(config)
+
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = service_beacon.beacon(config)
+        assert ret == [
+            {
+                "service_name": "salt-master",
+                "tag": "salt-master",
+                "salt-master": {"running": True},
+            }
+        ]
+
+        # LAST_STATUS has service name and status has not changed
+        config = [{"services": {"salt-master": {"onchangeonly": True}}}]
+
+        ret = service_beacon.validate(config)
+
+        assert ret == (True, "Valid beacon configuration")
+
+        mock_ret_dict = {}
+        mock_ret_dict["salt-master"] = {"running": True}
+
+        with patch.dict(service_beacon.LAST_STATUS, mock_ret_dict):
+            ret = service_beacon.beacon(config)
+            assert ret == []
+
+        # LAST_STATUS has service name and status has changed
+        config = [{"services": {"salt-master": {"onchangeonly": True}}}]
+
+        ret = service_beacon.validate(config)
+
+        assert ret == (True, "Valid beacon configuration")
+
+        mock_ret_dict = {}
+        mock_ret_dict["salt-master"] = {"running": False}
+
+        with patch.dict(service_beacon.LAST_STATUS, mock_ret_dict):
+            ret = service_beacon.beacon(config)
+            assert ret == [
+                {
+                    "service_name": "salt-master",
+                    "tag": "salt-master",
+                    "salt-master": {"running": True},
+                }
+            ]
+
 
 def test_service_not_running():
     with patch.dict(

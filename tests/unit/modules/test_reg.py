@@ -3,7 +3,7 @@ import salt.modules.reg as reg
 import salt.utils.stringutils
 import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
-from tests.support.helpers import random_string
+from saltfactories.utils import random_string
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

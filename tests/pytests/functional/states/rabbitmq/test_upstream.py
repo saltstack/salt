@@ -10,6 +10,8 @@ import salt.states.rabbitmq_upstream as rabbitmq_upstream
 
 log = logging.getLogger(__name__)
 
+pytest.importorskip("docker")
+
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_freebsd(reason="No Docker on FreeBSD available"),

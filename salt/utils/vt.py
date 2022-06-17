@@ -14,7 +14,7 @@
     get us into.
 
     .. __: http://code.activestate.com/recipes/440554/
-    .. __: https://github.com/python-mirror/python/blob/3.3/Lib/pty.py
+    .. __: https://github.com/python/cpython/blob/3.3/Lib/pty.py
     .. __: https://github.com/pexpect/pexpect
 
 """

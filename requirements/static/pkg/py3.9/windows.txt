@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.9/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -97,7 +97,7 @@ python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via tempora
 pywin32==303
     # via

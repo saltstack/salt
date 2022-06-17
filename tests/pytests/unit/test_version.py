@@ -144,11 +144,13 @@ def test_version_report_lines():
     """
     Validate padding in versions report is correct
     """
-    # Get a set of all version report name lenghts including padding
+    # Get a set of all version report name lengths including padding
+    versions_report_ret = list(versions_report())
+    start_looking_index = versions_report_ret.index("Dependency Versions:") + 1
     line_lengths = {
         len(line.split(":")[0])
-        for line in list(versions_report())[4:]
-        if line != " " and line != "System Versions:"
+        for line in versions_report_ret[start_looking_index:]
+        if line != " " and line not in ("System Versions:", "Salt Extensions:")
     }
     # Check that they are all the same size (only one element in the set)
     assert len(line_lengths) == 1

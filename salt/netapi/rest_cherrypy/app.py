@@ -601,6 +601,7 @@ import salt
 import salt.auth
 import salt.exceptions
 import salt.netapi
+import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
@@ -976,6 +977,15 @@ def urlencoded_processor(entity):
             unserialized_data[key] = val[0]
         if len(val) == 0:
             unserialized_data[key] = ""
+
+    # Parse `arg` and `kwarg` just like we do it on the CLI
+    if "kwarg" in unserialized_data:
+        unserialized_data["kwarg"] = salt.utils.args.yamlify_arg(
+            unserialized_data["kwarg"]
+        )
+    if "arg" in unserialized_data:
+        for idx, value in enumerate(unserialized_data["arg"]):
+            unserialized_data["arg"][idx] = salt.utils.args.yamlify_arg(value)
     cherrypy.serving.request.unserialized_data = unserialized_data
 
 
@@ -1889,18 +1899,8 @@ class Login(LowDataAdapter):
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
             else:
-                # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], []).copy()
-                perms.extend(eauth.get("*", []))
-
-                if "groups" in token and token["groups"]:
-                    user_groups = set(token["groups"])
-                    eauth_groups = {
-                        i.rstrip("%") for i in eauth.keys() if i.endswith("%")
-                    }
-
-                    for group in user_groups & eauth_groups:
-                        perms.extend(eauth["{}%".format(group)])
+                perms = salt.netapi.sum_permissions(token, eauth)
+                perms = salt.netapi.sorted_permissions(perms)
 
             if not perms:
                 logger.debug("Eauth permission list not found.")

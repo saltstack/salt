@@ -38,8 +38,8 @@ def test_cp_testfile(salt_minion, salt_cp_cli, source_testfile, dest_testfile):
     test salt-cp
     """
     ret = salt_cp_cli.run(source_testfile, dest_testfile, minion_tgt=salt_minion.id)
-    assert ret.exitcode == 0
-    assert ret.json[dest_testfile] is True
+    assert ret.returncode == 0
+    assert ret.data[dest_testfile] is True
     assert os.path.exists(dest_testfile)
     with salt.utils.files.fopen(source_testfile) as rfh:
         source_testfile_contents = rfh.read()
