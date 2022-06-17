@@ -9052,7 +9052,7 @@ def mod_beacon(name, **kwargs):
         }
 
 
-def rmdir(name, recurse=False, ignore_errors=False):
+def rmdir(name, recurse=False, ignore_errors=False, older_than=None):
     """
     .. versionadded:: 3006.0
 
@@ -9073,6 +9073,12 @@ def rmdir(name, recurse=False, ignore_errors=False):
         option since it's not terribly useful to ignore errors on the removal of
         a single directory. Useful for pruning only the empty directories in a
         tree which contains non-empty directories as well.
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
     """
     name = os.path.expanduser(name)
 
@@ -9088,7 +9094,9 @@ def rmdir(name, recurse=False, ignore_errors=False):
             ret["comment"] = "Directory {} is set for removal".format(name)
             return ret
 
-        res = __salt__["file.rmdir"](name, recurse=recurse, verbose=True)
+        res = __salt__["file.rmdir"](
+            name, recurse=recurse, verbose=True, older_than=older_than
+        )
         result = res.pop("result")
 
         if result:

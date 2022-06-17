@@ -1,4 +1,5 @@
 import os
+import time
 
 import pytest
 
@@ -39,6 +40,10 @@ def nested_empty_dirs(tmp_path):
                     / "last{}".format(last)
                 )
                 nest.mkdir(parents=True, exist_ok=True)
+                if last % 2:
+                    now = time.time()
+                    old = now - (2 * 86400)
+                    os.utime(str(nest), (old, old))
     yield str(tmp_path)
 
 
@@ -128,3 +133,19 @@ def test_rmdir_verbose_failure(file, single_dir_with_file):
     assert not ret["deleted"]
     assert ret["errors"][0][0] == single_dir_with_file
     assert os.path.isdir(single_dir_with_file)
+
+
+def test_rmdir_nested_empty_dirs_recurse_older_than(file, nested_empty_dirs):
+    ret = file.rmdir(nested_empty_dirs, recurse=True, verbose=True, older_than=1)
+    assert ret["result"] is True
+    assert len(ret["deleted"]) == 8
+    assert len(ret["errors"]) == 0
+    assert os.path.isdir(nested_empty_dirs)
+
+
+def test_rmdir_nested_empty_dirs_recurse_not_older_than(file, nested_empty_dirs):
+    ret = file.rmdir(nested_empty_dirs, recurse=True, verbose=True, older_than=3)
+    assert ret["result"] is True
+    assert len(ret["deleted"]) == 0
+    assert len(ret["errors"]) == 0
+    assert os.path.isdir(nested_empty_dirs)
