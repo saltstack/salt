@@ -615,7 +615,7 @@ def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):
         keyid="0E08A149DE57BFBE",
         aptkey=False,
     )
-    with salt.utils.files.fopen(repo.repo_file, "r") as fp:
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
     assert repo.key_file.is_file()
