@@ -938,18 +938,34 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     self.missing_modules[name] = err_string
                     return False
 
-        if getattr(mod, "__load__", False) is not False:
-            log.info(
+        try:
+            funcs_to_load = mod.__load__
+            log.debug(
                 "The functions from module '%s' are being loaded from the "
                 "provided __load__ attribute",
                 module_name,
             )
+        except AttributeError:
+            try:
+                funcs_to_load = mod.__all__
+                log.debug(
+                    "The functions from module '%s' are being loaded from the "
+                    "provided __all__ attribute",
+                    module_name,
+                )
+            except AttributeError:
+                funcs_to_load = dir(mod)
+                log.debug(
+                    "The functions from module '%s' are being loaded by "
+                    "dir() on the loaded module",
+                    module_name,
+                )
 
         # If we had another module by the same virtual name, we should put any
         # new functions under the existing dictionary.
         mod_names = [module_name] + list(virtual_aliases)
 
-        for attr in getattr(mod, "__load__", dir(mod)):
+        for attr in funcs_to_load:
             if attr.startswith("_"):
                 # private functions are skipped
                 continue
@@ -957,6 +973,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if not inspect.isfunction(func) and not isinstance(func, functools.partial):
                 # Not a function!? Skip it!!!
                 continue
+
+            if not func.__module__.startswith(self.loaded_base_name):
+                # We're not interested in imported functions, only
+                # functions defined(or namespaced) on the loaded module.
+                continue
+
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
             # dictionary mapping in the form of(key -> value):
