@@ -326,7 +326,7 @@ def _run_with_coverage(session, *test_cmd, env=None):
             # Instruct sub processes to also run under coverage
             "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
         },
-        **coverage_base_env
+        **coverage_base_env,
     )
 
     try:
@@ -513,13 +513,6 @@ def pytest_parametrized(session, coverage, transport, crypto):
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        "--rootdir",
-        str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
-        "--log-file-level=debug",
-        "--show-capture=no",
-        "-ra",
-        "-s",
         "--transport={}".format(transport),
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
@@ -699,13 +692,6 @@ def pytest_cloud(session, coverage):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        "--rootdir",
-        str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
-        "--log-file-level=debug",
-        "--show-capture=no",
-        "-ra",
-        "-s",
         "--run-expensive",
         "-k",
         "cloud",
@@ -728,17 +714,7 @@ def pytest_tornado(session, coverage):
         session.install(
             "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
         )
-
-    cmd_args = [
-        "--rootdir",
-        str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
-        "--log-file-level=debug",
-        "--show-capture=no",
-        "-ra",
-        "-s",
-    ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage, session.posargs)
 
 
 def _pytest(session, coverage, cmd_args):
@@ -746,62 +722,41 @@ def _pytest(session, coverage, cmd_args):
     _create_ci_directories()
 
     env = {"CI_RUN": "1" if CI_RUN else "0"}
-    if IS_DARWIN:
-        # Don't nuke our multiprocessing efforts objc!
-        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
-        env["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+
+    args = [
+        "--rootdir",
+        str(REPO_ROOT),
+        "--log-file={}".format(RUNTESTS_LOGFILE),
+        "--log-file-level=debug",
+        "--show-capture=no",
+        "-ra",
+        "-s",
+        "--showlocals",
+    ]
+    args.extend(cmd_args)
 
     if CI_RUN:
         # We'll print out the collected tests on CI runs.
         # This will show a full list of what tests are going to run, in the right order, which, in case
         # of a test suite hang, helps us pinpoint which test is hanging
         session.run(
-            "python", "-m", "pytest", *(cmd_args + ["--collect-only", "-qqq"]), env=env
+            "python", "-m", "pytest", *(args + ["--collect-only", "-qqq"]), env=env
         )
 
-    try:
-        if coverage is True:
-            _run_with_coverage(
-                session,
-                "python",
-                "-m",
-                "coverage",
-                "run",
-                "-m",
-                "pytest",
-                "--showlocals",
-                *cmd_args,
-                env=env
-            )
-        else:
-            session.run("python", "-m", "pytest", *cmd_args, env=env)
-    except CommandFailed:  # pylint: disable=try-except-raise
-        # Not rerunning failed tests for now
-        raise
-
-        # pylint: disable=unreachable
-        # Re-run failed tests
-        session.log("Re-running failed tests")
-
-        for idx, parg in enumerate(cmd_args):
-            if parg.startswith("--junitxml="):
-                cmd_args[idx] = parg.replace(".xml", "-rerun-failed.xml")
-        cmd_args.append("--lf")
-        if coverage is True:
-            _run_with_coverage(
-                session,
-                "python",
-                "-m",
-                "coverage",
-                "run",
-                "-m",
-                "pytest",
-                "--showlocals",
-                *cmd_args
-            )
-        else:
-            session.run("python", "-m", "pytest", *cmd_args, env=env)
-        # pylint: enable=unreachable
+    if coverage is True:
+        _run_with_coverage(
+            session,
+            "python",
+            "-m",
+            "coverage",
+            "run",
+            "-m",
+            "pytest",
+            *args,
+            env=env,
+        )
+    else:
+        session.run("python", "-m", "pytest", *args, env=env)
 
 
 class Tee:
@@ -1072,7 +1027,8 @@ def invoke(session):
 
 @nox.session(name="changelog", python="3")
 @nox.parametrize("draft", [False, True])
-def changelog(session, draft):
+@nox.parametrize("force", [False, True])
+def changelog(session, draft, force):
     """
     Generate salt's changelog
     """
@@ -1086,4 +1042,7 @@ def changelog(session, draft):
     town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
     if draft:
         town_cmd.append("--draft")
+    if force:
+        # Do not ask, just remove news fragments
+        town_cmd.append("--yes")
     session.run(*town_cmd)

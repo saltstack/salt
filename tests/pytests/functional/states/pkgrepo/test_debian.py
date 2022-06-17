@@ -187,7 +187,7 @@ def ubuntu_state_tree(system_aptsources, state_tree, grains):
     pkgrepo-deps:
       pkg.installed:
         - pkgs:
-          - python-apt
+          - python3-apt
           - software-properties-common
     {%- for repo in ubuntu_repos -%}
     {% if loop.first %}
@@ -465,3 +465,115 @@ def test_pkgrepo_with_architectures(pkgrepo, grains, sources_list_file, subtests
         assert not ret.changes
         assert "already" in ret.comment
         assert ret.result is True
+
+
+@pytest.fixture
+def trailing_slash_repo_file(grains):
+    if grains["os_family"] != "Debian":
+        pytest.skip(
+            "Test only applicable to Debian flavors, not '{}'".format(
+                grains["osfinger"]
+            )
+        )
+    repo_file_path = "/etc/apt/sources.list.d/trailing-slash.list"
+    try:
+        yield repo_file_path
+    finally:
+        try:
+            os.unlink(repo_file_path)
+        except OSError:
+            pass
+
+
+@pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
+def test_repo_present_absent_trailing_slash_uri(pkgrepo, trailing_slash_repo_file):
+    """
+    test adding a repo with a trailing slash in the uri
+    """
+    repo_content = "deb http://www.deb-multimedia.org/ stable main"
+    # initial creation
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
+    )
+    with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
+        file_content = fp.read()
+    assert file_content.strip() == "deb http://www.deb-multimedia.org stable main"
+    assert ret.changes
+    # no changes
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False
+    )
+    assert not ret.changes
+    # absent
+    ret = pkgrepo.absent(name=repo_content)
+    assert ret.result
+
+
+@pytest.fixture
+def key_path():
+    key_file = pathlib.Path("/usr", "share", "keyrings", "salt-archive-keyring.gpg")
+    assert not key_file.is_file()
+    yield key_file
+    key_file.unlink()
+
+
+def test_adding_repo_file_signedby(pkgrepo, grains, states, tmp_path, key_path):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and setting signedby
+    """
+    repo_file = str(tmp_path / "stable-binary.list")
+    fullname = grains["osfullname"].lower().split()[0]
+    arch = grains["osarch"]
+    lsb_release = grains["lsb_distrib_release"]
+    key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
+        fullname, lsb_release, arch
+    )
+    repo_content = "deb [arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
+        fullname, lsb_release, grains["oscodename"], arch=arch
+    )
+    ret = states.pkgrepo.managed(
+        name=repo_content,
+        file=repo_file,
+        clean_file=True,
+        signedby=str(key_path),
+        key_url=key_file,
+        aptkey=False,
+    )
+    with salt.utils.files.fopen(repo_file, "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo_content
+    assert key_path.is_file()
+
+
+def test_adding_repo_file_signedby_keyserver(
+    pkgrepo, grains, states, tmp_path, key_path
+):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and setting signedby with a keyserver
+    """
+    repo_file = str(tmp_path / "stable-binary.list")
+    fullname = grains["osfullname"].lower().split()[0]
+    arch = grains["osarch"]
+    lsb_release = grains["lsb_distrib_release"]
+    key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
+        fullname, lsb_release, arch
+    )
+    repo_content = "deb [arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
+        fullname, lsb_release, grains["oscodename"], arch=arch
+    )
+
+    ret = states.pkgrepo.managed(
+        name=repo_content,
+        file=repo_file,
+        clean_file=True,
+        signedby=str(key_path),
+        keyserver="keyserver.ubuntu.com",
+        keyid="0E08A149DE57BFBE",
+        aptkey=False,
+    )
+    with salt.utils.files.fopen(repo_file, "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo_content
+    assert key_path.is_file()

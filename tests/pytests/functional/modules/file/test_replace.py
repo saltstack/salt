@@ -205,3 +205,8 @@ def test_replace_no_modify_time_update_on_no_change(file, multiline_file):
     nmtime = os.stat(str(multiline_file)).st_mtime
 
     assert mtime == nmtime
+
+
+def test_backslash_literal(file, multiline_file):
+    file.replace(str(multiline_file), r"Etiam", "Emma", backslash_literal=True)
+    assert "Emma" in multiline_file.read_text()
