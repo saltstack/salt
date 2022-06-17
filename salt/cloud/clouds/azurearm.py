@@ -871,7 +871,6 @@ def create_network_interface(call=None, kwargs=None):
             time.sleep(5)
 
 
-@salt.utils.azurearm.deprecation_message
 def request_instance(vm_, kwargs=None):
     """
     Request a VM from Azure.
