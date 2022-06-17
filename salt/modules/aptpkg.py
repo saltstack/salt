@@ -3024,8 +3024,9 @@ def expand_repo_def(**kwargs):
             repo_opts = _get_opts(repo)
             opts_order = [x for x in repo_opts.keys()]
             for opt in repo_opts:
-                idx = repo_opts[opt]["index"]
-                opts_order[idx] = repo_opts[opt]["full"]
+                if "index" in repo_opts[opt]:
+                    idx = repo_opts[opt]["index"]
+                    opts_order[idx] = repo_opts[opt]["full"]
 
             opts = "[" + " ".join(opts_order) + "]"
             line[1] = opts
