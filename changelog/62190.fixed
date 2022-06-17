@@ -1,0 +1,1 @@
+Only functions defined on the modules being loaded will be added to the lazy loader, functions imported from other modules, unless they are properly namespaced, are not included.
