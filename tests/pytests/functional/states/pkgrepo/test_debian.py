@@ -608,7 +608,7 @@ def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):
     """
     ret = states.pkgrepo.managed(
         name=repo.repo_content,
-        file=repo.repo_file,
+        file=str(repo.repo_file),
         clean_file=True,
         signedby=str(repo.key_file),
         keyserver="keyserver.ubuntu.com",
