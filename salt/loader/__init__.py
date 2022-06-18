@@ -484,6 +484,7 @@ def utils(
         pack={"__context__": context, "__proxy__": proxy or {}},
         pack_self=pack_self,
         loaded_base_name=loaded_base_name,
+        _only_pack_properly_namespaced_functions=False,
     )
 
 

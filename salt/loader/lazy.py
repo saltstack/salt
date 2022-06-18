@@ -230,6 +230,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         virtual_funcs=None,
         extra_module_dirs=None,
         pack_self=None,
+        # Once we get rid of __utils__, the keyword argument bellow should be removed
+        _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
         """
         In pack, if any of the values are None they will be replaced with an
@@ -258,11 +260,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.module_dirs = module_dirs
         self.tag = tag
         self._gc_finalizer = None
-        if loaded_base_name and loaded_base_name != LOADED_BASE_NAME:
-            self.loaded_base_name = loaded_base_name
-        else:
-            self.loaded_base_name = LOADED_BASE_NAME
+        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        self._only_pack_properly_namespaced_functions = (
+            _only_pack_properly_namespaced_functions
+        )
 
         if "__context__" not in self.pack:
             self.pack["__context__"] = None
@@ -974,7 +976,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # Not a function!? Skip it!!!
                 continue
 
-            if not func.__module__.startswith(self.loaded_base_name):
+            if (
+                self._only_pack_properly_namespaced_functions
+                and not func.__module__.startswith(self.loaded_base_name)
+            ):
                 # We're not interested in imported functions, only
                 # functions defined(or namespaced) on the loaded module.
                 continue
