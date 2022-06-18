@@ -302,7 +302,8 @@ def test_get_repo_keys(repo_keys_var):
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
         if not HAS_APT:
             with patch("os.listdir", return_value="/tmp/keys"):
-                assert aptpkg.get_repo_keys() == repo_keys_var
+                with patch("pathlib.Path.is_dir", return_value=True):
+                    assert aptpkg.get_repo_keys() == repo_keys_var
         else:
             assert aptpkg.get_repo_keys() == repo_keys_var
 
