@@ -102,6 +102,8 @@ class _Zypper:
     XML_DIRECTIVES = ["-x", "--xmlout"]
     # ZYPPER_LOCK is not affected by --root
     ZYPPER_LOCK = "/var/run/zypp.pid"
+    RPM_LOCK = "/usr/lib/sysimage/rpm/.rpm.lock"
+    RPM_LOCK_ERR_MESSAGE = "can't create transaction lock on"
     TAG_RELEASED = "zypper/released"
     TAG_BLOCKED = "zypper/blocked"
 
@@ -240,6 +242,12 @@ class _Zypper:
         """
         return self.exit_code == self.LOCK_EXIT_CODE
 
+    def _is_rpm_lock(self):
+        """
+        Is this an RPM lock error?
+        """
+        return self.RPM_LOCK_ERR_MESSAGE in self.error_msg
+
     def _is_xml_mode(self):
         """
         Is Zypper's output is in XML format?
@@ -327,51 +335,16 @@ class _Zypper:
             cmd.extend(self.__cmd)
             log.debug("Calling Zypper: %s", " ".join(cmd))
             self.__call_result = __salt__["cmd.run_all"](cmd, **kwargs)
-            if self._check_result():
+            if self._check_result() and not self._is_rpm_lock():
                 break
 
-            if os.path.exists(self.ZYPPER_LOCK):
-                try:
-                    with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
-                        data = __salt__["ps.proc_info"](
-                            int(rfh.readline()),
-                            attrs=["pid", "name", "cmdline", "create_time"],
-                        )
-                        data["cmdline"] = " ".join(data["cmdline"])
-                        data["info"] = "Blocking process created at {}.".format(
-                            datetime.datetime.utcfromtimestamp(
-                                data["create_time"]
-                            ).isoformat()
-                        )
-                        data["success"] = True
-                except Exception as err:  # pylint: disable=broad-except
-                    data = {
-                        "info": (
-                            "Unable to retrieve information about blocking process: {}".format(
-                                err.message
-                            )
-                        ),
-                        "success": False,
-                    }
-            else:
-                data = {
-                    "info": "Zypper is locked, but no Zypper lock has been found.",
-                    "success": False,
-                }
-
-            if not data["success"]:
-                log.debug("Unable to collect data about blocking process.")
-            else:
-                log.debug("Collected data about blocking process.")
-
-            __salt__["event.fire_master"](data, self.TAG_BLOCKED)
-            log.debug(
-                "Fired a Zypper blocked event to the master with the data: %s", data
-            )
-            log.debug("Waiting 5 seconds for Zypper gets released...")
-            time.sleep(5)
-            if not was_blocked:
-                was_blocked = True
+            # Zypper lock
+            if self._is_lock():
+                self._handle_lock_file(self.ZYPPER_LOCK, "Zypper")
+            # RPM lock
+            if self._is_rpm_lock():
+                self._handle_lock_file(self.RPM_LOCK, "RPM")
+            was_blocked = True
 
         if was_blocked:
             __salt__["event.fire_master"](
@@ -393,6 +366,49 @@ class _Zypper:
             )
             or self.__call_result["stdout"]
         )
+
+    def _handle_lock_file(self, lock_file, tool):
+        if os.path.exists(lock_file):
+            try:
+                with salt.utils.files.fopen(lock_file) as rfh:
+                    data = __salt__["ps.proc_info"](
+                        int(rfh.readline()),
+                        attrs=["pid", "name", "cmdline", "create_time"],
+                    )
+                    data["cmdline"] = " ".join(data["cmdline"])
+                    data["info"] = "Blocking process created at {}.".format(
+                        datetime.datetime.utcfromtimestamp(
+                            data["create_time"]
+                        ).isoformat()
+                    )
+                    data["success"] = True
+            except Exception as err:  # pylint: disable=broad-except
+                data = {
+                    "info": (
+                        "Unable to retrieve information about "
+                        "blocking process: {}".format(
+                            err.message
+                        )
+                    ),
+                    "success": False,
+                }
+        else:
+            data = {
+                "info": "{} is locked, but no {} lock has been "
+                        "found.".format(tool, tool),
+                "success": False,
+            }
+        if not data["success"]:
+            log.debug("Unable to collect data about blocking process.")
+        else:
+            log.debug("Collected data about blocking process.")
+        __salt__["event.fire_master"](data, self.TAG_BLOCKED)
+        log.debug(
+            "Fired a %s blocked event to the master with the data: "
+            "%s", tool, data
+        )
+        log.debug("Waiting 5 seconds for Zypper gets released...")
+        time.sleep(5)
 
 
 __zypper__ = _Zypper()
