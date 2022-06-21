@@ -5969,7 +5969,6 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
-    sysctl_cmd = "sysctl hw.vmm.create"
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(

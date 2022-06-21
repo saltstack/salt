@@ -29,6 +29,7 @@ BIN_DIR="$INSTALL_DIR/bin"
 CONFIG_DIR="/etc/salt"
 TEMP_DIR="/tmp"
 SBIN_DIR="/usr/local/sbin"
+PY_DOT_VERSION="3.7.12"
 
 ###############################################################################
 # Set up logging and error handling
