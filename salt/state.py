@@ -25,12 +25,12 @@ import sys
 import time
 import traceback
 
+import salt.channel.client
 import salt.fileclient
 import salt.loader
 import salt.minion
 import salt.pillar
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
@@ -222,14 +222,18 @@ def state_args(id_, state, high):
     return args
 
 
-def find_name(name, state, high):
+def find_name(name, state, high, strict=False):
     """
     Scan high data for the id referencing the given name and return a list of (IDs, state) tuples that match
 
     Note: if `state` is sls, then we are looking for all IDs that match the given SLS
     """
     ext_id = []
-    if name in high and state in high[name]:
+    if strict is False:
+        check2 = True
+    else:
+        check2 = state in high.get(name, {})
+    if name in high and check2:
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == "sls":
@@ -733,6 +737,17 @@ class State:
         loader="states",
         initial_pillar=None,
     ):
+        self._init_kwargs = {
+            "opts": opts,
+            "pillar_override": pillar_override,
+            "jid": jid,
+            "pillar_enc": pillar_enc,
+            "proxy": proxy,
+            "context": context,
+            "mocked": mocked,
+            "loader": loader,
+            "initial_pillar": initial_pillar,
+        }
         self.states_loader = loader
         if "grains" not in opts:
             opts["grains"] = salt.loader.grains(opts)
@@ -1626,7 +1641,7 @@ class State:
         chunks = self.order_chunks(chunks)
         return chunks
 
-    def reconcile_extend(self, high):
+    def reconcile_extend(self, high, strict=False):
         """
         Pull the extend data and add it to the respective high data
         """
@@ -1639,7 +1654,7 @@ class State:
                 state_type = next(x for x in body if not x.startswith("__"))
                 if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
-                    ids = find_name(name, state_type, high)
+                    ids = find_name(name, state_type, high, strict=strict)
                     if len(ids) != 1:
                         errors.append(
                             "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
@@ -1887,7 +1902,9 @@ class State:
                                         )
                                     if key == "prereq":
                                         # Add prerequired to prereqs
-                                        ext_ids = find_name(name, _state, high)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if ext_id not in extend:
                                                 extend[ext_id] = OrderedDict()
@@ -1900,7 +1917,9 @@ class State:
                                     if key == "use_in":
                                         # Add the running states args to the
                                         # use_in states
-                                        ext_ids = find_name(name, _state, high)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if not ext_id:
                                                 continue
@@ -1927,7 +1946,9 @@ class State:
                                     if key == "use":
                                         # Add the use state's args to the
                                         # running state
-                                        ext_ids = find_name(name, _state, high)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if not ext_id:
                                                 continue
@@ -1975,22 +1996,25 @@ class State:
         high["__extend__"] = []
         for key, val in extend.items():
             high["__extend__"].append({key: val})
-        req_in_high, req_in_errors = self.reconcile_extend(high)
+        req_in_high, req_in_errors = self.reconcile_extend(high, strict=True)
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def _call_parallel_target(self, name, cdata, low):
+    @classmethod
+    def _call_parallel_target(cls, instance, init_kwargs, name, cdata, low):
         """
         The target function to call that will create the parallel thread/process
         """
+        if instance is None:
+            instance = cls(**init_kwargs)
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
-        self.format_slots(cdata)
+        instance.format_slots(cdata)
         tag = _gen_tag(low)
         try:
-            ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
+            ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -2006,12 +2030,78 @@ class State:
             }
 
         utc_finish_time = datetime.datetime.utcnow()
+        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
+        local_finish_time = utc_finish_time - timezone_delta
+        local_start_time = utc_start_time - timezone_delta
+        ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
+        ret["__parallel__"] = True
 
-        troot = os.path.join(self.opts["cachedir"], self.jid)
+        if "retry" in low:
+            retries = 1
+            low["retry"] = instance.verify_retry_data(low["retry"])
+            if not sys.modules[instance.states[cdata["full"]].__module__].__opts__[
+                "test"
+            ]:
+                while low["retry"]["attempts"] >= retries:
+
+                    if low["retry"]["until"] == ret["result"]:
+                        break
+
+                    interval = low["retry"]["interval"]
+                    if low["retry"]["splay"] != 0:
+                        interval = interval + random.randint(0, low["retry"]["splay"])
+                    log.info(
+                        "State result does not match retry until value, "
+                        "state will be re-run in %s seconds",
+                        interval,
+                    )
+                    time.sleep(interval)
+                    retry_ret = instance.states[cdata["full"]](
+                        *cdata["args"], **cdata["kwargs"]
+                    )
+
+                    utc_start_time = datetime.datetime.utcnow()
+                    utc_finish_time = datetime.datetime.utcnow()
+                    delta = utc_finish_time - utc_start_time
+                    duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+                    retry_ret["duration"] = duration
+
+                    orig_ret = ret
+                    ret = retry_ret
+                    if not ret["comment"]:
+                        _comment = ""
+                    else:
+                        _comment = (
+                            'Attempt {}: Returned a result of "{}", '
+                            'with the following comment: "{}"'.format(
+                                retries, ret["result"], ret["comment"]
+                            )
+                        )
+
+                    ret["comment"] = "\n".join([orig_ret["comment"], _comment])
+                    ret["duration"] = (
+                        ret["duration"] + orig_ret["duration"] + (interval * 1000)
+                    )
+                    if retries == 1:
+                        ret["start_time"] = orig_ret["start_time"]
+                    retries = retries + 1
+
+            else:
+                ret["comment"] = "  ".join(
+                    [
+                        "" if not ret["comment"] else str(ret["comment"]),
+                        "The state would be retried every {interval} seconds "
+                        "(with a splay of up to {splay} seconds) a maximum of "
+                        "{attempts} times or until a result of {until} "
+                        "is returned".format(**low["retry"]),
+                    ]
+                )
+
+        troot = os.path.join(instance.opts["cachedir"], instance.jid)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
@@ -2036,9 +2126,14 @@ class State:
         if not name:
             name = low.get("name", low.get("__id__"))
 
+        if salt.utils.platform.spawning_platform():
+            instance = None
+        else:
+            instance = self
+
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
-            args=(name, cdata, low),
+            args=(instance, self._init_kwargs, name, cdata, low),
             name="ParallelState({})".format(name),
         )
         proc.start()
@@ -2253,7 +2348,7 @@ class State:
             local_finish_time.time().isoformat(),
             duration,
         )
-        if "retry" in low:
+        if "retry" in low and "parallel" not in low:
             low["retry"] = self.verify_retry_data(low["retry"])
             if not sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]:
                 if low["retry"]["until"] != ret["result"]:
@@ -2854,7 +2949,7 @@ class State:
             preload = {"jid": self.jid}
             ev_func(ret, tag, preload=preload)
 
-    def call_chunk(self, low, running, chunks):
+    def call_chunk(self, low, running, chunks, depth=0):
         """
         Check if a chunk has any requires, execute the requires and then
         the chunk
@@ -2994,7 +3089,20 @@ class State:
                     self.pre[tag]["changes"] = {"watch": "watch"}
                     self.pre[tag]["result"] = None
             else:
-                running = self.call_chunk(low, running, chunks)
+                depth += 1
+                # even this depth is being generous. This shouldn't exceed 1 no
+                # matter how the loops are happening
+                if depth >= 20:
+                    log.error("Recursive requisite found")
+                    running[tag] = {
+                        "changes": {},
+                        "result": False,
+                        "comment": "Recursive requisite found",
+                        "__run_num__": self.__run_num,
+                        "__sls__": low["__sls__"],
+                    }
+                else:
+                    running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
                 running["__FAILHARD__"] = True
                 return running
@@ -3524,8 +3632,8 @@ class BaseHighState:
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
             opts["state_events"] = mopts.get("state_events")
-            opts["state_aggregate"] = mopts.get(
-                "state_aggregate", opts.get("state_aggregate", False)
+            opts["state_aggregate"] = (
+                opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
             opts["jinja_env"] = mopts.get("jinja_env", {})
             opts["jinja_sls_env"] = mopts.get("jinja_sls_env", {})
@@ -4608,7 +4716,7 @@ class BaseHighState:
                 "count_unused": 0,
             }
 
-            env_matches = matches.get(saltenv)
+            env_matches = matches.get(saltenv, [])
 
             for state in states:
                 env_usage["count_all"] += 1
@@ -4767,7 +4875,7 @@ class RemoteHighState:
         self.opts = opts
         self.grains = grains
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts["master_uri"])
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts["master_uri"])
         self._closing = False
 
     def compile_master(self):

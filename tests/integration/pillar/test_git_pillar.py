@@ -65,10 +65,12 @@ https://github.com/unbit/uwsgi/commit/ac1e354
 
 import random
 import string
+import sys
 
 import pytest
 import salt.utils.path
 import salt.utils.platform
+from distro import linux_distribution
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
@@ -88,7 +90,7 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import requires_system_grains
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, requires_system_grains
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -106,6 +108,10 @@ HAS_SSHD = bool(salt.utils.path.which("sshd"))
 HAS_NGINX = bool(salt.utils.path.which("nginx"))
 HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
+pytestmark = [
+    SKIP_INITIAL_PHOTONOS_FAILURES,
+]
+
 
 def _rand_key_name(length):
     return "id_rsa_{}".format(
@@ -115,6 +121,13 @@ def _rand_key_name(length):
 
 def _windows_or_mac():
     return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
+
+
+def _centos_stream_9():
+    (osname, osrelease, oscodename) = (
+        x.strip('"').strip("'") for x in linux_distribution()
+    )
+    return osname == "CentOS Stream" and osrelease == "9"
 
 
 class GitPythonMixin:
@@ -728,6 +741,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @skipIf(salt.utils.platform.is_aarch64(), "Test is broken on aarch64")
 @skipIf(_windows_or_mac(), "minion is windows or mac")
+@skipIf(_centos_stream_9(), "CentOS Stream 9 has RSA keys disabled by default")
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -736,6 +750,13 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10),
+    reason=(
+        "Temporarily Skip under Py3.10. Issue with ssh and newer ssh keys. "
+        "See https://github.com/saltstack/salt/issues/61704"
+    ),
+)
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

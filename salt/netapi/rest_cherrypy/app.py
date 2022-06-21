@@ -591,6 +591,7 @@ import logging
 import os
 import signal
 import tarfile
+import time
 from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
@@ -600,6 +601,7 @@ import salt
 import salt.auth
 import salt.exceptions
 import salt.netapi
+import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
@@ -615,13 +617,13 @@ try:
     )
 except AttributeError:
     cpstats = None
-    logger.warn(
+    logger.warning(
         "Import of cherrypy.cpstats failed. Possible upstream bug: "
         "https://github.com/cherrypy/cherrypy/issues/1444"
     )
 except ImportError:
     cpstats = None
-    logger.warn("Import of cherrypy.cpstats failed.")
+    logger.warning("Import of cherrypy.cpstats failed.")
 
 try:
     # Imports related to websocket
@@ -975,6 +977,15 @@ def urlencoded_processor(entity):
             unserialized_data[key] = val[0]
         if len(val) == 0:
             unserialized_data[key] = ""
+
+    # Parse `arg` and `kwarg` just like we do it on the CLI
+    if "kwarg" in unserialized_data:
+        unserialized_data["kwarg"] = salt.utils.args.yamlify_arg(
+            unserialized_data["kwarg"]
+        )
+    if "arg" in unserialized_data:
+        for idx, value in enumerate(unserialized_data["arg"]):
+            unserialized_data["arg"][idx] = salt.utils.args.yamlify_arg(value)
     cherrypy.serving.request.unserialized_data = unserialized_data
 
 
@@ -1888,18 +1899,8 @@ class Login(LowDataAdapter):
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
             else:
-                # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], [])
-                perms.extend(eauth.get("*", []))
-
-                if "groups" in token and token["groups"]:
-                    user_groups = set(token["groups"])
-                    eauth_groups = {
-                        i.rstrip("%") for i in eauth.keys() if i.endswith("%")
-                    }
-
-                    for group in user_groups & eauth_groups:
-                        perms.extend(eauth["{}%".format(group)])
+                perms = salt.netapi.sum_permissions(token, eauth)
+                perms = salt.netapi.sorted_permissions(perms)
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
@@ -2208,8 +2209,11 @@ class Events:
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
         # allows access.
-        if salt_token and self.resolver.get_token(salt_token):
-            return True
+        if salt_token:
+            # We want to at least make sure that the token isn't expired yet.
+            resolved_tkn = self.resolver.get_token(salt_token)
+            if resolved_tkn and resolved_tkn.get("expire", 0) > time.time():
+                return True
 
         return False
 
@@ -2363,7 +2367,6 @@ class Events:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2372,6 +2375,11 @@ class Events:
                 yield "retry: 400\n"
 
                 while True:
+                    # make sure the token is still valid
+                    if not self._is_valid_token(auth_token):
+                        logger.debug("Token is no longer valid")
+                        break
+
                     data = next(stream)
                     yield "tag: {}\n".format(data.get("tag", ""))
                     yield "data: {}\n\n".format(salt.utils.json.dumps(data))
@@ -2539,7 +2547,6 @@ class WebsocketEndpoint:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2639,7 +2646,6 @@ class Webhook:
         self.event = salt.utils.event.get_event(
             "master",
             sock_dir=self.opts["sock_dir"],
-            transport=self.opts["transport"],
             opts=self.opts,
             listen=False,
         )

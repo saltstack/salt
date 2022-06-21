@@ -14,7 +14,13 @@ Statistics
 - Total Issue References: **36**
 - Total PR References: **145**
 
-- Contributors: **49** (`Sacro`_, `The-Loeki`_, `YanChii`_, `aboe76`_, `anlutro`_, `awdrius`_, `basepi`_, `cdarwin`_, `cedwards`_, `clan`_, `corywright`_, `cro`_, `djcrabhat`_, `dmyerscough`_, `dr4Ke`_, `fayetted`_, `galet`_, `garethgreenaway`_, `ghost`_, `hazelesque`_, `hvnsweeting`_, `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jbq`_, `jfindlay`_, `joejulian`_, `justinta`_, `kartiksubbarao`_, `kiorky`_, `merll`_, `msteed`_, `neogenix`_, `nicholascapo`_, `nleib`_, `pengyao`_, `pruiz`_, `rallytime`_, `randybias`_, `ryan-lane`_, `steverweber`_, `swdream`_, `techhat`_, `terminalmage`_, `thcipriani`_, `thusoy`_, `trevor-h`_, `twangboy`_, `whiteinge`_)
+- Contributors: **49** (`Sacro`_, `The-Loeki`_, `YanChii`_, `aboe76`_, `anlutro`_, `awdrius`_,
+  `basepi`_, `cdarwin`_, `cedwards`_, `clan`_, `corywright`_, `cro`_, `djcrabhat`_, `dmyerscough`_,
+  `dr4Ke`_, `fayetted`_, `galet`_, `garethgreenaway`_, `ghost`_, `hazelesque`_, `hvnsweeting`_,
+  `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jbq`_, `jfindlay`_, `joejulian`_, `justinta`_,
+  `kartiksubbarao`_, `kiorky`_, `merll`_, `msteed`_, `neogenix`_, `nicholascapo`_, `nleib`_,
+  `pengyao`_, `pruiz`_, `rallytime`_, `randybias`_, `ryan-lane`_, `steverweber`_, `swdream`_,
+  `techhat`_, `terminalmage`_, `thcipriani`_, `thusoy`_, `trevor-h`_, `twangboy`_, `whiteinge`_)
 
 
 Changelog for v2015.5.1..v2015.5.2
@@ -115,7 +121,7 @@ Changelog for v2015.5.1..v2015.5.2
 
   * 02bfb254d6 Merge pull request `#24281`_ from steverweber/ipmi_docfix
 
-  * dd36f2c555 yaml formating
+  * dd36f2c555 yaml formatting
 
   * f6deef3047 include api_kg kwarg in ipmi state
 
@@ -249,7 +255,7 @@ Changelog for v2015.5.1..v2015.5.2
 
   * 608da5ef5d modules/lxc: merge resolution
 
-  * 27c4689a24 modules/lxc: more consistent comparsion
+  * 27c4689a24 modules/lxc: more consistent comparison
 
   * 07c365a23b lxc: merge conflict spotted
 
@@ -1020,7 +1026,7 @@ Changelog for v2015.5.1..v2015.5.2
 
   * 1dc67e5678 lxc: versionadded
 
-  * fcad7cb804 lxc: states improvments
+  * fcad7cb804 lxc: states improvements
 
   * 644bd729f7 lxc: more consistence for profiles
 

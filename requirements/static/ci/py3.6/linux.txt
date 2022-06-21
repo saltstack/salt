@@ -8,9 +8,13 @@ adal==1.2.3
     # via
     #   azure-datalake-store
     #   msrestazure
-ansible-base==2.10.9
+aiohttp==3.8.1
+    # via etcd3-py
+aiosignal==1.2.0
+    # via aiohttp
+ansible-core==2.11.7
     # via ansible
-ansible==3.4.0
+ansible==4.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -20,15 +24,19 @@ asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
+async-timeout==4.0.2
+    # via aiohttp
+asynctest==0.13.0
+    # via aiohttp
 attrs==20.3.0
     # via
+    #   aiohttp
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
-aws-sam-translator==1.33.0
-    # via cfn-lint
-aws-xray-sdk==0.95
-    # via moto
+    #   pytest-shell-utilities
+    #   pytest-skip-markers
+    #   pytest-system-statistics
 azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
@@ -341,12 +349,9 @@ bcrypt==3.1.6
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
-    #   aws-sam-translator
     #   moto
 boto==2.49.0
-    # via
-    #   -r requirements/static/ci/common.in
-    #   moto
+    # via -r requirements/static/ci/common.in
 botocore==1.20.67
     # via
     #   boto3
@@ -358,7 +363,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -375,10 +380,10 @@ cffi==1.14.6
     #   cryptography
     #   pygit2
     #   pynacl
-cfn-lint==0.44.3
-    # via moto
 chardet==3.0.4
     # via requests
+charset-normalizer==2.0.12
+    # via aiohttp
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -398,41 +403,41 @@ croniter==0.3.29 ; sys_platform != "win32"
 cryptography==3.3.2
     # via
     #   adal
-    #   ansible-base
+    #   ansible-core
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
+    #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
-    #   python-jose
-    #   sshpubkeys
     #   vcert
-decorator==4.4.2
-    # via networkx
+dataclasses==0.8
+    # via werkzeug
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker-pycreds==0.4.0
-    # via docker
-docker==3.7.2
+docker==5.0.3
     # via
     #   -r requirements/static/ci/common.in
-    #   moto
-ecdsa==0.14.1
-    # via
-    #   moto
-    #   python-jose
-    #   sshpubkeys
+    #   pytest-salt-factories
+etcd3-py==0.1.6 ; python_version >= "3.6"
+    # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
+frozenlist==1.2.0
+    # via
+    #   aiohttp
+    #   aiosignal
 future==0.17.1
     # via textfsm
 genshi==0.7.5
@@ -445,10 +450,16 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/linux.in
+idna-ssl==1.1.0
+    # via aiohttp
 idna==2.8
     # via
-    #   moto
+    #   etcd3-py
+    #   idna-ssl
     #   requests
+    #   yarl
 immutables==0.14
     # via contextvars
 importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
@@ -456,14 +467,13 @@ importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
     #   importlib-resources
-    #   jsonpickle
     #   jsonschema
+    #   moto
     #   pluggy
     #   pytest
     #   virtualenv
 importlib-resources==1.5.0
     # via
-    #   cfn-lint
     #   jaraco.text
     #   virtualenv
 iniconfig==1.0.1
@@ -483,10 +493,10 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==2.11.3
+jinja2==3.0.3
     # via
     #   -r requirements/base.txt
-    #   ansible-base
+    #   ansible-core
     #   junos-eznc
     #   moto
 jmespath==0.9.4
@@ -494,22 +504,9 @@ jmespath==0.9.4
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsondiff==1.2.0
-    # via moto
-jsonpatch==1.28
-    # via cfn-lint
-jsonpickle==2.0.0
-    # via aws-xray-sdk
-jsonpointer==2.0
-    # via jsonpatch
 jsonschema==3.2.0
-    # via
-    #   -r requirements/static/ci/common.in
-    #   aws-sam-translator
-    #   cfn-lint
-junit-xml==1.9
-    # via cfn-lint
-junos-eznc==2.4.0 ; sys_platform != "win32"
+    # via -r requirements/static/ci/common.in
+junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.9"
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -521,30 +518,29 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   ncclient
 mako==1.1.4
     # via -r requirements/static/ci/common.in
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/linux.in
 mock==3.0.5
-    # via
-    #   -r requirements/pytest.txt
-    #   moto
+    # via -r requirements/pytest.txt
 more-itertools==5.0.0
     # via
     #   cheroot
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-    #   moto
-moto==1.3.16
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -639,12 +635,14 @@ msrestazure==0.6.3
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
+multidict==5.2.0
+    # via
+    #   aiohttp
+    #   yarl
 ncclient==0.6.4
     # via junos-eznc
 netaddr==0.7.19
     # via junos-eznc
-networkx==2.5
-    # via cfn-lint
 ntc-templates==1.4.0
     # via junos-eznc
 oauthlib==3.1.0
@@ -653,9 +651,9 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via
-    #   ansible-base
+    #   ansible-core
     #   pytest
-paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -663,6 +661,8 @@ paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   scp
 passlib==1.7.2 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+pathspec==0.9.0
+    # via yamllint
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -675,6 +675,8 @@ psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
@@ -682,13 +684,12 @@ pyasn1-modules==0.2.4
 pyasn1==0.4.8
     # via
     #   pyasn1-modules
-    #   python-jose
     #   rsa
 pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.43.0.6
+pycurl==7.43.0.6 ; python_version <= "3.9"
     # via -r requirements/static/ci/common.in
 pygit2==1.0.3 ; python_version <= "3.8"
     # via -r requirements/static/ci/linux.in
@@ -696,7 +697,7 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==1.7.1
+pyjwt==2.4.0
     # via
     #   adal
     #   twilio
@@ -705,7 +706,9 @@ pymysql==1.0.2 ; python_version > "3.5"
 pynacl==1.3.0
     # via paramiko
 pyopenssl==19.1.0
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   etcd3-py
 pyparsing==2.4.5
     # via
     #   junos-eznc
@@ -718,21 +721,41 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.907.0
+    #   pytest-shell-utilities
+pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
+pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
+    # via -r requirements/pytest.txt
+pytest-shell-utilities==1.4.0
+    # via pytest-salt-factories
+pytest-skip-markers==1.2.0
+    # via
+    #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
+pytest-system-statistics==1.0.2
+    # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest==6.1.2
+pytest-timeout==1.4.2
+    # via -r requirements/pytest.txt
+pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-skip-markers
     #   pytest-subtests
+    #   pytest-system-statistics
     #   pytest-tempdir
+    #   pytest-timeout
+python-consul==1.1.0
+    # via -r requirements/static/ci/linux.in
 python-dateutil==2.8.1
     # via
     #   -r requirements/static/pkg/linux.in
@@ -746,13 +769,11 @@ python-dateutil==2.8.1
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-python-jose[cryptography]==3.2.0
-    # via moto
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-pytz==2021.1
+pytz==2022.1
     # via
     #   apscheduler
     #   moto
@@ -765,17 +786,20 @@ pyvmomi==6.7.1.2018.12
 pyyaml==5.4.1
     # via
     #   -r requirements/base.txt
-    #   ansible-base
-    #   cfn-lint
+    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   moto
+    #   yamllint
     #   yamlordereddictloader
 pyzmq==18.0.1 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
+redis-py-cluster==2.1.3
+    # via -r requirements/static/ci/linux.in
+redis==3.5.3
+    # via redis-py-cluster
 requests-oauthlib==1.3.0
     # via msrest
 requests==2.25.1
@@ -784,7 +808,6 @@ requests==2.25.1
     #   -r requirements/static/ci/common.in
     #   adal
     #   apache-libcloud
-    #   aws-xray-sdk
     #   azure-cosmosdb-table
     #   azure-datalake-store
     #   azure-keyvault
@@ -792,14 +815,18 @@ requests==2.25.1
     #   azure-servicemanagement-legacy
     #   azure-storage-common
     #   docker
+    #   etcd3-py
     #   kubernetes
     #   moto
     #   msrest
+    #   python-consul
     #   pyvmomi
     #   requests-oauthlib
     #   responses
     #   twilio
     #   vcert
+resolvelib==0.5.4
+    # via ansible-core
 responses==0.10.6
     # via moto
 rfc3987==1.3.8
@@ -807,50 +834,44 @@ rfc3987==1.3.8
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
 rsa==4.7.2
-    # via
-    #   google-auth
-    #   python-jose
+    # via google-auth
 s3transfer==0.4.2
     # via boto3
 scp==0.13.2
     # via junos-eznc
-setproctitle==1.1.10
+semantic-version==2.9.0
+    # via etcd3-py
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
     #   apscheduler
-    #   aws-sam-translator
     #   bcrypt
     #   cassandra-driver
-    #   cfn-lint
     #   cheroot
     #   cryptography
-    #   docker
-    #   docker-pycreds
-    #   ecdsa
+    #   etcd3-py
     #   genshi
     #   geomet
     #   google-auth
     #   isodate
     #   jsonschema
-    #   junit-xml
     #   junos-eznc
     #   kazoo
     #   kubernetes
     #   mock
     #   more-itertools
-    #   moto
     #   ncclient
     #   packaging
+    #   paramiko
     #   pynacl
     #   pyopenssl
+    #   python-consul
     #   python-dateutil
-    #   python-jose
     #   pyvmomi
     #   responses
     #   textfsm
     #   transitions
-    #   twilio
     #   vcert
     #   virtualenv
     #   websocket-client
@@ -858,8 +879,6 @@ smmap==3.0.4
     # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
-sshpubkeys==3.1.0
-    # via moto
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
@@ -871,17 +890,23 @@ textfsm==1.1.0
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   pytest
+    # via -r requirements/static/ci/common.in
+tomli==1.2.3
+    # via pytest
 tornado==6.1
     # via python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
-twilio==6.63.0
+twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
-    # via importlib-metadata
+    # via
+    #   aiohttp
+    #   async-timeout
+    #   importlib-metadata
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
+    #   yarl
 tzlocal==2.1
     # via apscheduler
 urllib3==1.26.6
@@ -890,7 +915,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
@@ -902,21 +927,24 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==0.15.6
-    # via moto
-wrapt==1.11.1
-    # via aws-xray-sdk
+werkzeug==2.0.3
+    # via
+    #   moto
+    #   pytest-httpserver
 xmltodict==0.12.0
     # via moto
+yamllint==1.26.3
+    # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
+yarl==1.7.2
+    # via aiohttp
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0
     # via
     #   importlib-metadata
     #   importlib-resources
-    #   moto
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

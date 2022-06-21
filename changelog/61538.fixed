@@ -1,0 +1,1 @@
+Fixed error when using network module on RHEL 8 due to the name of the service changing from "network" to "NetworkManager".

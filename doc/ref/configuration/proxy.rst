@@ -19,6 +19,12 @@ By default, the salt-proxy configuration will be in :file:`/etc/salt/proxy`.
 A notable exception is FreeBSD, where the configuration will be in
 :file:`/usr/local/etc/salt/proxy`.
 
+With the Salt 3004 release, the ability to configure proxy minions using the delta proxy
+was introduced.  The delta proxy provides the ability for a single control proxy
+minion to manage multiple proxy minions.
+
+.. seealso::
+    :ref:`Installing and Using Deltaproxy <delta-proxy-information>`
 
 
 Proxy-specific Configuration Options

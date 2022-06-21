@@ -8,8 +8,8 @@ import pytest
 import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
+from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
 
 
 @pytest.mark.skip_if_not_root

@@ -11,7 +11,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-from tests.support.helpers import requires_system_grains
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +22,6 @@ pytestmark = [
 
 
 @pytest.fixture(autouse=True)
-@requires_system_grains
 def refresh_db(ctx, grains, modules):
     if "refresh" not in ctx:
         modules.pkg.refresh_db()
@@ -41,7 +39,6 @@ def refresh_db(ctx, grains, modules):
 
 
 @pytest.fixture
-@requires_system_grains
 def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
@@ -49,7 +46,12 @@ def PKG_TARGETS(grains):
     elif grains["os"] == "Amazon":
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
-        _PKG_TARGETS = ["units", "zsh-html"]
+        if grains["os"] == "VMware Photon OS":
+            _PKG_TARGETS = ["wget", "zsh-html"]
+        elif grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+            _PKG_TARGETS = ["units", "zsh"]
+        else:
+            _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
         _PKG_TARGETS = ["lynx", "htop"]
 
@@ -57,7 +59,6 @@ def PKG_TARGETS(grains):
 
 
 @pytest.fixture
-@requires_system_grains
 def PKG_CAP_TARGETS(grains):
     _PKG_CAP_TARGETS = []
     if grains["os_family"] == "Suse":
@@ -67,7 +68,6 @@ def PKG_CAP_TARGETS(grains):
 
 
 @pytest.fixture
-@requires_system_grains
 def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
     if grains["os_family"] == "RedHat":
@@ -80,7 +80,6 @@ def PKG_32_TARGETS(grains):
 
 
 @pytest.fixture
-@requires_system_grains
 def PKG_DOT_TARGETS(grains):
     _PKG_DOT_TARGETS = []
     if grains["os_family"] == "RedHat":
@@ -91,12 +90,11 @@ def PKG_DOT_TARGETS(grains):
         elif grains["osmajorrelease"] == 7:
             _PKG_DOT_TARGETS = ["tomcat-el-2.2-api"]
         elif grains["osmajorrelease"] == 8:
-            _PKG_DOT_TARGETS = ["vid.stab"]
+            _PKG_DOT_TARGETS = ["aspnetcore-runtime-6.0"]
     return _PKG_DOT_TARGETS
 
 
 @pytest.fixture
-@requires_system_grains
 def PKG_EPOCH_TARGETS(grains):
     _PKG_EPOCH_TARGETS = []
     if grains["os_family"] == "RedHat":
@@ -109,7 +107,6 @@ def PKG_EPOCH_TARGETS(grains):
 
 
 @pytest.fixture
-@requires_system_grains
 def VERSION_SPEC_SUPPORTED(grains):
     _VERSION_SPEC_SUPPORTED = True
     if grains["os"] == "FreeBSD":
@@ -118,7 +115,6 @@ def VERSION_SPEC_SUPPORTED(grains):
 
 
 @pytest.fixture
-@requires_system_grains
 def WILDCARDS_SUPPORTED(grains):
     _WILDCARDS_SUPPORTED = False
     if grains["os_family"] in ("Arch", "Debian"):
@@ -411,7 +407,6 @@ def test_pkg_010_latest(PKG_TARGETS, latest_version, states):
 @pytest.mark.requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
 @pytest.mark.requires_salt_states("pkg.latest")
 @pytest.mark.slow_test
-@requires_system_grains
 def test_pkg_011_latest_only_upgrade(
     grains, PKG_TARGETS, latest_version, states, modules
 ):
@@ -517,7 +512,6 @@ def test_pkg_012_installed_with_wildcard_version(
 
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.latest_version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
-@requires_system_grains
 def test_pkg_013_installed_with_comparison_operator(
     grains, PKG_TARGETS, states, modules
 ):
@@ -588,7 +582,6 @@ def test_pkg_014_installed_missing_release(grains, PKG_TARGETS, states, modules)
     "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
 )
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
-@requires_system_grains
 def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     """
     Tests that a package can be held even when the package is already installed.
@@ -699,11 +692,14 @@ def test_pkg_016_conditionally_ignore_epoch(PKG_EPOCH_TARGETS, latest_version, s
     assert ret.result is True
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos(),
+    reason="package hold/unhold unsupported on Photon OS",
+)
 @pytest.mark.requires_salt_modules(
     "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
 )
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
-@requires_system_grains
 def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGETS):
     """
     Tests that a package is installed when hold is explicitly False.

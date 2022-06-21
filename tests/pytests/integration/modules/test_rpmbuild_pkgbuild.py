@@ -187,14 +187,14 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
     try:
         with top_tempfile, packaging_tempfile:
             ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-            assert ret.exitcode == 0
-            assert ret.json is True
+            assert ret.returncode == 0
+            assert ret.data is True
             yield
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 def _testrpm_signed(abs_path_named_rpm):
@@ -271,7 +271,7 @@ def gpg_agent(request, gpghome):
         check=True,
         universal_newlines=True,
     )
-    if tuple([int(p) for p in gpg_version_proc.stdout.split(".")]) >= (2, 1):
+    if tuple(int(p) for p in gpg_version_proc.stdout.split(".")) >= (2, 1):
         kill_option_supported = True
     else:
         kill_option_supported = False
@@ -360,9 +360,9 @@ def test_make_repo(grains, gpghome, repodir, gpg_agent, salt_call_cli, pillar_tr
         )
 
     ret = salt_call_cli.run("pillar.data")
-    assert ret.exitcode == 0
-    assert ret.json
-    pillar = ret.json
+    assert ret.returncode == 0
+    assert ret.data
+    pillar = ret.data
     assert pillar["gpg_passphrase"] == GPG_TEST_KEY_PASSPHRASE
     assert pillar["gpg_pkg_pub_keyname"] == "gpg_pkg_key.pub"
 
@@ -377,8 +377,8 @@ def test_make_repo(grains, gpghome, repodir, gpg_agent, salt_call_cli, pillar_tr
         runas="root",
         timeout=15.0,
     )
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
     test_rpm_path = repodir / REPO_NAMED_RPM
     assert _testrpm_signed(test_rpm_path)

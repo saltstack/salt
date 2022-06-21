@@ -20,6 +20,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    3004*
     3003*
     3002*
     3001*
@@ -42,7 +43,8 @@ Upcoming Release
     :maxdepth: 1
     :glob:
 
-    3004*
+    3005*
+    3006*
 
 .. seealso:: :ref:`Legacy salt-cloud release docs <legacy-salt-cloud-release-notes>`
 

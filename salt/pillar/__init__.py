@@ -9,12 +9,13 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 
+import salt.channel.client
 import salt.ext.tornado.gen
 import salt.fileclient
 import salt.loader
 import salt.minion
-import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
 import salt.utils.crypt
@@ -218,7 +219,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
+        self.channel = salt.channel.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -262,6 +263,9 @@ class AsyncRemotePillar(RemotePillarMixin):
                 load,
                 dictkey="pillar",
             )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
@@ -311,7 +315,7 @@ class RemotePillar(RemotePillarMixin):
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.client.ReqChannel.factory(opts)
+        self.channel = salt.channel.client.ReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -651,6 +655,10 @@ class Pillar:
                     env,
                 )
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
+                for idx, root in enumerate(opts["pillar_roots"][env]):
+                    opts["pillar_roots"][env][idx] = opts["pillar_roots"][env][
+                        idx
+                    ].replace("__env__", env)
             else:
                 log.debug(
                     "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
@@ -692,7 +700,7 @@ class Pillar:
                 else:
                     saltenvs.add(self.opts["pillarenv"])
             else:
-                saltenvs = self._get_envs()
+                saltenvs.update(self._get_envs())
                 if self.opts.get("pillar_source_merging_strategy", None) == "none":
                     saltenvs &= {self.saltenv or "base"}
 

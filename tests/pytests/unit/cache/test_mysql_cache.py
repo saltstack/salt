@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.skipif(
         mysql_cache.MySQLdb is None, reason="No python mysql client installed."
-    ),
+    )
 ]
 
 
@@ -64,8 +64,8 @@ def test_store(master_config):
                 expected_calls = [
                     call(
                         mock_connect_client,
-                        b"REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
-                        ("minions/minion", "key1", b"\xa4data"),
+                        "REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
+                        args=("minions/minion", "key1", b"\xa4data"),
                     )
                 ]
 
@@ -81,8 +81,8 @@ def test_store(master_config):
                 expected_calls = [
                     call(
                         mock_connect_client,
-                        b"REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
-                        ("minions/minion", "key2", b"\xa4data"),
+                        "REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
+                        args=("minions/minion", "key2", b"\xa4data"),
                     )
                 ]
 
@@ -135,7 +135,11 @@ def test_flush():
             with patch.object(mysql_cache, "run_query") as mock_run_query:
 
                 expected_calls = [
-                    call(mock_connect_client, "DELETE FROM salt WHERE bank='bank'"),
+                    call(
+                        mock_connect_client,
+                        "DELETE FROM salt WHERE bank=%s",
+                        args=("bank",),
+                    ),
                 ]
                 mock_run_query.return_value = (MagicMock(), "")
                 mysql_cache.flush(bank="bank")
@@ -144,7 +148,8 @@ def test_flush():
                 expected_calls = [
                     call(
                         mock_connect_client,
-                        "DELETE FROM salt WHERE bank='bank' AND etcd_key='key'",
+                        "DELETE FROM salt WHERE bank=%s AND etcd_key=%s",
+                        args=("bank", "key"),
                     )
                 ]
                 mysql_cache.flush(bank="bank", key="key")
@@ -219,6 +224,9 @@ def test_create_table(master_config):
       bank CHAR(255),
       etcd_key CHAR(255),
       data MEDIUMBLOB,
+      last_update TIMESTAMP NOT NULL
+                  DEFAULT CURRENT_TIMESTAMP
+                  ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY(bank, etcd_key)
     );"""
             expected_calls = [call(mock_connect_client, sql_call)]

@@ -188,7 +188,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
 
     for key, creds in __AssumeCache__.items():
         if (creds["Expiration"] - now) <= 120:
-            __AssumeCache__.delete(key)
+            __AssumeCache__[key].delete()
 
     if role_arn in __AssumeCache__:
         c = __AssumeCache__[role_arn]

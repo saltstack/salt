@@ -142,22 +142,24 @@ def delete(name, remove=False, force=False):
     """
     if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError("Username cannot contain whitespace")
-    if not info(name):
+
+    user_info = info(name)
+    if not user_info:
         return True
 
     # force is added for compatibility with user.absent state function
     if force:
         log.warning("force option is unsupported on MacOS, ignoring")
 
-    # remove home directory from filesystem
-    if remove:
-        __salt__["file.remove"](info(name)["home"])
-
     # Remove from any groups other than primary group. Needs to be done since
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
     chgroups(name, ())
-    return _dscl(["/Users/{}".format(name)], ctype="delete")["retcode"] == 0
+    ret = _dscl(["/Users/{}".format(name)], ctype="delete")["retcode"] == 0
+    if ret and remove:
+        # remove home directory from filesystem
+        __salt__["file.remove"](user_info["home"])
+    return ret
 
 
 def getent(refresh=False):
