@@ -11,6 +11,10 @@ from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
 
+pytestmark = pytest.mark.skipif(
+    True, reason="Skipping tests in 3002.x and 3003.x branches."
+)
+
 log = logging.getLogger(__name__)
 
 

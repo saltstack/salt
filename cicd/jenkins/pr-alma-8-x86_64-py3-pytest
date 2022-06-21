@@ -1,6 +1,13 @@
+<<<<<<<< HEAD:cicd/jenkins/pr-alma-8-x86_64-py3-pytest
 @Library('salt@master-1.11') _
 
 runTestSuite(
+========
+@Library('salt@master-1.10') _
+
+runTestSuite(
+    ami_image_id: 'ami-02fc0a57f9b1fa4ed',
+>>>>>>>> 3003.5:cicd/jenkins/pr-centosstream-8-x86_64-py3-pytest
     concurrent_builds: 1,
     distro_name: 'alma',
     distro_version: '8',

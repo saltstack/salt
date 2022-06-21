@@ -13,7 +13,8 @@ cherrypy>=17.4.1
 clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
-docker
+docker<3.0.0; sys_platform == 'win32'
+docker; sys_platform != 'win32'
 gitpython>=2.1.15
 jmespath
 jsonschema
@@ -23,9 +24,9 @@ kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
 kubernetes<4.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
-moto>=1.3.14
+moto>=1.3.14; python_version >= '3.6'
 napalm; sys_platform != 'win32' and python_version > '3.6'
-paramiko>=2.1.6; sys_platform != 'win32' and sys_platform != 'darwin'
+paramiko>=2.1.6; python_version >= '3.6' and sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.2; sys_platform != 'win32'
 pycurl>=7.43.0.5
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"

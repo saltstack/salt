@@ -11,8 +11,11 @@ import collections
 import logging
 
 try:
+    # pylint: disable=no-name-in-module
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+
+    # pylint: enable=no-name-in-module
 
     HAS_WATCHDOG = True
 except ImportError:
