@@ -3,7 +3,13 @@ Azure (ARM) Resource State Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -84,6 +90,7 @@ Azure (ARM) Resource State Module
 import json
 import logging
 
+import salt.utils.azurearm
 import salt.utils.files
 
 __virtualname__ = "azurearm_resource"
@@ -100,6 +107,7 @@ def __virtual__():
     return (False, "azurearm_resource module could not be loaded")
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_group_present(
     name, location, managed_by=None, tags=None, connection_auth=None, **kwargs
 ):
@@ -208,6 +216,7 @@ def resource_group_present(
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_group_absent(name, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -275,6 +284,7 @@ def resource_group_absent(name, connection_auth=None):
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_definition_present(
     name,
     policy_rule=None,
@@ -581,6 +591,7 @@ def policy_definition_present(
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_definition_absent(name, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -634,6 +645,7 @@ def policy_definition_absent(name, connection_auth=None):
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignment_present(
     name,
     scope,
@@ -789,6 +801,7 @@ def policy_assignment_present(
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignment_absent(name, scope, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
