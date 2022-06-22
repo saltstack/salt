@@ -126,7 +126,9 @@ tempora==4.1.1
 timelib==0.2.5
     # via -r requirements/windows.txt
 urllib3==1.26.6
-    # via requests
+    # via
+    #   -r requirements/windows.txt
+    #   requests
 wheel==0.36.2
     # via -r requirements/windows.txt
 wmi==1.5.1
