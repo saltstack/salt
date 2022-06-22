@@ -8,8 +8,6 @@ import salt.exceptions
 import salt.ext.tornado
 import salt.transport.tcp
 from pytestshellutils.utils import ports
-from tests.support.mock import MagicMock, patch
-import salt.transport.tcp
 from tests.support.mock import MagicMock, PropertyMock, create_autospec, patch
 
 
