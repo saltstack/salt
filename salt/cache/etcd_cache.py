@@ -17,6 +17,12 @@ Etcd installed. This can be easily installed with pip:
 
     pip install python-etcd
 
+.. note::
+
+    While etcd API v3 has been implemented in other places within salt,
+    etcd_cache does not support it at this time due to fundamental differences in
+    how the versions are designed and v3 not being compatible with the cache API.
+
 Optionally, depending on the Etcd agent configuration, the following values
 could be set in the master config. These are the defaults:
 
