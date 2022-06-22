@@ -87,7 +87,7 @@ apt-key deprecated
 ------------------
 ``apt-key`` is deprecated and will be last available in Debian 11 and
 Ubuntu 22.04. The recommended way to manage repo keys going forward
-is to download the keys into /usr/share/keyrings and use ``signed-by``
+is to download the keys into /etc/apt/keyrings and use ``signed-by``
 in your repo file pointing to the key. This module was updated
 in version 3005 to implement the recommended approach. You need to add
 ``- aptkey: False`` to your state and set ``signed-by`` in your repo
@@ -99,7 +99,7 @@ Using ``aptkey: False`` with ``key_url`` example:
 
 .. code-block:: yaml
 
-    deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
@@ -109,7 +109,7 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
 
 .. code-block:: yaml
 
-    deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - keyserver: keyserver.ubuntu.com
@@ -127,7 +127,7 @@ NOT in the ``signedby`` argument of the state if python3-apt is installed.
     deb [arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /usr/share/keyrings/salt-archive-keyring.gpg
+        - signedby: /etc/apt/keyrings/salt-archive-keyring.gpg
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
@@ -138,10 +138,10 @@ will override what is set in the name.
 
 .. code-block:: yaml
 
-    deb [arch=amd64 signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [arch=amd64 signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /usr/share/keyrings/salt-archive-keyring-override.gpg
+        - signedby: /etc/apt/keyrings/salt-archive-keyring-override.gpg
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
@@ -466,9 +466,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             else salt.utils.data.is_true(enabled)
         )
 
-    if __grains__["os_family"] == "Debian":
-        repo = salt.utils.pkg.deb.strip_uri(repo)
-
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
@@ -510,22 +507,23 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
-                # split the line and sort everything after the URL
-                sanitizedsplit = sanitizedkwargs[kwarg].split()
-                sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = (
-                    x.strip() for x in pre[kwarg].partition("#")
-                )
-                reposplit = reposplit.split()
-                reposplit[3:] = sorted(reposplit[3:])
-                if sanitizedsplit != reposplit:
-                    break
-                if "comments" in kwargs:
-                    post_comments = salt.utils.pkg.deb.combine_comments(
-                        kwargs["comments"]
+                if not sanitizedkwargs["disabled"]:
+                    # split the line and sort everything after the URL
+                    sanitizedsplit = sanitizedkwargs[kwarg].split()
+                    sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
+                    reposplit, _, pre_comments = (
+                        x.strip() for x in pre[kwarg].partition("#")
                     )
-                    if pre_comments != post_comments:
+                    reposplit = reposplit.split()
+                    reposplit[3:] = sorted(reposplit[3:])
+                    if sanitizedsplit != reposplit:
                         break
+                    if "comments" in kwargs:
+                        post_comments = salt.utils.pkg.deb.combine_comments(
+                            kwargs["comments"]
+                        )
+                        if pre_comments != post_comments:
+                            break
             elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
