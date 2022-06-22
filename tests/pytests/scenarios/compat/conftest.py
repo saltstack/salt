@@ -15,14 +15,16 @@ from saltfactories.utils import random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
-try:
-    import docker
-    from docker.errors import DockerException
-except ImportError:
-    docker = None
+docker = pytest.importorskip("docker")
+# pylint: disable=3rd-party-module-not-gated,no-name-in-module
+from docker.errors import DockerException  # isort:skip
 
-    class DockerException(Exception):
-        pass
+# pylint: enable=3rd-party-module-not-gated,no-name-in-module
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker"),
+]
 
 
 log = logging.getLogger(__name__)

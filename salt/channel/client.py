@@ -188,7 +188,7 @@ class AsyncReqChannel:
         signed_msg = pcrypt.loads(ret[dictkey])
 
         # Validate the master's signature.
-        master_pubkey_path = os.path.join(self.opts["pki_dir"], "minion_master.pub")
+        master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
         if not salt.crypt.verify_signature(
             master_pubkey_path, signed_msg["data"], signed_msg["sig"]
         ):
@@ -536,7 +536,7 @@ class AsyncPubChannel:
                 )
 
             # Verify that the signature is valid
-            master_pubkey_path = os.path.join(self.opts["pki_dir"], "minion_master.pub")
+            master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
             if not salt.crypt.verify_signature(
                 master_pubkey_path, payload["load"], payload.get("sig")
             ):
