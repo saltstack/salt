@@ -775,14 +775,12 @@ def test_installed_with_single_normalize():
             list_no_weird_installed,
             list_no_weird_installed_ver_list,
             list_with_weird_installed,
-            list_with_weird_installed,
             list_with_weird_installed_ver_list,
             # For the package with no version specified
             list_no_weird_installed_ver_list,
             {},
             list_no_weird_installed,
             list_no_weird_installed_ver_list,
-            list_with_weird_installed,
             list_with_weird_installed,
             list_with_weird_installed_ver_list,
         ]
@@ -808,6 +806,8 @@ def test_installed_with_single_normalize():
         yumpkg.__salt__, salt_dict
     ), patch.dict(
         yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+    ), patch.object(
+        yumpkg, "list_holds", MagicMock()
     ):
 
         expected = {
