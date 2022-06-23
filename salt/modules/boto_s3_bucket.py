@@ -53,6 +53,7 @@ The dependencies listed above can be installed via package or pip.
 
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
@@ -90,7 +91,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__["boto3.assign_funcs"](__name__, "s3")
+        salt.utils.boto3mod.assign_funcs(__name__, "s3")
 
 
 def exists(Bucket, region=None, key=None, keyid=None, profile=None):
@@ -115,7 +116,7 @@ def exists(Bucket, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         if e.response.get("Error", {}).get("Code") == "404":
             return {"exists": False}
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         return {"error": err}
 
 
@@ -180,7 +181,7 @@ def create(
             log.warning("Bucket was not created")
             return {"created": False}
     except ClientError as e:
-        return {"created": False, "error": __utils__["boto3.get_error"](e)}
+        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete(
@@ -222,7 +223,7 @@ def delete(
         conn.delete_bucket(Bucket=Bucket)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_objects(
@@ -270,7 +271,7 @@ def delete_objects(
             ret = conn.delete_objects(**args)
             failed += ret.get("Errors", [])
         except ClientError as e:
-            return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+            return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
     if failed:
         return {"deleted": False, "failed": failed}
@@ -339,10 +340,10 @@ def describe(Bucket, region=None, key=None, keyid=None, profile=None):
             result["Tagging"] = tags
         return {"bucket": result}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "NoSuchBucket":
             return {"bucket": None}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def empty(
@@ -416,7 +417,7 @@ def list(region=None, key=None, keyid=None, profile=None):
             del buckets["ResponseMetadata"]
         return buckets
     except ClientError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def list_object_versions(
@@ -461,7 +462,7 @@ def list_object_versions(
             DeleteMarkers += ret.get("DeleteMarkers", [])
         return {"Versions": Versions, "DeleteMarkers": DeleteMarkers}
     except ClientError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def list_objects(
@@ -506,7 +507,7 @@ def list_objects(
             Contents += ret.get("Contents", [])
         return {"Contents": Contents}
     except ClientError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_acl(
@@ -560,7 +561,7 @@ def put_acl(
         conn.put_bucket_acl(Bucket=Bucket, **kwargs)
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_cors(Bucket, CORSRules, region=None, key=None, keyid=None, profile=None):
@@ -591,7 +592,7 @@ def put_cors(Bucket, CORSRules, region=None, key=None, keyid=None, profile=None)
         conn.put_bucket_cors(Bucket=Bucket, CORSConfiguration={"CORSRules": CORSRules})
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_lifecycle_configuration(
@@ -628,7 +629,7 @@ def put_lifecycle_configuration(
         )
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_logging(
@@ -675,7 +676,7 @@ def put_logging(
         conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus=logstatus)
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_notification_configuration(
@@ -732,7 +733,7 @@ def put_notification_configuration(
         )
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_policy(Bucket, Policy, region=None, key=None, keyid=None, profile=None):
@@ -759,7 +760,7 @@ def put_policy(Bucket, Policy, region=None, key=None, keyid=None, profile=None):
         conn.put_bucket_policy(Bucket=Bucket, Policy=Policy)
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -807,7 +808,7 @@ def put_replication(
         )
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_request_payment(Bucket, Payer, region=None, key=None, keyid=None, profile=None):
@@ -832,7 +833,7 @@ def put_request_payment(Bucket, Payer, region=None, key=None, keyid=None, profil
         )
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_tagging(Bucket, region=None, key=None, keyid=None, profile=None, **kwargs):
@@ -860,7 +861,7 @@ def put_tagging(Bucket, region=None, key=None, keyid=None, profile=None, **kwarg
         conn.put_bucket_tagging(Bucket=Bucket, Tagging={"TagSet": tagslist})
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_versioning(
@@ -900,7 +901,7 @@ def put_versioning(
         )
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_website(
@@ -948,7 +949,7 @@ def put_website(
         )
         return {"updated": True, "name": Bucket}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_cors(Bucket, region=None, key=None, keyid=None, profile=None):
@@ -971,7 +972,7 @@ def delete_cors(Bucket, region=None, key=None, keyid=None, profile=None):
         conn.delete_bucket_cors(Bucket=Bucket)
         return {"deleted": True, "name": Bucket}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_lifecycle_configuration(
@@ -996,7 +997,7 @@ def delete_lifecycle_configuration(
         conn.delete_bucket_lifecycle(Bucket=Bucket)
         return {"deleted": True, "name": Bucket}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_policy(Bucket, region=None, key=None, keyid=None, profile=None):
@@ -1019,7 +1020,7 @@ def delete_policy(Bucket, region=None, key=None, keyid=None, profile=None):
         conn.delete_bucket_policy(Bucket=Bucket)
         return {"deleted": True, "name": Bucket}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_replication(Bucket, region=None, key=None, keyid=None, profile=None):
@@ -1042,7 +1043,7 @@ def delete_replication(Bucket, region=None, key=None, keyid=None, profile=None):
         conn.delete_bucket_replication(Bucket=Bucket)
         return {"deleted": True, "name": Bucket}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_tagging(Bucket, region=None, key=None, keyid=None, profile=None):
@@ -1065,7 +1066,7 @@ def delete_tagging(Bucket, region=None, key=None, keyid=None, profile=None):
         conn.delete_bucket_tagging(Bucket=Bucket)
         return {"deleted": True, "name": Bucket}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete_website(Bucket, region=None, key=None, keyid=None, profile=None):
@@ -1088,4 +1089,4 @@ def delete_website(Bucket, region=None, key=None, keyid=None, profile=None):
         conn.delete_bucket_website(Bucket=Bucket)
         return {"deleted": True, "name": Bucket}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}

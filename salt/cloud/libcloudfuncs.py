@@ -73,7 +73,7 @@ def get_node(conn, name):
     nodes = conn.list_nodes()
     for node in nodes:
         if node.name == name:
-            __utils__["cloud.cache_node"](
+            salt.utils.cloud.cache_node(
                 salt.utils.data.simple_types_filter(node.__dict__),
                 __active_provider_name__,
                 __opts__,
@@ -254,7 +254,7 @@ def destroy(name, conn=None, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -293,7 +293,7 @@ def destroy(name, conn=None, call=None):
     if ret:
         log.info("Destroyed VM: %s", name)
         # Fire destroy action
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroyed instance",
             "salt/cloud/{}/destroyed".format(name),
@@ -311,7 +311,7 @@ def destroy(name, conn=None, call=None):
                 salt.utils.cloud.remove_sshkey(private_ips[0])
 
         if __opts__.get("update_cachedir", False) is True:
-            __utils__["cloud.delete_minion_cachedir"](
+            salt.utils.cloud.delete_minion_cachedir(
                 name, __active_provider_name__.split(":")[0], __opts__
             )
 
@@ -336,7 +336,7 @@ def reboot(name, conn=None):
     if ret:
         log.info("Rebooted VM: %s", name)
         # Fire reboot action
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "{} has been rebooted".format(name),
             "salt/cloud/{}/rebooting".format(name),
@@ -398,7 +398,7 @@ def list_nodes_full(conn=None, call=None):
         ret[node.name] = pairs
         del ret[node.name]["driver"]
 
-    __utils__["cloud.cache_node_list"](
+    salt.utils.cloud.cache_node_list(
         ret, __active_provider_name__.split(":")[0], __opts__
     )
     return ret
@@ -428,7 +428,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 

@@ -52,6 +52,7 @@ import logging
 import re
 import time
 
+import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -81,7 +82,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO3:
-        __utils__["boto3.assign_funcs"](__name__, "route53")
+        salt.utils.boto3mod.assign_funcs(__name__, "route53")
 
 
 def _collect_results(func, item, args, marker="Marker", nextmarker="NextMarker"):

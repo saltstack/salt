@@ -125,6 +125,7 @@ outside a ``nxos_api`` Proxy, e.g.:
 import difflib
 import logging
 
+import salt.utils.nxos_api
 from salt.exceptions import CommandExecutionError, SaltException
 
 # -----------------------------------------------------------------------------
@@ -246,7 +247,7 @@ def rpc(commands, method="cli", **kwargs):
         return __proxy__["nxos_api.rpc"](commands, method=method, **nxos_api_kwargs)
     nxos_api_kwargs = __salt__["config.get"]("nxos_api", {})
     nxos_api_kwargs.update(**kwargs)
-    return __utils__["nxos_api.rpc"](commands, method=method, **nxos_api_kwargs)
+    return salt.utils.nxos_api.rpc(commands, method=method, **nxos_api_kwargs)
 
 
 def show(commands, raw_text=True, **kwargs):

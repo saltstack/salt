@@ -459,9 +459,7 @@ def show_instance(name, call=None):
     if "name" not in nodes[name]:
         nodes[name]["name"] = nodes[name]["id"]
     try:
-        __utils__["cloud.cache_node"](
-            nodes[name], _get_active_provider_name(), __opts__
-        )
+        salt.utils.cloud.cache_node(nodes[name], _get_active_provider_name(), __opts__)
     except TypeError:
         log.warning(
             "Unable to show cache node data; this may be because the node has been"
@@ -491,11 +489,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -608,11 +606,11 @@ def create(vm_):
     del event_kwargs["vm_kwargs"]["system_config"]
     del event_kwargs["vm_kwargs"]["os_virtual_hard_disk"]
     del event_kwargs["vm_kwargs"]["network_config"]
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "requesting", event_kwargs, list(event_kwargs)
         ),
         sock_dir=__opts__["sock_dir"],
@@ -716,18 +714,18 @@ def create(vm_):
 
     vm_["ssh_host"] = hostname.replace("http://", "").replace("/", "")
     vm_["password"] = config.get_cloud_config_value("ssh_password", vm_, __opts__)
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     # Attaching volumes
     volumes = config.get_cloud_config_value(
         "volumes", vm_, __opts__, search_global=True
     )
     if volumes:
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "attaching volumes",
             "salt/cloud/{}/attaching_volumes".format(vm_["name"]),
-            args=__utils__["cloud.filter_event"]("attaching_volumes", vm_, ["volumes"]),
+            args=salt.utils.cloud.filter_event("attaching_volumes", vm_, ["volumes"]),
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
         )
@@ -755,11 +753,11 @@ def create(vm_):
 
     ret.update(data)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -1037,7 +1035,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
         delete_type: {"request_id": result.request_id},
     }
     if __opts__.get("update_cachedir", False) is True:
-        __utils__["cloud.delete_minion_cachedir"](
+        salt.utils.cloud.delete_minion_cachedir(
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 

@@ -22,6 +22,7 @@ import time
 import salt.client
 import salt.config as config
 import salt.utils.cloud
+import salt.utils.smb
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
@@ -312,7 +313,7 @@ def create(vm_):
                             log.info("delaying %d seconds for boot", sleep_time)
                             time.sleep(sleep_time)
         log.info("Provisioning existing machine %s", vm_["name"])
-        ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     else:
         ret = _verify(vm_)
 
@@ -358,7 +359,7 @@ def _verify(vm_):
         # Test SMB connection
         try:
             log.debug("Testing SMB protocol for %s", vm_["name"])
-            if __utils__["smb.get_conn"](**kwargs) is False:
+            if salt.utils.smb.get_conn(**kwargs) is False:
                 return False
         except (smbSessionError, smb3SessionError) as exc:
             log.error("Exception: %s", exc)
@@ -382,7 +383,7 @@ def _verify(vm_):
 
             try:
                 log.debug("Testing WinRM protocol for %s", vm_["name"])
-                return __utils__["cloud.wait_for_winrm"](**kwargs) is not None
+                return salt.utils.cloud.wait_for_winrm(**kwargs) is not None
             except (
                 ConnectionError,
                 ConnectTimeout,
@@ -429,7 +430,7 @@ def _verify(vm_):
 
         log.debug("Testing SSH protocol for %s", vm_["name"])
         try:
-            return __utils__["cloud.wait_for_passwd"](**kwargs) is True
+            return salt.utils.cloud.wait_for_passwd(**kwargs) is True
         except SaltCloudException as exc:
             log.error("Exception: %s", exc)
             return False
@@ -463,7 +464,7 @@ def destroy(name, call=None):
 
     opts = __opts__
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -509,7 +510,7 @@ def destroy(name, call=None):
             if ret and ret[name]:
                 log.info("system.shutdown for minion %s successful", name)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),

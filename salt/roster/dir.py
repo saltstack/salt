@@ -52,6 +52,7 @@ import os
 
 import salt.loader
 import salt.template
+import salt.utils.roster_matcher
 import salt.utils.verify
 from salt.exceptions import CommandExecutionError
 
@@ -67,7 +68,7 @@ def targets(tgt, tgt_type="glob", **kwargs):
     # Match the targets before rendering to avoid opening files unnecessarily.
     raw = dict.fromkeys(os.listdir(roster_dir), "")
     log.debug("Filtering %d minions in %s", len(raw), roster_dir)
-    matched_raw = __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")
+    matched_raw = salt.utils.roster_matcher.targets(raw, tgt, tgt_type, "ipv4")
     rendered = {}
     for minion_id in matched_raw:
         target_file = salt.utils.verify.clean_path(roster_dir, minion_id)

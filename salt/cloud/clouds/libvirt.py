@@ -329,11 +329,11 @@ def create(vm_):
     # TODO: check name qemu/libvirt will choke on some characters (like '/')?
     name = vm_["name"]
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(name),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -371,12 +371,12 @@ def create(vm_):
                 "base_domain": base,
             }
 
-            __utils__["cloud.fire_event"](
+            salt.utils.cloud.fire_event(
                 "event",
                 "requesting instance",
                 "salt/cloud/{}/requesting".format(name),
                 args={
-                    "kwargs": __utils__["cloud.filter_event"](
+                    "kwargs": salt.utils.cloud.filter_event(
                         "requesting", kwargs, list(kwargs)
                     ),
                 },
@@ -510,13 +510,13 @@ def create(vm_):
 
         # the bootstrap script needs to be installed first in /etc/salt/cloud.deploy.d/
         # salt-cloud -u is your friend
-        ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "created instance",
             "salt/cloud/{}/created".format(name),
-            args=__utils__["cloud.filter_event"](
+            args=salt.utils.cloud.filter_event(
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
             sock_dir=__opts__["sock_dir"],
@@ -622,7 +622,7 @@ def destroy(name, call=None):
     if len(found) > 1:
         return "{} doesn't identify a unique machine leaving things".format(name)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -633,7 +633,7 @@ def destroy(name, call=None):
 
     destroy_domain(found[0]["conn"], found[0]["domain"])
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),

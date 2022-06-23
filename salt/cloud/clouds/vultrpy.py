@@ -82,6 +82,8 @@ import time
 import urllib.parse
 
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.http
 from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
@@ -263,7 +265,7 @@ def list_nodes_select(conn=None, call=None):
     """
     Return a list of the VMs that are on the provider, with select fields
     """
-    return __utils__["cloud.list_nodes_select"](
+    return salt.utils.cloud.list_nodes_select(
         list_nodes_full(),
         __opts__["query.selection"],
         call,
@@ -318,7 +320,7 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
+    salt.utils.cloud.cache_node(nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -402,11 +404,11 @@ def create(vm_):
     else:
         enable_private_network = "no"
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -447,14 +449,12 @@ def create(vm_):
 
     log.info("Creating Cloud VM %s", vm_["name"])
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": __utils__["cloud.filter_event"](
-                "requesting", kwargs, list(kwargs)
-            ),
+            "kwargs": salt.utils.cloud.filter_event("requesting", kwargs, list(kwargs)),
         },
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -475,7 +475,7 @@ def create(vm_):
                 "invalid location, image, or size."
             )
 
-            __utils__["cloud.fire_event"](
+            salt.utils.cloud.fire_event(
                 "event",
                 "instance request failed",
                 "salt/cloud/{}/requesting/failed".format(vm_["name"]),
@@ -494,7 +494,7 @@ def create(vm_):
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "instance request failed",
             "salt/cloud/{}/requesting/failed".format(vm_["name"]),
@@ -552,25 +552,25 @@ def create(vm_):
             return False
         return data["default_password"]
 
-    vm_["ssh_host"] = __utils__["cloud.wait_for_fun"](
+    vm_["ssh_host"] = salt.utils.cloud.wait_for_fun(
         wait_for_hostname,
         timeout=config.get_cloud_config_value(
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
         ),
     )
-    vm_["password"] = __utils__["cloud.wait_for_fun"](
+    vm_["password"] = salt.utils.cloud.wait_for_fun(
         wait_for_default_password,
         timeout=config.get_cloud_config_value(
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
         ),
     )
-    __utils__["cloud.wait_for_fun"](
+    salt.utils.cloud.wait_for_fun(
         wait_for_status,
         timeout=config.get_cloud_config_value(
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
         ),
     )
-    __utils__["cloud.wait_for_fun"](
+    salt.utils.cloud.wait_for_fun(
         wait_for_server_state,
         timeout=config.get_cloud_config_value(
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
@@ -586,18 +586,18 @@ def create(vm_):
     )
 
     # Bootstrap
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(show_instance(vm_["name"], call="action"))
 
     log.info("Created Cloud VM '%s'", vm_["name"])
     log.debug("'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -633,7 +633,7 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
     if header_dict is None:
         header_dict = {}
 
-    result = __utils__["http.query"](
+    result = salt.utils.http.query(
         url,
         method=method,
         params=params,

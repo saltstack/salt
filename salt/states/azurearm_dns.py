@@ -119,6 +119,7 @@ Optional provider parameters:
 import logging
 
 import salt.utils.azurearm
+import salt.utils.dictdiffer
 
 __virtualname__ = "azurearm_dns"
 
@@ -220,9 +221,7 @@ def zone_present(
     )
 
     if "error" not in zone:
-        tag_changes = __utils__["dictdiffer.deep_diff"](
-            zone.get("tags", {}), tags or {}
-        )
+        tag_changes = salt.utils.dictdiffer.deep_diff(zone.get("tags", {}), tags or {})
         if tag_changes:
             ret["changes"]["tags"] = tag_changes
 
@@ -557,7 +556,7 @@ def record_set_present(
     )
 
     if "error" not in rec_set:
-        metadata_changes = __utils__["dictdiffer.deep_diff"](
+        metadata_changes = salt.utils.dictdiffer.deep_diff(
             rec_set.get("metadata", {}), metadata or {}
         )
         if metadata_changes:

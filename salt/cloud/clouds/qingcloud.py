@@ -520,7 +520,7 @@ def list_nodes_full(call=None):
         provider = comps[0]
 
     __opts__["update_cachedir"] = True
-    __utils__["cloud.cache_node_list"](result, provider, __opts__)
+    salt.utils.cloud.cache_node_list(result, provider, __opts__)
 
     return result
 
@@ -675,11 +675,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -700,14 +700,12 @@ def create(vm_):
         "login_keypair": vm_["login_keypair"],
     }
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": __utils__["cloud.filter_event"](
-                "requesting", params, list(params)
-            ),
+            "kwargs": salt.utils.cloud.filter_event("requesting", params, list(params)),
         },
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -743,17 +741,17 @@ def create(vm_):
     vm_["ssh_host"] = private_ip
 
     # The instance is booted and accessible, let's Salt it!
-    __utils__["cloud.bootstrap"](vm_, __opts__)
+    salt.utils.cloud.bootstrap(vm_, __opts__)
 
     log.info("Created Cloud VM '%s'", vm_["name"])
 
     log.debug("'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -875,7 +873,7 @@ def destroy(instance_id, call=None):
     instance_data = show_instance(instance_id, call="action")
     name = instance_data["instance_name"]
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -891,7 +889,7 @@ def destroy(instance_id, call=None):
     }
     result = query(params)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),

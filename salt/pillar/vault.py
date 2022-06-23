@@ -123,6 +123,8 @@ minion-passwd   minionbadpasswd1
 
 import logging
 
+import salt.utils.vault
+
 log = logging.getLogger(__name__)
 
 __func_alias__ = {"set_": "set"}
@@ -156,12 +158,12 @@ def ext_pillar(
     try:
         path = paths[0].replace("path=", "")
         path = path.format(**{"minion": minion_id})
-        version2 = __utils__["vault.is_v2"](path)
+        version2 = salt.utils.vault.is_v2(path)
         if version2["v2"]:
             path = version2["data"]
 
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("GET", url)
+        response = salt.utils.vault.make_request("GET", url)
         if response.status_code == 200:
             vault_pillar = response.json().get("data", {})
         else:

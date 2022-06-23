@@ -114,6 +114,8 @@ import time
 from pathlib import Path
 
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.http
 from salt._compat import ipaddress
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -495,7 +497,7 @@ class LinodeAPI:
         )
 
     def list_nodes_select(self, call):
-        return __utils__["cloud.list_nodes_select"](
+        return salt.utils.cloud.list_nodes_select(
             self.list_nodes_full(),
             __opts__["query.selection"],
             call,
@@ -697,11 +699,11 @@ class LinodeAPIv4(LinodeAPI):
         if not _validate_name(name):
             return False
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "starting create",
             "salt/cloud/{}/creating".format(name),
-            args=__utils__["cloud.filter_event"](
+            args=salt.utils.cloud.filter_event(
                 "creating", vm_, ["name", "profile", "provider", "driver"]
             ),
             sock_dir=__opts__["sock_dir"],
@@ -790,7 +792,7 @@ class LinodeAPIv4(LinodeAPI):
             vm_["ssh_host"] = public_ips[0]
 
         # Send event that the instance has booted.
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "waiting for ssh",
             "salt/cloud/{}/waiting_for_ssh".format(name),
@@ -799,17 +801,17 @@ class LinodeAPIv4(LinodeAPI):
             transport=__opts__["transport"],
         )
 
-        ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
         ret.update(data)
 
         log.info("Created Cloud VM '%s'", name)
         log.debug("'%s' VM creation details:\n%s", name, pprint.pformat(data))
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "created instance",
             "salt/cloud/{}/created".format(name),
-            args=__utils__["cloud.filter_event"](
+            args=salt.utils.cloud.filter_event(
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
             sock_dir=__opts__["sock_dir"],
@@ -819,7 +821,7 @@ class LinodeAPIv4(LinodeAPI):
         return ret
 
     def destroy(self, name):
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroyed instance",
             "salt/cloud/{}/destroyed".format(name),
@@ -829,7 +831,7 @@ class LinodeAPIv4(LinodeAPI):
         )
 
         if __opts__.get("update_cachedir", False) is True:
-            __utils__["cloud.delete_minion_cachedir"](
+            salt.utils.cloud.delete_minion_cachedir(
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
 
@@ -1181,7 +1183,7 @@ class LinodeAPIv3(LinodeAPI):
         if LASTCALL >= now:
             time.sleep(ratelimit_sleep)
 
-        result = __utils__["http.query"](
+        result = salt.utils.http.query(
             url,
             method,
             params=args,
@@ -1304,11 +1306,11 @@ class LinodeAPIv3(LinodeAPI):
         if not _validate_name(name):
             return False
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "starting create",
             "salt/cloud/{}/creating".format(name),
-            args=__utils__["cloud.filter_event"](
+            args=salt.utils.cloud.filter_event(
                 "creating", vm_, ["name", "profile", "provider", "driver"]
             ),
             sock_dir=__opts__["sock_dir"],
@@ -1405,11 +1407,11 @@ class LinodeAPIv3(LinodeAPI):
                 )
                 return False
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "requesting instance",
             "salt/cloud/{}/requesting".format(name),
-            args=__utils__["cloud.filter_event"](
+            args=salt.utils.cloud.filter_event(
                 "requesting", vm_, ["name", "profile", "provider", "driver"]
             ),
             sock_dir=__opts__["sock_dir"],
@@ -1498,7 +1500,7 @@ class LinodeAPIv3(LinodeAPI):
         vm_["private_ips"] = ips["private_ips"]
 
         # Send event that the instance has booted.
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "waiting for ssh",
             "salt/cloud/{}/waiting_for_ssh".format(name),
@@ -1508,18 +1510,18 @@ class LinodeAPIv3(LinodeAPI):
         )
 
         # Bootstrap!
-        ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
         ret.update(data)
 
         log.info("Created Cloud VM '%s'", name)
         log.debug("'%s' VM creation details:\n%s", name, pprint.pformat(data))
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "created instance",
             "salt/cloud/{}/created".format(name),
-            args=__utils__["cloud.filter_event"](
+            args=salt.utils.cloud.filter_event(
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
             sock_dir=__opts__["sock_dir"],
@@ -1656,7 +1658,7 @@ class LinodeAPIv3(LinodeAPI):
         return self._clean_data(result)
 
     def destroy(self, name):
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroying instance",
             "salt/cloud/{}/destroying".format(name),
@@ -1671,7 +1673,7 @@ class LinodeAPIv3(LinodeAPI):
             "linode", "delete", args={"LinodeID": linode_id, "skipChecks": True}
         )
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroyed instance",
             "salt/cloud/{}/destroyed".format(name),
@@ -1681,7 +1683,7 @@ class LinodeAPIv3(LinodeAPI):
         )
 
         if __opts__.get("update_cachedir", False) is True:
-            __utils__["cloud.delete_minion_cachedir"](
+            salt.utils.cloud.delete_minion_cachedir(
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
 

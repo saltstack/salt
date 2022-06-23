@@ -10,6 +10,7 @@ import logging
 import os.path
 import tempfile
 
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def _umount(path):
     Umount and clean the temporary place.
     """
     __states__["mount.unmounted"](path)
-    __utils__["files.rm_rf"](path)
+    salt.utils.files.rm_rf(path)
 
 
 def _is_default(path, dest, name):

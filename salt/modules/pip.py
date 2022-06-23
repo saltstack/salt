@@ -94,6 +94,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
+import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # This needs to be named logger so we don't shadow it in pip.install
@@ -327,7 +328,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 # In Windows, just being owner of a file isn't enough. You also
                 # need permissions
                 if salt.utils.platform.is_windows():
-                    __utils__["dacl.set_permissions"](
+                    salt.utils.win_dacl.set_permissions(
                         obj_name=treq, principal=user, permissions="read_execute"
                     )
 

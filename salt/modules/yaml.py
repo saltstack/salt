@@ -11,6 +11,9 @@ Yaml helper module for troubleshooting yaml
 
 import logging
 
+import salt.utils.files
+import salt.utils.yamllint
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = "yaml"
@@ -46,11 +49,11 @@ def lint(source, saltenv=None, pre_render=None, **kwargs):
         cache = __salt__["cp.cache_file"](source, saltenv)
         if cache is False:
             return (False, "Template was unable to be cached")
-        with __utils__["files.fopen"](cache, "r") as yaml_stream:
+        with salt.utils.files.fopen(cache, "r") as yaml_stream:
             yaml_out = yaml_stream.read(-1)
     else:
         kwargs.update({"saltenv": saltenv})
         yaml_out = __salt__["slsutil.renderer"](
             path=source, default_renderer=pre_render, **kwargs
         )
-    return __utils__["yamllint.lint"](yaml_out)
+    return salt.utils.yamllint.lint(yaml_out)

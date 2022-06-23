@@ -56,6 +56,7 @@ import logging
 import os
 import re
 
+import salt.utils.boto3mod
 import salt.utils.files
 import salt.utils.json
 import salt.utils.yaml
@@ -1636,8 +1637,8 @@ class _Swagger:
         profile = self._common_aws_args.get("profile")
         region = self._common_aws_args.get("region")
 
-        lambda_region = __utils__["boto3.get_region"]("lambda", lambda_region, profile)
-        apigw_region = __utils__["boto3.get_region"]("apigateway", region, profile)
+        lambda_region = salt.utils.boto3mod.get_region("lambda", lambda_region, profile)
+        apigw_region = salt.utils.boto3mod.get_region("apigateway", region, profile)
 
         lambda_desc = __salt__["boto_lambda.describe_function"](
             lambda_name, **self._common_aws_args

@@ -7,6 +7,7 @@ of the current salt process.
 import os
 
 import salt.utils.platform
+import salt.utils.win_reg
 
 
 def __virtual__():
@@ -131,7 +132,7 @@ def setenv(
                             r" Manager\Environment"
                         )
 
-                    out = __utils__["reg.read_value"](
+                    out = salt.utils.win_reg.read_value(
                         permanent_hive, permanent_key, _norm_key(key)
                     )
                     return out["success"] is True

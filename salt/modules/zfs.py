@@ -17,9 +17,11 @@ import logging
 
 import salt.modules.cmdmod
 import salt.utils.args
+import salt.utils.dateutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
+import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 
 __virtualname__ = "zfs"
@@ -71,7 +73,7 @@ def exists(name, **kwargs):
 
     ## Check if 'name' of 'type' exists
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="list",
             opts=opts,
             target=name,
@@ -133,13 +135,13 @@ def create(name, **kwargs):
     if kwargs.get("sparse", False) and kwargs.get("volume_size", None):
         flags.append("-s")
     if kwargs.get("volume_size", None):
-        opts["-V"] = __utils__["zfs.to_size"](
+        opts["-V"] = salt.utils.zfs.to_size(
             kwargs.get("volume_size"), convert_to_human=False
         )
 
     ## Create filesystem/volume
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="create",
             flags=flags,
             opts=opts,
@@ -149,7 +151,7 @@ def create(name, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "created")
+    return salt.utils.zfs.parse_command_result(res, "created")
 
 
 def destroy(name, **kwargs):
@@ -192,7 +194,7 @@ def destroy(name, **kwargs):
 
     ## Destroy filesystem/volume/snapshot/...
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="destroy",
             flags=flags,
             target=name,
@@ -200,7 +202,7 @@ def destroy(name, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "destroyed")
+    return salt.utils.zfs.parse_command_result(res, "destroyed")
 
 
 def rename(name, new_name, **kwargs):
@@ -236,7 +238,7 @@ def rename(name, new_name, **kwargs):
     target = []
 
     # NOTE: set extra config from kwargs
-    if __utils__["zfs.is_snapshot"](name):
+    if salt.utils.zfs.is_snapshot(name):
         if kwargs.get("create_parent", False):
             log.warning(
                 "zfs.rename - create_parent=True cannot be used with snapshots."
@@ -259,7 +261,7 @@ def rename(name, new_name, **kwargs):
 
     ## Rename filesystem/volume/snapshot/...
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="rename",
             flags=flags,
             target=target,
@@ -267,7 +269,7 @@ def rename(name, new_name, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "renamed")
+    return salt.utils.zfs.parse_command_result(res, "renamed")
 
 
 def list_(name=None, **kwargs):
@@ -346,7 +348,7 @@ def list_(name=None, **kwargs):
 
     ## parse zfs list
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="list",
             flags=flags,
             opts=opts,
@@ -357,11 +359,11 @@ def list_(name=None, **kwargs):
     if res["retcode"] == 0:
         for ds in res["stdout"].splitlines():
             if kwargs.get("parsable", True):
-                ds_data = __utils__["zfs.from_auto_dict"](
+                ds_data = salt.utils.zfs.from_auto_dict(
                     OrderedDict(list(zip(properties, ds.split("\t")))),
                 )
             else:
-                ds_data = __utils__["zfs.to_auto_dict"](
+                ds_data = salt.utils.zfs.to_auto_dict(
                     OrderedDict(list(zip(properties, ds.split("\t")))),
                     convert_to_human=True,
                 )
@@ -369,7 +371,7 @@ def list_(name=None, **kwargs):
             ret[ds_data["name"]] = ds_data
             del ret[ds_data["name"]]["name"]
     else:
-        return __utils__["zfs.parse_command_result"](res)
+        return salt.utils.zfs.parse_command_result(res)
 
     return ret
 
@@ -389,7 +391,7 @@ def list_mount():
     """
     ## List mounted filesystem
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="mount",
         ),
         python_shell=False,
@@ -402,7 +404,7 @@ def list_mount():
             ret[mount[0]] = mount[-1]
         return ret
     else:
-        return __utils__["zfs.parse_command_result"](res)
+        return salt.utils.zfs.parse_command_result(res)
 
 
 def mount(name=None, **kwargs):
@@ -446,7 +448,7 @@ def mount(name=None, **kwargs):
 
     ## Mount filesystem
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="mount",
             flags=flags,
             opts=opts,
@@ -455,7 +457,7 @@ def mount(name=None, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "mounted")
+    return salt.utils.zfs.parse_command_result(res, "mounted")
 
 
 def unmount(name, **kwargs):
@@ -501,7 +503,7 @@ def unmount(name, **kwargs):
 
     ## Unmount filesystem
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="unmount",
             flags=flags,
             target=name,
@@ -509,7 +511,7 @@ def unmount(name, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "unmounted")
+    return salt.utils.zfs.parse_command_result(res, "unmounted")
 
 
 def inherit(prop, name, **kwargs):
@@ -547,7 +549,7 @@ def inherit(prop, name, **kwargs):
 
     ## Inherit property
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="inherit",
             flags=flags,
             property_name=prop,
@@ -556,7 +558,7 @@ def inherit(prop, name, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "inherited")
+    return salt.utils.zfs.parse_command_result(res, "inherited")
 
 
 def diff(name_a, name_b=None, **kwargs):
@@ -603,7 +605,7 @@ def diff(name_a, name_b=None, **kwargs):
 
     ## Diff filesystem/snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="diff",
             flags=flags,
             target=target,
@@ -612,13 +614,13 @@ def diff(name_a, name_b=None, **kwargs):
     )
 
     if res["retcode"] != 0:
-        return __utils__["zfs.parse_command_result"](res)
+        return salt.utils.zfs.parse_command_result(res)
     else:
         if not kwargs.get("parsable", True) and kwargs.get("show_changetime", True):
             ret = OrderedDict()
             for entry in res["stdout"].splitlines():
                 entry = entry.split()
-                entry_timestamp = __utils__["dateutils.strftime"](
+                entry_timestamp = salt.utils.dateutils.strftime(
                     entry[0], "%Y-%m-%d.%H:%M:%S.%f"
                 )
                 entry_data = "\t\t".join(entry[1:])
@@ -683,7 +685,7 @@ def rollback(name, **kwargs):
 
     ## Rollback to snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="rollback",
             flags=flags,
             target=name,
@@ -691,7 +693,7 @@ def rollback(name, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "rolledback")
+    return salt.utils.zfs.parse_command_result(res, "rolledback")
 
 
 def clone(name_a, name_b, **kwargs):
@@ -743,7 +745,7 @@ def clone(name_a, name_b, **kwargs):
 
     ## Clone filesystem/volume
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="clone",
             flags=flags,
             filesystem_properties=filesystem_properties,
@@ -752,7 +754,7 @@ def clone(name_a, name_b, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "cloned")
+    return salt.utils.zfs.parse_command_result(res, "cloned")
 
 
 def promote(name):
@@ -789,14 +791,14 @@ def promote(name):
     """
     ## Promote clone
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="promote",
             target=name,
         ),
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "promoted")
+    return salt.utils.zfs.parse_command_result(res, "promoted")
 
 
 def bookmark(snapshot, bookmark):
@@ -826,7 +828,7 @@ def bookmark(snapshot, bookmark):
 
     """
     # abort if we do not have feature flags
-    if not __utils__["zfs.has_feature_flags"]():
+    if not salt.utils.zfs.has_feature_flags():
         return OrderedDict([("error", "bookmarks are not supported")])
 
     ## Configure command
@@ -839,14 +841,14 @@ def bookmark(snapshot, bookmark):
 
     ## Bookmark snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="bookmark",
             target=target,
         ),
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "bookmarked")
+    return salt.utils.zfs.parse_command_result(res, "bookmarked")
 
 
 def holds(snapshot, **kwargs):
@@ -881,7 +883,7 @@ def holds(snapshot, **kwargs):
 
     ## Lookup holds
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="holds",
             flags=flags,
             target=target,
@@ -889,7 +891,7 @@ def holds(snapshot, **kwargs):
         python_shell=False,
     )
 
-    ret = __utils__["zfs.parse_command_result"](res)
+    ret = salt.utils.zfs.parse_command_result(res)
     if res["retcode"] == 0:
         for hold in res["stdout"].splitlines():
             hold_data = OrderedDict(
@@ -956,7 +958,7 @@ def hold(tag, *snapshot, **kwargs):
 
     ## hold snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="hold",
             flags=flags,
             target=target,
@@ -964,7 +966,7 @@ def hold(tag, *snapshot, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "held")
+    return salt.utils.zfs.parse_command_result(res, "held")
 
 
 def release(tag, *snapshot, **kwargs):
@@ -1017,7 +1019,7 @@ def release(tag, *snapshot, **kwargs):
 
     ## release snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="release",
             flags=flags,
             target=target,
@@ -1025,7 +1027,7 @@ def release(tag, *snapshot, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "released")
+    return salt.utils.zfs.parse_command_result(res, "released")
 
 
 def snapshot(*snapshot, **kwargs):
@@ -1070,7 +1072,7 @@ def snapshot(*snapshot, **kwargs):
 
     ## Create snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="snapshot",
             flags=flags,
             filesystem_properties=filesystem_properties,
@@ -1079,7 +1081,7 @@ def snapshot(*snapshot, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "snapshotted")
+    return salt.utils.zfs.parse_command_result(res, "snapshotted")
 
 
 def set(*dataset, **kwargs):
@@ -1125,7 +1127,7 @@ def set(*dataset, **kwargs):
 
     ## Set property
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="set",
             property_name=list(filesystem_properties.keys()),
             property_value=list(filesystem_properties.values()),
@@ -1134,7 +1136,7 @@ def set(*dataset, **kwargs):
         python_shell=False,
     )
 
-    return __utils__["zfs.parse_command_result"](res, "set")
+    return salt.utils.zfs.parse_command_result(res, "set")
 
 
 def get(*dataset, **kwargs):
@@ -1213,7 +1215,7 @@ def get(*dataset, **kwargs):
 
     ## Get properties
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](
+        salt.utils.zfs.zfs_command(
             command="get",
             flags=flags,
             opts=opts,
@@ -1223,19 +1225,19 @@ def get(*dataset, **kwargs):
         python_shell=False,
     )
 
-    ret = __utils__["zfs.parse_command_result"](res)
+    ret = salt.utils.zfs.parse_command_result(res)
     if res["retcode"] == 0:
         for ds in res["stdout"].splitlines():
             ds_data = OrderedDict(list(zip(fields, ds.split("\t"))))
 
             if "value" in ds_data:
                 if kwargs.get("parsable", True):
-                    ds_data["value"] = __utils__["zfs.from_auto"](
+                    ds_data["value"] = salt.utils.zfs.from_auto(
                         ds_data["property"],
                         ds_data["value"],
                     )
                 else:
-                    ds_data["value"] = __utils__["zfs.to_auto"](
+                    ds_data["value"] = salt.utils.zfs.to_auto(
                         ds_data["property"],
                         ds_data["value"],
                         convert_to_human=True,

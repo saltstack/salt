@@ -54,6 +54,8 @@ import os
 import platform
 from datetime import datetime
 
+import salt.utils.stringutils
+import salt.utils.value
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party modules
@@ -455,7 +457,7 @@ def volume_extend(name, size):
     array = _get_system()
     vol = _get_volume(name, array)
     if vol is not None:
-        if __utils__["stringutils.human_to_bytes"](size) > vol["size"]:
+        if salt.utils.stringutils.human_to_bytes(size) > vol["size"]:
             try:
                 array.extend_volume(name, size)
                 return True
@@ -993,7 +995,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
                 return False
         else:
             return False
-    elif __utils__["value.xor"](hostgroup, host, volume):
+    elif salt.utils.value.xor(hostgroup, host, volume):
         if _get_pgroup(name, array) is None:
             try:
                 array.create_pgroup(name)

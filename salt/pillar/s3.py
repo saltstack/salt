@@ -97,6 +97,7 @@ from copy import deepcopy
 
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.s3
 from salt.pillar import Pillar
 
 log = logging.getLogger(__name__)
@@ -295,7 +296,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
         if continuation_token:
             params["continuation-token"] = continuation_token
 
-        return __utils__["s3.query"](
+        return salt.utils.s3.query(
             key=creds.key,
             keyid=creds.keyid,
             kms_keyid=creds.kms_keyid,
@@ -470,7 +471,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path, cached_file_path):
             return
 
     # ... or get the file from S3
-    __utils__["s3.query"](
+    salt.utils.s3.query(
         key=creds.key,
         keyid=creds.keyid,
         kms_keyid=creds.kms_keyid,

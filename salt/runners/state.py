@@ -8,6 +8,7 @@ import salt.loader
 import salt.utils.event
 import salt.utils.functools
 import salt.utils.jid
+import salt.utils.state
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ def orchestrate(
         orchestration_jid=orchestration_jid,
     )
     ret = {"data": {minion.opts["id"]: running}, "outputter": "highstate"}
-    res = __utils__["state.check_result"](ret["data"])
+    res = salt.utils.state.check_result(ret["data"])
     if res:
         ret["retcode"] = 0
     else:

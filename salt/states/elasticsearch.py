@@ -7,6 +7,7 @@ State module to manage Elasticsearch.
 
 import logging
 
+import salt.utils.dictdiffer
 import salt.utils.json
 
 log = logging.getLogger(__name__)
@@ -193,7 +194,7 @@ def alias_present(name, index, definition=None):
         if not definition:
             definition = {}
 
-        ret["changes"] = __utils__["dictdiffer.deep_diff"](old, definition)
+        ret["changes"] = salt.utils.dictdiffer.deep_diff(old, definition)
 
         if ret["changes"] or not definition:
             if __opts__["test"]:
@@ -352,7 +353,7 @@ def index_template_present(name, definition, check_definition=False):
                 for key in ("mappings", "aliases", "settings"):
                     if current_template[key] == {} and key not in definition_parsed:
                         del current_template[key]
-                diff = __utils__["dictdiffer.deep_diff"](
+                diff = salt.utils.dictdiffer.deep_diff(
                     current_template, definition_parsed
                 )
                 if len(diff) != 0:
@@ -460,7 +461,7 @@ def pipeline_present(name, definition):
         old = {}
         if pipeline and name in pipeline:
             old = pipeline[name]
-        ret["changes"] = __utils__["dictdiffer.deep_diff"](old, definition)
+        ret["changes"] = salt.utils.dictdiffer.deep_diff(old, definition)
 
         if ret["changes"] or not definition:
             if __opts__["test"]:
@@ -570,7 +571,7 @@ def search_template_present(name, definition):
         if template:
             old = salt.utils.json.loads(template["template"])
 
-        ret["changes"] = __utils__["dictdiffer.deep_diff"](old, definition)
+        ret["changes"] = salt.utils.dictdiffer.deep_diff(old, definition)
 
         if ret["changes"] or not definition:
             if __opts__["test"]:

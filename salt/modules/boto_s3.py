@@ -52,6 +52,7 @@ Connection module for Amazon S3 using boto3
 
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ def __virtual__():
 
 def __init__(opts):  # pylint: disable=unused-argument
     if HAS_BOTO:
-        __utils__["boto3.assign_funcs"](__name__, "s3")
+        salt.utils.boto3mod.assign_funcs(__name__, "s3")
 
 
 def get_object_metadata(
@@ -120,7 +121,7 @@ def get_object_metadata(
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Message"] == "Not Found":
             return {"result": None}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
     return {"result": metadata}
 
@@ -156,7 +157,7 @@ def upload_file(
     try:
         conn.upload_file(source, bucket, s3_key, ExtraArgs=extra_args)
     except boto3.exceptions.S3UploadFailedError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
     log.info("S3 object uploaded to %s", name)
     return {"result": True}

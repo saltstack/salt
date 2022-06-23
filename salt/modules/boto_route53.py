@@ -48,6 +48,7 @@ Connection module for Amazon Route53
 import logging
 import time
 
+import salt.utils.botomod
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
@@ -79,7 +80,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__["boto.assign_funcs"](__name__, "route53", pack=__salt__)
+        salt.utils.botomod.assign_funcs(__name__, "route53", pack=__salt__)
 
 
 def _get_split_zone(zone, _conn, private_zone):
@@ -490,7 +491,7 @@ def create_healthcheck(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            return {"error": __utils__["boto.get_error"](exc)}
+            return {"error": salt.utils.botomod.get_error(exc)}
     return False
 
 

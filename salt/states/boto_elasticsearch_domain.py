@@ -81,6 +81,7 @@ config:
 import logging
 import os
 
+import salt.utils.boto3mod
 import salt.utils.json
 
 log = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ def __virtual__():
 
 
 def _compare_json(current, desired):
-    return __utils__["boto3.json_objs_equal"](current, desired)
+    return salt.utils.boto3mod.json_objs_equal(current, desired)
 
 
 def present(

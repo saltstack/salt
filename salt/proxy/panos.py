@@ -207,6 +207,7 @@ import logging
 import xml.etree.ElementTree as ET
 
 import salt.exceptions
+import salt.utils.http
 import salt.utils.xmlutil as xml
 
 # This must be present or the Salt loader won't load this module.
@@ -310,7 +311,7 @@ def call(payload=None):
             # Pass the api key without the target declaration
             conditional_payload = {"key": DETAILS["apikey"]}
             payload.update(conditional_payload)
-            r = __utils__["http.query"](
+            r = salt.utils.http.query(
                 DETAILS["url"],
                 data=payload,
                 method="POST",
@@ -322,7 +323,7 @@ def call(payload=None):
             )
         elif DETAILS["method"] == "dev_pass":
             # Pass credentials without the target declaration
-            r = __utils__["http.query"](
+            r = salt.utils.http.query(
                 DETAILS["url"],
                 username=DETAILS["username"],
                 password=DETAILS["password"],
@@ -341,7 +342,7 @@ def call(payload=None):
                 "target": DETAILS["serial"],
             }
             payload.update(conditional_payload)
-            r = __utils__["http.query"](
+            r = salt.utils.http.query(
                 DETAILS["url"],
                 data=payload,
                 method="POST",
@@ -355,7 +356,7 @@ def call(payload=None):
             # Pass credentials with the target declaration
             conditional_payload = {"target": DETAILS["serial"]}
             payload.update(conditional_payload)
-            r = __utils__["http.query"](
+            r = salt.utils.http.query(
                 DETAILS["url"],
                 username=DETAILS["username"],
                 password=DETAILS["password"],

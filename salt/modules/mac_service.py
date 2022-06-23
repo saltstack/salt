@@ -32,6 +32,7 @@ import logging
 import os
 
 import salt.utils.files
+import salt.utils.mac_utils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -127,7 +128,7 @@ def _get_service(name):
     :return: The service information for the service, otherwise an Error
     :rtype: dict
     """
-    services = __utils__["mac_utils.available_services"]()
+    services = salt.utils.mac_utils.available_services()
     # fix the name differences between platforms
     # salt-minion becomes com.saltstack.salt.minion
     name = SALT_MAC_SERVICES.get(name, name).lower()
@@ -155,7 +156,7 @@ def _get_service(name):
 
     # we used a cached version to check, a service could have been made
     # between now and then, we should refresh our available services.
-    services = __utils__["mac_utils.available_services"](refresh=True)
+    services = salt.utils.mac_utils.available_services(refresh=True)
 
     # check to see if we found the service we are looking for.
     service = _name_in_services(name, services)
@@ -239,7 +240,7 @@ def _get_domain_target(name, service_target=False):
     # check if a LaunchAgent as we should treat these differently.
     if "LaunchAgents" in path:
         # Get the console user so we can service in the correct session
-        uid = __utils__["mac_utils.console_user"]()
+        uid = salt.utils.mac_utils.console_user()
         domain_target = "gui/{}".format(uid)
 
     # check to see if we need to make it a full service target.
@@ -315,7 +316,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     """
-    return __utils__["mac_utils.launchctl"](sub_cmd, *args, **kwargs)
+    return salt.utils.mac_utils.launchctl(sub_cmd, *args, **kwargs)
 
 
 def list_(name=None, runas=None):
@@ -345,7 +346,7 @@ def list_(name=None, runas=None):
         # we can assume if we are trying to list a LaunchAgent we need
         # to run as a user, if not provided, we'll use the console user.
         if not runas and _launch_agent(name):
-            runas = __utils__["mac_utils.console_user"](username=True)
+            runas = salt.utils.mac_utils.console_user(username=True)
 
         # Collect information on service: will raise an error if it fails
         return launchctl("list", label, return_stdout=True, runas=runas)
@@ -522,7 +523,7 @@ def status(name, sig=None, runas=None):
         return False
 
     if not runas and _launch_agent(name):
-        runas = __utils__["mac_utils.console_user"](username=True)
+        runas = salt.utils.mac_utils.console_user(username=True)
 
     try:
         output = __salt__["service.list"](name, runas=runas)

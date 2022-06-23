@@ -197,7 +197,7 @@ def query_instance(vm_=None, call=None):
             "The query_instance action must be called with -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "querying instance",
         "salt/cloud/{}/querying".format(vm_["name"]),
@@ -280,11 +280,11 @@ def create(vm_):
         "private_key", vm_, __opts__, search_global=False, default=None
     )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -308,14 +308,12 @@ def create(vm_):
     if "networks" in vm_:
         kwargs["networks"] = vm_.get("networks")
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": __utils__["cloud.filter_event"](
-                "requesting", kwargs, list(kwargs)
-            ),
+            "kwargs": salt.utils.cloud.filter_event("requesting", kwargs, list(kwargs)),
         },
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -332,13 +330,13 @@ def create(vm_):
     vm_["key_filename"] = key_filename
     vm_["ssh_host"] = data[1]["primaryIp"]
 
-    __utils__["cloud.bootstrap"](vm_, __opts__)
+    salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -416,7 +414,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -432,7 +430,7 @@ def destroy(name, call=None):
         method="DELETE",
     )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -442,7 +440,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get("update_cachedir", False) is True:
-        __utils__["cloud.delete_minion_cachedir"](
+        salt.utils.cloud.delete_minion_cachedir(
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 

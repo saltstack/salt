@@ -2075,14 +2075,12 @@ def request_instance(vm_=None, call=None):
             "'del_all_vols_on_destroy' should be a boolean value."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": __utils__["cloud.filter_event"](
-                "requesting", params, list(params)
-            ),
+            "kwargs": salt.utils.cloud.filter_event("requesting", params, list(params)),
             "location": location,
         },
         sock_dir=__opts__["sock_dir"],
@@ -2157,7 +2155,7 @@ def request_instance(vm_=None, call=None):
                 )
                 return False
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "waiting for spot instance",
             "salt/cloud/{}/waiting_for_spot".format(vm_["name"]),
@@ -2226,7 +2224,7 @@ def query_instance(vm_=None, call=None):
 
     instance_id = vm_["instance_id"]
     location = vm_.get("location", get_location(vm_))
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "querying instance",
         "salt/cloud/{}/querying".format(vm_["name"]),
@@ -2326,7 +2324,7 @@ def query_instance(vm_=None, call=None):
             raise SaltCloudSystemExit(str(exc))
 
     if "reactor" in vm_ and vm_["reactor"] is True:
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "instance queried",
             "salt/cloud/{}/query_reactor".format(vm_["name"]),
@@ -2363,7 +2361,7 @@ def wait_for_instance(
 
     ssh_gateway_config = vm_.get("gateway", get_ssh_gateway_config(vm_))
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "waiting for ssh",
         "salt/cloud/{}/waiting_for_ssh".format(vm_["name"]),
@@ -2541,7 +2539,7 @@ def wait_for_instance(
         raise SaltCloudSystemExit("Failed to connect to remote ssh")
 
     if "reactor" in vm_ and vm_["reactor"] is True:
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "ssh is available",
             "salt/cloud/{}/ssh_ready_reactor".format(vm_["name"]),
@@ -2609,17 +2607,17 @@ def create(vm_=None, call=None):
         # new instances when deploy is True
         _validate_key_path_and_mode(key_filename)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
-    __utils__["cloud.cachedir_index_add"](
+    salt.utils.cloud.cachedir_index_add(
         vm_["name"], vm_["profile"], "ec2", vm_["driver"]
     )
 
@@ -2704,7 +2702,7 @@ def create(vm_=None, call=None):
 
     tags["Name"] = vm_["name"]
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "setting tags",
         "salt/cloud/{}/tagging".format(vm_["name"]),
@@ -2748,7 +2746,7 @@ def create(vm_=None, call=None):
         for k, v in vm_["spot_config"]["tag"].items():
             spot_request_tags[k] = v
 
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "setting tags",
             "salt/cloud/spot_request_{}/tagging".format(sir_id),
@@ -2814,7 +2812,7 @@ def create(vm_=None, call=None):
         "volumes", vm_, __opts__, search_global=True
     )
     if volumes:
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "attaching volumes",
             "salt/cloud/{}/attaching_volumes".format(vm_["name"]),
@@ -2873,18 +2871,18 @@ def create(vm_=None, call=None):
     if ssm_document:
         event_data["ssm_document"] = ssm_document
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"]("created", event_data, list(event_data)),
+        args=salt.utils.cloud.filter_event("created", event_data, list(event_data)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
 
     # Ensure that the latest node data is returned
     node = _get_node(instance_id=vm_["instance_id"])
-    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
+    salt.utils.cloud.cache_node(node, _get_active_provider_name(), __opts__)
     ret.update(node)
 
     # Add any block device tags specified
@@ -2920,7 +2918,7 @@ def create(vm_=None, call=None):
     if block_device_volume_id_map:
 
         for volid, tags in block_device_volume_id_map.items():
-            __utils__["cloud.fire_event"](
+            salt.utils.cloud.fire_event(
                 "event",
                 "setting tags",
                 "salt/cloud/block_volume_{}/tagging".format(str(volid)),
@@ -2929,7 +2927,7 @@ def create(vm_=None, call=None):
                 transport=__opts__["transport"],
             )
 
-            __utils__["cloud.wait_for_fun"](
+            salt.utils.cloud.wait_for_fun(
                 set_tags,
                 timeout=30,
                 name=vm_["name"],
@@ -2956,7 +2954,7 @@ def queue_instances(instances):
     """
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
+        salt.utils.cloud.cache_node(node, _get_active_provider_name(), __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -3050,7 +3048,7 @@ def stop(name, call=None):
 
     instance_id = _get_node(name)["instanceId"]
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "stopping instance",
         "salt/cloud/{}/stopping".format(name),
@@ -3084,7 +3082,7 @@ def start(name, call=None):
 
     instance_id = _get_node(name)["instanceId"]
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting instance",
         "salt/cloud/{}/starting".format(name),
@@ -3352,7 +3350,7 @@ def destroy(name, call=None):
         name=name, instance_id=instance_id, call="action", quiet=True
     )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -3406,7 +3404,7 @@ def destroy(name, call=None):
         )
         ret["spotInstance"] = result[0]
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -3415,10 +3413,10 @@ def destroy(name, call=None):
         transport=__opts__["transport"],
     )
 
-    __utils__["cloud.cachedir_index_del"](name)
+    salt.utils.cloud.cachedir_index_del(name)
 
     if __opts__.get("update_cachedir", False) is True:
-        __utils__["cloud.delete_minion_cachedir"](
+        salt.utils.cloud.delete_minion_cachedir(
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 
@@ -3506,7 +3504,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
+    salt.utils.cloud.cache_node(node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -3635,7 +3633,7 @@ def _list_nodes_full(location=None):
 
     ret = _extract_instance_info(instances)
 
-    __utils__["cloud.cache_node_list"](ret, provider, __opts__)
+    salt.utils.cloud.cache_node_list(ret, provider, __opts__)
     return ret
 
 

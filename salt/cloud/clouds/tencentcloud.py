@@ -363,7 +363,7 @@ def list_nodes_full(call=None):
         provider = comps[0]
 
     __opts__["update_cachedir"] = True
-    __utils__["cloud.cache_node_list"](ret, provider, __opts__)
+    salt.utils.cloud.cache_node_list(ret, provider, __opts__)
 
     return ret
 
@@ -453,11 +453,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -535,11 +535,11 @@ def create(vm_):
     if system_disk_type:
         req.SystemDisk["DiskType"] = system_disk_type
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"]("requesting", vm_, list(vm_)),
+        args=salt.utils.cloud.filter_event("requesting", vm_, list(vm_)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -602,16 +602,16 @@ def create(vm_):
     vm_["ssh_host"] = ssh_ip
 
     # The instance is booted and accessible, let's Salt it!
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
     log.debug("'%s' instance creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -711,7 +711,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -727,7 +727,7 @@ def destroy(name, call=None):
     req.InstanceIds = [node.InstanceId]
     resp = client.TerminateInstances(req)
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),

@@ -51,6 +51,7 @@ The dependencies listed above can be installed via package or pip.
 
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.versions
 
@@ -86,7 +87,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__["boto3.assign_funcs"](__name__, "cloudtrail")
+        salt.utils.boto3mod.assign_funcs(__name__, "cloudtrail")
 
 
 def exists(Name, region=None, key=None, keyid=None, profile=None):
@@ -109,7 +110,7 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
         conn.get_trail_status(Name=Name)
         return {"exists": True}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "TrailNotFoundException":
             return {"exists": False}
         return {"error": err}
@@ -169,7 +170,7 @@ def create(
             log.warning("Trail was not created")
             return {"created": False}
     except ClientError as e:
-        return {"created": False, "error": __utils__["boto3.get_error"](e)}
+        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete(Name, region=None, key=None, keyid=None, profile=None):
@@ -192,7 +193,7 @@ def delete(Name, region=None, key=None, keyid=None, profile=None):
         conn.delete_trail(Name=Name)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def describe(Name, region=None, key=None, keyid=None, profile=None):
@@ -232,10 +233,10 @@ def describe(Name, region=None, key=None, keyid=None, profile=None):
         else:
             return {"trail": None}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "TrailNotFoundException":
             return {"trail": None}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def status(Name, region=None, key=None, keyid=None, profile=None):
@@ -279,10 +280,10 @@ def status(Name, region=None, key=None, keyid=None, profile=None):
         else:
             return {"trail": None}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "TrailNotFoundException":
             return {"trail": None}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def list(region=None, key=None, keyid=None, profile=None):
@@ -307,7 +308,7 @@ def list(region=None, key=None, keyid=None, profile=None):
             log.warning("No trails found")
         return {"trails": trails.get("trailList", [])}
     except ClientError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def update(
@@ -364,7 +365,7 @@ def update(
             log.warning("Trail was not created")
             return {"updated": False}
     except ClientError as e:
-        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
+        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def start_logging(Name, region=None, key=None, keyid=None, profile=None):
@@ -387,7 +388,7 @@ def start_logging(Name, region=None, key=None, keyid=None, profile=None):
         conn.start_logging(Name=Name)
         return {"started": True}
     except ClientError as e:
-        return {"started": False, "error": __utils__["boto3.get_error"](e)}
+        return {"started": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def stop_logging(Name, region=None, key=None, keyid=None, profile=None):
@@ -410,7 +411,7 @@ def stop_logging(Name, region=None, key=None, keyid=None, profile=None):
         conn.stop_logging(Name=Name)
         return {"stopped": True}
     except ClientError as e:
-        return {"stopped": False, "error": __utils__["boto3.get_error"](e)}
+        return {"stopped": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -457,7 +458,7 @@ def add_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):
         )
         return {"tagged": True}
     except ClientError as e:
-        return {"tagged": False, "error": __utils__["boto3.get_error"](e)}
+        return {"tagged": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def remove_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):
@@ -490,7 +491,7 @@ def remove_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs)
         )
         return {"tagged": True}
     except ClientError as e:
-        return {"tagged": False, "error": __utils__["boto3.get_error"](e)}
+        return {"tagged": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def list_tags(Name, region=None, key=None, keyid=None, profile=None):
@@ -520,4 +521,4 @@ def list_tags(Name, region=None, key=None, keyid=None, profile=None):
             tagdict[tag.get("Key")] = tag.get("Value")
         return {"tags": tagdict}
     except ClientError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}

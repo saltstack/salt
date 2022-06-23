@@ -101,11 +101,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -132,12 +132,12 @@ def create(vm_):
         "ip": host_ip,
     }
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": __utils__["cloud.filter_event"](
+            "kwargs": salt.utils.cloud.filter_event(
                 "requesting", create_kwargs, list(create_kwargs)
             ),
         },
@@ -182,17 +182,17 @@ def create(vm_):
     )
 
     vm_["ssh_host"] = host_ip
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
     log.info("Created Cloud VM '%s'", vm_["name"])
     log.debug("'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -414,7 +414,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -425,7 +425,7 @@ def destroy(name, call=None):
 
     response = _query("grid", "server/delete", args={"name": name})
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -435,7 +435,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get("update_cachedir", False) is True:
-        __utils__["cloud.delete_minion_cachedir"](
+        salt.utils.cloud.delete_minion_cachedir(
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 

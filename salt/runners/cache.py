@@ -13,6 +13,7 @@ import salt.payload
 import salt.pillar.git_pillar
 import salt.runners.winrepo
 import salt.utils.args
+import salt.utils.cloud
 import salt.utils.gitfs
 import salt.utils.master
 from salt.exceptions import SaltInvocationError
@@ -372,7 +373,7 @@ def cloud(tgt, provider=None):
     if not opts.get("update_cachedir"):
         return {}
 
-    cloud_cache = __utils__["cloud.list_cache_nodes_full"](opts=opts, provider=provider)
+    cloud_cache = salt.utils.cloud.list_cache_nodes_full(opts=opts, provider=provider)
     if cloud_cache is None:
         return {}
 

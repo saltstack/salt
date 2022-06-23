@@ -46,6 +46,7 @@ Connection module for Amazon CloudWatch Events
 
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
@@ -77,7 +78,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__["boto3.assign_funcs"](__name__, "events")
+        salt.utils.boto3mod.assign_funcs(__name__, "events")
 
 
 def exists(Name, region=None, key=None, keyid=None, profile=None):
@@ -104,7 +105,7 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
                 return {"exists": True}
         return {"exists": False}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         return {"error": err}
 
 
@@ -155,7 +156,7 @@ def create_or_update(
             log.warning("Event rule was not created")
             return {"created": False}
     except ClientError as e:
-        return {"created": False, "error": __utils__["boto3.get_error"](e)}
+        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def delete(Name, region=None, key=None, keyid=None, profile=None):
@@ -178,7 +179,7 @@ def delete(Name, region=None, key=None, keyid=None, profile=None):
         conn.delete_rule(Name=Name)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
+        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
 
 
 def describe(Name, region=None, key=None, keyid=None, profile=None):
@@ -212,10 +213,10 @@ def describe(Name, region=None, key=None, keyid=None, profile=None):
         else:
             return {"rule": None}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
             return {"error": "Rule {} not found".format(Rule)}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def list_rules(region=None, key=None, keyid=None, profile=None):
@@ -240,7 +241,7 @@ def list_rules(region=None, key=None, keyid=None, profile=None):
             NextToken = r.get("NextToken")
         return ret
     except ClientError as e:
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def list_targets(Rule, region=None, key=None, keyid=None, profile=None):
@@ -268,10 +269,10 @@ def list_targets(Rule, region=None, key=None, keyid=None, profile=None):
         else:
             return {"targets": None}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
             return {"error": "Rule {} not found".format(Rule)}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def put_targets(Rule, Targets, region=None, key=None, keyid=None, profile=None):
@@ -297,10 +298,10 @@ def put_targets(Rule, Targets, region=None, key=None, keyid=None, profile=None):
         else:
             return {"failures": None}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
             return {"error": "Rule {} not found".format(Rule)}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}
 
 
 def remove_targets(Rule, Ids, region=None, key=None, keyid=None, profile=None):
@@ -326,7 +327,7 @@ def remove_targets(Rule, Ids, region=None, key=None, keyid=None, profile=None):
         else:
             return {"failures": None}
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
             return {"error": "Rule {} not found".format(Rule)}
-        return {"error": __utils__["boto3.get_error"](e)}
+        return {"error": salt.utils.boto3mod.get_error(e)}

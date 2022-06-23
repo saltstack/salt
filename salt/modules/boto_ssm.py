@@ -14,6 +14,7 @@ Connection module for Amazon SSM
 """
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.json as json
 import salt.utils.versions
 
@@ -26,7 +27,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        __utils__["boto3.assign_funcs"](__name__, "ssm")
+        salt.utils.boto3mod.assign_funcs(__name__, "ssm")
     return has_boto_reqs
 
 
@@ -48,7 +49,7 @@ def get_parameter(
 
         salt-call boto_ssm.get_parameter test-param withdescription=True
     """
-    conn = __utils__["boto3.get_connection"](
+    conn = salt.utils.boto3mod.get_connection(
         "ssm", region=region, key=key, keyid=keyid, profile=profile
     )
     try:
@@ -85,7 +86,7 @@ def put_parameter(
 
         salt-call boto_ssm.put_parameter test-param test_value Type=SecureString KeyId=alias/aws/ssm Description='test encrypted key'
     """
-    conn = __utils__["boto3.get_connection"](
+    conn = salt.utils.boto3mod.get_connection(
         "ssm", region=region, key=key, keyid=keyid, profile=profile
     )
     if Type not in ("String", "StringList", "SecureString"):
@@ -124,7 +125,7 @@ def delete_parameter(Name, region=None, key=None, keyid=None, profile=None):
 
         salt-call boto_ssm.delete_parameter test-param
     """
-    conn = __utils__["boto3.get_connection"](
+    conn = salt.utils.boto3mod.get_connection(
         "ssm", region=region, key=key, keyid=keyid, profile=profile
     )
     try:

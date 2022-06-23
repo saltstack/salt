@@ -95,6 +95,7 @@ Azure (ARM) Compute State Module
 import logging
 
 import salt.utils.azurearm
+import salt.utils.dictdiffer
 
 __virtualname__ = "azurearm_compute"
 
@@ -189,9 +190,7 @@ def availability_set_present(
     )
 
     if "error" not in aset:
-        tag_changes = __utils__["dictdiffer.deep_diff"](
-            aset.get("tags", {}), tags or {}
-        )
+        tag_changes = salt.utils.dictdiffer.deep_diff(aset.get("tags", {}), tags or {})
         if tag_changes:
             ret["changes"]["tags"] = tag_changes
 

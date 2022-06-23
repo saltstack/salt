@@ -66,6 +66,7 @@ import copy
 import logging
 import re
 
+import salt.utils.boto3mod
 import salt.utils.json
 
 log = logging.getLogger(__name__)
@@ -383,10 +384,10 @@ def topic_absent(
 
 
 def _json_objs_equal(left, right):
-    left = __utils__["boto3.ordered"](
+    left = salt.utils.boto3mod.ordered(
         salt.utils.json.loads(left) if isinstance(left, str) else left
     )
-    right = __utils__["boto3.ordered"](
+    right = salt.utils.boto3mod.ordered(
         salt.utils.json.loads(right) if isinstance(right, str) else right
     )
     return left == right

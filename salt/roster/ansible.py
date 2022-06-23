@@ -97,7 +97,9 @@ Any of the [groups] or direct hostnames will return.  The 'all' is special, and 
 import copy
 import fnmatch
 
+import salt.utils.json
 import salt.utils.path
+import salt.utils.stringutils
 from salt.roster import get_roster_file
 
 CONVERSION = {
@@ -128,8 +130,8 @@ def targets(tgt, tgt_type="glob", **kwargs):
         "cmd.run_all",
         "ansible-inventory -i {} --list".format(get_roster_file(__opts__)),
     )
-    __context__["inventory"] = __utils__["json.loads"](
-        __utils__["stringutils.to_str"](inventory["stdout"])
+    __context__["inventory"] = salt.utils.json.loads(
+        salt.utils.stringutils.to_str(inventory["stdout"])
     )
 
     if tgt_type == "glob":

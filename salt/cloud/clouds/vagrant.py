@@ -265,7 +265,7 @@ def create(vm_):
             name,
             vm_["ssh_host"],
         )
-        ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
         return ret
 
 
@@ -297,7 +297,7 @@ def destroy(name, call=None):
 
     opts = __opts__
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -314,7 +314,7 @@ def destroy(name, call=None):
             ret = local.cmd(host, "vagrant.destroy", [name])
 
         if ret[host]:
-            __utils__["cloud.fire_event"](
+            salt.utils.cloud.fire_event(
                 "event",
                 "destroyed instance",
                 "salt/cloud/{}/destroyed".format(name),
@@ -324,7 +324,7 @@ def destroy(name, call=None):
             )
 
             if opts.get("update_cachedir", False) is True:
-                __utils__["cloud.delete_minion_cachedir"](
+                salt.utils.cloud.delete_minion_cachedir(
                     name, _get_active_provider_name().split(":")[0], opts
                 )
 

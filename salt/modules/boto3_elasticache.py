@@ -49,6 +49,7 @@ Execution module for Amazon Elasticache using boto3
 import logging
 import time
 
+import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -77,7 +78,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO3:
-        __utils__["boto3.assign_funcs"](
+        salt.utils.boto3mod.assign_funcs(
             __name__,
             "elasticache",
             get_conn_funcname="_get_conn",

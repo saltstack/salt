@@ -297,12 +297,12 @@ def create(vm_):
     except AttributeError:
         pass
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         transport=__opts__["transport"],
@@ -339,13 +339,13 @@ def create(vm_):
     event_data["image"] = kwargs["image"].name
     event_data["size"] = kwargs["size"].name
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
         args={
-            "kwargs": __utils__["cloud.filter_event"](
+            "kwargs": salt.utils.cloud.filter_event(
                 "requesting",
                 event_data,
                 ["name", "profile", "provider", "driver", "image", "size"],
@@ -368,7 +368,7 @@ def create(vm_):
                 ex_blockdevicemapping["VirtualName"] = "{}-{}".format(
                     vm_["name"], len(volumes)
                 )
-            __utils__["cloud.fire_event"](
+            salt.utils.cloud.fire_event(
                 "event",
                 "requesting volume",
                 "salt/cloud/{}/requesting".format(ex_blockdevicemapping["VirtualName"]),
@@ -435,7 +435,7 @@ def create(vm_):
     vm_["ssh_host"] = get_ip(data)
     vm_["password"] = data.extra["password"]
     vm_["key_filename"] = get_key()
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(data.__dict__)
 
@@ -447,12 +447,12 @@ def create(vm_):
         "'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data.__dict__)
     )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         transport=__opts__["transport"],
@@ -470,7 +470,7 @@ def destroy(name, conn=None, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -495,7 +495,7 @@ def destroy(name, conn=None, call=None):
             )
             continue
         log.info("Detaching volume: %s", volume.name)
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "detaching volume",
             "salt/cloud/{}/detaching".format(volume.name),
@@ -506,7 +506,7 @@ def destroy(name, conn=None, call=None):
             log.error("Failed to Detach volume: %s", volume.name)
             return False
         log.info("Detached volume: %s", volume.name)
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "detached volume",
             "salt/cloud/{}/detached".format(volume.name),
@@ -515,7 +515,7 @@ def destroy(name, conn=None, call=None):
         )
 
         log.info("Destroying volume: %s", volume.name)
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroying volume",
             "salt/cloud/{}/destroying".format(volume.name),
@@ -526,7 +526,7 @@ def destroy(name, conn=None, call=None):
             log.error("Failed to Destroy volume: %s", volume.name)
             return False
         log.info("Destroyed volume: %s", volume.name)
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroyed volume",
             "salt/cloud/{}/destroyed".format(volume.name),
@@ -541,7 +541,7 @@ def destroy(name, conn=None, call=None):
     log.info("Destroyed VM: %s", name)
     # Fire destroy action
     event = salt.utils.event.SaltEvent("master", __opts__["sock_dir"])
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),

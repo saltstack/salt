@@ -196,6 +196,7 @@ import copy
 import hashlib
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.dictupdate as dictupdate
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
@@ -642,9 +643,9 @@ def present(
             # always be returned from AWS.
             if value is None:
                 continue
-            value = __utils__["boto3.ordered"](value)
+            value = salt.utils.boto3mod.ordered(value)
             if asg_property in asg:
-                _value = __utils__["boto3.ordered"](asg[asg_property])
+                _value = salt.utils.boto3mod.ordered(asg[asg_property])
                 if not value == _value:
                     log.debug("%s asg_property differs from %s", value, _value)
                     proposed.setdefault("old", {}).update({asg_property: _value})

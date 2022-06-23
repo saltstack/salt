@@ -68,6 +68,7 @@ import logging
 import time
 
 import salt.config as config
+import salt.utils.cloud
 import salt.utils.json
 from salt.exceptions import SaltCloudSystemExit
 
@@ -418,7 +419,7 @@ def create(vm_):
     )
     req_id = clc_return["RequestID"]
     vm_["ssh_host"] = get_build_status(req_id, name)
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "waiting for ssh",
         "salt/cloud/{}/waiting_for_ssh".format(name),
@@ -428,7 +429,7 @@ def create(vm_):
     )
 
     # Bootstrap!
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     return_message = {"Server Name": name, "IP Address": vm_["ssh_host"]}
     ret.update(return_message)
     return return_message

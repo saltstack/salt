@@ -27,7 +27,7 @@ Example States
         - description: "Very Secure Security Group"
         - project_id: 1dcac318a83b4610b7a7f7ba01465548
 """
-
+import salt.utils.args
 
 __virtualname__ = "neutron_secgroup_rule"
 
@@ -74,7 +74,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     __salt__["neutronng.setup_clouds"](auth)
 

@@ -51,6 +51,8 @@ import logging
 import sys
 import time
 
+import salt.utils.boto3mod
+import salt.utils.botomod
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
@@ -83,20 +85,20 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        __utils__["boto.assign_funcs"](
+        salt.utils.botomod.assign_funcs(
             __name__, "asg", module="ec2.autoscale", pack=__salt__
         )
         setattr(
             sys.modules[__name__],
             "_get_ec2_conn",
-            __utils__["boto.get_connection_func"]("ec2"),
+            salt.utils.botomod.get_connection_func("ec2"),
         )
     return has_boto_reqs
 
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__["boto3.assign_funcs"](
+        salt.utils.boto3mod.assign_funcs(
             __name__, "autoscaling", get_conn_funcname="_get_conn_autoscaling_boto3"
         )
 
@@ -423,7 +425,7 @@ def update(
     add_tags = []
     desired_tags = []
     if tags:
-        tags = __utils__["boto3.ordered"](tags)
+        tags = salt.utils.boto3mod.ordered(tags)
         for tag in tags:
             try:
                 key = tag.get("key")
@@ -1052,7 +1054,7 @@ def enter_standby(
             ShouldDecrementDesiredCapacity=should_decrement_desired_capacity,
         )
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"exists": False}
         return {"error": err}
@@ -1090,7 +1092,7 @@ def exit_standby(
             InstanceIds=instance_ids, AutoScalingGroupName=name
         )
     except ClientError as e:
-        err = __utils__["boto3.get_error"](e)
+        err = salt.utils.boto3mod.get_error(e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"exists": False}
         return {"error": err}

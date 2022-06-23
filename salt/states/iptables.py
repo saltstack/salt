@@ -245,6 +245,7 @@ Example rules for IPSec policy:
     output of iptables-save. This may have unintended consequences on legacy
     releases of ``iptables``.
 """
+import salt.utils.state
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -880,7 +881,7 @@ def mod_aggregate(low, chunks, running):
     if low.get("fun") not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = __utils__["state.gen_tag"](chunk)
+        tag = salt.utils.state.gen_tag(chunk)
         if tag in running:
             # Already ran the iptables state, skip aggregation
             continue

@@ -13,6 +13,7 @@ import salt.template
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.path
+import salt.utils.stringio
 
 CONTEXT_BASE = "slsutil"
 
@@ -181,7 +182,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         __opts__["renderer_whitelist"],
         **kwargs
     )
-    return ret.read() if __utils__["stringio.is_readable"](ret) else ret
+    return ret.read() if salt.utils.stringio.is_readable(ret) else ret
 
 
 def _get_serialize_fn(serializer, fn_name):

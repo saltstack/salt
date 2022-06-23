@@ -231,6 +231,10 @@ import pprint
 import socket
 
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.dictupdate
+import salt.utils.files
+import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -371,7 +375,7 @@ def get_conn():
     vm_ = get_configured_provider()
     profile = vm_.pop("profile", None)
     if profile is not None:
-        vm_ = __utils__["dictupdate.update"](
+        vm_ = salt.utils.dictupdate.update(
             os_client_config.vendors.get_profile(profile), vm_
         )
     conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
@@ -444,11 +448,9 @@ def _get_ips(node, addr_type="public"):
                 "OS-EXT-IPS:type"
             ):
                 ret.append(addr["addr"])
-            elif addr_type == "public" and __utils__["cloud.is_public_ip"](
-                addr["addr"]
-            ):
+            elif addr_type == "public" and salt.utils.cloud.is_public_ip(addr["addr"]):
                 ret.append(addr["addr"])
-            elif addr_type == "private" and not __utils__["cloud.is_public_ip"](
+            elif addr_type == "private" and not salt.utils.cloud.is_public_ip(
                 addr["addr"]
             ):
                 ret.append(addr["addr"])
@@ -507,7 +509,7 @@ def list_nodes_select(conn=None, call=None):
         raise SaltCloudSystemExit(
             "The list_nodes_select function must be called with -f or --function."
         )
-    return __utils__["cloud.list_nodes_select"](
+    return salt.utils.cloud.list_nodes_select(
         list_nodes(conn, "function"), __opts__["query.selection"], call
     )
 
@@ -683,7 +685,7 @@ def _clean_create_kwargs(**kwargs):
                 continue
             log.error("Error %s: %s is not of type %s", key, value, VALID_OPTS[key])
         kwargs.pop(key)
-    return __utils__["dictupdate.update"](kwargs, extra)
+    return salt.utils.dictupdate.update(kwargs, extra)
 
 
 def request_instance(vm_, conn=None, call=None):
@@ -698,7 +700,7 @@ def request_instance(vm_, conn=None, call=None):
         )
     kwargs = copy.deepcopy(vm_)
     log.info("Creating Cloud VM %s", vm_["name"])
-    __utils__["cloud.check_name"](vm_["name"], "a-zA-Z0-9._-")
+    salt.utils.cloud.check_name(vm_["name"], "a-zA-Z0-9._-")
     if conn is None:
         conn = get_conn()
     userdata = config.get_cloud_config_value(
@@ -706,8 +708,8 @@ def request_instance(vm_, conn=None, call=None):
     )
     if userdata is not None and os.path.isfile(userdata):
         try:
-            with __utils__["files.fopen"](userdata, "r") as fp_:
-                kwargs["userdata"] = __utils__["cloud.userdata_template"](
+            with salt.utils.files.fopen(userdata, "r") as fp_:
+                kwargs["userdata"] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
         except Exception as exc:  # pylint: disable=broad-except
@@ -743,11 +745,11 @@ def create(vm_):
 
     vm_["key_filename"] = key_filename
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.filter_event(
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -760,7 +762,7 @@ def create(vm_):
         # things like salt keys created yet, so let's create them now.
         if "pub_key" not in vm_ and "priv_key" not in vm_:
             log.debug("Generating minion keys for '%s'", vm_["name"])
-            vm_["priv_key"], vm_["pub_key"] = __utils__["cloud.gen_keys"](
+            vm_["priv_key"], vm_["pub_key"] = salt.utils.cloud.gen_keys(
                 config.get_cloud_config_value("keysize", vm_, __opts__)
             )
     else:
@@ -783,7 +785,7 @@ def create(vm_):
         return preferred_ip(vm_, data[ssh_interface(vm_)])
 
     try:
-        ip_address = __utils__["cloud.wait_for_fun"](__query_node, vm_=vm_)
+        ip_address = salt.utils.cloud.wait_for_fun(__query_node, vm_=vm_)
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
             # It might be already up, let's destroy it!
@@ -794,7 +796,7 @@ def create(vm_):
             raise SaltCloudSystemExit(str(exc))
     log.debug("Using IP address %s", ip_address)
 
-    salt_interface = __utils__["cloud.get_salt_interface"](vm_, __opts__)
+    salt_interface = salt.utils.cloud.get_salt_interface(vm_, __opts__)
     salt_ip_address = preferred_ip(vm_, data[salt_interface])
     log.debug("Salt interface set to: %s", salt_ip_address)
 
@@ -804,7 +806,7 @@ def create(vm_):
     vm_["ssh_host"] = ip_address
     vm_["salt_host"] = salt_ip_address
 
-    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
     log.info("Created Cloud VM '%s'", vm_["name"])
@@ -821,15 +823,15 @@ def create(vm_):
         "public_ips": data["public_ips"],
     }
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"]("created", event_data, list(event_data)),
+        args=salt.utils.cloud.filter_event("created", event_data, list(event_data)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
-    __utils__["cloud.cachedir_index_add"](
+    salt.utils.cloud.cachedir_index_add(
         vm_["name"], vm_["profile"], "nova", vm_["driver"]
     )
     return ret
@@ -844,7 +846,7 @@ def destroy(name, conn=None, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -861,7 +863,7 @@ def destroy(name, conn=None, call=None):
     if ret:
         log.info("Destroyed VM: %s", name)
         # Fire destroy action
-        __utils__["cloud.fire_event"](
+        salt.utils.cloud.fire_event(
             "event",
             "destroyed instance",
             "salt/cloud/{}/destroyed".format(name),
@@ -870,14 +872,14 @@ def destroy(name, conn=None, call=None):
             transport=__opts__["transport"],
         )
         if __opts__.get("delete_sshkeys", False) is True:
-            __utils__["cloud.remove_sshkey"](
+            salt.utils.cloud.remove_sshkey(
                 getattr(node, __opts__.get("ssh_interface", "public_ips"))[0]
             )
         if __opts__.get("update_cachedir", False) is True:
-            __utils__["cloud.delete_minion_cachedir"](
+            salt.utils.cloud.delete_minion_cachedir(
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
-        __utils__["cloud.cachedir_index_del"](name)
+        salt.utils.cloud.cachedir_index_del(name)
         return True
 
     log.error("Failed to Destroy VM: %s", name)
@@ -913,7 +915,7 @@ def call(conn=None, call=None, kwargs=None):
     func = kwargs.pop("func")
     for key, value in kwargs.items():
         try:
-            kwargs[key] = __utils__["json.loads"](value)
+            kwargs[key] = salt.utils.json.loads(value)
         except ValueError:
             continue
     try:

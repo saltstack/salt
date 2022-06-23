@@ -178,6 +178,7 @@ Functions to interact with Hashicorp Vault.
 import logging
 import os
 
+import salt.utils.vault
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -213,13 +214,13 @@ def read_secret(path, key=None, metadata=False, default=None):
     """
     if default is None:
         default = CommandExecutionError
-    version2 = __utils__["vault.is_v2"](path)
+    version2 = salt.utils.vault.is_v2(path)
     if version2["v2"]:
         path = version2["data"]
     log.debug("Reading Vault secret for %s at %s", __grains__["id"], path)
     try:
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("GET", url)
+        response = salt.utils.vault.make_request("GET", url)
         if response.status_code != 200:
             response.raise_for_status()
         data = response.json()["data"]
@@ -256,13 +257,13 @@ def write_secret(path, **kwargs):
     """
     log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
     data = {x: y for x, y in kwargs.items() if not x.startswith("__")}
-    version2 = __utils__["vault.is_v2"](path)
+    version2 = salt.utils.vault.is_v2(path)
     if version2["v2"]:
         path = version2["data"]
         data = {"data": data}
     try:
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("POST", url, json=data)
+        response = salt.utils.vault.make_request("POST", url, json=data)
         if response.status_code == 200:
             return response.json()["data"]
         elif response.status_code != 204:
@@ -284,13 +285,13 @@ def write_raw(path, raw):
             salt '*' vault.write_raw "secret/my/secret" '{"user":"foo","password": "bar"}'
     """
     log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
-    version2 = __utils__["vault.is_v2"](path)
+    version2 = salt.utils.vault.is_v2(path)
     if version2["v2"]:
         path = version2["data"]
         raw = {"data": raw}
     try:
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("POST", url, json=raw)
+        response = salt.utils.vault.make_request("POST", url, json=raw)
         if response.status_code == 200:
             return response.json()["data"]
         elif response.status_code != 204:
@@ -312,12 +313,12 @@ def delete_secret(path):
         salt '*' vault.delete_secret "secret/my/secret"
     """
     log.debug("Deleting vault secrets for %s in %s", __grains__["id"], path)
-    version2 = __utils__["vault.is_v2"](path)
+    version2 = salt.utils.vault.is_v2(path)
     if version2["v2"]:
         path = version2["data"]
     try:
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("DELETE", url)
+        response = salt.utils.vault.make_request("DELETE", url)
         if response.status_code != 204:
             response.raise_for_status()
         return True
@@ -341,7 +342,7 @@ def destroy_secret(path, *args):
     """
     log.debug("Destroying vault secrets for %s in %s", __grains__["id"], path)
     data = {"versions": list(args)}
-    version2 = __utils__["vault.is_v2"](path)
+    version2 = salt.utils.vault.is_v2(path)
     if version2["v2"]:
         path = version2["destroy"]
     else:
@@ -349,7 +350,7 @@ def destroy_secret(path, *args):
         return False
     try:
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("POST", url, json=data)
+        response = salt.utils.vault.make_request("POST", url, json=data)
         if response.status_code != 204:
             response.raise_for_status()
         return True
@@ -377,12 +378,12 @@ def list_secrets(path, default=None):
     if default is None:
         default = CommandExecutionError
     log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
-    version2 = __utils__["vault.is_v2"](path)
+    version2 = salt.utils.vault.is_v2(path)
     if version2["v2"]:
         path = version2["metadata"]
     try:
         url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("LIST", url)
+        response = salt.utils.vault.make_request("LIST", url)
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()["data"]

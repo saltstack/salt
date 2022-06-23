@@ -46,6 +46,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 import logging
 import time
 
+import salt.utils.botomod
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.json
@@ -84,13 +85,13 @@ def __virtual__():
         boto_ver="2.8.0", check_boto3=False
     )
     if has_boto_reqs is True:
-        __utils__["boto.assign_funcs"](__name__, "ec2", pack=__salt__)
+        salt.utils.botomod.assign_funcs(__name__, "ec2", pack=__salt__)
     return has_boto_reqs
 
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__["boto.assign_funcs"](__name__, "ec2")
+        salt.utils.botomod.assign_funcs(__name__, "ec2")
 
 
 def _get_all_eip_addresses(
@@ -1664,7 +1665,7 @@ def get_network_interface_id(name, region=None, key=None, keyid=None, profile=No
             eni = enis[0]
             r["result"] = eni.id
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
     return r
 
 
@@ -1720,7 +1721,7 @@ def _get_network_interface(conn, name=None, network_interface_id=None):
             eni = enis[0]
             r["result"] = eni
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
     return r
 
 
@@ -1839,7 +1840,7 @@ def create_network_interface(
         )
         eni.add_tag("Name", name)
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
         return r
     r["result"] = _describe_network_interface(eni)
     return r
@@ -1883,7 +1884,7 @@ def delete_network_interface(
     try:
         r["result"] = conn.delete_network_interface(network_interface_id)
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
     return r
 
 
@@ -1948,7 +1949,7 @@ def attach_network_interface(
             network_interface_id, instance_id, device_index
         )
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
     return r
 
 
@@ -1993,7 +1994,7 @@ def detach_network_interface(
     try:
         r["result"] = conn.detach_network_interface(attachment_id, force)
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
     return r
 
 
@@ -2074,7 +2075,7 @@ def modify_network_interface_attribute(
             network_interface_id, _attr, _value, attachment_id=_attachment_id
         )
     except boto.exception.EC2ResponseError as e:
-        r["error"] = __utils__["boto.get_error"](e)
+        r["error"] = salt.utils.botomod.get_error(e)
     return r
 
 
@@ -2632,5 +2633,5 @@ def create_volume(
         else:
             ret["result"] = vol.id
     except boto.exception.BotoServerError as error:
-        ret["error"] = __utils__["boto.get_error"](error)
+        ret["error"] = salt.utils.botomod.get_error(error)
     return ret
