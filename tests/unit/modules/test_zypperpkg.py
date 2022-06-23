@@ -391,6 +391,73 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 zypper_mock.assert_called_with(
                     ["zypper", "--non-interactive", "refresh", "--force"], **call_kwargs
                 )
+                zypper.refresh_db(gpgautoimport=True)
+                zypper_mock.assert_called_with(
+                    [
+                        "zypper",
+                        "--non-interactive",
+                        "--gpg-auto-import-keys",
+                        "refresh",
+                        "--force",
+                    ],
+                    **call_kwargs
+                )
+                zypper.refresh_db(gpgautoimport=True, force=True)
+                zypper_mock.assert_called_with(
+                    [
+                        "zypper",
+                        "--non-interactive",
+                        "--gpg-auto-import-keys",
+                        "refresh",
+                        "--force",
+                    ],
+                    **call_kwargs
+                )
+                zypper.refresh_db(gpgautoimport=True, force=False)
+                zypper_mock.assert_called_with(
+                    [
+                        "zypper",
+                        "--non-interactive",
+                        "--gpg-auto-import-keys",
+                        "refresh",
+                    ],
+                    **call_kwargs
+                )
+                zypper.refresh_db(
+                    gpgautoimport=True,
+                    refresh=True,
+                    repos="mock-repo-name",
+                    root=None,
+                    url="http://repo.url/some/path",
+                )
+                zypper_mock.assert_called_with(
+                    [
+                        "zypper",
+                        "--non-interactive",
+                        "--gpg-auto-import-keys",
+                        "refresh",
+                        "--force",
+                        "mock-repo-name",
+                    ],
+                    **call_kwargs
+                )
+                zypper.refresh_db(
+                    gpgautoimport=True,
+                    repos="mock-repo-name",
+                    root=None,
+                    url="http://repo.url/some/path",
+                )
+                zypper_mock.assert_called_with(
+                    [
+                        "zypper",
+                        "--non-interactive",
+                        "--gpg-auto-import-keys",
+                        "refresh",
+                        "--force",
+                        "mock-repo-name",
+                    ],
+                    **call_kwargs
+                )
 
     def test_info_installed(self):
         """

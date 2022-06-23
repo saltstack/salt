@@ -1398,7 +1398,7 @@ def mod_repo(repo, **kwargs):
     return repo
 
 
-def refresh_db(force=None, root=None):
+def refresh_db(force=None, root=None, **kwargs):
     """
     Trigger a repository refresh by calling ``zypper refresh``. Refresh will run
     with ``--force`` if the "force=True" flag is passed on the CLI or
@@ -1408,6 +1408,17 @@ def refresh_db(force=None, root=None):
     It will return a dict::
 
         {'<database name>': Bool}
+
+    gpgautoimport : False
+        If set to True, automatically trust and import public GPG key for
+        the repository.
+
+        .. versionadded:: 3005
+
+    repos
+        Refresh just the specified repos
+
+        .. versionadded:: 3005
 
     root
         operate on a different root directory.
@@ -1429,11 +1440,18 @@ def refresh_db(force=None, root=None):
     salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
     refresh_opts = ["refresh"]
+    global_opts = []
     if force is None:
         force = __pillar__.get("zypper", {}).get("refreshdb_force", True)
     if force:
         refresh_opts.append("--force")
-    out = __zypper__(root=root).refreshable.call(*refresh_opts)
+    repos = kwargs.get("repos", [])
+    refresh_opts.extend([repos] if not isinstance(repos, list) else repos)
+
+    if kwargs.get("gpgautoimport", False):
+        global_opts.append("--gpg-auto-import-keys")
+
+    out = __zypper__(root=root).refreshable.call(*global_opts, *refresh_opts)
 
     for line in out.splitlines():
         if not line:
