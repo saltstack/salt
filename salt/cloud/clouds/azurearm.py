@@ -294,7 +294,9 @@ def get_conn(client_type):
         )
         conn_kwargs.update({"username": username, "password": password})
 
-    client = salt.utils.azurearm.get_client(client_type=client_type, **conn_kwargs)
+    client = salt.utils.azurearm.get_client(
+        __salt__["config.option"], client_type=client_type, **conn_kwargs
+    )
 
     return client
 
