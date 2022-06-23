@@ -321,6 +321,7 @@ def create(vm_):
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
         args=salt.utils.cloud.filter_event(
+            __opts__,
             "creating",
             vm_,
             ["name", "profile", "provider", "driver"],
@@ -441,6 +442,7 @@ def create(vm_):
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
         args=salt.utils.cloud.filter_event(
+            __opts__,
             "created",
             vm_,
             ["name", "profile", "provider", "driver"],
