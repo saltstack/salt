@@ -1610,15 +1610,17 @@ def install(
                     if ignore_epoch is True:
                         version_num = version_num.split(":", 1)[-1]
                 arch = ""
-                if kwargs.get("split_arch", True):
-                    try:
-                        namepart, archpart = pkgname.rsplit(".", 1)
-                    except ValueError:
-                        pass
-                    else:
-                        if archpart in salt.utils.pkg.rpm.ARCHES:
-                            arch = "." + archpart
-                            pkgname = namepart
+                try:
+                    namepart, archpart = pkgname.rsplit(".", 1)
+                except ValueError:
+                    pass
+                else:
+                    if archpart in salt.utils.pkg.rpm.ARCHES and (
+                        archpart != __grains__["osarch"]
+                        or kwargs.get("split_arch", True)
+                    ):
+                        arch = "." + archpart
+                        pkgname = namepart
 
                 if "*" in version_num:
                     # Resolve wildcard matches
@@ -2167,15 +2169,16 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         elif target in old and version_to_remove in old[target].split(","):
             arch = ""
             pkgname = target
-            if kwargs.get("split_arch", True):
-                try:
-                    namepart, archpart = pkgname.rsplit(".", 1)
-                except ValueError:
-                    pass
-                else:
-                    if archpart in salt.utils.pkg.rpm.ARCHES:
-                        arch = "." + archpart
-                        pkgname = namepart
+            try:
+                namepart, archpart = pkgname.rsplit(".", 1)
+            except ValueError:
+                pass
+            else:
+                if archpart in salt.utils.pkg.rpm.ARCHES and (
+                    archpart != __grains__["osarch"] or kwargs.get("split_arch", True)
+                ):
+                    arch = "." + archpart
+                    pkgname = namepart
             # Since we don't always have the arch info, epoch information has to parsed out. But
             # a version check was already performed, so we are removing the right version.
             targets.append(
