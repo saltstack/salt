@@ -62,6 +62,7 @@ Usage:
 import logging
 import re
 import tempfile
+from functools import lru_cache
 
 import salt.modules.cmdmod
 import salt.utils.files
@@ -216,14 +217,13 @@ def get_setting(name):
     raise KeyError("Invalid name: {}".format(name))
 
 
+@lru_cache(maxsize=1, typed=False)
 def _get_valid_names():
-    if "auditpol.valid_names" not in __context__:
-        settings = get_settings(category="All")
-        __context__["auditpol.valid_names"] = [k.lower() for k in settings]
-    return __context__["auditpol.valid_names"]
+    settings = get_settings(category="All")
+    return [k.lower() for k in settings]
 
 
-def set_setting(name, value):
+def set_setting(name, value, context):
     """
     Set the configuration for the named audit setting
 
