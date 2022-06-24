@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import os
+import re
+import sys
+
+bin_path = os.path.dirname(os.path.abspath(__file__))
+if bin_path.endswith("bin"):
+    prefix_path = os.path.dirname(bin_path)
+else:
+    prefix_path = bin_path
+
+
+# Pin to the python in our directory
+sys.prefix = prefix_path
+sys.exec_prefix = prefix_path
+
+# Remove paths outside of our python location
+path = []
+for i in list(sys.path):
+    if i.startswith(sys.prefix):
+        path.append(i)
+sys.path = path
+
+# isort: off
+
+from pip._internal.cli.main import main
+from pip._vendor.distlib.scripts import ScriptMaker
+
+# isort: on
+
+ScriptMaker.script_template = r"""# -*- coding: utf-8 -*-
+import os
+import re
+import sys
+
+bin_path = os.path.dirname(os.path.abspath(__file__))
+if bin_path.endswith("bin"):
+    prefix_path = os.path.dirname(bin_path)
+else:
+    prefix_path = bin_path
+
+# Pin to the python in our directory
+sys.prefix = prefix_path
+sys.exec_prefix = prefix_path
+
+# Remove paths outside of our python location
+path = []
+for i in list(sys.path):
+    if i.startswith(sys.prefix):
+        path.append(i)
+sys.path = path
+
+from %(module)s import %(import_name)s
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(%(func)s())
+"""
+
+
+if __name__ == "__main__":
+    sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
+    sys.exit(main())
