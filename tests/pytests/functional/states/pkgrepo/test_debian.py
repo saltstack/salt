@@ -585,11 +585,17 @@ class Repo:
             opts = " "
             if self.signedby:
                 opts = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] "
-            repo_content = "deb{}https://artifacts.elastic.co/packages/8.x/apt stable main".format(opts)
+            repo_content = (
+                "deb{}https://artifacts.elastic.co/packages/8.x/apt stable main".format(
+                    opts
+                )
+            )
         else:
             opts = "[arch={arch}]".format(arch=self.grains["osarch"])
             if self.signedby:
-                opts = "[arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]".format(arch=self.grains["osarch"])
+                opts = "[arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]".format(
+                    arch=self.grains["osarch"]
+                )
             repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
                 self.fullname,
                 self.grains["lsb_distrib_release"],
@@ -612,9 +618,9 @@ class Repo:
 
 @pytest.fixture
 def repo(request, grains, tmp_path):
-    signedby=False
+    signedby = False
     if "signedby" in request.node.name:
-        signedby=True
+        signedby = True
     repo = Repo(grains=grains, tmp_path=tmp_path, signedby=signedby)
     yield repo
     if repo.key_file.is_file():
