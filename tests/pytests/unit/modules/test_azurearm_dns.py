@@ -1,28 +1,14 @@
 import logging
 
 import pytest
-import salt.config
-import salt.loader
 import salt.modules.azurearm_dns as azurearm_dns
-from tests.support.mock import MagicMock
-from tests.support.sminion import create_sminion
+import salt.modules.config
+from tests.support.mock import MagicMock, patch
 
-HAS_LIBS = False
-try:
-    import azure.mgmt.dns.models  # pylint: disable=import-error
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
+azure_mgmt_dns_models = pytest.importorskip("azure.mgmt.dns.models")
 
 
 log = logging.getLogger(__name__)
-
-pytestmark = [
-    pytest.mark.skipif(
-        HAS_LIBS is False, reason="The azure.mgmt.dns module must be installed."
-    ),
-]
 
 
 class AzureObjMock:
@@ -116,15 +102,14 @@ def configure_loader_modules():
     """
     setup loader modules and override the azurearm.get_client utility
     """
-    minion_config = create_sminion().opts.copy()
-    utils = salt.loader.utils(minion_config)
-    funcs = salt.loader.minion_mods(
-        minion_config, utils=utils, whitelist=["azurearm_dns", "config"]
-    )
-    utils["azurearm.get_client"] = AzureClientMock()
-    return {
-        azurearm_dns: {"__utils__": utils, "__salt__": funcs},
-    }
+    with patch("salt.utils.azurearm.get_client", AzureClientMock()):
+        yield {
+            azurearm_dns: {
+                "__salt__": {
+                    "config.option": salt.modules.config.option,
+                }
+            },
+        }
 
 
 def test_record_set_create_or_update(credentials):
@@ -152,7 +137,7 @@ def test_record_set_create_or_update(credentials):
     )
 
     for key, val in record_set_kwargs.items():
-        if isinstance(val, azure.mgmt.dns.models.RecordSet):
+        if isinstance(val, azure_mgmt_dns_models.RecordSet):
             record_set_kwargs[key] = val.as_dict()
 
     assert record_set_kwargs == expected
@@ -175,7 +160,7 @@ def test_zone_create_or_update(credentials):
     )
 
     for key, val in zone_kwargs.items():
-        if isinstance(val, azure.mgmt.dns.models.Zone):
+        if isinstance(val, azure_mgmt_dns_models.Zone):
             zone_kwargs[key] = val.as_dict()
 
     assert zone_kwargs == expected

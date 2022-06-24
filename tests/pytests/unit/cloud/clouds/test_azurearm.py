@@ -1,8 +1,13 @@
 import types
 
 import pytest
+import salt.modules.config
 from salt.cloud.clouds import azurearm as azure
 from tests.support.mock import MagicMock, create_autospec, patch
+
+pytestmark = [
+    pytest.mark.skipif(not azure.HAS_LIBS, reason="azure not available"),
+]
 
 
 def copy_func(func, globals=None):
@@ -50,10 +55,16 @@ def mock_module(mod, sut=None):
 
 @pytest.fixture
 def configure_loader_modules():
-    return {azure: {"__opts__": {}, "__active_provider_name__": None}}
+    return {
+        azure: {
+            "__salt__": {
+                "config.option": salt.modules.config.option,
+            },
+            "__active_provider_name__": None,
+        }
+    }
 
 
-@pytest.mark.skipif(not azure.HAS_LIBS, reason="azure not available")
 def test_function_signatures():
     mock_azure = mock_module(azure, sut=["request_instance", "__opts__", "__utils__"])
     mock_azure.create_network_interface.return_value = [
@@ -85,11 +96,7 @@ def test_function_signatures():
     mock_azure.get_conn.return_value.virtual_machines.create_or_update.assert_called_once()
 
 
-def test_get_configured_provider():
-    mock_azure = mock_module(
-        azure, sut=["get_configured_provider", "__opts__", "__utils__"]
-    )
-
+def test_get_configured_provider(subtests):
     good_combos = [
         {
             "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
@@ -106,8 +113,11 @@ def test_get_configured_provider():
     ]
 
     for combo in good_combos:
-        mock_azure.__opts__["providers"] = {"azure_test": {"azurearm": combo}}
-        assert azure.get_configured_provider() == combo
+        with subtests.test(combo=combo):
+            with patch.dict(
+                azure.__opts__, providers={"azure_test": {"azurearm": combo}}
+            ):
+                assert azure.get_configured_provider() == combo
 
     bad_combos = [
         {"subscrption": "3287abc8-f98a-c678-3bde-326766fd3617"},
@@ -115,46 +125,52 @@ def test_get_configured_provider():
     ]
 
     for combo in bad_combos:
-        mock_azure.__opts__["providers"] = {"azure_test": {"azurearm": combo}}
-        assert not azure.get_configured_provider()
+        with subtests.test(combo=combo):
+            with patch.dict(
+                azure.__opts__, providers={"azure_test": {"azurearm": combo}}
+            ):
+                assert not azure.get_configured_provider()
 
 
 def test_get_conn():
-    mock_azure = mock_module(azure, sut=["get_conn", "__opts__", "__utils__"])
+    def mocked_get_client(config_option_func=None, client_type=None, **kw):
+        return kw
 
-    mock_azure.__opts__["providers"] = {
-        "azure_test": {
-            "azurearm": {
-                "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
-                "driver": "azurearm",
-                "password": "monkeydonkey",
+    with patch.dict(
+        azure.__opts__,
+        providers={
+            "azure_test": {
+                "azurearm": {
+                    "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
+                    "driver": "azurearm",
+                    "password": "monkeydonkey",
+                }
             }
-        }
-    }
-    # password is stripped if username not provided
-    expected = {"subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617"}
-    with patch(
-        "salt.utils.azurearm.get_client", side_effect=lambda client_type, **kw: kw
+        },
     ):
-        assert azure.get_conn(client_type="compute") == expected
+        # password is stripped if username not provided
+        expected = {"subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617"}
+        with patch("salt.utils.azurearm.get_client", side_effect=mocked_get_client):
+            assert azure.get_conn(client_type="compute") == expected
 
-    mock_azure.__opts__["providers"] = {
-        "azure_test": {
-            "azurearm": {
-                "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
-                "driver": "azurearm",
-                "username": "donkeymonkey",
-                "password": "monkeydonkey",
+    with patch.dict(
+        azure.__opts__,
+        providers={
+            "azure_test": {
+                "azurearm": {
+                    "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
+                    "driver": "azurearm",
+                    "username": "donkeymonkey",
+                    "password": "monkeydonkey",
+                }
             }
-        }
-    }
-    # username and password via provider config
-    expected = {
-        "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
-        "username": "donkeymonkey",
-        "password": "monkeydonkey",
-    }
-    with patch(
-        "salt.utils.azurearm.get_client", side_effect=lambda client_type, **kw: kw
+        },
     ):
-        assert azure.get_conn(client_type="compute") == expected
+        # username and password via provider config
+        expected = {
+            "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
+            "username": "donkeymonkey",
+            "password": "monkeydonkey",
+        }
+        with patch("salt.utils.azurearm.get_client", side_effect=mocked_get_client):
+            assert azure.get_conn(client_type="compute") == expected
