@@ -8,7 +8,7 @@ import salt.exceptions
 import salt.ext.tornado
 import salt.transport.tcp
 from pytestshellutils.utils import ports
-from tests.support.mock import MagicMock, PropertyMock, create_autospec, patch
+from tests.support.mock import MagicMock, PropertyMock, patch
 
 
 @pytest.fixture
@@ -394,54 +394,15 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
         "id": "syndic",
         "__role": "syndic",
         "keysize": 4096,
+        "transport": "tcp",
+        "acceptance_wait_time": 30,
+        "acceptance_wait_time_max": 30,
     }
-    client = salt.transport.tcp.AsyncTCPReqChannel(opts, io_loop=mockloop)
-
-    dictkey = "pillar"
-    target = "minion"
-
-    # Mock auth and message client.
-    client.auth._authenticate_future = MagicMock()
-    client.auth._authenticate_future.done.return_value = True
-    client.auth._authenticate_future.exception.return_value = None
-    client.auth._crypticle = MagicMock()
-    client.message_client = create_autospec(client.message_client)
-
-    @salt.ext.tornado.gen.coroutine
-    def mocksend(msg, timeout=60, tries=3):
-        raise salt.ext.tornado.gen.Return({"pillar": "data", "key": "value"})
-
-    client.message_client.send = mocksend
-
-    # Note the 'ver' value in 'load' does not represent the the 'version' sent
-    # in the top level of the transport's message.
-    load = {
-        "id": target,
-        "grains": {},
-        "saltenv": "base",
-        "pillarenv": "base",
-        "pillar_override": True,
-        "extra_minion_data": {},
-        "ver": "2",
-        "cmd": "_pillar",
-    }
-    fake_nonce = 42
-    with patch(
-        "salt.crypt.verify_signature", autospec=True, return_value=True
-    ) as fake_verify, patch(
-        "salt.payload.loads",
-        autospec=True,
-        return_value={"key": "value", "nonce": fake_nonce, "pillar": "data"},
-    ), patch(
-        "uuid.uuid4", autospec=True
-    ) as fake_uuid:
-        fake_uuid.return_value.hex = fake_nonce
-        ret = await client.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
-
-        assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
+    client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
+    assert client.master_pubkey_path == expected_pubkey_path
+    with patch("salt.crypt.verify_signature") as mock:
+        client.verify_signature("mockdata", "mocksig")
+        assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
 
 async def test_mixin_should_use_correct_path_when_syndic(
@@ -460,24 +421,11 @@ async def test_mixin_should_use_correct_path_when_syndic(
         "__role": "syndic",
         "keysize": 4096,
         "sign_pub_messages": True,
+        "transport": "tcp",
     }
-
-    with patch(
-        "salt.crypt.verify_signature", autospec=True, return_value=True
-    ) as fake_verify, patch(
-        "salt.utils.msgpack.loads",
-        autospec=True,
-        return_value={"enc": "aes", "load": "", "sig": "fake_signature"},
-    ):
-        client = salt.transport.tcp.AsyncTCPPubChannel(opts, io_loop=mockloop)
-        client.message_client = MagicMock()
-        client.message_client.on_recv.side_effect = lambda x: x(b"some_data")
-        await client.connect()
-        client.auth._crypticle = fake_crypticle
-
-        @client.on_recv
-        def test_recv_function(*args, **kwargs):
-            ...
-
-        await test_recv_function
-        assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
+    client = salt.channel.client.AsyncPubChannel.factory(opts, io_loop=mockloop)
+    client.master_pubkey_path = expected_pubkey_path
+    payload = {"sig": "abc", "load": {"foo": "bar"}}
+    with patch("salt.crypt.verify_signature") as mock:
+        client._verify_master_signature(payload)
+        assert mock.call_args_list[0][0][0] == expected_pubkey_path

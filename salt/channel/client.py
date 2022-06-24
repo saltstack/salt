@@ -135,6 +135,9 @@ class AsyncReqChannel:
         self.opts = dict(opts)
         self.transport = transport
         self.auth = auth
+        self.master_pubkey_path = None
+        if self.auth:
+            self.master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
         self._closing = False
 
     @property
@@ -188,10 +191,7 @@ class AsyncReqChannel:
         signed_msg = pcrypt.loads(ret[dictkey])
 
         # Validate the master's signature.
-        master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
-        if not salt.crypt.verify_signature(
-            master_pubkey_path, signed_msg["data"], signed_msg["sig"]
-        ):
+        if not self.verify_signature(signed_msg["data"], signed_msg["sig"]):
             raise salt.crypt.AuthenticationError(
                 "Pillar payload signature failed to validate."
             )
@@ -205,6 +205,9 @@ class AsyncReqChannel:
         if data["nonce"] != nonce:
             raise salt.crypt.AuthenticationError("Pillar nonce verification failed.")
         raise salt.ext.tornado.gen.Return(data["pillar"])
+
+    def verify_signature(self, data, sig):
+        return salt.crypt.verify_signature(self.master_pubkey_path, data, sig)
 
     @salt.ext.tornado.gen.coroutine
     def _crypted_transfer(self, load, timeout=60, raw=False):
@@ -367,6 +370,7 @@ class AsyncPubChannel:
         self._closing = False
         self._reconnected = False
         self.event = salt.utils.event.get_event("minion", opts=self.opts, listen=False)
+        self.master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
 
     @property
     def crypt(self):
@@ -379,6 +383,7 @@ class AsyncPubChannel:
         """
         try:
             if not self.auth.authenticated:
+                log.error("WTF %r %r", self.auth.authenticated, self.auth.authenticate)
                 yield self.auth.authenticate()
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4506)) != 4506:
@@ -536,9 +541,8 @@ class AsyncPubChannel:
                 )
 
             # Verify that the signature is valid
-            master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
             if not salt.crypt.verify_signature(
-                master_pubkey_path, payload["load"], payload.get("sig")
+                self.master_pubkey_path, payload["load"], payload.get("sig")
             ):
                 raise salt.crypt.AuthenticationError(
                     "Message signature failed to validate."

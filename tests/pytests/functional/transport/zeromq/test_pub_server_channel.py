@@ -45,7 +45,7 @@ class RecvError(Exception):
 
 class Collector(salt.utils.process.SignalHandlingProcess):
     def __init__(
-        self, minion_config, interface, port, aes_key, timeout=30, zmq_filtering=False
+        self, minion_config, interface, port, aes_key, timeout=300, zmq_filtering=False
     ):
         super().__init__()
         self.minion_config = minion_config
@@ -122,13 +122,11 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
-                serial_payload = salt.payload.loads(msg["body"])
-                raise salt.ext.tornado.gen.Return(serial_payload)
+                raise salt.ext.tornado.gen.Return(msg["body"])
             byts = yield self.sock.read_bytes(8096, partial=True)
             self.unpacker.feed(byts)
             for msg in self.unpacker:
-                serial_payload = salt.payload.loads(msg["body"])
-                raise salt.ext.tornado.gen.Return(serial_payload)
+                raise salt.ext.tornado.gen.Return(msg["body"])
             raise RecvError("TCP Error")
 
     @salt.ext.tornado.gen.coroutine
@@ -235,7 +233,11 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.queue = multiprocessing.Queue()
         self.stopped = multiprocessing.Event()
         self.collector = Collector(
-            self.minion_config, self.pub_uri, self.aes_key, **self.collector_kwargs
+            self.minion_config,
+            self.master_config["interface"],
+            self.master_config["publish_port"],
+            self.aes_key,
+            **self.collector_kwargs
         )
 
     def run(self):
@@ -275,7 +277,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __enter__(self):
         self.start()
         self.collector.__enter__()
-        attempts = 60
+        attempts = 300
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
