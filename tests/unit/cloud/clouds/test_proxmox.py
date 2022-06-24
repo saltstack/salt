@@ -2,12 +2,34 @@
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
+import io
 import textwrap
 
+import requests
+from salt import config
 from salt.cloud.clouds import proxmox
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
+
+PROFILE = {
+    "my_proxmox": {
+        "provider": "my_proxmox",
+        "image": "local:some_image.tgz",
+    }
+}
+PROVIDER_CONFIG = {
+    "my_proxmox": {
+        "proxmox": {
+            "driver": "proxmox",
+            "url": "pve@domain.com",
+            "user": "cloud@pve",
+            "password": "verybadpass",
+            "profiles": PROFILE,
+        }
+    }
+}
 
 
 class ProxmoxTest(TestCase, LoaderModuleMockMixin):
@@ -22,8 +44,8 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 "__opts__": {
                     "sock_dir": True,
                     "transport": True,
-                    "providers": {"my_proxmox": {}},
-                    "profiles": {"my_proxmox": {}},
+                    "providers": PROVIDER_CONFIG,
+                    "profiles": PROFILE,
                 },
                 "__active_provider_name__": "my_proxmox:proxmox",
             }
@@ -261,4 +283,87 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
         with patch("requests.get", requests_get_mock):
             proxmox._import_api()
         self.assertEqual(proxmox.api, [{"info": {}}])
+        return
+
+    def test__authenticate_success(self):
+        response = requests.Response()
+        response.status_code = 200
+        response.reason = "OK"
+        response.raw = io.BytesIO(
+            b"""{"data":{"CSRFPreventionToken":"01234567:dG9rZW4=","ticket":"PVE:cloud@pve:01234567::dGlja2V0"}}"""
+        )
+        with patch("requests.post", return_value=response):
+            proxmox._authenticate()
+        assert proxmox.csrf and proxmox.ticket
+        return
+
+    def test__authenticate_failure(self):
+        """
+        Confirm that authentication failure raises an exception.
+        """
+        response = requests.Response()
+        response.status_code = 401
+        response.reason = "authentication failure"
+        response.raw = io.BytesIO(b"""{"data":null}""")
+        with patch("requests.post", return_value=response):
+            self.assertRaises(requests.exceptions.HTTPError, proxmox._authenticate)
+        return
+
+    def test_creation_failure_logging(self):
+        """
+        Test detailed logging on HTTP errors during VM creation.
+        """
+        vm_ = {
+            "profile": "my_proxmox",
+            "name": "vm4",
+            "technology": "lxc",
+            "host": "127.0.0.1",
+            "image": "local:some_image.tgz",
+            "onboot": True,
+        }
+        self.assertEqual(
+            config.is_profile_configured(
+                proxmox.__opts__, "my_proxmox:proxmox", "my_proxmox", vm_=vm_
+            ),
+            True,
+        )
+
+        response = requests.Response()
+        response.status_code = 400
+        response.reason = "Parameter verification failed."
+        response.raw = io.BytesIO(
+            b"""{"data":null,"errors":{"onboot":"type check ('boolean') failed - got 'True'"}}"""
+        )
+
+        def mock_query_response(conn_type, option, post_data=None):
+            if conn_type == "get" and option == "cluster/nextid":
+                return 104
+            if conn_type == "post" and option == "nodes/127.0.0.1/lxc":
+                response.raise_for_status()
+                return response
+            return None
+
+        with patch.object(
+            proxmox, "query", side_effect=mock_query_response
+        ), patch.object(
+            proxmox, "_get_properties", return_value=set()
+        ), TstSuiteLoggingHandler() as log_handler:
+            self.assertEqual(proxmox.create(vm_), False)
+
+            # Search for these messages in a multi-line log entry.
+            missing = {
+                "{} Client Error: {} for url:".format(
+                    response.status_code, response.reason
+                ),
+                response.text,
+            }
+            for required in list(missing):
+                for message in log_handler.messages:
+                    if required in message:
+                        missing.remove(required)
+                        break
+            if missing:
+                raise AssertionError(
+                    "Did not find error messages: {}".format(sorted(list(missing)))
+                )
         return

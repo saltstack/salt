@@ -136,7 +136,9 @@ def _authenticate():
     connect_data = {"username": username, "password": passwd}
     full_url = "https://{}:{}/api2/json/access/ticket".format(url, port)
 
-    returned_data = requests.post(full_url, verify=verify_ssl, data=connect_data).json()
+    response = requests.post(full_url, verify=verify_ssl, data=connect_data)
+    response.raise_for_status()
+    returned_data = response.json()
 
     ticket = {"PVEAuthCookie": returned_data["data"]["ticket"]}
     csrf = str(returned_data["data"]["CSRFPreventionToken"])
@@ -655,12 +657,18 @@ def create(vm_):
         newid = _get_next_vmid()
         data = create_node(vm_, newid)
     except Exception as exc:  # pylint: disable=broad-except
+        msg = str(exc)
+        if (
+            isinstance(exc, requests.exceptions.RequestException)
+            and exc.response is not None
+        ):
+            msg = msg + "\n" + exc.response.text
         log.error(
             "Error creating %s on PROXMOX\n\n"
             "The following exception was thrown when trying to "
             "run the initial deployment: \n%s",
             vm_["name"],
-            exc,
+            msg,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
