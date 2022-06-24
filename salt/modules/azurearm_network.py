@@ -51,16 +51,11 @@ Azure (ARM) Network Execution Module
 
 """
 
-# Python libs
-
 import logging
 
-# Salt libs
 import salt.utils.azurearm
 from salt.exceptions import SaltInvocationError  # pylint: disable=unused-import
 
-# Azure libs
-HAS_LIBS = False
 try:
     import azure.mgmt.network.models  # pylint: disable=unused-import
     from msrest.exceptions import SerializationError
@@ -68,7 +63,7 @@ try:
 
     HAS_LIBS = True
 except ImportError:
-    pass
+    HAS_LIBS = False
 
 __virtualname__ = "azurearm_network"
 
@@ -105,7 +100,11 @@ def check_dns_name_availability(name, region, **kwargs):
         salt-call azurearm_network.check_dns_name_availability testdnsname westus
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         check_dns_name = netconn.check_dns_name_availability(
             location=region, domain_name_label=name
@@ -143,7 +142,11 @@ def check_ip_address_availability(
         salt-call azurearm_network.check_ip_address_availability 10.0.0.4 testnet testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         check_ip = netconn.virtual_networks.check_ip_address_availability(
             resource_group_name=resource_group,
@@ -258,7 +261,11 @@ def security_rules_list(security_group, resource_group, **kwargs):
         salt-call azurearm_network.security_rules_list testnsg testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secrules = netconn.security_rules.list(
             network_security_group_name=security_group,
@@ -378,7 +385,11 @@ def security_rule_create_or_update(
             # pylint: disable=exec-used
             exec("{} = None".format(params[1]))
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         rulemodel = __utils__["azurearm.create_object_model"](
@@ -397,7 +408,7 @@ def security_rule_create_or_update(
             destination_port_range=destination_port_range,
             destination_address_prefixes=destination_address_prefixes,
             destination_address_prefix=destination_address_prefix,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
@@ -447,7 +458,11 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secrule = netconn.security_rules.delete(
             network_security_group_name=security_group,
@@ -484,7 +499,11 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
         salt-call azurearm_network.security_rule_get testrule1 testnsg testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secrule = netconn.security_rules.get(
             network_security_group_name=security_group,
@@ -530,7 +549,11 @@ def network_security_group_create_or_update(
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         secgroupmodel = __utils__["azurearm.create_object_model"](
@@ -580,7 +603,11 @@ def network_security_group_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secgroup = netconn.network_security_groups.delete(
             resource_group_name=resource_group, network_security_group_name=name
@@ -612,7 +639,11 @@ def network_security_group_get(name, resource_group, **kwargs):
         salt-call azurearm_network.network_security_group_get testnsg testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secgroup = netconn.network_security_groups.get(
             resource_group_name=resource_group, network_security_group_name=name
@@ -643,7 +674,11 @@ def network_security_groups_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secgroups = __utils__["azurearm.paged_object_to_list"](
             netconn.network_security_groups.list(resource_group_name=resource_group)
@@ -672,7 +707,11 @@ def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         secgroups = __utils__["azurearm.paged_object_to_list"](
             netconn.network_security_groups.list_all()
@@ -706,7 +745,11 @@ def subnets_list(virtual_network, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         subnets = __utils__["azurearm.paged_object_to_list"](
             netconn.subnets.list(
@@ -745,7 +788,11 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
         salt-call azurearm_network.subnet_get testsubnet testnet testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         subnet = netconn.subnets.get(
             resource_group_name=resource_group,
@@ -788,14 +835,18 @@ def subnet_create_or_update(
                   '10.0.0.0/24' testnet testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     # Use NSG name to link to the ID of an existing NSG.
     if kwargs.get("network_security_group"):
         nsg = network_security_group_get(
             name=kwargs["network_security_group"],
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
         if "error" not in nsg:
             kwargs["network_security_group"] = {"id": str(nsg["id"])}
@@ -814,7 +865,7 @@ def subnet_create_or_update(
             "Subnet",
             address_prefix=address_prefix,
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
@@ -864,7 +915,11 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         subnet = netconn.subnets.delete(
             resource_group_name=resource_group,
@@ -894,7 +949,11 @@ def virtual_networks_list_all(**kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         vnets = __utils__["azurearm.paged_object_to_list"](
             netconn.virtual_networks.list_all()
@@ -927,7 +986,11 @@ def virtual_networks_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         vnets = __utils__["azurearm.paged_object_to_list"](
             netconn.virtual_networks.list(resource_group_name=resource_group)
@@ -981,7 +1044,11 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
         log.error("Address prefixes must be specified as a list!")
         return False
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     address_space = {"address_prefixes": address_prefixes}
     dhcp_options = {"dns_servers": kwargs.get("dns_servers")}
@@ -992,7 +1059,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
             "VirtualNetwork",
             address_space=address_space,
             dhcp_options=dhcp_options,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
@@ -1038,7 +1105,11 @@ def virtual_network_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         vnet = netconn.virtual_networks.delete(
             virtual_network_name=name, resource_group_name=resource_group
@@ -1070,7 +1141,11 @@ def virtual_network_get(name, resource_group, **kwargs):
         salt-call azurearm_network.virtual_network_get testnet testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         vnet = netconn.virtual_networks.get(
             virtual_network_name=name, resource_group_name=resource_group
@@ -1098,7 +1173,11 @@ def load_balancers_list_all(**kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         load_balancers = __utils__["azurearm.paged_object_to_list"](
             netconn.load_balancers.list_all()
@@ -1131,7 +1210,11 @@ def load_balancers_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         load_balancers = __utils__["azurearm.paged_object_to_list"](
             netconn.load_balancers.list(resource_group_name=resource_group)
@@ -1165,7 +1248,11 @@ def load_balancer_get(name, resource_group, **kwargs):
         salt-call azurearm_network.load_balancer_get testlb testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         load_balancer = netconn.load_balancers.get(
             load_balancer_name=name, resource_group_name=resource_group
@@ -1207,7 +1294,11 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     if isinstance(kwargs.get("frontend_ip_configurations"), list):
         for idx in range(0, len(kwargs["frontend_ip_configurations"])):
@@ -1216,7 +1307,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                 pub_ip = public_ip_address_get(
                     name=kwargs["frontend_ip_configurations"][idx]["public_ip_address"],
                     resource_group=resource_group,
-                    **kwargs
+                    **kwargs,
                 )
                 if "error" not in pub_ip:
                     kwargs["frontend_ip_configurations"][idx]["public_ip_address"] = {
@@ -1230,7 +1321,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                         subnets = subnets_list(
                             virtual_network=vnet,
                             resource_group=resource_group,
-                            **kwargs
+                            **kwargs,
                         )
                         if (
                             kwargs["frontend_ip_configurations"][idx]["subnet"]
@@ -1385,7 +1476,11 @@ def load_balancer_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         load_balancer = netconn.load_balancers.delete(
             load_balancer_name=name, resource_group_name=resource_group
@@ -1414,7 +1509,11 @@ def usages_list(location, **kwargs):
         salt-call azurearm_network.usages_list westus
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         result = __utils__["azurearm.paged_object_to_list"](
             netconn.usages.list(location)
@@ -1447,7 +1546,11 @@ def network_interface_delete(name, resource_group, **kwargs):
     """
     result = False
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nic = netconn.network_interfaces.delete(
             network_interface_name=name, resource_group_name=resource_group
@@ -1479,7 +1582,11 @@ def network_interface_get(name, resource_group, **kwargs):
         salt-call azurearm_network.network_interface_get test-iface0 testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nic = netconn.network_interfaces.get(
             network_interface_name=name, resource_group_name=resource_group
@@ -1533,14 +1640,18 @@ def network_interface_create_or_update(
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     # Use NSG name to link to the ID of an existing NSG.
     if kwargs.get("network_security_group"):
         nsg = network_security_group_get(
             name=kwargs["network_security_group"],
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
         if "error" not in nsg:
             kwargs["network_security_group"] = {"id": str(nsg["id"])}
@@ -1559,7 +1670,7 @@ def network_interface_create_or_update(
             name=subnet,
             virtual_network=virtual_network,
             resource_group=resource_group,
-            **kwargs
+            **kwargs,
         )
         if "error" not in subnet:
             subnet = {"id": str(subnet["id"])}
@@ -1585,7 +1696,7 @@ def network_interface_create_or_update(
                         pub_ip = public_ip_address_get(
                             name=ipconfig["public_ip_address"],
                             resource_group=resource_group,
-                            **kwargs
+                            **kwargs,
                         )
                         if "error" not in pub_ip:
                             ipconfig["public_ip_address"] = {"id": str(pub_ip["id"])}
@@ -1633,7 +1744,11 @@ def network_interfaces_list_all(**kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list_all()
@@ -1666,7 +1781,11 @@ def network_interfaces_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list(resource_group_name=resource_group)
@@ -1701,7 +1820,11 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
         salt-call azurearm_network.network_interface_get_effective_route_table test-iface0 testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nic = netconn.network_interfaces.get_effective_route_table(
             network_interface_name=name, resource_group_name=resource_group
@@ -1739,7 +1862,11 @@ def network_interface_list_effective_network_security_groups(
         salt-call azurearm_network.network_interface_list_effective_network_security_groups test-iface0 testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nic = netconn.network_interfaces.list_effective_network_security_groups(
             network_interface_name=name, resource_group_name=resource_group
@@ -1780,7 +1907,11 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list_virtual_machine_scale_set_vm_network_interfaces(
@@ -1822,7 +1953,11 @@ def list_virtual_machine_scale_set_network_interfaces(
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list_virtual_machine_scale_set_network_interfaces(
@@ -1868,7 +2003,11 @@ def get_virtual_machine_scale_set_network_interface(
     """
     expand = kwargs.get("expand")
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         nic = netconn.network_interfaces.list_virtual_machine_scale_set_vm_network_interfaces(
             network_interface_name=name,
@@ -1906,7 +2045,11 @@ def public_ip_address_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         pub_ip = netconn.public_ip_addresses.delete(
             public_ip_address_name=name, resource_group_name=resource_group
@@ -1940,7 +2083,11 @@ def public_ip_address_get(name, resource_group, **kwargs):
     """
     expand = kwargs.get("expand")
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         pub_ip = netconn.public_ip_addresses.get(
@@ -1985,7 +2132,11 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         pub_ip_model = __utils__["azurearm.create_object_model"](
@@ -2030,7 +2181,11 @@ def public_ip_addresses_list_all(**kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         pub_ips = __utils__["azurearm.paged_object_to_list"](
             netconn.public_ip_addresses.list_all()
@@ -2063,7 +2218,11 @@ def public_ip_addresses_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         pub_ips = __utils__["azurearm.paged_object_to_list"](
             netconn.public_ip_addresses.list(resource_group_name=resource_group)
@@ -2100,7 +2259,11 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         rule = netconn.route_filter_rules.delete(
             resource_group_name=resource_group,
@@ -2137,7 +2300,11 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         rule = netconn.route_filter_rules.get(
             resource_group_name=resource_group,
@@ -2195,7 +2362,11 @@ def route_filter_rule_create_or_update(
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         rule_model = __utils__["azurearm.create_object_model"](
@@ -2203,7 +2374,7 @@ def route_filter_rule_create_or_update(
             "RouteFilterRule",
             access=access,
             communities=communities,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
@@ -2253,7 +2424,11 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         rules = __utils__["azurearm.paged_object_to_list"](
             netconn.route_filter_rules.list_by_route_filter(
@@ -2290,7 +2465,11 @@ def route_filter_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         route_filter = netconn.route_filters.delete(
             route_filter_name=name, resource_group_name=resource_group
@@ -2324,7 +2503,11 @@ def route_filter_get(name, resource_group, **kwargs):
     """
     expand = kwargs.get("expand")
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         route_filter = netconn.route_filters.get(
@@ -2367,7 +2550,11 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         rt_filter_model = __utils__["azurearm.create_object_model"](
@@ -2415,7 +2602,11 @@ def route_filters_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         filters = __utils__["azurearm.paged_object_to_list"](
             netconn.route_filters.list_by_resource_group(
@@ -2447,7 +2638,11 @@ def route_filters_list_all(**kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         filters = __utils__["azurearm.paged_object_to_list"](
             netconn.route_filters.list()
@@ -2484,7 +2679,11 @@ def route_delete(name, route_table, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         route = netconn.routes.delete(
             resource_group_name=resource_group,
@@ -2521,7 +2720,11 @@ def route_get(name, route_table, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         route = netconn.routes.get(
             resource_group_name=resource_group,
@@ -2574,7 +2777,11 @@ def route_create_or_update(
         salt-call azurearm_network.route_create_or_update test-rt '10.0.0.0/8' test-rt-table testgroup
 
     """
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         rt_model = __utils__["azurearm.create_object_model"](
@@ -2583,7 +2790,7 @@ def route_create_or_update(
             address_prefix=address_prefix,
             next_hop_type=next_hop_type,
             next_hop_ip_address=next_hop_ip_address,
-            **kwargs
+            **kwargs,
         )
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
@@ -2630,7 +2837,11 @@ def routes_list(route_table, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         routes = __utils__["azurearm.paged_object_to_list"](
             netconn.routes.list(
@@ -2667,7 +2878,11 @@ def route_table_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         table = netconn.route_tables.delete(
             route_table_name=name, resource_group_name=resource_group
@@ -2701,7 +2916,11 @@ def route_table_get(name, resource_group, **kwargs):
     """
     expand = kwargs.get("expand")
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         table = netconn.route_tables.get(
@@ -2744,7 +2963,11 @@ def route_table_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
 
     try:
         rt_tbl_model = __utils__["azurearm.create_object_model"](
@@ -2792,7 +3015,11 @@ def route_tables_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         tables = __utils__["azurearm.paged_object_to_list"](
             netconn.route_tables.list(resource_group_name=resource_group)
@@ -2822,7 +3049,11 @@ def route_tables_list_all(**kwargs):
 
     """
     result = {}
-    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+    netconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="network",
+        **kwargs,
+    )
     try:
         tables = __utils__["azurearm.paged_object_to_list"](
             netconn.route_tables.list_all()

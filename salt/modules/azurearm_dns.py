@@ -57,14 +57,10 @@ Optional provider parameters:
 
 """
 
-# Python libs
-
 import logging
 
 import salt.utils.azurearm
 
-# Azure libs
-HAS_LIBS = False
 try:
     import azure.mgmt.dns.models  # pylint: disable=unused-import
     from msrest.exceptions import SerializationError
@@ -72,7 +68,7 @@ try:
 
     HAS_LIBS = True
 except ImportError:
-    pass
+    HAS_LIBS = False
 
 __virtualname__ = "azurearm_dns"
 
@@ -117,7 +113,11 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
             arecords='[{ipv4_address: 10.0.0.1}]' ttl=300
 
     """
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
 
     try:
         record_set_model = __utils__["azurearm.create_object_model"](
@@ -175,7 +175,11 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
 
     """
     result = False
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         record_set = dnsconn.record_sets.delete(
             relative_record_set_name=name,
@@ -215,7 +219,11 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
         salt-call azurearm_dns.record_set_get '@' myzone testgroup SOA
 
     """
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         record_set = dnsconn.record_sets.get(
             relative_record_set_name=name,
@@ -265,7 +273,11 @@ def record_sets_list_by_type(
 
     """
     result = {}
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         record_sets = __utils__["azurearm.paged_object_to_list"](
             dnsconn.record_sets.list_by_type(
@@ -315,7 +327,11 @@ def record_sets_list_by_dns_zone(
 
     """
     result = {}
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         record_sets = __utils__["azurearm.paged_object_to_list"](
             dnsconn.record_sets.list_by_dns_zone(
@@ -356,7 +372,11 @@ def zone_create_or_update(name, resource_group, **kwargs):
     # DNS zones are global objects
     kwargs["location"] = "global"
 
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
 
     # Convert list of ID strings to list of dictionaries with id key.
     if isinstance(kwargs.get("registration_virtual_networks"), list):
@@ -414,7 +434,11 @@ def zone_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         zone = dnsconn.zones.delete(
             zone_name=name,
@@ -448,7 +472,11 @@ def zone_get(name, resource_group, **kwargs):
         salt-call azurearm_dns.zone_get myzone testgroup
 
     """
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         zone = dnsconn.zones.get(zone_name=name, resource_group_name=resource_group)
         result = zone.as_dict()
@@ -481,7 +509,11 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
 
     """
     result = {}
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         zones = __utils__["azurearm.paged_object_to_list"](
             dnsconn.zones.list_by_resource_group(
@@ -517,7 +549,11 @@ def zones_list(top=None, **kwargs):
 
     """
     result = {}
-    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
+    dnsconn = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type="dns",
+        **kwargs,
+    )
     try:
         zones = __utils__["azurearm.paged_object_to_list"](dnsconn.zones.list(top=top))
 

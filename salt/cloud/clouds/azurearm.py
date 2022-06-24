@@ -121,7 +121,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-HAS_LIBS = False
 try:
     import azure.mgmt.compute.models as compute_models
     import azure.mgmt.network.models as network_models
@@ -130,7 +129,7 @@ try:
 
     HAS_LIBS = True
 except ImportError:
-    pass
+    HAS_LIBS = False
 
 __virtualname__ = "azurearm"
 
@@ -294,7 +293,11 @@ def get_conn(client_type):
         )
         conn_kwargs.update({"username": username, "password": password})
 
-    client = salt.utils.azurearm.get_client(client_type=client_type, **conn_kwargs)
+    client = salt.utils.azurearm.get_client(
+        config_option_func=__salt__["config.option"],
+        client_type=client_type,
+        **conn_kwargs,
+    )
 
     return client
 
@@ -815,7 +818,7 @@ def create_network_interface(call=None, kwargs=None):
                         NetworkInterfaceIPConfiguration(
                             name="{}-ip".format(kwargs["iface_name"]),
                             subnet=subnet_obj,
-                            **ip_kwargs
+                            **ip_kwargs,
                         )
                     ]
                     break
