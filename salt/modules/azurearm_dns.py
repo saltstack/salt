@@ -120,7 +120,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
     )
 
     try:
-        record_set_model = __utils__["azurearm.create_object_model"](
+        record_set_model = salt.utils.azurearm.create_object_model(
             "dns", "RecordSet", **kwargs
         )
     except TypeError as exc:
@@ -139,7 +139,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
         )
         result = record_set.as_dict()
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -190,7 +190,7 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
         )
         result = True
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
 
     return result
 
@@ -234,7 +234,7 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
         result = record_set.as_dict()
 
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -279,7 +279,7 @@ def record_sets_list_by_type(
         **kwargs,
     )
     try:
-        record_sets = __utils__["azurearm.paged_object_to_list"](
+        record_sets = salt.utils.azurearm.paged_object_to_list(
             dnsconn.record_sets.list_by_type(
                 zone_name=zone_name,
                 resource_group_name=resource_group,
@@ -292,7 +292,7 @@ def record_sets_list_by_type(
         for record_set in record_sets:
             result[record_set["name"]] = record_set
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -333,7 +333,7 @@ def record_sets_list_by_dns_zone(
         **kwargs,
     )
     try:
-        record_sets = __utils__["azurearm.paged_object_to_list"](
+        record_sets = salt.utils.azurearm.paged_object_to_list(
             dnsconn.record_sets.list_by_dns_zone(
                 zone_name=zone_name,
                 resource_group_name=resource_group,
@@ -345,7 +345,7 @@ def record_sets_list_by_dns_zone(
         for record_set in record_sets:
             result[record_set["name"]] = record_set
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -390,7 +390,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
         ]
 
     try:
-        zone_model = __utils__["azurearm.create_object_model"]("dns", "Zone", **kwargs)
+        zone_model = salt.utils.azurearm.create_object_model("dns", "Zone", **kwargs)
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
@@ -405,7 +405,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
         )
         result = zone.as_dict()
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -448,7 +448,7 @@ def zone_delete(name, resource_group, **kwargs):
         zone.wait()
         result = True
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
 
     return result
 
@@ -482,7 +482,7 @@ def zone_get(name, resource_group, **kwargs):
         result = zone.as_dict()
 
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -515,7 +515,7 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
         **kwargs,
     )
     try:
-        zones = __utils__["azurearm.paged_object_to_list"](
+        zones = salt.utils.azurearm.paged_object_to_list(
             dnsconn.zones.list_by_resource_group(
                 resource_group_name=resource_group, top=top
             )
@@ -524,7 +524,7 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
         for zone in zones:
             result[zone["name"]] = zone
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -555,12 +555,12 @@ def zones_list(top=None, **kwargs):
         **kwargs,
     )
     try:
-        zones = __utils__["azurearm.paged_object_to_list"](dnsconn.zones.list(top=top))
+        zones = salt.utils.azurearm.paged_object_to_list(dnsconn.zones.list(top=top))
 
         for zone in zones:
             result[zone["name"]] = zone
     except CloudError as exc:
-        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
