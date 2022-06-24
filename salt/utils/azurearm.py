@@ -48,15 +48,25 @@ try:
 except ImportError:
     HAS_AZURE = False
 
+__opts__ = salt.config.minion_config("/etc/salt/minion")
+__salt__ = salt.loader.minion_mods(__opts__)
+
 log = logging.getLogger(__name__)
 
 
-def _determine_auth(config_option_func, **kwargs):
+def __virtual__():
+    if not HAS_AZURE:
+        return False
+    else:
+        return True
+
+
+def _determine_auth(**kwargs):
     """
     Acquire Azure ARM Credentials
     """
     if "profile" in kwargs:
-        azure_credentials = config_option_func(kwargs["profile"])
+        azure_credentials = __salt__["config.option"](kwargs["profile"])
         kwargs.update(azure_credentials)
 
     service_principal_creds_kwargs = ["client_id", "secret", "tenant"]
@@ -131,7 +141,7 @@ def _determine_auth(config_option_func, **kwargs):
     return credentials, subscription_id, cloud_env
 
 
-def get_client(config_option_func, client_type, **kwargs):
+def get_client(client_type, **kwargs):
     """
     Dynamically load the selected client and return a management client object
     """
@@ -172,9 +182,7 @@ def get_client(config_option_func, client_type, **kwargs):
     except ImportError:
         raise sys.exit("The azure {} client is not available.".format(client_type))
 
-    credentials, subscription_id, cloud_env = _determine_auth(
-        config_option_func, **kwargs
-    )
+    credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
 
     if client_type == "subscription":
         client = Client(

@@ -102,9 +102,7 @@ def resource_groups_list(**kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         groups = salt.utils.azurearm.paged_object_to_list(
             resconn.resource_groups.list()
@@ -136,9 +134,7 @@ def resource_group_check_existence(name, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         result = resconn.resource_groups.check_existence(name)
 
@@ -165,9 +161,7 @@ def resource_group_get(name, **kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         group = resconn.resource_groups.get(name)
         result = group.as_dict()
@@ -201,9 +195,7 @@ def resource_group_create_or_update(
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     resource_group_params = {
         "location": location,
         "managed_by": kwargs.get("managed_by"),
@@ -236,9 +228,7 @@ def resource_group_delete(name, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         group = resconn.resource_groups.delete(name)
         group.wait()
@@ -270,9 +260,7 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_operation_get XXXXX testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         operation = resconn.deployment_operations.get(
             resource_group_name=resource_group,
@@ -311,9 +299,7 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         operations = salt.utils.azurearm.paged_object_to_list(
             resconn.deployment_operations.list(
@@ -352,9 +338,7 @@ def deployment_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         deploy = resconn.deployments.delete(
             deployment_name=name, resource_group_name=resource_group
@@ -387,9 +371,7 @@ def deployment_check_existence(name, resource_group, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         result = resconn.deployments.check_existence(
             deployment_name=name, resource_group_name=resource_group
@@ -456,9 +438,7 @@ def deployment_create_or_update(
         salt-call azurearm_resource.deployment_create_or_update testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
 
     prop_kwargs = {"mode": deploy_mode}
     prop_kwargs["debug_setting"] = {"detail_level": debug_setting}
@@ -535,9 +515,7 @@ def deployment_get(name, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_get testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         deploy = resconn.deployments.get(
             deployment_name=name, resource_group_name=resource_group
@@ -569,9 +547,7 @@ def deployment_cancel(name, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_cancel testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         resconn.deployments.cancel(
             deployment_name=name, resource_group_name=resource_group
@@ -641,9 +617,7 @@ def deployment_validate(
         salt-call azurearm_resource.deployment_validate testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
 
     prop_kwargs = {"mode": deploy_mode}
     prop_kwargs["debug_setting"] = {"detail_level": debug_setting}
@@ -716,9 +690,7 @@ def deployment_export_template(name, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_export_template testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         deploy = resconn.deployments.export_template(
             deployment_name=name, resource_group_name=resource_group
@@ -746,9 +718,7 @@ def deployments_list(resource_group, **kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "resource", **kwargs
-    )
+    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
     try:
         deployments = salt.utils.azurearm.paged_object_to_list(
             resconn.deployments.list_by_resource_group(
@@ -788,9 +758,7 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
     elif not kwargs.get("subscription_id"):
         kwargs["subscription_id"] = subscription_id
 
-    subconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "subscription", **kwargs
-    )
+    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
     try:
         locations = salt.utils.azurearm.paged_object_to_list(
             subconn.subscriptions.list_locations(
@@ -830,9 +798,7 @@ def subscription_get(subscription_id=None, **kwargs):
     elif not kwargs.get("subscription_id"):
         kwargs["subscription_id"] = subscription_id
 
-    subconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "subscription", **kwargs
-    )
+    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
     try:
         subscription = subconn.subscriptions.get(
             subscription_id=kwargs.get("subscription_id")
@@ -861,9 +827,7 @@ def subscriptions_list(**kwargs):
 
     """
     result = {}
-    subconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "subscription", **kwargs
-    )
+    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
     try:
         subs = salt.utils.azurearm.paged_object_to_list(subconn.subscriptions.list())
 
@@ -891,9 +855,7 @@ def tenants_list(**kwargs):
 
     """
     result = {}
-    subconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "subscription", **kwargs
-    )
+    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
     try:
         tenants = salt.utils.azurearm.paged_object_to_list(subconn.tenants.list())
 
@@ -926,9 +888,7 @@ def policy_assignment_delete(name, scope, **kwargs):
 
     """
     result = False
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         # pylint: disable=unused-variable
         policy = polconn.policy_assignments.delete(
@@ -962,9 +922,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852 testpolicy
 
     """
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
 
     # "get" doesn't work for built-in policies per https://github.com/Azure/azure-cli/issues/692
     # Uncomment this section when the ticket above is resolved.
@@ -1047,9 +1005,7 @@ def policy_assignment_get(name, scope, **kwargs):
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852
 
     """
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         policy = polconn.policy_assignments.get(
             policy_assignment_name=name, scope=scope
@@ -1081,9 +1037,7 @@ def policy_assignments_list_for_resource_group(
 
     """
     result = {}
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         policy_assign = salt.utils.azurearm.paged_object_to_list(
             polconn.policy_assignments.list_for_resource_group(
@@ -1115,9 +1069,7 @@ def policy_assignments_list(**kwargs):
 
     """
     result = {}
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         policy_assign = salt.utils.azurearm.paged_object_to_list(
             polconn.policy_assignments.list()
@@ -1157,9 +1109,7 @@ def policy_definition_create_or_update(
         result = {"error": "The policy rule must be a dictionary!"}
         return result
 
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
 
     # Convert OrderedDict to dict
     prop_kwargs = {
@@ -1210,9 +1160,7 @@ def policy_definition_delete(name, **kwargs):
 
     """
     result = False
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         # pylint: disable=unused-variable
         policy = polconn.policy_definitions.delete(policy_definition_name=name)
@@ -1239,9 +1187,7 @@ def policy_definition_get(name, **kwargs):
         salt-call azurearm_resource.policy_definition_get testpolicy
 
     """
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         policy_def = polconn.policy_definitions.get(policy_definition_name=name)
         result = policy_def.as_dict()
@@ -1269,9 +1215,7 @@ def policy_definitions_list(hide_builtin=False, **kwargs):
 
     """
     result = {}
-    polconn = salt.utils.azurearm.get_client(
-        __salt__["config.option"], "policy", **kwargs
-    )
+    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
     try:
         policy_defs = salt.utils.azurearm.paged_object_to_list(
             polconn.policy_definitions.list()
