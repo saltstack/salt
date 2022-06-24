@@ -33,6 +33,7 @@ import salt.utils.stringutils
 import salt.utils.versions
 import salt.version
 from salt.exceptions import SaltInvocationError, SaltSystemExit
+from salt.utils.decorators.dunder_utils import deprecated
 
 try:
     from azure.common.credentials import (
@@ -48,25 +49,20 @@ try:
 except ImportError:
     HAS_AZURE = False
 
-__opts__ = salt.config.minion_config("/etc/salt/minion")
-__salt__ = salt.loader.minion_mods(__opts__)
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not HAS_AZURE:
-        return False
-    else:
-        return True
+    return HAS_AZURE
 
 
-def _determine_auth(**kwargs):
+def _determine_auth(config_option_func, **kwargs):
     """
     Acquire Azure ARM Credentials
     """
     if "profile" in kwargs:
-        azure_credentials = __salt__["config.option"](kwargs["profile"])
+        azure_credentials = config_option_func(kwargs["profile"])
         kwargs.update(azure_credentials)
 
     service_principal_creds_kwargs = ["client_id", "secret", "tenant"]
@@ -141,7 +137,7 @@ def _determine_auth(**kwargs):
     return credentials, subscription_id, cloud_env
 
 
-def get_client(client_type, **kwargs):
+def get_client(config_option_func, client_type, **kwargs):
     """
     Dynamically load the selected client and return a management client object
     """
@@ -182,7 +178,9 @@ def get_client(client_type, **kwargs):
     except ImportError:
         raise sys.exit("The azure {} client is not available.".format(client_type))
 
-    credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
+    credentials, subscription_id, cloud_env = _determine_auth(
+        config_option_func, **kwargs
+    )
 
     if client_type == "subscription":
         client = Client(
@@ -199,6 +197,15 @@ def get_client(client_type, **kwargs):
     client.config.add_user_agent("Salt/{}".format(salt.version.__version__))
 
     return client
+
+
+@deprecated(by=get_client)
+def old_get_client(client_type, **kwargs):
+    """
+    This docstring will be repalced but the docstring of function passed in
+    ``by`` on the ``deprecated`` decorator.
+    """
+    return get_client(__salt__["config.option"], client_type, **kwargs)
 
 
 def log_cloud_error(client, message, **kwargs):
