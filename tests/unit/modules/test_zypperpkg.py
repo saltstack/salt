@@ -1617,17 +1617,22 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
         url = self.new_repo_config["url"]
         name = self.new_repo_config["name"]
-        with zypper_patcher:
+        with zypper_patcher, patch.object(zypper, "refresh_db", Mock()) as refreshmock:
             zypper.mod_repo(name, **{"url": url, "gpgautoimport": True})
             self.assertEqual(
                 zypper.__zypper__(root=None).xml.call.call_args_list,
                 [
                     call("ar", url, name),
-                    call("--gpg-auto-import-keys", "refresh", name),
                 ],
             )
             self.assertTrue(
                 zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0
+            )
+            refreshmock.assert_called_once_with(
+                gpgautoimport=True,
+                repos=name,
+                root=None,
+                url="http://repo.url/some/path",
             )
 
     def test_repo_noadd_nomod_ref(self):
@@ -1647,14 +1652,16 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.zypperpkg", **self.zypper_patcher_config
         )
 
-        with zypper_patcher:
+        with zypper_patcher, patch.object(zypper, "refresh_db", Mock()) as refreshmock:
             zypper.mod_repo(name, **{"url": url, "gpgautoimport": True})
-            self.assertEqual(
-                zypper.__zypper__(root=None).xml.call.call_args_list,
-                [call("--gpg-auto-import-keys", "refresh", name)],
-            )
             self.assertTrue(
                 zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0
+            )
+            refreshmock.assert_called_once_with(
+                gpgautoimport=True,
+                repos=name,
+                root=None,
+                url="http://repo.url/some/path",
             )
 
     def test_repo_add_mod_ref(self):
@@ -1668,10 +1675,10 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         zypper_patcher = patch.multiple(
             "salt.modules.zypperpkg", **self.zypper_patcher_config
         )
-
         url = self.new_repo_config["url"]
         name = self.new_repo_config["name"]
-        with zypper_patcher:
+
+        with zypper_patcher, patch.object(zypper, "refresh_db", Mock()) as refreshmock:
             zypper.mod_repo(
                 name, **{"url": url, "refresh": True, "gpgautoimport": True}
             )
@@ -1679,11 +1686,17 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 zypper.__zypper__(root=None).xml.call.call_args_list,
                 [
                     call("ar", url, name),
-                    call("--gpg-auto-import-keys", "refresh", name),
                 ],
             )
             zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
-                "--gpg-auto-import-keys", "mr", "--refresh", name
+                "mr", "--refresh", name
+            )
+            refreshmock.assert_called_once_with(
+                gpgautoimport=True,
+                refresh=True,
+                repos=name,
+                root=None,
+                url="http://repo.url/some/path",
             )
 
     def test_repo_noadd_mod_ref(self):
@@ -1703,16 +1716,19 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.zypperpkg", **self.zypper_patcher_config
         )
 
-        with zypper_patcher:
+        with zypper_patcher, patch.object(zypper, "refresh_db", Mock()) as refreshmock:
             zypper.mod_repo(
                 name, **{"url": url, "refresh": True, "gpgautoimport": True}
             )
-            self.assertEqual(
-                zypper.__zypper__(root=None).xml.call.call_args_list,
-                [call("--gpg-auto-import-keys", "refresh", name)],
-            )
             zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
-                "--gpg-auto-import-keys", "mr", "--refresh", name
+                "mr", "--refresh", name
+            )
+            refreshmock.assert_called_once_with(
+                gpgautoimport=True,
+                refresh=True,
+                repos=name,
+                root=None,
+                url="http://repo.url/some/path",
             )
 
     def test_wildcard_to_query_match_all(self):
