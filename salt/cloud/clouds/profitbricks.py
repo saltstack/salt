@@ -754,10 +754,7 @@ def get_key_filename(vm_):
 
 def signal_event(vm_, event, description):
     args = salt.utils.cloud.filter_event(
-        __opts__,
-        event,
-        vm_,
-        ["name", "profile", "provider", "driver"],
+        event, vm_, ["name", "profile", "provider", "driver"]
     )
 
     salt.utils.cloud.fire_event(

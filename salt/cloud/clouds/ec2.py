@@ -2080,12 +2080,7 @@ def request_instance(vm_=None, call=None):
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": salt.utils.cloud.filter_event(
-                __opts__,
-                "requesting",
-                params,
-                list(params),
-            ),
+            "kwargs": salt.utils.cloud.filter_event("requesting", params, list(params)),
             "location": location,
         },
         sock_dir=__opts__["sock_dir"],
@@ -2617,16 +2612,13 @@ def create(vm_=None, call=None):
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
         args=salt.utils.cloud.filter_event(
-            __opts__,
-            "creating",
-            vm_,
-            ["name", "profile", "provider", "driver"],
+            "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
     salt.utils.cloud.cachedir_index_add(
-        __opts__["cachedir"], vm_["name"], vm_["profile"], "ec2", vm_["driver"]
+        vm_["name"], vm_["profile"], "ec2", vm_["driver"]
     )
 
     vm_["key_filename"] = key_filename
@@ -2883,12 +2875,7 @@ def create(vm_=None, call=None):
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
-            __opts__,
-            "created",
-            event_data,
-            list(event_data),
-        ),
+        args=salt.utils.cloud.filter_event("created", event_data, list(event_data)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -3426,7 +3413,7 @@ def destroy(name, call=None):
         transport=__opts__["transport"],
     )
 
-    salt.utils.cloud.cachedir_index_del(__opts__["cachedir"], name)
+    salt.utils.cloud.cachedir_index_del(name)
 
     if __opts__.get("update_cachedir", False) is True:
         salt.utils.cloud.delete_minion_cachedir(

@@ -1258,10 +1258,7 @@ def request_instance(vm_, kwargs=None):
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args=salt.utils.cloud.filter_event(
-            __opts__,
-            "requesting",
-            vm_,
-            ["name", "profile", "provider", "driver"],
+            "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1313,16 +1310,13 @@ def create(vm_):
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
         args=salt.utils.cloud.filter_event(
-            __opts__,
-            "creating",
-            vm_,
-            ["name", "profile", "provider", "driver"],
+            "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
     salt.utils.cloud.cachedir_index_add(
-        __opts__["cachedir"], vm_["name"], vm_["profile"], "azurearm", vm_["driver"]
+        vm_["name"], vm_["profile"], "azurearm", vm_["driver"]
     )
     if not vm_.get("location"):
         vm_["location"] = get_location(kwargs=vm_)
@@ -1398,10 +1392,7 @@ def create(vm_):
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
         args=salt.utils.cloud.filter_event(
-            __opts__,
-            "created",
-            vm_,
-            ["name", "profile", "provider", "driver"],
+            "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

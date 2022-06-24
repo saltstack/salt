@@ -557,7 +557,7 @@ def create(vm_):
     )
     log.debug("Adding %s to cloud cache.", name)
     salt.utils.cloud.cachedir_index_add(
-        __opts__["cachedir"], vm_["name"], vm_["profile"], "xen", vm_["driver"]
+        vm_["name"], vm_["profile"], "xen", vm_["driver"]
     )
 
     # connect to xen
@@ -1018,7 +1018,7 @@ def destroy(name=None, call=None):
             salt.utils.cloud.delete_minion_cachedir(
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
-        salt.utils.cloud.cachedir_index_del(__opts__["cachedir"], name)
+        salt.utils.cloud.cachedir_index_del(name)
         return ret
 
 

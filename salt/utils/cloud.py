@@ -383,12 +383,14 @@ def salt_config_to_yaml(configuration, line_break="\n"):
     )
 
 
-def bootstrap(vm_, opts):
+def bootstrap(vm_, opts=None):
     """
     This is the primary entry point for logging into any system (POSIX or
     Windows) to install Salt. It will make the decision on its own as to which
     deploy function to call.
     """
+    if opts is None:
+        opts = __opts__
     deploy_config = salt.config.get_cloud_config_value(
         "deploy", vm_, opts, default=False
     )
@@ -613,7 +615,7 @@ def bootstrap(vm_, opts):
         "executing deploy script",
         "salt/cloud/{}/deploying".format(vm_["name"]),
         args={"kwargs": salt.utils.data.simple_types_filter(event_kwargs)},
-        sock_dir=opts.get("sock_dir", os.path.join(opts["sock_dir"], "master")),
+        sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
         transport=opts.get("transport", "zeromq"),
     )
 
@@ -1408,7 +1410,7 @@ def deploy_windows(
             "{} has been deployed at {}".format(name, host),
             "salt/cloud/{}/deploy_windows".format(name),
             args={"name": name},
-            sock_dir=opts.get("sock_dir", os.path.join(opts["sock_dir"], "master")),
+            sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
             transport=opts.get("transport", "zeromq"),
         )
 
@@ -1917,7 +1919,9 @@ def deploy_script(
                 "{} has been deployed at {}".format(name, host),
                 "salt/cloud/{}/deploy_script".format(name),
                 args={"name": name, "host": host},
-                sock_dir=opts.get("sock_dir", os.path.join(opts["sock_dir"], "master")),
+                sock_dir=opts.get(
+                    "sock_dir", os.path.join(__opts__["sock_dir"], "master")
+                ),
                 transport=opts.get("transport", "zeromq"),
             )
             if file_map_fail or file_map_success:
@@ -2028,7 +2032,7 @@ def run_inline_script(
     return True
 
 
-def filter_event(opts, tag, data, defaults):
+def filter_event(tag, data, defaults):
     """
     Accept a tag, a dict and a list of default keys to return from the dict, and
     check them against the cloud configuration for that tag
@@ -2037,11 +2041,11 @@ def filter_event(opts, tag, data, defaults):
     keys = []
     use_defaults = True
 
-    for ktag in opts.get("filter_events", {}):
+    for ktag in __opts__.get("filter_events", {}):
         if tag != ktag:
             continue
-        keys = opts["filter_events"][ktag]["keys"]
-        use_defaults = opts["filter_events"][ktag].get("use_defaults", True)
+        keys = __opts__["filter_events"][ktag]["keys"]
+        use_defaults = __opts__["filter_events"][ktag].get("use_defaults", True)
 
     if use_defaults is False:
         defaults = []
@@ -2708,7 +2712,7 @@ def unlock_file(filename):
         log.trace("Unable to remove lock for %s: %s", filename, exc)
 
 
-def cachedir_index_add(cachedir, minion_id, profile, driver, provider, base=None):
+def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     """
     Add an entry to the cachedir index. This generally only needs to happen when
     a new instance is created. This entry should contain:
@@ -2723,7 +2727,7 @@ def cachedir_index_add(cachedir, minion_id, profile, driver, provider, base=None
     salt-ssh. However, other code that makes use of profile information can also
     make use of this function.
     """
-    base = init_cachedir(base or cachedir)
+    base = init_cachedir(base)
     index_file = os.path.join(base, "index.p")
     lock_file(index_file)
 
@@ -2754,12 +2758,12 @@ def cachedir_index_add(cachedir, minion_id, profile, driver, provider, base=None
     unlock_file(index_file)
 
 
-def cachedir_index_del(cachedir, minion_id, base=None):
+def cachedir_index_del(minion_id, base=None):
     """
     Delete an entry from the cachedir index. This generally only needs to happen
     when an instance is deleted.
     """
-    base = init_cachedir(base or cachedir)
+    base = init_cachedir(base)
     index_file = os.path.join(base, "index.p")
     lock_file(index_file)
 
@@ -2780,21 +2784,19 @@ def cachedir_index_del(cachedir, minion_id, base=None):
     unlock_file(index_file)
 
 
-def init_cachedir(cachedir):
+def init_cachedir(base=None):
     """
     Initialize the cachedir needed for Salt Cloud to keep track of minions
     """
-    needed_dirs = (
-        cachedir,
-        os.path.join(cachedir, "requested"),
-        os.path.join(cachedir, "active"),
-    )
+    if base is None:
+        base = __opts__["cachedir"]
+    needed_dirs = (base, os.path.join(base, "requested"), os.path.join(base, "active"))
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        os.chmod(cachedir, 0o755)
+        os.chmod(base, 0o755)
 
-    return cachedir
+    return base
 
 
 # FIXME: This function seems used nowhere. Dead code?
@@ -2816,7 +2818,7 @@ def request_minion_cachedir(
     will be set to None.
     """
     if base is None:
-        base = opts["cachedir"]
+        base = __opts__["cachedir"]
 
     if not fingerprint and pubkey is not None:
         fingerprint = salt.utils.crypt.pem_finger(
@@ -2860,7 +2862,7 @@ def change_minion_cachedir(
         return False
 
     if base is None:
-        base = cachedir
+        base = __opts__["cachedir"]
 
     fname = "{}.p".format(minion_id)
     path = os.path.join(base, cachedir, fname)
@@ -2876,14 +2878,14 @@ def change_minion_cachedir(
         salt.utils.msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
-def activate_minion_cachedir(cachedir, minion_id, base=None):
+def activate_minion_cachedir(minion_id, base=None):
     """
     Moves a minion from the requested/ cachedir into the active/ cachedir. This
     means that Salt Cloud has verified that a requested instance properly
     exists, and should be expected to exist from here on out.
     """
     if base is None:
-        base = cachedir
+        base = __opts__["cachedir"]
 
     fname = "{}.p".format(minion_id)
     src = os.path.join(base, "requested", fname)
@@ -2897,13 +2899,16 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     all cachedirs to find the minion's cache file.
     Needs `update_cachedir` set to True.
     """
-    if opts.get("update_cachedir", False) is False:
+    if isinstance(opts, dict):
+        __opts__.update(opts)
+
+    if __opts__.get("update_cachedir", False) is False:
         return
 
     if base is None:
-        base = opts["cachedir"]
+        base = __opts__["cachedir"]
 
-    driver = next(iter(opts["providers"][provider].keys()))
+    driver = next(iter(__opts__["providers"][provider].keys()))
     fname = "{}.p".format(minion_id)
     for cachedir in "requested", "active":
         path = os.path.join(base, cachedir, driver, provider, fname)
@@ -2912,11 +2917,13 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
             os.remove(path)
 
 
-def list_cache_nodes_full(opts, provider=None, base=None):
+def list_cache_nodes_full(opts=None, provider=None, base=None):
     """
     Return a list of minion data from the cloud cache, rather from the cloud
     providers themselves. This is the cloud cache version of list_nodes_full().
     """
+    if opts is None:
+        opts = __opts__
     if opts.get("update_cachedir", False) is False:
         return
 
@@ -3078,7 +3085,7 @@ def cache_node_list(nodes, provider, opts):
     if "update_cachedir" not in opts or not opts["update_cachedir"]:
         return
 
-    base = os.path.join(init_cachedir(opts["cachedir"]), "active")
+    base = os.path.join(init_cachedir(), "active")
     driver = next(iter(opts["providers"][provider].keys()))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
@@ -3100,13 +3107,16 @@ def cache_node(node, provider, opts):
 
     .. versionadded:: 2014.7.0
     """
-    if "update_cachedir" not in opts or not opts["update_cachedir"]:
+    if isinstance(opts, dict):
+        __opts__.update(opts)
+
+    if "update_cachedir" not in __opts__ or not __opts__["update_cachedir"]:
         return
 
-    if not os.path.exists(os.path.join(opts["cachedir"], "active")):
-        init_cachedir(opts["cachedir"])
+    if not os.path.exists(os.path.join(__opts__["cachedir"], "active")):
+        init_cachedir()
 
-    base = os.path.join(opts["cachedir"], "active")
+    base = os.path.join(__opts__["cachedir"], "active")
     provider, driver = provider.split(":")
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
@@ -3144,7 +3154,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
                     "salt/cloud/{}/cache_node_missing".format(node),
                     args={"missing node": node},
                     sock_dir=opts.get(
-                        "sock_dir", os.path.join(opts["sock_dir"], "master")
+                        "sock_dir", os.path.join(__opts__["sock_dir"], "master")
                     ),
                     transport=opts.get("transport", "zeromq"),
                 )
@@ -3179,7 +3189,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
             "new node found",
             "salt/cloud/{}/cache_node_new".format(node),
             args={"new_data": event_data},
-            sock_dir=opts.get("sock_dir", os.path.join(opts["sock_dir"], "master")),
+            sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
             transport=opts.get("transport", "zeromq"),
         )
         return
@@ -3206,7 +3216,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
                 "new_data": _strip_cache_events(new_data, opts),
                 "cache_data": _strip_cache_events(cache_data, opts),
             },
-            sock_dir=opts.get("sock_dir", os.path.join(opts["sock_dir"], "master")),
+            sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
             transport=opts.get("transport", "zeromq"),
         )
 
