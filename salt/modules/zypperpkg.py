@@ -1374,7 +1374,6 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append(kwargs.get("name"))
 
     if kwargs.get("gpgautoimport") is True:
-        global_cmd_opt.append("--gpg-auto-import-keys")
         call_refresh = True
 
     if cmd_opt:
@@ -1386,8 +1385,8 @@ def mod_repo(repo, **kwargs):
         # when used with "zypper ar --refresh" or "zypper mr --refresh"
         # --gpg-auto-import-keys is not doing anything
         # so we need to specifically refresh here with --gpg-auto-import-keys
-        refresh_opts = global_cmd_opt + ["refresh"] + [repo]
-        __zypper__(root=root).xml.call(*refresh_opts)
+        kwargs.update({"repos": repo})
+        refresh_db(root=root, **kwargs)
     elif not added and not cmd_opt:
         comment = "Specified arguments did not result in modification of repo"
 
