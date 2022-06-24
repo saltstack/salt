@@ -644,6 +644,7 @@ def test_adding_repo_file_signedby(pkgrepo, states, repo):
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
     assert repo.key_file.is_file()
+    assert repo.repo_content in ret.comment
 
 
 def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):

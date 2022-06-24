@@ -115,36 +115,6 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
-
-You can also use the ``signedby`` option as an argument to the state.
-This option is only supported if you do NOT have python3-apt installed.
-Python3-apt does not currently support the ``signed-by`` option in repo
-definitions. You can set ``signed-by`` in the name of the repo, but
-NOT in the ``signedby`` argument of the state if python3-apt is installed.
-
-.. code-block:: yaml
-
-    deb [arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
-      pkgrepo.managed:
-        - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /etc/apt/keyrings/salt-archive-keyring.gpg
-        - keyserver: keyserver.ubuntu.com
-        - keyid: 0E08A149DE57BFBE
-        - aptkey: False
-
-If you have the ``signed-by`` option set in your pkgrepo.managed name
-and the ``signedby`` arg set in the state, the ``signedby`` arg
-will override what is set in the name.
-
-.. code-block:: yaml
-
-    deb [arch=amd64 signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
-      pkgrepo.managed:
-        - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /etc/apt/keyrings/salt-archive-keyring-override.gpg
-        - keyserver: keyserver.ubuntu.com
-        - keyid: 0E08A149DE57BFBE
-        - aptkey: False
 """
 
 
@@ -374,10 +344,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
        in the path, aptkey will be False, regardless of what is passed into
        this argument.
-
-    signedby:
-        On apt-based systems, ``signedby`` is the the path to the key file
-        the repository will use. This is required if apt-key is False.
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False

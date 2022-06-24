@@ -2159,7 +2159,7 @@ def _parse_repo_keys_output(cmd_ret):
                     "capability": items[11],
                     "date_creation": items[5],
                     "date_expiration": items[6],
-                    "keyid": items[4],
+                    "keyid": str(items[4]),
                     "validity": items[1],
                 }
             )
@@ -2742,10 +2742,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
 
-    if "signedby" in kwargs:
-        kwargs["signedby"] = pathlib.Path(kwargs["signedby"])
-    else:
-        kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
+    kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
