@@ -102,16 +102,16 @@ def resource_groups_list(**kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
-        groups = salt.utils.azurearm.paged_object_to_list(
+        groups = __utils__["azurearm.paged_object_to_list"](
             resconn.resource_groups.list()
         )
 
         for group in groups:
             result[group["name"]] = group
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -134,12 +134,12 @@ def resource_group_check_existence(name, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         result = resconn.resource_groups.check_existence(name)
 
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
 
     return result
 
@@ -161,13 +161,13 @@ def resource_group_get(name, **kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         group = resconn.resource_groups.get(name)
         result = group.as_dict()
 
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -195,7 +195,7 @@ def resource_group_create_or_update(
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     resource_group_params = {
         "location": location,
         "managed_by": kwargs.get("managed_by"),
@@ -205,7 +205,7 @@ def resource_group_create_or_update(
         group = resconn.resource_groups.create_or_update(name, resource_group_params)
         result = group.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -228,13 +228,13 @@ def resource_group_delete(name, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         group = resconn.resource_groups.delete(name)
         group.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
 
     return result
 
@@ -260,7 +260,7 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_operation_get XXXXX testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         operation = resconn.deployment_operations.get(
             resource_group_name=resource_group,
@@ -270,7 +270,7 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
 
         result = operation.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -299,9 +299,9 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
-        operations = salt.utils.azurearm.paged_object_to_list(
+        operations = __utils__["azurearm.paged_object_to_list"](
             resconn.deployment_operations.list(
                 resource_group_name=resource_group,
                 deployment_name=name,
@@ -312,7 +312,7 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
         for oper in operations:
             result[oper["operation_id"]] = oper
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -338,7 +338,7 @@ def deployment_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deploy = resconn.deployments.delete(
             deployment_name=name, resource_group_name=resource_group
@@ -346,7 +346,7 @@ def deployment_delete(name, resource_group, **kwargs):
         deploy.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
 
     return result
 
@@ -371,13 +371,13 @@ def deployment_check_existence(name, resource_group, **kwargs):
 
     """
     result = False
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         result = resconn.deployments.check_existence(
             deployment_name=name, resource_group_name=resource_group
         )
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
 
     return result
 
@@ -438,7 +438,7 @@ def deployment_create_or_update(
         salt-call azurearm_resource.deployment_create_or_update testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
 
     prop_kwargs = {"mode": deploy_mode}
     prop_kwargs["debug_setting"] = {"detail_level": debug_setting}
@@ -463,7 +463,7 @@ def deployment_create_or_update(
     deploy_kwargs.update(prop_kwargs)
 
     try:
-        deploy_model = salt.utils.azurearm.create_object_model(
+        deploy_model = __utils__["azurearm.create_object_model"](
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
@@ -486,7 +486,7 @@ def deployment_create_or_update(
             deploy_result = deploy.result()
             result = deploy_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -515,14 +515,14 @@ def deployment_get(name, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_get testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deploy = resconn.deployments.get(
             deployment_name=name, resource_group_name=resource_group
         )
         result = deploy.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -547,14 +547,14 @@ def deployment_cancel(name, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_cancel testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         resconn.deployments.cancel(
             deployment_name=name, resource_group_name=resource_group
         )
         result = {"result": True}
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc), "result": False}
 
     return result
@@ -617,7 +617,7 @@ def deployment_validate(
         salt-call azurearm_resource.deployment_validate testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
 
     prop_kwargs = {"mode": deploy_mode}
     prop_kwargs["debug_setting"] = {"detail_level": debug_setting}
@@ -642,7 +642,7 @@ def deployment_validate(
     deploy_kwargs.update(prop_kwargs)
 
     try:
-        deploy_model = salt.utils.azurearm.create_object_model(
+        deploy_model = __utils__["azurearm.create_object_model"](
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
@@ -661,7 +661,7 @@ def deployment_validate(
         )
         result = deploy.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -690,14 +690,14 @@ def deployment_export_template(name, resource_group, **kwargs):
         salt-call azurearm_resource.deployment_export_template testdeploy testgroup
 
     """
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deploy = resconn.deployments.export_template(
             deployment_name=name, resource_group_name=resource_group
         )
         result = deploy.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -718,9 +718,9 @@ def deployments_list(resource_group, **kwargs):
 
     """
     result = {}
-    resconn = salt.utils.azurearm.get_client("resource", **kwargs)
+    resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
-        deployments = salt.utils.azurearm.paged_object_to_list(
+        deployments = __utils__["azurearm.paged_object_to_list"](
             resconn.deployments.list_by_resource_group(
                 resource_group_name=resource_group
             )
@@ -729,7 +729,7 @@ def deployments_list(resource_group, **kwargs):
         for deploy in deployments:
             result[deploy["name"]] = deploy
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -758,9 +758,9 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
     elif not kwargs.get("subscription_id"):
         kwargs["subscription_id"] = subscription_id
 
-    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
+    subconn = __utils__["azurearm.get_client"]("subscription", **kwargs)
     try:
-        locations = salt.utils.azurearm.paged_object_to_list(
+        locations = __utils__["azurearm.paged_object_to_list"](
             subconn.subscriptions.list_locations(
                 subscription_id=kwargs["subscription_id"]
             )
@@ -769,7 +769,7 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
         for loc in locations:
             result[loc["name"]] = loc
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -798,7 +798,7 @@ def subscription_get(subscription_id=None, **kwargs):
     elif not kwargs.get("subscription_id"):
         kwargs["subscription_id"] = subscription_id
 
-    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
+    subconn = __utils__["azurearm.get_client"]("subscription", **kwargs)
     try:
         subscription = subconn.subscriptions.get(
             subscription_id=kwargs.get("subscription_id")
@@ -806,7 +806,7 @@ def subscription_get(subscription_id=None, **kwargs):
 
         result = subscription.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -827,14 +827,14 @@ def subscriptions_list(**kwargs):
 
     """
     result = {}
-    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
+    subconn = __utils__["azurearm.get_client"]("subscription", **kwargs)
     try:
-        subs = salt.utils.azurearm.paged_object_to_list(subconn.subscriptions.list())
+        subs = __utils__["azurearm.paged_object_to_list"](subconn.subscriptions.list())
 
         for sub in subs:
             result[sub["subscription_id"]] = sub
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -855,14 +855,14 @@ def tenants_list(**kwargs):
 
     """
     result = {}
-    subconn = salt.utils.azurearm.get_client("subscription", **kwargs)
+    subconn = __utils__["azurearm.get_client"]("subscription", **kwargs)
     try:
-        tenants = salt.utils.azurearm.paged_object_to_list(subconn.tenants.list())
+        tenants = __utils__["azurearm.paged_object_to_list"](subconn.tenants.list())
 
         for tenant in tenants:
             result[tenant["tenant_id"]] = tenant
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -888,7 +888,7 @@ def policy_assignment_delete(name, scope, **kwargs):
 
     """
     result = False
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         # pylint: disable=unused-variable
         policy = polconn.policy_assignments.delete(
@@ -896,7 +896,7 @@ def policy_assignment_delete(name, scope, **kwargs):
         )
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
 
     return result
 
@@ -922,7 +922,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852 testpolicy
 
     """
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
 
     # "get" doesn't work for built-in policies per https://github.com/Azure/azure-cli/issues/692
     # Uncomment this section when the ticket above is resolved.
@@ -955,7 +955,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
         policy_kwargs.update(prop_kwargs)
 
         try:
-            policy_model = salt.utils.azurearm.create_object_model(
+            policy_model = __utils__["azurearm.create_object_model"](
                 "resource.policy", "PolicyAssignment", **policy_kwargs
             )
         except TypeError as exc:
@@ -970,7 +970,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
             )
             result = policy.as_dict()
         except CloudError as exc:
-            salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+            __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
             result = {"error": str(exc)}
         except SerializationError as exc:
             result = {
@@ -1005,14 +1005,14 @@ def policy_assignment_get(name, scope, **kwargs):
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852
 
     """
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy = polconn.policy_assignments.get(
             policy_assignment_name=name, scope=scope
         )
         result = policy.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1037,9 +1037,9 @@ def policy_assignments_list_for_resource_group(
 
     """
     result = {}
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
-        policy_assign = salt.utils.azurearm.paged_object_to_list(
+        policy_assign = __utils__["azurearm.paged_object_to_list"](
             polconn.policy_assignments.list_for_resource_group(
                 resource_group_name=resource_group, filter=kwargs.get("filter")
             )
@@ -1048,7 +1048,7 @@ def policy_assignments_list_for_resource_group(
         for assign in policy_assign:
             result[assign["name"]] = assign
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1069,16 +1069,16 @@ def policy_assignments_list(**kwargs):
 
     """
     result = {}
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
-        policy_assign = salt.utils.azurearm.paged_object_to_list(
+        policy_assign = __utils__["azurearm.paged_object_to_list"](
             polconn.policy_assignments.list()
         )
 
         for assign in policy_assign:
             result[assign["name"]] = assign
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1109,7 +1109,7 @@ def policy_definition_create_or_update(
         result = {"error": "The policy rule must be a dictionary!"}
         return result
 
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
 
     # Convert OrderedDict to dict
     prop_kwargs = {
@@ -1120,7 +1120,7 @@ def policy_definition_create_or_update(
     policy_kwargs.update(prop_kwargs)
 
     try:
-        policy_model = salt.utils.azurearm.create_object_model(
+        policy_model = __utils__["azurearm.create_object_model"](
             "resource.policy", "PolicyDefinition", **policy_kwargs
         )
     except TypeError as exc:
@@ -1133,7 +1133,7 @@ def policy_definition_create_or_update(
         )
         result = policy.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -1160,13 +1160,13 @@ def policy_definition_delete(name, **kwargs):
 
     """
     result = False
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         # pylint: disable=unused-variable
         policy = polconn.policy_definitions.delete(policy_definition_name=name)
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
 
     return result
 
@@ -1187,12 +1187,12 @@ def policy_definition_get(name, **kwargs):
         salt-call azurearm_resource.policy_definition_get testpolicy
 
     """
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy_def = polconn.policy_definitions.get(policy_definition_name=name)
         result = policy_def.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1215,9 +1215,9 @@ def policy_definitions_list(hide_builtin=False, **kwargs):
 
     """
     result = {}
-    polconn = salt.utils.azurearm.get_client("policy", **kwargs)
+    polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
-        policy_defs = salt.utils.azurearm.paged_object_to_list(
+        policy_defs = __utils__["azurearm.paged_object_to_list"](
             polconn.policy_definitions.list()
         )
 
@@ -1225,7 +1225,7 @@ def policy_definitions_list(hide_builtin=False, **kwargs):
             if not (hide_builtin and policy["policy_type"] == "BuiltIn"):
                 result[policy["name"]] = policy
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("resource", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("resource", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result

@@ -46,7 +46,6 @@ Connection module for Amazon DynamoDB
 import logging
 import time
 
-import salt.utils.botomod
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -81,7 +80,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
     if has_boto_reqs is True:
-        salt.utils.botomod.assign_funcs(__name__, "dynamodb2", pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "dynamodb2", pack=__salt__)
     return has_boto_reqs
 
 

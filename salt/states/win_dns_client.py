@@ -1,7 +1,6 @@
 """
 Module for configuring DNS Client on Windows systems
 """
-import salt.utils.win_reg
 
 
 def __virtual__():
@@ -241,7 +240,7 @@ def primary_suffix(name, suffix=None, updates=False):
                 "new": {"suffix": reg_data["suffix"]["new"]},
             }
 
-    suffix_result = salt.utils.win_reg.set_value(
+    suffix_result = __utils__["reg.set_value"](
         reg_data["suffix"]["hive"],
         reg_data["suffix"]["key"],
         reg_data["suffix"]["vname"],
@@ -249,7 +248,7 @@ def primary_suffix(name, suffix=None, updates=False):
         reg_data["suffix"]["vtype"],
     )
 
-    updates_result = salt.utils.win_reg.set_value(
+    updates_result = __utils__["reg.set_value"](
         reg_data["updates"]["hive"],
         reg_data["updates"]["key"],
         reg_data["updates"]["vname"],

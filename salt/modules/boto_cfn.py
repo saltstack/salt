@@ -34,7 +34,6 @@ Connection module for Amazon Cloud Formation
 
 import logging
 
-import salt.utils.botomod
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        salt.utils.botomod.assign_funcs(
+        __utils__["boto.assign_funcs"](
             __name__, "cfn", module="cloudformation", pack=__salt__
         )
 

@@ -9,7 +9,6 @@ Helpers for the NAPALM modules.
 
 import logging
 
-import salt.utils.args
 import salt.utils.napalm
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators import depends
@@ -96,7 +95,7 @@ def _get_netmiko_args(optional_args):
     # Older version don't have the netmiko_helpers module, the following code is
     # simply a port from the NAPALM code base, for backwards compatibility:
     # https://github.com/napalm-automation/napalm/blob/develop/napalm/base/netmiko_helpers.py
-    netmiko_args, _, _, netmiko_defaults = salt.utils.args.get_function_argspec(
+    netmiko_args, _, _, netmiko_defaults = __utils__["args.get_function_argspec"](
         BaseConnection.__init__
     )
     check_self = netmiko_args.pop(0)

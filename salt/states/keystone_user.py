@@ -28,7 +28,7 @@ Example States
         - email: "user1@example.org"
         - description: 'my user'
 """
-import salt.utils.args
+
 
 __virtualname__ = "keystone_user"
 
@@ -81,7 +81,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
     __salt__["keystoneng.setup_clouds"](auth)
 
@@ -128,7 +128,7 @@ def absent(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
     __salt__["keystoneng.setup_clouds"](auth)
 

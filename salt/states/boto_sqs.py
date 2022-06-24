@@ -61,7 +61,6 @@ import difflib
 import logging
 
 import salt.utils.json
-import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -202,8 +201,8 @@ def present(
         """
         Safely dump YAML using a readable flow style
         """
-        dumper = salt.utils.yaml.get_dumper("IndentedSafeOrderedDumper")
-        return salt.utils.yaml.dump(attrs, default_flow_style=False, Dumper=dumper)
+        dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
+        return __utils__["yaml.dump"](attrs, default_flow_style=False, Dumper=dumper)
 
     attributes_diff = "".join(
         difflib.unified_diff(

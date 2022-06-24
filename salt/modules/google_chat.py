@@ -11,8 +11,6 @@ where you would like the message to be sent, see:
 
 import json
 
-import salt.utils.http
-
 # ------------------------------------------------------------------------------
 # module properties
 # ------------------------------------------------------------------------------
@@ -43,7 +41,7 @@ def send_message(url, message):
     """
     headers = {"Content-Type": "application/json"}
     data = {"text": message}
-    result = salt.utils.http.query(
+    result = __utils__["http.query"](
         url,
         "POST",
         data=json.dumps(data),

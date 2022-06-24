@@ -6,7 +6,6 @@ The Windows feature 'SNMP-Service' must be installed.
 import logging
 
 import salt.utils.platform
-import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 _HKEY = "HKLM"
@@ -47,7 +46,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, "Module win_snmp: Requires Windows"
 
-    if not salt.utils.win_reg.key_exists(_HKEY, _SNMP_KEY):
+    if not __utils__["reg.key_exists"](_HKEY, _SNMP_KEY):
         return False, "Module win_snmp: SNMP not installed"
 
     return __virtualname__
@@ -103,15 +102,15 @@ def get_agent_settings():
     sorted_types = sorted(_SERVICE_TYPES.items(), key=lambda x: (-x[1], x[0]))
 
     ret["services"] = list()
-    ret["contact"] = (salt.utils.win_reg.read_value(_HKEY, _AGENT_KEY, "sysContact"))[
+    ret["contact"] = (__utils__["reg.read_value"](_HKEY, _AGENT_KEY, "sysContact"))[
         "vdata"
     ]
 
-    ret["location"] = (salt.utils.win_reg.read_value(_HKEY, _AGENT_KEY, "sysLocation"))[
+    ret["location"] = (__utils__["reg.read_value"](_HKEY, _AGENT_KEY, "sysLocation"))[
         "vdata"
     ]
 
-    current_bitmask = (salt.utils.win_reg.read_value(_HKEY, _AGENT_KEY, "sysServices"))[
+    current_bitmask = (__utils__["reg.read_value"](_HKEY, _AGENT_KEY, "sysServices"))[
         "vdata"
     ]
 
@@ -178,13 +177,13 @@ def set_agent_settings(contact=None, location=None, services=None):
 
     if contact is not None:
         if contact != current_settings["contact"]:
-            salt.utils.win_reg.set_value(
+            __utils__["reg.set_value"](
                 _HKEY, _AGENT_KEY, "sysContact", contact, "REG_SZ"
             )
 
     if location is not None:
         if location != current_settings["location"]:
-            salt.utils.win_reg.set_value(
+            __utils__["reg.set_value"](
                 _HKEY, _AGENT_KEY, "sysLocation", location, "REG_SZ"
             )
 
@@ -196,7 +195,7 @@ def set_agent_settings(contact=None, location=None, services=None):
 
             _LOG.debug("Setting sysServices vdata to: %s", vdata)
 
-            salt.utils.win_reg.set_value(
+            __utils__["reg.set_value"](
                 _HKEY, _AGENT_KEY, "sysServices", vdata, "REG_DWORD"
             )
 
@@ -230,9 +229,7 @@ def get_auth_traps_enabled():
 
         salt '*' win_snmp.get_auth_traps_enabled
     """
-    reg_ret = salt.utils.win_reg.read_value(
-        _HKEY, _SNMP_KEY, "EnableAuthenticationTraps"
-    )
+    reg_ret = __utils__["reg.read_value"](_HKEY, _SNMP_KEY, "EnableAuthenticationTraps")
 
     if reg_ret["vdata"] == "(value not set)":
         return False
@@ -263,7 +260,7 @@ def set_auth_traps_enabled(status=True):
         return True
 
     vdata = int(status)
-    salt.utils.win_reg.set_value(_HKEY, _SNMP_KEY, vname, vdata, "REG_DWORD")
+    __utils__["reg.set_value"](_HKEY, _SNMP_KEY, vname, vdata, "REG_DWORD")
 
     new_status = get_auth_traps_enabled()
 
@@ -305,11 +302,11 @@ def get_community_names():
     ret = dict()
 
     # Look in GPO settings first
-    if salt.utils.win_reg.key_exists(_HKEY, _COMMUNITIES_GPO_KEY):
+    if __utils__["reg.key_exists"](_HKEY, _COMMUNITIES_GPO_KEY):
 
         _LOG.debug("Loading communities from Group Policy settings")
 
-        current_values = salt.utils.win_reg.list_values(_HKEY, _COMMUNITIES_GPO_KEY)
+        current_values = __utils__["reg.list_values"](_HKEY, _COMMUNITIES_GPO_KEY)
 
         # GPO settings are different in that they do not designate permissions
         # They are a numbered list of communities like so:
@@ -336,7 +333,7 @@ def get_community_names():
 
         _LOG.debug("Loading communities from SNMP settings")
 
-        current_values = salt.utils.win_reg.list_values(_HKEY, _COMMUNITIES_KEY)
+        current_values = __utils__["reg.list_values"](_HKEY, _COMMUNITIES_KEY)
 
         # The communities are stored as the community name with a numeric
         # permission value. Like this (4 = Read Only):
@@ -399,7 +396,7 @@ def set_community_names(communities):
     """
     values = dict()
 
-    if salt.utils.win_reg.key_exists(_HKEY, _COMMUNITIES_GPO_KEY):
+    if __utils__["reg.key_exists"](_HKEY, _COMMUNITIES_GPO_KEY):
         _LOG.debug("Communities on this system are managed by Group Policy")
         raise CommandExecutionError(
             "Communities on this system are managed by Group Policy"
@@ -429,7 +426,7 @@ def set_community_names(communities):
         if current_vname in values:
             # Modify existing communities that have a different permission value.
             if current_communities[current_vname] != values[current_vname]:
-                salt.utils.win_reg.set_value(
+                __utils__["reg.set_value"](
                     _HKEY,
                     _COMMUNITIES_KEY,
                     current_vname,
@@ -438,12 +435,12 @@ def set_community_names(communities):
                 )
         else:
             # Remove current communities that weren't provided.
-            salt.utils.win_reg.delete_value(_HKEY, _COMMUNITIES_KEY, current_vname)
+            __utils__["reg.delete_value"](_HKEY, _COMMUNITIES_KEY, current_vname)
 
     # Create any new communities.
     for vname in values:
         if vname not in current_communities:
-            salt.utils.win_reg.set_value(
+            __utils__["reg.set_value"](
                 _HKEY, _COMMUNITIES_KEY, vname, values[vname], "REG_DWORD"
             )
 

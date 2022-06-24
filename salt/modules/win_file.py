@@ -34,11 +34,8 @@ from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.user
-import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # do not remove, used in imported file.py functions
@@ -362,7 +359,7 @@ def group_to_gid(group):
     if group is None:
         return ""
 
-    return salt.utils.win_dacl.get_sid_string(group)
+    return __utils__["dacl.get_sid_string"](group)
 
 
 def get_pgid(path, follow_symlinks=True):
@@ -403,8 +400,8 @@ def get_pgid(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    group_name = salt.utils.win_dacl.get_primary_group(path)
-    return salt.utils.win_dacl.get_sid_string(group_name)
+    group_name = __utils__["dacl.get_primary_group"](path)
+    return __utils__["dacl.get_sid_string"](group_name)
 
 
 def get_pgroup(path, follow_symlinks=True):
@@ -555,7 +552,7 @@ def uid_to_user(uid):
     if uid is None or uid == "":
         return ""
 
-    return salt.utils.win_dacl.get_name(uid)
+    return __utils__["dacl.get_name"](uid)
 
 
 def user_to_uid(user):
@@ -575,9 +572,9 @@ def user_to_uid(user):
         salt '*' file.user_to_uid myusername
     """
     if user is None:
-        user = salt.utils.user.get_user()
+        user = __utils__["user.get_user"]()
 
-    return salt.utils.win_dacl.get_sid_string(user)
+    return __utils__["dacl.get_sid_string"](user)
 
 
 def get_uid(path, follow_symlinks=True):
@@ -615,8 +612,8 @@ def get_uid(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    owner_sid = salt.utils.win_dacl.get_owner(path)
-    return salt.utils.win_dacl.get_sid_string(owner_sid)
+    owner_sid = __utils__["dacl.get_owner"](path)
+    return __utils__["dacl.get_sid_string"](owner_sid)
 
 
 def get_user(path, follow_symlinks=True):
@@ -654,7 +651,7 @@ def get_user(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    return salt.utils.win_dacl.get_owner(path)
+    return __utils__["dacl.get_owner"](path)
 
 
 def get_mode(path):
@@ -792,9 +789,9 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     if not os.path.exists(path):
         raise CommandExecutionError("Path not found: {}".format(path))
 
-    salt.utils.win_dacl.set_owner(path, user)
+    __utils__["dacl.set_owner"](path, user)
     if pgroup:
-        salt.utils.win_dacl.set_primary_group(path, pgroup)
+        __utils__["dacl.set_primary_group"](path, pgroup)
 
     return True
 
@@ -824,7 +821,7 @@ def chpgrp(path, group):
         salt '*' file.chpgrp c:\\temp\\test.txt Administrators
         salt '*' file.chpgrp c:\\temp\\test.txt "'None'"
     """
-    return salt.utils.win_dacl.set_primary_group(path, group)
+    return __utils__["dacl.set_primary_group"](path, group)
 
 
 def chgrp(path, group):
@@ -928,7 +925,7 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     ret["mtime"] = pstat.st_mtime
     ret["ctime"] = pstat.st_ctime
     ret["size"] = pstat.st_size
-    ret["mode"] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
+    ret["mode"] = __utils__["files.normalize_mode"](oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret["sum"] = get_sum(path, hash_type)
     ret["type"] = "file"
@@ -1535,7 +1532,7 @@ def is_link(path):
         )
 
     try:
-        return salt.utils.path.islink(path)
+        return __utils__["path.islink"](path)
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
@@ -1626,10 +1623,10 @@ def mkdir(
 
             # Set owner
             if owner:
-                salt.utils.win_dacl.set_owner(obj_name=path, principal=owner)
+                __utils__["dacl.set_owner"](obj_name=path, principal=owner)
 
             # Set permissions
-            salt.utils.win_dacl.set_perms(
+            __utils__["dacl.set_perms"](
                 obj_name=path,
                 obj_type="file",
                 grant_perms=grant_perms,
@@ -1948,7 +1945,7 @@ def check_perms(
 
     path = os.path.expanduser(path)
 
-    return salt.utils.win_dacl.check_perms(
+    return __utils__["dacl.check_perms"](
         obj_name=path,
         obj_type="file",
         ret=ret,
@@ -2034,7 +2031,7 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
         # Specify advanced attributes with a list
         salt '*' file.set_perms C:\\Temp\\ "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
     """
-    return salt.utils.win_dacl.set_perms(
+    return __utils__["dacl.set_perms"](
         obj_name=path,
         obj_type="file",
         grant_perms=grant_perms,

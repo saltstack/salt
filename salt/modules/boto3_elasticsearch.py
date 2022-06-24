@@ -52,7 +52,6 @@ Connection module for Amazon Elasticsearch Service
 
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
@@ -89,7 +88,7 @@ def __virtual__():
 def __init__(opts):
     _ = opts
     if HAS_BOTO:
-        salt.utils.boto3mod.assign_funcs(__name__, "es")
+        __utils__["boto3.assign_funcs"](__name__, "es")
 
 
 def add_tags(

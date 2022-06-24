@@ -100,7 +100,7 @@ def _set_retcode(ret, highstate=None):
     if isinstance(ret, list):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return
-    if not salt.utils.state.check_result(ret, highstate=highstate):
+    if not __utils__["state.check_result"](ret, highstate=highstate):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
 
 
@@ -459,7 +459,7 @@ def low(data, queue=False, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-    if salt.utils.state.check_result(ret):
+    if __utils__["state.check_result"](ret):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
     return ret
 

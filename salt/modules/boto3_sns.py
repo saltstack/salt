@@ -44,7 +44,6 @@ Connection module for Amazon SNS
 
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -68,7 +67,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "sns")
+        __utils__["boto3.assign_funcs"](__name__, "sns")
     return has_boto_reqs
 
 

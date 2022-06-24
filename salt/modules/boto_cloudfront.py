@@ -52,10 +52,7 @@ Connection module for Amazon CloudFront
 
 import logging
 
-import salt.utils.boto3mod
-import salt.utils.dictdiffer
 import salt.utils.versions
-import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 try:
@@ -78,7 +75,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "cloudfront")
+        __utils__["boto3.assign_funcs"](__name__, "cloudfront")
     return has_boto_reqs
 
 
@@ -211,7 +208,7 @@ def get_distribution(name, region=None, key=None, keyid=None, profile=None):
                 return {"error": msg.format(name)}
             distribution = dist
     except botocore.exceptions.ClientError as err:
-        return {"error": salt.utils.boto3mod.get_error(err)}
+        return {"error": __utils__["boto3.get_error"](err)}
     if not distribution:
         return {"result": None}
 
@@ -266,8 +263,8 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
         # as opposed to being called from execution or state modules
         log.trace("Boto client error: {}", exc)
 
-    dumper = salt.utils.yaml.get_dumper("IndentedSafeOrderedDumper")
-    return salt.utils.yaml.dump(
+    dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
+    return __utils__["yaml.dump"](
         results,
         default_flow_style=False,
         Dumper=dumper,
@@ -339,7 +336,7 @@ def create_distribution(
             profile=profile,
         )
     except botocore.exceptions.ClientError as err:
-        return {"error": salt.utils.boto3mod.get_error(err)}
+        return {"error": __utils__["boto3.get_error"](err)}
 
     return {"result": True}
 
@@ -397,9 +394,9 @@ def update_distribution(
     current_tags = dist_with_tags["tags"]
     etag = dist_with_tags["etag"]
 
-    config_diff = salt.utils.dictdiffer.deep_diff(current_config, config)
+    config_diff = __utils__["dictdiffer.deep_diff"](current_config, config)
     if tags:
-        tags_diff = salt.utils.dictdiffer.deep_diff(current_tags, tags)
+        tags_diff = __utils__["dictdiffer.deep_diff"](current_tags, tags)
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -430,7 +427,7 @@ def update_distribution(
                     TagKeys=tags_to_remove,
                 )
     except botocore.exceptions.ClientError as err:
-        return {"error": salt.utils.boto3mod.get_error(err)}
+        return {"error": __utils__["boto3.get_error"](err)}
     finally:
         _cache_id(
             "cloudfront",

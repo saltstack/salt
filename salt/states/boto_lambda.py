@@ -64,7 +64,6 @@ import hashlib
 import logging
 import os
 
-import salt.utils.boto3mod
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
@@ -442,7 +441,7 @@ def _function_config_present(
     if oldval is not None:
         oldval.pop("VpcId", None)
     fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
-    if salt.utils.boto3mod.ordered(oldval) != salt.utils.boto3mod.ordered(
+    if __utils__["boto3.ordered"](oldval) != __utils__["boto3.ordered"](
         fixed_VpcConfig
     ):
         need_update = True

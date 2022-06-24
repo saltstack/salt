@@ -105,14 +105,14 @@ def check_dns_name_availability(name, region, **kwargs):
         salt-call azurearm_network.check_dns_name_availability testdnsname westus
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         check_dns_name = netconn.check_dns_name_availability(
             location=region, domain_name_label=name
         )
         result = check_dns_name.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -143,7 +143,7 @@ def check_ip_address_availability(
         salt-call azurearm_network.check_ip_address_availability 10.0.0.4 testnet testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         check_ip = netconn.virtual_networks.check_ip_address_availability(
             resource_group_name=resource_group,
@@ -152,7 +152,7 @@ def check_ip_address_availability(
         )
         result = check_ip.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -258,15 +258,15 @@ def security_rules_list(security_group, resource_group, **kwargs):
         salt-call azurearm_network.security_rules_list testnsg testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secrules = netconn.security_rules.list(
             network_security_group_name=security_group,
             resource_group_name=resource_group,
         )
-        result = salt.utils.azurearm.paged_object_to_list(secrules)
+        result = __utils__["azurearm.paged_object_to_list"](secrules)
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -378,10 +378,10 @@ def security_rule_create_or_update(
             # pylint: disable=exec-used
             exec("{} = None".format(params[1]))
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        rulemodel = salt.utils.azurearm.create_object_model(
+        rulemodel = __utils__["azurearm.create_object_model"](
             "network",
             "SecurityRule",
             name=name,
@@ -414,7 +414,7 @@ def security_rule_create_or_update(
         secrule_result = secrule.result()
         result = secrule_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -447,7 +447,7 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secrule = netconn.security_rules.delete(
             network_security_group_name=security_group,
@@ -457,7 +457,7 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
         secrule.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -484,7 +484,7 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
         salt-call azurearm_network.security_rule_get testrule1 testnsg testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secrule = netconn.security_rules.get(
             network_security_group_name=security_group,
@@ -493,7 +493,7 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
         )
         result = secrule.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -530,10 +530,10 @@ def network_security_group_create_or_update(
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        secgroupmodel = salt.utils.azurearm.create_object_model(
+        secgroupmodel = __utils__["azurearm.create_object_model"](
             "network", "NetworkSecurityGroup", **kwargs
         )
     except TypeError as exc:
@@ -550,7 +550,7 @@ def network_security_group_create_or_update(
         secgroup_result = secgroup.result()
         result = secgroup_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -580,7 +580,7 @@ def network_security_group_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secgroup = netconn.network_security_groups.delete(
             resource_group_name=resource_group, network_security_group_name=name
@@ -588,7 +588,7 @@ def network_security_group_delete(name, resource_group, **kwargs):
         secgroup.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -612,14 +612,14 @@ def network_security_group_get(name, resource_group, **kwargs):
         salt-call azurearm_network.network_security_group_get testnsg testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secgroup = netconn.network_security_groups.get(
             resource_group_name=resource_group, network_security_group_name=name
         )
         result = secgroup.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -643,15 +643,15 @@ def network_security_groups_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        secgroups = salt.utils.azurearm.paged_object_to_list(
+        secgroups = __utils__["azurearm.paged_object_to_list"](
             netconn.network_security_groups.list(resource_group_name=resource_group)
         )
         for secgroup in secgroups:
             result[secgroup["name"]] = secgroup
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -672,15 +672,15 @@ def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        secgroups = salt.utils.azurearm.paged_object_to_list(
+        secgroups = __utils__["azurearm.paged_object_to_list"](
             netconn.network_security_groups.list_all()
         )
         for secgroup in secgroups:
             result[secgroup["name"]] = secgroup
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -706,9 +706,9 @@ def subnets_list(virtual_network, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        subnets = salt.utils.azurearm.paged_object_to_list(
+        subnets = __utils__["azurearm.paged_object_to_list"](
             netconn.subnets.list(
                 resource_group_name=resource_group, virtual_network_name=virtual_network
             )
@@ -717,7 +717,7 @@ def subnets_list(virtual_network, resource_group, **kwargs):
         for subnet in subnets:
             result[subnet["name"]] = subnet
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -745,7 +745,7 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
         salt-call azurearm_network.subnet_get testsubnet testnet testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         subnet = netconn.subnets.get(
             resource_group_name=resource_group,
@@ -755,7 +755,7 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
 
         result = subnet.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -788,7 +788,7 @@ def subnet_create_or_update(
                   '10.0.0.0/24' testnet testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     # Use NSG name to link to the ID of an existing NSG.
     if kwargs.get("network_security_group"):
@@ -809,7 +809,7 @@ def subnet_create_or_update(
             kwargs["route_table"] = {"id": str(rt_table["id"])}
 
     try:
-        snetmodel = salt.utils.azurearm.create_object_model(
+        snetmodel = __utils__["azurearm.create_object_model"](
             "network",
             "Subnet",
             address_prefix=address_prefix,
@@ -831,7 +831,7 @@ def subnet_create_or_update(
         sn_result = subnet.result()
         result = sn_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -864,7 +864,7 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         subnet = netconn.subnets.delete(
             resource_group_name=resource_group,
@@ -874,7 +874,7 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
         subnet.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -894,16 +894,16 @@ def virtual_networks_list_all(**kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        vnets = salt.utils.azurearm.paged_object_to_list(
+        vnets = __utils__["azurearm.paged_object_to_list"](
             netconn.virtual_networks.list_all()
         )
 
         for vnet in vnets:
             result[vnet["name"]] = vnet
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -927,16 +927,16 @@ def virtual_networks_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        vnets = salt.utils.azurearm.paged_object_to_list(
+        vnets = __utils__["azurearm.paged_object_to_list"](
             netconn.virtual_networks.list(resource_group_name=resource_group)
         )
 
         for vnet in vnets:
             result[vnet["name"]] = vnet
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -981,13 +981,13 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
         log.error("Address prefixes must be specified as a list!")
         return False
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     address_space = {"address_prefixes": address_prefixes}
     dhcp_options = {"dns_servers": kwargs.get("dns_servers")}
 
     try:
-        vnetmodel = salt.utils.azurearm.create_object_model(
+        vnetmodel = __utils__["azurearm.create_object_model"](
             "network",
             "VirtualNetwork",
             address_space=address_space,
@@ -1008,7 +1008,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
         vnet_result = vnet.result()
         result = vnet_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -1038,7 +1038,7 @@ def virtual_network_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         vnet = netconn.virtual_networks.delete(
             virtual_network_name=name, resource_group_name=resource_group
@@ -1046,7 +1046,7 @@ def virtual_network_delete(name, resource_group, **kwargs):
         vnet.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -1070,14 +1070,14 @@ def virtual_network_get(name, resource_group, **kwargs):
         salt-call azurearm_network.virtual_network_get testnet testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         vnet = netconn.virtual_networks.get(
             virtual_network_name=name, resource_group_name=resource_group
         )
         result = vnet.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1098,16 +1098,16 @@ def load_balancers_list_all(**kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        load_balancers = salt.utils.azurearm.paged_object_to_list(
+        load_balancers = __utils__["azurearm.paged_object_to_list"](
             netconn.load_balancers.list_all()
         )
 
         for load_balancer in load_balancers:
             result[load_balancer["name"]] = load_balancer
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1131,16 +1131,16 @@ def load_balancers_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        load_balancers = salt.utils.azurearm.paged_object_to_list(
+        load_balancers = __utils__["azurearm.paged_object_to_list"](
             netconn.load_balancers.list(resource_group_name=resource_group)
         )
 
         for load_balancer in load_balancers:
             result[load_balancer["name"]] = load_balancer
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1165,14 +1165,14 @@ def load_balancer_get(name, resource_group, **kwargs):
         salt-call azurearm_network.load_balancer_get testlb testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         load_balancer = netconn.load_balancers.get(
             load_balancer_name=name, resource_group_name=resource_group
         )
         result = load_balancer.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1207,7 +1207,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     if isinstance(kwargs.get("frontend_ip_configurations"), list):
         for idx in range(0, len(kwargs["frontend_ip_configurations"])):
@@ -1338,7 +1338,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                 }
 
     try:
-        lbmodel = salt.utils.azurearm.create_object_model(
+        lbmodel = __utils__["azurearm.create_object_model"](
             "network", "LoadBalancer", **kwargs
         )
     except TypeError as exc:
@@ -1355,7 +1355,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
         lb_result = load_balancer.result()
         result = lb_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -1385,7 +1385,7 @@ def load_balancer_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         load_balancer = netconn.load_balancers.delete(
             load_balancer_name=name, resource_group_name=resource_group
@@ -1393,7 +1393,7 @@ def load_balancer_delete(name, resource_group, **kwargs):
         load_balancer.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -1414,11 +1414,13 @@ def usages_list(location, **kwargs):
         salt-call azurearm_network.usages_list westus
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        result = salt.utils.azurearm.paged_object_to_list(netconn.usages.list(location))
+        result = __utils__["azurearm.paged_object_to_list"](
+            netconn.usages.list(location)
+        )
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1445,7 +1447,7 @@ def network_interface_delete(name, resource_group, **kwargs):
     """
     result = False
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.delete(
             network_interface_name=name, resource_group_name=resource_group
@@ -1453,7 +1455,7 @@ def network_interface_delete(name, resource_group, **kwargs):
         nic.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -1477,14 +1479,14 @@ def network_interface_get(name, resource_group, **kwargs):
         salt-call azurearm_network.network_interface_get test-iface0 testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.get(
             network_interface_name=name, resource_group_name=resource_group
         )
         result = nic.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1531,7 +1533,7 @@ def network_interface_create_or_update(
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     # Use NSG name to link to the ID of an existing NSG.
     if kwargs.get("network_security_group"):
@@ -1589,7 +1591,7 @@ def network_interface_create_or_update(
                             ipconfig["public_ip_address"] = {"id": str(pub_ip["id"])}
 
     try:
-        nicmodel = salt.utils.azurearm.create_object_model(
+        nicmodel = __utils__["azurearm.create_object_model"](
             "network", "NetworkInterface", ip_configurations=ip_configurations, **kwargs
         )
     except TypeError as exc:
@@ -1606,7 +1608,7 @@ def network_interface_create_or_update(
         nic_result = interface.result()
         result = nic_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -1631,16 +1633,16 @@ def network_interfaces_list_all(**kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        nics = salt.utils.azurearm.paged_object_to_list(
+        nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list_all()
         )
 
         for nic in nics:
             result[nic["name"]] = nic
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1664,16 +1666,16 @@ def network_interfaces_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        nics = salt.utils.azurearm.paged_object_to_list(
+        nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list(resource_group_name=resource_group)
         )
 
         for nic in nics:
             result[nic["name"]] = nic
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1699,7 +1701,7 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
         salt-call azurearm_network.network_interface_get_effective_route_table test-iface0 testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.get_effective_route_table(
             network_interface_name=name, resource_group_name=resource_group
@@ -1709,7 +1711,7 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
         tables = tables.as_dict()
         result = tables["value"]
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1737,7 +1739,7 @@ def network_interface_list_effective_network_security_groups(
         salt-call azurearm_network.network_interface_list_effective_network_security_groups test-iface0 testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.list_effective_network_security_groups(
             network_interface_name=name, resource_group_name=resource_group
@@ -1747,7 +1749,7 @@ def network_interface_list_effective_network_security_groups(
         groups = groups.as_dict()
         result = groups["value"]
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1778,9 +1780,9 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        nics = salt.utils.azurearm.paged_object_to_list(
+        nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list_virtual_machine_scale_set_vm_network_interfaces(
                 virtual_machine_scale_set_name=scale_set,
                 virtualmachine_index=vm_index,
@@ -1791,7 +1793,7 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
         for nic in nics:
             result[nic["name"]] = nic
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1820,9 +1822,9 @@ def list_virtual_machine_scale_set_network_interfaces(
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        nics = salt.utils.azurearm.paged_object_to_list(
+        nics = __utils__["azurearm.paged_object_to_list"](
             netconn.network_interfaces.list_virtual_machine_scale_set_network_interfaces(
                 virtual_machine_scale_set_name=scale_set,
                 resource_group_name=resource_group,
@@ -1832,7 +1834,7 @@ def list_virtual_machine_scale_set_network_interfaces(
         for nic in nics:
             result[nic["name"]] = nic
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1866,7 +1868,7 @@ def get_virtual_machine_scale_set_network_interface(
     """
     expand = kwargs.get("expand")
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.list_virtual_machine_scale_set_vm_network_interfaces(
             network_interface_name=name,
@@ -1878,7 +1880,7 @@ def get_virtual_machine_scale_set_network_interface(
 
         result = nic.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1904,7 +1906,7 @@ def public_ip_address_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         pub_ip = netconn.public_ip_addresses.delete(
             public_ip_address_name=name, resource_group_name=resource_group
@@ -1912,7 +1914,7 @@ def public_ip_address_delete(name, resource_group, **kwargs):
         pub_ip.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -1938,7 +1940,7 @@ def public_ip_address_get(name, resource_group, **kwargs):
     """
     expand = kwargs.get("expand")
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
         pub_ip = netconn.public_ip_addresses.get(
@@ -1948,7 +1950,7 @@ def public_ip_address_get(name, resource_group, **kwargs):
         )
         result = pub_ip.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -1983,10 +1985,10 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        pub_ip_model = salt.utils.azurearm.create_object_model(
+        pub_ip_model = __utils__["azurearm.create_object_model"](
             "network", "PublicIPAddress", **kwargs
         )
     except TypeError as exc:
@@ -2003,7 +2005,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
         ip_result = ip.result()
         result = ip_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -2028,16 +2030,16 @@ def public_ip_addresses_list_all(**kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        pub_ips = salt.utils.azurearm.paged_object_to_list(
+        pub_ips = __utils__["azurearm.paged_object_to_list"](
             netconn.public_ip_addresses.list_all()
         )
 
         for ip in pub_ips:
             result[ip["name"]] = ip
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2061,16 +2063,16 @@ def public_ip_addresses_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        pub_ips = salt.utils.azurearm.paged_object_to_list(
+        pub_ips = __utils__["azurearm.paged_object_to_list"](
             netconn.public_ip_addresses.list(resource_group_name=resource_group)
         )
 
         for ip in pub_ips:
             result[ip["name"]] = ip
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2098,7 +2100,7 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         rule = netconn.route_filter_rules.delete(
             resource_group_name=resource_group,
@@ -2108,7 +2110,7 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
         rule.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -2135,7 +2137,7 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         rule = netconn.route_filter_rules.get(
             resource_group_name=resource_group,
@@ -2145,7 +2147,7 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
 
         result = rule.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2193,10 +2195,10 @@ def route_filter_rule_create_or_update(
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        rule_model = salt.utils.azurearm.create_object_model(
+        rule_model = __utils__["azurearm.create_object_model"](
             "network",
             "RouteFilterRule",
             access=access,
@@ -2221,7 +2223,7 @@ def route_filter_rule_create_or_update(
         message = str(exc)
         if kwargs.get("subscription_id") == str(message).strip():
             message = "Subscription not authorized for this operation!"
-        salt.utils.azurearm.log_cloud_error("network", message, **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", message, **kwargs)
         result = {"error": message}
     except SerializationError as exc:
         result = {
@@ -2251,9 +2253,9 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        rules = salt.utils.azurearm.paged_object_to_list(
+        rules = __utils__["azurearm.paged_object_to_list"](
             netconn.route_filter_rules.list_by_route_filter(
                 resource_group_name=resource_group, route_filter_name=route_filter
             )
@@ -2262,7 +2264,7 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
         for rule in rules:
             result[rule["name"]] = rule
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2288,7 +2290,7 @@ def route_filter_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         route_filter = netconn.route_filters.delete(
             route_filter_name=name, resource_group_name=resource_group
@@ -2296,7 +2298,7 @@ def route_filter_delete(name, resource_group, **kwargs):
         route_filter.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -2322,7 +2324,7 @@ def route_filter_get(name, resource_group, **kwargs):
     """
     expand = kwargs.get("expand")
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
         route_filter = netconn.route_filters.get(
@@ -2330,7 +2332,7 @@ def route_filter_get(name, resource_group, **kwargs):
         )
         result = route_filter.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2365,10 +2367,10 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        rt_filter_model = salt.utils.azurearm.create_object_model(
+        rt_filter_model = __utils__["azurearm.create_object_model"](
             "network", "RouteFilter", **kwargs
         )
     except TypeError as exc:
@@ -2385,7 +2387,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
         rt_result = rt_filter.result()
         result = rt_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -2413,9 +2415,9 @@ def route_filters_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        filters = salt.utils.azurearm.paged_object_to_list(
+        filters = __utils__["azurearm.paged_object_to_list"](
             netconn.route_filters.list_by_resource_group(
                 resource_group_name=resource_group
             )
@@ -2424,7 +2426,7 @@ def route_filters_list(resource_group, **kwargs):
         for route_filter in filters:
             result[route_filter["name"]] = route_filter
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2445,14 +2447,16 @@ def route_filters_list_all(**kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        filters = salt.utils.azurearm.paged_object_to_list(netconn.route_filters.list())
+        filters = __utils__["azurearm.paged_object_to_list"](
+            netconn.route_filters.list()
+        )
 
         for route_filter in filters:
             result[route_filter["name"]] = route_filter
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2480,7 +2484,7 @@ def route_delete(name, route_table, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         route = netconn.routes.delete(
             resource_group_name=resource_group,
@@ -2490,7 +2494,7 @@ def route_delete(name, route_table, resource_group, **kwargs):
         route.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -2517,7 +2521,7 @@ def route_get(name, route_table, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         route = netconn.routes.get(
             resource_group_name=resource_group,
@@ -2527,7 +2531,7 @@ def route_get(name, route_table, resource_group, **kwargs):
 
         result = route.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2570,10 +2574,10 @@ def route_create_or_update(
         salt-call azurearm_network.route_create_or_update test-rt '10.0.0.0/8' test-rt-table testgroup
 
     """
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        rt_model = salt.utils.azurearm.create_object_model(
+        rt_model = __utils__["azurearm.create_object_model"](
             "network",
             "Route",
             address_prefix=address_prefix,
@@ -2596,7 +2600,7 @@ def route_create_or_update(
         rt_result = route.result()
         result = rt_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -2626,9 +2630,9 @@ def routes_list(route_table, resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        routes = salt.utils.azurearm.paged_object_to_list(
+        routes = __utils__["azurearm.paged_object_to_list"](
             netconn.routes.list(
                 resource_group_name=resource_group, route_table_name=route_table
             )
@@ -2637,7 +2641,7 @@ def routes_list(route_table, resource_group, **kwargs):
         for route in routes:
             result[route["name"]] = route
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2663,7 +2667,7 @@ def route_table_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         table = netconn.route_tables.delete(
             route_table_name=name, resource_group_name=resource_group
@@ -2671,7 +2675,7 @@ def route_table_delete(name, resource_group, **kwargs):
         table.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
 
     return result
 
@@ -2697,7 +2701,7 @@ def route_table_get(name, resource_group, **kwargs):
     """
     expand = kwargs.get("expand")
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
         table = netconn.route_tables.get(
@@ -2705,7 +2709,7 @@ def route_table_get(name, resource_group, **kwargs):
         )
         result = table.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2740,10 +2744,10 @@ def route_table_create_or_update(name, resource_group, **kwargs):
             return False
         kwargs["location"] = rg_props["location"]
 
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     try:
-        rt_tbl_model = salt.utils.azurearm.create_object_model(
+        rt_tbl_model = __utils__["azurearm.create_object_model"](
             "network", "RouteTable", **kwargs
         )
     except TypeError as exc:
@@ -2760,7 +2764,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
         tbl_result = table.result()
         result = tbl_result.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -2788,16 +2792,16 @@ def route_tables_list(resource_group, **kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        tables = salt.utils.azurearm.paged_object_to_list(
+        tables = __utils__["azurearm.paged_object_to_list"](
             netconn.route_tables.list(resource_group_name=resource_group)
         )
 
         for table in tables:
             result[table["name"]] = table
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
@@ -2818,16 +2822,16 @@ def route_tables_list_all(**kwargs):
 
     """
     result = {}
-    netconn = salt.utils.azurearm.get_client("network", **kwargs)
+    netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
-        tables = salt.utils.azurearm.paged_object_to_list(
+        tables = __utils__["azurearm.paged_object_to_list"](
             netconn.route_tables.list_all()
         )
 
         for table in tables:
             result[table["name"]] = table
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("network", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("network", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result

@@ -10,7 +10,6 @@ System module for sleeping, restarting, and shutting down the system on Mac OS X
 import getpass
 import shlex
 
-import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -205,10 +204,10 @@ def get_remote_login():
 
         salt '*' system.get_remote_login
     """
-    ret = salt.utils.mac_utils.execute_return_result("systemsetup -getremotelogin")
+    ret = __utils__["mac_utils.execute_return_result"]("systemsetup -getremotelogin")
 
-    enabled = salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret)
+    enabled = __utils__["mac_utils.validate_enabled"](
+        __utils__["mac_utils.parse_return"](ret)
     )
 
     return enabled == "on"
@@ -231,12 +230,12 @@ def set_remote_login(enable):
 
         salt '*' system.set_remote_login True
     """
-    state = salt.utils.mac_utils.validate_enabled(enable)
+    state = __utils__["mac_utils.validate_enabled"](enable)
 
     cmd = "systemsetup -f -setremotelogin {}".format(state)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         state, get_remote_login, normalize_ret=True
     )
 
@@ -254,12 +253,12 @@ def get_remote_events():
 
         salt '*' system.get_remote_events
     """
-    ret = salt.utils.mac_utils.execute_return_result(
+    ret = __utils__["mac_utils.execute_return_result"](
         "systemsetup -getremoteappleevents"
     )
 
-    enabled = salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret)
+    enabled = __utils__["mac_utils.validate_enabled"](
+        __utils__["mac_utils.parse_return"](ret)
     )
 
     return enabled == "on"
@@ -283,12 +282,12 @@ def set_remote_events(enable):
 
         salt '*' system.set_remote_events On
     """
-    state = salt.utils.mac_utils.validate_enabled(enable)
+    state = __utils__["mac_utils.validate_enabled"](enable)
 
     cmd = "systemsetup -setremoteappleevents {}".format(state)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         state,
         get_remote_events,
         normalize_ret=True,
@@ -308,9 +307,9 @@ def get_computer_name():
 
         salt '*' system.get_computer_name
     """
-    ret = salt.utils.mac_utils.execute_return_result("scutil --get ComputerName")
+    ret = __utils__["mac_utils.execute_return_result"]("scutil --get ComputerName")
 
-    return salt.utils.mac_utils.parse_return(ret)
+    return __utils__["mac_utils.parse_return"](ret)
 
 
 def set_computer_name(name):
@@ -329,9 +328,9 @@ def set_computer_name(name):
         salt '*' system.set_computer_name "Mike's Mac"
     """
     cmd = 'scutil --set ComputerName "{}"'.format(name)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         name,
         get_computer_name,
     )
@@ -350,9 +349,11 @@ def get_subnet_name():
 
         salt '*' system.get_subnet_name
     """
-    ret = salt.utils.mac_utils.execute_return_result("systemsetup -getlocalsubnetname")
+    ret = __utils__["mac_utils.execute_return_result"](
+        "systemsetup -getlocalsubnetname"
+    )
 
-    return salt.utils.mac_utils.parse_return(ret)
+    return __utils__["mac_utils.parse_return"](ret)
 
 
 def set_subnet_name(name):
@@ -375,9 +376,9 @@ def set_subnet_name(name):
         salt '*' system.set_subnet_name "Mike's Mac"
     """
     cmd = 'systemsetup -setlocalsubnetname "{}"'.format(name)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         name,
         get_subnet_name,
     )
@@ -396,9 +397,9 @@ def get_startup_disk():
 
         salt '*' system.get_startup_disk
     """
-    ret = salt.utils.mac_utils.execute_return_result("systemsetup -getstartupdisk")
+    ret = __utils__["mac_utils.execute_return_result"]("systemsetup -getstartupdisk")
 
-    return salt.utils.mac_utils.parse_return(ret)
+    return __utils__["mac_utils.parse_return"](ret)
 
 
 def list_startup_disks():
@@ -414,7 +415,7 @@ def list_startup_disks():
 
         salt '*' system.list_startup_disks
     """
-    ret = salt.utils.mac_utils.execute_return_result("systemsetup -liststartupdisks")
+    ret = __utils__["mac_utils.execute_return_result"]("systemsetup -liststartupdisks")
 
     return ret.splitlines()
 
@@ -445,9 +446,9 @@ def set_startup_disk(path):
         raise SaltInvocationError(msg)
 
     cmd = "systemsetup -setstartupdisk {}".format(path)
-    salt.utils.mac_utils.execute_return_result(cmd)
+    __utils__["mac_utils.execute_return_result"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         path,
         get_startup_disk,
     )
@@ -468,11 +469,11 @@ def get_restart_delay():
 
         salt '*' system.get_restart_delay
     """
-    ret = salt.utils.mac_utils.execute_return_result(
+    ret = __utils__["mac_utils.execute_return_result"](
         "systemsetup -getwaitforstartupafterpowerfailure"
     )
 
-    return salt.utils.mac_utils.parse_return(ret)
+    return __utils__["mac_utils.parse_return"](ret)
 
 
 def set_restart_delay(seconds):
@@ -512,9 +513,9 @@ def set_restart_delay(seconds):
         raise SaltInvocationError(msg)
 
     cmd = "systemsetup -setwaitforstartupafterpowerfailure {}".format(seconds)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         seconds,
         get_restart_delay,
     )
@@ -534,12 +535,12 @@ def get_disable_keyboard_on_lock():
 
         salt '*' system.get_disable_keyboard_on_lock
     """
-    ret = salt.utils.mac_utils.execute_return_result(
+    ret = __utils__["mac_utils.execute_return_result"](
         "systemsetup -getdisablekeyboardwhenenclosurelockisengaged"
     )
 
-    enabled = salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret)
+    enabled = __utils__["mac_utils.validate_enabled"](
+        __utils__["mac_utils.parse_return"](ret)
     )
 
     return enabled == "on"
@@ -563,12 +564,12 @@ def set_disable_keyboard_on_lock(enable):
 
         salt '*' system.set_disable_keyboard_on_lock False
     """
-    state = salt.utils.mac_utils.validate_enabled(enable)
+    state = __utils__["mac_utils.validate_enabled"](enable)
 
     cmd = "systemsetup -setdisablekeyboardwhenenclosurelockisengaged {}".format(state)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         state,
         get_disable_keyboard_on_lock,
         normalize_ret=True,
@@ -588,11 +589,11 @@ def get_boot_arch():
 
         salt '*' system.get_boot_arch
     """
-    ret = salt.utils.mac_utils.execute_return_result(
+    ret = __utils__["mac_utils.execute_return_result"](
         "systemsetup -getkernelbootarchitecturesetting"
     )
 
-    arch = salt.utils.mac_utils.parse_return(ret)
+    arch = __utils__["mac_utils.parse_return"](ret)
 
     if "default" in arch:
         return "default"
@@ -639,9 +640,9 @@ def set_boot_arch(arch="default"):
         raise SaltInvocationError(msg)
 
     cmd = "systemsetup -setkernelbootarchitecture {}".format(arch)
-    salt.utils.mac_utils.execute_return_success(cmd)
+    __utils__["mac_utils.execute_return_success"](cmd)
 
-    return salt.utils.mac_utils.confirm_updated(
+    return __utils__["mac_utils.confirm_updated"](
         arch,
         get_boot_arch,
     )

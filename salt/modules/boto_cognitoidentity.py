@@ -78,7 +78,6 @@ Connection module for Amazon CognitoIdentity
 
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.versions
 
@@ -115,7 +114,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        salt.utils.boto3mod.assign_funcs(__name__, "cognito-identity")
+        __utils__["boto3.assign_funcs"](__name__, "cognito-identity")
 
 
 def _find_identity_pool_ids(name, pool_id, conn):
@@ -125,7 +124,7 @@ def _find_identity_pool_ids(name, pool_id, conn):
     """
     ids = []
     if pool_id is None:
-        for pools in salt.utils.boto3mod.paged_call(
+        for pools in __utils__["boto3.paged_call"](
             conn.list_identity_pools,
             marker_flag="NextToken",
             marker_arg="NextToken",
@@ -178,7 +177,7 @@ def describe_identity_pools(
         else:
             return {"identity_pools": None}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def create_identity_pool(
@@ -231,7 +230,7 @@ def create_identity_pool(
 
         return {"created": True, "identity_pool": response}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_identity_pools(
@@ -271,7 +270,7 @@ def delete_identity_pools(
         else:
             return {"deleted": False, "count": count}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def get_identity_pool_roles(
@@ -311,7 +310,7 @@ def get_identity_pool_roles(
         else:
             return {"identity_pool_roles": None}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def _get_role_arn(name, **conn_params):
@@ -391,7 +390,7 @@ def set_identity_pool_roles(
 
         return {"set": True, "roles": Roles}
     except ClientError as e:
-        return {"set": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"set": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def update_identity_pool(
@@ -476,4 +475,4 @@ def update_identity_pool(
 
         return {"updated": True, "identity_pool": response}
     except ClientError as e:
-        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"updated": False, "error": __utils__["boto3.get_error"](e)}

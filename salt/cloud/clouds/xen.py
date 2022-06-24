@@ -328,7 +328,7 @@ def list_nodes_full(session=None):
     log.debug("ret: %s", ret)
     log.debug("provider: %s", provider)
     log.debug("__opts__: %s", __opts__)
-    salt.utils.cloud.cache_node_list(ret, provider, __opts__)
+    __utils__["cloud.cache_node_list"](ret, provider, __opts__)
     return ret
 
 
@@ -488,7 +488,7 @@ def show_instance(name, session=None, call=None):
             "public_ips": None,
         }
 
-        salt.utils.cloud.cache_node(ret, _get_active_provider_name(), __opts__)
+        __utils__["cloud.cache_node"](ret, _get_active_provider_name(), __opts__)
     return ret
 
 
@@ -547,7 +547,7 @@ def create(vm_):
     ret = {}
 
     # fire creating event
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(name),
@@ -556,7 +556,7 @@ def create(vm_):
         transport=__opts__["transport"],
     )
     log.debug("Adding %s to cloud cache.", name)
-    salt.utils.cloud.cachedir_index_add(
+    __utils__["cloud.cachedir_index_add"](
         vm_["name"], vm_["profile"], "xen", vm_["driver"]
     )
 
@@ -577,7 +577,7 @@ def create(vm_):
     log.debug("Clone: %s ", clone)
 
     # fire event to read new vm properties (requesting)
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(name),
@@ -620,7 +620,7 @@ def create(vm_):
     ret = show_instance(name)
     ret.update({"extra": record})
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(name),
@@ -644,7 +644,7 @@ def _deploy_salt_minion(name, session, vm_):
     # Bootstrap Salt minion!
     if vm_["ssh_host"] is not None:
         log.info("Installing Salt minion on %s", name)
-        boot_ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+        boot_ret = __utils__["cloud.bootstrap"](vm_, __opts__)
         log.debug("boot return: %s", boot_ret)
 
 
@@ -981,7 +981,7 @@ def destroy(name=None, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
     ret = {}
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -1006,7 +1006,7 @@ def destroy(name=None, call=None):
         task = session.xenapi.Async.VM.destroy(vm)
         _run_async_task(task, session)
         ret["destroyed"] = True
-        salt.utils.cloud.fire_event(
+        __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
             "salt/cloud/{}/destroyed".format(name),
@@ -1015,10 +1015,10 @@ def destroy(name=None, call=None):
             transport=__opts__["transport"],
         )
         if __opts__.get("update_cachedir", False) is True:
-            salt.utils.cloud.delete_minion_cachedir(
+            __utils__["cloud.delete_minion_cachedir"](
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
-        salt.utils.cloud.cachedir_index_del(name)
+        __utils__["cloud.cachedir_index_del"](name)
         return ret
 
 

@@ -25,8 +25,6 @@ private key file:
 import logging
 import re
 
-import salt.utils.args
-import salt.utils.dictupdate
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -120,7 +118,7 @@ def _get(app, endpoint, id=None, auth_required=False, **kwargs):
     if id:
         item = getattr(getattr(nb, app), endpoint).get(id)
     else:
-        kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        kwargs = __utils__["args.clean_kwargs"](**kwargs)
         item = getattr(getattr(nb, app), endpoint).get(**kwargs)
     return item
 
@@ -155,7 +153,7 @@ def filter_(app, endpoint, **kwargs):
     ret = []
     nb = _nb_obj(auth_required=True if app in AUTH_ENDPOINTS else False)
     nb_query = getattr(getattr(nb, app), endpoint).filter(
-        **salt.utils.args.clean_kwargs(**kwargs)
+        **__utils__["args.clean_kwargs"](**kwargs)
     )
     if nb_query:
         ret = [_strip_url_field(dict(i)) for i in nb_query]
@@ -413,7 +411,7 @@ def update_device(name, **kwargs):
 
         salt myminion netbox.update_device edge_router serial=JN2932920
     """
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
     nb_device = _get("dcim", "devices", auth_required=True, name=name)
     for k, v in kwargs.items():
         setattr(nb_device, k, v)
@@ -606,7 +604,7 @@ def openconfig_interfaces(device_name=None):
                             }
                         }
                     }
-                    oc_if[if_name] = salt.utils.dictupdate.update(
+                    oc_if[if_name] = __utils__["dictupdate.update"](
                         oc_if[if_name], subif_descr
                     )
             if interface["mtu"]:

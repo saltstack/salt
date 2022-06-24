@@ -53,7 +53,6 @@ Installation Prerequisites
 import os
 from datetime import datetime
 
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -323,9 +322,9 @@ def fs_create(
     print(proto)
     if _get_fs(name, blade) is None:
         if size is None:
-            size = salt.utils.stringutils.human_to_bytes("32G")
+            size = __utils__["stringutils.human_to_bytes"]("32G")
         else:
-            size = salt.utils.stringutils.human_to_bytes(size)
+            size = __utils__["stringutils.human_to_bytes"](size)
         if proto.lower() == "nfs":
             fs_obj = FileSystem(
                 name=name,
@@ -464,9 +463,9 @@ def fs_extend(name, size):
     blade = _get_blade()
     _fs = _get_fs(name, blade)
     if _fs is not None:
-        if salt.utils.stringutils.human_to_bytes(size) > _fs.provisioned:
+        if __utils__["stringutils.human_to_bytes"](size) > _fs.provisioned:
             try:
-                attr["provisioned"] = salt.utils.stringutils.human_to_bytes(size)
+                attr["provisioned"] = __utils__["stringutils.human_to_bytes"](size)
                 n_attr = FileSystem(**attr)
                 blade.file_systems.update_file_systems(name=name, attributes=n_attr)
                 return True

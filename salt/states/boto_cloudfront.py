@@ -47,9 +47,6 @@ either passed in as a dict, or a string to pull from pillars or minion config:
 import difflib
 import logging
 
-import salt.utils.dictdiffer
-import salt.utils.yaml
-
 log = logging.getLogger(__name__)
 
 
@@ -169,7 +166,7 @@ def present(
             "config": config,
             "tags": tags,
         }
-        diffed_config = salt.utils.dictdiffer.deep_diff(
+        diffed_config = __utils__["dictdiffer.deep_diff"](
             full_config_old,
             full_config_new,
         )
@@ -179,8 +176,10 @@ def present(
             Safely dump YAML using a readable flow style
             """
             dumper_name = "IndentedSafeOrderedDumper"
-            dumper = salt.utils.yaml.get_dumper(dumper_name)
-            return salt.utils.yaml.dump(attrs, default_flow_style=False, Dumper=dumper)
+            dumper = __utils__["yaml.get_dumper"](dumper_name)
+            return __utils__["yaml.dump"](
+                attrs, default_flow_style=False, Dumper=dumper
+            )
 
         changes_diff = "".join(
             difflib.unified_diff(

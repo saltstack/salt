@@ -53,9 +53,7 @@ import copy
 import difflib
 import logging
 
-import salt.utils.dictupdate
 import salt.utils.hashutils
-import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +171,7 @@ def object_present(
     combined_extra_args = copy.deepcopy(
         __salt__["config.option"](extra_args_from_pillar, {})
     )
-    salt.utils.dictupdate.update(combined_extra_args, extra_args)
+    __utils__["dictupdate.update"](combined_extra_args, extra_args)
     if combined_extra_args:
         supported_args = STORED_EXTRA_ARGS | UPLOAD_ONLY_EXTRA_ARGS
         combined_extra_args_keys = frozenset(combined_extra_args.keys())
@@ -267,8 +265,8 @@ def object_present(
         Safely dump YAML using a readable flow style
         """
         dumper_name = "IndentedSafeOrderedDumper"
-        dumper = salt.utils.yaml.get_dumper(dumper_name)
-        return salt.utils.yaml.dump(attrs, default_flow_style=False, Dumper=dumper)
+        dumper = __utils__["yaml.get_dumper"](dumper_name)
+        return __utils__["yaml.dump"](attrs, default_flow_style=False, Dumper=dumper)
 
     changes_diff = "".join(
         difflib.unified_diff(

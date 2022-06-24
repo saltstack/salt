@@ -316,7 +316,7 @@ def show_instance(name, call=None):
     if not call:
         call = "action"
     nodes = list_nodes_full(call=call)
-    salt.utils.cloud.cache_node(nodes[name], _get_active_provider_name(), __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -369,7 +369,7 @@ def destroy(vm_, call=None):
         return
     ret = {"comment": "{} was not found".format(vm_), "result": False}
     if _salt("lxc.info", vm_, path=path):
-        salt.utils.cloud.fire_event(
+        __utils__["cloud.fire_event"](
             "event",
             "destroying instance",
             "salt/cloud/{}/destroying".format(vm_),
@@ -381,7 +381,7 @@ def destroy(vm_, call=None):
         ret["result"] = cret["result"]
         if ret["result"]:
             ret["comment"] = "{} was destroyed".format(vm_)
-            salt.utils.cloud.fire_event(
+            __utils__["cloud.fire_event"](
                 "event",
                 "destroyed instance",
                 "salt/cloud/{}/destroyed".format(vm_),
@@ -390,7 +390,7 @@ def destroy(vm_, call=None):
                 transport=__opts__["transport"],
             )
             if __opts__.get("update_cachedir", False) is True:
-                salt.utils.cloud.delete_minion_cachedir(
+                __utils__["cloud.delete_minion_cachedir"](
                     vm_, _get_active_provider_name().split(":")[0], __opts__
                 )
     return ret
@@ -414,11 +414,11 @@ def create(vm_, call=None):
     event_data = vm_.copy()
     event_data["profile"] = profile
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", event_data, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -436,11 +436,11 @@ def create(vm_, call=None):
     kwarg["host"] = prov["target"]
     kwarg["profile"] = profile
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -466,11 +466,11 @@ def create(vm_, call=None):
         __opts__["internal_lxc_profile"] = __opts__["profile"]
         del __opts__["profile"]
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],

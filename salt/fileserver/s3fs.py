@@ -90,7 +90,6 @@ import salt.modules
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
-import salt.utils.s3
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -421,7 +420,7 @@ def _refresh_buckets_cache_file(cache_file):
     def __get_s3_meta(bucket, key=key, keyid=keyid):
         ret, marker = [], ""
         while True:
-            tmp = salt.utils.s3.query(
+            tmp = __utils__["s3.query"](
                 key=key,
                 keyid=keyid,
                 kms_keyid=keyid,
@@ -733,7 +732,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         "cached file mtime later than metadata last "
                         "modification time."
                     )
-                    ret = salt.utils.s3.query(
+                    ret = __utils__["s3.query"](
                         key=key,
                         keyid=keyid,
                         kms_keyid=keyid,
@@ -772,7 +771,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                             return
 
     # ... or get the file from S3
-    salt.utils.s3.query(
+    __utils__["s3.query"](
         key=key,
         keyid=keyid,
         kms_keyid=keyid,

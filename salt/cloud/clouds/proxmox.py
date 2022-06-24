@@ -626,11 +626,11 @@ def create(vm_):
 
     ret = {}
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -738,17 +738,17 @@ def create(vm_):
 
     vm_["ssh_host"] = ip_address
     vm_["password"] = ssh_password
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
 
     # Report success!
     log.info("Created Cloud VM '%s'", vm_["name"])
     log.debug("'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -1010,12 +1010,12 @@ def create_node(vm_, newid):
                 newnode[prop] = vm_[prop]
 
     # The node is ready. Lets request it to be added
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": salt.utils.cloud.filter_event(
+            "kwargs": __utils__["cloud.filter_event"](
                 "requesting", newnode, list(newnode)
             ),
         },
@@ -1060,7 +1060,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], _get_active_provider_name(), __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -1145,7 +1145,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -1169,7 +1169,7 @@ def destroy(name, call=None):
         time.sleep(3)
 
         query("delete", "nodes/{}/{}".format(vmobj["node"], vmobj["id"]))
-        salt.utils.cloud.fire_event(
+        __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
             "salt/cloud/{}/destroyed".format(name),
@@ -1178,7 +1178,7 @@ def destroy(name, call=None):
             transport=__opts__["transport"],
         )
         if __opts__.get("update_cachedir", False) is True:
-            salt.utils.cloud.delete_minion_cachedir(
+            __utils__["cloud.delete_minion_cachedir"](
                 name, _get_active_provider_name().split(":")[0], __opts__
             )
 

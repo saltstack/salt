@@ -25,7 +25,6 @@ import time
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
-import salt.utils.timeutil
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -245,7 +244,7 @@ def _config_logic(
             # and also the user wants to commit (default)
             # and there are changes to commit
             if commit_in or commit_at:
-                commit_time = salt.utils.timeutil.get_time_at(
+                commit_time = __utils__["timeutil.get_time_at"](
                     time_in=commit_in, time_at=commit_in
                 )
                 # schedule job
@@ -292,7 +291,7 @@ def _config_logic(
             log.debug("About to commit:")
             log.debug(loaded_result["diff"])
             if revert_in or revert_at:
-                revert_time = salt.utils.timeutil.get_time_at(
+                revert_time = __utils__["timeutil.get_time_at"](
                     time_in=revert_in, time_at=revert_at
                 )
                 if __grains__["os"] == "junos":
@@ -304,7 +303,7 @@ def _config_logic(
                         )
                         loaded_result["result"] = False
                         return loaded_result
-                    timestamp_at = salt.utils.timeutil.get_timestamp_at(
+                    timestamp_at = __utils__["timeutil.get_timestamp_at"](
                         time_in=revert_in, time_at=revert_at
                     )
                     minutes = int((timestamp_at - time.time()) / 60)

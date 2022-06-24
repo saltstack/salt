@@ -6,7 +6,6 @@ import logging
 
 import salt.config
 import salt.loader
-import salt.utils.roster_matcher
 from salt.roster import get_roster_file
 from salt.template import compile_template
 
@@ -33,4 +32,4 @@ def targets(tgt, tgt_type="glob", **kwargs):
     conditioned_raw = {}
     for minion in raw:
         conditioned_raw[str(minion)] = salt.config.apply_sdb(raw[minion])
-    return salt.utils.roster_matcher.targets(conditioned_raw, tgt, tgt_type, "ipv4")
+    return __utils__["roster_matcher.targets"](conditioned_raw, tgt, tgt_type, "ipv4")

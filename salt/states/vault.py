@@ -13,8 +13,6 @@ Currently handles policies. Configuration instructions are documented in the exe
 import difflib
 import logging
 
-import salt.utils.vault
-
 log = logging.getLogger(__name__)
 
 
@@ -44,7 +42,7 @@ def policy_present(name, rules):
 
     """
     url = "v1/sys/policy/{}".format(name)
-    response = salt.utils.vault.make_request("GET", url)
+    response = __utils__["vault.make_request"]("GET", url)
     try:
         if response.status_code == 200:
             return _handle_existing_policy(name, rules, response.json()["rules"])
@@ -72,7 +70,7 @@ def _create_new_policy(name, rules):
 
     payload = {"rules": rules}
     url = "v1/sys/policy/{}".format(name)
-    response = salt.utils.vault.make_request("PUT", url, json=payload)
+    response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
             "name": name,
@@ -111,7 +109,7 @@ def _handle_existing_policy(name, new_rules, existing_rules):
     payload = {"rules": new_rules}
 
     url = "v1/sys/policy/{}".format(name)
-    response = salt.utils.vault.make_request("PUT", url, json=payload)
+    response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
             "name": name,

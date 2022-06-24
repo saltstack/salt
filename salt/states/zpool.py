@@ -72,7 +72,6 @@ States for managing zpools
 import logging
 import os
 
-import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -265,11 +264,11 @@ def present(
 
     # ensure properties are zfs values
     if properties:
-        properties = salt.utils.zfs.from_auto_dict(properties)
+        properties = __utils__["zfs.from_auto_dict"](properties)
     elif properties is None:
         properties = {}
     if filesystem_properties:
-        filesystem_properties = salt.utils.zfs.from_auto_dict(filesystem_properties)
+        filesystem_properties = __utils__["zfs.from_auto_dict"](filesystem_properties)
     elif filesystem_properties is None:
         filesystem_properties = {}
 

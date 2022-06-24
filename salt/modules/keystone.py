@@ -54,7 +54,6 @@ Module for handling openstack keystone calls.
 import logging
 
 import salt.utils.http
-import salt.utils.versions
 
 HAS_KEYSTONE = False
 try:
@@ -173,7 +172,7 @@ def auth(profile=None, **connection_args):
 
         salt '*' keystone.auth
     """
-    salt.utils.versions.warn_until(
+    __utils__["versions.warn_until"](
         "Argon",
         "The keystone module has been deprecated and will be removed in {version}.  "
         "Please update to using the keystoneng module",

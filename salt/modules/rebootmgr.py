@@ -11,14 +11,13 @@ import logging
 import re
 
 import salt.exceptions
-import salt.utils.path
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     """rebootmgrctl command is required."""
-    if salt.utils.path.which("rebootmgrctl") is not None:
+    if __utils__["path.which"]("rebootmgrctl") is not None:
         return True
     else:
         return (False, "Module rebootmgt requires the command rebootmgrctl")

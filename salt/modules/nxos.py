@@ -127,7 +127,7 @@ def ping(**kwargs):
     """
     if salt.utils.platform.is_proxy():
         return __proxy__["nxos.ping"]()
-    return salt.utils.nxos.ping(**kwargs)
+    return __utils__["nxos.ping"](**kwargs)
 
 
 # -----------------------------------------------------------------------------
@@ -875,4 +875,4 @@ def _nxapi_request(commands, method="cli_conf", **kwargs):
     else:
         api_kwargs = __salt__["config.get"]("nxos", {})
         api_kwargs.update(**kwargs)
-        return salt.utils.nxos.nxapi_request(commands, method=method, **api_kwargs)
+        return __utils__["nxos.nxapi_request"](commands, method=method, **api_kwargs)

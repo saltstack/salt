@@ -94,7 +94,6 @@ Azure (ARM) Network State Module
 import logging
 
 import salt.utils.azurearm
-import salt.utils.dictdiffer
 
 __virtualname__ = "azurearm_network"
 
@@ -177,7 +176,9 @@ def virtual_network_present(
     )
 
     if "error" not in vnet:
-        tag_changes = salt.utils.dictdiffer.deep_diff(vnet.get("tags", {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            vnet.get("tags", {}), tags or {}
+        )
         if tag_changes:
             ret["changes"]["tags"] = tag_changes
 
@@ -612,12 +613,12 @@ def network_security_group_present(
     )
 
     if "error" not in nsg:
-        tag_changes = salt.utils.dictdiffer.deep_diff(nsg.get("tags", {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](nsg.get("tags", {}), tags or {})
         if tag_changes:
             ret["changes"]["tags"] = tag_changes
 
         if security_rules:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 nsg.get("security_rules", []), security_rules
             )
 
@@ -1342,7 +1343,7 @@ def load_balancer_present(
 
     if "error" not in load_bal:
         # tag changes
-        tag_changes = salt.utils.dictdiffer.deep_diff(
+        tag_changes = __utils__["dictdiffer.deep_diff"](
             load_bal.get("tags", {}), tags or {}
         )
         if tag_changes:
@@ -1350,13 +1351,15 @@ def load_balancer_present(
 
         # sku changes
         if sku:
-            sku_changes = salt.utils.dictdiffer.deep_diff(load_bal.get("sku", {}), sku)
+            sku_changes = __utils__["dictdiffer.deep_diff"](
+                load_bal.get("sku", {}), sku
+            )
             if sku_changes:
                 ret["changes"]["sku"] = sku_changes
 
         # frontend_ip_configurations changes
         if frontend_ip_configurations:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("frontend_ip_configurations", []),
                 frontend_ip_configurations,
                 ["public_ip_address", "subnet"],
@@ -1373,7 +1376,7 @@ def load_balancer_present(
 
         # backend_address_pools changes
         if backend_address_pools:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("backend_address_pools", []), backend_address_pools
             )
 
@@ -1388,7 +1391,7 @@ def load_balancer_present(
 
         # probes changes
         if probes:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("probes", []), probes
             )
 
@@ -1401,7 +1404,7 @@ def load_balancer_present(
 
         # load_balancing_rules changes
         if load_balancing_rules:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("load_balancing_rules", []),
                 load_balancing_rules,
                 ["frontend_ip_configuration", "backend_address_pool", "probe"],
@@ -1416,7 +1419,7 @@ def load_balancer_present(
 
         # inbound_nat_rules changes
         if inbound_nat_rules:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("inbound_nat_rules", []),
                 inbound_nat_rules,
                 ["frontend_ip_configuration"],
@@ -1431,7 +1434,7 @@ def load_balancer_present(
 
         # inbound_nat_pools changes
         if inbound_nat_pools:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("inbound_nat_pools", []),
                 inbound_nat_pools,
                 ["frontend_ip_configuration"],
@@ -1446,7 +1449,7 @@ def load_balancer_present(
 
         # outbound_nat_rules changes
         if outbound_nat_rules:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 load_bal.get("outbound_nat_rules", []),
                 outbound_nat_rules,
                 ["frontend_ip_configuration"],
@@ -1667,7 +1670,7 @@ def public_ip_address_present(
 
     if "error" not in pub_ip:
         # tag changes
-        tag_changes = salt.utils.dictdiffer.deep_diff(
+        tag_changes = __utils__["dictdiffer.deep_diff"](
             pub_ip.get("tags", {}), tags or {}
         )
         if tag_changes:
@@ -1689,7 +1692,7 @@ def public_ip_address_present(
 
         # sku changes
         if sku:
-            sku_changes = salt.utils.dictdiffer.deep_diff(pub_ip.get("sku", {}), sku)
+            sku_changes = __utils__["dictdiffer.deep_diff"](pub_ip.get("sku", {}), sku)
             if sku_changes:
                 ret["changes"]["sku"] = sku_changes
 
@@ -1954,7 +1957,9 @@ def network_interface_present(
 
     if "error" not in iface:
         # tag changes
-        tag_changes = salt.utils.dictdiffer.deep_diff(iface.get("tags", {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            iface.get("tags", {}), tags or {}
+        )
         if tag_changes:
             ret["changes"]["tags"] = tag_changes
 
@@ -2028,7 +2033,7 @@ def network_interface_present(
                     break
 
         # ip_configurations changes
-        comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+        comp_ret = __utils__["azurearm.compare_list_of_dicts"](
             iface.get("ip_configurations", []),
             ip_configurations,
             ["public_ip_address", "subnet"],
@@ -2234,7 +2239,7 @@ def route_table_present(
 
     if "error" not in rt_tbl:
         # tag changes
-        tag_changes = salt.utils.dictdiffer.deep_diff(
+        tag_changes = __utils__["dictdiffer.deep_diff"](
             rt_tbl.get("tags", {}), tags or {}
         )
         if tag_changes:
@@ -2252,7 +2257,7 @@ def route_table_present(
 
         # routes changes
         if routes:
-            comp_ret = salt.utils.azurearm.compare_list_of_dicts(
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
                 rt_tbl.get("routes", []), routes
             )
 

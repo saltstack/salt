@@ -284,8 +284,6 @@ import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
 import salt.exceptions
 import salt.utils.args
-import salt.utils.json
-import salt.utils.path
 from salt.modules.state import _check_queue, _prior_running_states, _wait, running
 
 __func_alias__ = {"apply_": "apply"}
@@ -298,7 +296,7 @@ def __virtual__():
     transactional-update command is required.
     """
     global _check_queue, _wait, _prior_running_states, running
-    if salt.utils.path.which("transactional-update"):
+    if __utils__["path.which"]("transactional-update"):
         _check_queue = salt.utils.functools.namespaced_function(_check_queue, globals())
         _wait = salt.utils.functools.namespaced_function(_wait, globals())
         _prior_running_states = salt.utils.functools.namespaced_function(
@@ -369,7 +367,7 @@ def transactional():
         salt microos transactional_update transactional
 
     """
-    return bool(salt.utils.path.which("transactional-update"))
+    return bool(__utils__["path.which"]("transactional-update"))
 
 
 def in_transaction():
@@ -968,7 +966,7 @@ def call(function, *args, **kwargs):
 
         # Process "real" result in stdout
         try:
-            data = salt.utils.json.find_json(ret_stdout)
+            data = __utils__["json.find_json"](ret_stdout)
             local = data.get("local", data)
             if isinstance(local, dict):
                 if "retcode" in local:

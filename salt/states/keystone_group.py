@@ -25,7 +25,7 @@ Example States
         - domain: domain1
         - description: 'my group'
 """
-import salt.utils.args
+
 
 __virtualname__ = "keystone_group"
 
@@ -71,7 +71,7 @@ def present(name, auth=None, **kwargs):
 
     __salt__["keystoneng.setup_cloud"](auth)
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
     kwargs["name"] = name
     group = _common(kwargs)
@@ -115,7 +115,7 @@ def absent(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
     __salt__["keystoneng.setup_cloud"](auth)
 

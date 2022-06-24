@@ -102,8 +102,6 @@ Proxy Pillar Example
 import copy
 import logging
 
-import salt.utils.nxos_api
-
 # Import Salt modules
 from salt.exceptions import SaltException
 
@@ -156,7 +154,7 @@ def init(opts):
     # This is not a SSH-based proxy, so it should be safe to enable
     # multiprocessing.
     try:
-        rpc_reply = salt.utils.nxos_api.rpc("show clock", **conn_args)
+        rpc_reply = __utils__["nxos_api.rpc"]("show clock", **conn_args)
         # Execute a very simple command to confirm we are able to connect properly
         nxos_device["conn_args"] = conn_args
         nxos_device["initialized"] = True
@@ -207,4 +205,4 @@ def rpc(commands, method="cli", **kwargs):
     """
     conn_args = nxos_device["conn_args"]
     conn_args.update(kwargs)
-    return salt.utils.nxos_api.rpc(commands, method=method, **conn_args)
+    return __utils__["nxos_api.rpc"](commands, method=method, **conn_args)

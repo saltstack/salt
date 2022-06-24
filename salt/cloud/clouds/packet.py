@@ -337,11 +337,11 @@ def create(vm_):
     if not is_profile_configured(vm_):
         return False
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(name),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -352,11 +352,11 @@ def create(vm_):
 
     manager = packet.Manager(auth_token=vm_["token"])
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -404,7 +404,7 @@ def create(vm_):
     vm_["private_key"] = key_filename
 
     # Bootstrap!
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
 
     ret.update({"device": device.__dict__})
 
@@ -438,11 +438,11 @@ def create(vm_):
 
     log.debug("'%s' VM creation details:\n%s", name, pprint.pformat(device.__dict__))
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(name),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -577,7 +577,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -603,7 +603,7 @@ def destroy(name, call=None):
 
     manager.call_api("devices/{id}".format(id=node["id"]), type="DELETE")
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),

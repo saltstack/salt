@@ -21,7 +21,6 @@ import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.ssh
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -1416,4 +1415,4 @@ def key_is_encrypted(key):
 
         salt '*' ssh.key_is_encrypted /root/id_rsa
     """
-    return salt.utils.ssh.key_is_encrypted(key)
+    return __utils__["ssh.key_is_encrypted"](key)

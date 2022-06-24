@@ -49,7 +49,6 @@ import logging
 import random
 import time
 
-import salt.utils.boto3mod
 import salt.utils.versions
 
 # pylint: disable=unused-import
@@ -74,7 +73,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "kinesis")
+        __utils__["boto3.assign_funcs"](__name__, "kinesis")
         return __virtualname__
     return has_boto_reqs
 

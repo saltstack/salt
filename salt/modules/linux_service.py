@@ -6,8 +6,6 @@ import fnmatch
 import os
 import re
 
-import salt.utils.systemd
-
 __func_alias__ = {"reload_": "reload"}
 
 _GRAINMAP = {"Arch": "/etc/rc.d", "Arch ARM": "/etc/rc.d"}
@@ -46,7 +44,7 @@ def __virtual__():
     init_grain = __grains__.get("init")
     if init_grain not in (None, "sysvinit", "unknown"):
         return (False, "Minion is running {}".format(init_grain))
-    elif salt.utils.systemd.booted(__context__):
+    elif __utils__["systemd.booted"](__context__):
         # Should have been caught by init grain check, but check just in case
         return (False, "Minion is running systemd")
     return "service"

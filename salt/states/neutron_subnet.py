@@ -45,7 +45,7 @@ Example States
         - network_name_or_id: network1
         - ip_version: 6
 """
-import salt.utils.args
+
 
 __virtualname__ = "neutron_subnet"
 
@@ -93,7 +93,7 @@ def present(name, auth=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
     __salt__["neutronng.setup_clouds"](auth)
 

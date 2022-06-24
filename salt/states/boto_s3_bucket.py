@@ -141,7 +141,6 @@ config:
 import copy
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.json
 
 log = logging.getLogger(__name__)
@@ -304,7 +303,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _compare_json(current, desired, region, key, keyid, profile):
-    return salt.utils.boto3mod.json_objs_equal(current, desired)
+    return __utils__["boto3.json_objs_equal"](current, desired)
 
 
 def _compare_acl(current, desired, region, key, keyid, profile):
@@ -315,7 +314,7 @@ def _compare_acl(current, desired, region, key, keyid, profile):
     rather than the input itself.
     """
     ocid = _get_canonical_id(region, key, keyid, profile)
-    return salt.utils.boto3mod.json_objs_equal(current, _acl_to_grant(desired, ocid))
+    return __utils__["boto3.json_objs_equal"](current, _acl_to_grant(desired, ocid))
 
 
 def _compare_policy(current, desired, region, key, keyid, profile):
@@ -331,7 +330,7 @@ def _compare_replication(current, desired, region, key, keyid, profile):
         desired["Role"] = _get_role_arn(
             desired["Role"], region=region, key=key, keyid=keyid, profile=profile
         )
-    return salt.utils.boto3mod.json_objs_equal(current, desired)
+    return __utils__["boto3.json_objs_equal"](current, desired)
 
 
 def present(
@@ -428,7 +427,7 @@ def present(
     if Policy:
         if isinstance(Policy, str):
             Policy = salt.utils.json.loads(Policy)
-        Policy = salt.utils.boto3mod.ordered(Policy)
+        Policy = __utils__["boto3.ordered"](Policy)
 
     r = __salt__["boto_s3_bucket.exists"](
         Bucket=Bucket, region=region, key=key, keyid=keyid, profile=profile
@@ -632,7 +631,7 @@ def present(
                 # Policy description is always returned as a JSON string.
                 # Convert it to JSON now for ease of comparisons later.
                 if isinstance(temp, str):
-                    current = salt.utils.boto3mod.ordered(
+                    current = __utils__["boto3.ordered"](
                         {"Policy": salt.utils.json.loads(temp)}
                     )
         if not comparator(current, desired, region, key, keyid, profile):

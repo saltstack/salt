@@ -46,7 +46,6 @@ Connection module for Amazon Security Groups
 
 import logging
 
-import salt.utils.botomod
 import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -80,7 +79,7 @@ def __virtual__():
         boto_ver="2.4.0", check_boto3=False
     )
     if has_boto_reqs is True:
-        salt.utils.botomod.assign_funcs(__name__, "ec2", pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "ec2", pack=__salt__)
     return has_boto_reqs
 
 
@@ -762,7 +761,7 @@ def _find_vpcs(
             "provided: vpc_id, vpc_name, cidr or tags."
         )
 
-    local_get_conn = salt.utils.botomod.get_connection_func("vpc")
+    local_get_conn = __utils__["boto.get_connection_func"]("vpc")
     conn = local_get_conn(region=region, key=key, keyid=keyid, profile=profile)
     filter_parameters = {"filters": {}}
 

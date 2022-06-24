@@ -23,7 +23,6 @@ import logging
 import time
 
 import salt.config as config
-import salt.utils.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # hcloud module will be needed
@@ -253,7 +252,7 @@ def show_instance(name, call=None):
         log.debug("Failed to get data for node '%s'", name)
         node = {}
 
-    salt.utils.cloud.cache_node(
+    __utils__["cloud.cache_node"](
         node,
         _get_active_provider_name() or __virtualname__,
         __opts__,
@@ -316,11 +315,11 @@ def create(vm_):
     if image is None:
         raise SaltCloudException("The server image is not supported")
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating",
             vm_,
             ["name", "profile", "provider", "driver"],
@@ -431,16 +430,16 @@ def create(vm_):
         }
     )
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
 
     log.info("Created Cloud VM '%s'", vm_["name"])
     ret["created"] = True
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created",
             vm_,
             ["name", "profile", "provider", "driver"],
@@ -476,7 +475,7 @@ def start(name, call=None, wait=True):
     if wait and not wait_until(name, "running"):
         return "Instance {} doesn't start.".format(name)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "started instance",
         "salt/cloud/{}/started".format(name),
@@ -510,7 +509,7 @@ def stop(name, call=None, wait=True):
     if wait and not wait_until(name, "off"):
         return "Instance {} doesn't stop.".format(name)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "stopped instance",
         "salt/cloud/{}/stopped".format(name),
@@ -570,7 +569,7 @@ def destroy(name, call=None):
     if server is None:
         return "Instance {} doesn't exist.".format(name)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -587,7 +586,7 @@ def destroy(name, call=None):
 
     server.delete()
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -597,7 +596,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get("update_cachedir", False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__["cloud.delete_minion_cachedir"](
             name,
             _get_active_provider_name().split(":")[0],
             __opts__,
@@ -635,7 +634,7 @@ def resize(name, kwargs, call=None):
     if server_type is None:
         raise SaltCloudException("The server size is not supported")
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "resizing instance",
         "salt/cloud/{}/resizing".format(name),
@@ -652,7 +651,7 @@ def resize(name, kwargs, call=None):
 
     server.change_type(server_type, kwargs.get("upgrade_disk", False))
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "resizing instance",
         "salt/cloud/{}/resized".format(name),

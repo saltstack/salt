@@ -45,11 +45,9 @@ Connection module for Amazon CloudWatch
 
 import logging
 
-import salt.utils.botomod
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-import salt.utils.yaml
 import yaml  # pylint: disable=blacklisted-import
 
 try:
@@ -72,7 +70,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
     if has_boto_reqs is True:
-        salt.utils.botomod.assign_funcs(
+        __utils__["boto.assign_funcs"](
             __name__, "cloudwatch", module="ec2.cloudwatch", pack=__salt__
         )
     return has_boto_reqs
@@ -104,7 +102,7 @@ def _safe_dump(data):
     work with the objects returned from
     boto.describe_alarms()
     """
-    custom_dumper = salt.utils.yaml.get_dumper("SafeOrderedDumper")
+    custom_dumper = __utils__["yaml.get_dumper"]("SafeOrderedDumper")
 
     def boto_listelement_presenter(dumper, data):
         return dumper.represent_list(list(data))
@@ -124,7 +122,7 @@ def _safe_dump(data):
         Dumper=custom_dumper,
     )
 
-    return salt.utils.yaml.dump(data, Dumper=custom_dumper)
+    return __utils__["yaml.dump"](data, Dumper=custom_dumper)
 
 
 def get_all_alarms(region=None, prefix=None, key=None, keyid=None, profile=None):

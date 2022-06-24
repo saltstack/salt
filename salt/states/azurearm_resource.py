@@ -91,7 +91,6 @@ import json
 import logging
 
 import salt.utils.azurearm
-import salt.utils.dictdiffer
 import salt.utils.files
 
 __virtualname__ = "azurearm_resource"
@@ -166,7 +165,7 @@ def resource_group_present(
         group = __salt__["azurearm_resource.resource_group_get"](
             name, **connection_auth
         )
-        ret["changes"] = salt.utils.dictdiffer.deep_diff(
+        ret["changes"] = __utils__["dictdiffer.deep_diff"](
             group.get("tags", {}), tags or {}
         )
 
@@ -512,19 +511,19 @@ def policy_definition_present(
                 "new": description,
             }
 
-        rule_changes = salt.utils.dictdiffer.deep_diff(
+        rule_changes = __utils__["dictdiffer.deep_diff"](
             policy.get("policy_rule", {}), policy_rule or {}
         )
         if rule_changes:
             ret["changes"]["policy_rule"] = rule_changes
 
-        meta_changes = salt.utils.dictdiffer.deep_diff(
+        meta_changes = __utils__["dictdiffer.deep_diff"](
             policy.get("metadata", {}), metadata or {}
         )
         if meta_changes:
             ret["changes"]["metadata"] = meta_changes
 
-        param_changes = salt.utils.dictdiffer.deep_diff(
+        param_changes = __utils__["dictdiffer.deep_diff"](
             policy.get("parameters", {}), parameters or {}
         )
         if param_changes:
@@ -740,7 +739,7 @@ def policy_assignment_present(
                 "new": description,
             }
 
-        param_changes = salt.utils.dictdiffer.deep_diff(
+        param_changes = __utils__["dictdiffer.deep_diff"](
             policy.get("parameters", {}), parameters or {}
         )
         if param_changes:

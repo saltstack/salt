@@ -47,7 +47,6 @@ Connection module for Amazon Elasticache
 import logging
 import time
 
-import salt.utils.botomod
 import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -74,7 +73,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
     if has_boto_reqs is True:
-        salt.utils.botomod.assign_funcs(__name__, "elasticache", pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "elasticache", pack=__salt__)
 
     return has_boto_reqs
 

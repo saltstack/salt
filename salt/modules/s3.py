@@ -73,8 +73,6 @@ Connection module for Amazon S3
 
 import logging
 
-import salt.utils.s3
-
 log = logging.getLogger(__name__)
 
 
@@ -133,7 +131,7 @@ def delete(
         https_enable,
     )
 
-    return salt.utils.s3.query(
+    return __utils__["s3.query"](
         method="DELETE",
         bucket=bucket,
         path=path,
@@ -229,7 +227,7 @@ def get(
         https_enable,
     )
 
-    return salt.utils.s3.query(
+    return __utils__["s3.query"](
         method="GET",
         bucket=bucket,
         path=path,
@@ -293,7 +291,7 @@ def head(
         https_enable,
     )
 
-    return salt.utils.s3.query(
+    return __utils__["s3.query"](
         method="HEAD",
         bucket=bucket,
         path=path,
@@ -359,7 +357,7 @@ def put(
         https_enable,
     )
 
-    return salt.utils.s3.query(
+    return __utils__["s3.query"](
         method="PUT",
         bucket=bucket,
         path=path,

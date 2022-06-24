@@ -47,7 +47,6 @@ Connection module for Amazon SQS
 import logging
 import urllib.parse
 
-import salt.utils.boto3mod
 import salt.utils.json
 import salt.utils.versions
 
@@ -75,7 +74,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "sqs")
+        __utils__["boto3.assign_funcs"](__name__, "sqs")
     return has_boto_reqs
 
 
@@ -114,7 +113,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         missing_code = "AWS.SimpleQueueService.NonExistentQueue"
         if e.response.get("Error", {}).get("Code") == missing_code:
             return {"result": False}
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     return {"result": True}
 
 
@@ -144,7 +143,7 @@ def create(
     try:
         conn.create_queue(QueueName=name, Attributes=attributes)
     except botocore.exceptions.ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     return {"result": True}
 
 
@@ -164,7 +163,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         url = conn.get_queue_url(QueueName=name)["QueueUrl"]
         conn.delete_queue(QueueUrl=url)
     except botocore.exceptions.ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     return {"result": True}
 
 
@@ -192,7 +191,7 @@ def list_(prefix="", region=None, key=None, keyid=None, profile=None):
         urls = r.get("QueueUrls", [])
         return {"result": [extract_name(url) for url in urls]}
     except botocore.exceptions.ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def get_attributes(name, region=None, key=None, keyid=None, profile=None):
@@ -212,7 +211,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         r = conn.get_queue_attributes(QueueUrl=url, AttributeNames=["All"])
         return {"result": r["Attributes"]}
     except botocore.exceptions.ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def set_attributes(
@@ -240,5 +239,5 @@ def set_attributes(
         url = conn.get_queue_url(QueueName=name)["QueueUrl"]
         conn.set_queue_attributes(QueueUrl=url, Attributes=attributes)
     except botocore.exceptions.ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     return {"result": True}

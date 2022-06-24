@@ -43,7 +43,6 @@ The above URI is analogous to running the following vault command:
 import logging
 
 import salt.exceptions
-import salt.utils.vault
 
 log = logging.getLogger(__name__)
 
@@ -60,14 +59,14 @@ def set_(key, value, profile=None):
         path, key = key.rsplit("/", 1)
     data = {key: value}
 
-    version2 = salt.utils.vault.is_v2(path)
+    version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["data"]
         data = {"data": data}
 
     try:
         url = "v1/{}".format(path)
-        response = salt.utils.vault.make_request("POST", url, json=data)
+        response = __utils__["vault.make_request"]("POST", url, json=data)
 
         if response.status_code != 204:
             response.raise_for_status()
@@ -86,18 +85,18 @@ def get(key, profile=None):
     else:
         path, key = key.rsplit("/", 1)
 
-    version2 = salt.utils.vault.is_v2(path)
+    version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["data"]
 
     try:
         url = "v1/{}".format(path)
-        response = salt.utils.vault.make_request("GET", url)
+        response = __utils__["vault.make_request"]("GET", url)
         if response.status_code == 404:
             if version2["v2"]:
                 path = version2["data"] + "/" + key
                 url = "v1/{}".format(path)
-                response = salt.utils.vault.make_request("GET", url)
+                response = __utils__["vault.make_request"]("GET", url)
                 if response.status_code == 404:
                     return None
             else:

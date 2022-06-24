@@ -39,7 +39,6 @@ Connection module for Amazon KMS
 import logging
 
 import salt.serializers.json
-import salt.utils.botomod
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
@@ -67,7 +66,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        salt.utils.botomod.assign_funcs(__name__, "kms", pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "kms", pack=__salt__)
 
 
 def create_alias(
@@ -90,7 +89,7 @@ def create_alias(
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -131,7 +130,7 @@ def create_grant(
             grant_tokens=grant_tokens,
         )
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -163,7 +162,7 @@ def create_key(
         )
         r["key_metadata"] = key_metadata["KeyMetadata"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -196,7 +195,7 @@ def decrypt(
         )
         r["plaintext"] = plaintext["Plaintext"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -221,7 +220,7 @@ def key_exists(key_id, region=None, key=None, keyid=None, profile=None):
         if isinstance(e, boto.kms.exceptions.NotFoundException):
             r["result"] = False
             return r
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -251,7 +250,7 @@ def describe_key(key_id, region=None, key=None, keyid=None, profile=None):
         # TODO: add to context cache
         r["key_metadata"] = key["KeyMetadata"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -273,7 +272,7 @@ def disable_key(key_id, region=None, key=None, keyid=None, profile=None):
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -295,7 +294,7 @@ def disable_key_rotation(key_id, region=None, key=None, keyid=None, profile=None
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -317,7 +316,7 @@ def enable_key(key_id, region=None, key=None, keyid=None, profile=None):
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -339,7 +338,7 @@ def enable_key_rotation(key_id, region=None, key=None, keyid=None, profile=None)
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -374,7 +373,7 @@ def encrypt(
         )
         r["ciphertext"] = ciphertext["CiphertextBlob"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -411,7 +410,7 @@ def generate_data_key(
         )
         r["data_key"] = data_key
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -448,7 +447,7 @@ def generate_data_key_without_plaintext(
         )
         r["data_key"] = data_key
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -471,7 +470,7 @@ def generate_random(
         random = conn.generate_random(number_of_bytes)
         r["random"] = random["Plaintext"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -496,7 +495,7 @@ def get_key_policy(
             key_policy["Policy"], object_pairs_hook=odict.OrderedDict
         )
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -517,7 +516,7 @@ def get_key_rotation_status(key_id, region=None, key=None, keyid=None, profile=N
         key_rotation_status = conn.get_key_rotation_status(key_id)
         r["result"] = key_rotation_status["KeyRotationEnabled"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -551,7 +550,7 @@ def list_grants(
                 break
         r["grants"] = _grants
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -577,7 +576,7 @@ def list_key_policies(
         # TODO: handle limit, marker and truncation automatically.
         r["key_policies"] = key_policies["PolicyNames"]
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -603,7 +602,7 @@ def put_key_policy(
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -640,7 +639,7 @@ def re_encrypt(
         )
         r["ciphertext"] = ciphertext
     except boto.exception.BotoServerError as e:
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -664,7 +663,7 @@ def revoke_grant(key_id, grant_id, region=None, key=None, keyid=None, profile=No
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r
 
 
@@ -688,5 +687,5 @@ def update_key_description(
         r["result"] = True
     except boto.exception.BotoServerError as e:
         r["result"] = False
-        r["error"] = salt.utils.botomod.get_error(e)
+        r["error"] = __utils__["boto.get_error"](e)
     return r

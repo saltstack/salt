@@ -450,7 +450,7 @@ def _init_nxapi(opts):
     conn_args = copy.deepcopy(proxy_dict)
     conn_args.pop("proxytype", None)
     try:
-        rpc_reply = salt.utils.nxos.nxapi_request("show clock", **conn_args)
+        rpc_reply = __utils__["nxos.nxapi_request"]("show clock", **conn_args)
         # Execute a very simple command to confirm we are able to connect properly
         DEVICE_DETAILS["conn_args"] = conn_args
         DEVICE_DETAILS["initialized"] = True
@@ -502,5 +502,5 @@ def _nxapi_request(commands, method="cli_conf", **kwargs):
         return "_nxapi_request is not available for ssh proxy"
     conn_args = DEVICE_DETAILS["conn_args"]
     conn_args.update(kwargs)
-    data = salt.utils.nxos.nxapi_request(commands, method=method, **conn_args)
+    data = __utils__["nxos.nxapi_request"](commands, method=method, **conn_args)
     return data

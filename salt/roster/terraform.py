@@ -59,7 +59,6 @@ import os.path
 
 import salt.utils.files
 import salt.utils.json
-import salt.utils.roster_matcher
 
 log = logging.getLogger(__name__)
 
@@ -178,4 +177,4 @@ def targets(tgt, tgt_type="glob", **kwargs):  # pylint: disable=W0613
 
     raw = _parse_state_file(roster_file)
     log.debug("%s hosts in terraform state file", len(raw))
-    return salt.utils.roster_matcher.targets(raw, tgt, tgt_type, "ipv4")
+    return __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")

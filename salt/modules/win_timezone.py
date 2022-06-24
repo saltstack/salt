@@ -4,8 +4,6 @@ Module for managing timezone on Windows systems.
 import logging
 from datetime import datetime
 
-import salt.utils.path
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -189,11 +187,11 @@ def __virtual__():
     """
     Only load on windows
     """
-    if not salt.utils.platform.is_windows():
+    if not __utils__["platform.is_windows"]():
         return False, "Module win_timezone: Not on Windows client"
     if not HAS_PYTZ:
         return False, "Module win_timezone: pytz not found"
-    if not salt.utils.path.which("tzutil"):
+    if not __utils__["path.which"]("tzutil"):
         return False, "Module win_timezone: tzutil not found"
     return __virtualname__
 

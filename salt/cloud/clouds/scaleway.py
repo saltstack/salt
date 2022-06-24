@@ -28,7 +28,6 @@ import time
 
 import salt.config as config
 import salt.utils.cloud
-import salt.utils.http
 import salt.utils.json
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -199,11 +198,11 @@ def create(server_):
     except AttributeError:
         pass
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(server_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", server_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -238,12 +237,14 @@ def create(server_):
         "commercial_type": commercial_type,
     }
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(server_["name"]),
         args={
-            "kwargs": salt.utils.cloud.filter_event("requesting", kwargs, list(kwargs)),
+            "kwargs": __utils__["cloud.filter_event"](
+                "requesting", kwargs, list(kwargs)
+            ),
         },
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -293,7 +294,7 @@ def create(server_):
     server_["ssh_host"] = data["public_ip"]["address"]
     server_["ssh_password"] = ssh_password
     server_["key_filename"] = key_filename
-    ret = salt.utils.cloud.bootstrap(server_, __opts__)
+    ret = __utils__["cloud.bootstrap"](server_, __opts__)
 
     ret.update(data)
 
@@ -304,11 +305,11 @@ def create(server_):
         pprint.pformat(data),
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(server_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", server_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -360,7 +361,7 @@ def query(
 
     data = salt.utils.json.dumps(args)
 
-    request = salt.utils.http.query(
+    request = __utils__["http.query"](
         path,
         method=http_method,
         data=data,
@@ -402,7 +403,7 @@ def show_instance(name, call=None):
             "The show_instance action must be called with -a or --action."
         )
     node = _get_node(name)
-    salt.utils.cloud.cache_node(node, _get_active_provider_name(), __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -435,7 +436,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -453,7 +454,7 @@ def destroy(name, call=None):
         http_method="POST",
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -463,7 +464,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get("update_cachedir", False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__["cloud.delete_minion_cachedir"](
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 

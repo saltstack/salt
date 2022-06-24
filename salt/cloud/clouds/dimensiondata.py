@@ -214,11 +214,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -267,11 +267,13 @@ def create(vm_):
 
     event_data = _to_event_data(kwargs)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event("requesting", event_data, list(event_data)),
+        args=__utils__["cloud.filter_event"](
+            "requesting", event_data, list(event_data)
+        ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -294,7 +296,7 @@ def create(vm_):
         return False
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__["cloud.wait_for_ip"](
             _query_node_data,
             update_args=(vm_, data),
             timeout=config.get_cloud_config_value(
@@ -323,7 +325,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug("Using IP address %s", ip_address)
 
-    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == "private_ips":
+    if __utils__["cloud.get_salt_interface"](vm_, __opts__) == "private_ips":
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info("Salt interface set to: %s", salt_ip_address)
     else:
@@ -337,7 +339,7 @@ def create(vm_):
     vm_["ssh_host"] = ip_address
     vm_["password"] = vm_["auth"]
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
 
     ret.update(data.__dict__)
 
@@ -349,11 +351,11 @@ def create(vm_):
         "'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data.__dict__)
     )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -428,7 +430,7 @@ def create_lb(kwargs=None, call=None):
 
     event_data = _to_event_data(kwargs)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "create load_balancer",
         "salt/cloud/loadbalancer/creating",
@@ -441,7 +443,7 @@ def create_lb(kwargs=None, call=None):
 
     event_data = _to_event_data(kwargs)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created load_balancer",
         "salt/cloud/loadbalancer/created",

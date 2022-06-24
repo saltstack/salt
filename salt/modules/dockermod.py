@@ -216,17 +216,11 @@ import salt.client.ssh.state
 import salt.exceptions
 import salt.fileclient
 import salt.pillar
-import salt.utils.args
-import salt.utils.dockermod
 import salt.utils.dockermod.translate.container
 import salt.utils.dockermod.translate.network
-import salt.utils.files
 import salt.utils.functools
-import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.path
-import salt.utils.state
-import salt.utils.thin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import HighState
 
@@ -432,7 +426,7 @@ def _docker_client(wrapped):
         """
         Ensure that the client is present
         """
-        kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        kwargs = __utils__["args.clean_kwargs"](**kwargs)
         timeout = kwargs.pop("client_timeout", NOTSET)
         if "docker.client" not in __context__ or not hasattr(
             __context__["docker.client"], "timeout"
@@ -465,7 +459,7 @@ def _refresh_mine_cache(wrapped):
         """
         refresh salt mine on exit.
         """
-        returned = wrapped(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        returned = wrapped(*args, **__utils__["args.clean_kwargs"](**kwargs))
         if _check_update_mine():
             __salt__["mine.send"]("docker.ps", verbose=True, all=True, host=True)
         return returned
@@ -869,7 +863,7 @@ def get_client_args(limit=None):
         salt myminion docker.get_client_args logs
         salt myminion docker.get_client_args create_container,connect_container_to_network
     """
-    return salt.utils.dockermod.get_client_args(limit=limit)
+    return __utils__["docker.get_client_args"](limit=limit)
 
 
 def _get_create_kwargs(
@@ -890,12 +884,12 @@ def _get_create_kwargs(
     else:
         networks = {}
 
-    kwargs = salt.utils.dockermod.translate_input(
+    kwargs = __utils__["docker.translate_input"](
         salt.utils.dockermod.translate.container,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
-        **salt.utils.args.clean_kwargs(**kwargs)
+        **__utils__["args.clean_kwargs"](**kwargs)
     )
 
     if networks:
@@ -960,7 +954,7 @@ def compare_containers(first, second, ignore=None):
         salt myminion docker.compare_containers foo bar
         salt myminion docker.compare_containers foo bar ignore=Hostname
     """
-    ignore = salt.utils.args.split_input(ignore or [])
+    ignore = __utils__["args.split_input"](ignore or [])
     result1 = inspect_container(first)
     result2 = inspect_container(second)
     ret = {}
@@ -1302,7 +1296,7 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
 
         salt myminion docker.compare_network foo bar
     """
-    ignore = salt.utils.args.split_input(ignore or [])
+    ignore = __utils__["args.split_input"](ignore or [])
     net1 = inspect_network(first) if not isinstance(first, dict) else first
     net2 = inspect_network(second) if not isinstance(second, dict) else second
     ret = {}
@@ -2097,10 +2091,10 @@ def resolve_tag(name, **kwargs):
         salt myminion docker.resolve_tag centos:7 all=True
         salt myminion docker.resolve_tag c9f378ac27d9
     """
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
     all_ = kwargs.pop("all", False)
     if kwargs:
-        salt.utils.args.invalid_kwargs(kwargs)
+        __utils__["args.invalid_kwargs"](kwargs)
 
     try:
         inspect_result = inspect_image(name)
@@ -2183,7 +2177,7 @@ def logs(name, **kwargs):
         salt myminion docker.logs mycontainer since='1 week ago'
         salt myminion docker.logs mycontainer since='1 fortnight ago'
     """
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
     if "stream" in kwargs:
         raise SaltInvocationError("The 'stream' argument is not supported")
 
@@ -3846,7 +3840,9 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = salt.utils.files.fopen(path, "wb")  # pylint: disable=resource-leakage
+            out = __utils__["files.fopen"](
+                path, "wb"
+            )  # pylint: disable=resource-leakage
         response = _client_wrapper("export", name)
         buf = None
         while buf != "":
@@ -3930,12 +3926,12 @@ def rm_(name, force=False, volumes=False, **kwargs):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     """
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
     stop_ = kwargs.pop("stop", False)
     timeout = kwargs.pop("timeout", None)
     auto_remove = False
     if kwargs:
-        salt.utils.args.invalid_kwargs(kwargs)
+        __utils__["args.invalid_kwargs"](kwargs)
 
     if state(name) == "running" and not (force or stop_):
         raise CommandExecutionError(
@@ -4915,7 +4911,7 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
             )
 
     if compression:
-        saved_path = salt.utils.files.mkstemp()
+        saved_path = __utils__["files.mkstemp"]()
     else:
         saved_path = path
     # use the image name if its valid if not use the image id
@@ -4945,14 +4941,14 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
             compressor = lzma.LZMACompressor()
 
         try:
-            with salt.utils.files.fopen(saved_path, "rb") as uncompressed:
+            with __utils__["files.fopen"](saved_path, "rb") as uncompressed:
                 # No need to decode on read and encode on on write, since we're
                 # reading and immediately writing out bytes.
                 if compression != "gzip":
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
                     # to open the filehandle here.
-                    out = salt.utils.files.fopen(path, "wb")
+                    out = __utils__["files.fopen"](path, "wb")
                 buf = None
                 while buf != "":
                     buf = uncompressed.read(4096)
@@ -5072,9 +5068,9 @@ def networks(names=None, ids=None):
         salt myminion docker.networks ids=1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     """
     if names is not None:
-        names = salt.utils.args.split_input(names)
+        names = __utils__["args.split_input"](names)
     if ids is not None:
-        ids = salt.utils.args.split_input(ids)
+        ids = __utils__["args.split_input"](ids)
 
     response = _client_wrapper("networks", names=names, ids=ids)
     # Work around https://github.com/docker/docker-py/issues/1775
@@ -5331,12 +5327,12 @@ def create_network(
         # IPv4 and IPv6
         salt myminion docker.create_network mynet ipam_pools='[{"subnet": "10.0.0.0/24", "gateway": "10.0.0.1"}, {"subnet": "fe3f:2180:26:1::60/123", "gateway": "fe3f:2180:26:1::61"}]'
     """
-    kwargs = salt.utils.dockermod.translate_input(
+    kwargs = __utils__["docker.translate_input"](
         salt.utils.dockermod.translate.network,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
-        **salt.utils.args.clean_kwargs(**kwargs)
+        **__utils__["args.clean_kwargs"](**kwargs)
     )
 
     if "ipam" not in kwargs:
@@ -5354,7 +5350,7 @@ def create_network(
         # IPAM-specific configuration was passed. Just create the network
         # without specifying IPAM configuration.
         if ipam_pools or ipam_kwargs:
-            kwargs["ipam"] = salt.utils.dockermod.create_ipam_config(
+            kwargs["ipam"] = __utils__["docker.create_ipam_config"](
                 *ipam_pools, **ipam_kwargs
             )
 
@@ -5429,7 +5425,7 @@ def connect_container_to_network(container, net_id, **kwargs):
         salt myminion docker.connect_container_to_network web-1 mynet ipv4_address=10.20.0.10
         salt myminion docker.connect_container_to_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     """
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
     log.debug(
         "Connecting container '%s' to network '%s' with the following "
         "configuration: %s",
@@ -6025,7 +6021,7 @@ def prune(
     if system is None and not any((containers, images, networks, build)):
         system = True
 
-    filters = salt.utils.args.clean_kwargs(**filters)
+    filters = __utils__["args.clean_kwargs"](**filters)
     for fname in list(filters):
         if not isinstance(filters[fname], bool):
             # support comma-separated values
@@ -6122,7 +6118,7 @@ def _script(
         except OSError as exc:
             log.error("cmd.script: Unable to clean tempfile '%s': %s", path, exc)
 
-    path = salt.utils.files.mkstemp(
+    path = __utils__["files.mkstemp"](
         dir="/tmp", prefix="salt", suffix=os.path.splitext(source)[1]
     )
     if template:
@@ -6733,7 +6729,7 @@ def call(name, function, *args, **kwargs):
         raise CommandExecutionError("Missing function parameter")
 
     # move salt into the container
-    thin_path = salt.utils.thin.gen_thin(
+    thin_path = __utils__["thin.gen_thin"](
         __opts__["cachedir"],
         extra_mods=__salt__["config.option"]("thin_extra_mods", ""),
         so_mods=__salt__["config.option"]("thin_so_mods", ""),
@@ -6801,7 +6797,7 @@ def call(name, function, *args, **kwargs):
 
         # process "real" result in stdout
         try:
-            data = salt.utils.json.find_json(ret["stdout"])
+            data = __utils__["json.find_json"](ret["stdout"])
             local = data.get("local", data)
             if isinstance(local, dict):
                 if "retcode" in local:
@@ -6887,7 +6883,7 @@ def sls(name, mods=None, **kwargs):
     pillar_override = kwargs.pop("pillar", None)
     if "saltenv" not in kwargs:
         kwargs["saltenv"] = "base"
-    sls_opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    sls_opts = __utils__["state.get_sls_opts"](__opts__, **kwargs)
 
     # gather grains from the container
     grains = call(name, "grains.items")
@@ -6923,7 +6919,7 @@ def sls(name, mods=None, **kwargs):
 
     ret = None
     try:
-        trans_tar_sha256 = salt.utils.hashutils.get_hash(trans_tar, "sha256")
+        trans_tar_sha256 = __utils__["hashutils.get_hash"](trans_tar, "sha256")
         copy_to(
             name,
             trans_tar,
@@ -6953,7 +6949,7 @@ def sls(name, mods=None, **kwargs):
             )
     if not isinstance(ret, dict):
         __context__["retcode"] = 1
-    elif not salt.utils.state.check_result(ret):
+    elif not __utils__["state.check_result"](ret):
         __context__["retcode"] = 2
     else:
         __context__["retcode"] = 0
@@ -7059,7 +7055,7 @@ def sls_build(
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     """
-    create_kwargs = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
+    create_kwargs = __utils__["args.clean_kwargs"](**copy.deepcopy(kwargs))
     for key in ("image", "name", "cmd", "interactive", "tty", "extra_filerefs"):
         try:
             del create_kwargs[key]
@@ -7077,7 +7073,7 @@ def sls_build(
         # Now execute the state into the container
         ret = sls(id_, mods, **kwargs)
         # fail if the state was not successful
-        if not dryrun and not salt.utils.state.check_result(ret):
+        if not dryrun and not __utils__["state.check_result"](ret):
             raise CommandExecutionError(ret)
         if dryrun is False:
             ret = commit(id_, repository, tag=tag)

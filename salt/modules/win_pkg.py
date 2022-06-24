@@ -59,7 +59,6 @@ import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_functions
-import salt.utils.win_reg
 from salt.exceptions import (
     CommandExecutionError,
     MinionError,
@@ -489,7 +488,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         """
         if include_components:
             return False
-        if salt.utils.win_reg.value_exists(
+        if __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="SystemComponent",
@@ -518,7 +517,7 @@ def _get_reg_software(include_components=True, include_updates=True):
             bool: True if the package needs to be skipped, otherwise False
         """
         products_key = "Software\\Classes\\Installer\\Products\\{0}"
-        if salt.utils.win_reg.value_exists(
+        if __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="WindowsInstaller",
@@ -534,7 +533,7 @@ def _get_reg_software(include_components=True, include_updates=True):
                 > 0
             ):
                 squid = salt.utils.win_functions.guid_to_squid(sub_key)
-                if not salt.utils.win_reg.key_exists(
+                if not __utils__["reg.key_exists"](
                     hive="HKLM",
                     key=products_key.format(squid),
                     use_32bit_registry=use_32bit_registry,
@@ -556,7 +555,7 @@ def _get_reg_software(include_components=True, include_updates=True):
             bool: True if the package needs to be skipped, otherwise False
         """
         # https://docs.microsoft.com/en-us/windows/win32/msi/arpnoremove
-        if salt.utils.win_reg.value_exists(
+        if __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="NoRemove",
@@ -572,7 +571,7 @@ def _get_reg_software(include_components=True, include_updates=True):
                 > 0
             ):
                 return False
-        if not salt.utils.win_reg.value_exists(
+        if not __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="UninstallString",
@@ -593,7 +592,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         if include_updates:
             return False
         skip_types = ["Hotfix", "Security Update", "Update Rollup"]
-        if salt.utils.win_reg.value_exists(
+        if __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="ReleaseType",
@@ -619,7 +618,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         Returns:
             bool: True if the package needs to be skipped, otherwise False
         """
-        if salt.utils.win_reg.value_exists(
+        if __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="ParentKeyName",
@@ -636,7 +635,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         not start with 'KB' followed by 6 numbers - as that indicates a
         Windows update.
         """
-        d_name_regdata = salt.utils.win_reg.read_value(
+        d_name_regdata = __utils__["reg.read_value"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="DisplayName",
@@ -655,7 +654,7 @@ def _get_reg_software(include_components=True, include_updates=True):
             if re.match(r"^KB[0-9]{6}", d_name):
                 return
 
-        d_vers_regdata = salt.utils.win_reg.read_value(
+        d_vers_regdata = __utils__["reg.read_value"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
             vname="DisplayVersion",
@@ -684,7 +683,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         "key": "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
         "use_32bit_registry": False,
     }
-    for sub_key in salt.utils.win_reg.list_keys(**kwargs):
+    for sub_key in __utils__["reg.list_keys"](**kwargs):
         kwargs["sub_key"] = sub_key
         if skip_component(**kwargs):
             continue
@@ -701,7 +700,7 @@ def _get_reg_software(include_components=True, include_updates=True):
     # HKLM Uninstall 32 bit
     kwargs["use_32bit_registry"] = True
     kwargs.pop("sub_key", False)
-    for sub_key in salt.utils.win_reg.list_keys(**kwargs):
+    for sub_key in __utils__["reg.list_keys"](**kwargs):
         kwargs["sub_key"] = sub_key
         if skip_component(**kwargs):
             continue
@@ -725,9 +724,9 @@ def _get_reg_software(include_components=True, include_updates=True):
         "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\"
         "UserData\\S-1-5-18\\Products"
     )
-    for sub_key in salt.utils.win_reg.list_keys(**kwargs):
+    for sub_key in __utils__["reg.list_keys"](**kwargs):
         # If the key does not exist in userdata, skip it
-        if not salt.utils.win_reg.key_exists(
+        if not __utils__["reg.key_exists"](
             hive=kwargs["hive"], key="{}\\{}".format(userdata_key, sub_key)
         ):
             continue
@@ -748,14 +747,14 @@ def _get_reg_software(include_components=True, include_updates=True):
         "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\"
         "UserData\\{0}\\Products\\{1}"
     )
-    for user_guid in salt.utils.win_reg.list_keys(hive=hive_hku):
+    for user_guid in __utils__["reg.list_keys"](hive=hive_hku):
         kwargs = {
             "hive": hive_hku,
             "key": uninstall_key.format(user_guid),
             "use_32bit_registry": False,
         }
-        if salt.utils.win_reg.key_exists(**kwargs):
-            for sub_key in salt.utils.win_reg.list_keys(**kwargs):
+        if __utils__["reg.key_exists"](**kwargs):
+            for sub_key in __utils__["reg.list_keys"](**kwargs):
                 kwargs["sub_key"] = sub_key
                 if skip_component(**kwargs):
                     continue
@@ -775,30 +774,28 @@ def _get_reg_software(include_components=True, include_updates=True):
             "key": product_key.format(user_guid),
             "use_32bit_registry": False,
         }
-        if salt.utils.win_reg.key_exists(**kwargs):
-            for sub_key in salt.utils.win_reg.list_keys(**kwargs):
+        if __utils__["reg.key_exists"](**kwargs):
+            for sub_key in __utils__["reg.list_keys"](**kwargs):
                 kwargs = {
                     "hive": "HKLM",
                     "key": user_data_key.format(user_guid, sub_key),
                     "use_32bit_registry": False,
                 }
-                if salt.utils.win_reg.key_exists(**kwargs):
+                if __utils__["reg.key_exists"](**kwargs):
                     kwargs["sub_key"] = "InstallProperties"
                     if skip_component(**kwargs):
                         continue
                     add_software(**kwargs)
 
     # Uninstall for each user on the system (HKU), 32 bit
-    for user_guid in salt.utils.win_reg.list_keys(
-        hive=hive_hku, use_32bit_registry=True
-    ):
+    for user_guid in __utils__["reg.list_keys"](hive=hive_hku, use_32bit_registry=True):
         kwargs = {
             "hive": hive_hku,
             "key": uninstall_key.format(user_guid),
             "use_32bit_registry": True,
         }
-        if salt.utils.win_reg.key_exists(**kwargs):
-            for sub_key in salt.utils.win_reg.list_keys(**kwargs):
+        if __utils__["reg.key_exists"](**kwargs):
+            for sub_key in __utils__["reg.list_keys"](**kwargs):
                 kwargs["sub_key"] = sub_key
                 if skip_component(**kwargs):
                     continue
@@ -817,15 +814,15 @@ def _get_reg_software(include_components=True, include_updates=True):
             "key": product_key.format(user_guid),
             "use_32bit_registry": True,
         }
-        if salt.utils.win_reg.key_exists(**kwargs):
+        if __utils__["reg.key_exists"](**kwargs):
             # While we have the user guid, we're going to check userdata in HKLM
-            for sub_key_2 in salt.utils.win_reg.list_keys(**kwargs):
+            for sub_key_2 in __utils__["reg.list_keys"](**kwargs):
                 kwargs = {
                     "hive": "HKLM",
                     "key": user_data_key.format(user_guid, sub_key_2),
                     "use_32bit_registry": True,
                 }
-                if salt.utils.win_reg.key_exists(**kwargs):
+                if __utils__["reg.key_exists"](**kwargs):
                     kwargs["sub_key"] = "InstallProperties"
                     if skip_component(**kwargs):
                         continue

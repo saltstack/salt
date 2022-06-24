@@ -52,7 +52,6 @@ The dependencies listed above can be installed via package or pip.
 import datetime
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
@@ -90,7 +89,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        salt.utils.boto3mod.assign_funcs(__name__, "iot")
+        __utils__["boto3.assign_funcs"](__name__, "iot")
 
 
 def thing_type_exists(thingTypeName, region=None, key=None, keyid=None, profile=None):
@@ -118,7 +117,7 @@ def thing_type_exists(thingTypeName, region=None, key=None, keyid=None, profile=
         else:
             return {"exists": False}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"exists": False}
         return {"error": err}
@@ -154,7 +153,7 @@ def describe_thing_type(thingTypeName, region=None, key=None, keyid=None, profil
         else:
             return {"thing_type": None}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"thing_type": None}
         return {"error": err}
@@ -206,7 +205,7 @@ def create_thing_type(
             log.warning("thing type was not created")
             return {"created": False}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def deprecate_thing_type(
@@ -237,7 +236,7 @@ def deprecate_thing_type(
         deprecated = True if undoDeprecate is False else False
         return {"deprecated": deprecated}
     except ClientError as e:
-        return {"deprecated": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deprecated": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_thing_type(thingTypeName, region=None, key=None, keyid=None, profile=None):
@@ -262,7 +261,7 @@ def delete_thing_type(thingTypeName, region=None, key=None, keyid=None, profile=
         conn.delete_thing_type(thingTypeName=thingTypeName)
         return {"deleted": True}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"deleted": True}
         return {"deleted": False, "error": err}
@@ -288,7 +287,7 @@ def policy_exists(policyName, region=None, key=None, keyid=None, profile=None):
         conn.get_policy(policyName=policyName)
         return {"exists": True}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"exists": False}
         return {"error": err}
@@ -332,7 +331,7 @@ def create_policy(
             log.warning("Policy was not created")
             return {"created": False}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_policy(policyName, region=None, key=None, keyid=None, profile=None):
@@ -355,7 +354,7 @@ def delete_policy(policyName, region=None, key=None, keyid=None, profile=None):
         conn.delete_policy(policyName=policyName)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_policy(policyName, region=None, key=None, keyid=None, profile=None):
@@ -381,10 +380,10 @@ def describe_policy(policyName, region=None, key=None, keyid=None, profile=None)
         else:
             return {"policy": None}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"policy": None}
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def policy_version_exists(
@@ -411,10 +410,10 @@ def policy_version_exists(
         )
         return {"exists": bool(policy)}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"exists": False}
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def create_policy_version(
@@ -460,7 +459,7 @@ def create_policy_version(
             log.warning("Policy version was not created")
             return {"created": False}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_policy_version(
@@ -487,7 +486,7 @@ def delete_policy_version(
         )
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_policy_version(
@@ -523,10 +522,10 @@ def describe_policy_version(
         else:
             return {"policy": None}
     except ClientError as e:
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
             return {"policy": None}
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def list_policies(region=None, key=None, keyid=None, profile=None):
@@ -553,7 +552,7 @@ def list_policies(region=None, key=None, keyid=None, profile=None):
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         policies = []
-        for ret in salt.utils.boto3mod.paged_call(
+        for ret in __utils__["boto3.paged_call"](
             conn.list_policies, marker_flag="nextMarker", marker_arg="marker"
         ):
             policies.extend(ret["policies"])
@@ -561,7 +560,7 @@ def list_policies(region=None, key=None, keyid=None, profile=None):
             log.warning("No policies found")
         return {"policies": policies}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def list_policy_versions(policyName, region=None, key=None, keyid=None, profile=None):
@@ -586,7 +585,7 @@ def list_policy_versions(policyName, region=None, key=None, keyid=None, profile=
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vers = []
-        for ret in salt.utils.boto3mod.paged_call(
+        for ret in __utils__["boto3.paged_call"](
             conn.list_policy_versions,
             marker_flag="nextMarker",
             marker_arg="marker",
@@ -597,7 +596,7 @@ def list_policy_versions(policyName, region=None, key=None, keyid=None, profile=
             log.warning("No versions found")
         return {"policyVersions": vers}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def set_default_policy_version(
@@ -625,7 +624,7 @@ def set_default_policy_version(
         )
         return {"changed": True}
     except ClientError as e:
-        return {"changed": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"changed": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def list_principal_policies(principal, region=None, key=None, keyid=None, profile=None):
@@ -650,7 +649,7 @@ def list_principal_policies(principal, region=None, key=None, keyid=None, profil
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vers = []
-        for ret in salt.utils.boto3mod.paged_call(
+        for ret in __utils__["boto3.paged_call"](
             conn.list_principal_policies,
             principal=principal,
             marker_flag="nextMarker",
@@ -661,7 +660,7 @@ def list_principal_policies(principal, region=None, key=None, keyid=None, profil
             log.warning("No policies found")
         return {"policies": vers}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def attach_principal_policy(
@@ -686,7 +685,7 @@ def attach_principal_policy(
         conn.attach_principal_policy(policyName=policyName, principal=principal)
         return {"attached": True}
     except ClientError as e:
-        return {"attached": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"attached": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def detach_principal_policy(
@@ -711,7 +710,7 @@ def detach_principal_policy(
         conn.detach_principal_policy(policyName=policyName, principal=principal)
         return {"detached": True}
     except ClientError as e:
-        return {"detached": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"detached": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def topic_rule_exists(ruleName, region=None, key=None, keyid=None, profile=None):
@@ -739,10 +738,10 @@ def topic_rule_exists(ruleName, region=None, key=None, keyid=None, profile=None)
         # use, it's more useful to assume lack of existence than to assume a
         # genuine authorization problem; authorization problems should not be
         # the common case.
-        err = salt.utils.boto3mod.get_error(e)
+        err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "UnauthorizedException":
             return {"exists": False}
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def create_topic_rule(
@@ -785,7 +784,7 @@ def create_topic_rule(
         )
         return {"created": True}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def replace_topic_rule(
@@ -828,7 +827,7 @@ def replace_topic_rule(
         )
         return {"replaced": True}
     except ClientError as e:
-        return {"replaced": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"replaced": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_topic_rule(ruleName, region=None, key=None, keyid=None, profile=None):
@@ -851,7 +850,7 @@ def delete_topic_rule(ruleName, region=None, key=None, keyid=None, profile=None)
         conn.delete_topic_rule(ruleName=ruleName)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_topic_rule(ruleName, region=None, key=None, keyid=None, profile=None):
@@ -878,7 +877,7 @@ def describe_topic_rule(ruleName, region=None, key=None, keyid=None, profile=Non
         else:
             return {"rule": None}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def list_topic_rules(
@@ -912,7 +911,7 @@ def list_topic_rules(
         if ruleDisabled is not None:
             kwargs["ruleDisabled"] = ruleDisabled
         rules = []
-        for ret in salt.utils.boto3mod.paged_call(
+        for ret in __utils__["boto3.paged_call"](
             conn.list_topic_rules,
             marker_flag="nextToken",
             marker_arg="nextToken",
@@ -923,4 +922,4 @@ def list_topic_rules(
             log.warning("No rules found")
         return {"rules": rules}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}

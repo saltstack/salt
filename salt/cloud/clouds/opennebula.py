@@ -65,7 +65,6 @@ import pprint
 import time
 
 import salt.config as config
-import salt.utils.cloud
 import salt.utils.data
 import salt.utils.files
 from salt.exceptions import (
@@ -338,7 +337,7 @@ def list_nodes_select(call=None):
             "The list_nodes_full function must be called with -f or --function."
         )
 
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__["cloud.list_nodes_select"](
         list_nodes_full("function"),
         __opts__["query.selection"],
         call,
@@ -972,11 +971,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -997,12 +996,14 @@ def create(vm_):
     )
     kwargs["private_networking"] = "true" if private_networking else "false"
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
-            "kwargs": salt.utils.cloud.filter_event("requesting", kwargs, list(kwargs)),
+            "kwargs": __utils__["cloud.filter_event"](
+                "requesting", kwargs, list(kwargs)
+            ),
         },
         sock_dir=__opts__["sock_dir"],
     )
@@ -1075,7 +1076,7 @@ def create(vm_):
             return node_data
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__["cloud.wait_for_ip"](
             __query_node_data,
             update_args=(vm_["name"],),
             timeout=config.get_cloud_config_value(
@@ -1125,7 +1126,7 @@ def create(vm_):
     vm_["username"] = ssh_username
     vm_["key_filename"] = key_filename
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
 
     ret["id"] = data["id"]
     ret["image"] = vm_["image"]
@@ -1138,11 +1139,11 @@ def create(vm_):
     log.info("Created Cloud VM '%s'", vm_["name"])
     log.debug("'%s' VM creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -1173,7 +1174,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -1187,7 +1188,7 @@ def destroy(name, call=None):
     data = show_instance(name, call="action")
     node = server.one.vm.action(auth, "delete", int(data["id"]))
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -1196,7 +1197,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get("update_cachedir", False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__["cloud.delete_minion_cachedir"](
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 
@@ -1891,7 +1892,7 @@ def show_instance(name, call=None):
         )
 
     node = _get_node(name)
-    salt.utils.cloud.cache_node(node, _get_active_provider_name(), __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
 
     return node
 

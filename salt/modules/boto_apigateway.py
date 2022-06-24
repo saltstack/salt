@@ -81,7 +81,6 @@ Connection module for Amazon APIGateway
 import datetime
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
@@ -122,7 +121,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        salt.utils.boto3mod.assign_funcs(__name__, "apigateway")
+        __utils__["boto3.assign_funcs"](__name__, "apigateway")
 
 
 def _convert_datetime_str(response):
@@ -184,7 +183,7 @@ def _find_apis_by_name(
             apis = _filter_apis_desc(description, apis)
         return {"restapi": [_convert_datetime_str(api) for api in apis]}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_apis(
@@ -275,7 +274,7 @@ def create_api(
         api = _convert_datetime_str(api)
         return {"created": True, "restapi": api} if api else {"created": False}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api(name, description=None, region=None, key=None, keyid=None, profile=None):
@@ -306,7 +305,7 @@ def delete_api(name, description=None, region=None, key=None, keyid=None, profil
         else:
             return {"deleted": False}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_resources(restApiId, region=None, key=None, keyid=None, profile=None):
@@ -329,7 +328,7 @@ def describe_api_resources(restApiId, region=None, key=None, keyid=None, profile
 
         return {"resources": resources}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_resource(
@@ -402,7 +401,7 @@ def create_api_resources(
         else:
             return {"created": False, "error": "unexpected error."}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_resources(
@@ -434,7 +433,7 @@ def delete_api_resources(
         else:
             return {"deleted": False, "error": "no resource found by {}".format(path)}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_resource_method(
@@ -466,7 +465,7 @@ def describe_api_resource_method(
         )
         return {"method": method}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
@@ -485,7 +484,7 @@ def describe_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         response = conn.get_api_key(apiKey=apiKey)
         return {"apiKey": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_keys(region=None, key=None, keyid=None, profile=None):
@@ -505,7 +504,7 @@ def describe_api_keys(region=None, key=None, keyid=None, profile=None):
 
         return {"apiKeys": [_convert_datetime_str(apikey) for apikey in apikeys]}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_key(
@@ -552,7 +551,7 @@ def create_api_key(
 
         return {"created": True, "apiKey": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
@@ -571,7 +570,7 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         conn.delete_api_key(apiKey=apiKey)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def _api_key_patch_replace(conn, apiKey, path, value):
@@ -629,7 +628,7 @@ def update_api_key_description(
         response = _api_key_patch_replace(conn, apiKey, "/description", description)
         return {"updated": True, "apiKey": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
@@ -648,7 +647,7 @@ def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         response = _api_key_patch_replace(conn, apiKey, "/enabled", "True")
         return {"apiKey": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
@@ -667,7 +666,7 @@ def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         response = _api_key_patch_replace(conn, apiKey, "/enabled", "False")
         return {"apiKey": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def associate_api_key_stagekeys(
@@ -690,7 +689,7 @@ def associate_api_key_stagekeys(
         response = _api_key_patch_add(conn, apiKey, pvlist)
         return {"associated": True, "apiKey": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"associated": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"associated": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def disassociate_api_key_stagekeys(
@@ -713,7 +712,7 @@ def disassociate_api_key_stagekeys(
         response = _api_key_patch_remove(conn, apiKey, pvlist)
         return {"disassociated": True}
     except ClientError as e:
-        return {"disassociated": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"disassociated": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_deployments(
@@ -749,7 +748,7 @@ def describe_api_deployments(
             ]
         }
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_deployment(
@@ -770,7 +769,7 @@ def describe_api_deployment(
         deployment = conn.get_deployment(restApiId=restApiId, deploymentId=deploymentId)
         return {"deployment": _convert_datetime_str(deployment)}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def activate_api_deployment(
@@ -797,7 +796,7 @@ def activate_api_deployment(
         )
         return {"set": True, "response": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"set": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"set": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_deployment(
@@ -839,7 +838,7 @@ def create_api_deployment(
         )
         return {"created": True, "deployment": _convert_datetime_str(deployment)}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_deployment(
@@ -860,7 +859,7 @@ def delete_api_deployment(
         conn.delete_deployment(restApiId=restApiId, deploymentId=deploymentId)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def overwrite_api_stage_variables(
@@ -911,7 +910,7 @@ def overwrite_api_stage_variables(
 
         return {"overwrite": True, "stage": _convert_datetime_str(stage)}
     except ClientError as e:
-        return {"overwrite": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"overwrite": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_stage(
@@ -932,7 +931,7 @@ def describe_api_stage(
         stage = conn.get_stage(restApiId=restApiId, stageName=stageName)
         return {"stage": _convert_datetime_str(stage)}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_stages(
@@ -953,7 +952,7 @@ def describe_api_stages(
         stages = conn.get_stages(restApiId=restApiId, deploymentId=deploymentId)
         return {"stages": [_convert_datetime_str(stage) for stage in stages["item"]]}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_stage(
@@ -995,7 +994,7 @@ def create_api_stage(
         )
         return {"created": True, "stage": _convert_datetime_str(stage)}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_stage(
@@ -1016,7 +1015,7 @@ def delete_api_stage(
         conn.delete_stage(restApiId=restApiId, stageName=stageName)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def flush_api_stage_cache(
@@ -1037,7 +1036,7 @@ def flush_api_stage_cache(
         conn.flush_stage_cache(restApiId=restApiId, stageName=stageName)
         return {"flushed": True}
     except ClientError as e:
-        return {"flushed": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"flushed": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_method(
@@ -1093,7 +1092,7 @@ def create_api_method(
         return {"created": False, "error": "Failed to create method"}
 
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_method(
@@ -1126,7 +1125,7 @@ def describe_api_method(
             return {"method": _convert_datetime_str(method)}
         return {"error": "get API method failed: no such resource"}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_method(
@@ -1159,7 +1158,7 @@ def delete_api_method(
             return {"deleted": True}
         return {"deleted": False, "error": "get API method failed: no such resource"}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_method_response(
@@ -1212,7 +1211,7 @@ def create_api_method_response(
             return {"created": True, "response": response}
         return {"created": False, "error": "no such resource"}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_method_response(
@@ -1255,7 +1254,7 @@ def delete_api_method_response(
             return {"deleted": True}
         return {"deleted": False, "error": "no such resource"}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_method_response(
@@ -1298,7 +1297,7 @@ def describe_api_method_response(
             return {"response": _convert_datetime_str(response)}
         return {"error": "no such resource"}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_models(restApiId, region=None, key=None, keyid=None, profile=None):
@@ -1317,7 +1316,7 @@ def describe_api_models(restApiId, region=None, key=None, keyid=None, profile=No
         models = _multi_call(conn.get_models, "items", restApiId=restApiId)
         return {"models": [_convert_datetime_str(model) for model in models]}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_model(
@@ -1340,7 +1339,7 @@ def describe_api_model(
         )
         return {"model": _convert_datetime_str(model)}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def api_model_exists(
@@ -1397,7 +1396,7 @@ def update_api_model_schema(
         )
         return {"updated": True, "model": _convert_datetime_str(response)}
     except ClientError as e:
-        return {"updated": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_model(
@@ -1418,7 +1417,7 @@ def delete_api_model(
         conn.delete_model(restApiId=restApiId, modelName=modelName)
         return {"deleted": True}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_model(
@@ -1457,7 +1456,7 @@ def create_api_model(
         )
         return {"created": True, "model": _convert_datetime_str(model)}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_integration(
@@ -1490,7 +1489,7 @@ def describe_api_integration(
             return {"integration": _convert_datetime_str(integration)}
         return {"error": "no such resource"}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def describe_api_integration_response(
@@ -1533,7 +1532,7 @@ def describe_api_integration_response(
             return {"response": _convert_datetime_str(response)}
         return {"error": "no such resource"}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_integration(
@@ -1566,7 +1565,7 @@ def delete_api_integration(
             return {"deleted": True}
         return {"deleted": False, "error": "no such resource"}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete_api_integration_response(
@@ -1609,7 +1608,7 @@ def delete_api_integration_response(
             return {"deleted": True}
         return {"deleted": False, "error": "no such resource"}
     except ClientError as e:
-        return {"deleted": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -1695,7 +1694,7 @@ def create_api_integration(
             return {"created": True, "integration": integration}
         return {"created": False, "error": "no such resource"}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def create_api_integration_response(
@@ -1752,7 +1751,7 @@ def create_api_integration_response(
             return {"created": True, "response": response}
         return {"created": False, "error": "no such resource"}
     except ClientError as e:
-        return {"created": False, "error": salt.utils.boto3mod.get_error(e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def _filter_plans(attr, name, plans):
@@ -1790,7 +1789,7 @@ def describe_usage_plans(
         return {"plans": [_convert_datetime_str(plan) for plan in plans]}
 
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def _validate_throttle(throttle):
@@ -1886,7 +1885,7 @@ def create_usage_plan(
         res = conn.create_usage_plan(**values)
         return {"created": True, "result": res}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     except (TypeError, ValueError) as e:
         return {"error": str(e)}
 
@@ -1989,7 +1988,7 @@ def update_usage_plan(
         return {"updated": False}
 
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     except (TypeError, ValueError) as e:
         return {"error": str(e)}
 
@@ -2020,7 +2019,7 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
             res = conn.delete_usage_plan(usagePlanId=plan_id)
         return {"deleted": True, "usagePlanId": plan_id}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def _update_usage_plan_apis(
@@ -2059,7 +2058,7 @@ def _update_usage_plan_apis(
             )
         return {"success": True, "result": res}
     except ClientError as e:
-        return {"error": salt.utils.boto3mod.get_error(e)}
+        return {"error": __utils__["boto3.get_error"](e)}
     except Exception as e:  # pylint: disable=broad-except
         return {"error": e}
 

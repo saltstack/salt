@@ -13,8 +13,6 @@ This state provides access to idem states
 import pathlib
 import re
 
-import salt.utils.idem
-
 __virtualname__ = "idem"
 
 
@@ -115,7 +113,7 @@ def state(
     :depends:       acct, pop, pop-config, idem
     :platform:      all
     """
-    hub = salt.utils.idem.hub()
+    hub = __utils__["idem.hub"]()
 
     if isinstance(sls, str):
         sls = [sls]

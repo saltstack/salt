@@ -184,7 +184,6 @@ outside a ``netmiko`` Proxy, e.g.:
 
 import logging
 
-import salt.utils.args
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.utils.args import clean_kwargs
@@ -253,7 +252,7 @@ def _prepare_connection(**kwargs):
     fun_kwargs = {}
     netmiko_kwargs = __salt__["config.get"]("netmiko", {})
     netmiko_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    netmiko_init_args, _, _, netmiko_defaults = salt.utils.args.get_function_argspec(
+    netmiko_init_args, _, _, netmiko_defaults = __utils__["args.get_function_argspec"](
         BaseConnection.__init__
     )
     check_self = netmiko_init_args.pop(0)

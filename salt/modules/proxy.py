@@ -11,7 +11,6 @@ import logging
 import re
 
 import salt.utils.platform
-import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 __virtualname__ = "proxy"
@@ -114,14 +113,14 @@ def _set_proxy_windows(
     for t in types:
         server_str += "{}={}:{};".format(t, server, port)
 
-    salt.utils.win_reg.set_value(
+    __utils__["reg.set_value"](
         hive="HKEY_CURRENT_USER",
         key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
         vname="ProxyServer",
         vdata=server_str,
     )
 
-    salt.utils.win_reg.set_value(
+    __utils__["reg.set_value"](
         hive="HKEY_CURRENT_USER",
         key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
         vname="ProxyEnable",
@@ -132,7 +131,7 @@ def _set_proxy_windows(
     if bypass_hosts is not None:
         bypass_hosts_str = "<local>;{}".format(";".join(bypass_hosts))
 
-        salt.utils.win_reg.set_value(
+        __utils__["reg.set_value"](
             hive="HKEY_CURRENT_USER",
             key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
             vname="ProxyOverride",

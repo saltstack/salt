@@ -14,7 +14,6 @@ import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_functions
-import salt.utils.win_reg
 
 try:
     HAS_WIN32 = True
@@ -272,7 +271,7 @@ def add(path, index=None, **kwargs):
         return True
 
     # Move forward with registry update
-    result = salt.utils.win_reg.set_value(
+    result = __utils__["reg.set_value"](
         HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 
@@ -343,7 +342,7 @@ def remove(path, **kwargs):
         # No changes necessary
         return True
 
-    result = salt.utils.win_reg.set_value(
+    result = __utils__["reg.set_value"](
         HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 

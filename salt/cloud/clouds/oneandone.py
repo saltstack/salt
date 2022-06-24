@@ -464,7 +464,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], _get_active_provider_name(), __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -609,7 +609,7 @@ def create(vm_):
         # Assemble the hdds object.
         hdds = _get_hdds(vm_)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
@@ -694,7 +694,7 @@ def create(vm_):
     log.info("Created Cloud VM %s", vm_)
     log.debug("%s VM creation details:\n%s", vm_, pprint.pformat(data))
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
@@ -710,7 +710,7 @@ def create(vm_):
     if "ssh_host" in vm_:
         vm_["password"] = password
         vm_["key_filename"] = get_key_filename(vm_)
-        ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+        ret = __utils__["cloud.bootstrap"](vm_, __opts__)
         ret.update(data)
         return ret
     else:
@@ -738,7 +738,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -752,7 +752,7 @@ def destroy(name, call=None):
 
     conn.delete_server(server_id=node["id"])
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -762,7 +762,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get("update_cachedir", False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__["cloud.delete_minion_cachedir"](
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 

@@ -16,7 +16,6 @@ import re
 import stat
 
 import salt.utils.path
-import salt.utils.systemd
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ def __virtual__():
     management of either sysvinit or a hybrid sysvinit/upstart init system.
     """
     # Disable when booted with systemd
-    if salt.utils.systemd.booted(__context__):
+    if __utils__["systemd.booted"](__context__):
         return (
             False,
             "The rh_service execution module failed to load: this system was booted"

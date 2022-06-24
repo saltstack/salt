@@ -92,7 +92,6 @@ outside a ``pyeapi`` Proxy, e.g.:
 import difflib
 import logging
 
-import salt.utils.args
 from salt.exceptions import CommandExecutionError
 from salt.utils.args import clean_kwargs
 
@@ -160,7 +159,7 @@ def _prepare_connection(**kwargs):
     """
     pyeapi_kwargs = __salt__["config.get"]("pyeapi", {})
     pyeapi_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    init_kwargs, fun_kwargs = salt.utils.args.prepare_kwargs(
+    init_kwargs, fun_kwargs = __utils__["args.prepare_kwargs"](
         pyeapi_kwargs, PYEAPI_INIT_KWARGS
     )
     if "transport" not in init_kwargs:

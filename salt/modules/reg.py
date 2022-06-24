@@ -69,7 +69,6 @@ Value:
 import logging
 
 import salt.utils.platform
-import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -120,7 +119,7 @@ def key_exists(hive, key, use_32bit_registry=False):
 
             salt '*' reg.key_exists HKLM SOFTWARE\Microsoft
     """
-    return salt.utils.win_reg.key_exists(
+    return __utils__["reg.key_exists"](
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -150,7 +149,7 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
             salt '*' reg.value_exists HKLM SOFTWARE\Microsoft\Windows\CurrentVersion CommonFilesDir
     """
-    return salt.utils.win_reg.value_exists(
+    return __utils__["reg.value_exists"](
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
@@ -207,7 +206,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
             salt '*' reg.list_keys HKLM 'SOFTWARE'
     """
-    return salt.utils.win_reg.list_keys(
+    return __utils__["reg.list_keys"](
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -248,7 +247,7 @@ def list_values(hive, key=None, use_32bit_registry=False):
 
             salt '*' reg.list_values HKLM 'SYSTEM\\CurrentControlSet\\Services\\Tcpip'
     """
-    return salt.utils.win_reg.list_values(
+    return __utils__["reg.list_values"](
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -308,7 +307,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
             salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt'
     """
-    return salt.utils.win_reg.read_value(
+    return __utils__["reg.read_value"](
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 
@@ -432,7 +431,7 @@ def set_value(
 
             salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'list_data' vtype=REG_MULTI_SZ vdata='["Salt", "is", "great"]'
     """
-    return salt.utils.win_reg.set_value(
+    return __utils__["reg.set_value"](
         hive=hive,
         key=key,
         vname=vname,
@@ -480,7 +479,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
             salt '*' reg.delete_key_recursive HKLM SOFTWARE\\delete_me
     """
-    return salt.utils.win_reg.delete_key_recursive(
+    return __utils__["reg.delete_key_recursive"](
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )
 
@@ -520,7 +519,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
             salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     """
-    return salt.utils.win_reg.delete_value(
+    return __utils__["reg.delete_value"](
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
 

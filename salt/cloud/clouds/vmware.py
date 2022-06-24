@@ -2653,7 +2653,7 @@ def destroy(name, call=None):
             "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -2699,7 +2699,7 @@ def destroy(name, call=None):
                 )
                 return "failed to destroy"
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
@@ -2708,7 +2708,7 @@ def destroy(name, call=None):
         transport=__opts__["transport"],
     )
     if __opts__.get("update_cachedir", False) is True:
-        salt.utils.cloud.delete_minion_cachedir(
+        __utils__["cloud.delete_minion_cachedir"](
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 
@@ -2744,11 +2744,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -3002,11 +3002,11 @@ def create(vm_):
                 del event_kwargs["password"]
 
             try:
-                salt.utils.cloud.fire_event(
+                __utils__["cloud.fire_event"](
                     "event",
                     "requesting instance",
                     "salt/cloud/{}/requesting".format(vm_["name"]),
-                    args=salt.utils.cloud.filter_event(
+                    args=__utils__["cloud.filter_event"](
                         "requesting", event_kwargs, list(event_kwargs)
                     ),
                     sock_dir=__opts__["sock_dir"],
@@ -3077,18 +3077,18 @@ def create(vm_):
                             vm_["ssh_host"] = ip
                         log.info("[ %s ] Deploying to %s", vm_name, vm_["ssh_host"])
 
-                        out = salt.utils.cloud.bootstrap(vm_, __opts__)
+                        out = __utils__["cloud.bootstrap"](vm_, __opts__)
 
             data = show_instance(vm_name, call="action")
 
             if deploy and isinstance(out, dict):
                 data["deploy_kwargs"] = out.get("deploy_kwargs", {})
 
-            salt.utils.cloud.fire_event(
+            __utils__["cloud.fire_event"](
                 "event",
                 "created instance",
                 "salt/cloud/{}/created".format(vm_["name"]),
-                args=salt.utils.cloud.filter_event(
+                args=__utils__["cloud.filter_event"](
                     "created", vm_, ["name", "profile", "provider", "driver"]
                 ),
                 sock_dir=__opts__["sock_dir"],
@@ -3262,11 +3262,11 @@ def create(vm_):
         del event_kwargs["password"]
 
     try:
-        salt.utils.cloud.fire_event(
+        __utils__["cloud.fire_event"](
             "event",
             "requesting instance",
             "salt/cloud/{}/requesting".format(vm_["name"]),
-            args=salt.utils.cloud.filter_event(
+            args=__utils__["cloud.filter_event"](
                 "requesting", event_kwargs, list(event_kwargs)
             ),
             sock_dir=__opts__["sock_dir"],
@@ -3355,18 +3355,18 @@ def create(vm_):
                     vm_["ssh_host"] = ip
                 log.info("[ %s ] Deploying to %s", vm_name, vm_["ssh_host"])
 
-                out = salt.utils.cloud.bootstrap(vm_, __opts__)
+                out = __utils__["cloud.bootstrap"](vm_, __opts__)
 
     data = show_instance(vm_name, call="action")
 
     if deploy and isinstance(out, dict):
         data["deploy_kwargs"] = out.get("deploy_kwargs", {})
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],

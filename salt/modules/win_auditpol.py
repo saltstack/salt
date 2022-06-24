@@ -55,7 +55,6 @@ CLI Example:
 """
 
 import salt.utils.platform
-import salt.utils.win_lgpo_auditpol
 
 # Define the module's virtual name
 __virtualname__ = "auditpol"
@@ -113,7 +112,7 @@ def get_settings(category="All"):
         # category
         salt * auditpol.get_settings "Account Logon"
     """
-    return salt.utils.win_lgpo_auditpol.get_settings(category=category)
+    return __utils__["auditpol.get_settings"](category=category)
 
 
 def get_setting(name):
@@ -137,7 +136,7 @@ def get_setting(name):
         # Get current state of the "Credential Validation" setting
         salt * auditpol.get_setting "Credential Validation"
     """
-    return salt.utils.win_lgpo_auditpol.get_setting(name=name)
+    return __utils__["auditpol.get_setting"](name=name)
 
 
 def set_setting(name, value):
@@ -175,4 +174,4 @@ def set_setting(name, value):
         # Set the state of the "Credential Validation" setting to No Auditing
         salt * auditpol.set_setting "Credential Validation" "No Auditing"
     """
-    return salt.utils.win_lgpo_auditpol.set_setting(name=name, value=value)
+    return __utils__["auditpol.set_setting"](name=name, value=value)

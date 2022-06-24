@@ -12,7 +12,7 @@ import tempfile
 
 import salt.utils.data
 import salt.utils.platform
-import salt.utils.win_dotnet
+from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -21,11 +21,6 @@ from salt.exceptions import (
 )
 from salt.utils.data import CaseInsensitiveDict
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-try:
-    import salt.utils.win_dotnet
-except ImportError:
-    pass
 
 log = logging.getLogger(__name__)
 
@@ -278,7 +273,7 @@ def bootstrap(force=False, source=None):
     # Check that .NET v4.0+ is installed
     # Windows 7 / Windows Server 2008 R2 and below do not come with at least
     # .NET v4.0 installed
-    if not salt.utils.win_dotnet.version_at_least(version="4"):
+    if not __utils__["dotnet.version_at_least"](version="4"):
         # It took until .NET v4.0 for Microsoft got the hang of making
         # installers, this should work under any version of Windows
         url = "http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe"

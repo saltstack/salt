@@ -19,7 +19,6 @@ Dicts provided by salt:
 import logging
 
 import salt.config as config
-import salt.utils.cloud
 from salt.exceptions import SaltCloudSystemExit
 
 try:
@@ -188,11 +187,11 @@ def create(vm_info):
     )
 
     log.debug("Going to fire event: starting create")
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "starting create",
         "salt/cloud/{}/creating".format(vm_info["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "creating", vm_info, ["name", "profile", "provider", "driver"]
         ),
         sock_dir=__opts__["sock_dir"],
@@ -206,11 +205,11 @@ def create(vm_info):
         "clone_mode": clone_mode,
     }
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_info["name"]),
-        args=salt.utils.cloud.filter_event(
+        args=__utils__["cloud.filter_event"](
             "requesting", request_kwargs, list(request_kwargs)
         ),
         sock_dir=__opts__["sock_dir"],
@@ -233,14 +232,14 @@ def create(vm_info):
                 vm_info["key_filename"] = key_filename
                 vm_info["ssh_host"] = ip
 
-                res = salt.utils.cloud.bootstrap(vm_info, __opts__)
+                res = __utils__["cloud.bootstrap"](vm_info, __opts__)
                 vm_result.update(res)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "created machine",
         "salt/cloud/{}/created".format(vm_info["name"]),
-        args=salt.utils.cloud.filter_event("created", vm_result, list(vm_result)),
+        args=__utils__["cloud.filter_event"]("created", vm_result, list(vm_result)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -329,7 +328,7 @@ def list_nodes(kwargs=None, call=None):
         "private_ips",
         "public_ips",
     ]
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__["cloud.list_nodes_select"](
         list_nodes_full("function"),
         attributes,
         call,
@@ -340,7 +339,7 @@ def list_nodes_select(call=None):
     """
     Return a list of the VMs that are on the provider, with select fields
     """
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__["cloud.list_nodes_select"](
         list_nodes_full("function"),
         __opts__["query.selection"],
         call,
@@ -370,7 +369,7 @@ def destroy(name, call=None):
     if not vb_machine_exists(name):
         return "{} doesn't exist and can't be deleted".format(name)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
         "salt/cloud/{}/destroying".format(name),
@@ -381,7 +380,7 @@ def destroy(name, call=None):
 
     vb_destroy_machine(name)
 
-    salt.utils.cloud.fire_event(
+    __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
         "salt/cloud/{}/destroyed".format(name),
