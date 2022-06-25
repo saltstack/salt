@@ -9,11 +9,21 @@ import salt.beacons.network_settings as network_settings
 from tests.support.mock import MagicMock, patch
 
 try:
+    # ipdb_interfaces_view requires pyroute2 >= 0.7.1
+    from pyroute2 import NDB
+    from pyroute2.ndb.compat import ipdb_interfaces_view
+
+    HAS_NDB = True
+except ImportError:
+    HAS_NDB = False
+
+try:
+    # IPDB support may be dropped in future pyroute2 releases
     from pyroute2 import IPDB
 
-    HAS_PYROUTE2 = True
+    HAS_IPDB = True
 except ImportError:
-    HAS_PYROUTE2 = False
+    HAS_IPDB = False
 
 
 log = logging.getLogger(__name__)
@@ -141,8 +151,8 @@ def test_wildcard_interface():
         assert ret == _expected
 
 
-@pytest.mark.skipif(HAS_PYROUTE2 is False, reason="no pyroute2 installed, skipping")
-def test_interface_dict_fields():
+@pytest.mark.skipif(HAS_IPDB is False, reason="pyroute2.IPDB not available, skipping")
+def test_interface_dict_fields_old():
     with IPDB() as ipdb:
         for attr in network_settings.ATTRS:
             # ipdb.interfaces is a dict-like object, that
@@ -152,3 +162,31 @@ def test_interface_dict_fields():
             # ipdb.interfaces[1] is an interface with index 1,
             # that is the loopback interface.
             assert attr in ipdb.interfaces[1]
+
+
+@pytest.mark.skipif(
+    HAS_NDB is False, reason="pyroute2.ndb.compat not yet available, skipping"
+)
+def test_interface_dict_fields_new():
+    with NDB() as ndb:
+        # ndb provides dict-like objects for all the RTNL entities
+        # upon requests, like:
+        #
+        #   ndb.interfaces["lo"]
+        #   ndb.interfaces[{"target": "netns01", "ifname": "lo"}]
+        #   ndb.addresses["127.0.0.1/8"]
+        #
+        # but for our case is important that NDB provides listings of
+        # RTNL entities as sets of named tuples:
+        #
+        #   for record in ndb.interfaces:
+        #       print(record.index, record.ifname)
+        #
+        # pyroute2.ndb.compat.ipdb_interfaces_view() translates
+        # this view into a dict tree that resembles IPDB layout.
+        #
+        # beacon might use this translation to read the NDB info and at
+        # the same time not to saturate memory with multiple objects.
+        view = ipdb_interfaces_view(ndb)
+        for attr in network_settings.ATTRS:
+            assert attr in view["lo"]
