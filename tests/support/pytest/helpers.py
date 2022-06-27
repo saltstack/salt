@@ -189,15 +189,17 @@ def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
 
 @attr.s(kw_only=True, slots=True)
 class TestGroup:
-    sminion = attr.ib(default=None, repr=False)
-    name = attr.ib(default=None)
+    sminion = attr.ib(repr=False)
+    name = attr.ib()
     _delete_group = attr.ib(init=False, repr=False, default=False)
 
-    def __attrs_post_init__(self):
-        if self.sminion is None:
-            self.sminion = create_sminion()
-        if self.name is None:
-            self.name = random_string("group-", uppercase=False)
+    @sminion.default
+    def _default_sminion(self):
+        return create_sminion()
+
+    @name.default
+    def _default_name(self):
+        return random_string("group-", uppercase=False)
 
     @property
     def info(self):
@@ -209,7 +211,9 @@ class TestGroup:
             ret = self.sminion.functions.group.add(self.name)
             assert ret
             self._delete_group = True
-        log.debug("Created system group: %s", self)
+            log.debug("Created system group: %s", self)
+        else:
+            log.debug("Reusing exising system group: %s", self)
         # Run tests
         return self
 
@@ -226,39 +230,51 @@ class TestGroup:
 
 @pytest.helpers.register
 @contextmanager
-def create_group(name=None, sminion=None):
+def create_group(name=attr.NOTHING, sminion=attr.NOTHING):
     with TestGroup(sminion=sminion, name=name) as group:
         yield group
 
 
 @attr.s(kw_only=True, slots=True)
 class TestAccount:
-    sminion = attr.ib(default=None, repr=False)
-    username = attr.ib(default=None)
-    password = attr.ib(default=None)
-    hashed_password = attr.ib(default=None, repr=False)
-    group_name = attr.ib(default=None)
+    sminion = attr.ib(repr=False)
+    username = attr.ib()
+    password = attr.ib()
+    hashed_password = attr.ib(repr=False)
     create_group = attr.ib(repr=False, default=False)
-    _group = attr.ib(init=False, repr=False, default=None)
+    group_name = attr.ib()
+    _group = attr.ib(init=False, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
-    def __attrs_post_init__(self):
-        if self.sminion is None:
-            self.sminion = create_sminion()
-        if self.username is None:
-            self.username = random_string("account-", uppercase=False)
-        if self.password is None:
-            self.password = random_string("pwd-", size=8)
-        if (
-            self.hashed_password is None
-            and not salt.utils.platform.is_darwin()
-            and not salt.utils.platform.is_windows()
-        ):
-            self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
-        if self.create_group is True and self.group_name is None:
-            self.group_name = "group-{}".format(self.username)
-        if self.group_name is not None:
-            self._group = TestGroup(sminion=self.sminion, name=self.group_name)
+    @sminion.default
+    def _default_sminion(self):
+        return create_sminion()
+
+    @username.default
+    def _default_username(self):
+        return random_string("account-", uppercase=False)
+
+    @password.default
+    def _default_password(self):
+        return random_string("pwd-", size=8)
+
+    @hashed_password.default
+    def _default_hashed_password(self):
+        if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
+            return salt.utils.pycrypto.gen_hash(password=self.password)
+        return self.password
+
+    @group_name.default
+    def _default_group_name(self):
+        if self.create_group:
+            return "group-{}".format(self.username)
+        return None
+
+    @_group.default
+    def _default__group(self):
+        if self.group_name:
+            return TestGroup(sminion=self.sminion, name=self.group_name)
+        return None
 
     @property
     def info(self):
@@ -279,12 +295,12 @@ class TestAccount:
             ret = self.sminion.functions.user.add(self.username)
             assert ret
             self._delete_account = True
-            if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
-                password = self.password
-            else:
-                password = self.hashed_password
-            ret = self.sminion.functions.shadow.set_password(self.username, password)
-            assert ret
+        if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
+            password = self.password
+        else:
+            password = self.hashed_password
+        ret = self.sminion.functions.shadow.set_password(self.username, password)
+        assert ret
         assert self.username in self.sminion.functions.user.list_users()
         if self._group:
             self.group.__enter__()
@@ -293,7 +309,10 @@ class TestAccount:
                 # Make this group the primary_group for the user
                 self.sminion.functions.user.chgid(self.username, self.group.info.gid)
                 assert self.info.gid == self.group.info.gid
-        log.debug("Created system account: %s", self)
+        if self._delete_account:
+            log.debug("Created system account: %s", self)
+        else:
+            log.debug("Reusing exisintg system account: %s", self)
         # Run tests
         return self
 
@@ -328,16 +347,31 @@ class TestAccount:
                     "Failed to delete system account: %s", self.username, exc_info=True
                 )
 
+            if self.sminion.functions.group.info(self.username):
+                # A group with the same name as the user name still exists.
+                # Let's delete it
+                try:
+                    self.sminion.functions.group.delete(self.username)
+                    log.debug(
+                        "Deleted system group matching username: %s", self.username
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to delete system group matching username: %s",
+                        self.username,
+                        exc_info=True,
+                    )
+
 
 @pytest.helpers.register
 @contextmanager
 def create_account(
-    username=None,
-    password=None,
-    hashed_password=None,
-    group_name=None,
+    username=attr.NOTHING,
+    password=attr.NOTHING,
+    hashed_password=attr.NOTHING,
+    group_name=attr.NOTHING,
     create_group=False,
-    sminion=None,
+    sminion=attr.NOTHING,
 ):
     with TestAccount(
         sminion=sminion,

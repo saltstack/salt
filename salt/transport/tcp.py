@@ -680,6 +680,7 @@ class MessageClient:
                 self._stream = None
                 if stream:
                     stream.close()
+                unpacker = salt.utils.msgpack.Unpacker()
                 yield self.connect()
             except TypeError:
                 # This is an invalid transport
@@ -703,6 +704,7 @@ class MessageClient:
                 self._stream = None
                 if stream:
                     stream.close()
+                unpacker = salt.utils.msgpack.Unpacker()
                 yield self.connect()
         self._stream_return_running = False
 

@@ -174,17 +174,33 @@ if not HAS_APT:
             Parse lines from sources files
             """
             self.disabled = False
-            repo_line = self.line.strip().split()
-            if not repo_line:
+            line = self.line.strip()
+            if not line:
                 self.invalid = True
                 return False
-            if repo_line[0].startswith("#"):
-                repo_line.pop(0)
+
+            if line.startswith("#"):
                 self.disabled = True
-            if repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]:
+                line = line[1:]
+
+            idx = line.find("#")
+            if idx > 0:
+                self.comment = line[idx + 1 :]
+                line = line[:idx]
+
+            repo_line = line.strip().split()
+            if (
+                not repo_line
+                or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
+                or len(repo_line) < 3
+            ):
                 self.invalid = True
                 return False
+
             if repo_line[1].startswith("["):
+                if not any(x.endswith("]") for x in repo_line[1:]):
+                    self.invalid = True
+                    return False
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
                 self.architectures.extend(opts["arch"]["value"])
@@ -200,6 +216,7 @@ if not HAS_APT:
             self.uri = repo_line[1]
             self.dist = repo_line[2]
             self.comps = repo_line[3:]
+            return True
 
     class SourcesList:  # pylint: disable=function-redefined
         def __init__(self):
@@ -1686,7 +1703,10 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[.*\]", line)
-    ret = {"arch": {"full": "", "value": ""}, "signedby": {"full": "", "value": ""}}
+    ret = {
+        "arch": {"full": "", "value": "", "index": 0},
+        "signedby": {"full": "", "value": "", "index": 0},
+    }
 
     if not get_opts:
         return ret
@@ -2168,7 +2188,7 @@ def get_repo_keys(aptkey=True, keydir=None):
     List known repo key details.
     :param bool aptkey: Use the binary apt-key.
     :param str keydir: The directory path to save keys. The default directory
-    is /usr/share/keyrings/ which is the recommended path
+    is /etc/apt/keyrings/ which is the recommended path
     for adding third party keys. This argument is only used
     when aptkey is False.
 
@@ -2186,9 +2206,16 @@ def get_repo_keys(aptkey=True, keydir=None):
 
     if not aptkey:
         if not keydir:
-            keydir = pathlib.Path("/usr", "share", "keyrings")
+            keydir = pathlib.Path("/etc", "apt", "keyrings")
         if not isinstance(keydir, pathlib.Path):
             keydir = pathlib.Path(keydir)
+
+        if not keydir.is_dir():
+            log.error(
+                "The directory %s does not exist. Please create this directory only writable by root",
+                keydir,
+            )
+            return False
 
         ret_output = []
         for file in os.listdir(str(keydir)):
@@ -2243,8 +2270,10 @@ def _decrypt_key(key):
                         key,
                     )
                     return False
-                encrypted_key = key + ".gpg"
-                cmd = ["gpg", "--output", encrypted_key, "--dearmor", key]
+                encrypted_key = key
+                if not pathlib.Path(key).suffix:
+                    encrypted_key = key + ".gpg"
+                cmd = ["gpg", "--yes", "--output", encrypted_key, "--dearmor", key]
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
                 return encrypted_key
@@ -2275,7 +2304,7 @@ def add_repo_key(
     :param str saltenv: The environment the key file resides in.
     :param bool aptkey: Use the binary apt-key.
     :param str keydir: The directory path to save keys. The default directory
-                       is /usr/share/keyrings/ which is the recommended path
+                       is /etc/apt/keyrings/ which is the recommended path
                        for adding third party keys. This argument is only used
                        when aptkey is False.
 
@@ -2302,9 +2331,15 @@ def add_repo_key(
         salt '*' pkg.add_repo_key keyserver='keyserver.example' keyid='0000AAAA'
     """
     if not keydir:
-        keydir = pathlib.Path("/usr", "share", "keyrings")
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
     if not isinstance(keydir, pathlib.Path):
         keydir = pathlib.Path(keydir)
+    if not aptkey and not keydir.is_dir():
+        log.error(
+            "The directory %s does not exist. Please create this directory only writable by root",
+            keydir,
+        )
+        return False
 
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -2434,7 +2469,7 @@ def del_repo_key(name=None, aptkey=True, keydir=None, **kwargs):
 
     keydir
         The directory path to save keys. The default directory
-        is /usr/share/keyrings/ which is the recommended path
+        is /etc/apt/keyrings/ which is the recommended path
         for adding third party keys.
 
     .. warning::
@@ -2450,9 +2485,15 @@ def del_repo_key(name=None, aptkey=True, keydir=None, **kwargs):
         salt '*' pkg.del_repo_key name='ppa:foo/bar' keyid_ppa=True
     """
     if not keydir:
-        keydir = pathlib.Path("/usr", "share", "keyrings")
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
     if not isinstance(keydir, pathlib.Path):
         keydir = pathlib.Path(keydir)
+    if not aptkey and not keydir.is_dir():
+        log.error(
+            "The directory %s does not exist. Please create this directory only writable by root",
+            keydir,
+        )
+        return False
 
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -2777,7 +2818,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if not fn_:
             raise CommandExecutionError("Error: file not found: {}".format(key_url))
 
-        if fn_.name != kwargs["signedby"].name:
+        if kwargs["signedby"] and fn_.name != kwargs["signedby"].name:
             # override the signedby defined in the name with the
             # one defined in kwargs.
             new_path = fn_.parent / kwargs["signedby"].name
@@ -2785,7 +2826,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             fn_ = new_path
 
         if not aptkey:
-            if not add_repo_key(path=str(fn_), aptkey=False):
+            func_kwargs = {}
+            if kwargs.get("signedby"):
+                func_kwargs["keydir"] = kwargs.get("signedby").parent
+
+            if not add_repo_key(path=str(fn_), aptkey=False, **func_kwargs):
                 return False
         else:
             cmd = ["apt-key", "add", str(fn_)]
@@ -2825,26 +2870,26 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     kw_type = kwargs.get("type")
     kw_dist = kwargs.get("dist")
 
-    for source in repos:
+    for apt_source in repos:
         # This series of checks will identify the starting source line
         # and the resulting source line.  The idea here is to ensure
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            source.type == repo_type
-            and source.uri.rstrip("/") == repo_uri.rstrip("/")
-            and source.dist == repo_dist
+            apt_source.type == repo_type
+            and apt_source.uri.rstrip("/") == repo_uri.rstrip("/")
+            and apt_source.dist == repo_dist
         )
-        kw_matches = source.dist == kw_dist and source.type == kw_type
+        kw_matches = apt_source.dist == kw_dist and apt_source.type == kw_type
 
         if repo_matches or kw_matches:
             for comp in full_comp_list:
-                if comp in getattr(source, "comps", []):
-                    mod_source = source
-            if not source.comps:
-                mod_source = source
-            if kwargs["architectures"] != source.architectures:
-                mod_source = source
+                if comp in getattr(apt_source, "comps", []):
+                    mod_source = apt_source
+            if not apt_source.comps:
+                mod_source = apt_source
+            if kwargs["architectures"] != apt_source.architectures:
+                mod_source = apt_source
             if mod_source:
                 break
 
@@ -2862,6 +2907,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
+
+    if mod_source.uri != repo_uri:
+        mod_source.uri = repo_uri
+        mod_source.line = mod_source.repo_line()
+
     sources.save()
     # on changes, explicitly refresh
     if refresh:
@@ -2973,7 +3023,7 @@ def expand_repo_def(**kwargs):
     else:
         signedby = _get_opts(repo)["signedby"].get("value", "")
 
-    source_entry = source_list.add(
+    _source_entry = source_list.add(
         type=source_entry.type,
         uri=source_entry.uri,
         dist=source_entry.dist,
@@ -2981,15 +3031,20 @@ def expand_repo_def(**kwargs):
         architectures=getattr(source_entry, "architectures", []),
         **kwargs,
     )
+    if hasattr(_source_entry, "set_enabled"):
+        _source_entry.set_enabled(not source_entry.disabled)
+    else:
+        _source_entry.disabled = source_entry.disabled
+        _source_entry.line = _source_entry.repo_line()
 
-    sanitized["file"] = source_entry.file
-    sanitized["comps"] = getattr(source_entry, "comps", [])
-    sanitized["disabled"] = source_entry.disabled
-    sanitized["dist"] = source_entry.dist
-    sanitized["type"] = source_entry.type
-    sanitized["uri"] = source_entry.uri
-    sanitized["line"] = source_entry.line.strip()
-    sanitized["architectures"] = getattr(source_entry, "architectures", [])
+    sanitized["file"] = _source_entry.file
+    sanitized["comps"] = getattr(_source_entry, "comps", [])
+    sanitized["disabled"] = _source_entry.disabled
+    sanitized["dist"] = _source_entry.dist
+    sanitized["type"] = _source_entry.type
+    sanitized["uri"] = _source_entry.uri
+    sanitized["line"] = _source_entry.line.strip()
+    sanitized["architectures"] = getattr(_source_entry, "architectures", [])
     sanitized["signedby"] = signedby
     if HAS_APT and signedby:
         # python3-apt does not supported the signed-by opt currently.
@@ -2999,8 +3054,9 @@ def expand_repo_def(**kwargs):
             repo_opts = _get_opts(repo)
             opts_order = [x for x in repo_opts.keys()]
             for opt in repo_opts:
-                idx = repo_opts[opt]["index"]
-                opts_order[idx] = repo_opts[opt]["full"]
+                if "index" in repo_opts[opt]:
+                    idx = repo_opts[opt]["index"]
+                    opts_order[idx] = repo_opts[opt]["full"]
 
             opts = "[" + " ".join(opts_order) + "]"
             line[1] = opts

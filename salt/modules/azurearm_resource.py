@@ -3,7 +3,13 @@ Azure (ARM) Resource Execution Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -50,6 +56,7 @@ Azure (ARM) Resource Execution Module
 import logging
 
 # Salt Libs
+import salt.utils.azurearm
 import salt.utils.json
 
 # Azure libs
@@ -80,6 +87,7 @@ def __virtual__():
     return __virtualname__
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_groups_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -109,6 +117,7 @@ def resource_groups_list(**kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_group_check_existence(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -135,6 +144,7 @@ def resource_group_check_existence(name, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_group_get(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -163,6 +173,7 @@ def resource_group_get(name, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_group_create_or_update(
     name, location, **kwargs
 ):  # pylint: disable=invalid-name
@@ -200,6 +211,7 @@ def resource_group_create_or_update(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def resource_group_delete(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -227,6 +239,7 @@ def resource_group_delete(name, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -263,6 +276,7 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -304,6 +318,7 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -336,6 +351,7 @@ def deployment_delete(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_check_existence(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -366,6 +382,7 @@ def deployment_check_existence(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_create_or_update(
     name,
     resource_group,
@@ -479,6 +496,7 @@ def deployment_create_or_update(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -510,6 +528,7 @@ def deployment_get(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_cancel(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -541,6 +560,7 @@ def deployment_cancel(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_validate(
     name,
     resource_group,
@@ -651,6 +671,7 @@ def deployment_validate(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployment_export_template(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -682,6 +703,7 @@ def deployment_export_template(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def deployments_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -713,6 +735,7 @@ def deployments_list(resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def subscriptions_list_locations(subscription_id=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -752,6 +775,7 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def subscription_get(subscription_id=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -788,6 +812,7 @@ def subscription_get(subscription_id=None, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def subscriptions_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -815,6 +840,7 @@ def subscriptions_list(**kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def tenants_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -842,6 +868,7 @@ def tenants_list(**kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignment_delete(name, scope, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -874,6 +901,7 @@ def policy_assignment_delete(name, scope, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignment_create(name, scope, definition_name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -958,6 +986,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignment_get(name, scope, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -989,6 +1018,7 @@ def policy_assignment_get(name, scope, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignments_list_for_resource_group(
     resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -1024,6 +1054,7 @@ def policy_assignments_list_for_resource_group(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_assignments_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1053,6 +1084,7 @@ def policy_assignments_list(**kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_definition_create_or_update(
     name, policy_rule, **kwargs
 ):  # pylint: disable=invalid-name
@@ -1111,6 +1143,7 @@ def policy_definition_create_or_update(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_definition_delete(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1138,6 +1171,7 @@ def policy_definition_delete(name, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_definition_get(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1164,6 +1198,7 @@ def policy_definition_get(name, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def policy_definitions_list(hide_builtin=False, **kwargs):
     """
     .. versionadded:: 2019.2.0

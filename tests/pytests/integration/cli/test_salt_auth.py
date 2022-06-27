@@ -1,14 +1,6 @@
-"""
-    tests.integration.shell.auth
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
-
 import logging
 
 import pytest
-import salt.utils.platform
-import salt.utils.pycrypto
 
 log = logging.getLogger(__name__)
 
@@ -19,62 +11,20 @@ pytestmark = [
     pytest.mark.skip_on_windows,
 ]
 
-USERA = "saltdev-auth"
-USERA_PWD = "saltdev"
+
+@pytest.fixture(scope="module")
+def salt_auth_account_1(salt_auth_account_1_factory):
+    with salt_auth_account_1_factory as account:
+        yield account
 
 
 @pytest.fixture(scope="module")
-def saltdev_account(sminion):
-    try:
-        assert sminion.functions.user.add(USERA, createhome=False)
-        assert sminion.functions.shadow.set_password(
-            USERA,
-            USERA_PWD
-            if salt.utils.platform.is_darwin()
-            else salt.utils.pycrypto.gen_hash(password=USERA_PWD),
-        )
-        assert USERA in sminion.functions.user.list_users()
-        # Run tests
-        yield
-    finally:
-        sminion.functions.user.delete(USERA, remove=True)
+def salt_auth_account_2(salt_auth_account_2_factory):
+    with salt_auth_account_2_factory as account:
+        yield account
 
 
-SALTOPS = "saltops"
-
-
-@pytest.fixture(scope="module")
-def saltops_group(sminion):
-    try:
-        assert sminion.functions.group.add(SALTOPS)
-        # Run tests
-        yield
-    finally:
-        sminion.functions.group.delete(SALTOPS)
-
-
-USERB = "saltdev-adm"
-USERB_PWD = USERA_PWD
-
-
-@pytest.fixture(scope="module")
-def saltadm_account(sminion, saltops_group):
-    try:
-        assert sminion.functions.user.add(USERB, groups=[SALTOPS], createhome=False)
-        assert sminion.functions.shadow.set_password(
-            USERB,
-            USERB_PWD
-            if salt.utils.platform.is_darwin()
-            else salt.utils.pycrypto.gen_hash(password=USERB_PWD),
-        )
-        assert USERB in sminion.functions.user.list_users()
-        # Run tests
-        yield
-    finally:
-        sminion.functions.user.delete(USERB, remove=True)
-
-
-def test_pam_auth_valid_user(salt_minion, salt_cli, saltdev_account):
+def test_pam_auth_valid_user(salt_minion, salt_cli, salt_auth_account_1):
     """
     test that pam auth mechanism works with a valid user
     """
@@ -83,9 +33,9 @@ def test_pam_auth_valid_user(salt_minion, salt_cli, saltdev_account):
         "-a",
         "pam",
         "--username",
-        USERA,
+        salt_auth_account_1.username,
         "--password",
-        USERA_PWD,
+        salt_auth_account_1.password,
         "test.ping",
         minion_tgt=salt_minion.id,
     )
@@ -93,7 +43,7 @@ def test_pam_auth_valid_user(salt_minion, salt_cli, saltdev_account):
     assert ret.data is True
 
 
-def test_pam_auth_invalid_user(salt_minion, salt_cli, saltdev_account):
+def test_pam_auth_invalid_user(salt_minion, salt_cli):
     """
     test pam auth mechanism errors for an invalid user
     """
@@ -110,7 +60,7 @@ def test_pam_auth_invalid_user(salt_minion, salt_cli, saltdev_account):
     assert ret.stdout == "Authentication error occurred."
 
 
-def test_pam_auth_valid_group(salt_minion, salt_cli, saltadm_account):
+def test_pam_auth_valid_group(salt_minion, salt_cli, salt_auth_account_2):
     """
     test that pam auth mechanism works for a valid group
     """
@@ -120,9 +70,9 @@ def test_pam_auth_valid_group(salt_minion, salt_cli, saltadm_account):
         "-a",
         "pam",
         "--username",
-        USERB,
+        salt_auth_account_2.username,
         "--password",
-        USERB_PWD,
+        salt_auth_account_2.password,
         "test.ping",
         minion_tgt=salt_minion.id,
     )
