@@ -1211,3 +1211,25 @@ def test_zip_longest(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "Ax By C- D- "
+
+
+def test_random_sample(minion_opts, local_salt):
+    """
+    Test the `random_sample` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ['one', 'two', 'three', 'four'] | random_sample(2, seed='static') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "['four', 'two']"
+
+
+def test_random_shuffle(minion_opts, local_salt):
+    """
+    Test the `random_shuffle` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ['one', 'two', 'three', 'four'] | random_shuffle(seed='static') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "['four', 'two', 'three', 'one']"
