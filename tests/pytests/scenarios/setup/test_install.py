@@ -28,8 +28,6 @@ def use_static_requirements_ids(value):
 
 @pytest.fixture(params=[True, False], ids=use_static_requirements_ids)
 def use_static_requirements(request):
-    if salt.utils.platform.is_windows() and request.param is False:
-        pytest.skip("Skipping test in 3003.x on Windows.")
     return request.param
 
 
