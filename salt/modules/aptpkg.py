@@ -2744,6 +2744,9 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
 
+    if not aptkey and not kwargs["signedby"]:
+        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
+
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
         keyserver = kwargs.pop("keyserver", None)
@@ -2900,6 +2903,15 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         sources.list.append(mod_source)
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
+
+    if HAS_APT:
+        # workaround until python3-apt supports signedby
+        if str(mod_source) != str(SourceEntry(repo)) and "signed-by" in str(mod_source):
+            rline = SourceEntry(repo)
+            mod_source.line = rline.line
+
+    if not mod_source.line.endswith("\n"):
+        mod_source.line = mod_source.line + "\n"
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
