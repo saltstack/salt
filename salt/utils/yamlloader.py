@@ -3,8 +3,6 @@ Custom YAML loading in Salt
 """
 
 
-import warnings
-
 import salt.utils.stringutils
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
@@ -15,15 +13,6 @@ BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
-
-
-class DuplicateKeyWarning(RuntimeWarning):
-    """
-    Warned when duplicate keys exist
-    """
-
-
-warnings.simplefilter("always", category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388

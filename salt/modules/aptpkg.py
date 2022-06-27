@@ -174,17 +174,33 @@ if not HAS_APT:
             Parse lines from sources files
             """
             self.disabled = False
-            repo_line = self.line.strip().split()
-            if not repo_line:
+            line = self.line.strip()
+            if not line:
                 self.invalid = True
                 return False
-            if repo_line[0].startswith("#"):
-                repo_line.pop(0)
+
+            if line.startswith("#"):
                 self.disabled = True
-            if repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]:
+                line = line[1:]
+
+            idx = line.find("#")
+            if idx > 0:
+                self.comment = line[idx + 1 :]
+                line = line[:idx]
+
+            repo_line = line.strip().split()
+            if (
+                not repo_line
+                or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
+                or len(repo_line) < 3
+            ):
                 self.invalid = True
                 return False
+
             if repo_line[1].startswith("["):
+                if not any(x.endswith("]") for x in repo_line[1:]):
+                    self.invalid = True
+                    return False
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
                 self.architectures.extend(opts["arch"]["value"])
@@ -200,6 +216,7 @@ if not HAS_APT:
             self.uri = repo_line[1]
             self.dist = repo_line[2]
             self.comps = repo_line[3:]
+            return True
 
     class SourcesList:  # pylint: disable=function-redefined
         def __init__(self):

@@ -3,7 +3,13 @@ Azure (ARM) Compute Execution Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -49,6 +55,8 @@ Azure (ARM) Compute Execution Module
 
 import logging
 
+import salt.utils.azurearm
+
 # Azure libs
 HAS_LIBS = False
 try:
@@ -77,6 +85,7 @@ def __virtual__():
     return __virtualname__
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_set_create_or_update(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -147,6 +156,7 @@ def availability_set_create_or_update(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_set_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -179,6 +189,7 @@ def availability_set_delete(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_set_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -211,6 +222,7 @@ def availability_set_get(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_sets_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -243,6 +255,7 @@ def availability_sets_list(resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_sets_list_available_sizes(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -283,6 +296,7 @@ def availability_sets_list_available_sizes(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_capture(
     name, destination_name, resource_group, prefix="capture-", overwrite=False, **kwargs
 ):
@@ -337,6 +351,7 @@ def virtual_machine_capture(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -372,6 +387,7 @@ def virtual_machine_get(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_convert_to_managed_disks(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -409,6 +425,7 @@ def virtual_machine_convert_to_managed_disks(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_deallocate(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -443,6 +460,7 @@ def virtual_machine_deallocate(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_generalize(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -474,6 +492,7 @@ def virtual_machine_generalize(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machines_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -505,6 +524,7 @@ def virtual_machines_list(resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machines_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -533,6 +553,7 @@ def virtual_machines_list_all(**kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machines_list_available_sizes(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -571,6 +592,7 @@ def virtual_machines_list_available_sizes(
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_power_off(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -605,6 +627,7 @@ def virtual_machine_power_off(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_restart(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -639,6 +662,7 @@ def virtual_machine_restart(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_start(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -673,6 +697,7 @@ def virtual_machine_start(name, resource_group, **kwargs):
     return result
 
 
+@salt.utils.azurearm.deprecation_message
 def virtual_machine_redeploy(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0

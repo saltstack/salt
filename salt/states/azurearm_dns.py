@@ -3,6 +3,12 @@ Azure (ARM) DNS State Module
 
 .. versionadded:: 3000
 
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
 :maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
@@ -112,6 +118,8 @@ Optional provider parameters:
 """
 import logging
 
+import salt.utils.azurearm
+
 __virtualname__ = "azurearm_dns"
 
 log = logging.getLogger(__name__)
@@ -126,6 +134,7 @@ def __virtual__():
     return (False, "azurearm_dns module could not be loaded")
 
 
+@salt.utils.azurearm.deprecation_message
 def zone_present(
     name,
     resource_group,
@@ -326,6 +335,7 @@ def zone_present(
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def zone_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000
@@ -382,6 +392,7 @@ def zone_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def record_set_present(
     name,
     zone_name,
@@ -667,6 +678,7 @@ def record_set_present(
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def record_set_absent(name, zone_name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000
