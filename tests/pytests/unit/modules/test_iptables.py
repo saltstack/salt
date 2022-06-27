@@ -218,9 +218,10 @@ def test_build_rule():
         )
 
         # Should allow the --save jump option to CONNSECMARK
-        # self.assertEqual(iptables.build_rule(jump='CONNSECMARK',
-        #                                     **{'save': ''}),
-        #                 '--jump CONNSECMARK --save ')
+        # assert (
+        #    iptables.build_rule(jump='CONNSECMARK', **{'save': ''})
+        #    == '--jump CONNSECMARK --save '
+        # )
 
         ret = "/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT"
         with patch.object(
