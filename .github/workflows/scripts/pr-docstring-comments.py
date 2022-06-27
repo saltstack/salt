@@ -58,20 +58,15 @@ Thanks again!
 """
 
 
-def delete_previous_comments(pr, created_comment_id):
+def get_previous_comments(pr):
     for comment in pr.get_issue_comments():
         if comment.user.login != "github-actions[bot]":
             # Not a comment made by this bot
             continue
-        if comment.id == created_comment_id:
-            # This is the comment we have just created
-            continue
         if not comment.body.startswith(COMMENT_HEADER):
             # This comment does not start with our header
             continue
-        # We have a match, delete it
-        print(f"Deleting previous comment {comment}")
-        comment.delete()
+        yield comment
 
 
 def comment_on_pr(options, issues_output):
@@ -87,8 +82,17 @@ def comment_on_pr(options, issues_output):
             comment_header=COMMENT_HEADER, issues_output=issues_output
         )
     )
+    new_comment_content = COMMENT_TEMPLATE.format(
+        comment_header=COMMENT_HEADER, issues_output=issues_output
+    )
+    for comment in get_previous_comments(pr):
+        if comment.body.strip() != new_comment_content.strip():
+            # The content has changed.
+            print(f"Deleting previous comment {comment}")
+            comment.delete()
+
+    comment = pr.create_issue_comment(new_comment_content)
     print(f"Created Comment: {comment}")
-    delete_previous_comments(pr, comment.id)
 
 
 def main():
