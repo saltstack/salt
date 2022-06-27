@@ -1266,7 +1266,7 @@ Returns:
 .. jinja_ref:: random_sample
 
 ``random_sample``
----------------
+-----------------
 
 .. versionadded:: 3006
 
@@ -1290,7 +1290,7 @@ Returns:
 .. jinja_ref:: random_shuffle
 
 ``random_shuffle``
----------------
+------------------
 
 .. versionadded:: 3006
 
