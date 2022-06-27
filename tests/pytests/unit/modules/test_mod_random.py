@@ -89,7 +89,7 @@ def test_sample():
     assert mod_random.sample(lst, 2, seed="static") == ["four", "two"]
 
 
-def test_sample():
+def test_shuffle():
     lst = ["one", "two", "three", "four"]
     assert len(mod_random.shuffle(lst)) == 4
     assert mod_random.shuffle(lst, seed="static") == ["four", "two", "three", "one"]
