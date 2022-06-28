@@ -4,14 +4,23 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.8/windows.txt --pip-args='--constraint=requirements/static/pkg/py3.8/windows.txt' requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
+aiohttp==3.8.1
+    # via etcd3-py
+aiosignal==1.2.0
+    # via aiohttp
+async-timeout==4.0.2
+    # via aiohttp
 atomicwrites==1.3.0
     # via pytest
 attrs==20.3.0
     # via
+    #   aiohttp
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
+    #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 boto3==1.17.80 ; python_version >= "3.6"
@@ -31,7 +40,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -45,6 +54,8 @@ cffi==1.14.6
     #   pygit2
 chardet==3.0.4
     # via requests
+charset-normalizer==2.0.12
+    # via aiohttp
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -64,6 +75,7 @@ contextvars==2.4
 cryptography==3.4.7
     # via
     #   -r requirements/windows.txt
+    #   etcd3-py
     #   moto
     #   pyopenssl
     #   requests-ntlm
@@ -83,10 +95,16 @@ docker-pycreds==0.4.0
     # via docker
 docker==2.7.0
     # via -r requirements/static/ci/common.in
+etcd3-py==0.1.6 ; python_version >= "3.6"
+    # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
+frozenlist==1.3.0
+    # via
+    #   aiohttp
+    #   aiosignal
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
@@ -100,7 +118,10 @@ gitpython==3.1.18
 google-auth==1.6.3
     # via kubernetes
 idna==2.8
-    # via requests
+    # via
+    #   etcd3-py
+    #   requests
+    #   yarl
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
@@ -165,6 +186,10 @@ msgpack==1.0.2
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
+multidict==6.0.2
+    # via
+    #   aiohttp
+    #   yarl
 ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==19.2
@@ -185,6 +210,8 @@ psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
@@ -212,7 +239,9 @@ pymssql==2.2.1
 pymysql==1.0.2
     # via -r requirements/windows.txt
 pyopenssl==20.0.1
-    # via -r requirements/windows.txt
+    # via
+    #   -r requirements/windows.txt
+    #   etcd3-py
 pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
@@ -221,27 +250,37 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories==1.0.0rc17 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.2.0
+pytest-shell-utilities==1.4.0
     # via pytest-salt-factories
+pytest-skip-markers==1.2.0
+    # via
+    #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
+pytest-system-statistics==1.0.2
+    # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==6.1.2 ; python_version <= "3.9"
+pytest==7.1.2 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-subtests
+    #   pytest-system-statistics
     #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.1
@@ -256,7 +295,7 @@ python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via
     #   moto
     #   tempora
@@ -288,6 +327,7 @@ requests==2.25.1
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
     #   docker
+    #   etcd3-py
     #   kubernetes
     #   moto
     #   pyvmomi
@@ -304,6 +344,8 @@ s3transfer==0.4.2
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.in
+semantic-version==2.9.0
+    # via etcd3-py
 setproctitle==1.1.10
     # via -r requirements/windows.txt
 six==1.15.0
@@ -312,6 +354,7 @@ six==1.15.0
     #   cheroot
     #   docker
     #   docker-pycreds
+    #   etcd3-py
     #   genshi
     #   geomet
     #   google-auth
@@ -337,9 +380,13 @@ tempora==4.1.1
 timelib==0.2.5
     # via -r requirements/windows.txt
 toml==0.10.2
+    # via -r requirements/static/ci/common.in
+tomli==2.0.1
+    # via pytest
+typing-extensions==4.2.0
     # via
-    #   -r requirements/static/ci/common.in
-    #   pytest
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 urllib3==1.26.6
     # via
     #   botocore
@@ -370,6 +417,8 @@ xmltodict==0.12.0
     #   pywinrm
 yamllint==1.26.3
     # via -r requirements/static/ci/windows.in
+yarl==1.7.2
+    # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0

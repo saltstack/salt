@@ -7,8 +7,9 @@ import os
 import pytest
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
+from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
+from tests.support.helpers import runs_on
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)

@@ -723,7 +723,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get("pub_hwm", 1000))
         # in zmq >= 3.0, there are separate send and receive HWM settings
-        except AttributeError:
+        except (AttributeError, zmq.error.ZMQError):
             # Set the High Water Marks. For more information on HWM, see:
             # http://api.zeromq.org/4-1:zmq-setsockopt
             pub_sock.setsockopt(zmq.SNDHWM, self.opts.get("pub_hwm", 1000))

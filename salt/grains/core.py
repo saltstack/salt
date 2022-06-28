@@ -710,14 +710,14 @@ def _windows_virtual(osdata):
     elif "VirtualBox" in productname:
         grains["virtual"] = "VirtualBox"
     # Product Name: VMware Virtual Platform
-    elif "VMware Virtual Platform" in productname:
+    elif "VMware" in productname:
         grains["virtual"] = "VMware"
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
     elif "Microsoft" in manufacturer and "Virtual Machine" in productname:
         grains["virtual"] = "VirtualPC"
     # Manufacturer: Parallels Software International Inc.
-    elif "Parallels Software" in manufacturer:
+    elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in productname:
