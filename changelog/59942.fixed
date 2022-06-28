@@ -1,0 +1,1 @@
+Add typing_extensions to thin tarball. Fixes salt-ssh for targets with python<=3.8
