@@ -3,7 +3,13 @@ Azure (ARM) Compute State Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -88,6 +94,8 @@ Azure (ARM) Compute State Module
 
 import logging
 
+import salt.utils.azurearm
+
 __virtualname__ = "azurearm_compute"
 
 log = logging.getLogger(__name__)
@@ -102,6 +110,7 @@ def __virtual__():
     return (False, "azurearm module could not be loaded")
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_set_present(
     name,
     resource_group,
@@ -274,6 +283,7 @@ def availability_set_present(
     return ret
 
 
+@salt.utils.azurearm.deprecation_message
 def availability_set_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0

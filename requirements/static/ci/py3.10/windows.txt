@@ -271,7 +271,7 @@ pyrsistent==0.17.3
     # via jsonschema
 pytest-helpers-namespace==2019.1.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories==1.0.0rc17
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt

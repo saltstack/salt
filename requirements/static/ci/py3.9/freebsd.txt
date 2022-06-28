@@ -685,7 +685,7 @@ pygit2==1.8.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==2.0.0
+pyjwt==2.4.0
     # via adal
 pynacl==1.3.0
     # via paramiko
@@ -710,7 +710,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc16 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.4.0
     # via pytest-salt-factories

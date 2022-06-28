@@ -151,21 +151,21 @@ def test_cryptical_dumps_invalid_nonce():
         assert master_crypt.loads(ret, nonce="abcde")
 
 
-def test_verify_signature(tmpdir):
-    tmpdir.join("foo.pem").write(PRIV_KEY.strip())
-    tmpdir.join("foo.pub").write(PUB_KEY.strip())
-    tmpdir.join("bar.pem").write(PRIV_KEY2.strip())
-    tmpdir.join("bar.pub").write(PUB_KEY2.strip())
+def test_verify_signature(tmp_path):
+    tmp_path.joinpath("foo.pem").write_text(PRIV_KEY.strip())
+    tmp_path.joinpath("foo.pub").write_text(PUB_KEY.strip())
+    tmp_path.joinpath("bar.pem").write_text(PRIV_KEY2.strip())
+    tmp_path.joinpath("bar.pub").write_text(PUB_KEY2.strip())
     msg = b"foo bar"
-    sig = salt.crypt.sign_message(str(tmpdir.join("foo.pem")), msg)
-    assert salt.crypt.verify_signature(str(tmpdir.join("foo.pub")), msg, sig)
+    sig = salt.crypt.sign_message(str(tmp_path.joinpath("foo.pem")), msg)
+    assert salt.crypt.verify_signature(str(tmp_path.joinpath("foo.pub")), msg, sig)
 
 
-def test_verify_signature_bad_sig(tmpdir):
-    tmpdir.join("foo.pem").write(PRIV_KEY.strip())
-    tmpdir.join("foo.pub").write(PUB_KEY.strip())
-    tmpdir.join("bar.pem").write(PRIV_KEY2.strip())
-    tmpdir.join("bar.pub").write(PUB_KEY2.strip())
+def test_verify_signature_bad_sig(tmp_path):
+    tmp_path.joinpath("foo.pem").write_text(PRIV_KEY.strip())
+    tmp_path.joinpath("foo.pub").write_text(PUB_KEY.strip())
+    tmp_path.joinpath("bar.pem").write_text(PRIV_KEY2.strip())
+    tmp_path.joinpath("bar.pub").write_text(PUB_KEY2.strip())
     msg = b"foo bar"
-    sig = salt.crypt.sign_message(str(tmpdir.join("foo.pem")), msg)
-    assert not salt.crypt.verify_signature(str(tmpdir.join("bar.pub")), msg, sig)
+    sig = salt.crypt.sign_message(str(tmp_path.joinpath("foo.pem")), msg)
+    assert not salt.crypt.verify_signature(str(tmp_path.joinpath("bar.pub")), msg, sig)

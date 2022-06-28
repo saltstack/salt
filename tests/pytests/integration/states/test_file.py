@@ -179,7 +179,7 @@ def salt_cli_secondary_wrapper(salt_secondary_master, salt_secondary_minion):
 @SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.skip_on_windows
 def test_verify_ssl_skip_verify_false(
-    salt_master, salt_call_cli, tmpdir, ssl_webserver
+    salt_master, salt_call_cli, tmp_path, ssl_webserver
 ):
     """
     test verify_ssl when its False and True when managing
@@ -193,7 +193,7 @@ def test_verify_ssl_skip_verify_false(
         - source: {}
         - source_hash: {}
     """.format(
-        tmpdir.join("test_verify_ssl_true.txt"), web_file, web_file + ".sha256"
+        tmp_path / "test_verify_ssl_true.txt", web_file, web_file + ".sha256"
     )
 
     false_content = true_content + "    - verify_ssl: False"
