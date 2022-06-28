@@ -13,14 +13,20 @@ import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.master
 import salt.transport.zeromq
-import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import zmq
-from saltfactories.utils.processes import terminate_process
+from pytestshellutils.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.skip_on_spawning_platform(
+        reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
+    )
+]
 
 
 class Collector(salt.utils.process.SignalHandlingProcess):

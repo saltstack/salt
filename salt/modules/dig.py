@@ -129,6 +129,35 @@ def AAAA(host, nameserver=None):
     return [x for x in cmd["stdout"].split("\n") if check_ip(x)]
 
 
+def CNAME(host, nameserver=None):
+    """
+    Return the CNAME record for ``host``.
+
+    .. versionadded:: 3005
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dig.CNAME mail.google.com
+    """
+    dig = ["dig", "+short", str(host), "CNAME"]
+
+    if nameserver is not None:
+        dig.append("@{}".format(nameserver))
+
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
+    # In this case, 0 is not the same as False
+    if cmd["retcode"] != 0:
+        log.warning(
+            "dig returned exit code '%s'.",
+            cmd["retcode"],
+        )
+        return []
+
+    return cmd["stdout"]
+
+
 def NS(domain, resolve=True, nameserver=None):
     """
     Return a list of IPs of the nameservers for ``domain``
@@ -291,6 +320,7 @@ def TXT(host, nameserver=None):
 # Let lowercase work, since that is the convention for Salt functions
 a = A
 aaaa = AAAA
+cname = CNAME
 ns = NS
 spf = SPF
 mx = MX

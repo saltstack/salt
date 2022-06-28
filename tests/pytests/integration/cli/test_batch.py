@@ -52,7 +52,7 @@ def test_batch_run_number(salt_cli, salt_minion, salt_sub_minion, run_timeout):
 
 
 def test_batch_run_grains_targeting(
-    salt_cli, salt_minion, salt_sub_minion, run_timeout
+    grains, salt_cli, salt_minion, salt_sub_minion, run_timeout
 ):
     """
     Tests executing a batch command using a percentage divisor as well as grains
@@ -60,14 +60,11 @@ def test_batch_run_grains_targeting(
     """
     sub_min_ret = "Executing run on [{}]".format(repr(salt_sub_minion.id))
     min_ret = "Executing run on [{}]".format(repr(salt_minion.id))
-    os_grain = salt_cli.run("grains.get", "os", minion_tgt=salt_minion.id).json
-
-    os_grain = os_grain.strip()
     cmd = salt_cli.run(
         "-C",
         "-b 25%",
         "test.ping",
-        minion_tgt="G@os:{} and not localhost".format(os_grain.replace(" ", "?")),
+        minion_tgt="G@os:{} and not localhost".format(grains["os"].replace(" ", "?")),
         _timeout=run_timeout,
     )
     assert sub_min_ret in cmd.stdout
@@ -86,7 +83,7 @@ def test_batch_exit_code(salt_cli, salt_minion, salt_sub_minion, run_timeout):
         minion_tgt="*minion*",
         _timeout=run_timeout,
     )
-    assert cmd.exitcode == 2
+    assert cmd.returncode == 2
 
 
 # Test for failhard + batch. The best possible solution here was to do something like that:
@@ -180,7 +177,7 @@ def test_batch_retcode(salt_cli, salt_minion, salt_sub_minion, run_timeout):
         _timeout=run_timeout,
     )
 
-    assert cmd.exitcode == 23
+    assert cmd.returncode == 23
     assert not cmd.stderr
     assert "true" in cmd.stdout
 
@@ -199,7 +196,7 @@ def test_multiple_modules_in_batch(salt_cli, salt_minion, salt_sub_minion, run_t
         _timeout=run_timeout,
     )
 
-    assert cmd.exitcode == 23
+    assert cmd.returncode == 23
     assert not cmd.stderr
 
 

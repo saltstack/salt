@@ -1,0 +1,1 @@
+modules/lxd.FilesManager: fix memory leak through pylxd.modules.container.Container.FilesManager

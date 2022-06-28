@@ -1,0 +1,3 @@
+Fix #62092: Catch zmq.error.ZMQError to set HWM for zmq >= 3.
+
+Run ``git show 0be0941`` for more info.
