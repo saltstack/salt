@@ -14,6 +14,8 @@ Package support for openSUSE via the zypper package manager
 
 import configparser
 import datetime
+import errno
+import fcntl
 import fnmatch
 import logging
 import os
@@ -103,7 +105,6 @@ class _Zypper:
     # ZYPPER_LOCK is not affected by --root
     ZYPPER_LOCK = "/var/run/zypp.pid"
     RPM_LOCK = "/usr/lib/sysimage/rpm/.rpm.lock"
-    RPM_LOCK_ERR_MESSAGE = "can't create transaction lock on"
     TAG_RELEASED = "zypper/released"
     TAG_BLOCKED = "zypper/blocked"
 
@@ -246,7 +247,17 @@ class _Zypper:
         """
         Is this an RPM lock error?
         """
-        return self.RPM_LOCK_ERR_MESSAGE in self.error_msg
+        if self.exit_code > 0 and os.path.exists(self.RPM_LOCK):
+            with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
+                try:
+                    fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except OSError as err:
+                    if err.errno == errno.EAGAIN:
+                        return True
+                else:
+                    fcntl.lockf(rfh, fcntl.LOCK_UN)
+
+        return False
 
     def _is_xml_mode(self):
         """
