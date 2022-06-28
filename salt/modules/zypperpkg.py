@@ -398,7 +398,7 @@ class _Zypper:
                     "info": (
                         "Unable to retrieve information about "
                         "blocking process: {}".format(
-                            err.message
+                            err
                         )
                     ),
                     "success": False,
