@@ -382,7 +382,11 @@ def playbooks(
                 command.append("--{}={}".format(key, json.dumps(value)))
     command.append("--forks={}".format(forks))
     cmd_kwargs = {
-        "env": {"ANSIBLE_STDOUT_CALLBACK": "json", "ANSIBLE_RETRY_FILES_ENABLED": "0"},
+        "env": {
+            "ANSIBLE_STDOUT_CALLBACK": "json",
+            "ANSIBLE_RETRY_FILES_ENABLED": "0",
+            "ANSIBLE_DEPRECATION_WARNINGS": "0",
+        },
         "cwd": rundir,
         "cmd": " ".join(command),
     }
