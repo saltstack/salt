@@ -96,6 +96,9 @@ def __virtual__():
     if not ansible_playbook_bin:
         return False, "The 'ansible-playbook' binary was not found."
 
+    env = os.environ.copy()
+    env["ANSIBLE_DEPRECATION_WARNINGS"] = "0"
+
     proc = subprocess.run(
         [ansible_doc_bin, "--list", "--json", "--type=module"],
         stdout=subprocess.PIPE,
@@ -103,6 +106,7 @@ def __virtual__():
         check=False,
         shell=False,
         universal_newlines=True,
+        env=env,
     )
     if proc.returncode != 0:
         return (
@@ -140,6 +144,9 @@ def help(module=None, *args):
 
     ansible_doc_bin = salt.utils.path.which("ansible-doc")
 
+    env = os.environ.copy()
+    env["ANSIBLE_DEPRECATION_WARNINGS"] = "0"
+
     proc = subprocess.run(
         [ansible_doc_bin, "--json", "--type=module", module],
         stdout=subprocess.PIPE,
@@ -147,6 +154,7 @@ def help(module=None, *args):
         check=True,
         shell=False,
         universal_newlines=True,
+        env=env,
     )
     data = salt.utils.json.loads(proc.stdout)
     doc = data[next(iter(data))]
@@ -218,6 +226,9 @@ def call(module, *args, **kwargs):
         ansible_binary_path = salt.utils.path.which("ansible")
         log.debug("Calling ansible module %r", module)
         try:
+            env = os.environ.copy()
+            env["ANSIBLE_DEPRECATION_WARNINGS"] = "0"
+
             proc_exc = subprocess.run(
                 [
                     ansible_binary_path,
@@ -237,6 +248,7 @@ def call(module, *args, **kwargs):
                 universal_newlines=True,
                 check=True,
                 shell=False,
+                env=env,
             )
 
             original_output = proc_exc.stdout

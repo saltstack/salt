@@ -116,6 +116,7 @@ def test_ansible_module_call():
                 "-i",
                 ANY,
             ],
+            env=ANY,
             check=True,
             shell=False,
             stderr=-1,
