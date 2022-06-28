@@ -458,11 +458,6 @@ Added
   metadata for a package by extracting library requirement information from the
   binary ELF files in the package. (#59569)
 
-- Sign authentication replies to prevent MiTM (cve-2020-22935)
-- Sign pillar data to prevent MiTM attacks. (cve-2022-22934)
-- Prevent job and fileserver replays (cve-2022-22936)
-- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
-
 
 Salt 3002.9 (2022-05-25)
 ========================
