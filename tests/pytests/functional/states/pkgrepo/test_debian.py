@@ -623,8 +623,9 @@ def repo(request, grains, tmp_path):
         signedby = True
     repo = Repo(grains=grains, tmp_path=tmp_path, signedby=signedby)
     yield repo
-    if repo.key_file.is_file():
-        repo.key_file.unlink()
+    for key in [repo.key_file, repo.key_file.parent / "salt-alt-key.gpg"]:
+        if key.is_file():
+            key.unlink()
 
 
 def test_adding_repo_file_signedby(pkgrepo, states, repo):
@@ -678,8 +679,43 @@ def test_adding_repo_file_keyserver_key_url(pkgrepo, states, repo):
         clean_file=True,
         keyserver="keyserver.ubuntu.com",
         key_url=repo.key_url,
+    )
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo.repo_content
+
+
+def test_adding_repo_file_signedby_alt_file(pkgrepo, states, repo):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and setting signedby and then running again with
+    different key path.
+    """
+    ret = states.pkgrepo.managed(
+        name=repo.repo_content,
+        file=str(repo.repo_file),
+        clean_file=True,
+        key_url=repo.key_url,
         aptkey=False,
     )
     with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
+    assert repo.key_file.is_file()
+    assert repo.repo_content in ret.comment
+
+    key_file = repo.key_file.parent / "salt-alt-key.gpg"
+    repo_content="deb [arch=amd64 signed-by={}] https://repo.saltproject.io/py3/debian/10/amd64/latest buster main".format(str(key_file))
+    ret = states.pkgrepo.managed(
+        name=repo_content,
+        file=str(repo.repo_file),
+        clean_file=True,
+        key_url=repo.key_url,
+        aptkey=False,
+    )
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo_content
+        assert file_content.endswith("\n")
+    assert key_file.is_file()
+    assert repo_content in ret.comment
