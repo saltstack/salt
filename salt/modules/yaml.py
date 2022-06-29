@@ -4,20 +4,38 @@ Yaml helper module for troubleshooting yaml
 
 .. versionadded:: 3005
 
-:depends:   yamllint
+:depends:   yamllint >= 1.20.0
 
 
 """
 
 import logging
 
+import salt.utils.versions
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = "yaml"
 
 
+try:
+    import salt.utils.yamllint
+
+    HAS_LINT = True
+except ImportError:
+    HAS_LINT = False
+
+
 def __virtual__():
-    return __virtualname__
+    if HAS_LINT:
+        version = salt.utils.yamllint.version()
+        version_cmp = salt.utils.versions.version_cmp(version, "1.20.0")
+        if version_cmp >= 0:
+            return __virtualname__
+        else:
+            return (False, "yamllint below 1.20.0, please pip install a newer version")
+    else:
+        return (False, "yamllint not installd")
 
 
 def lint(source, saltenv=None, pre_render=None, **kwargs):
@@ -53,4 +71,4 @@ def lint(source, saltenv=None, pre_render=None, **kwargs):
         yaml_out = __salt__["slsutil.renderer"](
             path=source, default_renderer=pre_render, **kwargs
         )
-    return __utils__["yamllint.lint"](yaml_out)
+    return salt.utils.yamllint.lint(yaml_out)

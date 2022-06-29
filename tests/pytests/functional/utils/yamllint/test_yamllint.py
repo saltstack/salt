@@ -44,3 +44,7 @@ def test_config():
             }
         ],
     }
+
+
+def test_version():
+    assert yamllint.version() == "1.26.3"
