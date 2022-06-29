@@ -235,7 +235,7 @@ class _Zypper:
             and self.exit_code not in self.WARNING_EXIT_CODES
         )
 
-    def _is_lock(self):
+    def _is_zypper_lock(self):
         """
         Is this is a lock error code?
 
@@ -281,7 +281,7 @@ class _Zypper:
             raise CommandExecutionError("No output result from Zypper?")
 
         self.exit_code = self.__call_result["retcode"]
-        if self._is_lock():
+        if self._is_zypper_lock() or self._is_rpm_lock():
             return False
 
         if self._is_error():
@@ -346,15 +346,15 @@ class _Zypper:
             cmd.extend(self.__cmd)
             log.debug("Calling Zypper: %s", " ".join(cmd))
             self.__call_result = __salt__["cmd.run_all"](cmd, **kwargs)
-            if self._check_result() and not self._is_rpm_lock():
+            if self._check_result():
                 break
 
             # Zypper lock
-            if self._is_lock():
-                self._handle_lock_file(self.ZYPPER_LOCK, "Zypper")
+            if self._is_zypper_lock():
+                self._handle_zypper_lock_file()
             # RPM lock
             if self._is_rpm_lock():
-                self._handle_lock_file(self.RPM_LOCK, "RPM")
+                self._handle_rpm_lock_file()
             was_blocked = True
 
         if was_blocked:
@@ -378,10 +378,10 @@ class _Zypper:
             or self.__call_result["stdout"]
         )
 
-    def _handle_lock_file(self, lock_file, tool):
-        if os.path.exists(lock_file):
+    def _handle_zypper_lock_file(self):
+        if os.path.exists(self.ZYPPER_LOCK):
             try:
-                with salt.utils.files.fopen(lock_file) as rfh:
+                with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
                     data = __salt__["ps.proc_info"](
                         int(rfh.readline()),
                         attrs=["pid", "name", "cmdline", "create_time"],
@@ -405,8 +405,7 @@ class _Zypper:
                 }
         else:
             data = {
-                "info": "{} is locked, but no {} lock has been "
-                        "found.".format(tool, tool),
+                "info": "Zypper is locked, but no Zypper lock has been found.",
                 "success": False,
             }
         if not data["success"]:
@@ -415,10 +414,20 @@ class _Zypper:
             log.debug("Collected data about blocking process.")
         __salt__["event.fire_master"](data, self.TAG_BLOCKED)
         log.debug(
-            "Fired a %s blocked event to the master with the data: "
-            "%s", tool, data
+            "Fired a Zypper blocked event to the master with the data: %s", data
         )
         log.debug("Waiting 5 seconds for Zypper gets released...")
+        time.sleep(5)
+
+    def _handle_rpm_lock_file(self):
+        data = {
+            "info": "RPM is temporarily locked.",
+            "success": True
+        }
+        __salt__["event.fire_master"](data, self.TAG_BLOCKED)
+        log.debug("Fired an RPM blocked event to the master with the data: "
+                  "%s", data)
+        log.debug("Waiting 5 seconds for RPM to get released...")
         time.sleep(5)
 
 
