@@ -16,6 +16,7 @@ import textwrap
 import pytest
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -763,14 +764,20 @@ def test_mod_repo_match():
                                 "deb http://cdn-aws.deb.debian.org/debian"
                                 " stretch main"
                             )
-                            if HAS_APT:
-                                repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
+                            if salt.utils.path.which("apt-key"):
+                                repo = aptpkg.mod_repo(
+                                    source_line_no_slash, enabled=False
+                                )
                                 assert repo[source_line_no_slash]["uri"] == source_uri
                             else:
                                 with pytest.raises(Exception) as err:
-                                    repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
-                                assert "missing 'signedby' option when apt-key is missing" in str(err.value)
-
+                                    repo = aptpkg.mod_repo(
+                                        source_line_no_slash, enabled=False
+                                    )
+                                assert (
+                                    "missing 'signedby' option when apt-key is missing"
+                                    in str(err.value)
+                                )
 
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
