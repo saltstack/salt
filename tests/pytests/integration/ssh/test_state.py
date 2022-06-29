@@ -74,12 +74,12 @@ def test_state_with_import(salt_ssh_cli, state_tree):
     verify salt-ssh can use imported map files in states
     """
     ret = salt_ssh_cli.run("state.sls", "test")
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
 
 @pytest.fixture
-def nested_state_tree(base_env_state_tree_root_dir, tmpdir):
+def nested_state_tree(base_env_state_tree_root_dir, tmp_path):
     top_file = """
     base:
       'localhost':
@@ -93,7 +93,7 @@ def nested_state_tree(base_env_state_tree_root_dir, tmpdir):
         - source: salt://foo/file.jinja
         - template: jinja
     """.format(
-        tmpdir
+        tmp_path
     )
     file_jinja = """
     {% from 'foo/map.jinja' import comment %}{{ comment }}
@@ -132,13 +132,13 @@ def test_state_opts_test(salt_ssh_cli, test_opts_state_tree):
     """
 
     def _verify_output(ret):
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert (
-            ret.json["cmd_|-config.get check for is_test_|-echo 'True'_|-run"]["name"]
+            ret.data["cmd_|-config.get check for is_test_|-echo 'True'_|-run"]["name"]
             == "echo 'True'"
         )
         assert (
-            ret.json["cmd_|-opts.get check for test_|-echo 'True'_|-run"]["name"]
+            ret.data["cmd_|-opts.get check for test_|-echo 'True'_|-run"]["name"]
             == "echo 'True'"
         )
 

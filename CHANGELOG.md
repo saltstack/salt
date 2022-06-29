@@ -7,6 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+
 Salt 3004.1 (2022-02-16)
 ========================
 
@@ -205,6 +206,36 @@ Added
 - Add the `detect_remote_minions` and `remote_minions_port` options to allow the master to detect remote ports for connected minions. This will allow users to detect Heist-Salt minions the master is connected to over port 22 by default. (#60612)
 - Add the python rpm-vercmp library in the rpm_lowpkg.py module. (#60814)
 - Allow a user to use the aptpkg.py module without installing python-apt. (#60818)
+
+
+Salt 3003.5 (2022-07-05)
+========================
+
+Fixed
+-----
+
+- Update Markup and contextfunction imports for jinja versions >=3.1. (#61848)
+- Fix bug in tcp transport (#61865)
+- Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
+
+
+Security
+--------
+
+- Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
+
+
+Salt 3003.4 (2022-02-25)
+========================
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2022-22935)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Sign pillar data to prevent MiTM attacks. (cve-2202-22934)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
+- Fix denial of service in junos ifconfig output parsing.
 
 
 Salt 3003.3 (2021-08-20)
@@ -427,6 +458,37 @@ Added
   metadata for a package by extracting library requirement information from the
   binary ELF files in the package. (#59569)
 
+
+Salt 3002.9 (2022-05-25)
+========================
+
+Fixed
+-----
+
+- Fixed an error when running on CentOS Stream 8. (#59161)
+- Fix bug in tcp transport (#61865)
+- Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
+
+
+Security
+--------
+
+- Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
+
+
+Salt 3002.8 (2022-02-25)
+========================
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2020-22935)
+- Sign pillar data to prevent MiTM attacks. (cve-2022-22934)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
+
+
+
 Salt 3002.7 (2021-08-20)
 ========================
 
@@ -443,6 +505,7 @@ Security
   Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
 - Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
+
 Salt 3002.6 (2021-03-10)
 ========================
 
@@ -450,6 +513,7 @@ Changed
 -------
 
 - Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
+
 
 Fixed
 -----

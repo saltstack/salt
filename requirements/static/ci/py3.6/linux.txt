@@ -8,6 +8,10 @@ adal==1.2.3
     # via
     #   azure-datalake-store
     #   msrestazure
+aiohttp==3.8.1
+    # via etcd3-py
+aiosignal==1.2.0
+    # via aiohttp
 ansible-core==2.11.7
     # via ansible
 ansible==4.4.0
@@ -20,12 +24,19 @@ asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
+async-timeout==4.0.2
+    # via aiohttp
+asynctest==0.13.0
+    # via aiohttp
 attrs==20.3.0
     # via
+    #   aiohttp
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
+    #   pytest-system-statistics
 azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
@@ -352,7 +363,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -371,6 +382,8 @@ cffi==1.14.6
     #   pynacl
 chardet==3.0.4
     # via requests
+charset-normalizer==2.0.12
+    # via aiohttp
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -394,6 +407,7 @@ cryptography==3.3.2
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
+    #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
@@ -410,14 +424,20 @@ dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker-pycreds==0.4.0
-    # via docker
-docker==3.7.2
+docker==5.0.3
+    # via
+    #   -r requirements/static/ci/common.in
+    #   pytest-salt-factories
+etcd3-py==0.1.6 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
+frozenlist==1.2.0
+    # via
+    #   aiohttp
+    #   aiosignal
 future==0.17.1
     # via textfsm
 genshi==0.7.5
@@ -432,8 +452,14 @@ google-auth==1.6.3
     # via kubernetes
 hglib==2.6.1
     # via -r requirements/static/ci/linux.in
+idna-ssl==1.1.0
+    # via aiohttp
 idna==2.8
-    # via requests
+    # via
+    #   etcd3-py
+    #   idna-ssl
+    #   requests
+    #   yarl
 immutables==0.14
     # via contextvars
 importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
@@ -609,6 +635,10 @@ msrestazure==0.6.3
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
+multidict==5.2.0
+    # via
+    #   aiohttp
+    #   yarl
 ncclient==0.6.4
     # via junos-eznc
 netaddr==0.7.19
@@ -645,6 +675,8 @@ psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
@@ -665,7 +697,7 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==1.7.1
+pyjwt==2.4.0
     # via
     #   adal
     #   twilio
@@ -674,7 +706,9 @@ pymysql==1.0.2 ; python_version > "3.5"
 pynacl==1.3.0
     # via paramiko
 pyopenssl==19.1.0
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   etcd3-py
 pyparsing==2.4.5
     # via
     #   junos-eznc
@@ -687,29 +721,41 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.2.0
+pytest-shell-utilities==1.4.0
     # via pytest-salt-factories
+pytest-skip-markers==1.2.0
+    # via
+    #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
+pytest-system-statistics==1.0.2
+    # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==6.1.2 ; python_version <= "3.9"
+pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-subtests
+    #   pytest-system-statistics
     #   pytest-tempdir
     #   pytest-timeout
+python-consul==1.1.0
+    # via -r requirements/static/ci/linux.in
 python-dateutil==2.8.1
     # via
     #   -r requirements/static/pkg/linux.in
@@ -727,7 +773,7 @@ python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-pytz==2021.1
+pytz==2022.1
     # via
     #   apscheduler
     #   moto
@@ -750,6 +796,10 @@ pyzmq==18.0.1 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
+redis-py-cluster==2.1.3
+    # via -r requirements/static/ci/linux.in
+redis==3.5.3
+    # via redis-py-cluster
 requests-oauthlib==1.3.0
     # via msrest
 requests==2.25.1
@@ -765,9 +815,11 @@ requests==2.25.1
     #   azure-servicemanagement-legacy
     #   azure-storage-common
     #   docker
+    #   etcd3-py
     #   kubernetes
     #   moto
     #   msrest
+    #   python-consul
     #   pyvmomi
     #   requests-oauthlib
     #   responses
@@ -787,6 +839,8 @@ s3transfer==0.4.2
     # via boto3
 scp==0.13.2
     # via junos-eznc
+semantic-version==2.9.0
+    # via etcd3-py
 setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
@@ -796,8 +850,7 @@ six==1.16.0
     #   cassandra-driver
     #   cheroot
     #   cryptography
-    #   docker
-    #   docker-pycreds
+    #   etcd3-py
     #   genshi
     #   geomet
     #   google-auth
@@ -813,12 +866,12 @@ six==1.16.0
     #   paramiko
     #   pynacl
     #   pyopenssl
+    #   python-consul
     #   python-dateutil
     #   pyvmomi
     #   responses
     #   textfsm
     #   transitions
-    #   twilio
     #   vcert
     #   virtualenv
     #   websocket-client
@@ -837,17 +890,23 @@ textfsm==1.1.0
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   pytest
+    # via -r requirements/static/ci/common.in
+tomli==1.2.3
+    # via pytest
 tornado==6.1
     # via python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
-twilio==6.63.0
+twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
-    # via importlib-metadata
+    # via
+    #   aiohttp
+    #   async-timeout
+    #   importlib-metadata
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
+    #   yarl
 tzlocal==2.1
     # via apscheduler
 urllib3==1.26.6
@@ -878,6 +937,8 @@ yamllint==1.26.3
     # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
+yarl==1.7.2
+    # via aiohttp
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0

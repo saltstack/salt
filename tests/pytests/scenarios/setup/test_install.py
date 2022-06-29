@@ -127,7 +127,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.skip(
                 "Setuptools version, {}, does not include the easy_install module".format(
                     setuptools_version
@@ -173,7 +173,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.skip(
                 "Setuptools version, {}, does not include the easy_install module".format(
                     setuptools_version

@@ -1237,7 +1237,6 @@ class Minion(MinionBase):
         self.safe = safe
 
         self._running = None
-        self.win_proc = []
         self.subprocess_list = salt.utils.process.SubprocessList()
         self.loaded_base_name = loaded_base_name
         self.connected = False
@@ -1766,7 +1765,7 @@ class Minion(MinionBase):
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
         name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
-            if sys.platform.startswith("win"):
+            if salt.utils.platform.spawning_platform():
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None

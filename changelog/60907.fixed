@@ -1,0 +1,1 @@
+Handle the situation when apt repo lines have or do not have trailing slashes properly.

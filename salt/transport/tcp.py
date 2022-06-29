@@ -403,7 +403,12 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         self.message_handler = message_handler
 
     @salt.ext.tornado.gen.coroutine
-    def handle_stream(self, stream, address):
+    def handle_stream(  # pylint: disable=arguments-differ
+        self,
+        stream,
+        address,
+        _StreamClosedError=salt.ext.tornado.iostream.StreamClosedError,
+    ):
         """
         Handle incoming streams and add messages to the incoming queue
         """
@@ -420,7 +425,7 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
                     self.io_loop.spawn_callback(
                         self.message_handler, stream, framed_msg["body"], header
                     )
-        except salt.ext.tornado.iostream.StreamClosedError:
+        except _StreamClosedError:
             log.trace("req client disconnected %s", address)
             self.remove_client((stream, address))
         except Exception as e:  # pylint: disable=broad-except
@@ -675,6 +680,7 @@ class MessageClient:
                 self._stream = None
                 if stream:
                     stream.close()
+                unpacker = salt.utils.msgpack.Unpacker()
                 yield self.connect()
             except TypeError:
                 # This is an invalid transport
@@ -698,6 +704,7 @@ class MessageClient:
                 self._stream = None
                 if stream:
                     stream.close()
+                unpacker = salt.utils.msgpack.Unpacker()
                 yield self.connect()
         self._stream_return_running = False
 

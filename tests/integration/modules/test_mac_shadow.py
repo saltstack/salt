@@ -5,8 +5,9 @@ integration tests for mac_shadow
 import datetime
 
 import pytest
+from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
+from tests.support.helpers import runs_on
 
 TEST_USER = random_string("RS-", lowercase=False)
 NO_USER = random_string("RS-", lowercase=False)

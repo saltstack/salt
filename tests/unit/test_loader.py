@@ -1364,7 +1364,7 @@ class LoaderGlobalsTest(ModuleCase):
         global_vars = {}
         for val in mod_dict.values():
             # only find salty globals
-            if val.__module__.startswith("salt.loaded"):
+            if val.__module__.startswith(salt.loader.lazy.LOADED_BASE_NAME):
                 if hasattr(val, "__globals__"):
                     if hasattr(val, "__wrapped__") or "__wrapped__" in val.__globals__:
                         global_vars[val.__module__] = sys.modules[
