@@ -125,6 +125,40 @@ def __init__(opts):
         os.environ.update(DPKG_ENV_VARS)
 
 
+def invalid(line):
+    disabled = False
+    invalid = False
+    comment = ""
+    line = line.strip()
+    if not line:
+        invalid = True
+        return disabled, invalid, comment, repo_line
+
+    if line.startswith("#"):
+        disabled = True
+        line = line[1:]
+
+    idx = line.find("#")
+    if idx > 0:
+        comment = line[idx + 1 :]
+        line = line[:idx]
+
+    repo_line = line.strip().split()
+    if (
+        not repo_line
+        or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
+        or len(repo_line) < 3
+    ):
+        invalid = True
+        return disabled, invalid
+
+    if repo_line[1].startswith("["):
+        if not any(x.endswith("]") for x in repo_line[1:]):
+            invalid = True
+            return disabled, invalid, comment, repo_line
+
+    return disabled, invalid, comment, repo_line
+
 if not HAS_APT:
 
     class SourceEntry:  # pylint: disable=function-redefined
@@ -173,34 +207,8 @@ if not HAS_APT:
             """
             Parse lines from sources files
             """
-            self.disabled = False
-            line = self.line.strip()
-            if not line:
-                self.invalid = True
-                return False
-
-            if line.startswith("#"):
-                self.disabled = True
-                line = line[1:]
-
-            idx = line.find("#")
-            if idx > 0:
-                self.comment = line[idx + 1 :]
-                line = line[:idx]
-
-            repo_line = line.strip().split()
-            if (
-                not repo_line
-                or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
-                or len(repo_line) < 3
-            ):
-                self.invalid = True
-                return False
-
+            self.disabled, self.invalid, self.comment, repo_line = invalid(line)
             if repo_line[1].startswith("["):
-                if not any(x.endswith("]") for x in repo_line[1:]):
-                    self.invalid = True
-                    return False
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
                 self.architectures.extend(opts["arch"]["value"])
@@ -2723,7 +2731,15 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # that are not the main sources.list file
         sources = _consolidate_repo_sources(sources)
 
-    repos = [s for s in sources if not s.invalid]
+    repos = []
+    for source in sources:
+        if HAS_APT:
+            _, _invalid, _, _= invalid(source.line)
+            if not _invalid:
+                repos.append(source)
+        else:
+            repos.append(source)
+
     mod_source = None
     try:
         (
@@ -2761,9 +2777,16 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 key, int
             ):  # yaml can make this an int, we need the hex version
                 key = hex(key)
-            cmd = ["apt-key", "export", key]
-            output = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
-            imported = output.startswith("-----BEGIN PGP")
+            if not aptkey:
+                imported = False
+                output = get_repo_keys(aptkey=aptkey,
+                                      keydir=kwargs["signedby"].parent)
+                if output.get(key):
+                    imported = True
+            else:
+                cmd = ["apt-key", "export", key]
+                output = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
+                imported = output.startswith("-----BEGIN PGP")
             if keyserver:
                 if not imported:
                     http_proxy_url = _get_http_proxy_url()
@@ -2783,7 +2806,6 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                         ]
                     else:
                         if not aptkey:
-
                             key_file = kwargs["signedby"]
                             add_repo_key(
                                 keyid=key,

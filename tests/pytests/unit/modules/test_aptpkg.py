@@ -763,8 +763,14 @@ def test_mod_repo_match():
                                 "deb http://cdn-aws.deb.debian.org/debian"
                                 " stretch main"
                             )
-                            repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
-                            assert repo[source_line_no_slash]["uri"] == source_uri
+                            if HAS_APT:
+                                repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
+                                assert repo[source_line_no_slash]["uri"] == source_uri
+                            else:
+                                with pytest.raises(Exception) as err:
+                                    repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
+                                assert "missing 'signedby' option when apt-key is missing" in str(err.value)
+
 
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
