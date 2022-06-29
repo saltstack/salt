@@ -79,6 +79,14 @@ install_name_tool $INSTALL_DIR/bin/python${PY_VERSION}m \
     -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl/lib || echo "already present"
 
 ################################################################################
+# Add rpath to the Python binaries before signing
+################################################################################
+echo "**** Setting rpath in binaries"
+install_name_tool $INSTALL_DIR/bin/python3.7m \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/lib \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib || echo "already present"
+
+################################################################################
 # Sign python binaries in `bin` and `lib`
 ################################################################################
 echo "**** Signing binaries that have entitlements (/opt/salt/.pyenv)"

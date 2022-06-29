@@ -130,7 +130,9 @@ typing-extensions==3.10.0.0
     #   gitpython
     #   importlib-metadata
 urllib3==1.26.6
-    # via requests
+    # via
+    #   -r requirements/windows.txt
+    #   requests
 wheel==0.36.2
     # via -r requirements/windows.txt
 wmi==1.5.1
