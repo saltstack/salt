@@ -539,6 +539,7 @@ def test_repo_present_absent_no_trailing_slash_uri(pkgrepo, trailing_slash_repo_
 @attr.s(kw_only=True)
 class Repo:
     key_root = attr.ib(default=pathlib.Path("/usr", "share", "keyrings"))
+    signedby = attr.ib(default=False)
     grains = attr.ib()
     fullname = attr.ib()
     alt_repo = attr.ib(init=False)
@@ -580,14 +581,28 @@ class Repo:
 
     @repo_content.default
     def _default_repo_content(self):
-        repo_content = "deb [arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
-            self.fullname,
-            self.grains["lsb_distrib_release"],
-            self.grains["oscodename"],
-            arch=self.grains["osarch"],
-        )
         if self.alt_repo:
-            repo_content = "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main"
+            opts = " "
+            if self.signedby:
+                opts = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] "
+            repo_content = (
+                "deb{}https://artifacts.elastic.co/packages/8.x/apt stable main".format(
+                    opts
+                )
+            )
+        else:
+            opts = "[arch={arch}]".format(arch=self.grains["osarch"])
+            if self.signedby:
+                opts = "[arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]".format(
+                    arch=self.grains["osarch"]
+                )
+            repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
+                self.fullname,
+                self.grains["lsb_distrib_release"],
+                self.grains["oscodename"],
+                arch=self.grains["osarch"],
+                opts=opts,
+            )
         return repo_content
 
     @key_url.default
@@ -602,10 +617,14 @@ class Repo:
 
 
 @pytest.fixture
-def repo(grains, tmp_path):
-    repo = Repo(grains=grains, tmp_path=tmp_path)
+def repo(request, grains, tmp_path):
+    signedby = False
+    if "signedby" in request.node.name:
+        signedby = True
+    repo = Repo(grains=grains, tmp_path=tmp_path, signedby=signedby)
     yield repo
-    repo.key_file.unlink()
+    if repo.key_file.is_file():
+        repo.key_file.unlink()
 
 
 def test_adding_repo_file_signedby(pkgrepo, states, repo):
@@ -645,3 +664,21 @@ def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
     assert repo.key_file.is_file()
+
+
+def test_adding_repo_file_keyserver_key_url(pkgrepo, states, repo):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and a key_url.
+    """
+    ret = states.pkgrepo.managed(
+        name=repo.repo_content,
+        file=str(repo.repo_file),
+        clean_file=True,
+        keyserver="keyserver.ubuntu.com",
+        key_url=repo.key_url,
+        aptkey=False,
+    )
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo.repo_content

@@ -1,0 +1,1 @@
+All of Salt's loaders now accept ``loaded_base_name`` as a keyword argument, allowing different namespacing the loaded modules.
