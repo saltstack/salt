@@ -12,6 +12,10 @@ aiohttp==3.8.1
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
+allure-pytest==2.9.45
+    # via -r requirements/pytest.txt
+allure-python-commons==2.9.45
+    # via allure-pytest
 ansible-core==2.11.7
     # via ansible
 ansible==4.4.0
@@ -29,6 +33,7 @@ async-timeout==4.0.2
 attrs==20.3.0
     # via
     #   aiohttp
+    #   allure-python-commons
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
@@ -672,7 +677,9 @@ pathtools==0.1.2
 platformdirs==2.2.0
     # via virtualenv
 pluggy==0.13.0
-    # via pytest
+    # via
+    #   allure-python-commons
+    #   pytest
 portend==2.4
     # via cherrypy
 psutil==5.8.0
@@ -756,6 +763,7 @@ pytest-timeout==1.4.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   allure-pytest
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -861,6 +869,8 @@ setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
+    #   allure-pytest
+    #   allure-python-commons
     #   apscheduler
     #   bcrypt
     #   cassandra-driver

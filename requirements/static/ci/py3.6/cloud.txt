@@ -12,6 +12,10 @@ aiohttp==3.8.1
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
+allure-pytest==2.9.45
+    # via -r requirements/pytest.txt
+allure-python-commons==2.9.45
+    # via allure-pytest
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via
     #   -r requirements/static/ci/cloud.in
@@ -27,6 +31,7 @@ asynctest==0.13.0
 attrs==21.2.0
     # via
     #   aiohttp
+    #   allure-python-commons
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
@@ -654,7 +659,9 @@ passlib==1.7.4 ; sys_platform != "win32"
 platformdirs==2.3.0
     # via virtualenv
 pluggy==1.0.0
-    # via pytest
+    # via
+    #   allure-python-commons
+    #   pytest
 portend==2.7.1
     # via cherrypy
 profitbricks==4.1.3
@@ -731,6 +738,7 @@ pytest-timeout==2.0.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   allure-pytest
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -820,6 +828,8 @@ setproctitle==1.2.2 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
+    #   allure-pytest
+    #   allure-python-commons
     #   bcrypt
     #   cassandra-driver
     #   cheroot

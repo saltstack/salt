@@ -11,3 +11,4 @@ pytest-timeout
 pytest-httpserver
 pytest-custom-exit-code >= 0.3
 flaky
+allure-pytest
