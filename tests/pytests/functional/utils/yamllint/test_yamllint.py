@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import salt.utils.versions as versions
 import salt.utils.yamllint as yamllint
 
 
@@ -47,4 +48,4 @@ def test_config():
 
 
 def test_version():
-    assert yamllint.version() == "1.26.3"
+    assert versions.version_cmp(yamllint.version(), "1.26.3") >= 0
