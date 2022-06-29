@@ -6,6 +6,7 @@ HAS_YAMLLINT = True
 try:
     from yamllint import linter
     from yamllint.config import YamlLintConfig
+    import yamllint
 except ImportError:
     HAS_YAMLLINT = False
 
@@ -19,6 +20,13 @@ def __virtual__():
         return __virtualname__
     else:
         return (False, "YAMLLint Not installed")
+
+
+def version():
+    """
+    report version of yamllint installed for version comparison
+    """
+    return yamllint.__version__
 
 
 def lint(
@@ -44,7 +52,6 @@ def lint(
           empty-values: {forbid-in-block-mappings: false, forbid-in-flow-mappings: true}
           trailing-spaces: disable
           key-ordering: disable
-          truthy: {level: warning, check-keys: false }
         """
         conf = YamlLintConfig(yamlconf)
 
