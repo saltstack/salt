@@ -29,6 +29,7 @@ import stat
 import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
+import time  # do not remove, used in imported file.py functions
 import urllib.parse
 from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
