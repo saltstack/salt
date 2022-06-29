@@ -705,7 +705,9 @@ def test_adding_repo_file_signedby_alt_file(pkgrepo, states, repo):
     assert repo.repo_content in ret.comment
 
     key_file = repo.key_file.parent / "salt-alt-key.gpg"
-    repo_content="deb [arch=amd64 signed-by={}] https://repo.saltproject.io/py3/debian/10/amd64/latest buster main".format(str(key_file))
+    repo_content = "deb [arch=amd64 signed-by={}] https://repo.saltproject.io/py3/debian/10/amd64/latest buster main".format(
+        str(key_file)
+    )
     ret = states.pkgrepo.managed(
         name=repo_content,
         file=str(repo.repo_file),

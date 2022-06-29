@@ -125,14 +125,20 @@ def __init__(opts):
         os.environ.update(DPKG_ENV_VARS)
 
 
-def invalid(line):
+def _invalid(line):
+    """
+    This is a workaround since python3-apt does not support
+    the signed-by argument. This function was removed from
+    the class to ensure users using the python3-apt module or
+    not can use the signed-by option.
+    """
     disabled = False
     invalid = False
     comment = ""
     line = line.strip()
     if not line:
         invalid = True
-        return disabled, invalid, comment, repo_line
+        return disabled, invalid, comment, ""
 
     if line.startswith("#"):
         disabled = True
@@ -150,7 +156,7 @@ def invalid(line):
         or len(repo_line) < 3
     ):
         invalid = True
-        return disabled, invalid
+        return disabled, invalid, comment, repo_line
 
     if repo_line[1].startswith("["):
         if not any(x.endswith("]") for x in repo_line[1:]):
@@ -158,6 +164,7 @@ def invalid(line):
             return disabled, invalid, comment, repo_line
 
     return disabled, invalid, comment, repo_line
+
 
 if not HAS_APT:
 
@@ -207,7 +214,9 @@ if not HAS_APT:
             """
             Parse lines from sources files
             """
-            self.disabled, self.invalid, self.comment, repo_line = invalid(line)
+            self.disabled, self.invalid, self.comment, repo_line = _invalid(line)
+            if self.invalid:
+                return False
             if repo_line[1].startswith("["):
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
@@ -2734,8 +2743,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     repos = []
     for source in sources:
         if HAS_APT:
-            _, _invalid, _, _= invalid(source.line)
-            if not _invalid:
+            _, invalid, _, _ = _invalid(source.line)
+            if not invalid:
                 repos.append(source)
         else:
             repos.append(source)
@@ -2779,8 +2788,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 key = hex(key)
             if not aptkey:
                 imported = False
-                output = get_repo_keys(aptkey=aptkey,
-                                      keydir=kwargs["signedby"].parent)
+                output = get_repo_keys(aptkey=aptkey, keydir=kwargs["signedby"].parent)
                 if output.get(key):
                     imported = True
             else:
