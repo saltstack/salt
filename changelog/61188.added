@@ -1,1 +1,0 @@
-Add "--no-return-event" option to salt-call to prevent sending return event back to master.
