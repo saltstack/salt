@@ -148,9 +148,9 @@ Removed
   Recommended policy names will be displayed in comments (#61696)
 - Remove the feature flag feature.enable_slsvars_fixes and enable the fixes for `sls_path`, `tpl_file`, and `tpldir` by default.
   Enabling this behavior by default will fix the following:
-    - tpldir: If your directory name and your SLS file name are the same tpldir used to return a ., now it returns the correct directory name.
-    - slspath,slsdotpath,slscolonpath,sls_path: If an init.sls file is accessed by its explicit name path.to.init instead of path.to, init shows up as a directory for in various sls context parameters, now it will only show as a file.
-    - tplfile: When using tplfile in a SLS file in the root directory of file roots it returns empty. Now it returns the filename. (#61697)
+  - tpldir: If your directory name and your SLS file name are the same tpldir used to return a ., now it returns the correct directory name.
+  - slspath,slsdotpath,slscolonpath,sls_path: If an init.sls file is accessed by its explicit name path.to.init instead of path.to, init shows up as a directory for in various sls context parameters, now it will only show as a file.
+  - tplfile: When using tplfile in a SLS file in the root directory of file roots it returns empty. Now it returns the filename. (#61697)
 - Remove SaltMessageServer.shutdown in favor of close.
   Remove LoadBalancerWorker.stop in favor of close. (#61698)
 
