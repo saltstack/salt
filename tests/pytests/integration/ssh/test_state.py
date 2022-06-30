@@ -121,8 +121,8 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     ret = salt_ssh_cli.run(
         "--extra-filerefs=salt://foo/map.jinja", "state.apply", "foo"
     )
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
 
 @pytest.mark.slow_test
