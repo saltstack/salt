@@ -1,0 +1,1 @@
+Fix pkg.version_cmp on openEuler and a few other os flavors.
