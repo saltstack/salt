@@ -486,7 +486,7 @@ def min_patch_ver():
 
 def _check_minimum_version(salt_call_cli, minimum_patch_ver):
     version = salt_call_cli.run("--local", "cmd.run", "patch --version")
-    version = version.json.split()[2]
+    version = version.data.split()[2]
     if _LooseVersion(version) < _LooseVersion(minimum_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found,"
@@ -1294,7 +1294,7 @@ def test_issue_62117(
 
     with yaml_tempfile, jinja_tempfile, sls_tempfile:
         ret = salt_call_cli.run("--local", "state.apply", name.replace("/", "."))
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
