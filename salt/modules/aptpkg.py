@@ -278,7 +278,7 @@ if not HAS_APT:
             opts_count = []
             opts_line = ""
             if architectures:
-                architectures = "arch={}".format(" ".join(architectures))
+                architectures = "arch={}".format(",".join(architectures))
                 opts_count.append(architectures)
             if signedby:
                 signedby = "signed-by={}".format(signedby)
