@@ -6,9 +6,9 @@ import sys
 import time
 
 import pytest
+from pytestshellutils.utils.processes import terminate_process
 from salt._logging.handlers import DeferredStreamHandler
 from salt.utils.nb_popen import NonBlockingPopen
-from saltfactories.utils.processes import terminate_process
 from tests.support.helpers import CaptureOutput, dedent
 from tests.support.runtests import RUNTIME_VARS
 
