@@ -1,5 +1,6 @@
 import pytest
 import salt.modules.postgres as postgres
+from tests.support.mock import MagicMock, patch
 
 # 'md5' + md5('password' + 'username')
 md5_pw = "md55a231fcdb710d73268c4f44283487ba2"
@@ -9,6 +10,25 @@ scram_pw = (
     "0hn08ZdX8kirGaL4TM0j13digH9Wl365OOzCtAuF2pE=:"
     "LzAh/MGUdjYkdbDzcOKpfGwa3WwPUsyGcY+TEnSpcto="
 )
+
+test_privileges_list_function_csv = (
+    'name\n"{baruwatest=X/baruwatest,bayestest=r/baruwatest,baruwa=X*/baruwatest}"\n'
+)
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        postgres: {
+            "__grains__": {"os_family": "Linux"},
+            "__salt__": {
+                "config.option": MagicMock(),
+                "cmd.run_all": MagicMock(),
+                "file.chown": MagicMock(),
+                "file.remove": MagicMock(),
+            },
+        }
+    }
 
 
 def idfn(val):
@@ -47,4 +67,68 @@ def idfn(val):
     ids=idfn,
 )
 def test_verify_password(role, password, verifier, method, result):
+    patcher = patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql"))
     assert postgres._verify_password(role, password, verifier, method) == result
+
+
+def test_has_privileges_with_function():
+    with patch(
+        "salt.modules.postgres._run_psql",
+        MagicMock(
+            return_value={"retcode": 0, "stdout": test_privileges_list_function_csv}
+        ),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.has_privileges(
+            "baruwa",
+            "awl",
+            "function",
+            "EXECUTE",
+            grant_option=True,
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        assert ret is True
+
+        query = (
+            "COPY (SELECT rolname AS name "
+            "FROM pg_catalog.pg_proc p "
+            "JOIN pg_catalog.pg_namespace n "
+            "ON n.oid = p.pronamespace "
+            "JOIN pg_catalog.pg_roles r "
+            "ON p.proowner = r.oid "
+            "WHERE nspname = 'public' "
+            "AND p.oid::regprocedure::text = 'awl' "
+            "ORDER BY proname, proargtypes) TO STDOUT WITH CSV HEADER"
+        )
+
+        postgres._run_psql.assert_any_call(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-v",
+                "datestyle=ISO,MDY",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
