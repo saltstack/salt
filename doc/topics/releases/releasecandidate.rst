@@ -157,4 +157,4 @@ For example for the 3003rc1 release:
 
 .. code-block:: bash
 
-    sudo pip install salt==3005~rc1
+    sudo pip install salt==3005rc1
