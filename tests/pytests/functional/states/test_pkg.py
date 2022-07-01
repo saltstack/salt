@@ -6,7 +6,6 @@ import logging
 import os
 import time
 
-import attr
 import pytest
 import salt.utils.files
 import salt.utils.path
@@ -22,42 +21,23 @@ pytestmark = [
 ]
 
 
-@attr.s(kw_only=True, frozen=True, slots=True)
-class PkgDb:
-    modules = attr.ib()
-    ctx = attr.ib()
-    grains = attr.ib()
+@pytest.fixture(scope="module", autouse=True)
+def refresh_db(grains, modules):
+    modules.pkg.refresh_db()
 
-    def refresh(self):
-        if "refresh" not in self.ctx:
-            self.modules.pkg.refresh_db()
-            self.ctx["refresh"] = True
-
-        # If this is Arch Linux, check if pacman is in use by another process
-        if self.grains["os_family"] == "Arch":
-            for _ in range(12):
-                if not os.path.isfile("/var/lib/pacman/db.lck"):
-                    break
-                else:
-                    time.sleep(5)
+    # If this is Arch Linux, check if pacman is in use by another process
+    if grains["os_family"] == "Arch":
+        for _ in range(12):
+            if not os.path.isfile("/var/lib/pacman/db.lck"):
+                break
             else:
-                pytest.fail("Package database locked after 60 seconds, bailing out")
-
-    def __enter__(self):
-        self.refresh()
-        return self
-
-    def __exit__(self, *_):
-        pass
+                time.sleep(5)
+        else:
+            pytest.fail("Package database locked after 60 seconds, bailing out")
 
 
 @pytest.fixture
-def refreshed_db(ctx, grains, modules):
-    return PkgDb(modules=modules, grains=grains, ctx=ctx)
-
-
-@pytest.fixture
-def PKG_TARGETS(grains, refreshed_db):
+def PKG_TARGETS(grains):
     _PKG_TARGETS = ["figlet", "sl"]
     if grains["os"] == "Windows":
         _PKG_TARGETS = ["vlc", "putty"]
@@ -72,24 +52,22 @@ def PKG_TARGETS(grains, refreshed_db):
             _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
         _PKG_TARGETS = ["lynx", "htop"]
-    with refreshed_db:
-        return _PKG_TARGETS
+    return _PKG_TARGETS
 
 
 @pytest.fixture
-def PKG_CAP_TARGETS(grains, refreshed_db):
+def PKG_CAP_TARGETS(grains):
     _PKG_CAP_TARGETS = []
     if grains["os_family"] == "Suse":
         if grains["os"] == "SUSE":
             _PKG_CAP_TARGETS = [("perl(ZNC)", "znc-perl")]
     if not _PKG_CAP_TARGETS:
         pytest.skip("Capability not provided")
-    with refreshed_db:
-        return _PKG_CAP_TARGETS
+    return _PKG_CAP_TARGETS
 
 
 @pytest.fixture
-def PKG_32_TARGETS(grains, refreshed_db):
+def PKG_32_TARGETS(grains):
     _PKG_32_TARGETS = []
     if grains["os_family"] == "RedHat":
         if grains["os"] == "CentOS":
@@ -99,12 +77,11 @@ def PKG_32_TARGETS(grains, refreshed_db):
                 _PKG_32_TARGETS.append("xz-devel.i686")
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
-    with refreshed_db:
-        return _PKG_32_TARGETS
+    return _PKG_32_TARGETS
 
 
 @pytest.fixture
-def PKG_DOT_TARGETS(grains, refreshed_db):
+def PKG_DOT_TARGETS(grains):
     _PKG_DOT_TARGETS = []
     if grains["os_family"] == "RedHat":
         if grains["osmajorrelease"] == 5:
@@ -119,12 +96,11 @@ def PKG_DOT_TARGETS(grains, refreshed_db):
         pytest.skip(
             'No packages with "." in their name have been specified',
         )
-    with refreshed_db:
-        return _PKG_DOT_TARGETS
+    return _PKG_DOT_TARGETS
 
 
 @pytest.fixture
-def PKG_EPOCH_TARGETS(grains, refreshed_db):
+def PKG_EPOCH_TARGETS(grains):
     _PKG_EPOCH_TARGETS = []
     if grains["os_family"] == "RedHat":
         if grains["osmajorrelease"] == 7:
@@ -133,30 +109,27 @@ def PKG_EPOCH_TARGETS(grains, refreshed_db):
             _PKG_EPOCH_TARGETS = ["traceroute"]
     if not _PKG_EPOCH_TARGETS:
         pytest.skip('No targets have been configured with "epoch" in the version')
-    with refreshed_db:
-        return _PKG_EPOCH_TARGETS
+    return _PKG_EPOCH_TARGETS
 
 
 @pytest.fixture
-def VERSION_SPEC_SUPPORTED(grains, refreshed_db):
+def VERSION_SPEC_SUPPORTED(grains):
     _VERSION_SPEC_SUPPORTED = True
     if grains["os"] == "FreeBSD":
         _VERSION_SPEC_SUPPORTED = False
     if not _VERSION_SPEC_SUPPORTED:
         pytest.skip("Version specification not supported")
-    with refreshed_db:
-        return _VERSION_SPEC_SUPPORTED
+    return _VERSION_SPEC_SUPPORTED
 
 
 @pytest.fixture
-def WILDCARDS_SUPPORTED(grains, refreshed_db):
+def WILDCARDS_SUPPORTED(grains):
     _WILDCARDS_SUPPORTED = False
     if grains["os_family"] in ("Arch", "Debian"):
         _WILDCARDS_SUPPORTED = True
     if not _WILDCARDS_SUPPORTED:
         pytest.skip("Wildcards in pkg.install are not supported")
-    with refreshed_db:
-        return _WILDCARDS_SUPPORTED
+    return _WILDCARDS_SUPPORTED
 
 
 @pytest.fixture
@@ -376,7 +349,7 @@ def test_pkg_008_epoch_in_version(PKG_EPOCH_TARGETS, latest_version, states):
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.info_installed")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @pytest.mark.slow_test
-def test_pkg_009_latest_with_epoch(grains, modules, states, refreshed_db):
+def test_pkg_009_latest_with_epoch(grains, modules, states):
     """
     This tests for the following issue:
     https://github.com/saltstack/salt/issues/31014
@@ -393,12 +366,11 @@ def test_pkg_009_latest_with_epoch(grains, modules, states, refreshed_db):
     package = "bash-completion"
     pkgquery = "version"
 
-    with refreshed_db:
-        ret = states.pkg.installed(name=package, refresh=False)
-        assert ret.result is True
+    ret = states.pkg.installed(name=package, refresh=False)
+    assert ret.result is True
 
-        ret = modules.pkg.info_installed(package)
-        assert pkgquery in str(ret)
+    ret = modules.pkg.info_installed(package)
+    assert pkgquery in str(ret)
 
 
 @pytest.mark.requires_salt_states("pkg.latest", "pkg.removed")
