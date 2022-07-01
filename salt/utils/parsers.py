@@ -787,7 +787,8 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             )
         )
 
-        if not is_writeable(logfile, check_parent=True):
+        if (not logfile.startswith("file:///dev/") and
+            not is_writeable(logfile, check_parent=True)):
             # Since we're not be able to write to the log file or its parent
             # directory (if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
