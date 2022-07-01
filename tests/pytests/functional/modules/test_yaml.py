@@ -54,3 +54,7 @@ def test_lint_pre_render():
         "problems": [],
         "source": "key: value\n",
     }
+
+
+def test_yamllint_virtual():
+    assert salt.modules.yaml.__virtual__() == "yaml"

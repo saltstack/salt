@@ -7,8 +7,8 @@ Using Salt at scale
 The focus of this tutorial will be building a Salt infrastructure for handling
 large numbers of minions. This will include tuning, topology, and best practices.
 
-For how to install the Salt Master please
-go here: `Installing saltstack <https://docs.saltproject.io/topics/installation/index.html>`_
+For how to install the Salt Master, see the
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 .. note::
 
@@ -304,4 +304,3 @@ The job cache can be disabled:
 .. code-block:: yaml
 
    job_cache: False
-

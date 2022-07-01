@@ -125,6 +125,47 @@ def __init__(opts):
         os.environ.update(DPKG_ENV_VARS)
 
 
+def _invalid(line):
+    """
+    This is a workaround since python3-apt does not support
+    the signed-by argument. This function was removed from
+    the class to ensure users using the python3-apt module or
+    not can use the signed-by option.
+    """
+    disabled = False
+    invalid = False
+    comment = ""
+    line = line.strip()
+    if not line:
+        invalid = True
+        return disabled, invalid, comment, ""
+
+    if line.startswith("#"):
+        disabled = True
+        line = line[1:]
+
+    idx = line.find("#")
+    if idx > 0:
+        comment = line[idx + 1 :]
+        line = line[:idx]
+
+    repo_line = line.strip().split()
+    if (
+        not repo_line
+        or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
+        or len(repo_line) < 3
+    ):
+        invalid = True
+        return disabled, invalid, comment, repo_line
+
+    if repo_line[1].startswith("["):
+        if not any(x.endswith("]") for x in repo_line[1:]):
+            invalid = True
+            return disabled, invalid, comment, repo_line
+
+    return disabled, invalid, comment, repo_line
+
+
 if not HAS_APT:
 
     class SourceEntry:  # pylint: disable=function-redefined
@@ -173,34 +214,10 @@ if not HAS_APT:
             """
             Parse lines from sources files
             """
-            self.disabled = False
-            line = self.line.strip()
-            if not line:
-                self.invalid = True
+            self.disabled, self.invalid, self.comment, repo_line = _invalid(line)
+            if self.invalid:
                 return False
-
-            if line.startswith("#"):
-                self.disabled = True
-                line = line[1:]
-
-            idx = line.find("#")
-            if idx > 0:
-                self.comment = line[idx + 1 :]
-                line = line[:idx]
-
-            repo_line = line.strip().split()
-            if (
-                not repo_line
-                or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
-                or len(repo_line) < 3
-            ):
-                self.invalid = True
-                return False
-
             if repo_line[1].startswith("["):
-                if not any(x.endswith("]") for x in repo_line[1:]):
-                    self.invalid = True
-                    return False
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 opts = _get_opts(self.line)
                 self.architectures.extend(opts["arch"]["value"])
@@ -1703,7 +1720,10 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[.*\]", line)
-    ret = {"arch": {"full": "", "value": ""}, "signedby": {"full": "", "value": ""}}
+    ret = {
+        "arch": {"full": "", "value": "", "index": 0},
+        "signedby": {"full": "", "value": "", "index": 0},
+    }
 
     if not get_opts:
         return ret
@@ -2156,7 +2176,7 @@ def _parse_repo_keys_output(cmd_ret):
                     "capability": items[11],
                     "date_creation": items[5],
                     "date_expiration": items[6],
-                    "keyid": items[4],
+                    "keyid": str(items[4]),
                     "validity": items[1],
                 }
             )
@@ -2720,7 +2740,15 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # that are not the main sources.list file
         sources = _consolidate_repo_sources(sources)
 
-    repos = [s for s in sources if not s.invalid]
+    repos = []
+    for source in sources:
+        if HAS_APT:
+            _, invalid, _, _ = _invalid(source.line)
+            if not invalid:
+                repos.append(source)
+        else:
+            repos.append(source)
+
     mod_source = None
     try:
         (
@@ -2739,10 +2767,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
 
-    if "signedby" in kwargs:
-        kwargs["signedby"] = pathlib.Path(kwargs["signedby"])
-    else:
-        kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
+    kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
+
+    if not aptkey and not kwargs["signedby"]:
+        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
@@ -2758,9 +2786,15 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 key, int
             ):  # yaml can make this an int, we need the hex version
                 key = hex(key)
-            cmd = ["apt-key", "export", key]
-            output = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
-            imported = output.startswith("-----BEGIN PGP")
+            if not aptkey:
+                imported = False
+                output = get_repo_keys(aptkey=aptkey, keydir=kwargs["signedby"].parent)
+                if output.get(key):
+                    imported = True
+            else:
+                cmd = ["apt-key", "export", key]
+                output = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
+                imported = output.startswith("-----BEGIN PGP")
             if keyserver:
                 if not imported:
                     http_proxy_url = _get_http_proxy_url()
@@ -2780,7 +2814,6 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                         ]
                     else:
                         if not aptkey:
-
                             key_file = kwargs["signedby"]
                             add_repo_key(
                                 keyid=key,
@@ -2815,7 +2848,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if not fn_:
             raise CommandExecutionError("Error: file not found: {}".format(key_url))
 
-        if fn_.name != kwargs["signedby"].name:
+        if kwargs["signedby"] and fn_.name != kwargs["signedby"].name:
             # override the signedby defined in the name with the
             # one defined in kwargs.
             new_path = fn_.parent / kwargs["signedby"].name
@@ -2900,6 +2933,15 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         sources.list.append(mod_source)
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
+
+    if HAS_APT:
+        # workaround until python3-apt supports signedby
+        if str(mod_source) != str(SourceEntry(repo)) and "signed-by" in str(mod_source):
+            rline = SourceEntry(repo)
+            mod_source.line = rline.line
+
+    if not mod_source.line.endswith("\n"):
+        mod_source.line = mod_source.line + "\n"
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):

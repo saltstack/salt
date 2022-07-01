@@ -403,6 +403,7 @@ typing-extensions==3.10.0.0
     #   yarl
 urllib3==1.26.6
     # via
+    #   -r requirements/windows.txt
     #   botocore
     #   kubernetes
     #   python-etcd
