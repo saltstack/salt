@@ -1,1 +1,0 @@
-Added percent success/failure of state runs in highstate summary output via new state_output_pct option
