@@ -389,6 +389,7 @@ typing-extensions==4.2.0
     #   pytest-system-statistics
 urllib3==1.26.6
     # via
+    #   -r requirements/windows.txt
     #   botocore
     #   kubernetes
     #   python-etcd
