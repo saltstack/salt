@@ -54,6 +54,7 @@ Azure (ARM) Network Execution Module
 # Python libs
 
 import logging
+from functools import wraps
 
 # Salt libs
 import salt.utils.azurearm
@@ -87,7 +88,28 @@ def __virtual__():
     return __virtualname__
 
 
-@salt.utils.azurearm.deprecation_message
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def check_dns_name_availability(name, region, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -118,7 +140,7 @@ def check_dns_name_availability(name, region, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def check_ip_address_availability(
     ip_address, virtual_network, resource_group, **kwargs
 ):
@@ -158,7 +180,7 @@ def check_ip_address_availability(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def default_security_rule_get(name, security_group, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -202,7 +224,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def default_security_rules_list(security_group, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -239,7 +261,7 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def security_rules_list(security_group, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -272,7 +294,7 @@ def security_rules_list(security_group, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def security_rule_create_or_update(
     name,
     access,
@@ -424,7 +446,7 @@ def security_rule_create_or_update(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def security_rule_delete(security_rule, security_group, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -462,7 +484,7 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def security_rule_get(security_rule, security_group, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -499,7 +521,7 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_security_group_create_or_update(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -560,7 +582,7 @@ def network_security_group_create_or_update(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_security_group_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -593,7 +615,7 @@ def network_security_group_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_security_group_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -625,7 +647,7 @@ def network_security_group_get(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_security_groups_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -657,7 +679,7 @@ def network_security_groups_list(resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
     """
     .. versionadded:: 2019.2.0
@@ -686,7 +708,7 @@ def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def subnets_list(virtual_network, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -723,7 +745,7 @@ def subnets_list(virtual_network, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def subnet_get(name, virtual_network, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -761,7 +783,7 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def subnet_create_or_update(
     name, address_prefix, virtual_network, resource_group, **kwargs
 ):
@@ -841,7 +863,7 @@ def subnet_create_or_update(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def subnet_delete(name, virtual_network, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -879,7 +901,7 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def virtual_networks_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -909,7 +931,7 @@ def virtual_networks_list_all(**kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def virtual_networks_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -943,7 +965,7 @@ def virtual_networks_list(resource_group, **kwargs):
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def virtual_network_create_or_update(name, address_prefixes, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1018,7 +1040,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def virtual_network_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1051,7 +1073,7 @@ def virtual_network_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def virtual_network_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1083,7 +1105,7 @@ def virtual_network_get(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def load_balancers_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1113,7 +1135,7 @@ def load_balancers_list_all(**kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def load_balancers_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1146,7 +1168,7 @@ def load_balancers_list(resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def load_balancer_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1178,7 +1200,7 @@ def load_balancer_get(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def load_balancer_create_or_update(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1365,7 +1387,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def load_balancer_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1398,7 +1420,7 @@ def load_balancer_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def usages_list(location, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1426,7 +1448,7 @@ def usages_list(location, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interface_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1460,7 +1482,7 @@ def network_interface_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interface_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1493,7 +1515,7 @@ def network_interface_get(name, resource_group, **kwargs):
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interface_create_or_update(
     name, ip_configurations, subnet, virtual_network, resource_group, **kwargs
 ):
@@ -1618,7 +1640,7 @@ def network_interface_create_or_update(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interfaces_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1648,7 +1670,7 @@ def network_interfaces_list_all(**kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interfaces_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1682,7 +1704,7 @@ def network_interfaces_list(resource_group, **kwargs):
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interface_get_effective_route_table(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1718,7 +1740,7 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def network_interface_list_effective_network_security_groups(
     name, resource_group, **kwargs
 ):
@@ -1756,7 +1778,7 @@ def network_interface_list_effective_network_security_groups(
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def list_virtual_machine_scale_set_vm_network_interfaces(
     scale_set, vm_index, resource_group, **kwargs
 ):
@@ -1800,7 +1822,7 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def list_virtual_machine_scale_set_network_interfaces(
     scale_set, resource_group, **kwargs
 ):
@@ -1841,7 +1863,7 @@ def list_virtual_machine_scale_set_network_interfaces(
 
 
 # pylint: disable=invalid-name
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def get_virtual_machine_scale_set_network_interface(
     name, scale_set, vm_index, resource_group, **kwargs
 ):
@@ -1886,7 +1908,7 @@ def get_virtual_machine_scale_set_network_interface(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def public_ip_address_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1919,7 +1941,7 @@ def public_ip_address_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def public_ip_address_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1956,7 +1978,7 @@ def public_ip_address_get(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def public_ip_address_create_or_update(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2015,7 +2037,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def public_ip_addresses_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2045,7 +2067,7 @@ def public_ip_addresses_list_all(**kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def public_ip_addresses_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2078,7 +2100,7 @@ def public_ip_addresses_list(resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2115,7 +2137,7 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2153,7 +2175,7 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_rule_create_or_update(
     name, access, communities, route_filter, resource_group, **kwargs
 ):
@@ -2233,7 +2255,7 @@ def route_filter_rule_create_or_update(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_rules_list(route_filter, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2270,7 +2292,7 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2303,7 +2325,7 @@ def route_filter_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2338,7 +2360,7 @@ def route_filter_get(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filter_create_or_update(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2397,7 +2419,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filters_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2432,7 +2454,7 @@ def route_filters_list(resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_filters_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2462,7 +2484,7 @@ def route_filters_list_all(**kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_delete(name, route_table, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2499,7 +2521,7 @@ def route_delete(name, route_table, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_get(name, route_table, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2537,7 +2559,7 @@ def route_get(name, route_table, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_create_or_update(
     name,
     address_prefix,
@@ -2610,7 +2632,7 @@ def route_create_or_update(
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def routes_list(route_table, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2647,7 +2669,7 @@ def routes_list(route_table, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_table_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2680,7 +2702,7 @@ def route_table_delete(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_table_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2715,7 +2737,7 @@ def route_table_get(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_table_create_or_update(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2774,7 +2796,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_tables_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -2807,7 +2829,7 @@ def route_tables_list(resource_group, **kwargs):
     return result
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def route_tables_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
