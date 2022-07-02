@@ -88,9 +88,6 @@ def __virtual__():
     return HAS_NEUTRON
 
 
-__opts__ = {}
-
-
 def _auth(profile=None):
     """
     Set up neutron credentials
