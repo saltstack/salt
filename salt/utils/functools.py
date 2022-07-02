@@ -12,7 +12,7 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 
-def namespaced_function(function, global_dict, defaults=None, preserve_context=False):
+def namespaced_function(function, global_dict, defaults=None, preserve_context=True):
     """
     Redefine (clone) a function under a different globals() namespace scope
 
