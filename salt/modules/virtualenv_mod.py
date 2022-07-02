@@ -4,18 +4,20 @@ Create virtualenv environments.
 .. versionadded:: 0.17.0
 """
 
-
+import enum
 import glob
 import logging
 import os
 import re
 import shutil
 import sys
+import typing
 
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.verify
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 KNOWN_BINARY_NAMES = frozenset(
@@ -44,6 +46,12 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
     """
     return virtualenv version if exists
     """
+
+    salt.utils.versions.warn_until(
+        "Phosphorus",
+        "virtualenv_ver is not well named, and not well defined in python3.",
+    )
+
     # Virtualenv package
     try:
         import virtualenv
@@ -72,8 +80,15 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
     return virtualenv_version_info
 
 
+class Provider(enum.Enum):
+    VENV = "venv"
+    VIRTUALENV = "virtualenv"
+    PYENV_VIRTUALENV = "pyenv-virtualenv"
+
+
 def create(
     path,
+    provider: typing.Optional[str] = None,
     venv_bin=None,
     system_site_packages=False,
     distribute=False,
@@ -96,20 +111,28 @@ def create(
     path
         The path to the virtualenv to be created
 
+    provider
+        The provider of a virtual environment.
+        One of "venv" or "virtualenv"
+        Defaults to ``virtualenv``.
+
     venv_bin
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
         Defaults to ``virtualenv``.
 
-    system_site_packages : False
-        Passthrough argument given to virtualenv or pyvenv
-
-    distribute : False
-        Passthrough argument given to virtualenv
-
     pip : False
         Install pip after creating a virtual environment. Implies
-        ``distribute=True``
+        ``distribute=True``.
+        Deprecated.
+
+    distribute : False
+        Install setuptools.
+        Passthrough argument given to virtualenv.
+        Deprecated.
+
+    system_site_packages : False
+        Passthrough argument given to virtualenv or pyvenv
 
     clear : False
         Passthrough argument given to virtualenv or pyvenv
@@ -174,28 +197,86 @@ def create(
          - env:
            - VIRTUALENV_ALWAYS_COPY: 1
     """
-    if venv_bin is None:
+    all_passthrough = {
+        "system_site_packages": system_site_packages,
+        "clear": clear,
+    }
+    venv_passthrough = {
+        "symlinks": symlinks,
+        "upgrade": upgrade,
+    }
+    virtualenv_passthrough = {
+        "python": python,
+        "extra_search_dir": extra_search_dir,
+        "never_download": never_download,
+        "prompt": prompt,
+    }
+
+    if __pillar__.get("venv_bin"):
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "Python2 is deprecated, and as it is not support by Python3's venv module, "
+            "it is no longer supported to set a venv_bin in a pillar.",
+        )
+
+    if pip is not None:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "Python2 is deprecated, so it is no longer required to explicitly install pip.",
+        )
+
+    if distribute is not None:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "Python2 is deprecated, so distribute is no longer required to install setuptools.",
+        )
+
+    if provider and venv_bin:
+        raise CommandExecutionError(
+            "The provider and venv_bin options are mutually exclusive"
+        )
+
+    if provider:
+        provider = Provider(provider.upper())
+        if provider == Provider.VENV:
+            cmd = ["python", "-m", "venv"]
+        else:
+            venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
+            cmd = [venv_bin]
+    elif venv_bin:
+        if "pyvenv" in venv_bin:
+            provider = Provider.PYENV_VIRTUALENV
+        elif "venv" in venv_bin:
+            provider = Provider.PYENV_VENV
+        else:
+            provider = Provider.VIRTUALENV
+        cmd = [venv_bin]
+    elif venv_bin is None and provider is None:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "Python2 is deprecated, so virtualenv is no longer required."
+            "Default will chage from virtualenv to python3's venv module unless specified.",
+            category=FutureWarning,
+        )
+        provider = Provider.VIRTUALENV
         venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
+        cmd = [venv_bin]
+    else:
+        raise CommandExecutionError("venv_bin or provider option malformed")
 
-    cmd = [venv_bin]
-
-    if "pyvenv" not in venv_bin:
-        # ----- Stop the user if pyvenv only options are used --------------->
+    if provider == Provider.VIRTUALENV:
+        # Stop the user if pyvenv only options are used
         # If any of the following values are not None, it means that the user
         # is actually passing a True or False value. Stop Him!
-        if upgrade is not None:
-            raise CommandExecutionError(
-                "The `upgrade`(`--upgrade`) option is not supported by '{}'".format(
-                    venv_bin
+        for option, value in venv_passthrough.items():
+            if value is not None:
+                raise CommandExecutionError(
+                    "The `{option}`(`--{option_replace}`) option is not supported by '{provider}'".format(
+                        option=option,
+                        option_replace=option.replace("_", "-"),
+                        provider=provider.value,
+                    )
                 )
-            )
-        elif symlinks is not None:
-            raise CommandExecutionError(
-                "The `symlinks`(`--symlinks`) option is not supported by '{}'".format(
-                    venv_bin
-                )
-            )
-        # <---- Stop the user if pyvenv only options are used ----------------
 
         virtualenv_version_info = virtualenv_ver(venv_bin, user=user, **kwargs)
 
@@ -232,35 +313,23 @@ def create(
                 cmd.append("--never-download")
         if prompt is not None and prompt.strip() != "":
             cmd.append("--prompt='{}'".format(prompt))
+
     else:
         # venv module from the Python >= 3.3 standard library
+        # or pyenv virtualenv
 
-        # ----- Stop the user if virtualenv only options are being used ----->
+        # Stop the user if virtualenv only options are being used
         # If any of the following values are not None, it means that the user
         # is actually passing a True or False value. Stop Him!
-        if python is not None and python.strip() != "":
-            raise CommandExecutionError(
-                "The `python`(`--python`) option is not supported by '{}'".format(
-                    venv_bin
+        for option, value in virtualenv_passthrough.items():
+            if value is not None:
+                raise CommandExecutionError(
+                    "The `{option}`(`--{option_replace}`) option is not supported by '{provider}'".format(
+                        option=option,
+                        option_replace=option.replace("_", "-"),
+                        provider=provider.value,
+                    )
                 )
-            )
-        elif extra_search_dir is not None and extra_search_dir.strip() != "":
-            raise CommandExecutionError(
-                "The `extra_search_dir`(`--extra-search-dir`) option is not "
-                "supported by '{}'".format(venv_bin)
-            )
-        elif never_download is not None:
-            raise CommandExecutionError(
-                "The `never_download`(`--never-download`) option is not "
-                "supported by '{}'".format(venv_bin)
-            )
-        elif prompt is not None and prompt.strip() != "":
-            raise CommandExecutionError(
-                "The `prompt`(`--prompt`) option is not supported by '{}'".format(
-                    venv_bin
-                )
-            )
-        # <---- Stop the user if virtualenv only options are being used ------
 
         if upgrade is True:
             cmd.append("--upgrade")

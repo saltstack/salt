@@ -66,6 +66,11 @@ def managed(
     name
         Path to the virtualenv.
 
+    provider
+        The provider of a virtual environment.
+        One of "venv" or "virtualenv"
+        Defaults to ``virtualenv``.
+
     venv_bin: virtualenv
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.

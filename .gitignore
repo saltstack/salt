@@ -36,6 +36,7 @@ Pipfile.lock
 /tests/unit/templates/roots/
 /var/
 /venv/
+/.venv/
 
 # setuptools stuff
 *.egg-info

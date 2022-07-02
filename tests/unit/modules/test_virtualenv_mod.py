@@ -412,3 +412,11 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
                 ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
         self.assertEqual(ret, (20, 0, 23))
+
+    def test_venv(self):
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
+            virtualenv_mod.create("/tmp/foo", provider="venv")
+            mock.assert_called_once_with(
+                ["python", "-m", "venv", "/tmp/foo"], runas=None, python_shell=False
+            )
