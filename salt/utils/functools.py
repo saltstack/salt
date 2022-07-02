@@ -1,38 +1,62 @@
 """
 Utility functions to modify other functions
 """
-
-
 import logging
 import types
 
 import salt.utils.args
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
 
-def namespaced_function(function, global_dict, defaults=None, preserve_context=True):
+def namespaced_function(function, global_dict, defaults=None, preserve_context=None):
     """
-    Redefine (clone) a function under a different globals() namespace scope
+    Redefine (clone) a function under a different globals() namespace scope.
 
-        preserve_context:
-            Allow keeping the context taken from orignal namespace,
-            and extend it with globals() taken from
-            new targetted namespace.
+    Any keys missing in the passed ``global_dict`` that is present in the
+    passed function ``__globals__`` attribute get's copied over into
+    ``global_dict``, thus avoiding ``NameError`` from modules imported in
+    the original function module.
+
+    :param defaults:
+        .. deprecated:: 3005
+
+    :param preserve_context:
+        .. deprecated:: 3005
+
+        Allow keeping the context taken from orignal namespace,
+        and extend it with globals() taken from
+        new targetted namespace.
     """
-    if defaults is None:
-        defaults = function.__defaults__
+    if defaults is not None:
+        salt.utils.versions.warn_until(
+            3008,
+            "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
+            "for removal in {version} and no longer does anything for the "
+            "function being namespaced.",
+        )
 
-    if preserve_context:
-        _global_dict = function.__globals__.copy()
-        _global_dict.update(global_dict)
-        global_dict = _global_dict
+    if preserve_context is not None:
+        salt.utils.versions.warn_until(
+            3008,
+            "Passing 'preserve_context' to 'namespaced_function' is deprecated, "
+            "slated for removal in {version} and no longer does anything for the "
+            "function being namespaced.",
+        )
+
+    # Make sure that any key on the globals of the function being copied get's
+    # added to the destination globals dictionary, if not present.
+    for key, value in function.__globals__.items():
+        if key not in global_dict:
+            global_dict[key] = value
+
     new_namespaced_function = types.FunctionType(
         function.__code__,
         global_dict,
         name=function.__name__,
-        argdefs=defaults,
+        argdefs=function.__defaults__,
         closure=function.__closure__,
     )
     new_namespaced_function.__dict__.update(function.__dict__)
