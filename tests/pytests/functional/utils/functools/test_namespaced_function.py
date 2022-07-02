@@ -1,7 +1,9 @@
 import logging
 import sys
+import warnings
 
 import pytest
+from salt.utils.functools import namespaced_function
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
@@ -16,7 +18,7 @@ def preserve_context(request):
     return request.param
 
 
-def test_namespacing_preserve_context(tmp_path, shell, preserve_context):
+def test_namespacing(tmp_path, shell):
     pkgpath = tmp_path / "foopkg"
     mod1_contents = """
     import json
@@ -41,25 +43,19 @@ def test_namespacing_preserve_context(tmp_path, shell, preserve_context):
     from salt.utils.functools import namespaced_function
     from foopkg.mod1 import func_1
 
-    func_1 = namespaced_function(func_1, globals(), preserve_context={})
+    func_1 = namespaced_function(func_1, globals())
 
     def main():
-        try:
-            result = func_1()
-        except Exception as exc:
-            result = str(exc)
-        data = {{
-            "func1": result,
+        data = {
+            "func1": func_1(),
             "module": func_1.__module__,
             "time_present": "time" in func_1.__globals__
-        }}
+        }
         print(json.dumps(data))
 
     if __name__ == "__main__":
         main()
-    """.format(
-        preserve_context
-    )
+    """
     run1_contents = """
     import sys
     sys.path.insert(0, '{}')
@@ -99,9 +95,37 @@ def test_namespacing_preserve_context(tmp_path, shell, preserve_context):
         log.warning(ret)
         assert ret.returncode == 0
         assert ret.data["module"] == "foopkg.mod2"
-        if preserve_context:
-            assert isinstance(ret.data["func1"], float)
-            assert ret.data["time_present"] is True
-        else:
-            assert isinstance(ret.data["func1"], str)
-            assert ret.data["time_present"] is False
+        assert isinstance(ret.data["func1"], float)
+        assert ret.data["time_present"] is True
+
+
+def test_deprecated_defaults_kwarg():
+    def foo():
+        pass
+
+    with warnings.catch_warnings(record=True) as w:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        namespaced_function(foo, globals(), defaults={"foo": 1})
+
+    assert str(w[-1].message) == (
+        "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
+        "for removal in 3008 and no longer does anything for the function "
+        "being namespaced."
+    )
+
+
+def test_deprecated_preserve_context_kwarg(preserve_context):
+    def foo():
+        pass
+
+    with warnings.catch_warnings(record=True) as w:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        namespaced_function(foo, globals(), preserve_context=preserve_context)
+
+    assert str(w[-1].message) == (
+        "Passing 'preserve_context' to 'namespaced_function' is deprecated, slated "
+        "for removal in 3008 and no longer does anything for the function "
+        "being namespaced."
+    )
