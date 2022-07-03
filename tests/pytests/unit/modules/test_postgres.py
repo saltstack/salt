@@ -67,7 +67,6 @@ def idfn(val):
     ids=idfn,
 )
 def test_verify_password(role, password, verifier, method, result):
-    patcher = patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql"))
     assert postgres._verify_password(role, password, verifier, method) == result
 
 
