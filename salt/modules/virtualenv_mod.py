@@ -48,7 +48,7 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
     """
 
     salt.utils.versions.warn_until(
-        "Phosphorus",
+        "Sulfur",
         "virtualenv_ver is not well named, and not well defined in python3.",
     )
 
@@ -214,20 +214,20 @@ def create(
 
     if __pillar__.get("venv_bin"):
         salt.utils.versions.warn_until(
-            "Phosphorus",
+            "Sulfur",
             "Python2 is deprecated, and as it is not support by Python3's venv module, "
             "it is no longer supported to set a venv_bin in a pillar.",
         )
 
     if pip is not None:
         salt.utils.versions.warn_until(
-            "Phosphorus",
+            "Sulfur",
             "Python2 is deprecated, so it is no longer required to explicitly install pip.",
         )
 
     if distribute is not None:
         salt.utils.versions.warn_until(
-            "Phosphorus",
+            "Sulfur",
             "Python2 is deprecated, so distribute is no longer required to install setuptools.",
         )
 
@@ -237,7 +237,7 @@ def create(
         )
 
     if provider:
-        provider = Provider(provider.upper())
+        provider = Provider(provider)
         if provider == Provider.VENV:
             cmd = ["python", "-m", "venv"]
         else:
@@ -253,7 +253,7 @@ def create(
         cmd = [venv_bin]
     elif venv_bin is None and provider is None:
         salt.utils.versions.warn_until(
-            "Phosphorus",
+            "Sulfur",
             "Python2 is deprecated, so virtualenv is no longer required."
             "Default will chage from virtualenv to python3's venv module unless specified.",
             category=FutureWarning,

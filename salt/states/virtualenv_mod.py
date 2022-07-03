@@ -7,6 +7,7 @@ Setup of Python virtualenv sandboxes.
 
 import logging
 import os
+import typing
 
 import salt.utils.functools
 import salt.utils.platform
@@ -28,6 +29,7 @@ def __virtual__():
 
 def managed(
     name,
+    provider: typing.Optional[str] = None,
     venv_bin=None,
     requirements=None,
     system_site_packages=False,
@@ -198,6 +200,7 @@ def managed(
         try:
             venv_ret = __salt__["virtualenv.create"](
                 name,
+                provider=provider,
                 venv_bin=venv_bin,
                 system_site_packages=system_site_packages,
                 distribute=distribute,
