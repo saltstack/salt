@@ -130,6 +130,7 @@ def check_container_started(timeout_at, container, combo):
         sleeptime *= 2
     else:
         return False
+    time.sleep(0.5)
     return True
 
 
