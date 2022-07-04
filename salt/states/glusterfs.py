@@ -73,7 +73,8 @@ def peered(name):
         # it from the user.
         this_ips = set(salt.utils.network.ip_addrs())
         this_ips.update(salt.utils.network.ip_addrs6())
-        if this_ips.intersection(name_ips):
+        if (any(salt.utils.network.is_loopback(addr) for addr in name_ips)
+                or this_ips.intersection(name_ips)):
             ret["result"] = True
             ret["comment"] = "Peering with localhost is not needed"
             return ret
