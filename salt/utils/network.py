@@ -324,6 +324,16 @@ def is_ipv6(ip_addr):
         return False
 
 
+def is_loopback(ip_addr):
+    """
+    Returns a bool telling if the value passed to it is a loopback address
+    """
+    try:
+        return ipaddress.ip_address(ip_addr).is_loopback
+    except ValueError:
+        return False
+
+
 def is_subnet(cidr):
     """
     Returns a bool telling if the passed string is an IPv4 or IPv6 subnet
