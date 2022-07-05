@@ -42,14 +42,14 @@ For RedHat:
     baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/
 
 For Ubuntu, replace the ``<os_version>`` variable with number of the Ubuntu
-version. For example ``20.04``:
+version. For example ``22.04`` for Jammy:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64 focal main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64 jammy main
 
 For Debian, replace the ``<os_version>`` variable with the Debian version. For
-example: ``10``:
+example: ``10`` for Buster:
 
 .. code-block:: none
 
@@ -66,11 +66,11 @@ For RedHat:
     baseurl=https://repo.saltproject.io/salt_rc/py3/redhat/$releasever/$basearch/
 
 For Ubuntu, replace the ``<os_version>`` variable with number of the Ubuntu
-version. For example ``20.04``:
+version. For example ``22.04`` for Jammy:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 focal main
+    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 jammy main
 
 For Debian, replace the ``<os_version>`` variable with the Debian version. For
 example: ``10``:
