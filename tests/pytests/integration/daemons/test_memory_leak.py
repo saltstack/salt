@@ -74,6 +74,4 @@ def test_memory_leak(salt_cli, salt_minion, file_add_sls, file_delete_sls):
     numerator = sum(x * y - y_bar * x for x, y in usage_ts_data)
     denominator = sum(x * x - x_bar * x for x, y in usage_ts_data)
     slope = numerator / denominator
-    print(f"DATA: {usage_ts_data}")
-    print(f"SLOPE: {slope}")
     assert slope <= 0
