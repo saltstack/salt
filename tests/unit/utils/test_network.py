@@ -233,6 +233,15 @@ class NetworkTestCase(TestCase):
         self.assertTrue(network.ipv6("2001:0db8:85a3::8a2e:0370:7334"))
         self.assertTrue(network.ipv6("2001:67c:2e8::/48"))
 
+    def test_is_loopback(self):
+        self.assertTrue(network.is_loopback("127.0.1.1"))
+        self.assertTrue(network.is_loopback("::1"))
+        self.assertFalse(network.is_loopback("10.0.1.2"))
+        self.assertFalse(network.is_loopback("2001:db8:0:1:1:1:1:1"))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6("sixteen-char-str"))
+
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
         good_host_ports = {
