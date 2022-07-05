@@ -1,0 +1,60 @@
+Source: salt
+Section: admin
+Priority: optional
+Maintainer: Debian Salt Team <pkg-salt-team@lists.alioth.debian.org>
+Uploaders: Joe Healy <joehealy@gmail.com>,
+           Franklin G Mendoza <franklin.g.mendoza@gmail.com>,
+           Andriy Senkovych <jolly_roger@itblog.org.ua>,
+           David Murphy <dmurphy@saltstack.com>
+Build-Depends: build-essential,
+               devscripts,
+               gdb,
+               lcov,
+               libbz2-dev,
+               libffi-dev,
+               libgdbm-dev,
+               libgdbm-compat-dev,
+               libncurses5-dev,
+               libreadline6-dev,
+               libsqlite3-dev,
+               libssl-dev,
+               lzma,
+               liblzma-dev,
+               tk-dev,
+               uuid-dev,
+               zlib1g-dev,
+               patchelf,
+               curl,
+               bash-completion,
+               debhelper (>= 10),
+               dh-python
+Standards-Version: 4.1.3
+Homepage: http://saltstack.org/
+Vcs-Browser: https://github.com/saltstack/salt.git
+Vcs-Git: git://github.com/saltstack/salt.git
+
+
+Package: salt
+Architecture: amd64
+Depends: ${misc:Depends}
+Suggests: ifupdown
+Recommends: lsb-release
+Description: shared libraries that salt requires for all packages
+ salt is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of
+ servers. This means systems can be easily managed, but data can
+ also be easily gathered.  Quick introspection into running
+ systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a
+ remote system. Salt addresses this problem as well, the salt
+ state system uses salt state files to define the state a server
+ needs to be in.
+ .
+ Between the remote execution system, and state management Salt
+ addresses the backbone of cloud and data center management.
+ .
+ This particular package provides shared libraries that
+ salt-master, salt-minion, and salt-syndic require to function.

@@ -1,0 +1,2 @@
+conf/cloud /etc/salt
+debian/one-dir-bins/salt-cloud /usr/bin

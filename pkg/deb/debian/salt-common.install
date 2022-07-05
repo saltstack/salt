@@ -1,0 +1,13 @@
+build/salt /opt/saltstack
+pkg/fish-completions/salt-run.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt-minion.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt-master.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt-key.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt-cp.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt-call.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt-syndic.fish /usr/share/fish/vendor_completions.d
+pkg/fish-completions/salt_common.fish /usr/share/fish/vendor_completions.d
+debian/one-dir-bins/salt-call /usr/bin
+debian/one-dir-bins/spm /usr/bin
+debian/one-dir-bins/salt-pip /usr/bin

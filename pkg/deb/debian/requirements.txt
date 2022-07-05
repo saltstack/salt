@@ -1,0 +1,5 @@
+# This file only exists currently because tiamat imposes it's existance.
+# That should be fixed in tiamat but until it's not, this is just a blank
+# requirements file or any requirements here are just extra requirements.
+tiamat-pip==1.5.1
+setuptools<60.7.0

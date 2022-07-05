@@ -1,0 +1,2 @@
+#!/bin/bash
+exec /opt/saltstack/salt/run/run cp "${@:1}"

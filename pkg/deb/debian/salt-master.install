@@ -1,0 +1,7 @@
+conf/master /etc/salt
+pkg/salt-master.service /lib/systemd/system
+debian/one-dir-bins/salt /usr/bin
+debian/one-dir-bins/salt-cp /usr/bin
+debian/one-dir-bins/salt-key /usr/bin
+debian/one-dir-bins/salt-master /usr/bin
+debian/one-dir-bins/salt-run /usr/bin
