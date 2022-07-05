@@ -42,18 +42,25 @@ For RedHat:
     baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/
 
 For Ubuntu, replace the ``<os_version>`` variable with number of the Ubuntu
-version. For example ``22.04`` for Jammy:
+version and ``<codename>`` for the release codename.
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64 jammy main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64 <codename> main
 
-For Debian, replace the ``<os_version>`` variable with the Debian version. For
-example: ``10`` for Buster:
+For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/debian/<os_version>/amd64 buster main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/22.04/amd64 jammy main
+
+
+For Debian, the syntax is identical to Ubuntu. For example, for the version 10
+(Buster) release:
+
+.. code-block:: none
+
+    deb https://repo.saltproject.io/salt_rc/salt/py3/debian/10/amd64 buster main
 
 
 
@@ -66,18 +73,25 @@ For RedHat:
     baseurl=https://repo.saltproject.io/salt_rc/py3/redhat/$releasever/$basearch/
 
 For Ubuntu, replace the ``<os_version>`` variable with number of the Ubuntu
-version. For example ``22.04`` for Jammy:
+version and ``<codename>`` for the release codename.
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 jammy main
+    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 <codename> main
 
-For Debian, replace the ``<os_version>`` variable with the Debian version. For
-example: ``10``:
+For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/py3/debian/<os_version>/amd64 buster main
+    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/22.04/amd64 jammy main
+
+
+For Debian, the syntax is identical to Ubuntu. For example, for the version 10
+(Buster) release:
+
+.. code-block:: none
+
+    deb https://repo.saltproject.io/salt_rc/py3/debian/10/amd64 buster main
 
 
 
