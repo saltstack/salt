@@ -1,0 +1,2 @@
+pkg/salt-api.service /lib/systemd/system
+debian/one-dir-bins/salt-api /usr/bin

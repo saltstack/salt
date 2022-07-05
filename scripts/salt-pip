@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import os
 import re
 import sys
@@ -7,8 +6,12 @@ import sys
 bin_path = os.path.dirname(os.path.abspath(__file__))
 if bin_path.endswith("bin"):
     prefix_path = os.path.dirname(bin_path)
+    if not os.path.exists(os.path.join(prefix_path, ".onedir")):
+        prefix_path = "/opt/saltstack/salt"
 else:
     prefix_path = bin_path
+    if not os.path.exists(os.path.join(prefix_path, ".onedir")):
+        prefix_path = "/opt/saltstack/salt"
 
 
 # Pin to the python in our directory
@@ -37,8 +40,12 @@ import sys
 bin_path = os.path.dirname(os.path.abspath(__file__))
 if bin_path.endswith("bin"):
     prefix_path = os.path.dirname(bin_path)
+    if not os.path.exists(os.path.join(prefix_path, ".onedir")):
+        prefix_path = "/opt/saltstack/salt"
 else:
     prefix_path = bin_path
+    if not os.path.exists(os.path.join(prefix_path, ".onedir")):
+        prefix_path = "/opt/saltstack/salt"
 
 # Pin to the python in our directory
 sys.prefix = prefix_path

@@ -7,6 +7,7 @@
 
 SCRIPT=$(cat <<'EOF'
 set -e
+yum install deltarpm
 yum install epel-release -y
 yum --disablerepo="*" --enablerepo="epel" list available
 yum install yum-utils -y

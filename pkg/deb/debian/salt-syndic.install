@@ -1,0 +1,2 @@
+pkg/salt-syndic.service /lib/systemd/system
+debian/one-dir-bins/salt-syndic /usr/bin

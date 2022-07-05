@@ -4,7 +4,7 @@ PY_SUFFIX ?= $(shell echo $(PYTHON_VERSION) | sed -r 's/([0-9]+)(\.[0-9]+)(\.[0-
 TARGET_DIRNAME := $(shell dirname $(TARGET_DIR))
 TARGET_BASENAME := $(shell basename $(TARGET_DIR))
 DYNLOAD = $(TARGET_DIR)/lib/python$(PY_SUFFIX)/lib-dynload/*.so
-DYNLIB := libssl.so.10 libcrypto.so.10 libcrypt.so libffi.so.6
+DYNLIB := libssl.so.10 libcrypto.so.10 libcrypt.so libffi.so.6 libpthread.so.0 libc.so.6 libm.so libutil.so
 
 
 .PHONY: all $(SCRIPTS) $(DYNLOAD)
@@ -35,7 +35,10 @@ $(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION
 	./configure --prefix=$(TARGET_DIR) ; \ #--enable-optimizations; \
 	make -j4; make install; \
 
-$(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX)
+$(TARGET_DIR)/.onedir:
+	touch $(TARGET_DIR)/.onedir
+
+$(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.onedir
 	cp $(PWD)/scripts/salt-pip $(SCRIPTS_DIR)/salt-pip
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $@;
 
@@ -45,6 +48,7 @@ $(DYNLOAD):
 
 $(DYNLIB):
 	cp $(realpath /lib64/$@) $(TARGET_DIR)/lib/python$(PY_SUFFIX)/lib-dynload/$@
+
 
 $(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip $(DYNLOAD) $(DYNLIB)
 	$(SCRIPTS_DIR)/salt-pip install .

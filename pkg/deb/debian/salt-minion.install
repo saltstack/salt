@@ -1,0 +1,6 @@
+conf/minion /etc/salt
+conf/proxy /etc/salt
+pkg/salt-minion.service /lib/systemd/system
+pkg/salt-proxy@.service /lib/systemd/system
+debian/one-dir-bins/salt-minion /usr/bin
+debian/one-dir-bins/salt-proxy /usr/bin

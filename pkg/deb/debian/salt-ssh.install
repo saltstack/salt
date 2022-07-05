@@ -1,0 +1,2 @@
+conf/roster /etc/salt
+debian/one-dir-bins/salt-ssh /usr/bin
