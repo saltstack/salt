@@ -46,6 +46,11 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": comt})
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
+                mock_host_ips.return_value = ["127.0.1.1"]
+                comt = "Peering with localhost is not needed"
+                ret.update({"comment": comt})
+                self.assertDictEqual(glusterfs.peered(name), ret)
+
                 mock_host_ips.return_value = ["2001:db8::1"]
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
