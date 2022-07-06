@@ -214,6 +214,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     """
 
     mod_dict_class = dict
+    _clean_module_dirs_mutex = threading.Lock()
 
     def __init__(
         self,
@@ -625,18 +626,20 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self._reload_submodules(submodule)
 
     def __populate_sys_path(self):
-        for directory in self.extra_module_dirs:
-            if directory not in sys.path:
-                sys.path.append(directory)
-                self._clean_module_dirs.append(directory)
+        with LazyLoader._clean_module_dirs_mutex:
+            for directory in self.extra_module_dirs:
+                if directory not in sys.path:
+                    sys.path.append(directory)
+                    self._clean_module_dirs.append(directory)
 
     def __clean_sys_path(self):
-        invalidate_path_importer_cache = False
-        for directory in self._clean_module_dirs:
-            if directory in sys.path:
-                sys.path.remove(directory)
-                invalidate_path_importer_cache = True
-        self._clean_module_dirs = []
+        with LazyLoader._clean_module_dirs_mutex:
+            invalidate_path_importer_cache = False
+            for directory in self._clean_module_dirs:
+                if directory in sys.path:
+                    sys.path.remove(directory)
+                    invalidate_path_importer_cache = True
+            self._clean_module_dirs.clear()
 
         # Be sure that sys.path_importer_cache do not contains any
         # invalid FileFinder references
