@@ -119,7 +119,7 @@ VALID_OPTS = immutabletypes.freeze(
         "master_uri_format": str,
         # The following options refer to the Minion only, and they specify
         # the details of the source address / port to be used when connecting to
-        # the Master. This is useful when dealing withmachines where due to firewall
+        # the Master. This is useful when dealing with machines where due to firewall
         # rules you are restricted to use a certain IP/port combination only.
         "source_interface_name": str,
         "source_address": str,
@@ -131,7 +131,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Deprecated in 2019.2.0. Use 'random_master' instead.
         # Do not remove! Keep as an alias for usability.
         "master_shuffle": bool,
-        # When in multi-master mode, temporarily remove a master from the list if a conenction
+        # When in multi-master mode, temporarily remove a master from the list if a connection
         # is interrupted and try another master in the list.
         "master_alive_interval": int,
         # When in multi-master failover mode, fail back to the first master in the list if it's back
@@ -165,7 +165,7 @@ VALID_OPTS = immutabletypes.freeze(
         "syndic_finger": str,
         # The caching mechanism to use for the PKI key store. Can substantially decrease master publish
         # times. Available types:
-        # 'maint': Runs on a schedule as a part of the maintanence process.
+        # 'maint': Runs on a schedule as a part of the maintenance process.
         # '': Disable the key cache [default]
         "key_cache": str,
         # The user under which the daemon should run
@@ -208,7 +208,7 @@ VALID_OPTS = immutabletypes.freeze(
         "renderer": str,
         # Renderer whitelist. The only renderers from this list are allowed.
         "renderer_whitelist": list,
-        # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
+        # Renderer blacklist. Renderers from this list are disallowed even if specified in whitelist.
         "renderer_blacklist": list,
         # A flag indicating that a highstate run should immediately cease if a failure occurs.
         "failhard": bool,

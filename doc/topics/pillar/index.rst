@@ -522,7 +522,7 @@ The :py:func:`pillar.get <salt.modules.pillar.get>` Function
 
 The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the same
 way as the ``get`` method in a python dict, but with an enhancement: nested
-dictonaries can be traversed using a colon as a delimiter.
+dictionaries can be traversed using a colon as a delimiter.
 
 If a structure like this is in pillar:
 
@@ -706,7 +706,7 @@ The following functions support passing pillar data on the CLI via the
 - :py:func:`state.highstate <salt.modules.state.highstate>`
 - :py:func:`state.sls <salt.modules.state.sls>`
 
-Triggerring decryption of this CLI pillar data can be done in one of two ways:
+Triggering decryption of this CLI pillar data can be done in one of two ways:
 
 1. Using the ``pillar_enc`` argument:
 

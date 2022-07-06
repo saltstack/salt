@@ -32,7 +32,7 @@ example):
 #. Announce new RC to salt-users and salt-announce google groups.
 #. Triage incoming issues based on the new RC release.
 #. Fix RC issues once they are categorized as a release blocker.
-#. Depending on the issues found during the RC process make a decesion
+#. Depending on the issues found during the RC process make a decision
    on whether to release based off the RC or go through another RC process
 #. If a RC is categorized as stable, build all required packages.
 #. Test all release packages.

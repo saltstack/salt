@@ -160,7 +160,7 @@ New modules must be added to the index manually.
     :blob:`state modules<doc/ref/states/all/index.rst>`,
     :blob:`renderer modules <doc/ref/renderers/all/index.rst>`, etc.
 
-2.  Add the new module to the alphebetized list.
+2.  Add the new module to the alphabetized list.
 
 3.  :ref:`Build the documentation <docs-building>` which will generate an ``.rst``
     file for the new module in the same directory as the ``index.rst``.

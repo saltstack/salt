@@ -538,7 +538,7 @@ def do_cleanup(cleanup):
     behavior over time. Passed in volumes and domains are deleted, any errors
     are ignored. Used when cloning/provisioning a domain fails.
 
-    :param cleanup: list containing dictonaries with two keys: 'what' and 'item'.
+    :param cleanup: list containing dictionaries with two keys: 'what' and 'item'.
                     If 'what' is domain the 'item' is a libvirt domain object.
                     If 'what' is volume then the item is a libvirt volume object.
 
