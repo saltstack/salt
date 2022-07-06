@@ -79,11 +79,11 @@ version and ``<codename>`` for the release codename.
 
     deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 <codename> main
 
-For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish:
+For example, for the 20.04 release of Ubuntu, codename Focal Fosse:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/22.04/amd64 jammy main
+    deb https://repo.saltproject.io/salt_rc/py3/ubuntu/20.04/amd64 focal main
 
 
 For Debian, the syntax is identical to Ubuntu. For example, for the version 10
