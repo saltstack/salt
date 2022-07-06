@@ -19,6 +19,8 @@ The data format for `kubernetes.kubeconfig-data` value is the content of
 Only `kubeconfig` or `kubeconfig-data` should be provided. In case both are
 provided `kubeconfig` entry is preferred.
 
+CLI Example:
+
 .. code-block:: bash
 
     salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
