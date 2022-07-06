@@ -1,3 +1,0 @@
-* Deprecated ``defaults`` and ``preserve_context`` for ``salt.utils.functools.namespaced_function``.
-
-Additionally, the behavior when ``preserve_namespace=True`` was passed is now the default in order not to require duplicating imports on the modules that are namespacing functions.
