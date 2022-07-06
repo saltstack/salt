@@ -41,6 +41,8 @@ Deprecated
 - Deprecated transport kwarg inside salt.utils.event.get_event (#61275)
 - Deprecated netmiko_conn and pyeapi_conn in napalm_mod.py as these function should not be called from the CLI (#61566)
 - Deprecate all Azure cloud modules (#62183)
+- Deprecated ``defaults`` and ``preserve_context`` for ``salt.utils.functools.namespaced_function``.
+  Additionally, the behavior when ``preserve_namespace=True`` was passed is now the default in order not to require duplicating imports on the modules that are namespacing functions. (#62272)
 
 
 Changed
@@ -236,6 +238,9 @@ Fixed
 - Fix sysctl functions hard-coded relative command name (#62164)
 - All of Salt's loaders now accept ``loaded_base_name`` as a keyword argument, allowing different namespacing the loaded modules. (#62186)
 - Only functions defined on the modules being loaded will be added to the lazy loader, functions imported from other modules, unless they are properly namespaced, are not included. (#62190)
+- Fixes issue in postgresql privileges detection: privileges on views were never retrieved and always recreated. (#57690)
+- Fix service.enabled error for unavailable service in test mode (#62258)
+- Fix variable reuse causing requisite_in problems (#62264)
 
 
 Added
