@@ -626,20 +626,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self._reload_submodules(submodule)
 
     def __populate_sys_path(self):
-        with LazyLoader._clean_module_dirs_mutex:
-            for directory in self.extra_module_dirs:
-                if directory not in sys.path:
-                    sys.path.append(directory)
-                    self._clean_module_dirs.append(directory)
+        for directory in self.extra_module_dirs:
+            if directory not in sys.path:
+                sys.path.append(directory)
+                self._clean_module_dirs.append(directory)
 
     def __clean_sys_path(self):
-        with LazyLoader._clean_module_dirs_mutex:
-            invalidate_path_importer_cache = False
-            for directory in self._clean_module_dirs:
-                if directory in sys.path:
-                    sys.path.remove(directory)
-                    invalidate_path_importer_cache = True
-            self._clean_module_dirs.clear()
+        invalidate_path_importer_cache = False
+        for directory in self._clean_module_dirs:
+            if directory in sys.path:
+                sys.path.remove(directory)
+                invalidate_path_importer_cache = True
+        self._clean_module_dirs.clear()
 
         # Be sure that sys.path_importer_cache do not contains any
         # invalid FileFinder references
@@ -685,94 +683,96 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
         try:
-            self.__populate_sys_path()
-            sys.path.append(fpath_dirname)
-            if suffix == ".pyx":
-                mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
-            elif suffix == ".o":
-                top_mod = __import__(fpath, globals(), locals(), [])
-                comps = fpath.split(".")
-                if len(comps) < 2:
-                    mod = top_mod
+            with LazyLoader._clean_module_dirs_mutex:
+                self.__populate_sys_path()
+                if fpath_dirname not in sys.path:
+                    sys.path.append(fpath_dirname)
+                if suffix == ".pyx":
+                    mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
+                elif suffix == ".o":
+                    top_mod = __import__(fpath, globals(), locals(), [])
+                    comps = fpath.split(".")
+                    if len(comps) < 2:
+                        mod = top_mod
+                    else:
+                        mod = top_mod
+                        for subname in comps[1:]:
+                            mod = getattr(mod, subname)
+                elif suffix == ".zip":
+                    mod = zipimporter(fpath).load_module(name)
                 else:
-                    mod = top_mod
-                    for subname in comps[1:]:
-                        mod = getattr(mod, subname)
-            elif suffix == ".zip":
-                mod = zipimporter(fpath).load_module(name)
-            else:
-                desc = self.suffix_map[suffix]
-                # if it is a directory, we don't open a file
-                try:
-                    mod_namespace = ".".join(
-                        (
+                    desc = self.suffix_map[suffix]
+                    # if it is a directory, we don't open a file
+                    try:
+                        mod_namespace = ".".join(
+                            (
+                                self.loaded_base_name,
+                                self.mod_type_check(fpath),
+                                self.tag,
+                                name,
+                            )
+                        )
+                    except TypeError:
+                        mod_namespace = "{}.{}.{}.{}".format(
                             self.loaded_base_name,
                             self.mod_type_check(fpath),
                             self.tag,
                             name,
                         )
-                    )
-                except TypeError:
-                    mod_namespace = "{}.{}.{}.{}".format(
-                        self.loaded_base_name,
-                        self.mod_type_check(fpath),
-                        self.tag,
-                        name,
-                    )
-                if suffix == "":
-                    # pylint: disable=no-member
-                    # Package directory, look for __init__
-                    loader_details = [
-                        (
-                            importlib.machinery.SourceFileLoader,
-                            importlib.machinery.SOURCE_SUFFIXES,
-                        ),
-                        (
-                            importlib.machinery.SourcelessFileLoader,
-                            importlib.machinery.BYTECODE_SUFFIXES,
-                        ),
-                        (
-                            importlib.machinery.ExtensionFileLoader,
-                            importlib.machinery.EXTENSION_SUFFIXES,
-                        ),
-                    ]
-                    file_finder = importlib.machinery.FileFinder(
-                        fpath_dirname, *loader_details
-                    )
-                    spec = file_finder.find_spec(mod_namespace)
-                    if spec is None:
-                        raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
-                    # pylint: enable=no-member
-                    sys.modules[mod_namespace] = mod
-                    # reload all submodules if necessary
-                    if not self.initial_load:
-                        self._reload_submodules(mod)
-                else:
-                    # pylint: disable=no-member
-                    loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
-                    spec = importlib.util.spec_from_file_location(
-                        mod_namespace, fpath, loader=loader
-                    )
-                    if spec is None:
-                        raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = self.run(spec.loader.load_module)
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
-                    # pylint: enable=no-member
-                    sys.modules[mod_namespace] = mod
+                    if suffix == "":
+                        # pylint: disable=no-member
+                        # Package directory, look for __init__
+                        loader_details = [
+                            (
+                                importlib.machinery.SourceFileLoader,
+                                importlib.machinery.SOURCE_SUFFIXES,
+                            ),
+                            (
+                                importlib.machinery.SourcelessFileLoader,
+                                importlib.machinery.BYTECODE_SUFFIXES,
+                            ),
+                            (
+                                importlib.machinery.ExtensionFileLoader,
+                                importlib.machinery.EXTENSION_SUFFIXES,
+                            ),
+                        ]
+                        file_finder = importlib.machinery.FileFinder(
+                            fpath_dirname, *loader_details
+                        )
+                        spec = file_finder.find_spec(mod_namespace)
+                        if spec is None:
+                            raise ImportError()
+                        # TODO: Get rid of load_module in favor of
+                        # exec_module below. load_module is deprecated, but
+                        # loading using exec_module has been causing odd things
+                        # with the magic dunders we pack into the loaded
+                        # modules, most notably with salt-ssh's __opts__.
+                        mod = spec.loader.load_module()
+                        # mod = importlib.util.module_from_spec(spec)
+                        # spec.loader.exec_module(mod)
+                        # pylint: enable=no-member
+                        sys.modules[mod_namespace] = mod
+                        # reload all submodules if necessary
+                        if not self.initial_load:
+                            self._reload_submodules(mod)
+                    else:
+                        # pylint: disable=no-member
+                        loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
+                        spec = importlib.util.spec_from_file_location(
+                            mod_namespace, fpath, loader=loader
+                        )
+                        if spec is None:
+                            raise ImportError()
+                        # TODO: Get rid of load_module in favor of
+                        # exec_module below. load_module is deprecated, but
+                        # loading using exec_module has been causing odd things
+                        # with the magic dunders we pack into the loaded
+                        # modules, most notably with salt-ssh's __opts__.
+                        mod = self.run(spec.loader.load_module)
+                        # mod = importlib.util.module_from_spec(spec)
+                        # spec.loader.exec_module(mod)
+                        # pylint: enable=no-member
+                        sys.modules[mod_namespace] = mod
         except OSError:
             raise
         except ImportError as exc:
@@ -823,8 +823,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         finally:
-            sys.path.remove(fpath_dirname)
-            self.__clean_sys_path()
+            with LazyLoader._clean_module_dirs_mutex:
+                if fpath_dirname in sys.path:
+                    sys.path.remove(fpath_dirname)
+                self.__clean_sys_path()
 
         loader_context = salt.loader.context.LoaderContext()
         if hasattr(mod, "__salt_loader__"):
