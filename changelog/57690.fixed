@@ -1,1 +1,0 @@
-Fixes issue in postgresql privileges detection: privileges on views were never retrieved and always recreated.
