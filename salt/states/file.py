@@ -280,6 +280,7 @@ For example:
 
 import copy
 import difflib
+import fnmatch
 import itertools
 import logging
 import os
@@ -607,7 +608,9 @@ def _gen_keep_files(name, require, walk_d=None):
             for low in __lowstate__:
                 # A requirement should match either the ID and the name of
                 # another state.
-                if low["name"] == comp["file"] or low["__id__"] == comp["file"]:
+                if fnmatch.fnmatch(low["name"], comp["file"]) or fnmatch.fnmatch(
+                    low["__id__"], comp["file"]
+                ):
                     fn = low["name"]
                     fun = low["fun"]
                     if os.path.isdir(fn):
