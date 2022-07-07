@@ -321,7 +321,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   moto
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   pytest-salt-factories
