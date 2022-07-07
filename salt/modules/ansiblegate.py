@@ -403,7 +403,7 @@ def playbooks(
 
 def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
     """
-    .. versionadded:: 3005
+    .. versionadded:: 3006
 
     Return the inventory from an Ansible inventory_file
 
@@ -435,7 +435,7 @@ def discover_playbooks(
     syntax_check=False,
 ):
     """
-    .. versionadded:: 3005
+    .. versionadded:: 3006
 
     Discover Ansible playbooks stored under the given path or from multiple paths (locations)
 
