@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	./pkg/onedir.sh
+
+override_dh_install:
+	INSTALL_ROOT=debian/salt/  build/salt/install-salt
+	dh_install
+
+
+# XXX: This needs fixing, it's telling us we're missing some shared libraries. There is another comment on /Makefile about how to fix this.
+override_dh_shlibdeps: ;
