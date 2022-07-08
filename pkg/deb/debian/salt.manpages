@@ -1,0 +1,13 @@
+doc/man/salt-api.1
+doc/man/salt-cloud.1
+doc/man/salt-call.1
+doc/man/salt.7
+doc/man/salt.1
+doc/man/salt-cp.1
+doc/man/salt-key.1
+doc/man/salt-master.1
+doc/man/salt-run.1
+doc/man/salt-minion.1
+doc/man/salt-proxy.1
+doc/man/salt-ssh.1
+doc/man/salt-syndic.1

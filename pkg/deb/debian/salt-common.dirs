@@ -1,4 +1,0 @@
-/var/cache/salt
-/var/log/salt
-/usr/share/fish/vendor_completions.d
-/opt/saltstack/pypath

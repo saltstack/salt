@@ -19,9 +19,9 @@ yum install -y zlib-devel
 yum install patchelf -y
 cd salt
 make salt.tar.xz
+chown $UID build
 EOF
 )
-
 docker run --mount type=bind,source="$(pwd)",target=/salt --name onedir centos:centos7 /bin/bash  -c "$SCRIPT"
 #docker cp onedir:salt/salt.tar.xz .
 docker container rm onedir

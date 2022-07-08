@@ -1,0 +1,18 @@
+#!/bin/bash
+[[ -z "${INSTALL_ROOT}" ]] && INSTALL_ROOT="/" || INSTALL_ROOT="${INSTALL_ROOT}"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+echo $SCRIPT_DIR
+SCRIPTS=("salt" "salt-api" "salt-call" "salt-cloud" "salt-cp" "salt-key" "salt-master" "salt-minion" "salt-proxy" "salt-run" "salt-ssh" "salt-syndic" "spm")
+
+mkdir -p $INSTALL_ROOT/opt/saltstack/salt
+cp -r $SCRIPT_DIR/lib  $SCRIPT_DIR/bin $INSTALL_ROOT/opt/saltstack/salt/
+
+
+if [ ! -d $INSTALL_ROOT/usr/bin ]; then
+    mkdir -p $INSTALL_ROOT/usr/bin
+fi
+
+for script in ${SCRIPTS[@]}; do
+    cp $SCRIPT_DIR/$script $INSTALL_ROOT/usr/bin;
+    sed -i -e '/#/ D; s/"exec".*/#!\/opt\/saltstack\/salt\/bin\/python3/g' $INSTALL_ROOT/usr/bin/$script
+done
