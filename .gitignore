@@ -1,4 +1,10 @@
-debian
+/debian
+/pkg/deb/debian/salt
+/pkg/deb/debian/rules
+/pkg/deb/debian/*.debhelper
+/pkg/deb/debian/*.substvars
+/pkg/deb/debian/files
+/pkg/deb/debian/debhelper-build-stamp
 salt.tar.xz
 /build
 /src

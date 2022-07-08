@@ -1,4 +1,13 @@
-build/salt /opt/saltstack
+pkg/salt-api.service /lib/systemd/system
+pkg/salt-master.service /lib/systemd/system
+pkg/salt-minion.service /lib/systemd/system
+pkg/salt-proxy@.service /lib/systemd/system
+pkg/salt-syndic.service /lib/systemd/system
+conf/roster /etc/salt
+conf/cloud /etc/salt
+conf/master /etc/salt
+conf/minion /etc/salt
+conf/proxy /etc/salt
 pkg/fish-completions/salt-run.fish /usr/share/fish/vendor_completions.d
 pkg/fish-completions/salt-minion.fish /usr/share/fish/vendor_completions.d
 pkg/fish-completions/salt-master.fish /usr/share/fish/vendor_completions.d
@@ -8,6 +17,3 @@ pkg/fish-completions/salt-cp.fish /usr/share/fish/vendor_completions.d
 pkg/fish-completions/salt-call.fish /usr/share/fish/vendor_completions.d
 pkg/fish-completions/salt-syndic.fish /usr/share/fish/vendor_completions.d
 pkg/fish-completions/salt_common.fish /usr/share/fish/vendor_completions.d
-debian/one-dir-bins/salt-call /usr/bin
-debian/one-dir-bins/spm /usr/bin
-debian/one-dir-bins/salt-pip /usr/bin

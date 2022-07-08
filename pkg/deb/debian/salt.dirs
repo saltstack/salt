@@ -1,0 +1,12 @@
+/etc/salt/cloud.conf.d/
+/etc/salt/cloud.deploy.d/
+/etc/salt/cloud.maps.d/
+/etc/salt/cloud.profiles.d/
+/etc/salt/cloud.providers.d/
+/var/cache/salt
+/var/log/salt
+/usr/share/fish/vendor_completions.d
+/opt/saltstack/pypath
+/etc/salt/master.d
+/etc/salt/minion.d/
+/etc/salt/proxy.d/
