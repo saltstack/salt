@@ -1,7 +1,21 @@
 from pathlib import Path
 
+import pytest
 import salt.utils.versions as versions
-import salt.utils.yamllint as yamllint
+
+try:
+    import salt.utils.yamllint as yamllint
+
+    YAMLLINT_AVAILABLE = True
+except ImportError:
+    YAMLLINT_AVAILABLE = False
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        YAMLLINT_AVAILABLE is False, reason="The 'yammllint' pacakge is not available"
+    ),
+]
 
 
 def test_good_yaml():
