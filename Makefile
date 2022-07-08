@@ -5,6 +5,7 @@ TARGET_DIRNAME := $(shell dirname $(TARGET_DIR))
 TARGET_BASENAME := $(shell basename $(TARGET_DIR))
 DYNLOAD = $(TARGET_DIR)/lib/python$(PY_SUFFIX)/lib-dynload/*.so
 DYNLIB := libssl.so.10 libcrypto.so.10 libcrypt.so libffi.so.6 libpthread.so.0 libc.so.6 libm.so libutil.so
+SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
 
 
 .PHONY: all $(SCRIPTS) $(DYNLOAD)
@@ -15,7 +16,8 @@ clean: ;
 	rm -rf $(TARGET_DIRNAME)
 
 
-onedir: salt.tar.xz
+onedir: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt salt-$(SALT_VERSION).tar.xz
+	echo $(SALT_VERSION)
 
 $(TARGET_DIR):
 	mkdir -p $(TARGET_DIR)
@@ -46,7 +48,8 @@ $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.one
 $(DYNLOAD):
 	patchelf --set-rpath '$$ORIGIN/' $@
 
-
+# XXX: This can be done much better by searching for the libraries and using ld
+# to find out what is being linked. See the dh_shlibdeps comment in debian/rules
 $(DYNLIB):
 	cp $(realpath /lib64/$@) $(TARGET_DIR)/lib/python$(PY_SUFFIX)/lib-dynload/$@
 
@@ -66,8 +69,8 @@ $(TARGET_DIR)/install-salt:
 $(TARGET_DIR)/uninstall-salt:
 	cp $(PWD)/scripts/uninstall-salt $(SCRIPTS_DIR)/uninstall-salt
 
-salt.tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
+salt-$(SALT_VERSION).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
 	find $(TARGET_DIR) -name '*.pyc' -exec rm -f {} \;
 	# XXX: Should we keep this?
-	rm -rf $(TARGET_DIR)/include $(TARGET_DIR)/share
-	tar cJvf salt.tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);
+	#rm -rf $(TARGET_DIR)/include $(TARGET_DIR)/share
+	tar cJvf salt.$(SALT_VERSION).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);

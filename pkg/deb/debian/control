@@ -8,26 +8,7 @@ Uploaders: Joe Healy <joehealy@gmail.com>,
            David Murphy <dmurphy@saltstack.com>
 Build-Depends: build-essential,
                devscripts,
-               gdb,
-               lcov,
-               libbz2-dev,
-               libffi-dev,
-               libgdbm-dev,
-               libgdbm-compat-dev,
-               libncurses5-dev,
-               libreadline6-dev,
-               libsqlite3-dev,
-               libssl-dev,
-               lzma,
-               liblzma-dev,
-               tk-dev,
-               uuid-dev,
-               zlib1g-dev,
-               patchelf,
-               curl,
-               bash-completion,
-               debhelper (>= 10),
-               dh-python
+               debhelper,
 Standards-Version: 4.1.3
 Homepage: http://saltstack.org/
 Vcs-Browser: https://github.com/saltstack/salt.git
