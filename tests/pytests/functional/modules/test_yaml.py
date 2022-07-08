@@ -5,10 +5,23 @@ import salt.loader
 import salt.modules.config
 import salt.modules.cp
 import salt.modules.slsutil
-import salt.modules.yaml
 import salt.utils.files
-import salt.utils.yamllint
 from tests.support.mock import MagicMock
+
+try:
+    import salt.modules.yaml
+    import salt.utils.yamllint
+
+    YAMLLINT_AVAILABLE = True
+except ImportError:
+    YAMLLINT_AVAILABLE = False
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        YAMLLINT_AVAILABLE is False, reason="The 'yammllint' pacakge is not available"
+    ),
+]
 
 
 @pytest.fixture
