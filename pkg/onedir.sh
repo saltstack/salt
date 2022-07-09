@@ -30,6 +30,6 @@ docker run \
   --mount type=bind,source="$PROJECT_ROOT",target=/salt \
   --name $CONTAINER_NAME \
   $CONTAINER_IMAGE \
-  /bin/bash  -c "$SCRIPT"
+  /bin/bash -c "$SCRIPT"
 echo "Removing $CONTAINER_NAME"
 docker container rm $CONTAINER_NAME
