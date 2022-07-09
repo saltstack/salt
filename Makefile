@@ -3,12 +3,14 @@ PYTHON_VERSION ?= 3.8.13
 PY_SUFFIX ?= $(shell echo $(PYTHON_VERSION) | sed -r 's/([0-9]+)(\.[0-9]+)(\.[0-9]+)/\1\2/')
 TARGET_DIRNAME := $(shell dirname $(TARGET_DIR))
 TARGET_BASENAME := $(shell basename $(TARGET_DIR))
-DYNLOAD = $(TARGET_DIR)/lib/python$(PY_SUFFIX)/lib-dynload/*.so
-DYNLIB := libssl.so.10 libcrypto.so.10 libcrypt.so libffi.so.6 libpthread.so.0 libc.so.6 libm.so libutil.so
+
 SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
 
 
-.PHONY: all $(SCRIPTS) $(DYNLOAD)
+.PHONY: all $(SCRIPTS) fixlibs meh
+
+meh:
+	echo $(SALT_VERSION)
 
 all: $(SCRIPTS_DIR)/salt
 
@@ -38,25 +40,21 @@ $(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION
 	make -j4; \
 	make install;
 
+# XXX: This can be done much better by searching for the libraries and using ld
+# to find out what is being linked. See the dh_shlibdeps comment in debian/rules
+fixlibs:
+	$(PWD)/pkg/fixlibs.sh $(TARGET_DIR)/lib
+
 $(TARGET_DIR)/.onedir:
+	pkg/fixlibs.sh $(TARGET_DIR)/lib
 	touch $(TARGET_DIR)/.onedir
 
 $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.onedir
 	cp $(PWD)/scripts/salt-pip $(SCRIPTS_DIR)/salt-pip
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $@;
 
-$(DYNLOAD):
-	patchelf --set-rpath '$$ORIGIN/' $@
-
-# XXX: This can be done much better by searching for the libraries and using ld
-# to find out what is being linked. See the dh_shlibdeps comment in debian/rules
-$(DYNLIB):
-	cp $(realpath /lib64/$@) $(TARGET_DIR)/lib/python$(PY_SUFFIX)/lib-dynload/$@
-
-
 $(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip $(DYNLOAD) $(DYNLIB)
 	$(SCRIPTS_DIR)/salt-pip install .
-	patchelf --set-rpath '$$ORIGIN/' $(TARGET_DIR)/lib/python$(PY_SUFFIX)/site-packages/pyzmq.libs/libzmq-68c212d3.so.5.2.4
 
 
 $(SCRIPTS): $(SCRIPTS_DIR)/salt
