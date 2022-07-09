@@ -5,7 +5,7 @@
 /pkg/deb/debian/*.substvars
 /pkg/deb/debian/files
 /pkg/deb/debian/debhelper-build-stamp
-salt.tar.xz
+salt*.tar.xz
 /build
 /src
 __pycache__/
