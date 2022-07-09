@@ -7,10 +7,7 @@ TARGET_BASENAME := $(shell basename $(TARGET_DIR))
 SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
 
 
-.PHONY: all $(SCRIPTS) fixlibs meh
-
-meh:
-	echo $(SALT_VERSION)
+.PHONY: all $(SCRIPTS) fixlibs
 
 all: $(SCRIPTS_DIR)/salt
 
