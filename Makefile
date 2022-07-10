@@ -5,6 +5,7 @@ TARGET_DIRNAME := $(shell dirname $(TARGET_DIR))
 TARGET_BASENAME := $(shell basename $(TARGET_DIR))
 
 SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
+ARCH := $(shell uname -m)
 
 
 .PHONY: all $(SCRIPTS) fixlibs
@@ -64,8 +65,8 @@ $(TARGET_DIR)/install-salt:
 $(TARGET_DIR)/uninstall-salt:
 	cp $(PWD)/scripts/uninstall-salt $(SCRIPTS_DIR)/uninstall-salt
 
-salt-$(SALT_VERSION).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
+salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
 	find $(TARGET_DIR) -name '*.pyc' -exec rm -f {} \;
 	# XXX: Should we keep this?
 	#rm -rf $(TARGET_DIR)/include $(TARGET_DIR)/share
-	tar cJvf salt.$(SALT_VERSION).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);
+	tar cJvf salt.$(SALT_VERSION)_$(ARCH).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);

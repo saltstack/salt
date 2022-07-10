@@ -3,7 +3,6 @@
 # For each shared object (.so) file under the given directory, find all shared
 # libraries needed and copy them into the the directory. Then modify the rpath
 # of the shared object to look for the library in the target directory.
-LIBS=()
 LIBSDIR=$1
 DONE=false
 while [ "$DONE" = false ]; do
