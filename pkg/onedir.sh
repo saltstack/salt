@@ -9,7 +9,7 @@ set +e
 
 # XXX: centos 7 with dependencies installed, we need to figure out how we'll
 # handle this
-CONTAINER_IMAGE=dwoz1/cicd:onedir-centos7
+[ -z "$CONTAINER_IMAGE" ] && CONTAINER_IMAGE=dwoz1/cicd:onedir-centos7
 
 CONTAINER_NAME="onedir-$RANDOM"
 SOURCE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
