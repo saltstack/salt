@@ -13,4 +13,4 @@ override_dh_install:
 
 
 # XXX: This needs fixing, it's telling us we're missing some shared libraries. There is another comment on /Makefile about how to fix this.
-override_dh_shlibdeps: ;
+#override_dh_shlibdeps: ;
