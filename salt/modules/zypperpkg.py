@@ -1450,7 +1450,9 @@ def refresh_db(force=None, root=None, **kwargs):
     if kwargs.get("gpgautoimport", False):
         global_opts.append("--gpg-auto-import-keys")
 
-    out = __zypper__(root=root).refreshable.call(*global_opts, *refresh_opts)
+    out = __zypper__(root=root).refreshable.call(
+        *global_opts, *refresh_opts, success_retcodes=[0, 6]
+    )
 
     for line in out.splitlines():
         if not line:
