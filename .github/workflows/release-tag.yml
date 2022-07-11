@@ -16,8 +16,13 @@ on:
         description: 'Re Tag (Deletes tag and release)'
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   GenerateTagRelease:
+    permissions:
+      contents: write  # for dev-drprasad/delete-tag-and-release to delete tags or releases
     name: Generate Tag and Github Release
     runs-on: ubuntu-latest
     steps:
