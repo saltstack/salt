@@ -1,4 +1,4 @@
-name: Build x86_65 DEB Package
+name: Build x86_64 RPM Package
 
 on:
   push:
@@ -20,8 +20,8 @@ jobs:
     - name: Link debian directory
       run: ln -s pkg/deb/debian debian
 
-    - name: Build onedir
-      run: debuild -uc -us
+    - name: Build RPM PKG
+      run: pkg/rpm/build.sh
 
     - name: ls dir
       run: ls `dirname ${{ github.workspace }}`
