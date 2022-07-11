@@ -373,7 +373,12 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         run_out = {"stderr": "", "stdout": "\n".join(ref_out), "retcode": 0}
 
         zypper_mock = MagicMock(return_value=run_out)
-        call_kwargs = {"output_loglevel": "trace", "python_shell": False, "env": {}}
+        call_kwargs = {
+            "output_loglevel": "trace",
+            "python_shell": False,
+            "env": {},
+            "success_retcodes": [0, 6],
+        }
         with patch.dict(zypper.__salt__, {"cmd.run_all": zypper_mock}):
             with patch.object(salt.utils.pkg, "clear_rtag", Mock()):
                 result = zypper.refresh_db()
