@@ -20,7 +20,7 @@ while [ "$DONE" = false ]; do
   	  echo "$TARGET exits"
         fi
         RELLIBSDIR=$(realpath --relative-to=$(dirname $shlib) $LIBSDIR)
-        RPATH="\$ORIGIN/$RELLIBSDIR"
+        RPATH="\$ORIGIN:\$ORIGIN/$RELLIBSDIR"
         patchelf --set-rpath $RPATH $shlib
       fi
     done
