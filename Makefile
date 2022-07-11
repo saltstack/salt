@@ -16,7 +16,7 @@ clean: ;
 	rm -rf $(TARGET_DIRNAME)
 
 
-onedir: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt salt-$(SALT_VERSION)_$(ARCH).tar.xz
+onedir: salt-$(SALT_VERSION)_$(ARCH).tar.xz
 	echo $(SALT_VERSION)
 
 $(TARGET_DIR):
@@ -65,7 +65,7 @@ $(TARGET_DIR)/install-salt:
 $(TARGET_DIR)/uninstall-salt:
 	cp $(PWD)/scripts/uninstall-salt $(SCRIPTS_DIR)/uninstall-salt
 
-salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
+salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt fixlibs
 	find $(TARGET_DIR) -name '*.pyc' -exec rm -f {} \;
 	# XXX: Should we keep this?
 	#rm -rf $(TARGET_DIR)/include $(TARGET_DIR)/share
