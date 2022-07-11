@@ -77,7 +77,7 @@ def __virtual__():
     return (
         False,
         "The rpm execution module failed to load: only available on redhat/suse type"
-        " systems or amazon, xcp or xenserver.",
+        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx or openeuler.",
     )
 
 
