@@ -160,7 +160,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0
     # via -r requirements/windows.txt
-lxml==4.7.1
+lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.1.4
     # via
@@ -315,7 +315,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -389,6 +389,7 @@ typing-extensions==4.2.0
     #   pytest-system-statistics
 urllib3==1.26.6
     # via
+    #   -r requirements/windows.txt
     #   botocore
     #   kubernetes
     #   python-etcd

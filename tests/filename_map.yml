@@ -211,7 +211,8 @@ salt/config/*:
 salt/loader/*:
   - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
-  - pytests.functional.test_loader
+  - pytests.functional.loader.test_loader
+  - pytests.functional.loader.test_loaded_base_name
 
 salt/minion.py:
   - integration.client.test_syndic
@@ -322,8 +323,8 @@ tests/support/mock.py:
   - unit.test_mock
 
 tests/support/pytest/mysql.py:
-  - pytests.integration.states.test_mysql
-  - pytests.integration.modules.test_mysql
+  - pytests.functional.states.test_mysql
+  - pytests.functional.modules.test_mysql
 
 tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.test_multimaster

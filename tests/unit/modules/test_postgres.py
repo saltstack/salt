@@ -1468,7 +1468,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             query = (
                 "COPY (SELECT relacl AS name FROM pg_catalog.pg_class c "
                 "JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
-                "WHERE nspname = 'public' AND relname = 'awl' AND relkind = 'r' "
+                "WHERE nspname = 'public' AND relname = 'awl' AND relkind in ('r', 'v') "
                 "ORDER BY relname) TO STDOUT WITH CSV HEADER"
             )
 
