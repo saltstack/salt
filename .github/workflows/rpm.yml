@@ -24,7 +24,7 @@ jobs:
       run: pkg/rpm/build.sh
 
     - name: ls dir
-      run: ls `dirname ${{ github.workspace }}`
+      run: ls `${{ github.workspace }}`
 
     - name: Artifact
       uses: actions/upload-artifact@v3
