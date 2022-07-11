@@ -101,7 +101,7 @@ def A(host, nameserver=None):
 
 def X(host, nameserver=None):
     """
-    .. versionadded:: 9999.9
+    .. versionadded:: 3006.0
     Return the PTR record for ``host``.
 
     Always returns a list.
