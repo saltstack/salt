@@ -4,8 +4,16 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  contents: read
+
 jobs:
   label-and-assign:
+    permissions:
+      actions: read  # for dawidd6/action-download-artifact to query and download artifacts
+      contents: read  # for actions/checkout to fetch code
+      issues: write
+      pull-requests: read  # for dawidd6/action-download-artifact to query commit hash
     name: Triage New Issue
     runs-on: ubuntu-latest
     steps:
