@@ -315,7 +315,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
