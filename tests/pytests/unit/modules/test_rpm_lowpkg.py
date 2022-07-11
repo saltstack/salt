@@ -35,6 +35,26 @@ def _called_with_root(mock):
 def configure_loader_modules():
     return {rpm: {"rpm": MagicMock(return_value=MagicMock)}}
 
+def test___virtual___openeuler():
+    patch_which = patch("salt.utils.path.which", return_value=True)
+    with patch.dict(rpm.__grains__, {"os": "openEuler", "os_family": "openEuler"}), patch_which:
+        assert rpm.__virtual__() == "lowpkg"
+
+def test___virtual___issabel_pbx():
+    patch_which = patch("salt.utils.path.which", return_value=True)
+    with patch.dict(rpm.__grains__, {"os": "Issabel Pbx", "os_family": "IssabeL PBX"}), patch_which:
+        assert rpm.__virtual__() == "lowpkg"
+
+def test___virtual___virtuozzo():
+    patch_which = patch("salt.utils.path.which", return_value=True)
+    with patch.dict(rpm.__grains__, {"os": "virtuozzo", "os_family": "VirtuoZZO"}), patch_which:
+        assert rpm.__virtual__() == "lowpkg"
+
+def test___virtual___with_no_rpm():
+    patch_which = patch("salt.utils.path.which", return_value=False)
+    ret = rpm.__virtual__()
+    assert isinstance(ret, tuple)
+    assert ret[0] == False
 
 # 'list_pkgs' function tests: 2
 
