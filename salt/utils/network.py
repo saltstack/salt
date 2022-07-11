@@ -11,6 +11,7 @@ import os
 import platform
 import random
 import re
+import shutil
 import socket
 import subprocess
 import types
@@ -1996,6 +1997,9 @@ def _linux_remotes_on(port, which_end):
 
     """
     remotes = set()
+    lsof_binary = shutil.which("lsof")
+    if lsof_binary is None:
+        return remotes
 
     try:
         data = subprocess.check_output(

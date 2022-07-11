@@ -498,7 +498,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 linode-python==1.1.1
     # via -r requirements/darwin.txt
-lxml==4.7.1
+lxml==4.9.1
     # via
     #   junos-eznc
     #   napalm
@@ -777,7 +777,7 @@ pyyaml==5.4.1
     #   napalm
     #   yamllint
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

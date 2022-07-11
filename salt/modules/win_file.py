@@ -8,43 +8,17 @@ data, modify the ACL of files/directories
             - salt.utils.win_dacl
 """
 
-# pylint: disable=unused-import
-import contextlib  # do not remove, used in imported file.py functions
-import datetime  # do not remove.
-import difflib  # do not remove, used in imported file.py functions
-import errno  # do not remove, used in imported file.py functions
-import fnmatch  # do not remove, used in imported file.py functions
-import glob  # do not remove, used in imported file.py functions
-import hashlib  # do not remove, used in imported file.py functions
-import io  # do not remove, used in imported file.py functions
-import itertools  # same as above, do not remove, it's used in __clean_tmp
+import errno
 import logging
-import mmap  # do not remove, used in imported file.py functions
-import operator  # do not remove
 import os
 import os.path
-import re  # do not remove, used in imported file.py functions
-import shutil  # do not remove, used in imported file.py functions
 import stat
-import string  # do not remove, used in imported file.py functions
-import sys  # do not remove, used in imported file.py functions
-import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
-import time  # do not remove, used in imported file.py functions
-import urllib.parse
-from collections.abc import Iterable, Mapping
-from functools import reduce  # do not remove
+import sys
 
-import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# do not remove, used in imported file.py functions
-from salt.modules.file import check_hash  # pylint: disable=W0611
 from salt.modules.file import (
-    HASHES,
-    HASHES_REVMAP,
-    RE_FLAG_TABLE,
     __clean_tmp,
     _add_flags,
     _assert_occurrence,
@@ -54,9 +28,7 @@ from salt.modules.file import (
     _get_eol,
     _get_flags,
     _mkstemp_copy,
-    _psed,
     _regex_to_static,
-    _sed_esc,
     _set_line,
     _set_line_eol,
     _set_line_indent,
@@ -67,6 +39,7 @@ from salt.modules.file import (
     basename,
     blockreplace,
     check_file_meta,
+    check_hash,
     check_managed,
     check_managed_changes,
     comment,
@@ -116,7 +89,7 @@ from salt.modules.file import (
     uncomment,
     write,
 )
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 
 HAS_WINDOWS_MODULES = False
 try:
@@ -132,14 +105,80 @@ try:
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
-# This is to fix the pylint error: E0602: Undefined variable "WindowsError"
-try:
-    from exceptions import WindowsError  # pylint: disable=no-name-in-module
-except ImportError:
-
-    class WindowsError(OSError):
-        pass
-
+if salt.utils.platform.is_windows():
+    if HAS_WINDOWS_MODULES:
+        # namespace functions from file.py
+        replace = namespaced_function(replace, globals())
+        search = namespaced_function(search, globals())
+        _get_flags = namespaced_function(_get_flags, globals())
+        _binary_replace = namespaced_function(_binary_replace, globals())
+        _splitlines_preserving_trailing_newline = namespaced_function(
+            _splitlines_preserving_trailing_newline, globals()
+        )
+        _error = namespaced_function(_error, globals())
+        _get_bkroot = namespaced_function(_get_bkroot, globals())
+        list_backups = namespaced_function(list_backups, globals())
+        restore_backup = namespaced_function(restore_backup, globals())
+        delete_backup = namespaced_function(delete_backup, globals())
+        extract_hash = namespaced_function(extract_hash, globals())
+        append = namespaced_function(append, globals())
+        get_managed = namespaced_function(get_managed, globals())
+        check_managed = namespaced_function(check_managed, globals())
+        check_managed_changes = namespaced_function(check_managed_changes, globals())
+        check_file_meta = namespaced_function(check_file_meta, globals())
+        manage_file = namespaced_function(manage_file, globals())
+        source_list = namespaced_function(source_list, globals())
+        file_exists = namespaced_function(file_exists, globals())
+        __clean_tmp = namespaced_function(__clean_tmp, globals())
+        directory_exists = namespaced_function(directory_exists, globals())
+        touch = namespaced_function(touch, globals())
+        contains = namespaced_function(contains, globals())
+        contains_regex = namespaced_function(contains_regex, globals())
+        contains_glob = namespaced_function(contains_glob, globals())
+        get_source_sum = namespaced_function(get_source_sum, globals())
+        find = namespaced_function(find, globals())
+        psed = namespaced_function(psed, globals())
+        get_sum = namespaced_function(get_sum, globals())
+        check_hash = namespaced_function(check_hash, globals())
+        get_hash = namespaced_function(get_hash, globals())
+        get_diff = namespaced_function(get_diff, globals())
+        line = namespaced_function(line, globals())
+        access = namespaced_function(access, globals())
+        copy = namespaced_function(copy, globals())
+        readdir = namespaced_function(readdir, globals())
+        readlink = namespaced_function(readlink, globals())
+        read = namespaced_function(read, globals())
+        rmdir = namespaced_function(rmdir, globals())
+        truncate = namespaced_function(truncate, globals())
+        blockreplace = namespaced_function(blockreplace, globals())
+        prepend = namespaced_function(prepend, globals())
+        seek_read = namespaced_function(seek_read, globals())
+        seek_write = namespaced_function(seek_write, globals())
+        rename = namespaced_function(rename, globals())
+        lstat = namespaced_function(lstat, globals())
+        path_exists_glob = namespaced_function(path_exists_glob, globals())
+        write = namespaced_function(write, globals())
+        pardir = namespaced_function(pardir, globals())
+        join = namespaced_function(join, globals())
+        comment = namespaced_function(comment, globals())
+        uncomment = namespaced_function(uncomment, globals())
+        comment_line = namespaced_function(comment_line, globals())
+        _regex_to_static = namespaced_function(_regex_to_static, globals())
+        _set_line = namespaced_function(_set_line, globals())
+        _set_line_indent = namespaced_function(_set_line_indent, globals())
+        _set_line_eol = namespaced_function(_set_line_eol, globals())
+        _get_eol = namespaced_function(_get_eol, globals())
+        _mkstemp_copy = namespaced_function(_mkstemp_copy, globals())
+        _add_flags = namespaced_function(_add_flags, globals())
+        apply_template_on_contents = namespaced_function(
+            apply_template_on_contents, globals()
+        )
+        dirname = namespaced_function(dirname, globals())
+        basename = namespaced_function(basename, globals())
+        list_backups_dir = namespaced_function(list_backups_dir, globals())
+        normpath_ = namespaced_function(normpath_, globals())
+        _assert_occurrence = namespaced_function(_assert_occurrence, globals())
+        patch = namespaced_function(patch, globals())
 
 log = logging.getLogger(__name__)
 
@@ -151,104 +190,8 @@ def __virtual__():
     """
     Only works on Windows systems
     """
-    if salt.utils.platform.is_windows():
-        if HAS_WINDOWS_MODULES:
-            # Load functions from file.py
-            global get_managed, manage_file, patch
-            global source_list, __clean_tmp, file_exists
-            global check_managed, check_managed_changes, check_file_meta
-            global append, _error, directory_exists, touch, contains
-            global contains_regex, contains_glob, get_source_sum
-            global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, line, _get_flags, extract_hash, comment_line
-            global access, copy, readdir, read, rmdir, truncate, replace, search
-            global _binary_replace, _get_bkroot, list_backups, restore_backup
-            global _splitlines_preserving_trailing_newline, readlink
-            global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global write, pardir, join, _add_flags, apply_template_on_contents
-            global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _set_line_indent, dirname, basename
-            global list_backups_dir, normpath_, _assert_occurrence
-            global _set_line_eol, _get_eol
-            global _set_line
-
-            replace = _namespaced_function(replace, globals())
-            search = _namespaced_function(search, globals())
-            _get_flags = _namespaced_function(_get_flags, globals())
-            _binary_replace = _namespaced_function(_binary_replace, globals())
-            _splitlines_preserving_trailing_newline = _namespaced_function(
-                _splitlines_preserving_trailing_newline, globals()
-            )
-            _error = _namespaced_function(_error, globals())
-            _get_bkroot = _namespaced_function(_get_bkroot, globals())
-            list_backups = _namespaced_function(list_backups, globals())
-            restore_backup = _namespaced_function(restore_backup, globals())
-            delete_backup = _namespaced_function(delete_backup, globals())
-            extract_hash = _namespaced_function(extract_hash, globals())
-            append = _namespaced_function(append, globals())
-            get_managed = _namespaced_function(get_managed, globals())
-            check_managed = _namespaced_function(check_managed, globals())
-            check_managed_changes = _namespaced_function(
-                check_managed_changes, globals()
-            )
-            check_file_meta = _namespaced_function(check_file_meta, globals())
-            manage_file = _namespaced_function(manage_file, globals())
-            source_list = _namespaced_function(source_list, globals())
-            file_exists = _namespaced_function(file_exists, globals())
-            __clean_tmp = _namespaced_function(__clean_tmp, globals())
-            directory_exists = _namespaced_function(directory_exists, globals())
-            touch = _namespaced_function(touch, globals())
-            contains = _namespaced_function(contains, globals())
-            contains_regex = _namespaced_function(contains_regex, globals())
-            contains_glob = _namespaced_function(contains_glob, globals())
-            get_source_sum = _namespaced_function(get_source_sum, globals())
-            find = _namespaced_function(find, globals())
-            psed = _namespaced_function(psed, globals())
-            get_sum = _namespaced_function(get_sum, globals())
-            check_hash = _namespaced_function(check_hash, globals())
-            get_hash = _namespaced_function(get_hash, globals())
-            get_diff = _namespaced_function(get_diff, globals())
-            line = _namespaced_function(line, globals())
-            access = _namespaced_function(access, globals())
-            copy = _namespaced_function(copy, globals())
-            readdir = _namespaced_function(readdir, globals())
-            readlink = _namespaced_function(readlink, globals())
-            read = _namespaced_function(read, globals())
-            rmdir = _namespaced_function(rmdir, globals())
-            truncate = _namespaced_function(truncate, globals())
-            blockreplace = _namespaced_function(blockreplace, globals())
-            prepend = _namespaced_function(prepend, globals())
-            seek_read = _namespaced_function(seek_read, globals())
-            seek_write = _namespaced_function(seek_write, globals())
-            rename = _namespaced_function(rename, globals())
-            lstat = _namespaced_function(lstat, globals())
-            path_exists_glob = _namespaced_function(path_exists_glob, globals())
-            write = _namespaced_function(write, globals())
-            pardir = _namespaced_function(pardir, globals())
-            join = _namespaced_function(join, globals())
-            comment = _namespaced_function(comment, globals())
-            uncomment = _namespaced_function(uncomment, globals())
-            comment_line = _namespaced_function(comment_line, globals())
-            _regex_to_static = _namespaced_function(_regex_to_static, globals())
-            _set_line = _namespaced_function(_set_line, globals())
-            _set_line_indent = _namespaced_function(_set_line_indent, globals())
-            _set_line_eol = _namespaced_function(_set_line_eol, globals())
-            _get_eol = _namespaced_function(_get_eol, globals())
-            _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
-            _add_flags = _namespaced_function(_add_flags, globals())
-            apply_template_on_contents = _namespaced_function(
-                apply_template_on_contents, globals()
-            )
-            dirname = _namespaced_function(dirname, globals())
-            basename = _namespaced_function(basename, globals())
-            list_backups_dir = _namespaced_function(list_backups_dir, globals())
-            normpath_ = _namespaced_function(normpath_, globals())
-            _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
-            patch = _namespaced_function(patch, globals())
-
-        else:
-            return False, "Module win_file: Missing Win32 modules"
-
+    if not salt.utils.platform.is_windows() or not HAS_WINDOWS_MODULES:
+        return False, "Module win_file: Missing Win32 modules"
     return __virtualname__
 
 
