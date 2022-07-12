@@ -14,6 +14,7 @@ Cassandra NoSQL Database Module
 import logging
 
 import salt.utils.path
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +26,13 @@ try:
     HAS_PYCASSA = True
 except ImportError:
     pass
+
+
+warn_until_date(
+    "20240101",
+    "The cassandra returner is broken and deprecated, and will be removed"
+    " after {date}. Use the cassandra_cql returner instead",
+)
 
 
 def __virtual__():
