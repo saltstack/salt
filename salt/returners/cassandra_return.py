@@ -1,4 +1,9 @@
 """
+.. warning::
+
+    The `cassandra` returner is deprecated in favor of the `cassandra_cql`
+    returner.
+
 Return data to a Cassandra ColumnFamily
 
 Here's an example Keyspace / ColumnFamily setup that works with this
