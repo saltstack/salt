@@ -10,6 +10,9 @@
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#     - In order for the zeromq tests to pass we need to set the `maxfiles`
+#       limits pretty high. Follow the instructions here:
+#       https://superuser.com/a/1679740
 #
 # Usage:
 #     This script can be passed 1 parameter
@@ -83,12 +86,44 @@ export PYENV_ROOT=$INSTALL_DIR/.pyenv
 # This is needed to allow some test suites (zmq) to pass
 # taken from https://github.com/zeromq/libzmq/issues/1878
 ################################################################################
-echo "**** Set ulimit settings"
-SET_ULIMIT=300000
-sysctl -w kern.maxfiles=$SET_ULIMIT > /dev/null
-sysctl -w kern.maxfilesperproc=$SET_ULIMIT > /dev/null
-launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
-ulimit -n 64000 $SET_ULIMIT
+# Old Method
+# SET_ULIMIT=300000
+# sysctl -w kern.maxfiles=$SET_ULIMIT > /dev/null
+# sysctl -w kern.maxfilesperproc=$SET_ULIMIT > /dev/null
+# launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
+# ulimit -n 64000 $SET_ULIMIT
+
+# To set the limits properly follow the instructions here:
+# https://superuser.com/a/1679740
+# Basically, create the file /Library/LaunchDaemons/limit.maxfiles.plist:
+#<?xml version="1.0" encoding="UTF-8"?>
+#<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+#<plist version="1.0">
+#  <dict>
+#    <key>Label</key>
+#    <string>limit.maxfiles</string>
+#    <key>ProgramArguments</key>
+#    <array>
+#      <string>launchctl</string>
+#      <string>limit</string>
+#      <string>maxfiles</string>
+#      <string>524288</string>
+#      <string>16777216</string>
+#    </array>
+#    <key>RunAtLoad</key>
+#    <true/>
+#    <key>ServiceIPC</key>
+#    <false/>
+#  </dict>
+#</plist>
+
+# Then Change Ownership:
+# sudo chown root:wheel /Library/LaunchDaemons/limit.maxfiles.plist
+
+# Load the Daemon:
+# sudo launchctl load -w /Library/LaunchDaemons/limit.maxfiles.plist
+
+# Finally, reboot the system to have the settings apply to ulimit -Sn/-Hn
 
 ################################################################################
 # Determine Which XCode is being used (XCode or XCode Command Line Tools)
@@ -174,7 +209,7 @@ cd $PKG_DIR
 echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: configure\007"
 ./configure --prefix=$PYENV_ROOT
 echo -n -e "\033]0;Build_Env: libsodium: make\007"
-$MAKE -j4
+$MAKE -j$(sysctl -n hw.ncpu)
 echo -n -e "\033]0;Build_Env: libsodium: make check\007"
 $MAKE check
 echo -n -e "\033]0;Build_Env: libsodium: make install\007"
@@ -195,7 +230,7 @@ cd $PKG_DIR
 echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: configure\007"
 ./configure --prefix=$PYENV_ROOT
 echo -n -e "\033]0;Build_Env: zeromq: make\007"
-$MAKE -j4
+$MAKE -j$(sysctl -n hw.ncpu)
 echo -n -e "\033]0;Build_Env: zeromq: make check\007"
 # some tests fail occasionally.
 $MAKE check
