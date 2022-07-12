@@ -20,4 +20,27 @@ jobs:
     - name: Artifact
       uses: actions/upload-artifact@v3
       with:
+        name: Salt Onedir X86_64
         path: salt*.tar.xz
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Fetch Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: Salt Onedir X86_64
+
+    - name: Extract Artifact
+      run: ls .
+
+    - name: Install Nox
+      run: pip install nox
+
+    - name: Run Tests
+      run: nox -e 'pytest-zeromq-3(coverage=True)' -- -vv --scrits-path=salt-artifacts/salt --system-install --run-slow tests/pytest/integration
+
