@@ -22,6 +22,7 @@ Required python modules: pycassa
 import logging
 
 import salt.utils.jid
+from salt.utils.versions import warn_until_date
 
 try:
     import pycassa  # pylint: disable=import-error
@@ -41,6 +42,12 @@ __opts__ = {
 
 # Define the module's virtual name
 __virtualname__ = "cassandra"
+
+warn_until_date(
+    "20240101",
+    "The cassandra returner is broken and deprecated, and will be removed"
+    " after {date}. Use the cassandra_cql returner instead",
+)
 
 
 def __virtual__():
