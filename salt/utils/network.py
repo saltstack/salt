@@ -2004,7 +2004,7 @@ def _linux_remotes_on(port, which_end):
     try:
         data = subprocess.check_output(
             [
-                "lsof",
+                lsof_binary,
                 "-iTCP:{:d}".format(port),
                 "-n",
                 "-P",
