@@ -196,7 +196,7 @@ def test_run_all_with_success_stderr(cmdmod, tmp_path):
     """
     cmd.run with success_retcodes
     """
-    random_file = tmp_path / "{}".format(random.random())
+    random_file = str(tmp_path / "{}".format(random.random()))
 
     if salt.utils.platform.is_windows():
         func = "type"
@@ -205,7 +205,7 @@ def test_run_all_with_success_stderr(cmdmod, tmp_path):
         func = "cat"
         expected_stderr = "No such file or directory"
     ret = cmdmod.run_all(
-        "{} {}".format(func, str(random_file)),
+        "{} {}".format(func, random_file),
         success_stderr=[expected_stderr],
         python_shell=True,
     )
@@ -251,10 +251,10 @@ def test_script_cwd(cmdmod, script_contents, tmp_path):
     """
     cmd.script with cwd
     """
-    tmp_cwd = tmp_path
+    tmp_cwd = str(tmp_path)
     args = "saltines crackers biscuits=yes"
     script = "salt://script.py"
-    ret = cmdmod.script(script, args, cwd=str(tmp_cwd), saltenv="base")
+    ret = cmdmod.script(script, args, cwd=tmp_cwd, saltenv="base")
     assert ret["stdout"] == args
 
 
@@ -263,12 +263,12 @@ def test_script_cwd_with_space(cmdmod, script_contents, tmp_path):
     """
     cmd.script with cwd
     """
-    tmp_cwd = tmp_path / "test 2"
+    tmp_cwd = str(tmp_path / "test 2")
     os.mkdir(tmp_cwd)
 
     args = "saltines crackers biscuits=yes"
     script = "salt://script.py"
-    ret = cmdmod.script(script, args, cwd=str(tmp_cwd), saltenv="base")
+    ret = cmdmod.script(script, args, cwd=tmp_cwd, saltenv="base")
     assert ret["stdout"] == args
 
 
@@ -400,17 +400,15 @@ def test_cwd_runas(cmdmod, usermod, runas_usr, tmp_path):
     or not runas is in use.
     """
     cmd = "pwd"
-    tmp_cwd = tmp_path
-    os.chmod(str(tmp_cwd), 0o711)
+    tmp_cwd = str(tmp_path)
+    os.chmod(tmp_cwd, 0o711)
 
-    cwd_normal = cmdmod.run_stdout(cmd, cwd=str(tmp_cwd)).rstrip("\n")
-    assert str(tmp_cwd) == cwd_normal
+    cwd_normal = cmdmod.run_stdout(cmd, cwd=tmp_cwd).rstrip("\n")
+    assert tmp_cwd == cwd_normal
 
     with _ensure_user_exists(runas_usr, usermod):
-        cwd_runas = cmdmod.run_stdout(cmd, cwd=str(tmp_cwd), runas=runas_usr).rstrip(
-            "\n"
-        )
-    assert str(tmp_cwd) == cwd_runas
+        cwd_runas = cmdmod.run_stdout(cmd, cwd=tmp_cwd, runas=runas_usr).rstrip("\n")
+    assert tmp_cwd == cwd_runas
 
 
 @pytest.mark.destructive_test
@@ -445,13 +443,13 @@ def test_runas_complex_command_bad_cwd(cmdmod, usermod, runas_usr, tmp_path):
     buggy behaviour, but its purpose is to ensure that the greater bug of
     running commands after failing to cd does not occur.
     """
-    tmp_cwd = tmp_path
+    tmp_cwd = str(tmp_path)
     os.chmod(tmp_cwd, 0o700)
 
     with _ensure_user_exists(runas_usr, usermod):
         cmd_result = cmdmod.run_all(
             'pwd; pwd; : $(echo "You have failed the test" >&2)',
-            cwd=str(tmp_cwd),
+            cwd=tmp_cwd,
             runas=runas_usr,
         )
 
