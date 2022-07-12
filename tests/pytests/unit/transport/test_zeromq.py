@@ -708,6 +708,7 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -772,6 +773,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -835,6 +837,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -914,6 +917,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps

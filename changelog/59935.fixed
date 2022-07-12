@@ -1,1 +1,0 @@
-Fix pillar_roots.write on subdirectories broken after CVE-2021-25282 patch.

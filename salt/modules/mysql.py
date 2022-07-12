@@ -76,9 +76,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# TODO: this is not used anywhere in the code?
-__opts__ = {}
-
 __grants__ = [
     "ALL PRIVILEGES",
     "ALTER",

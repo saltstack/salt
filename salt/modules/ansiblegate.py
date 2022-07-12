@@ -17,10 +17,12 @@ any Ansible module to respond.
 import fnmatch
 import json
 import logging
+import os
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
 
+import salt.utils.ansible
 import salt.utils.decorators.path
 import salt.utils.json
 import salt.utils.path
@@ -44,7 +46,16 @@ hosts:
 """
 DEFAULT_TIMEOUT = 1200  # seconds (20 minutes)
 
-__load__ = __non_ansible_functions__ = ["help", "list_", "call", "playbooks"][:]
+__non_ansible_functions__ = []
+
+__load__ = __non_ansible_functions__[:] = [
+    "help",
+    "list_",
+    "call",
+    "playbooks",
+    "discover_playbooks",
+    "targets",
+]
 
 
 def _set_callables(modules):
@@ -85,6 +96,9 @@ def __virtual__():
     if not ansible_playbook_bin:
         return False, "The 'ansible-playbook' binary was not found."
 
+    env = os.environ.copy()
+    env["ANSIBLE_DEPRECATION_WARNINGS"] = "0"
+
     proc = subprocess.run(
         [ansible_doc_bin, "--list", "--json", "--type=module"],
         stdout=subprocess.PIPE,
@@ -92,6 +106,7 @@ def __virtual__():
         check=False,
         shell=False,
         universal_newlines=True,
+        env=env,
     )
     if proc.returncode != 0:
         return (
@@ -129,6 +144,9 @@ def help(module=None, *args):
 
     ansible_doc_bin = salt.utils.path.which("ansible-doc")
 
+    env = os.environ.copy()
+    env["ANSIBLE_DEPRECATION_WARNINGS"] = "0"
+
     proc = subprocess.run(
         [ansible_doc_bin, "--json", "--type=module", module],
         stdout=subprocess.PIPE,
@@ -136,6 +154,7 @@ def help(module=None, *args):
         check=True,
         shell=False,
         universal_newlines=True,
+        env=env,
     )
     data = salt.utils.json.loads(proc.stdout)
     doc = data[next(iter(data))]
@@ -207,6 +226,9 @@ def call(module, *args, **kwargs):
         ansible_binary_path = salt.utils.path.which("ansible")
         log.debug("Calling ansible module %r", module)
         try:
+            env = os.environ.copy()
+            env["ANSIBLE_DEPRECATION_WARNINGS"] = "0"
+
             proc_exc = subprocess.run(
                 [
                     ansible_binary_path,
@@ -226,6 +248,7 @@ def call(module, *args, **kwargs):
                 universal_newlines=True,
                 check=True,
                 shell=False,
+                env=env,
             )
 
             original_output = proc_exc.stdout
@@ -359,13 +382,215 @@ def playbooks(
                 command.append("--{}={}".format(key, json.dumps(value)))
     command.append("--forks={}".format(forks))
     cmd_kwargs = {
-        "env": {"ANSIBLE_STDOUT_CALLBACK": "json", "ANSIBLE_RETRY_FILES_ENABLED": "0"},
+        "env": {
+            "ANSIBLE_STDOUT_CALLBACK": "json",
+            "ANSIBLE_RETRY_FILES_ENABLED": "0",
+            "ANSIBLE_DEPRECATION_WARNINGS": "0",
+        },
         "cwd": rundir,
         "cmd": " ".join(command),
     }
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
-    retdata = json.loads(ret["stdout"])
+    try:
+        retdata = json.loads(ret["stdout"])
+    except ValueError:
+        retdata = ret
     if "retcode" in ret:
         __context__["retcode"] = retdata["retcode"] = ret["retcode"]
     return retdata
+
+
+def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
+    """
+    .. versionadded:: 3006
+
+    Return the inventory from an Ansible inventory_file
+
+    :param inventory:
+        The inventory file to read the inventory from. Default: "/etc/ansible/hosts"
+
+    :param yaml:
+        Return the inventory as yaml output. Default: False
+
+    :param export:
+        Return inventory as export format. Default: False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'ansiblehost' ansible.targets
+        salt 'ansiblehost' ansible.targets inventory=my_custom_inventory
+
+    """
+    return salt.utils.ansible.targets(inventory=inventory, yaml=yaml, export=export)
+
+
+def discover_playbooks(
+    path=None,
+    locations=None,
+    playbook_extension=None,
+    hosts_filename=None,
+    syntax_check=False,
+):
+    """
+    .. versionadded:: 3006
+
+    Discover Ansible playbooks stored under the given path or from multiple paths (locations)
+
+    This will search for files matching with the playbook file extension under the given
+    root path and will also look for files inside the first level of directories in this path.
+
+    The return of this function would be a dict like this:
+
+    .. code-block:: python
+
+        {
+            "/home/foobar/": {
+                "my_ansible_playbook.yml": {
+                    "fullpath": "/home/foobar/playbooks/my_ansible_playbook.yml",
+                    "custom_inventory": "/home/foobar/playbooks/hosts"
+                },
+                "another_playbook.yml": {
+                    "fullpath": "/home/foobar/playbooks/another_playbook.yml",
+                    "custom_inventory": "/home/foobar/playbooks/hosts"
+                },
+                "lamp_simple/site.yml": {
+                    "fullpath": "/home/foobar/playbooks/lamp_simple/site.yml",
+                    "custom_inventory": "/home/foobar/playbooks/lamp_simple/hosts"
+                },
+                "lamp_proxy/site.yml": {
+                    "fullpath": "/home/foobar/playbooks/lamp_proxy/site.yml",
+                    "custom_inventory": "/home/foobar/playbooks/lamp_proxy/hosts"
+                }
+            },
+            "/srv/playbooks/": {
+                "example_playbook/example.yml": {
+                    "fullpath": "/srv/playbooks/example_playbook/example.yml",
+                    "custom_inventory": "/srv/playbooks/example_playbook/hosts"
+                }
+            }
+        }
+
+    :param path:
+        Path to discover playbooks from.
+
+    :param locations:
+        List of paths to discover playbooks from.
+
+    :param playbook_extension:
+        File extension of playbooks file to search for. Default: "yml"
+
+    :param hosts_filename:
+        Filename of custom playbook inventory to search for. Default: "hosts"
+
+    :param syntax_check:
+        Skip playbooks that do not pass "ansible-playbook --syntax-check" validation. Default: False
+
+    :return:
+        The discovered playbooks under the given paths
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'ansiblehost' ansible.discover_playbooks path=/srv/playbooks/
+        salt 'ansiblehost' ansible.discover_playbooks locations='["/srv/playbooks/", "/srv/foobar"]'
+
+    """
+
+    if not path and not locations:
+        raise CommandExecutionError(
+            "You have to specify either 'path' or 'locations' arguments"
+        )
+
+    if path and locations:
+        raise CommandExecutionError(
+            "You cannot specify 'path' and 'locations' at the same time"
+        )
+
+    if not playbook_extension:
+        playbook_extension = "yml"
+    if not hosts_filename:
+        hosts_filename = "hosts"
+
+    if path:
+        if not os.path.isabs(path):
+            raise CommandExecutionError(
+                "The given path is not an absolute path: {}".format(path)
+            )
+        if not os.path.isdir(path):
+            raise CommandExecutionError(
+                "The given path is not a directory: {}".format(path)
+            )
+        return {
+            path: _explore_path(path, playbook_extension, hosts_filename, syntax_check)
+        }
+
+    if locations:
+        all_ret = {}
+        for location in locations:
+            all_ret[location] = _explore_path(
+                location, playbook_extension, hosts_filename, syntax_check
+            )
+        return all_ret
+
+
+def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
+    ret = {}
+
+    if not os.path.isabs(path):
+        log.error("The given path is not an absolute path: %s", path)
+        return ret
+    if not os.path.isdir(path):
+        log.error("The given path is not a directory: %s", path)
+        return ret
+
+    try:
+        # Check files in the given path
+        for _f in os.listdir(path):
+            _path = os.path.join(path, _f)
+            if os.path.isfile(_path) and _path.endswith("." + playbook_extension):
+                ret[_f] = {"fullpath": _path}
+                # Check for custom inventory file
+                if os.path.isfile(os.path.join(path, hosts_filename)):
+                    ret[_f].update(
+                        {"custom_inventory": os.path.join(path, hosts_filename)}
+                    )
+            elif os.path.isdir(_path):
+                # Check files in the 1st level of subdirectories
+                for _f2 in os.listdir(_path):
+                    _path2 = os.path.join(_path, _f2)
+                    if os.path.isfile(_path2) and _path2.endswith(
+                        "." + playbook_extension
+                    ):
+                        ret[os.path.join(_f, _f2)] = {"fullpath": _path2}
+                        # Check for custom inventory file
+                        if os.path.isfile(os.path.join(_path, hosts_filename)):
+                            ret[os.path.join(_f, _f2)].update(
+                                {
+                                    "custom_inventory": os.path.join(
+                                        _path, hosts_filename
+                                    )
+                                }
+                            )
+    except Exception as exc:
+        raise CommandExecutionError(
+            "There was an exception while discovering playbooks: {}".format(exc)
+        )
+
+    # Run syntax check validation
+    if syntax_check:
+        check_command = ["ansible-playbook", "--syntax-check"]
+        try:
+            for pb in list(ret):
+                if __salt__["cmd.retcode"](check_command + [ret[pb]]):
+                    del ret[pb]
+        except Exception as exc:
+            raise CommandExecutionError(
+                "There was an exception while checking syntax of playbooks: {}".format(
+                    exc
+                )
+            )
+    return ret
