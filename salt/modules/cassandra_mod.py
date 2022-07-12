@@ -1,4 +1,10 @@
 """
+
+.. warning::
+
+    The `cassandra` module is deprecated in favor of the `cassandra_cql`
+    module.
+
 Cassandra NoSQL Database Module
 
 :depends:   - pycassa Cassandra Python adapter
