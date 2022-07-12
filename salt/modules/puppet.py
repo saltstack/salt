@@ -64,26 +64,12 @@ class _Puppet:
         self.kwargs = {"color": "false"}  # e.g. --tags=apache::server
         self.args = []  # e.g. --noop
 
-        if salt.utils.platform.is_windows():
-            self.vardir = "C:\\ProgramData\\PuppetLabs\\puppet\\var"
-            self.rundir = "C:\\ProgramData\\PuppetLabs\\puppet\\run"
-            self.confdir = "C:\\ProgramData\\PuppetLabs\\puppet\\etc"
-        else:
-            self.puppet_version = __salt__["cmd.run"]("puppet --version")
-            if "Enterprise" in self.puppet_version:
-                self.vardir = "/var/opt/lib/pe-puppet"
-                self.rundir = "/var/opt/run/pe-puppet"
-                self.confdir = "/etc/puppetlabs/puppet"
-            elif self.puppet_version != [] and version.StrictVersion(
-                self.puppet_version
-            ) >= version.StrictVersion("4.0.0"):
-                self.vardir = "/opt/puppetlabs/puppet/cache"
-                self.rundir = "/var/run/puppetlabs"
-                self.confdir = "/etc/puppetlabs/puppet"
-            else:
-                self.vardir = "/var/lib/puppet"
-                self.rundir = "/var/run/puppet"
-                self.confdir = "/etc/puppet"
+        conf = salt.utils.yaml.safe_load(
+          __salt__["cmd.run"]("puppet config print --render-as yaml vardir rundir confdir")
+        )
+        self.vardir  = conf["vardir"]
+        self.rundir  = conf["rundir"]
+        self.confdir = conf["confdir"]
 
         self.disabled_lockfile = self.vardir + "/state/agent_disabled.lock"
         self.run_lockfile = self.vardir + "/state/agent_catalog_run.lock"
