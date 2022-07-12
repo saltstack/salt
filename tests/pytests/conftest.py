@@ -150,6 +150,12 @@ def salt_master_factory(
     config_defaults["reactor"] = [
         {reactor_event.tag: [str(reactor_event.sls_path)]},
     ]
+    config_defaults["engines_dirs"] = [
+        str(salt_factories.get_salt_engines_path()),
+    ]
+    config_defaults["log_handlers_dirs"] = [
+        str(salt_factories.get_salt_log_handlers_path()),
+    ]
 
     nodegroups = {
         "min": salt_minion_id,
@@ -309,6 +315,12 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
+    config_defaults["engines_dirs"] = [
+        str(salt_factories.get_salt_engines_path()),
+    ]
+    config_defaults["log_handlers_dirs"] = [
+        str(salt_factories.get_salt_log_handlers_path()),
+    ]
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
@@ -331,7 +343,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
 
 
 @pytest.fixture(scope="session")
-def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
+def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id, salt_factories):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
     ) as rfh:
@@ -339,6 +351,12 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = salt_master_factory.config["transport"]
+    config_defaults["engines_dirs"] = [
+        str(salt_factories.get_salt_engines_path()),
+    ]
+    config_defaults["log_handlers_dirs"] = [
+        str(salt_factories.get_salt_log_handlers_path()),
+    ]
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
