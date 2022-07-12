@@ -8,7 +8,7 @@ SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
 ARCH := $(shell uname -m)
 
 
-.PHONY: all $(SCRIPTS) fixlibs
+.PHONY: all $(SCRIPTS)
 
 all: $(SCRIPTS_DIR)/salt
 
@@ -37,11 +37,6 @@ $(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION
 	./configure --prefix=$(TARGET_DIR) ; \
 	make -j4; \
 	make install;
-
-# XXX: This can be done much better by searching for the libraries and using ld
-# to find out what is being linked. See the dh_shlibdeps comment in debian/rules
-fixlibs:
-	$(PWD)/pkg/fixlibs.sh $(TARGET_DIR)/lib
 
 $(TARGET_DIR)/.onedir:
 	pkg/fixlibs.sh $(TARGET_DIR)/lib
