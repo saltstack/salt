@@ -42,4 +42,4 @@ jobs:
       run: sudo apt-get install -y libcurl4-openssl-dev libssl-dev; sudo pip install nox
 
     - name: Run Tests
-      run: sudo nox -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-path=salt-artifacts/salt --system-install --run-slow tests/pytests/integration tests/pytests/scenarios
+      run: sudo nox -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-path=salt-artifacts/salt --system-install --run-slow --ssh-tests --run-destructive tests/integration tests/pytests/integration tests/pytests/scenarios
