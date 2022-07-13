@@ -22,9 +22,9 @@ def directory_name():
     return name
 
 
-def test_rmdir_clean(directory_name):
+def test_pruned_clean(directory_name):
     with patch("os.path.isdir", return_value=False):
-        ret = filestate.rmdir(name=directory_name)
+        ret = filestate.pruned(name=directory_name)
     assert ret == {
         "changes": {},
         "comment": "Directory {} is not present".format(directory_name),
@@ -33,12 +33,11 @@ def test_rmdir_clean(directory_name):
     }
 
 
-def test_rmdir_test(directory_name):
-    rmdir = MagicMock(return_value={"result": True})
+def test_pruned_test(directory_name):
     with patch("os.path.isdir", return_value=True), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        ret = filestate.rmdir(name=directory_name)
+        ret = filestate.pruned(name=directory_name)
     assert ret == {
         "changes": {"deleted": directory_name},
         "comment": "Directory {} is set for removal".format(directory_name),
@@ -47,12 +46,12 @@ def test_rmdir_test(directory_name):
     }
 
 
-def test_rmdir_success(directory_name):
+def test_pruned_success(directory_name):
     rmdir = MagicMock(return_value={"result": True})
     with patch("os.path.isdir", return_value=True), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(filestate.__salt__, {"file.rmdir": rmdir}):
-        ret = filestate.rmdir(name=directory_name)
+        ret = filestate.pruned(name=directory_name)
     assert ret == {
         "changes": {"deleted": directory_name},
         "comment": "Removed directory {}".format(directory_name),

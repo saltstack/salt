@@ -9052,12 +9052,13 @@ def mod_beacon(name, **kwargs):
         }
 
 
-def rmdir(name, recurse=False, ignore_errors=False, older_than=None):
+def pruned(name, recurse=False, ignore_errors=False, older_than=None):
     """
     .. versionadded:: 3006.0
 
     Ensure that the named directory is absent. If it exists and is empty, it
-    will be deleted.
+    will be deleted. An entire directory tree can be pruned of empty
+    directories as well, by using the ``recurse`` option.
 
     name
         The directory which should be deleted if empty.

@@ -56,16 +56,16 @@ def nested_dirs_with_files(tmp_path):
     yield str(tmp_path)
 
 
-def test_rmdir_failure(file, single_dir_with_file):
-    ret = file.rmdir(name=single_dir_with_file)
+def test_pruned_failure(file, single_dir_with_file):
+    ret = file.pruned(name=single_dir_with_file)
     assert ret.result is False
     assert not ret.changes["deleted"]
     assert len(ret.changes["errors"]) == 1
     assert ret.comment == "Failed to remove directory {}".format(single_dir_with_file)
 
 
-def test_rmdir_success_recurse_and_deleted(file, nested_empty_dirs):
-    ret = file.rmdir(name=nested_empty_dirs, recurse=True)
+def test_pruned_success_recurse_and_deleted(file, nested_empty_dirs):
+    ret = file.pruned(name=nested_empty_dirs, recurse=True)
     assert ret.result is True
     assert len(ret.changes["deleted"]) == 27
     assert ret.comment == "Recursively removed empty directories under {}".format(
@@ -73,8 +73,8 @@ def test_rmdir_success_recurse_and_deleted(file, nested_empty_dirs):
     )
 
 
-def test_rmdir_success_ignore_errors_and_deleted(file, nested_dirs_with_files):
-    ret = file.rmdir(name=nested_dirs_with_files, ignore_errors=True)
+def test_pruned_success_ignore_errors_and_deleted(file, nested_dirs_with_files):
+    ret = file.pruned(name=nested_dirs_with_files, ignore_errors=True)
     assert ret.result is True
     assert len(ret.changes["deleted"]) == 8
     assert ret.comment == "Recursively removed empty directories under {}".format(
