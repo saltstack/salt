@@ -45,6 +45,8 @@ def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
         yield sls_name
 
 
+@pytest.mark.skip_on_darwin(reason="MacOS is a spawning platform, won't work")
+@pytest.mark.flaky(max_runs=4)
 def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
     max_usg = None
 
