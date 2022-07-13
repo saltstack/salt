@@ -8,11 +8,11 @@ SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
 ARCH := $(shell uname -m)
 
 
-.PHONY: all $(SCRIPTS)
+.PHONY: all requirements onedir clean $(SCRIPTS)
 
 all: $(SCRIPTS_DIR)/salt
 
-clean: ;
+clean:
 	rm -rf $(TARGET_DIRNAME)
 
 
@@ -38,26 +38,29 @@ $(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION
 	make -j4; \
 	make install;
 
-$(TARGET_DIR)/.onedir:
-	pkg/fixlibs.sh $(TARGET_DIR)/lib
-	touch $(TARGET_DIR)/.onedir
-
 $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.onedir
 	cp $(PWD)/scripts/salt-pip $(SCRIPTS_DIR)/salt-pip
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $@;
 
 $(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip $(DYNLOAD) $(DYNLIB)
 	$(SCRIPTS_DIR)/salt-pip install .
-
+	$(SCRIPTS_DIR)/salt-pip install -r $(PWD)/requirements/static/pkg/py$(PY_SUFFIX)/linux.txt
 
 $(SCRIPTS): $(SCRIPTS_DIR)/salt
 	mv $(TARGET_DIR)/bin/$@ $(SCRIPTS_DIR);
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $(SCRIPTS_DIR)/$@;
 
+
+$(TARGET_DIR)/.onedir:
+	touch $(TARGET_DIR)/.onedir
+
+fixlibs:
+	pkg/fixlibs.sh $(TARGET_DIR)/lib
+
 $(TARGET_DIR)/install-salt:
 	cp $(PWD)/scripts/install-salt $(SCRIPTS_DIR)/install-salt
 
-$(TARGET_DIR)/uninstall-salt:
+$(TARGET_DIR)/uninstall-salt: fixlibs
 	cp $(PWD)/scripts/uninstall-salt $(SCRIPTS_DIR)/uninstall-salt
 
 salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
