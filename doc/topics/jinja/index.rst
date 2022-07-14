@@ -1268,7 +1268,7 @@ Returns:
 ``random_sample``
 -----------------
 
-.. versionadded:: 3006
+.. versionadded:: 3005
 
 Returns a given sample size from a list. The ``seed`` parameter can be used to
 return a predictable outcome.
@@ -1292,7 +1292,7 @@ Returns:
 ``random_shuffle``
 ------------------
 
-.. versionadded:: 3006
+.. versionadded:: 3005
 
 Returns a shuffled copy of an input list. The ``seed`` parameter can be used to
 return a predictable outcome.
