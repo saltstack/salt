@@ -134,6 +134,19 @@ For example:
         - bin_env: /usr/bin/python3
 
 
+Known issues
+------------
+To make use of Salt 3005 or later on a Salt master connected to SaltStack
+Config, you must use SaltStack Config version 8.9.0 or later.
+
+It is recommended to upgrade SaltStack Config before upgrading your Salt
+masters. However, if a Salt master is upgraded to version 3005 before
+upgrading SaltStack Config, the upgrade can still be completed.
+
+After upgrading SaltStack Config, including the SSC plugin on each Salt master,
+restart the Salt masters.
+
+
 Removed
 -------
 
