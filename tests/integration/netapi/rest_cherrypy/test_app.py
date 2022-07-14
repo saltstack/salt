@@ -238,7 +238,8 @@ class TestFlush(cptc.BaseRestCherryPyTest):
         '''
         Return the token
         '''
-        body = urlencode(self.auth_creds)
+        cmd = dict(**dict(self.auth_creds))
+        body = urlencode(cmd)
         request, response = self.request(
             '/login',
             method='POST',
