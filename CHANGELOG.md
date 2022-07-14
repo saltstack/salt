@@ -241,6 +241,8 @@ Fixed
 - Fixes issue in postgresql privileges detection: privileges on views were never retrieved and always recreated. (#57690)
 - Fix service.enabled error for unavailable service in test mode (#62258)
 - Fix variable reuse causing requisite_in problems (#62264)
+- Adding -G option to pkgdd cmd_prefix list when current_zone_only is True. (#62206)
+- Don't expect ``lsof`` to be installed when trying check which minions are connected. (#62303)
 
 
 Added
@@ -292,6 +294,14 @@ Added
   Added compatibility with Zabbix 4.0+ for `zabbix.user_getmedia` method
   Added support for setting medias in `zabbix.user_update` for Zabbix 3.4+ (#62012)
 - Add ignore_missing parameter to file.comment state (#62044)
+- General improvements on the "ansiblegate" module:
+  * Add "ansible.targets" method to gather Ansible inventory
+  * Add "ansible.discover_playbooks" method to help collecting playbooks
+  * Fix crash when running Ansible playbooks if ansible-playbook CLI output is not the expected JSON.
+  * Fix issues when processing inventory and there are groups with no members.
+  * Allow new types of targets for Ansible roster (#60056)
+- Add sample and shuffle functions from random (#62225)
+
 
 Salt 3004.2 (2022-05-12)
 ========================
