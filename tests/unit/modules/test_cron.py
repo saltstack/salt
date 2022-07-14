@@ -1299,7 +1299,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                 4,
                 5,
                 "/bin/echo NOT A DROID",
-                "WERE YOU LOOKING FOR ME?",
+                comment = "WERE YOU LOOKING FOR ME?",
             )
             expected_call = call(
                 "DUMMY_USER",
@@ -1310,7 +1310,9 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                     "1 2 3 4 5 /bin/echo NOT A DROID\n",
                 ],
             )
-            cron._write_cron_lines.call_args.assert_called_with(expected_call)
+            cron._write_cron_lines.assert_has_calls(
+                (expected_call,), any_order=True
+            )
 
     def test_rm_special(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
