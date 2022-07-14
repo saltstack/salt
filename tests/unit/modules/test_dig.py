@@ -96,7 +96,7 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
-    def test_x(self):
+    def test_ptr(self):
         dig_mock = MagicMock(
             return_value={
                 "pid": 3657,
@@ -107,7 +107,7 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
             self.assertEqual(
-                dig.X("8.8.8.8"),
+                dig.ptr("8.8.8.8"),
                 [
                     "dns.google.",
                 ],
