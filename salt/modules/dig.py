@@ -99,7 +99,7 @@ def A(host, nameserver=None):
     return [x for x in cmd["stdout"].split("\n") if check_ip(x)]
 
 
-def X(host, nameserver=None):
+def PTR(host, nameserver=None):
     """
     .. versionadded:: 3006.0
     Return the PTR record for ``host``.
@@ -110,7 +110,7 @@ def X(host, nameserver=None):
 
     .. code-block:: bash
 
-        salt ns1 dig.X 1.2.3.4
+        salt ns1 dig.PTR 1.2.3.4
     """
     dig = ["dig", "+short", "-x", str(host)]
 
@@ -349,7 +349,7 @@ def TXT(host, nameserver=None):
 
 # Let lowercase work, since that is the convention for Salt functions
 a = A
-x = X
+ptr = PTR
 aaaa = AAAA
 cname = CNAME
 ns = NS
