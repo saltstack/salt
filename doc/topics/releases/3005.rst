@@ -139,6 +139,11 @@ Known issues
 To make use of Salt 3005 or later on a Salt master connected to SaltStack
 Config, you must use SaltStack Config version 8.9.0 or later.
 
+The root cause of the issue is a breaking change to
+``AsyncClient._proc_function()``` in Salt, which is the function that the
+raas-master uses to run ``salt-run`` commands. As this is a private API, there's
+no expectation that the API should remain backward-compatible.
+
 It is recommended to upgrade SaltStack Config before upgrading your Salt
 masters. However, if a Salt master is upgraded to version 3005 before
 upgrading SaltStack Config, the upgrade can still be completed.
