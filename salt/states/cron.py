@@ -355,9 +355,6 @@ def present(
         return ret
 
     if special is None:
-        antidata = __salt__["cron.rm_special"](
-            user, name, special=special, identifier=identifier
-        )
         data = __salt__["cron.set_job"](
             user=user,
             minute=minute,
@@ -371,7 +368,6 @@ def present(
             identifier=identifier,
         )
     else:
-        antidata = __salt__["cron.rm_job"](user, name, identifier=identifier)
         data = __salt__["cron.set_special"](
             user=user,
             special=special,
@@ -380,22 +376,14 @@ def present(
             commented=commented,
             identifier=identifier,
         )
-
-    if data == "present" and antidata == "removed":
-        ret["comment"] = "Duplicate Cron {} removed".format(name)
-        return ret
-
-    if data == "present" and antidata == "absent":
+    if data == "present":
         ret["comment"] = "Cron {} already present".format(name)
         return ret
 
-    if data == "new" and antidata == "absent":
+    if data == "new":
         ret["comment"] = "Cron {} added to {}'s crontab".format(name, user)
         ret["changes"] = {user: name}
         return ret
-
-    if data == "new" and antidata == "removed":
-        ret["comment"] = "Cron {} time specification changed".format(name)
 
     if data == "updated":
         ret["comment"] = "Cron {} updated".format(name)
