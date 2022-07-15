@@ -299,7 +299,9 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port, salt_factories):
+def salt_minion_factory(
+    salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port, salt_factories
+):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
