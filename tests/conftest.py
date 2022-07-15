@@ -165,18 +165,16 @@ def pytest_addoption(parser):
     )
     test_selection_group.addoption(
         "--system-install",
-        action='store_true',
+        action="store_true",
         default=False,
-        help=(
-             "Use system installed salt."
-        )
+        help=("Use system installed salt."),
     )
     test_selection_group.addoption(
         "--scripts-path",
         help=(
-             "Run the tests using the scripts found in this location. This"
-             "option is used to test salt artifacts."
-        )
+            "Run the tests using the scripts found in this location. This"
+            "option is used to test salt artifacts."
+        ),
     )
     test_selection_group.addoption(
         "--ssh",
@@ -694,7 +692,7 @@ def groups_collection_modifyitems(config, items):
 
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
- # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
+# ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 
 # Hook the system installation of salt into salt_factories
 @pytest.fixture(scope="session")
@@ -1135,7 +1133,9 @@ def salt_sub_minion_factory(salt_master_factory):
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = salt_master_factory.config["transport"]
     config_defaults["engines_dirs"] = salt_master_factory.config["engines_dirs"].copy()
-    config_defaults["log_handlers_dirs"] = salt_master_factory.config["log_handlers_dirs"].copy()
+    config_defaults["log_handlers_dirs"] = salt_master_factory.config[
+        "log_handlers_dirs"
+    ].copy()
 
     config_overrides = {
         "log_level_logfile": "quiet",
