@@ -7,8 +7,6 @@ or for problem solving if your minion is having problems.
 
 :depends:  - wmi
 """
-
-
 import ctypes
 import datetime
 import logging
@@ -18,17 +16,11 @@ import salt.utils.event
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_pdh
-
-# These imports needed for namespaced functions
-# pylint: disable=W0611
 from salt.modules.status import ping_master, time_
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.utils.network import host_to_ips as _host_to_ips
 
 log = logging.getLogger(__name__)
-
-
-# pylint: enable=W0611
 
 try:
     if salt.utils.platform.is_windows():
@@ -41,13 +33,17 @@ try:
 except ImportError:
     HAS_WMI = False
 
-HAS_PSUTIL = False
-if salt.utils.platform.is_windows():
+try:
     import psutil
 
     HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
-__opts__ = {}
+if salt.utils.platform.is_windows():
+    ping_master = namespaced_function(ping_master, globals())
+    time_ = namespaced_function(time_, globals())
+
 __virtualname__ = "status"
 
 
@@ -152,8 +148,6 @@ def __virtual__():
 
     # Namespace modules from `status.py`
     global ping_master, time_
-    ping_master = _namespaced_function(ping_master, globals())
-    time_ = _namespaced_function(time_, globals())
 
     return __virtualname__
 
