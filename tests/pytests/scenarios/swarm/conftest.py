@@ -38,14 +38,6 @@ def salt_cli(salt_master):
 
 
 @pytest.fixture(scope="package")
-def pki_dir(tmp_path_factory, salt_key_cli):
-    pki_dir = tmp_path_factory.mktemp("swarm") / "pki"
-    key_ret = salt_key_cli.run("--gen-keys", "minion", "--gen-keys-dir", str(pki_dir))
-    assert key_ret.returncode == 0
-    return pki_dir
-
-
-@pytest.fixture(scope="package")
 def minion_count():
     return 20
 
@@ -62,6 +54,7 @@ def minion_swarm(salt_master, minion_count):
                 random_string("swarm-minion-{}-".format(idx)),
                 extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
             )
+            print(f"Starting minion {minion_factory.id}")
             stack.enter_context(minion_factory.started())
             minions.append(minion_factory)
         for minion in minions:
