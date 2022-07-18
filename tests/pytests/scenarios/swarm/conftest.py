@@ -54,7 +54,6 @@ def minion_swarm(salt_master, minion_count):
                 random_string("swarm-minion-{}-".format(idx)),
                 extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
             )
-            print(f"Starting minion {minion_factory.id}")
             stack.enter_context(minion_factory.started())
             minions.append(minion_factory)
         for minion in minions:
