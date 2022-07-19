@@ -267,7 +267,8 @@ def pytest_configure(config):
         "requiring a minimum value of random entropy. In the case where the value is lower "
         "than the provided 'minimum', an attempt will be made to raise that value up until "
         "the provided 'timeout' minutes have passed, at which time, depending on the value "
-        "of 'skip' the test will skip or fail.".format(
+        "of 'skip' the test will skip or fail.  For entropy poolsizes of 256 bits, the min "
+        "is adjusted to 192.".format(
             EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
         ),
     )
