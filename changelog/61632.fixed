@@ -1,1 +1,0 @@
-modules/aptpkg.SourceEntry: fix parsing lines with arbitrary comments in case HAS_APT=False

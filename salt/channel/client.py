@@ -383,7 +383,6 @@ class AsyncPubChannel:
         """
         try:
             if not self.auth.authenticated:
-                log.error("WTF %r %r", self.auth.authenticated, self.auth.authenticate)
                 yield self.auth.authenticate()
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4506)) != 4506:
