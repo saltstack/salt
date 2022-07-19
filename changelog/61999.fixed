@@ -1,1 +1,0 @@
-When states are running in parallel, ensure that the total run time produced by the highstate outputter takes that into account.

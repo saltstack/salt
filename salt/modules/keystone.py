@@ -91,9 +91,6 @@ def __virtual__():
     )
 
 
-__opts__ = {}
-
-
 def _get_kwargs(profile=None, **connection_args):
     """
     get connection args

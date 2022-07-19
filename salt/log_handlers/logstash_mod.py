@@ -167,6 +167,7 @@ from salt._logging import LOG_LEVELS
 
 try:
     import zmq
+    import zmq.error
 except ImportError:
     pass
 
@@ -434,7 +435,7 @@ class ZMQLogstashHander(logging.Handler):
                 # Above the defined high water mark(unsent messages), start
                 # dropping them
                 self._publisher.setsockopt(zmq.HWM, self._zmq_hwm)
-            except AttributeError:
+            except (AttributeError, zmq.error.ZMQError):
                 # In ZMQ >= 3.0, there are separate send and receive HWM
                 # settings
                 self._publisher.setsockopt(zmq.SNDHWM, self._zmq_hwm)

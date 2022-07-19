@@ -117,6 +117,7 @@ Optional provider parameters:
 
 """
 import logging
+from functools import wraps
 
 import salt.utils.azurearm
 
@@ -134,7 +135,28 @@ def __virtual__():
     return (False, "azurearm_dns module could not be loaded")
 
 
-@salt.utils.azurearm.deprecation_message
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def zone_present(
     name,
     resource_group,
@@ -335,7 +357,7 @@ def zone_present(
     return ret
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def zone_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000
@@ -392,7 +414,7 @@ def zone_absent(name, resource_group, connection_auth=None):
     return ret
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def record_set_present(
     name,
     zone_name,
@@ -678,7 +700,7 @@ def record_set_present(
     return ret
 
 
-@salt.utils.azurearm.deprecation_message
+@_deprecation_message
 def record_set_absent(name, zone_name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000

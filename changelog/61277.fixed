@@ -1,1 +1,0 @@
-Fixed tracebacks and print helpful error message when proxy_return = True but no platform or primary_ip set in NetBox pillar.
