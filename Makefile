@@ -64,7 +64,7 @@ $(TARGET_DIR)/uninstall-salt: fixlibs
 	cp $(PWD)/scripts/uninstall-salt $(SCRIPTS_DIR)/uninstall-salt
 
 salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
-	find $(TARGET_DIR) -name '*.pyc' -exec rm -f {} \;
+	find $(TARGET_DIR) -name '__pycache__' -exec rm -rf {} \;
 	# XXX: Should we keep this?
 	#rm -rf $(TARGET_DIR)/include $(TARGET_DIR)/share
 	tar cJvf salt-$(SALT_VERSION)_$(ARCH).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);
