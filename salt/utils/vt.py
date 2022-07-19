@@ -14,7 +14,7 @@
     get us into.
 
     .. __: http://code.activestate.com/recipes/440554/
-    .. __: https://github.com/python-mirror/python/blob/3.3/Lib/pty.py
+    .. __: https://github.com/python/cpython/blob/3.3/Lib/pty.py
     .. __: https://github.com/pexpect/pexpect
 
 """
@@ -32,7 +32,7 @@ import time
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.stringutils
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 mswindows = sys.platform == "win32"
 

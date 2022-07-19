@@ -911,26 +911,12 @@ def _handle_unit(s, def_unit="m"):
     """
     Handle the unit conversion, return the value in bytes
     """
-    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(s).strip())
-    value = m.group("value")
-    # default unit
-    unit = m.group("unit").lower() or def_unit
-    try:
-        value = int(value)
-    except ValueError:
-        try:
-            value = float(value)
-        except ValueError:
-            raise SaltInvocationError("invalid number")
-    # flag for base ten
-    dec = False
-    if re.match(r"[kmgtpezy]b$", unit):
-        dec = True
-    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
-        raise SaltInvocationError("invalid units")
-    p = "bkmgtpezy".index(unit[0])
-    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
-    return int(value)
+    ret = salt.utils.stringutils.human_to_bytes(
+        s, default_unit=def_unit, handle_metric=True
+    )
+    if ret == 0:
+        raise SaltInvocationError("invalid number or unit")
+    return ret
 
 
 def nesthash(value=None):
@@ -5792,7 +5778,6 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
-    sysctl_cmd = "sysctl hw.vmm.create"
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(

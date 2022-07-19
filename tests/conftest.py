@@ -26,7 +26,7 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
-import salt._logging.impl
+import salt._logging
 import salt._logging.mixins
 import salt.config
 import salt.loader
@@ -108,6 +108,7 @@ _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
 # Reset logging root handlers
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+    handler.close()
 
 
 # Reset the root logger to its default level(because salt changed it)
@@ -255,6 +256,21 @@ def pytest_configure(config):
         "markers",
         "slow_test: Mark test as being slow. These tests are skipped by default unless"
         " `--run-slow` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
+    )
+    config.addinivalue_line(
+        "markers",
+        "requires_random_entropy(minimum={}, timeout={}, skip=True): Mark test as "
+        "requiring a minimum value of random entropy. In the case where the value is lower "
+        "than the provided 'minimum', an attempt will be made to raise that value up until "
+        "the provided 'timeout' minutes have passed, at which time, depending on the value "
+        "of 'skip' the test will skip or fail.  For entropy poolsizes of 256 bits, the min "
+        "is adjusted to 192.".format(
+            EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
+        ),
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
@@ -540,6 +556,55 @@ def pytest_runtest_setup(item):
                 )
             )
 
+    requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
+    if requires_random_entropy_marker is not None:
+        if requires_random_entropy_marker.args:
+            raise pytest.UsageError(
+                "'requires_random_entropy' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        skip = requires_random_entropy_marker.kwargs.pop("skip", None)
+        if skip and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'requires_random_entropy' marker "
+                "requires a boolean not '{}'.".format(type(skip))
+            )
+        minimum_entropy = requires_random_entropy_marker.kwargs.pop("minimum", None)
+        if minimum_entropy is not None:
+            if not isinstance(minimum_entropy, int):
+                raise pytest.UsageError(
+                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an integer not '{}'.".format(type(minimum_entropy))
+                )
+            if minimum_entropy <= 0:
+                raise pytest.UsageError(
+                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an positive integer not '{}'.".format(minimum_entropy)
+                )
+        max_minutes = requires_random_entropy_marker.kwargs.pop("timeout", None)
+        if max_minutes is not None:
+            if not isinstance(max_minutes, int):
+                raise pytest.UsageError(
+                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an integer not '{}'.".format(type(max_minutes))
+                )
+            if max_minutes <= 0:
+                raise pytest.UsageError(
+                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an positive integer not '{}'.".format(max_minutes)
+                )
+        if requires_random_entropy_marker.kwargs:
+            raise pytest.UsageError(
+                "Unsupported keyword arguments passed to the 'requires_random_entropy' "
+                "marker: {}".format(
+                    ", ".join(list(requires_random_entropy_marker.kwargs))
+                )
+            )
+        entropy_generator = EntropyGenerator(
+            minimum_entropy=minimum_entropy, max_minutes=max_minutes, skip=skip
+        )
+        entropy_generator.generate_entropy()
+
     if salt.utils.platform.is_windows():
         unit_tests_paths = (
             str(TESTS_DIR / "unit"),
@@ -627,6 +692,15 @@ def salt_factories_config():
     }
 
 
+@pytest.fixture
+def tmpdir(tmpdir):
+    raise pytest.UsageError(
+        "The `tmpdir` fixture uses Pytest's `pypath` implementation which "
+        "is getting deprecated in favor of `pathlib`. Please use the "
+        "`tmp_path` fixture instead."
+    )
+
+
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
 
 
@@ -640,6 +714,22 @@ def integration_files_dir(salt_factories):
     dirname = salt_factories.root_dir / "integration-files"
     dirname.mkdir(exist_ok=True)
     for child in (PYTESTS_DIR / "integration" / "files").iterdir():
+        if child.is_dir():
+            shutil.copytree(str(child), str(dirname / child.name))
+        else:
+            shutil.copyfile(str(child), str(dirname / child.name))
+    return dirname
+
+
+@pytest.fixture(scope="module")
+def functional_files_dir(salt_factories):
+    """
+    Fixture which returns the salt functional files directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = salt_factories.root_dir / "functional-files"
+    dirname.mkdir(exist_ok=True)
+    for child in (PYTESTS_DIR / "functional" / "files").iterdir():
         if child.is_dir():
             shutil.copytree(str(child), str(dirname / child.name))
         else:
@@ -852,6 +942,7 @@ def salt_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
+    salt_api_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -889,6 +980,16 @@ def salt_master_factory(
         }
     )
     config_overrides["pillar_opts"] = True
+    config_overrides["external_auth"] = {
+        "auto": {
+            salt_api_account_factory.username: [
+                "@wheel",
+                "@runner",
+                "test.*",
+                "grains.*",
+            ],
+        }
+    }
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
@@ -1089,7 +1190,7 @@ def sshd_config_dir(salt_factories):
 
 
 @pytest.fixture(scope="module")
-def sshd_server(salt_factories, sshd_config_dir, salt_master):
+def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp
@@ -1120,6 +1221,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
         "Subsystem": "sftp /usr/lib/openssh/sftp-server",
         "UsePAM": "yes",
     }
+    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        sshd_config_dict["Subsystem"] = "sftp /usr/libexec/openssh/sftp-server"
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
@@ -1425,6 +1528,28 @@ def ssl_webserver(integration_files_dir, scope="module"):
     webserver.start()
     yield webserver
     webserver.stop()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _disable_salt_logging():
+    # This fixture is used to set logging to a configuration that salt expects,
+    # however, no logging is actually configured since pytest's logging will be
+    # logging what we need.
+    logging_config = {
+        # Undocumented, on purpose, at least for now, options.
+        "configure_ext_handlers": False,
+        "configure_file_logger": False,
+        "configure_console_logger": False,
+        "configure_granular_levels": False,
+    }
+    salt._logging.set_logging_options_dict(logging_config)
+    # Run the test suite
+    yield
+
+
+@pytest.fixture(scope="session")
+def salt_api_account_factory():
+    return TestAccount(username="saltdev_api", password="saltdev")
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

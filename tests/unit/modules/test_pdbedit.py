@@ -1,15 +1,28 @@
+import hashlib
+
 import pytest
 import salt.modules.pdbedit as pdbedit
-import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_photonos(),
-    reason="Hash type md4 is unsupported on Photon OS",
-)
+def _md4_supported():
+    try:
+        hashlib.new("md4", "".encode("utf-16le"))
+        return True
+    except ValueError:
+        return False
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        not _md4_supported(),
+        reason="Hash type md4 is unsupported on this OS",
+    ),
+]
+
+
 class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
     """
     TestCase for salt.modules.pdbedit module

@@ -27,7 +27,9 @@ from operator import itemgetter
 
 import salt.config
 import salt.loader
+import salt.utils.args
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.version
 from salt.exceptions import SaltInvocationError, SaltSystemExit
 

@@ -25,7 +25,6 @@ from errno import EACCES, EPERM
 
 import distro
 import salt.exceptions
-import salt.log
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -711,14 +710,14 @@ def _windows_virtual(osdata):
     elif "VirtualBox" in productname:
         grains["virtual"] = "VirtualBox"
     # Product Name: VMware Virtual Platform
-    elif "VMware Virtual Platform" in productname:
+    elif "VMware" in productname:
         grains["virtual"] = "VMware"
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
     elif "Microsoft" in manufacturer and "Virtual Machine" in productname:
         grains["virtual"] = "VirtualPC"
     # Manufacturer: Parallels Software International Inc.
-    elif "Parallels Software" in manufacturer:
+    elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in productname:
@@ -784,8 +783,7 @@ def _virtual(osdata):
                 try:
                     ret = __salt__["cmd.run_all"](virtinfo)
                 except salt.exceptions.CommandExecutionError:
-                    if salt.log.is_logging_configured():
-                        failed_commands.add(virtinfo)
+                    failed_commands.add(virtinfo)
                 else:
                     if ret["stdout"].endswith("not supported"):
                         command = "prtdiag"
@@ -806,23 +804,21 @@ def _virtual(osdata):
             ret = __salt__["cmd.run_all"](cmd)
 
             if ret["retcode"] > 0:
-                if salt.log.is_logging_configured():
-                    # systemd-detect-virt always returns > 0 on non-virtualized
-                    # systems
-                    # prtdiag only works in the global zone, skip if it fails
-                    if (
-                        salt.utils.platform.is_windows()
-                        or "systemd-detect-virt" in cmd
-                        or "prtdiag" in cmd
-                    ):
-                        continue
-                    failed_commands.add(command)
-                continue
-        except salt.exceptions.CommandExecutionError:
-            if salt.log.is_logging_configured():
-                if salt.utils.platform.is_windows():
+                # systemd-detect-virt always returns > 0 on non-virtualized
+                # systems
+                # prtdiag only works in the global zone, skip if it fails
+                if (
+                    salt.utils.platform.is_windows()
+                    or "systemd-detect-virt" in cmd
+                    or "prtdiag" in cmd
+                ):
                     continue
                 failed_commands.add(command)
+                continue
+        except salt.exceptions.CommandExecutionError:
+            if salt.utils.platform.is_windows():
+                continue
+            failed_commands.add(command)
             continue
 
         output = ret["stdout"]

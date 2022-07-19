@@ -11,6 +11,8 @@ from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
+pytest.importorskip("docker")
+
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_freebsd(reason="No Docker on FreeBSD available"),
@@ -45,7 +47,6 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
     }
 
 
-@pytest.mark.slow_test
 def test_present_absent(rabbitmq_container):
     """
     Test rabbitmq_policy.present and rabbitmq_policy.absent

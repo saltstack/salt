@@ -510,6 +510,26 @@ def test_enabled():
         assert service.__context__ == {"service.state": "enabled"}
 
 
+def test_enabled_in_test_mode():
+    ret = {
+        "changes": {},
+        "comment": "Service salt not present; if created in this state run, it would have been enabled",
+        "name": "salt",
+        "result": None,
+    }
+    mock = MagicMock(
+        return_value={
+            "result": "False",
+            "comment": "The named service salt is not available",
+        }
+    )
+    with patch.object(service, "_enable", mock), patch.dict(
+        service.__opts__, {"test": True}
+    ):
+        assert service.enabled("salt") == ret
+        assert service.__context__ == {"service.state": "enabled"}
+
+
 def test_disabled():
     """
     Test to verify that the service is disabled

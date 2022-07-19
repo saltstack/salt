@@ -1,18 +1,58 @@
+import os
 import socket
 
 import attr
 import pytest
+import salt.channel.server
 import salt.exceptions
 import salt.ext.tornado
 import salt.transport.tcp
-from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.mock import MagicMock, patch
+from pytestshellutils.utils import ports
+from tests.support.mock import MagicMock, PropertyMock, patch
+
+
+@pytest.fixture
+def fake_keys():
+    with patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
+        yield
+
+
+@pytest.fixture
+def fake_crypto():
+    with patch("salt.transport.tcp.PKCS1_OAEP", create=True) as fake_crypto:
+        yield fake_crypto
+
+
+@pytest.fixture
+def fake_authd():
+    @salt.ext.tornado.gen.coroutine
+    def return_nothing():
+        raise salt.ext.tornado.gen.Return()
+
+    with patch(
+        "salt.crypt.AsyncAuth.authenticated", new_callable=PropertyMock
+    ) as mock_authed, patch(
+        "salt.crypt.AsyncAuth.authenticate",
+        autospec=True,
+        return_value=return_nothing(),
+    ), patch(
+        "salt.crypt.AsyncAuth.gen_token", autospec=True, return_value=42
+    ):
+        mock_authed.return_value = False
+        yield
+
+
+@pytest.fixture
+def fake_crypticle():
+    with patch("salt.crypt.Crypticle") as fake_crypticle:
+        fake_crypticle.generate_key_string.return_value = "fakey fake"
+        yield fake_crypticle
 
 
 @attr.s(frozen=True, slots=True)
 class ClientSocket:
     listen_on = attr.ib(init=False, default="127.0.0.1")
-    port = attr.ib(init=False, default=attr.Factory(get_unused_localhost_port))
+    port = attr.ib(init=False, default=attr.Factory(ports.get_unused_localhost_port))
     sock = attr.ib(init=False, repr=False)
 
     @sock.default
@@ -79,84 +119,118 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
         orig_loop.close(all_fds=True)
 
 
-# XXX: Test channel for this
-# def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
-#    opts = dict(
-#        temp_salt_master.config.copy(),
-#        sign_pub_messages=False,
-#        transport="tcp",
-#        acceptance_wait_time=5,
-#        acceptance_wait_time_max=5,
-#    )
-#    with patch("salt.master.SMaster.secrets") as secrets, patch(
-#        "salt.crypt.Crypticle"
-#    ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper:
-#        channel = salt.transport.tcp.TCPPubServerChannel(opts)
-#        wrap = MagicMock()
-#        crypt = MagicMock()
-#        crypt.dumps.return_value = {"test": "value"}
-#
-#        secrets.return_value = {"aes": {"secret": None}}
-#        crypticle.return_value = crypt
-#        SyncWrapper.return_value = wrap
-#
-#        # try simple publish with glob tgt_type
-#        channel.publish({"test": "value", "tgt_type": "glob", "tgt": "*"})
-#        payload = wrap.send.call_args[0][0]
-#
-#        # verify we send it without any specific topic
-#        assert "topic_lst" not in payload
-#
-#        # try simple publish with list tgt_type
-#        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
-#        payload = wrap.send.call_args[0][0]
-#
-#        # verify we send it with correct topic
-#        assert "topic_lst" in payload
-#        assert payload["topic_lst"] == ["minion01"]
-#
-#        # try with syndic settings
-#        opts["order_masters"] = True
-#        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
-#        payload = wrap.send.call_args[0][0]
-#
-#        # verify we send it without topic for syndics
-#        assert "topic_lst" not in payload
+async def test_async_tcp_pub_channel_connect_publish_port(
+    temp_salt_master, client_socket
+):
+    """
+    test when publish_port is not 4506
+    """
+    opts = dict(
+        temp_salt_master.config.copy(),
+        master_uri="tcp://127.0.0.1:1234",
+        master_ip="127.0.0.1",
+        publish_port=1234,
+        transport="tcp",
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
+    )
+    patch_auth = MagicMock(return_value=True)
+    transport = MagicMock(spec=salt.transport.tcp.TCPPubClient)
+    with patch("salt.crypt.AsyncAuth.gen_token", patch_auth), patch(
+        "salt.crypt.AsyncAuth.authenticated", patch_auth
+    ), patch("salt.transport.tcp.TCPPubClient", transport):
+        channel = salt.channel.client.AsyncPubChannel.factory(opts)
+        with channel:
+            # We won't be able to succeed the connection because we're not mocking the tornado coroutine
+            with pytest.raises(salt.exceptions.SaltClientError):
+                await channel.connect()
+    # The first call to the mock is the instance's __init__, and the first argument to those calls is the opts dict
+    assert channel.transport.connect.call_args[0][0] == opts["publish_port"]
 
 
-# def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
-#    opts = dict(
-#        temp_salt_master.config.copy(),
-#        transport="tcp",
-#        sign_pub_messages=False,
-#        acceptance_wait_time=5,
-#        acceptance_wait_time_max=5,
-#    )
-#    with patch("salt.master.SMaster.secrets") as secrets, patch(
-#        "salt.crypt.Crypticle"
-#    ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper, patch(
-#        "salt.utils.minions.CkMinions.check_minions"
-#    ) as check_minions:
-#        channel = salt.transport.tcp.TCPPubServerChannel(opts)
-#        wrap = MagicMock()
-#        crypt = MagicMock()
-#        crypt.dumps.return_value = {"test": "value"}
-#
-#        secrets.return_value = {"aes": {"secret": None}}
-#        crypticle.return_value = crypt
-#        SyncWrapper.return_value = wrap
-#        check_minions.return_value = {"minions": ["minion02"]}
-#
-#        # try simple publish with list tgt_type
-#        channel.publish({"test": "value", "tgt_type": "list", "tgt": "minion02"})
-#        payload = wrap.send.call_args[0][0]
-#
-#        # verify we send it with correct topic
-#        assert "topic_lst" in payload
-#        assert payload["topic_lst"] == ["minion02"]
-#
-#        # verify it was correctly calling check_minions
-#        check_minions.assert_called_with("minion02", tgt_type="list")
+def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
+    opts = dict(
+        temp_salt_master.config.copy(),
+        sign_pub_messages=False,
+        transport="tcp",
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
+    )
+    with patch("salt.master.SMaster.secrets") as secrets, patch(
+        "salt.crypt.Crypticle"
+    ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper:
+        channel = salt.channel.server.PubServerChannel.factory(opts)
+        wrap = MagicMock()
+        crypt = MagicMock()
+        crypt.dumps.return_value = {"test": "value"}
+
+        secrets.return_value = {"aes": {"secret": None}}
+        crypticle.return_value = crypt
+        SyncWrapper.return_value = wrap
+
+        # try simple publish with glob tgt_type
+        payload = channel.wrap_payload(
+            {"test": "value", "tgt_type": "glob", "tgt": "*"}
+        )
+
+        # verify we send it without any specific topic
+        assert "topic_lst" in payload
+        assert payload["topic_lst"] == []  # "minion01"]
+
+        # try simple publish with list tgt_type
+        payload = channel.wrap_payload(
+            {"test": "value", "tgt_type": "list", "tgt": ["minion01"]}
+        )
+
+        # verify we send it with correct topic
+        assert "topic_lst" in payload
+        assert payload["topic_lst"] == ["minion01"]
+
+        # try with syndic settings
+        opts["order_masters"] = True
+        channel = salt.channel.server.PubServerChannel.factory(opts)
+        payload = channel.wrap_payload(
+            {"test": "value", "tgt_type": "list", "tgt": ["minion01"]}
+        )
+
+        # verify we send it without topic for syndics
+        assert "topic_lst" not in payload
+
+
+def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
+    opts = dict(
+        temp_salt_master.config.copy(),
+        transport="tcp",
+        sign_pub_messages=False,
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
+    )
+    with patch("salt.master.SMaster.secrets") as secrets, patch(
+        "salt.crypt.Crypticle"
+    ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper, patch(
+        "salt.utils.minions.CkMinions.check_minions"
+    ) as check_minions:
+        channel = salt.channel.server.PubServerChannel.factory(opts)
+        wrap = MagicMock()
+        crypt = MagicMock()
+        crypt.dumps.return_value = {"test": "value"}
+
+        secrets.return_value = {"aes": {"secret": None}}
+        crypticle.return_value = crypt
+        SyncWrapper.return_value = wrap
+        check_minions.return_value = {"minions": ["minion02"]}
+
+        # try simple publish with list tgt_type
+        payload = channel.wrap_payload(
+            {"test": "value", "tgt_type": "list", "tgt": "minion02"}
+        )
+
+        # verify we send it with correct topic
+        assert "topic_lst" in payload
+        assert payload["topic_lst"] == ["minion02"]
+
+        # verify it was correctly calling check_minions
+        check_minions.assert_called_with("minion02", tgt_type="list")
 
 
 @pytest.fixture(scope="function")
@@ -165,7 +239,7 @@ def salt_message_client():
     io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
 
     client = salt.transport.tcp.MessageClient(
-        {}, "127.0.0.1", get_unused_localhost_port(), io_loop=io_loop_mock
+        {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop_mock
     )
 
     try:
@@ -300,3 +374,58 @@ def xtest_client_reconnect_backoff(client_socket):
             client.io_loop.run_sync(client.connect)
     finally:
         client.close()
+
+
+async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(
+    fake_keys, fake_crypto, fake_crypticle
+):
+    # Syndics use the minion pki dir, but they also create a syndic_master.pub
+    # file for comms with the Salt master
+    expected_pubkey_path = os.path.join("/etc/salt/pki/minion", "syndic_master.pub")
+    fake_crypto.new.return_value.decrypt.return_value = "decrypted_return_value"
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": "/etc/salt/pki/minion",
+        "id": "syndic",
+        "__role": "syndic",
+        "keysize": 4096,
+        "transport": "tcp",
+        "acceptance_wait_time": 30,
+        "acceptance_wait_time_max": 30,
+    }
+    client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
+    assert client.master_pubkey_path == expected_pubkey_path
+    with patch("salt.crypt.verify_signature") as mock:
+        client.verify_signature("mockdata", "mocksig")
+        assert mock.call_args_list[0][0][0] == expected_pubkey_path
+
+
+async def test_mixin_should_use_correct_path_when_syndic(
+    fake_keys, fake_authd, fake_crypticle
+):
+    mockloop = MagicMock()
+    expected_pubkey_path = os.path.join("/etc/salt/pki/minion", "syndic_master.pub")
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": "/etc/salt/pki/minion",
+        "id": "syndic",
+        "__role": "syndic",
+        "keysize": 4096,
+        "sign_pub_messages": True,
+        "transport": "tcp",
+    }
+    client = salt.channel.client.AsyncPubChannel.factory(opts, io_loop=mockloop)
+    client.master_pubkey_path = expected_pubkey_path
+    payload = {"sig": "abc", "load": {"foo": "bar"}}
+    with patch("salt.crypt.verify_signature") as mock:
+        client._verify_master_signature(payload)
+        assert mock.call_args_list[0][0][0] == expected_pubkey_path

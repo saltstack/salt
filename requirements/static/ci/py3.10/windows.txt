@@ -37,7 +37,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
@@ -187,7 +187,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-lxml==4.7.1
+lxml==4.9.1
     # via -r requirements/static/pkg/py3.10/windows.txt
 mako==1.1.4
     # via
@@ -214,7 +214,7 @@ more-itertools==8.2.0
     #   zipp
 moto==3.0.1
     # via -r requirements/static/ci/common.in
-msgpack==0.6.2
+msgpack==1.0.2
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   pytest-salt-factories
@@ -271,7 +271,7 @@ pyrsistent==0.17.3
     # via jsonschema
 pytest-helpers-namespace==2019.1.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories==1.0.0rc17
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -294,13 +294,13 @@ python-dateutil==2.8.1
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.7
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/py3.10/windows.txt
 python-jose[cryptography]==3.2.0
     # via moto
 pythonnet==2.5.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   moto
@@ -321,7 +321,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   moto
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   pytest-salt-factories
@@ -435,3 +435,4 @@ zipp==0.6.0
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
+yamllint

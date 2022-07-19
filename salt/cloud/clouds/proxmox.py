@@ -848,7 +848,7 @@ def _import_api():
     full_url = "https://{}:{}/pve-docs/api-viewer/apidoc.js".format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
-    re_filter = re.compile("(?<=pveapi =)(.*)(?=^;)", re.DOTALL | re.MULTILINE)
+    re_filter = re.compile(" (?:pveapi|apiSchema) = (.*)^;", re.DOTALL | re.MULTILINE)
     api_json = re_filter.findall(returned_data.text)[0]
     api = salt.utils.json.loads(api_json)
 

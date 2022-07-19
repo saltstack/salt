@@ -19,9 +19,13 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.skipif(
-    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
-)
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker"),
+    pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+    ),
+]
 
 
 DOCKERFILE = """
@@ -32,7 +36,7 @@ ENV VIRTUAL_ENV={virtualenv_path}
 
 RUN virtualenv --python=python3 $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install salt~={salt_version}
+RUN pip install salt=={salt_version}
 
 CMD . $VIRTUAL_ENV/bin/activate
 """
@@ -43,7 +47,7 @@ def _get_test_versions_ids(value):
 
 
 @pytest.fixture(
-    params=("3002.0", "3003.0", "3004.0"), ids=_get_test_versions_ids, scope="module"
+    params=("3002.7", "3003.3", "3004"), ids=_get_test_versions_ids, scope="module"
 )
 def compat_salt_version(request):
     return request.param
@@ -119,6 +123,8 @@ def salt_minion(
         image=minion_image,
         docker_client=docker_client,
         start_timeout=120,
+        pull_before_start=False,
+        skip_if_docker_client_not_connectable=True,
         container_run_kwargs={
             "volumes": {str(artifacts_path): {"bind": "/artifacts", "mode": "z"}}
         },
@@ -172,8 +178,8 @@ def populated_state_tree(minion_id, package_name, state_tree):
 
 def test_ping(salt_cli, salt_minion):
     ret = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
-    assert ret.exitcode == 0, ret
-    assert ret.json is True
+    assert ret.returncode == 0, ret
+    assert ret.data is True
 
 
 @pytest.mark.usefixtures("populated_state_tree")
@@ -182,10 +188,10 @@ def test_highstate(salt_cli, salt_minion, package_name):
     Assert a state.highstate with a newer master runs properly on older minions.
     """
     ret = salt_cli.run("state.highstate", minion_tgt=salt_minion.id, _timeout=300)
-    assert ret.exitcode == 0, ret
-    assert ret.json is not None
-    assert isinstance(ret.json, dict), ret.json
-    state_return = next(iter(ret.json.values()))
+    assert ret.returncode == 0, ret
+    assert ret.data is not None
+    assert isinstance(ret.data, dict), ret.data
+    state_return = next(iter(ret.data.values()))
     assert package_name in state_return["changes"], state_return
 
 
@@ -205,9 +211,9 @@ def test_cp(salt_cp_cli, salt_minion, artifacts_path, cp_file_source):
     ret = salt_cp_cli.run(
         str(cp_file_source), remote_path, minion_tgt=salt_minion.id, _timeout=300
     )
-    assert ret.exitcode == 0, ret
-    assert ret.json is not None
-    assert isinstance(ret.json, dict), ret.json
-    assert ret.json == {remote_path: True}
+    assert ret.returncode == 0, ret
+    assert ret.data is not None
+    assert isinstance(ret.data, dict), ret.data
+    assert ret.data == {remote_path: True}
     cp_file_dest = artifacts_path / "cheese"
     assert cp_file_source.read_text() == cp_file_dest.read_text()

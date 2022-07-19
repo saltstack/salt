@@ -45,7 +45,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          pre-commit run -v --hook-stage manual check-known-missing-docstrings --show-diff-on-failure --color=never --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
+          pre-commit run --hook-stage manual check-known-missing-docstrings \
+            --show-diff-on-failure --color=never \
+            --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
 
       - name: Comment on PR
         # Comment on PRs if pre-commit triggered a failure

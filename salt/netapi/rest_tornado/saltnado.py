@@ -459,8 +459,11 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         """
         Boolean whether the request is auth'd
         """
-
-        return self.token and bool(self.application.auth.get_tok(self.token))
+        if self.token:
+            token_dict = self.application.auth.get_tok(self.token)
+            if token_dict and token_dict.get("expire", 0) > time.time():
+                return True
+        return False
 
     def prepare(self):
         """
@@ -753,18 +756,8 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         # Grab eauth config for the current backend for the current user
         try:
             eauth = self.application.opts["external_auth"][token["eauth"]]
-            # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token["name"], [])
-            perms.extend(eauth.get("*", []))
-
-            if "groups" in token and token["groups"]:
-                user_groups = set(token["groups"])
-                eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
-
-                for group in user_groups & eauth_groups:
-                    perms.extend(eauth["{}%".format(group)])
-
-            perms = sorted(list(set(perms)))
+            perms = salt.netapi.sum_permissions(token, eauth)
+            perms = salt.netapi.sorted_permissions(perms)
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
@@ -1624,6 +1617,10 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         while True:
             try:
+                if not self._verify_auth():
+                    log.debug("Token is no longer valid")
+                    break
+
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
                 self.write("data: {}\n\n".format(_json_dumps(event)))

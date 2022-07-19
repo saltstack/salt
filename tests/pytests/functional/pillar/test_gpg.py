@@ -8,10 +8,11 @@ import textwrap
 import pytest
 import salt.pillar
 import salt.utils.stringutils
-from saltfactories.utils.processes import ProcessResult
+from pytestshellutils.utils.processes import ProcessResult
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg"),
+    pytest.mark.requires_random_entropy,
 ]
 
 log = logging.getLogger(__name__)
@@ -265,9 +266,9 @@ def gpg_homedir(salt_master, test_key):
             universal_newlines=True,
         )
         ret = ProcessResult(
-            exitcode=proc.returncode,
+            returncode=proc.returncode,
             stdout=proc.stdout,
-            stderr=proc.stderr,
+            stderr=proc.stderr or "",
             cmdline=proc.args,
         )
         log.debug("Instantiating gpg keyring...\n%s", ret)
@@ -282,9 +283,9 @@ def gpg_homedir(salt_master, test_key):
             input=test_key,
         )
         ret = ProcessResult(
-            exitcode=proc.returncode,
+            returncode=proc.returncode,
             stdout=proc.stdout,
-            stderr=proc.stderr,
+            stderr=proc.stderr or "",
             cmdline=proc.args,
         )
         log.debug("Importing keypair...:\n%s", ret)
@@ -305,9 +306,9 @@ def gpg_homedir(salt_master, test_key):
                     input="KILLAGENT",
                 )
                 ret = ProcessResult(
-                    exitcode=proc.returncode,
+                    returncode=proc.returncode,
                     stdout=proc.stdout,
-                    stderr=proc.stderr,
+                    stderr=proc.stderr or "",
                     cmdline=proc.args,
                 )
                 log.debug("Killed gpg-agent...\n%s", ret)

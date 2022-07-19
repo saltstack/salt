@@ -1,19 +1,21 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Binary Signing Script for the macOS installer
+# Title: Binary Signing Script for macOS
 # Author: Shane Lee
 # Date: December 2020
 #
 # Description: This signs all binaries built by the `build_env.sh` script as
-#              well as those created by installing salt. It assumes a python
-#              environment in /opt/salt with salt installed
+#              well as those created by installing salt. It assumes a pyenv
+#              environment in /opt/salt/.pyenv with salt installed
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#       or
+#     - Xcode
 #
 # Usage:
-#     This script ignores any parameters passed to it
+#     This script does not require any parameters.
 #
 #     Example:
 #
@@ -28,7 +30,7 @@
 #         security import "developerID_application.p12" -k ~/Library/Keychains/login.keychain
 #
 #         NOTE: The .p12 certificate is required as the .cer certificate is
-#               is missing the private key. This can be created by exporting the
+#               missing the private key. This can be created by exporting the
 #               certificate from the machine it was created on
 #
 #     Define Environment Variables:
@@ -39,15 +41,15 @@
 #         export DEV_APP_CERT="Developer ID Application: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "#########################################################################"
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Signing Binaries"
 
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -57,7 +59,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit -1
+    exit 1
 }
 
 ################################################################################
@@ -65,46 +67,58 @@ quit_on_error() {
 ################################################################################
 echo "**** Setting Variables"
 INSTALL_DIR=/opt/salt
+PY_VERSION=3.9
+PY_DOT_VERSION=3.9.12
+
+################################################################################
+# Add rpath to the Python binaries before signing
+################################################################################
+echo "**** Setting rpath in binaries"
+install_name_tool $INSTALL_DIR/bin/python${PY_VERSION}m \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/lib \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl/lib || echo "already present"
+
+################################################################################
+# Add rpath to the Python binaries before signing
+################################################################################
+echo "**** Setting rpath in binaries"
+install_name_tool $INSTALL_DIR/bin/python3.7m \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/lib \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib || echo "already present"
 
 ################################################################################
 # Sign python binaries in `bin` and `lib`
 ################################################################################
-echo "**** Signing binaries that have entitlements (/opt/salt/bin)"
-find ${INSTALL_DIR}/bin \
+echo "**** Signing binaries that have entitlements (/opt/salt/.pyenv)"
+find ${INSTALL_DIR}/.pyenv \
     -type f \
     -perm -u=x \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
                    --entitlements ./entitlements.plist \
                    --sign "$DEV_APP_CERT" "{}" \;
 
-echo "**** Signing binaries (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
-    -type f \
-    -perm -u=x \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-echo "**** Signing dynamic libraries (*dylib) (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
+echo "**** Signing dynamic libraries (*dylib) (/opt/salt/.pyenv)"
+find ${INSTALL_DIR}/.pyenv \
     -type f \
     -name "*dylib" \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
                    --sign "$DEV_APP_CERT" "{}" \;
 
-echo "**** Signing shared libraries (*.so) (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
+echo "**** Signing shared libraries (*.so) (/opt/salt/.pyenv)"
+find ${INSTALL_DIR}/.pyenv \
     -type f \
     -name "*.so" \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
                    --sign "$DEV_APP_CERT" "{}" \;
 
 echo "**** Signing Binaries Completed Successfully"
-echo "#########################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

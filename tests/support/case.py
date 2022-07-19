@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import salt.utils.files
-from saltfactories.utils.processes import terminate_process
+from pytestshellutils.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import RedirectStdStreams
 from tests.support.mixins import (  # pylint: disable=unused-import
@@ -737,6 +737,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             "time.sleep",
             "grains.delkey",
             "grains.delval",
+            "sdb.get",
         )
         if "f_arg" in kwargs:
             kwargs["arg"] = kwargs.pop("f_arg")

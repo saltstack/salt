@@ -2016,6 +2016,75 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
     return _uninstall(name=name, pkgs=pkgs, root=root)
 
 
+def list_holds(pattern=None, full=True, root=None, **kwargs):
+    """
+    .. versionadded:: 3005
+
+    List information on locked packages.
+
+    .. note::
+        This function returns the computed output of ``list_locks``
+        to show exact locked packages.
+
+    pattern
+        Regular expression used to match the package name
+
+    full : True
+        Show the full hold definition including version and epoch. Set to
+        ``False`` to return just the name of the package(s) being held.
+
+    root
+        Operate on a different root directory.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_holds
+        salt '*' pkg.list_holds full=False
+    """
+    locks = list_locks(root=root)
+    ret = []
+    inst_pkgs = {}
+    for solv_name, lock in locks.items():
+        if lock.get("type", "package") != "package":
+            continue
+        try:
+            found_pkgs = search(
+                solv_name,
+                root=root,
+                match=None if "*" in solv_name else "exact",
+                case_sensitive=(lock.get("case_sensitive", "on") == "on"),
+                installed_only=True,
+                details=True,
+            )
+        except CommandExecutionError:
+            continue
+        if found_pkgs:
+            for pkg in found_pkgs:
+                if pkg not in inst_pkgs:
+                    inst_pkgs.update(
+                        info_installed(
+                            pkg, root=root, attr="edition,epoch", all_versions=True
+                        )
+                    )
+
+    ptrn_re = re.compile(r"{}-\S+".format(pattern)) if pattern else None
+    for pkg_name, pkg_editions in inst_pkgs.items():
+        for pkg_info in pkg_editions:
+            pkg_ret = (
+                "{}-{}:{}.*".format(
+                    pkg_name, pkg_info.get("epoch", 0), pkg_info.get("edition")
+                )
+                if full
+                else pkg_name
+            )
+            if pkg_ret not in ret and (not ptrn_re or ptrn_re.match(pkg_ret)):
+                ret.append(pkg_ret)
+
+    return ret
+
+
 def list_locks(root=None):
     """
     List current package locks.
@@ -2086,7 +2155,7 @@ def clean_locks(root=None):
     return out
 
 
-def unhold(name=None, pkgs=None, **kwargs):
+def unhold(name=None, pkgs=None, root=None, **kwargs):
     """
     .. versionadded:: 3003
 
@@ -2099,6 +2168,9 @@ def unhold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to unhold.  The ``name`` parameter will be ignored if
         this option is passed.
+
+    root
+        operate on a different root directory.
 
     CLI Example:
 
@@ -2114,33 +2186,47 @@ def unhold(name=None, pkgs=None, **kwargs):
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     else:
         targets.append(name)
 
-    locks = list_locks()
+    locks = list_locks(root=root)
     removed = []
-    missing = []
 
     for target in targets:
+        version = None
+        if isinstance(target, dict):
+            (target, version) = next(iter(target.items()))
         ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
         if locks.get(target):
-            removed.append(target)
-            ret[target]["changes"]["new"] = ""
-            ret[target]["changes"]["old"] = "hold"
-            ret[target]["comment"] = "Package {} is no longer held.".format(target)
+            lock_ver = None
+            if "version" in locks.get(target):
+                lock_ver = locks.get(target)["version"]
+                lock_ver = lock_ver.lstrip("= ")
+            if version and lock_ver != version:
+                ret[target]["result"] = False
+                ret[target][
+                    "comment"
+                ] = "Unable to unhold package {} as it is held with the other version.".format(
+                    target
+                )
+            else:
+                removed.append(
+                    target if not lock_ver else "{}={}".format(target, lock_ver)
+                )
+                ret[target]["changes"]["new"] = ""
+                ret[target]["changes"]["old"] = "hold"
+                ret[target]["comment"] = "Package {} is no longer held.".format(target)
         else:
-            missing.append(target)
             ret[target]["comment"] = "Package {} was already unheld.".format(target)
 
     if removed:
-        __zypper__.call("rl", *removed)
+        __zypper__(root=root).call("rl", *removed)
 
     return ret
 
 
-def hold(name=None, pkgs=None, **kwargs):
+def hold(name=None, pkgs=None, root=None, **kwargs):
     """
     .. versionadded:: 3003
 
@@ -2153,6 +2239,9 @@ def hold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to hold.  The ``name`` parameter will be ignored if
         this option is passed.
+
+    root
+        operate on a different root directory.
 
     CLI Example:
 
@@ -2168,18 +2257,20 @@ def hold(name=None, pkgs=None, **kwargs):
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     else:
         targets.append(name)
 
-    locks = list_locks()
+    locks = list_locks(root=root)
     added = []
 
     for target in targets:
+        version = None
+        if isinstance(target, dict):
+            (target, version) = next(iter(target.items()))
         ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
         if not locks.get(target):
-            added.append(target)
+            added.append(target if not version else "{}={}".format(target, version))
             ret[target]["changes"]["new"] = "hold"
             ret[target]["changes"]["old"] = ""
             ret[target]["comment"] = "Package {} is now being held.".format(target)
@@ -2189,7 +2280,7 @@ def hold(name=None, pkgs=None, **kwargs):
             )
 
     if added:
-        __zypper__.call("al", *added)
+        __zypper__(root=root).call("al", *added)
 
     return ret
 
