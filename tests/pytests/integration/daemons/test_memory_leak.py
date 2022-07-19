@@ -1,17 +1,10 @@
 import time
 from multiprocessing import Manager, Process
 
+import psutil
 import pytest
 
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
-
 pytestmark = [
-    pytest.mark.skipif(not HAS_PSUTIL, reason="Need psutil to test memory leak"),
     pytest.mark.slow_test,
 ]
 

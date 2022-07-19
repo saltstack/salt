@@ -20,8 +20,8 @@ def autosign_file_permissions():
 
 
 @pytest.fixture
-def autosign_file_path():
-    return os.path.join(RUNTIME_VARS.TMP, "autosign_file")
+def autosign_file_path(tmp_path):
+    return str(tmp_path / "autosign_file")
 
 
 @pytest.fixture
