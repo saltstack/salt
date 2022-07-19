@@ -150,12 +150,6 @@ def salt_master_factory(
     config_defaults["reactor"] = [
         {reactor_event.tag: [str(reactor_event.sls_path)]},
     ]
-    config_defaults["engines_dirs"] = [
-        str(salt_factories.get_salt_engines_path()),
-    ]
-    config_defaults["log_handlers_dirs"] = [
-        str(salt_factories.get_salt_log_handlers_path()),
-    ]
 
     nodegroups = {
         "min": salt_minion_id,
@@ -317,12 +311,6 @@ def salt_minion_factory(
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
-    config_defaults["engines_dirs"] = [
-        str(salt_factories.get_salt_engines_path()),
-    ]
-    config_defaults["log_handlers_dirs"] = [
-        str(salt_factories.get_salt_log_handlers_path()),
-    ]
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
@@ -353,12 +341,6 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id, salt_factor
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = salt_master_factory.config["transport"]
-    config_defaults["engines_dirs"] = [
-        str(salt_factories.get_salt_engines_path()),
-    ]
-    config_defaults["log_handlers_dirs"] = [
-        str(salt_factories.get_salt_log_handlers_path()),
-    ]
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
