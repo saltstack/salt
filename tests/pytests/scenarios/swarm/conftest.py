@@ -1,3 +1,4 @@
+import os
 from contextlib import ExitStack
 
 import pytest
@@ -39,7 +40,8 @@ def salt_cli(salt_master):
 
 @pytest.fixture(scope="package")
 def minion_count():
-    return 20
+    # Allow this to be changed via an environment variable if needed
+    return int(os.environ.get("SALT_CI_MINION_SWARM_COUNT", 20))
 
 
 @pytest.fixture(scope="package")
