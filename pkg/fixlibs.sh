@@ -5,6 +5,7 @@
 # of the shared object to look for the library in the target directory.
 SEENSLIBS=()
 LIBSDIR=$1
+LIBCLIBS=("librt.so.1" "libc.so.6" "libpthread.so.0" "libm.so.6", "libutil.so.1")
 DONE=false
 while [ "$DONE" = false ]; do
   DONE=true
@@ -13,13 +14,18 @@ while [ "$DONE" = false ]; do
         echo "Found shared library, $shlib"
         for lib in $(ldd $shlib  | awk '{print $3}' | sed '/^$/d'); do
           if [ -e $lib ]; then
-            TARGET=$LIBSDIR/$(basename $lib)
-            if [ ! -e $TARGET ]; then
-              DONE=false
-              echo "Creating depenency $($LIBSDIR)/$(basename $lib)";
-              cp $(realpath $lib) $LIBSDIR/$(basename $lib);
+            base=$(basename $lib)
+            if [[ ! " ${LIBCLIBS[*]} " =~ " ${base} " ]]; then
+              TARGET=$LIBSDIR/$(basename $lib)
+              if [ ! -e $TARGET ]; then
+                DONE=false
+                echo "Creating depenency $($LIBSDIR)/$(basename $lib)";
+                cp $(realpath $lib) $LIBSDIR/$(basename $lib);
+              else
+                echo "$TARGET exits"
+              fi
             else
-              echo "$TARGET exits"
+              echo "Skipping glibc $lib"
             fi
           fi
         done
