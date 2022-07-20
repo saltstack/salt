@@ -26,6 +26,14 @@ jobs:
   test:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-paths:
+          - tests/unit tests/pytests/unit
+          - tests/pytests/functional
+          - tests/pytests/scenarios
+          - --ignore=tests/unit --ignore=tests/pytests/unit --ignore=tests/pytests/functional --ignore=tests/pytests/scenarios
 
     steps:
     - uses: actions/checkout@v3
@@ -42,4 +50,4 @@ jobs:
       run: sudo apt-get install -y libcurl4-openssl-dev libssl-dev; sudo pip install nox
 
     - name: Run Tests
-      run: sudo nox -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive tests/integration tests/pytests/integration tests/pytests/scenarios
+      run: sudo nox -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
