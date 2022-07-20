@@ -53,7 +53,6 @@ if HAS_LIBCLOUD:
             assert object_name == "test_obj"
             return self._TEST_OBJECT
 
-
 else:
     MockStorageDriver = object
 

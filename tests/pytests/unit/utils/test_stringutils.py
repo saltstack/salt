@@ -722,14 +722,14 @@ def test_human_to_bytes(unit):
     # second multiplier is metric/decimal
     conversion = {
         "B": (1, 1),
-        "K": (2 ** 10, 10 ** 3),
-        "M": (2 ** 20, 10 ** 6),
-        "G": (2 ** 30, 10 ** 9),
-        "T": (2 ** 40, 10 ** 12),
-        "P": (2 ** 50, 10 ** 15),
-        "E": (2 ** 60, 10 ** 18),
-        "Z": (2 ** 70, 10 ** 21),
-        "Y": (2 ** 80, 10 ** 24),
+        "K": (2**10, 10**3),
+        "M": (2**20, 10**6),
+        "G": (2**30, 10**9),
+        "T": (2**40, 10**12),
+        "P": (2**50, 10**15),
+        "E": (2**60, 10**18),
+        "Z": (2**70, 10**21),
+        "Y": (2**80, 10**24),
     }
 
     idx = 0
@@ -774,7 +774,7 @@ def test_human_to_bytes_edge_cases():
     # no unit - bytes
     assert salt.utils.stringutils.human_to_bytes("32") == 32
     # no unit - default MB
-    assert salt.utils.stringutils.human_to_bytes("32", default_unit="M") == 32 * 2 ** 20
+    assert salt.utils.stringutils.human_to_bytes("32", default_unit="M") == 32 * 2**20
     # bad value
     assert salt.utils.stringutils.human_to_bytes("32-1") == 0
     assert salt.utils.stringutils.human_to_bytes("3.4.MB") == 0

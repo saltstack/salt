@@ -735,7 +735,7 @@ class EntropyGenerator:
                         "-out",
                         target_file.name,
                         "-base64",
-                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                        str(int(2**30 * 3 / 4)),  # 1GB
                     ],
                     shell=False,
                     check=True,

@@ -5498,14 +5498,10 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if (
-                urllib.parse.urlparse(source).scheme
-                in (
-                    "salt",
-                    "file",
-                )
-                or source.startswith("/")
-            ):
+            if urllib.parse.urlparse(source).scheme in (
+                "salt",
+                "file",
+            ) or source.startswith("/"):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
