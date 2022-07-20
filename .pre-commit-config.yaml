@@ -1113,7 +1113,10 @@ repos:
         args: [--py3-plus, --keep-mock]
         exclude: >
           (?x)^(
-            salt/client/ssh/ssh_py_shim.py|
+            salt/client/ssh/ssh_py_shim.py
+            |
+            salt/client/ssh/wrapper/pillar.py
+            |
             salt/ext/.*\.py
           )$
 
