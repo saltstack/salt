@@ -3,6 +3,7 @@ import stat
 from functools import wraps
 
 import pytest
+
 import salt.config
 import salt.daemons.masterapi as masterapi
 import salt.utils.platform

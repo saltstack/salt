@@ -2,6 +2,7 @@ import os.path
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.xmlutil as xmlutil

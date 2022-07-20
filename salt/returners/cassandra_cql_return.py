@@ -144,10 +144,9 @@ try:
     # installed, both the modules/cassandra_cql execution module and this returner module
     # will not be loaded by Salt's loader system.
     # pylint: disable=unused-import,no-name-in-module
-    from cassandra.cluster import Cluster
-    from cassandra.cluster import NoHostAvailable
-    from cassandra.connection import ConnectionException, ConnectionShutdown
     from cassandra.auth import PlainTextAuthProvider
+    from cassandra.cluster import Cluster, NoHostAvailable
+    from cassandra.connection import ConnectionException, ConnectionShutdown
     from cassandra.query import dict_factory
 
     # pylint: enable=unused-import,no-name-in-module

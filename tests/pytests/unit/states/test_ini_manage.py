@@ -2,6 +2,7 @@ import copy
 import os
 
 import pytest
+
 import salt.modules.ini_manage as mod_ini_manage
 import salt.states.ini_manage as ini_manage
 from salt.utils.odict import OrderedDict

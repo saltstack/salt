@@ -16,15 +16,15 @@ try:
     import libcloud
     from libcloud.compute.base import (
         BaseDriver,
+        KeyPair,
         Node,
+        NodeImage,
+        NodeLocation,
         NodeSize,
         NodeState,
-        NodeLocation,
         StorageVolume,
         StorageVolumeState,
         VolumeSnapshot,
-        NodeImage,
-        KeyPair,
     )
 
     if hasattr(libcloud, "__version__") and _LooseVersion(

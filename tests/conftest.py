@@ -26,6 +26,7 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
+
 import salt._logging
 import salt._logging.mixins
 import salt.config

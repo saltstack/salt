@@ -1,10 +1,11 @@
 import warnings
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.config
 import salt.loader
 from salt.loader.lazy import LazyLoader
-from saltfactories.utils import random_string
 
 
 @pytest.fixture(scope="module")

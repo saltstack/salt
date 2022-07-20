@@ -6,12 +6,12 @@ import functools
 import logging
 
 try:
-    from salt.utils.versions import LooseVersion as _LooseVersion
-    from salt.exceptions import CommandExecutionError
+    import salt.modules.yumpkg
     import salt.utils.data
     import salt.utils.functools
     import salt.utils.systemd
-    import salt.modules.yumpkg
+    from salt.exceptions import CommandExecutionError
+    from salt.utils.versions import LooseVersion as _LooseVersion
 
     __IMPORT_ERROR = None
 except ImportError as exc:

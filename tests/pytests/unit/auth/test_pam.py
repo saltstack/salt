@@ -1,4 +1,5 @@
 import pytest
+
 import salt.auth.pam
 from tests.support.mock import patch
 

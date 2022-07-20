@@ -24,6 +24,7 @@ import uuid
 from errno import EACCES, EPERM
 
 import distro
+
 import salt.exceptions
 
 # Solve the Chicken and egg problem where grains need to run before any

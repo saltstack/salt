@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import xmlrunner.runner
     import xmlrunner.result
+    import xmlrunner.runner
 
     HAS_XMLRUNNER = True
 

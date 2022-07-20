@@ -139,9 +139,9 @@ except ImportError:
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
-    from requests.packages.urllib3 import (
+    from requests.packages.urllib3 import (  # pylint: disable=no-name-in-module
         disable_warnings,
-    )  # pylint: disable=no-name-in-module
+    )
 
     disable_warnings()
 except ImportError:

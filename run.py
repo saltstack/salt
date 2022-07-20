@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # see issue: https://gitlab.com/saltstack/open/salt-pkg/-/issues/19
-import _pyio
 import contextlib
 import multiprocessing
 import os
 import pathlib
 import sys
 
-import salt.scripts
-import salt.utils.platform
+import _pyio
 import tiamatpip.cli
 import tiamatpip.configure
 import tiamatpip.utils
+
+import salt.scripts
+import salt.utils.platform
 
 AVAIL = (
     "minion",

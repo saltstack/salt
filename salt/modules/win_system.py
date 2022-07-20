@@ -24,12 +24,13 @@ import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 try:
+    from ctypes import windll
+
     import pywintypes
     import win32api
     import win32con
     import win32net
     import wmi
-    from ctypes import windll
 
     HAS_WIN32NET_MODS = True
 except ImportError:

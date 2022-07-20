@@ -24,6 +24,7 @@ import sys
 import weakref
 
 import pytest
+
 from salt._compat import ipaddress
 from tests.support.unit import TestCase, skipIf
 

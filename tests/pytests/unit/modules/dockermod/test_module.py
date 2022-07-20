@@ -5,6 +5,7 @@ Unit tests for the docker module
 import logging
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.dockermod as docker_mod
