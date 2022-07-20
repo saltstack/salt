@@ -35,24 +35,36 @@ of the file path.
 
 Tiamat packages
 ---------------
-For RedHat:
+For RedHat, replace the ``<salt version & release number>`` variable with the
+Salt version and release:
 
 .. code-block:: bash
 
-    baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/
+    baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/<salt version and release number>
 
-For Ubuntu, replace the ``<os_version>`` variable with number of the Ubuntu
-version and ``<codename>`` for the release codename.
+For example, for the 3005 release of RC 1-2:
+
+.. code-block:: bash
+
+    baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/3005rc1-2
+
+For Ubuntu, replace:
+
+* The ``<os_version>`` variable with number of the Ubuntu version
+* The ``<codename>`` variable for the Ubuntu release codename
+* The ``<salt version & release number>`` variable with the Salt version and
+  release
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64 <codename> main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64/minor/<salt version and release number> <codename> main
 
-For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish:
+For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish and the
+3005 release of RC 1-2:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/22.04/amd64 jammy main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/22.04/amd64/minor/3005rc1-2 jammy main
 
 
 For Debian, the syntax is identical to Ubuntu. For example, for the version 10
@@ -60,7 +72,7 @@ For Debian, the syntax is identical to Ubuntu. For example, for the version 10
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/debian/10/amd64 buster main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/debian/10/amd64/minor/3005rc1-2 buster main
 
 
 
