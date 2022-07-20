@@ -65,6 +65,8 @@ $(TARGET_DIR)/uninstall-salt: fixlibs
 
 salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
 	sh -c "find $(TARGET_DIR) -name '__pycache__' -type d -print0 |xargs -0 -n1 rm -rf --"
-	# XXX: Should we keep this?
-	rm -rf $(TARGET_DIR)/include $(TARGET_DIR)/share
+	# Remove Python Headers
+	# rm -rf $(TARGET_DIR)/include
+	# Remove man pages
+	rm -rf $(TARGET_DIR)/share
 	tar cJvf salt-$(SALT_VERSION)_$(ARCH).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);
