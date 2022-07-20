@@ -286,7 +286,7 @@ def sample(value, size, seed=None):
     Return a given sample size from a list. By default, the random number
     generator uses the current system time unless given a seed value.
 
-    .. versionadded:: 3005
+    .. versionadded:: 3006.0
 
     value
         A list to e used as input.
@@ -316,7 +316,7 @@ def shuffle(value, seed=None):
     Return a shuffled copy of an input list. By default, the random number
     generator uses the current system time unless given a seed value.
 
-    .. versionadded:: 3005
+    .. versionadded:: 3006.0
 
     value
         A list to be used as input.
