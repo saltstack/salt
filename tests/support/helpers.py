@@ -1923,3 +1923,40 @@ class CaptureOutput:
             return
         self._stderr.seek(0)
         return self._stderr.read()
+
+
+class Keys:
+    """
+    Temporary ssh key pair
+    """
+
+    def __init__(self, tmp_path_factory):
+        """
+        tmp_path_factory is the session scoped pytest fixture of the same name
+        """
+        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
+        self.priv_path = priv_path
+
+    def generate(self):
+        subprocess.run(
+            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
+        )
+
+    @property
+    def pub_path(self):
+        return self.priv_path.with_name("{}.pub".format(self.priv_path.name))
+
+    @property
+    def pub(self):
+        return self.pub_path.read_text()
+
+    @property
+    def priv(self):
+        return self.priv_path.read_text()
+
+    def __enter__(self):
+        self.generate()
+        return self
+
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
