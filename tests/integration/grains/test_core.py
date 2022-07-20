@@ -4,6 +4,7 @@ Test the core grains
 
 
 import pytest
+
 import salt.loader
 import salt.utils.platform
 from tests.support.case import ModuleCase

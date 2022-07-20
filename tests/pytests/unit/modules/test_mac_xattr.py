@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.mac_xattr as xattr
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError

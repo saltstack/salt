@@ -6,6 +6,7 @@ from numbers import Number
 from xml.etree import ElementTree
 
 import pytest
+
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")

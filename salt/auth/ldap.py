@@ -6,9 +6,10 @@ Provide authentication using simple LDAP binds
 import itertools
 import logging
 
+from jinja2 import Environment
+
 import salt.utils.data
 import salt.utils.stringutils
-from jinja2 import Environment
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -16,8 +17,8 @@ log = logging.getLogger(__name__)
 try:
     # pylint: disable=no-name-in-module
     import ldap
-    import ldap.modlist
     import ldap.filter
+    import ldap.modlist
 
     HAS_LDAP = True
     # pylint: enable=no-name-in-module

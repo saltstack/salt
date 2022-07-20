@@ -42,7 +42,6 @@ log = logging.getLogger(__name__)
 
 try:
     import pywintypes
-    import wmi
     import win32api
     import win32con
     import win32net
@@ -50,6 +49,7 @@ try:
     import win32profile
     import win32security
     import win32ts
+    import wmi
 
     HAS_WIN32NET_MODS = True
 except ImportError:

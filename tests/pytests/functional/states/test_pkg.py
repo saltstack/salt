@@ -7,6 +7,7 @@ import os
 import time
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm

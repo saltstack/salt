@@ -6,6 +6,7 @@ import logging
 import os
 
 import pytest
+
 import salt.config
 import salt.modules.beacons as beacons
 from salt.utils.event import SaltEvent

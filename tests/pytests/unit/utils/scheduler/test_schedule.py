@@ -7,6 +7,7 @@ import datetime
 import logging
 
 import pytest
+
 import salt.config
 import salt.utils.schedule
 from salt.utils.schedule import Schedule

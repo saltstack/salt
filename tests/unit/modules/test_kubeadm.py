@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.kubeadm as kubeadm
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin

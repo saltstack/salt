@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.keyboard as keyboard
 from tests.support.mock import MagicMock, patch
 

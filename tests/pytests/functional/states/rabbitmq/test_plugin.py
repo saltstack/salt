@@ -5,6 +5,7 @@ Integration tests for the rabbitmq_plugin states
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_plugin as rabbitmq_plugin
 from tests.support.mock import patch

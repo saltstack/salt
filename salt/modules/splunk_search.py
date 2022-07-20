@@ -27,8 +27,8 @@ from salt.utils.odict import OrderedDict
 
 HAS_LIBS = False
 try:
-    import splunklib.client
     import requests
+    import splunklib.client
 
     HAS_LIBS = True
 except ImportError:

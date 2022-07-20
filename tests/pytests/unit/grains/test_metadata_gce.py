@@ -9,6 +9,7 @@
 import logging
 
 import pytest
+
 import salt.grains.metadata_gce as metadata
 import salt.utils.http as http
 from tests.support.mock import create_autospec, patch

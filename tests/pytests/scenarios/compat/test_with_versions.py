@@ -9,9 +9,10 @@ import logging
 import pathlib
 
 import pytest
-import salt.utils.platform
 from saltfactories.daemons.container import SaltMinion
 from saltfactories.utils import random_string
+
+import salt.utils.platform
 from tests.support.runtests import RUNTIME_VARS
 
 docker = pytest.importorskip("docker")

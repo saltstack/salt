@@ -4,6 +4,7 @@ Tests for salt.loader.lazy
 import sys
 
 import pytest
+
 import salt.loader
 import salt.loader.context
 import salt.loader.lazy

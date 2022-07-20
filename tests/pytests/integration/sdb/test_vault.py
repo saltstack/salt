@@ -7,8 +7,9 @@ import subprocess
 import time
 
 import pytest
-import salt.utils.path
 from pytestshellutils.utils.processes import ProcessResult
+
+import salt.utils.path
 from tests.support.helpers import PatchedEnviron
 from tests.support.runtests import RUNTIME_VARS
 

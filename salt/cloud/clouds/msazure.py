@@ -61,13 +61,14 @@ from salt.exceptions import SaltCloudSystemExit
 HAS_LIBS = False
 try:
     import azure
-    import azure.storage
     import azure.servicemanagement
+    import azure.storage
     from azure.common import (
         AzureConflictHttpError,
-        AzureMissingResourceHttpError,
         AzureException,
+        AzureMissingResourceHttpError,
     )
+
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
 

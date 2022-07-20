@@ -5,6 +5,7 @@ Integration tests for the etcd modules
 import logging
 
 import pytest
+
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 etcd = pytest.importorskip("etcd")
