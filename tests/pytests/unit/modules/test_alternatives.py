@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.alternatives as alternatives
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, mock_open, patch

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 
 import pytest
+
 from salt.exceptions import CommandExecutionError
 
 try:
