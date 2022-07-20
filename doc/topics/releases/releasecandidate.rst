@@ -14,8 +14,11 @@ features! Be sure to report any bugs you find on `Github
 
 Install using packages
 ======================
-Builds for a few platforms are available as part of the RC at https://repo.saltproject.io/salt_rc/.
-The builds should include the latest version of the operating system that is currently available.
+Builds for a few platforms are available as part of the RC at:
+https://repo.saltproject.io/salt_rc/
+
+The builds include the latest version of the operating system that is currently
+available. Older versions of operating systems will not get an RC release.
 
 .. note::
 
