@@ -94,7 +94,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(
             zypper.__salt__, {"cmd.run_all": MagicMock(return_value=ref_out)}
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             upgrades = zypper.list_upgrades(refresh=False)
             self.assertEqual(len(upgrades), 3)
             for pkg, version in {
@@ -194,7 +194,8 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             ' type="error">Booya!</message></stream>'
         )
         sniffer = RunSniffer(stdout=stdout_xml_snippet, retcode=1)
-        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
+        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}), \
+            patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError, "^Zypper command failure: Booya!$"
             ):
@@ -228,7 +229,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             "salt.modules.zypperpkg.__salt__",
             {"cmd.run_all": MagicMock(return_value=ref_out)},
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError,
                 "^Zypper command failure: Some handled zypper internal error{}Another"
@@ -241,7 +242,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             "salt.modules.zypperpkg.__salt__",
             {"cmd.run_all": MagicMock(return_value=ref_out)},
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"
             ):
