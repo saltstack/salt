@@ -164,19 +164,6 @@ def pytest_addoption(parser):
         ),
     )
     test_selection_group.addoption(
-        "--system-install",
-        action="store_true",
-        default=False,
-        help="Use system installed salt.",
-    )
-    test_selection_group.addoption(
-        "--scripts-path",
-        help=(
-            "Run the tests using the scripts found in this location. This"
-            "option is used to test salt artifacts."
-        ),
-    )
-    test_selection_group.addoption(
         "--ssh",
         "--ssh-tests",
         dest="ssh",
@@ -696,22 +683,6 @@ def groups_collection_modifyitems(config, items):
 
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
-# ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
-
-@pytest.fixture(scope="session")
-def salt_factories_config():
-    """
-    Return a dictionary with the keyworkd arguments for FactoriesManager
-    """
-    return {
-        "code_dir": str(CODE_DIR),
-        "inject_coverage": MAYBE_RUN_COVERAGE,
-        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
-        "scripts_path": request.config.getoption("--scripts-path"),
-        "start_timeout": 120
-        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
-        else 60,
-    }
 
 
 @pytest.fixture(scope="session")
