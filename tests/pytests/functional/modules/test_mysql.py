@@ -2,9 +2,11 @@
 Test Salt MySQL module across various MySQL variants
 """
 import logging
+import time
 
 import pytest
 import salt.modules.mysql as mysqlmod
+from pytestshellutils.utils import format_callback_to_string
 from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 log = logging.getLogger(__name__)
@@ -18,24 +20,51 @@ pytestmark = [
 ]
 
 
+def _get_mysql_error(context):
+    return context.pop("mysql.error", None)
+
+
 class CallWrapper:
-    def __init__(self, func, container):
+    def __init__(self, func, container, ctx):
         self.func = func
         self.container = container
+        self.ctx = ctx
 
     def __call__(self, *args, **kwargs):
         kwargs.update(self.container.get_credentials(**kwargs))
-        return self.func(*args, **kwargs)
+        retry = 1
+        retries = 3
+        ret = None
+        while True:
+            ret = self.func(*list(args), **kwargs.copy())
+            mysql_error = _get_mysql_error(self.ctx)
+            if mysql_error is None:
+                break
+            retry += 1
+
+            if retry > retries:
+                break
+
+            time.sleep(0.5)
+            log.debug(
+                "Retrying(%s out of %s) %s because of the following error: %s",
+                retry,
+                retries,
+                format_callback_to_string(self.func, args, kwargs),
+                mysql_error,
+            )
+        return ret
 
 
 @pytest.fixture(scope="module")
-def mysql(modules, mysql_container):
+def mysql(modules, mysql_container, loaders):
     for name in list(modules):
         if not name.startswith("mysql."):
             continue
         modules._dict[name] = CallWrapper(
             modules._dict[name],
             mysql_container,
+            loaders.context,
         )
     return modules.mysql
 

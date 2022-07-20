@@ -9,4 +9,5 @@ pytest-helpers-namespace >= 2019.1.8
 pytest-subtests
 pytest-timeout
 pytest-httpserver
+pytest-custom-exit-code >= 0.3
 flaky
