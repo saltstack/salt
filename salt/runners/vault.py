@@ -1,10 +1,10 @@
 """
+Runner functions supporting the Vault modules. Configuration instructions are
+documented in the execution module docs.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
-
-Runner functions supporting the Vault modules. Configuration instructions are
-documented in the execution module docs.
 """
 
 import base64
