@@ -53,8 +53,14 @@ jobs:
     - name: Install Nox
       run: |
         sudo apt-get install -y libcurl4-openssl-dev libssl-dev
-        sudo pip install nox
+        sudo salt-artifacts/salt/bin/python3 -m pip install nox
+
+    - name: Install Requirements
+      run: |
+        sudo env PATH=salt-artifacts/salt/bin:${PATH} nox --force-color --install-only -e 'pytest-zeromq-3(coverage=True)'
 
     - name: Run Tests
       run: |
-        sudo nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
+        sudo env SKIP_REQUIREMENTS_INSTALL=YES PATH=salt-artifacts/salt/bin:${PATH} \
+          nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- \
+          -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
