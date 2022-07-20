@@ -174,8 +174,8 @@ class CommonTestMixin_v4(CommonTestMixin):
 
     def test_large_ints_rejected(self):
         msg = "%d (>= 2**32) is not permitted as an IPv4 address"
-        with self.assertAddressError(re.escape(msg % 2 ** 32)):
-            self.factory(2 ** 32)
+        with self.assertAddressError(re.escape(msg % 2**32)):
+            self.factory(2**32)
 
     def test_bad_packed_length(self):
         def assertBadLength(length):
@@ -213,8 +213,8 @@ class CommonTestMixin_v6(CommonTestMixin):
 
     def test_large_ints_rejected(self):
         msg = "%d (>= 2**128) is not permitted as an IPv6 address"
-        with self.assertAddressError(re.escape(msg % 2 ** 128)):
-            self.factory(2 ** 128)
+        with self.assertAddressError(re.escape(msg % 2**128)):
+            self.factory(2**128)
 
     def test_bad_packed_length(self):
         def assertBadLength(length):
@@ -1275,30 +1275,30 @@ class IpaddrUnitTest(TestCase):
             ipaddress.IPv4Address("1.1.1.1") - 256, ipaddress.IPv4Address("1.1.0.1")
         )
         self.assertEqual(
-            ipaddress.IPv6Address("::1") + (2 ** 16 - 2),
+            ipaddress.IPv6Address("::1") + (2**16 - 2),
             ipaddress.IPv6Address("::ffff"),
         )
         self.assertEqual(
-            ipaddress.IPv6Address("::ffff") - (2 ** 16 - 2),
+            ipaddress.IPv6Address("::ffff") - (2**16 - 2),
             ipaddress.IPv6Address("::1"),
         )
         self.assertNotEqual(
-            ipaddress.IPv6Address("::1%scope") + (2 ** 16 - 2),
+            ipaddress.IPv6Address("::1%scope") + (2**16 - 2),
             ipaddress.IPv6Address("::ffff%scope"),
         )
         self.assertNotEqual(
-            ipaddress.IPv6Address("::ffff%scope") - (2 ** 16 - 2),
+            ipaddress.IPv6Address("::ffff%scope") - (2**16 - 2),
             ipaddress.IPv6Address("::1%scope"),
         )
 
     def testInvalidIntToBytes(self):
         self.assertRaises(ValueError, ipaddress.v4_int_to_packed, -1)
         self.assertRaises(
-            ValueError, ipaddress.v4_int_to_packed, 2 ** ipaddress.IPV4LENGTH
+            ValueError, ipaddress.v4_int_to_packed, 2**ipaddress.IPV4LENGTH
         )
         self.assertRaises(ValueError, ipaddress.v6_int_to_packed, -1)
         self.assertRaises(
-            ValueError, ipaddress.v6_int_to_packed, 2 ** ipaddress.IPV6LENGTH
+            ValueError, ipaddress.v6_int_to_packed, 2**ipaddress.IPV6LENGTH
         )
 
     def testInternals(self):
@@ -2462,7 +2462,7 @@ class IpaddrUnitTest(TestCase):
     def testReservedIpv6(self):
 
         self.assertEqual(True, ipaddress.ip_network("ffff::").is_multicast)
-        self.assertEqual(True, ipaddress.ip_network(2 ** 128 - 1).is_multicast)
+        self.assertEqual(True, ipaddress.ip_network(2**128 - 1).is_multicast)
         self.assertEqual(True, ipaddress.ip_network("ff00::").is_multicast)
         self.assertEqual(False, ipaddress.ip_network("fdff::").is_multicast)
 
@@ -2496,7 +2496,7 @@ class IpaddrUnitTest(TestCase):
         self.assertEqual(True, ipaddress.ip_network("200::1/128").is_global)
         # test addresses
         self.assertEqual(True, ipaddress.ip_address("ffff::").is_multicast)
-        self.assertEqual(True, ipaddress.ip_address(2 ** 128 - 1).is_multicast)
+        self.assertEqual(True, ipaddress.ip_address(2**128 - 1).is_multicast)
         self.assertEqual(True, ipaddress.ip_address("ff00::").is_multicast)
         self.assertEqual(False, ipaddress.ip_address("fdff::").is_multicast)
 
@@ -2603,7 +2603,7 @@ class IpaddrUnitTest(TestCase):
         net = self.ipv4_network
         self.assertEqual("1.2.3.0/24", net.compressed)
         net = self.ipv6_network
-        self.assertRaises(ValueError, net._string_from_ip_int, 2 ** 128 + 1)
+        self.assertRaises(ValueError, net._string_from_ip_int, 2**128 + 1)
 
     def testIPv6NetworkHelpers(self):
         net = self.ipv6_network

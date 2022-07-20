@@ -194,7 +194,6 @@ if HAS_LIBCLOUD:
             assert key_pair.name == "test_key"
             return True
 
-
 else:
     MockComputeDriver = object
 

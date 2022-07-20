@@ -265,7 +265,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
                     teardown()
-                backoff_time = attempt ** 2
+                backoff_time = attempt**2
                 log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
         return cls
