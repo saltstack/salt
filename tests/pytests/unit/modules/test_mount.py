@@ -9,6 +9,7 @@ import sys
 import textwrap
 
 import pytest
+
 import salt.modules.mount as mount
 import salt.utils.files
 import salt.utils.path

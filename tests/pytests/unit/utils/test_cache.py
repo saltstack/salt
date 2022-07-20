@@ -8,6 +8,7 @@
 import time
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.payload

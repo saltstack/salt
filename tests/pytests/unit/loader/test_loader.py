@@ -9,6 +9,7 @@ import shutil
 import textwrap
 
 import pytest
+
 import salt.loader
 import salt.loader.lazy
 

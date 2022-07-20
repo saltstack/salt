@@ -3,6 +3,7 @@ import logging
 import os
 
 import pytest
+
 import salt.modules.file as filemod
 import salt.utils.files
 import salt.utils.platform

@@ -4,6 +4,7 @@ import string
 import sys
 
 import pytest
+
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod

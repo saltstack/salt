@@ -2,6 +2,7 @@ import collections
 import textwrap
 
 import pytest
+
 import salt.renderers.yaml as yaml
 from tests.support.mock import patch
 

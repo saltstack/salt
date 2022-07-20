@@ -8,6 +8,7 @@ import sys
 import textwrap
 
 import pytest
+
 import salt.utils.stringutils
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM

@@ -54,10 +54,12 @@ try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
     from boto.ec2.elb import HealthCheck
-    from boto.ec2.elb.attributes import AccessLogAttribute
-    from boto.ec2.elb.attributes import ConnectionDrainingAttribute
-    from boto.ec2.elb.attributes import ConnectionSettingAttribute
-    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
+    from boto.ec2.elb.attributes import (
+        AccessLogAttribute,
+        ConnectionDrainingAttribute,
+        ConnectionSettingAttribute,
+        CrossZoneLoadBalancingAttribute,
+    )
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     HAS_BOTO = True

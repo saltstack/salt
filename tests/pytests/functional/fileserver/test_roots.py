@@ -1,4 +1,5 @@
 import pytest
+
 import salt.config
 import salt.fileserver.roots as roots
 from salt.utils.odict import OrderedDict

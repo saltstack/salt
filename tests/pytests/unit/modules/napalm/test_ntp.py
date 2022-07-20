@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.napalm_ntp as napalm_ntp
 import tests.support.napalm as napalm_test_support
 from tests.support.mock import MagicMock, patch

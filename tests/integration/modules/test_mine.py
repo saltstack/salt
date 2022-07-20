@@ -6,6 +6,7 @@ import pprint
 import time
 
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.runtests import RUNTIME_VARS

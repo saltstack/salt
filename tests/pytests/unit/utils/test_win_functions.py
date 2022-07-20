@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
 

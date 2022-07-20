@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.macpackage as macpackage
 from tests.support.mock import MagicMock, call, patch
 

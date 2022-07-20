@@ -6,10 +6,11 @@ import tempfile
 import time
 
 import pytest
+from saltfactories.utils.functional import Loaders
+
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
-from saltfactories.utils.functional import Loaders
 
 log = logging.getLogger(__name__)
 
