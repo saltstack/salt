@@ -77,7 +77,6 @@ if HAS_LIBCLOUD:
             assert balancer.id == "test_id"
             return [self._TEST_MEMBER]
 
-
 else:
     MockLBDriver = object
 
