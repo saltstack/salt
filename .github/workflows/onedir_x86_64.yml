@@ -44,10 +44,17 @@ jobs:
         name: Salt Onedir X86_64
 
     - name: Extract Artifact
-      run: mkdir salt-artifacts; cp salt*tar.xz salt-artifacts/; cd salt-artifacts; tar -xvf salt*tar.xz;
+      run: |
+        mkdir salt-artifacts
+        cp salt*tar.xz salt-artifacts/
+        cd salt-artifacts
+        tar -xvf salt*tar.xz
 
     - name: Install Nox
-      run: sudo apt-get install -y libcurl4-openssl-dev libssl-dev; sudo pip install nox
+      run: |
+        sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+        sudo pip install nox
 
     - name: Run Tests
-      run: sudo nox -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
+      run: |
+        sudo nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
