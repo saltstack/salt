@@ -47,6 +47,7 @@ $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.one
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $@;
 
 $(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip $(DYNLOAD) $(DYNLIB)
+	$(SCRIPTS_DIR)/salt-pip install wheel
 	$(SCRIPTS_DIR)/salt-pip install .
 	$(SCRIPTS_DIR)/salt-pip install -r $(PWD)/requirements/static/pkg/py$(PY_SUFFIX)/linux.txt
 
