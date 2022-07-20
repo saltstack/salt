@@ -1,0 +1,1 @@
+Don't expect ``lsof`` to be installed when trying check which minions are connected.
