@@ -36,7 +36,11 @@ $(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION
 	cd $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION); \
 	./configure --prefix=$(TARGET_DIR) ; \
 	make -j4; \
-	make install;
+	make install; \
+	cd $(TARGET_DIR)/bin; \
+	ln -sf python$(PY_SUFFIX) python; \
+	ln -sf pip$(PY_SUFFIX) pip; \
+	cd $(PWD);
 
 $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.onedir
 	cp $(PWD)/scripts/salt-pip $(SCRIPTS_DIR)/salt-pip
