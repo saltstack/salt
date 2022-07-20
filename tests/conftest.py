@@ -164,19 +164,6 @@ def pytest_addoption(parser):
         ),
     )
     test_selection_group.addoption(
-        "--system-install",
-        action="store_true",
-        default=False,
-        help="Use system installed salt.",
-    )
-    test_selection_group.addoption(
-        "--scripts-path",
-        help=(
-            "Run the tests using the scripts found in this location. This"
-            "option is used to test salt artifacts."
-        ),
-    )
-    test_selection_group.addoption(
         "--ssh",
         "--ssh-tests",
         dest="ssh",
