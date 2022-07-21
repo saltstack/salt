@@ -43,12 +43,14 @@ Salt version and release:
 
 .. code-block:: bash
 
+    sudo rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/minor/<salt version>/SALTSTACK-GPG-KEY2.pub
     baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/<salt version and release number>
 
 For example, for the 3005 release of RC 1-2:
 
 .. code-block:: bash
 
+    sudo rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest/3005/SALTSTACK-GPG-KEY2.pub
     baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/3005rc1-2
 
 For Ubuntu, replace:
