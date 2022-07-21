@@ -175,7 +175,7 @@ def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_pas
         assert ret.data[id] == id
 
     # Run a test.sleep and kill it
-    sleep_time = 30
+    sleep_time = 15
     cmdline = salt_ssh_cli.cmdline("test.sleep", sleep_time, minion_tgt="*")
     terminal_stdout = tempfile.SpooledTemporaryFile(512000, buffering=0)
     terminal_stderr = tempfile.SpooledTemporaryFile(512000, buffering=0)
@@ -203,7 +203,7 @@ def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_pas
     with proc:
         # Wait for the process to terminate, to avoid zombies.
         # Shouldn't really take the 30 seconds
-        proc.wait(sleep_time)
+        proc.wait(sleep_time * 2)
         # poll the terminal so the right returncode is set on the popen object
         proc.poll()
         # This call shouldn't really be necessary
