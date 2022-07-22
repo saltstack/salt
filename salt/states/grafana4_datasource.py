@@ -141,7 +141,7 @@ def present(
         database=database,
         basicAuth=basic_auth,
         basicAuthUser=basic_auth_user,
-        basicAuthPassword=basic_auth_password,
+        secureJsonData=_get_json_data(basicAuthPassword=basic_auth_password),
         tlsAuth=tls_auth,
         jsonData=json_data,
         isDefault=is_default,
