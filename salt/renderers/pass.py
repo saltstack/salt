@@ -144,12 +144,17 @@ def _fetch_secret(pass_path):
     if pass_gnupghome:
         env["GNUPGHOME"] = pass_gnupghome
 
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE, env=env)
-    pass_data, pass_error = proc.communicate()
+    try:
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, env=env)
+        pass_data, pass_error = proc.communicate()
+        pass_returncode = proc.returncode
+    except OSError as e:
+        pass_data, pass_error = "", str(e)
+        pass_returncode = 1
 
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
-    if proc.returncode or not pass_data:
+    if pass_returncode or not pass_data:
         try:
             pass_error = pass_error.decode("utf-8")
         except (AttributeError, ValueError):
