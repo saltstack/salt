@@ -15,7 +15,6 @@ Package support for openSUSE via the zypper package manager
 import configparser
 import datetime
 import errno
-import fcntl
 import fnmatch
 import logging
 import os
@@ -38,6 +37,9 @@ import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
+
+if salt.utils.files.is_fcntl_available():
+    import fcntl
 
 log = logging.getLogger(__name__)
 
@@ -247,15 +249,16 @@ class _Zypper:
         """
         Is this an RPM lock error?
         """
-        if self.exit_code > 0 and os.path.exists(self.RPM_LOCK):
-            with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
-                try:
-                    fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except OSError as err:
-                    if err.errno == errno.EAGAIN:
-                        return True
-                else:
-                    fcntl.lockf(rfh, fcntl.LOCK_UN)
+        if salt.utils.files.is_fcntl_available():
+            if self.exit_code > 0 and os.path.exists(self.RPM_LOCK):
+                with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
+                    try:
+                        fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except OSError as err:
+                        if err.errno == errno.EAGAIN:
+                            return True
+                    else:
+                        fcntl.lockf(rfh, fcntl.LOCK_UN)
 
         return False
 
