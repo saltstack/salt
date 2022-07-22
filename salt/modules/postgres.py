@@ -2208,8 +2208,8 @@ def owner_to(
     """
 
     sqlfile = tempfile.NamedTemporaryFile()
-    sqlfile.write("begin;\n")
-    sqlfile.write('alter database "{}" owner to "{}";\n'.format(dbname, ownername))
+    sqlfile.write(b"begin;\n")
+    sqlfile.write('alter database "{}" owner to "{}";\n'.format(dbname, ownername).encode())
 
     queries = (
         # schemas
@@ -2259,9 +2259,9 @@ def owner_to(
             runas=runas,
         )
         for row in ret:
-            sqlfile.write(fmt.format(owner=ownername, n=row["n"]) + "\n")
+            sqlfile.write((fmt.format(owner=ownername, n=row["n"]) + "\n").encode())
 
-    sqlfile.write("commit;\n")
+    sqlfile.write(b"commit;\n")
     sqlfile.flush()
     os.chmod(sqlfile.name, 0o644)  # ensure psql can read the file
 
