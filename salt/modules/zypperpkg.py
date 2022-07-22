@@ -294,6 +294,10 @@ class _Zypper:
                     self.__call_result["stderr"]
                     and self.__call_result["stderr"].strip()
                     or ""
+                ) or (
+                    self.__call_result["stdout"]
+                    and self.__call_result["stdout"].strip()
+                    or ""
                 )
                 if msg:
                     _error_msg.append(msg)
