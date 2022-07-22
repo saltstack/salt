@@ -241,7 +241,7 @@ pycurl==7.43.0.5 ; python_version <= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via -r requirements/windows.txt

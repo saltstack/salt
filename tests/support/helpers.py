@@ -51,9 +51,6 @@ from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
 
-HAS_SYMLINKS = None
-
-
 PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
@@ -70,30 +67,27 @@ SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
 )
 
 
+@functools.lru_cache(maxsize=1, typed=False)
 def no_symlinks():
     """
     Check if git is installed and has symlinks enabled in the configuration.
     """
-    global HAS_SYMLINKS
-    if HAS_SYMLINKS is not None:
-        return not HAS_SYMLINKS
-    output = ""
     try:
-        output = subprocess.Popen(
+        ret = subprocess.run(
             ["git", "config", "--get", "core.symlinks"],
-            cwd=RUNTIME_VARS.TMP,
+            shell=False,
+            universal_newlines=True,
+            cwd=RUNTIME_VARS.CODE_DIR,
             stdout=subprocess.PIPE,
-        ).communicate()[0]
+            check=False,
+        )
+        if ret.returncode == 0 and ret.stdout.strip() == "true":
+            return False
+        return True
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-    except subprocess.CalledProcessError:
-        # git returned non-zero status
-        pass
-    HAS_SYMLINKS = False
-    if output.strip() == "true":
-        HAS_SYMLINKS = True
-    return not HAS_SYMLINKS
+    return True
 
 
 def destructiveTest(caller):
