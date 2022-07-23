@@ -386,8 +386,6 @@ def test_quotes(cmdmod):
     """
     cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
     expected_result = 'SELECT * FROM foo WHERE bar="baz"'
-    if salt.utils.platform.is_windows():
-        expected_result = "'SELECT * FROM foo WHERE bar=\"baz\"'"
     result = cmdmod.run_stdout(cmd).strip()
     assert result == expected_result
 
