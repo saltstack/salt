@@ -72,6 +72,6 @@ salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TAR
 	sh -c "find $(TARGET_DIR) -name '__pycache__' -type d -print0 |xargs -0 -n1 rm -rf --"
 	# Remove Python Headers
 	# rm -rf $(TARGET_DIR)/include
-	# Remove man pages
-	rm -rf $(TARGET_DIR)/share
+	# Remove python man pages
+	rm -rf $(TARGET_DIR)/share/man/**/python*
 	tar cJvf salt-$(SALT_VERSION)_$(ARCH).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);
