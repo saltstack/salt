@@ -58,6 +58,22 @@ def script_contents(state_tree):
         yield
 
 
+@pytest.fixture
+def issue_56195_test_ps1(state_tree):
+    _contents = """
+    [CmdLetBinding()]
+    Param(
+      [SecureString] $SecureString
+    )
+
+    $Credential = New-Object System.Net.NetworkCredential("DummyId", $SecureString)
+    $Credential.Password
+    """
+
+    with pytest.helpers.temp_file("issue_56195_test.ps1", _contents, state_tree):
+        yield
+
+
 @contextmanager
 def _ensure_user_exists(name, usermod):
     if name in usermod.info(name).values():
@@ -518,7 +534,7 @@ def test_windows_env_handling(cmdmod):
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-def test_windows_powershell_script_args(cmdmod):
+def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1):
     """
     Ensure that powershell processes inline script in args
     """
@@ -527,7 +543,7 @@ def test_windows_powershell_script_args(cmdmod):
         '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
         " -ErrorAction Stop".format(val)
     )
-    script = "salt://issue-56195/test.ps1"
+    script = "salt://issue_56195_test.ps1"
     ret = cmdmod.script(script, args=args, shell="powershell", saltenv="base")
     assert ret["stdout"] == val
 
@@ -535,7 +551,7 @@ def test_windows_powershell_script_args(cmdmod):
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
 @pytest.mark.skip_if_binaries_missing("pwsh")
-def test_windows_powershell_script_args_pwsh(cmdmod):
+def test_windows_powershell_script_args_pwsh(cmdmod, issue_56195_test_ps1):
     """
     Ensure that powershell processes inline script in args with powershell
     core
@@ -545,6 +561,6 @@ def test_windows_powershell_script_args_pwsh(cmdmod):
         '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
         " -ErrorAction Stop".format(val)
     )
-    script = "salt://issue-56195/test.ps1"
+    script = "salt://issue_56195_test.ps1"
     ret = cmdmod.script(script, args=args, shell="pwsh", saltenv="base")
     assert ret["stdout"] == val
