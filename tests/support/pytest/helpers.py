@@ -192,6 +192,7 @@ def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
 class TestGroup:
     sminion = attr.ib(repr=False)
     name = attr.ib()
+    gid = attr.ib()
     _delete_group = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -202,6 +203,10 @@ class TestGroup:
     def _default_name(self):
         return random_string("group-", uppercase=False)
 
+    @gid.default
+    def _default_gid(self):
+        return None
+
     @property
     def info(self):
         return types.SimpleNamespace(**self.sminion.functions.group.info(self.name))
@@ -209,7 +214,7 @@ class TestGroup:
     def __enter__(self):
         group = self.sminion.functions.group.info(self.name)
         if not group:
-            ret = self.sminion.functions.group.add(self.name)
+            ret = self.sminion.functions.group.add(self.name, gid=self.gid)
             assert ret
             self._delete_group = True
             log.debug("Created system group: %s", self)
@@ -231,8 +236,8 @@ class TestGroup:
 
 @pytest.helpers.register
 @contextmanager
-def create_group(name=attr.NOTHING, sminion=attr.NOTHING):
-    with TestGroup(sminion=sminion, name=name) as group:
+def create_group(name=attr.NOTHING, sminion=attr.NOTHING, gid=attr.NOTHING):
+    with TestGroup(sminion=sminion, name=name, gid=gid) as group:
         yield group
 
 
