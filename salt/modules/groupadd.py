@@ -40,8 +40,10 @@ def __virtual__():
     )
 
 
-def add(name, gid=None, system=False, root=None):
+def add(name, gid=None, system=False, root=None, non_unique=False):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
 
     name
@@ -56,6 +58,11 @@ def add(name, gid=None, system=False, root=None):
     root
         Directory to chroot into
 
+    non_unique
+        Allow creating groups with duplicate (non-unique) GIDs
+
+        .. versionchanged:: 3006.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -67,6 +74,8 @@ def add(name, gid=None, system=False, root=None):
         cmd.append("-g {}".format(gid))
     if system and __grains__["kernel"] != "OpenBSD":
         cmd.append("-r")
+    if non_unique:
+        cmd.append("-o")
 
     if root is not None:
         cmd.extend(("-R", root))
