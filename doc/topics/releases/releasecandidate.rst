@@ -38,17 +38,28 @@ of the file path.
 
 Tiamat packages
 ---------------
-For RedHat, replace the ``<salt version & release number>`` variable with the
-Salt version and release:
+For RedHat, replace:
+
+* The ``<os_version>`` variable with number of the RedHat version
+* The ``<salt version & release number>`` variable with the Salt version and
+  release
+
+.. Note::
+    Beginning with the release of RHEL 9, RedHat dropped support for SHA-1 and
+    now only accepts SHA-256 public keys. For that reason, any release
+    candidates for RedHat 9 and later need to import the
+    ``SALTSTACK-GPG-KEY2.pub`` key instead of the standard key.
 
 .. code-block:: bash
 
+    sudo rpm --import https://repo.saltproject.io/salt/py3/redhat/<os-version>/x86_64/minor/<salt version>/SALTSTACK-GPG-KEY.pub
     baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/<salt version and release number>
 
 For example, for the 3005 release of RC 1-2:
 
 .. code-block:: bash
 
+    sudo rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest/3005/SALTSTACK-GPG-KEY2.pub
     baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/3005rc1-2
 
 For Ubuntu, replace:
