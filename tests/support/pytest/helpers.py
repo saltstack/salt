@@ -213,7 +213,9 @@ class TestGroup:
     def __enter__(self):
         group = self.sminion.functions.group.info(self.name)
         if not group:
-            ret = self.sminion.functions.group.add(self.name, gid=self.gid)
+            ret = self.sminion.functions.group.add(
+                self.name, gid=self.gid, non_unique=True
+            )
             assert ret
             self._delete_group = True
             log.debug("Created system group: %s", self)
