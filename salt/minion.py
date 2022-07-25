@@ -119,6 +119,7 @@ def resolve_dns(opts, fallback=True):
     """
     ret = {}
     check_dns = True
+    master_host = opts.get("master_addr", None) or opts["master"]
     if opts.get("file_client", "remote") == "local" and not opts.get(
         "use_master_when_local", False
     ):
@@ -130,7 +131,7 @@ def resolve_dns(opts, fallback=True):
             if opts["master"] == "":
                 raise SaltSystemExit
             ret["master_ip"] = salt.utils.network.dns_check(
-                opts["master"], int(opts["master_port"]), True, opts["ipv6"]
+                master_host, int(opts["master_port"]), True, opts["ipv6"]
             )
         except SaltClientError:
             retry_dns_count = opts.get("retry_dns_count", None)
@@ -143,13 +144,13 @@ def resolve_dns(opts, fallback=True):
                     log.error(
                         "Master hostname: '%s' not found or not responsive. "
                         "Retrying in %s seconds",
-                        opts["master"],
+                        master_host,
                         opts["retry_dns"],
                     )
                     time.sleep(opts["retry_dns"])
                     try:
                         ret["master_ip"] = salt.utils.network.dns_check(
-                            opts["master"], int(opts["master_port"]), True, opts["ipv6"]
+                            master_host, int(opts["master_port"]), True, opts["ipv6"]
                         )
                         break
                     except SaltClientError:
@@ -1098,9 +1099,30 @@ class MinionManager(MinionBase):
         ):
             masters = [masters]
 
+        # every item is a tuple: (host,ip)
+        resolved_masters = []
+        if self.opts['master_type'] == 'str':
+            for master in masters:
+                for addr,v6 in salt.utils.network.dns_resolve_addresses(master):
+                    log.debug('Master host {h} resolved to {a}'\
+                             .format(h = master, a = addr))
+                    resolved_masters.append( (master, addr, v6) )
+                    pass
+                pass
+        else:
+            # if the type doesn't need RR DNS support, we're
+            # just going the old way by not adding a resolved
+            # address
+            resolved_masters = [(x, None, None) for x in masters]
+            pass
+
         beacons_leader = True
-        for master in masters:
+        for master,addr,v6 in resolved_masters:
             s_opts = copy.deepcopy(self.opts)
+            if addr is not None and v6 is not None:
+                s_opts["master_addr"] = addr
+                s_opts["ipv6"] = v6
+                pass
             s_opts["master"] = master
             s_opts["multimaster"] = True
             s_opts["beacons_leader"] = beacons_leader

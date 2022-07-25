@@ -2153,6 +2153,18 @@ def refresh_dns():
         # Exception raised loading the library, thus RES_INIT is not defined
         pass
 
+def dns_resolve_addresses(host):
+    '''
+    This function returns all the IP address that the host looks up to.
+    IPv6 addresses are only returned if the python interpreter has been
+    compiled with IPv6 support, because otherwise the returned structure
+    is effectively garbage.
+    '''
+    import sysconfig
+    hasv6 = sysconfig.get_config_vars()['ENABLE_IPV6'] == 1
+    return [(addr[0], af == socket.AF_INET6)
+            for af,_,_,_,addr in socket.getaddrinfo(host, 0, proto = socket.IPPROTO_TCP)
+            if af == socket.AF_INET or af == socket.AF_INET6 and hasv6]
 
 @jinja_filter("dns_check")
 def dns_check(addr, port, safe=False, ipv6=None):
