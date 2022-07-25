@@ -12,6 +12,7 @@ from pathlib import Path
 import jinja2
 import jinja2.ext
 import jinja2.sandbox
+import salt.modules.mod_random
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
