@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2022.03.15"
+__ScriptVersion="2022.05.19"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -1466,6 +1466,9 @@ __ubuntu_codename_translation() {
         "21")
             DISTRO_CODENAME="hirsute"
             ;;
+        "22")
+            DISTRO_CODENAME="jammy"
+            ;;
         *)
             DISTRO_CODENAME="trusty"
             ;;
@@ -1492,6 +1495,7 @@ __debian_derivatives_translation() {
     devuan_1_debian_base="8.0"
     devuan_2_debian_base="9.0"
     kali_1_debian_base="7.0"
+    kali_2021_debian_base="10.0"
     linuxmint_1_debian_base="8.0"
     raspbian_8_debian_base="8.0"
     raspbian_9_debian_base="9.0"
@@ -2925,7 +2929,8 @@ __enable_universe_repository() {
 __install_saltstack_ubuntu_repository() {
     # Workaround for latest non-LTS Ubuntu
     if { [ "$DISTRO_MAJOR_VERSION" -eq 20 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; } || \
-        [ "$DISTRO_MAJOR_VERSION" -eq 21 ]; then
+        # remove 22 version when salt packages for 22.04 are available
+        [ "$DISTRO_MAJOR_VERSION" -eq 21 ] ||  [ "$DISTRO_MAJOR_VERSION" -eq 22 ]; then
         echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages for previous LTS release. You may experience problems."
         UBUNTU_VERSION=20.04
         UBUNTU_CODENAME="focal"
@@ -3039,7 +3044,7 @@ install_ubuntu_stable_deps() {
 
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            if [ "$DISTRO_MAJOR_VERSION" -ge 20 ] || [ "$DISTRO_MAJOR_VERSION" -ge 21 ]; then
+            if [ "$DISTRO_MAJOR_VERSION" -ge 20 ] || [ "$DISTRO_MAJOR_VERSION" -ge 21 ] || [ "$DISTRO_MAJOR_VERSION" -ge 22 ]; then
                 __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring && apt-get update || return 1
             else
                 __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
@@ -3120,6 +3125,9 @@ install_ubuntu_git_deps() {
         fi
     else
         __PACKAGES="python${PY_PKG_VER}-dev python${PY_PKG_VER}-pip python${PY_PKG_VER}-setuptools gcc"
+        if [ "$DISTRO_MAJOR_VERSION" -ge 22 ]; then
+            __PACKAGES="${__PACKAGES} g++"
+        fi
         # shellcheck disable=SC2086
         __apt_get_install_noinput ${__PACKAGES} || return 1
     fi
@@ -3768,6 +3776,13 @@ install_debian_git_post() {
     done
 }
 
+install_debian_2021_post() {
+    # Kali 2021 (debian derivative) disables all network services by default
+    # Using archlinux post function to enable salt systemd services
+    install_arch_linux_post || return 1
+    return 0
+}
+
 install_debian_restart_daemons() {
     [ "$_START_DAEMONS" -eq $BS_FALSE ] && return 0
 
@@ -3983,6 +3998,9 @@ install_fedora_git_deps() {
             done
     else
         __PACKAGES="python${PY_PKG_VER}-devel python${PY_PKG_VER}-pip python${PY_PKG_VER}-setuptools gcc"
+        if [ "${DISTRO_VERSION}" -ge 35 ]; then
+            __PACKAGES="${__PACKAGES} gcc-c++"
+        fi
         # shellcheck disable=SC2086
         __dnf_install_noinput ${__PACKAGES} || return 1
     fi
@@ -4027,6 +4045,11 @@ install_fedora_git_post() {
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname}.service" "/lib/systemd/system/salt-${fname}.service"
+
+        # Salt executables are located under `/usr/local/bin/` on Fedora 36+
+        if [ "${DISTRO_VERSION}" -ge 36 ]; then
+          sed -i -e 's:/usr/bin/:/usr/local/bin/:g' /lib/systemd/system/salt-*.service
+        fi
 
         # Skip salt-api since the service should be opt-in and not necessarily started on boot
         [ $fname = "api" ] && continue
@@ -6140,7 +6163,7 @@ install_openbsd_git_deps() {
     __git_clone_and_checkout || return 1
 
     if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
-        pkg_add -I -v py-pip py-setuptools
+        pkg_add -I -v py3-pip py3-setuptools
     fi
 
     #
