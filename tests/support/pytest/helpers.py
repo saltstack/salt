@@ -191,7 +191,7 @@ def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
 class TestGroup:
     sminion = attr.ib(repr=False)
     name = attr.ib()
-    gid = attr.ib()
+    gid = attr.ib(repr=False, default=None)
     _delete_group = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -201,10 +201,6 @@ class TestGroup:
     @name.default
     def _default_name(self):
         return random_string("group-", uppercase=False)
-
-    @gid.default
-    def _default_gid(self):
-        return None
 
     @property
     def info(self):
