@@ -166,7 +166,9 @@ def mysql_container(salt_factories, mysql_combo):
 
     container = salt_factories.get_container(
         mysql_combo.container_id,
-        "{}:{}".format(mysql_combo.mysql_name, mysql_combo.mysql_version),
+        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+            mysql_combo.mysql_name, mysql_combo.mysql_version
+        ),
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
