@@ -41,7 +41,7 @@ def consul_container(salt_factories):
 
     container = salt_factories.get_container(
         random_string("consul-server-"),
-        image_name="consul:latest",
+        image_name="ghcr.io/saltstack/salt-ci-containers/consul:latest",
         container_run_kwargs={"ports": {"8500/tcp": None}},
         pull_before_start=True,
         skip_on_pull_failure=True,

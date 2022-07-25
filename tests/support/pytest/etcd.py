@@ -30,8 +30,8 @@ def etcd_version(request):
 @pytest.fixture(scope="module")
 def etcd_container_image_name(etcd_version):
     if etcd_version == EtcdVersion.v2:
-        return "elcolio/etcd"
-    return "bitnami/etcd:3"
+        return "ghcr.io/saltstack/salt-ci-containers/etcd:2"
+    return "ghcr.io/saltstack/salt-ci-containers/etcd:3"
 
 
 @pytest.fixture(scope="module")
