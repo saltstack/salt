@@ -294,8 +294,9 @@ def get_group_list(user, include_default=True):
         log.trace("Trying os.getgrouplist for '%s'", user)
         try:
             group_names = [
-                grp.getgrgid(grpid).gr_name
-                for grpid in os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
+                _group.gr_name
+                for _group in grp.getgrall()
+                if _group.gr_gid in os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
             ]
         except Exception:  # pylint: disable=broad-except
             pass
