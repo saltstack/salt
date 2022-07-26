@@ -73,6 +73,12 @@ connected masters:
       - saltmaster1.example.com
       - saltmaster2.example.com
 
+.. versionchanged:: 3006.0
+
+Saltstack now supports round-robin DNS lookups for the :conf_minion:`master`
+configuration option, meaning the list of masters can be specified with
+one or more round-robin DNS records, even transitively with CNAME records.
+
 Now the minion can be safely restarted.
 
 .. note::

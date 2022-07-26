@@ -76,6 +76,13 @@ The option can also be set to a list of masters, enabling
       - address1
       - address2
 
+.. versionchanged:: 3006.0
+
+    If :conf_minion:`master_type` is set to `str` (that is, in multimaster mode)
+    then all values of the :conf_minion:`master` option are looked up (even if it
+    is not a list but a single value string), and the list of master addresses
+    are expanded with the results of the DNS lookup.
+
 .. versionchanged:: 2014.7.0
 
     The master can be dynamically configured. The :conf_minion:`master` value
@@ -179,6 +186,12 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
 If this option is ``str`` (default), multiple hot masters are configured.    
 Minions can connect to multiple masters simultaneously (all master are "hot").
+
+.. versionchanged:: 3006.0
+
+Specifying the list of masters now can be done using round-robin DNS entries.
+Each value of the :minion_conf:`master` is looked up, and the list of masters
+will be expanded by all of the returned addresses.
 
 .. code-block:: yaml
 
