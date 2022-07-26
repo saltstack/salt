@@ -877,6 +877,9 @@ def _virtual(osdata):
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
+                elif "nutanix_ahv" in line:
+                    grains["virtual"] = "Nutanix"
+                    break
             break
         elif command == "dmidecode":
             # Product Name: VirtualBox
