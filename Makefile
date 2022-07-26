@@ -29,12 +29,12 @@ $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION).tar.xz: $(TARGET_DIR)
 $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION): $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION).tar.xz
 	cd $(TARGET_DIRNAME); \
 	tar xvf Python-$(PYTHON_VERSION).tar.xz; \
-	touch $@; \
-	cd $(PWD)
+	cd $(PWD); \
+	touch $@;
 
 $(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION)
 	cd $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION); \
-	./configure --prefix=$(TARGET_DIR) ; \
+	LDFLAGS="-Wl,--as-needed" ./configure --prefix=$(TARGET_DIR) ; \
 	make -j4; \
 	make install; \
 	cd $(TARGET_DIR)/bin; \
@@ -46,7 +46,7 @@ $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.one
 	cp $(PWD)/scripts/salt-pip $(SCRIPTS_DIR)/salt-pip
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $@;
 
-$(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip $(DYNLOAD) $(DYNLIB)
+$(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip
 	$(SCRIPTS_DIR)/salt-pip install wheel
 	$(SCRIPTS_DIR)/salt-pip install .
 	$(SCRIPTS_DIR)/salt-pip install -r $(PWD)/requirements/static/pkg/py$(PY_SUFFIX)/linux.txt
