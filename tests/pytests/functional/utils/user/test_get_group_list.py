@@ -21,11 +21,11 @@ def user():
 @pytest.fixture(scope="module")
 def dupegroup(user):
     grpid = user.group.info.gid
-    with pytest.helpers.create_group(name="dupegroup", gid=grpid) as _group:
+    with pytest.helpers.create_group(name="dupegroup", gid=grpid, members=user.username) as _group:
         yield _group
 
 
 def test_get_group_list_with_duplicate_gid_group(user, dupegroup):
-    group_list = salt.utils.user.get_group_list(user)
+    group_list = salt.utils.user.get_group_list(user.username)
     assert user.group.info.name in group_list
     assert dupegroup.name in group_list
