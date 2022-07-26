@@ -72,10 +72,10 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
     cmd = ["groupadd"]
     if gid:
         cmd.append("-g {}".format(gid))
+        if non_unique:
+            cmd.append("-o")
     if system and __grains__["kernel"] != "OpenBSD":
         cmd.append("-r")
-    if non_unique:
-        cmd.append("-o")
 
     if root is not None:
         cmd.extend(("-R", root))
