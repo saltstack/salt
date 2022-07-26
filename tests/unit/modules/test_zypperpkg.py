@@ -4,6 +4,7 @@
 
 
 import configparser
+import errno
 import io
 import os
 from xml.dom import minidom
@@ -14,7 +15,7 @@ import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, patch, mock_open
 from tests.support.unit import TestCase
 
 
@@ -77,6 +78,10 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "del_repo": Mock(),
             "mod_repo": Mock(wraps=zypper.mod_repo),
         }
+        fcntl_patcher = patch.object(salt.utils.files, "is_fcntl_available",
+                                     return_value=True)
+        fcntl_patcher.start()
+        self.addCleanup(fcntl_patcher.stop)
 
     def tearDown(self):
         del self.new_repo_config
@@ -2064,3 +2069,34 @@ pattern() = package-c"""
         with patch("salt.modules.zypperpkg.__zypper__", zypper_mock):
             assert zypper.services_need_restart() == expected
             zypper_mock(root=None).nolock.call.assert_called_with("ps", "-sss")
+
+    def test_is_rpm_lock_no_error(self):
+        with patch.object(os.path, "exists", return_value=True):
+            self.assertFalse(zypper.__zypper__._is_rpm_lock())
+        zypper.__zypper__._reset()
+
+    def test_rpm_lock_does_not_exist(self):
+        zypper.__zypper__.exit_code = 1
+        with patch.object(os.path, "exists", return_value=False) as \
+                mock_path_exists:
+            self.assertFalse(zypper.__zypper__._is_rpm_lock())
+            mock_path_exists.assert_called_with(zypper.__zypper__.RPM_LOCK)
+        zypper.__zypper__._reset()
+
+    def test_rpm_lock_acquirable(self):
+        zypper.__zypper__.exit_code = 1
+        with patch.object(os.path, "exists", return_value=True), \
+                patch("fcntl.lockf", side_effect=OSError(errno.EAGAIN, "")) as \
+                lockf_mock, patch("salt.utils.files.fopen", mock_open()):
+            self.assertTrue(zypper.__zypper__._is_rpm_lock())
+            lockf_mock.assert_called()
+        zypper.__zypper__._reset()
+
+    def test_rpm_lock_not_acquirable(self):
+        zypper.__zypper__.exit_code = 1
+        with patch.object(os.path, "exists", return_value=True), \
+            patch("fcntl.lockf") as lockf_mock, patch(
+                "salt.utils.files.fopen", mock_open()):
+            self.assertFalse(zypper.__zypper__._is_rpm_lock())
+            self.assertEqual(lockf_mock.call_count, 2)
+        zypper.__zypper__._reset()
