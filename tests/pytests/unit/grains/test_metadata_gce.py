@@ -41,6 +41,13 @@ def test_metadata_gce_search():
                     "Metadata-Flavor": "Google",
                 },
             },
+            "http://169.254.169.254/computeMetadata/v1/?alt=json&recursive=true": {
+                "body": "recursetest",
+                "headers": {
+                    "Content-Type": "application/octet-stream",
+                    "Metadata-Flavor": "Google",
+                },
+            },
         }
 
         return metadata_vals[url]
