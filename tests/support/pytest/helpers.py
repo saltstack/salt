@@ -239,7 +239,7 @@ class TestGroup:
 
 @pytest.helpers.register
 @contextmanager
-def create_group(name=attr.NOTHING, sminion=attr.NOTHING, gid=attr.NOTHING, members=attr.NOTHING):
+def create_group(name=attr.NOTHING, sminion=attr.NOTHING, gid=None, members=None):
     with TestGroup(sminion=sminion, name=name, gid=gid, members=members) as group:
         yield group
 
