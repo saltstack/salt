@@ -47,11 +47,11 @@ def __virtual__():
 
     # Only load the module if all checks were True
     if all(checks):
-        return __virtualname__
+        return True
     else:
         return False
 
-def fetch_gce_metadata():
+def metadata():
     log.debug("All checks true - loading gce metadata")
     result = http.query(URL, headers=True, header_list=['Metadata-Flavor: Google'])
     metadata = salt.utils.json.loads(result.get('body',{}))
