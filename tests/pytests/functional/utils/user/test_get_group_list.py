@@ -21,7 +21,9 @@ def user():
 @pytest.fixture(scope="module")
 def dupegroup(user):
     grpid = user.group.info.gid
-    with pytest.helpers.create_group(name="dupegroup", gid=grpid, members=user.username) as _group:
+    with pytest.helpers.create_group(
+        name="dupegroup", gid=grpid, members=user.username
+    ) as _group:
         yield _group
 
 
