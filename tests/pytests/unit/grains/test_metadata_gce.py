@@ -26,23 +26,8 @@ def configure_loader_modules():
 def test_metadata_gce_search():
     def mock_http(url="", headers=False, header_list=None):
         metadata_vals = {
-            "http://169.254.169.254/computeMetadata/v1/": {
-                "body": "instance/\nproject/",
-                "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
-            },
-            "http://169.254.169.254/computeMetadata/v1/instance/": {
-                "body": "test",
-                "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
-            },
-            "http://169.254.169.254/computeMetadata/v1/instance/test": {
-                "body": "fulltest",
-                "headers": {
-                    "Content-Type": "application/octet-stream",
-                    "Metadata-Flavor": "Google",
-                },
-            },
             "http://169.254.169.254/computeMetadata/v1/?alt=json&recursive=true": {
-                "body": "recursetest",
+                "body": '{"instance": {"test": "fulltest"}}',
                 "headers": {
                     "Content-Type": "application/octet-stream",
                     "Metadata-Flavor": "Google",
