@@ -36,9 +36,22 @@ def __virtual__():
     )
 
 
-def add(name, gid=None, **kwargs):
+def add(name, gid=None, non_unique=False, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
+
+    name
+        Name of the new group
+
+    gid
+        Use GID for the new group
+
+    non_unique
+        Allow creating groups with duplicate (non-unique) GIDs
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -55,6 +68,8 @@ def add(name, gid=None, **kwargs):
     cmd = "pw groupadd "
     if gid:
         cmd += "-g {} ".format(gid)
+    if non_unique:
+        cmd += "-o "
     cmd = "{} -n {}".format(cmd, name)
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 
