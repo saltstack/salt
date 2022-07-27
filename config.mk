@@ -1,6 +1,6 @@
 PWD := $(shell pwd)
 # What python version will be installed
-PYTHON_VERSION := 3.8.13
+PYTHON_VERSION := 3.9.13
 # The target where we will install python
 TARGET_DIR := $(PWD)/build/salt
 # The scripts directory which will contain Salt's scripts
