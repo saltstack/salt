@@ -119,19 +119,20 @@ def resolve_dns(opts, fallback=True):
     """
     ret = {}
     check_dns = True
-    master_host = opts.get("master_addr", None) or opts["master"]
     if opts.get("file_client", "remote") == "local" and not opts.get(
         "use_master_when_local", False
     ):
         check_dns = False
     import salt.utils.network
 
+    master_host = opts.get("_master_addr", None) or opts["master"]
+    master_port = opts.get("_master_port", None) or opts["master_port"]
     if check_dns is True:
         try:
             if opts["master"] == "":
                 raise SaltSystemExit
             ret["master_ip"] = salt.utils.network.dns_check(
-                master_host, int(opts["master_port"]), True, opts["ipv6"]
+                master_host, int(master_port), True, opts["ipv6"]
             )
         except SaltClientError:
             retry_dns_count = opts.get("retry_dns_count", None)
@@ -150,7 +151,7 @@ def resolve_dns(opts, fallback=True):
                     time.sleep(opts["retry_dns"])
                     try:
                         ret["master_ip"] = salt.utils.network.dns_check(
-                            master_host, int(opts["master_port"]), True, opts["ipv6"]
+                            master_host, int(master_port), True, opts["ipv6"]
                         )
                         break
                     except SaltClientError:
@@ -228,7 +229,7 @@ def resolve_dns(opts, fallback=True):
             "Using %d as source port for the master pub", ret["source_publish_port"]
         )
     ret["master_uri"] = "tcp://{ip}:{port}".format(
-        ip=ret["master_ip"], port=opts["master_port"]
+        ip=ret["master_ip"], port=master_port
     )
     log.debug("Master URI: %s", ret["master_uri"])
 
@@ -1103,10 +1104,14 @@ class MinionManager(MinionBase):
         resolved_masters = []
         if self.opts['master_type'] == 'str':
             for master in masters:
-                for addr,v6 in salt.utils.network.dns_resolve_addresses(master):
+                s_opts = copy.deepcopy(self.opts)
+                s_opts["master"] = master
+                s_opts = prep_ip_port(s_opts)
+                port = s_opts.get("master_port", None)
+                for addr,v6 in salt.utils.network.dns_resolve_addresses(s_opts["master"]):
                     log.debug('Master host {h} resolved to {a}'\
                              .format(h = master, a = addr))
-                    resolved_masters.append( (master, addr, v6) )
+                    resolved_masters.append( (master, addr, v6, port) )
                     pass
                 pass
         else:
@@ -1117,10 +1122,11 @@ class MinionManager(MinionBase):
             pass
 
         beacons_leader = True
-        for master,addr,v6 in resolved_masters:
+        for master,addr,v6,port in resolved_masters:
             s_opts = copy.deepcopy(self.opts)
             if addr is not None and v6 is not None:
-                s_opts["master_addr"] = addr
+                s_opts["_master_addr"] = addr
+                s_opts["_master_port"] = port
                 s_opts["ipv6"] = v6
                 pass
             s_opts["master"] = master
