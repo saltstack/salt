@@ -61,7 +61,7 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
     non_unique
         Allow creating groups with duplicate (non-unique) GIDs
 
-        .. versionchanged:: 3006.0
+        .. versionadded:: 3006.0
 
     CLI Example:
 
