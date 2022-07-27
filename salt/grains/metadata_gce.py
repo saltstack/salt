@@ -25,31 +25,11 @@ URL = f"http://{IP}/computeMetadata/v1/?alt=json&recursive=true"
 log = logging.getLogger(__name__)
 
 def __virtual__():
-    checks = []
     # Check if metadata_server_grains minion option is enabled
     if __opts__.get("metadata_server_grains", False) is False:
-        checks.append(False)
-    else:
-        checks.append(True)
-
-    # Check if metadata server is reachable
-    googletest = http.query(f"http://{IP}", status=True, headers=True)
-    if googletest.get("status", 404) == 200:
-        checks.append(True)
-    else:
-        checks.append(False)
-
-    # Check if headers include Google flavor
-    if googletest.get("headers", {}).get("Metadata-Flavor", False) == "Google":
-        checks.append(True)
-    else:
-        checks.append(False)
-
-    # Only load the module if all checks were True
-    if all(checks):
-        return True
-    else:
         return False
+    else:
+        return True
 
 def metadata():
     log.debug("All checks true - loading gce metadata")
