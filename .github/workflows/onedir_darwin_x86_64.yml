@@ -1,0 +1,24 @@
+name: Build MacOS Onedir x86_64
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: macos-12
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build onedir
+      run: make onedir
+
+    - name: Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Salt Onedir MacOS X86_64
+        path: salt*.tar.xz
