@@ -33,9 +33,22 @@ def __virtual__():
     return __virtualname__
 
 
-def add(name, gid=None, **kwargs):
+def add(name, gid=None, non_unique=False, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
+
+    name
+        Name of the new group
+
+    gid
+        Use GID for the new group
+
+    non_unique
+        Allow creating groups with duplicate (non-unique) GIDs
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -57,7 +70,7 @@ def add(name, gid=None, **kwargs):
         raise SaltInvocationError("gid must be an integer")
     # check if gid is already in use
     gid_list = _list_gids()
-    if str(gid) in gid_list:
+    if str(gid) in gid_list and not non_unique:
         raise CommandExecutionError("gid '{}' already exists".format(gid))
 
     cmd = ["dseditgroup", "-o", "create"]
