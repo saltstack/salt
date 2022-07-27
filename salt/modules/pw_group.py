@@ -36,7 +36,7 @@ def __virtual__():
     )
 
 
-def add(name, gid=None, non_unique=False, **kwargs):
+def add(name, gid=None, **kwargs):
     """
     .. versionchanged:: 3006.0
 
@@ -48,11 +48,6 @@ def add(name, gid=None, non_unique=False, **kwargs):
     gid
         Use GID for the new group
 
-    non_unique
-        Allow creating groups with duplicate (non-unique) GIDs
-
-        .. versionadded:: 3006.0
-
     CLI Example:
 
     .. code-block:: bash
@@ -62,14 +57,14 @@ def add(name, gid=None, non_unique=False, **kwargs):
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if salt.utils.data.is_true(kwargs.pop("system", False)):
         log.warning("pw_group module does not support the 'system' argument")
+    if "non_unique" in kwargs:
+        log.warning("The non_unique parameter is not supported on this platform.")
     if kwargs:
         log.warning("Invalid kwargs passed to group.add")
 
     cmd = "pw groupadd "
     if gid:
         cmd += "-g {} ".format(gid)
-    if non_unique:
-        cmd += "-o "
     cmd = "{} -n {}".format(cmd, name)
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 

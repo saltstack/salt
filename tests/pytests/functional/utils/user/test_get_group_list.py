@@ -2,6 +2,7 @@ import logging
 
 import pytest
 import salt.utils.user
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,10 @@ def dupegroup(user):
         yield _group
 
 
+@skipIf(
+    salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd(),
+    "This test should not run on FreeBSD and Mac due to lack of duplicate GID support",
+)
 def test_get_group_list_with_duplicate_gid_group(user, dupegroup):
     group_list = salt.utils.user.get_group_list(user.username)
     assert user.group.info.name in group_list
