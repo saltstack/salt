@@ -22,17 +22,31 @@ def _filter_stdlib_tests(name):
     return True
 
 
+def _python_stdlib_path():
+    """
+    Return the path to the standard library folder
+    """
+    base_exec_prefix = pathlib.Path(sys.base_exec_prefix)
+    log.info("Grabbing 'base_exec_prefix' for platform: %s", sys.platform)
+    if not sys.platform.lower().startswith("win"):
+        return base_exec_prefix / "lib" / "python{}.{}".format(*sys.version_info)
+    return base_exec_prefix / "Lib"
+
+
 def _collect_python_stdlib_hidden_imports():
     """
     Collect all of the standard library(most of it) as hidden imports.
     """
     _hidden_imports = set()
-    base_exec_prefix = pathlib.Path(sys.base_exec_prefix).resolve()
-    stdlib = base_exec_prefix / "lib" / "python{}.{}".format(*sys.version_info)
+
+    stdlib = _python_stdlib_path()
     if not stdlib.exists():
         log.error("The path '%s' does not exist", stdlib)
+        return list(_hidden_imports)
+
     log.info(
-        "Collecting hidden imports from the python standard library at: %s", stdlib
+        "Collecting hidden imports from the python standard library at: %s",
+        stdlib,
     )
     for path in stdlib.glob("*"):
         if path.is_dir():
@@ -55,7 +69,7 @@ def _collect_python_stdlib_hidden_imports():
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error("Failed to collect %r: %s", path.name, exc)
             continue
-        if path.suffix != ".py":
+        if path.suffix not in (".py", ".pyc", ".pyo"):
             continue
         _hidden_imports.add(path.stem)
     log.info("Collected stdlib hidden imports: %s", sorted(_hidden_imports))
@@ -67,13 +81,15 @@ def _collect_python_stdlib_dynamic_libraries():
     Collect all of the standard library(most of it) dynamic libraries.
     """
     _dynamic_libs = set()
-    base_exec_prefix = pathlib.Path(sys.base_exec_prefix)
-    stdlib = base_exec_prefix / "lib" / "python{}.{}".format(*sys.version_info)
+
+    stdlib = _python_stdlib_path()
     if not stdlib.exists():
         log.error("The path '%s' does not exist", stdlib)
         return list(_dynamic_libs)
+
     log.info(
-        "Collecting dynamic libraries from the python standard library at: %s", stdlib
+        "Collecting dynamic libraries from the python standard library at: %s",
+        stdlib,
     )
     for path in stdlib.glob("*"):
         if not path.is_dir():
