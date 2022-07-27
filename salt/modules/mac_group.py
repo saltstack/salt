@@ -1,6 +1,7 @@
 """
 Manage groups on Mac OS 10.7+
 """
+import logging
 
 import salt.utils.functools
 import salt.utils.itertools
@@ -12,6 +13,8 @@ try:
     import grp
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 # Define the module's virtual name
@@ -33,7 +36,7 @@ def __virtual__():
     return __virtualname__
 
 
-def add(name, gid=None, non_unique=False, **kwargs):
+def add(name, gid=None, **kwargs):
     """
     .. versionchanged:: 3006.0
 
@@ -44,11 +47,6 @@ def add(name, gid=None, non_unique=False, **kwargs):
 
     gid
         Use GID for the new group
-
-    non_unique
-        Allow creating groups with duplicate (non-unique) GIDs
-
-        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -68,9 +66,11 @@ def add(name, gid=None, non_unique=False, **kwargs):
         )
     if gid is not None and not isinstance(gid, int):
         raise SaltInvocationError("gid must be an integer")
+    if "non_unique" in kwargs:
+        log.warning("The non_unique parameter is not supported on this platform.")
     # check if gid is already in use
     gid_list = _list_gids()
-    if str(gid) in gid_list and not non_unique:
+    if str(gid) in gid_list:
         raise CommandExecutionError("gid '{}' already exists".format(gid))
 
     cmd = ["dseditgroup", "-o", "create"]
