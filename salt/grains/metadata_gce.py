@@ -19,17 +19,21 @@ import salt.utils.http as http
 import salt.utils.json
 import logging
 
-__virtualname__ = "gce"
-IP = "169.254.169.254"
-URL = f"http://{IP}/computeMetadata/v1/?alt=json&recursive=true"
+HOST = "http://169.254.169.254"
+URL = f"{HOST}/computeMetadata/v1/?alt=json&recursive=true"
 log = logging.getLogger(__name__)
 
 def __virtual__():
     # Check if metadata_server_grains minion option is enabled
     if __opts__.get("metadata_server_grains", False) is False:
         return False
-    else:
-        return True
+    googletest = http.query(HOST, status=True, headers=True)
+    if (
+        googletest.get("status", 404) != 200
+        or googletest.get("headers", {}).get("Metadata-Flavor", False) != "Google"
+    ):
+        return False
+    return True
 
 def metadata():
     log.debug("All checks true - loading gce metadata")
@@ -37,5 +41,3 @@ def metadata():
     metadata = salt.utils.json.loads(result.get('body',{}))
 
     return metadata
-
-
