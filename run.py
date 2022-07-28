@@ -65,9 +65,13 @@ def python_runtime():
 
     # update passed args so they don't start with "<binary> python"
     sys.argv = sys.argv[2:]
-
-    with open(script) as f:
-        exec(f.read())
+    exec_locals = {"__name__": "__main__", "__file__": str(script), "__doc__": None}
+    with open(script, encoding="utf-8") as rfh:
+        try:
+            exec(rfh.read(), exec_locals)
+        except Exception:
+            traceback.print_exc()
+            sys.exit(1)
 
 
 def redirect(argv):
