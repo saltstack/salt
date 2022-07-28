@@ -61,7 +61,6 @@ def python_runtime():
     # extract the absolute script path to alter sys.path and specific dunder variables
     script = pathlib.Path(sys.argv[2]).expanduser().absolute()
     sys.path.insert(0, str(script.parent))
-    __file__ = str(script)
 
     # update passed args so they don't start with "<binary> python"
     sys.argv = sys.argv[2:]
