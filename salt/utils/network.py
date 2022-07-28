@@ -2210,7 +2210,7 @@ def dns_resolve_addresses(host: str):
         try:
             ipaddress.ip_address(addr)
             return True
-        except Exception:
+        except ValueError:
             return False
 
     hasv6 = sysconfig.get_config_vars().get("ENABLE_IPV6", 1) == 1
