@@ -1117,7 +1117,7 @@ class MinionManager(MinionBase):
             # if the type doesn't need RR DNS support, we're
             # just going the old way by not adding a resolved
             # address
-            resolved_masters = [(x, None, None) for x in masters]
+            resolved_masters = [(x, None, None, None) for x in masters]
 
         beacons_leader = True
         for master, addr, v6, port in resolved_masters:
