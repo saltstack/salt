@@ -2205,7 +2205,7 @@ def dns_resolve_addresses(host: str):
     """
     import sysconfig
 
-    hasv6 = sysconfig.get_config_vars()["ENABLE_IPV6"] == 1
+    hasv6 = sysconfig.get_config_vars().get("ENABLE_IPV6", 0) == 1
     return [
         (addr[0], af == socket.AF_INET6)
         for af, _, _, _, addr in socket.getaddrinfo(host, 0, proto=socket.IPPROTO_TCP)
