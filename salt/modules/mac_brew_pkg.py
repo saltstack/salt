@@ -112,7 +112,7 @@ def _call_brew(*cmd, failhard=True):
     runas = user if user != __opts__["user"] else None
     _cmd = []
     if runas:
-        _cmd = ["sudo -i -n -H -u {} -- ".format(runas)]
+        _cmd = ["sudo -n -H -u {} -- ".format(runas)]
     _cmd = _cmd + [salt.utils.path.which("brew")] + list(cmd)
     _cmd = " ".join(_cmd)
 
