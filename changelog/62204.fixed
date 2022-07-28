@@ -1,2 +1,1 @@
 Fixed Zypper module failing on RPM lock file being temporarily unavailable.
-
