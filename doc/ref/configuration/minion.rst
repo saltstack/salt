@@ -32,7 +32,13 @@ Minion Primary Configuration
 Default: ``salt``
 
 The hostname or IP address of the master. See :conf_minion:`ipv6` for IPv6
-connections to the master.
+connections to the master. This option supports multiple forms, explained in
+details bellow. It can be either a single string, or a list of string. Each string
+can be simple a hostname or an IP address, or have the port explicitly specified
+by adding a colon and the port number.
+
+The functional interpretation of this option depends on the :conf_minion:`master_type`
+option, which is explained later.
 
 Default: ``salt``
 
