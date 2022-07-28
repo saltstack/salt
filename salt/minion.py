@@ -1102,16 +1102,19 @@ class MinionManager(MinionBase):
 
         # every item is a tuple: (host,ip)
         resolved_masters = []
-        if self.opts['master_type'] == 'str':
+        if self.opts["master_type"] == "str":
             for master in masters:
                 s_opts = copy.deepcopy(self.opts)
                 s_opts["master"] = master
                 s_opts = prep_ip_port(s_opts)
                 port = s_opts.get("master_port", None)
-                for addr,v6 in salt.utils.network.dns_resolve_addresses(s_opts["master"]):
-                    log.debug('Master host {h} resolved to {a}'\
-                             .format(h = master, a = addr))
-                    resolved_masters.append( (master, addr, v6, port) )
+                for addr, v6 in salt.utils.network.dns_resolve_addresses(
+                    s_opts["master"]
+                ):
+                    log.debug(
+                        "Master host {h} resolved to {a}".format(h=master, a=addr)
+                    )
+                    resolved_masters.append((master, addr, v6, port))
                     pass
                 pass
         else:
@@ -1122,7 +1125,7 @@ class MinionManager(MinionBase):
             pass
 
         beacons_leader = True
-        for master,addr,v6,port in resolved_masters:
+        for master, addr, v6, port in resolved_masters:
             s_opts = copy.deepcopy(self.opts)
             if addr is not None and v6 is not None:
                 s_opts["_master_addr"] = addr
