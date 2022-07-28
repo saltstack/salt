@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+import salt.utils.platform
 import salt.utils.user
 from tests.support.unit import skipIf
 
