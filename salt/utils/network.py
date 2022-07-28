@@ -2204,12 +2204,21 @@ def dns_resolve_addresses(host: str):
         is effectively garbage.
     """
     import sysconfig
+    import ipaddress
 
-    hasv6 = sysconfig.get_config_vars().get("ENABLE_IPV6", 0) == 1
+    def isipaddress(addr:str):
+        try:
+            ipaddress.ip_address(addr)
+            return True
+        except:
+            return False
+
+    hasv6 = sysconfig.get_config_vars().get("ENABLE_IPV6", 1) == 1
     return [
         (addr[0], af == socket.AF_INET6)
         for af, _, _, _, addr in socket.getaddrinfo(host, 0, proto=socket.IPPROTO_TCP)
-        if af == socket.AF_INET or af == socket.AF_INET6 and hasv6
+        if af == socket.AF_INET or af == socket.AF_INET6 and hasv6 and type(addr[0])==str
+        and len(addr)==4 and isipaddress(addr[0])
     ]
 
 
