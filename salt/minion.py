@@ -1112,7 +1112,7 @@ class MinionManager(MinionBase):
                     s_opts["master"]
                 ):
                     log.debug(
-                        "Master host {h} resolved to {a}".format(h=master, a=addr)
+                        "Master host %s resolved to %s", master, addr
                     )
                     resolved_masters.append((master, addr, v6, port))
         else:
