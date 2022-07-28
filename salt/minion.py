@@ -1115,14 +1115,11 @@ class MinionManager(MinionBase):
                         "Master host {h} resolved to {a}".format(h=master, a=addr)
                     )
                     resolved_masters.append((master, addr, v6, port))
-                    pass
-                pass
         else:
             # if the type doesn't need RR DNS support, we're
             # just going the old way by not adding a resolved
             # address
             resolved_masters = [(x, None, None) for x in masters]
-            pass
 
         beacons_leader = True
         for master, addr, v6, port in resolved_masters:
@@ -1131,7 +1128,7 @@ class MinionManager(MinionBase):
                 s_opts["_master_addr"] = addr
                 s_opts["_master_port"] = port
                 s_opts["ipv6"] = v6
-                pass
+
             s_opts["master"] = master
             s_opts["multimaster"] = True
             s_opts["beacons_leader"] = beacons_leader

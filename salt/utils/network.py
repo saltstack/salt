@@ -2154,14 +2154,14 @@ def refresh_dns():
         pass
 
 
-def dns_resolve_addresses(host:str):
+def dns_resolve_addresses(host: str):
     """
     This function returns all the IP address that the host looks up to,
     effectively a gettaddrinfo(3) wrapper, returning simplified results.
 
     This function takes one argument a string, which is the hostname
     to look up.
-    
+
     The return value is a list of tuples, one tuple by the result of the
     lookup. Each tuple consts of two fields, the first is the resulting
     address, and the second field is a boolean, True for IPv6 addresses
@@ -2197,7 +2197,7 @@ def dns_resolve_addresses(host:str):
 
         [('3.4.5.6', False),
          ('4.5.6.7', False)]
-    
+
     .. Warning::
         IPv6 addresses are only returned if the python interpreter has been
         compiled with IPv6 support, because otherwise the returned structure

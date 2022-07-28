@@ -196,7 +196,7 @@ Minions can connect to multiple masters simultaneously (all master are "hot").
 .. versionchanged:: 3006.0
 
 Specifying the list of masters now can be done using round-robin DNS entries.
-Each value of the :minion_conf:`master` is looked up, and the list of masters
+Each value of the :conf_minion:`master` is looked up, and the list of masters
 will be expanded by all of the returned addresses.
 
 .. code-block:: yaml
