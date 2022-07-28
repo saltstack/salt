@@ -1111,9 +1111,7 @@ class MinionManager(MinionBase):
                 for addr, v6 in salt.utils.network.dns_resolve_addresses(
                     s_opts["master"]
                 ):
-                    log.debug(
-                        "Master host %s resolved to %s", master, addr
-                    )
+                    log.debug("Master host %s resolved to %s", master, addr)
                     resolved_masters.append((master, addr, v6, port))
         else:
             # if the type doesn't need RR DNS support, we're
