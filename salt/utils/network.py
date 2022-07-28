@@ -2220,8 +2220,8 @@ def dns_resolve_addresses(host: str):
         if af == socket.AF_INET
         or af == socket.AF_INET6
         and hasv6
-        and type(addr[0])==str
-        and len(addr)==4
+        and type(addr[0]) == str
+        and len(addr) == 4
         and isipaddress(addr[0])
     ]
 
