@@ -43,7 +43,7 @@ def virt_minion_0(
     factory = salt_master.salt_minion_daemon(
         virt_minion_0_id,
         name=virt_minion_0_id,
-        image="quay.io/saltstack/virt-minion",
+        image="ghcr.io/saltstack/salt-ci-containers/virt-minion",
         factory_class=SaltVirtMinionContainerFactory,
         defaults=config_defaults,
         overrides=config_overrides,
@@ -79,7 +79,7 @@ def virt_minion_1(
     factory = salt_master.salt_minion_daemon(
         virt_minion_1_id,
         name=virt_minion_1_id,
-        image="quay.io/saltstack/virt-minion",
+        image="ghcr.io/saltstack/salt-ci-containers/virt-minion",
         factory_class=SaltVirtMinionContainerFactory,
         defaults=config_defaults,
         overrides=config_overrides,
