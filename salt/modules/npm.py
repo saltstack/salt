@@ -4,6 +4,7 @@ Manage and query NPM packages.
 
 import logging
 import shlex
+import tempfile
 
 import salt.modules.cmdmod
 import salt.utils.json
@@ -143,7 +144,10 @@ def install(
         cmd.append("--silent")
 
     if not dir:
+        cwd = tempfile.gettempdir()
         cmd.append("--global")
+    else:
+        cwd = dir
 
     if registry:
         cmd.append('--registry="{}"'.format(registry))
@@ -162,7 +166,7 @@ def install(
 
     cmd = " ".join(cmd)
     result = __salt__["cmd.run_all"](
-        cmd, python_shell=True, cwd=dir, runas=runas, env=env
+        cmd, python_shell=True, cwd=cwd, runas=runas, env=env
     )
 
     if result["retcode"] != 0:
