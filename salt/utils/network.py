@@ -2154,12 +2154,54 @@ def refresh_dns():
         pass
 
 
-def dns_resolve_addresses(host):
+def dns_resolve_addresses(host:str):
     """
-    This function returns all the IP address that the host looks up to.
-    IPv6 addresses are only returned if the python interpreter has been
-    compiled with IPv6 support, because otherwise the returned structure
-    is effectively garbage.
+    This function returns all the IP address that the host looks up to,
+    effectively a gettaddrinfo(3) wrapper, returning simplified results.
+
+    This function takes one argument a string, which is the hostname
+    to look up.
+    
+    The return value is a list of tuples, one tuple by the result of the
+    lookup. Each tuple consts of two fields, the first is the resulting
+    address, and the second field is a boolean, True for IPv6 addresses
+    and False otherwise.
+
+    Examples:
+    Let's assume the following DNS zone configuration, in isc-bind syntax:
+
+    .. code-block:: text
+
+        salt-rr         IN      CNAME salt-rr-cn1
+        salt-rr-cn1     IN      A     1.2.3.4
+        salt-rr-cn1     IN      A     2.3.4.5
+        salt-rr-cn1     IN      AAAA  2345:0425:2CA1:0000:0000:0567:5673:23b5
+        salt-rr-2       IN      A     3.4.5.6
+        salt-rr-2       IN      A     4.5.6.7
+
+    Calling it for salt-rr, the return value will be:
+
+    .. code-block:: text
+
+        [('1.2.3.4', False),
+         ('2.3.4.5', False),
+         ('2345:0425:2CA1:0000:0000:0567:5673:23b5', True)]
+
+    The resolved transitively resolves CNAME records as well, returning all the
+    addresses it's pointed to.
+
+    And calling it for salt-rr-2, which is a round-robin DNS entry of two addresses,
+    it returns the IP addresses it's pointing to:
+
+    .. code-block:: test
+
+        [('3.4.5.6', False),
+         ('4.5.6.7', False)]
+    
+    .. Warning::
+        IPv6 addresses are only returned if the python interpreter has been
+        compiled with IPv6 support, because otherwise the returned structure
+        is effectively garbage.
     """
     import sysconfig
 
