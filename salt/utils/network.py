@@ -2206,7 +2206,7 @@ def dns_resolve_addresses(host: str):
     import sysconfig
     import ipaddress
 
-    def isipaddress(addr:str):
+    def isipaddress(addr: str):
         try:
             ipaddress.ip_address(addr)
             return True
@@ -2217,8 +2217,12 @@ def dns_resolve_addresses(host: str):
     return [
         (addr[0], af == socket.AF_INET6)
         for af, _, _, _, addr in socket.getaddrinfo(host, 0, proto=socket.IPPROTO_TCP)
-        if af == socket.AF_INET or af == socket.AF_INET6 and hasv6 and type(addr[0])==str
-        and len(addr)==4 and isipaddress(addr[0])
+        if af == socket.AF_INET
+        or af == socket.AF_INET6
+        and hasv6
+        and type(addr[0])==str
+        and len(addr)==4
+        and isipaddress(addr[0])
     ]
 
 
