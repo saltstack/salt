@@ -47,7 +47,7 @@ def vault_container_version(request, salt_factories, vault_port, patched_environ
     }
     factory = salt_factories.get_container(
         "vault",
-        "vault:{}".format(vault_version),
+        "ghcr.io/saltstack/salt-ci-containers/vault:{}".format(vault_version),
         check_ports=[vault_port],
         container_run_kwargs={
             "ports": {"8200/tcp": vault_port},

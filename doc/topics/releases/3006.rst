@@ -55,10 +55,6 @@ Platform package support
 +--------------+---------------------+---------------------+
 | Debian 11    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
-| Raspbian 10  |         no          |        no           |
-+--------------+---------------------+---------------------+
-| Raspbian 11  |         no          |        yes          |
-+--------------+---------------------+---------------------+
 | Fedora 35    |         yes         |        yes          |
 +--------------+---------------------+---------------------+
 | Fedora 36    |         yes         |        yes          |
@@ -80,8 +76,6 @@ Repo paths
 | Ubuntu   | https://repo.saltproject.io/salt/py3/ubuntu/  | https://repo.saltproject.io/py3/ubuntu/ |
 +----------+-----------------------------------------------+-----------------------------------------+
 | Debian   | https://repo.saltproject.io/salt/py3/debian/  | https://repo.saltproject.io/py3/debian/ |
-+----------+-----------------------------------------------+-----------------------------------------+
-| Raspbian | https://repo.saltproject.io/salt/py3/debian/  | https://repo.saltproject.io/py3/debian/ |
 +----------+-----------------------------------------------+-----------------------------------------+
 | Fedora   | Hosted on Fedora Repos                        | Hosted on Fedora Repos                  |
 +----------+-----------------------------------------------+-----------------------------------------+
@@ -115,7 +109,7 @@ The migration path from the non-Tiamat packages to the Tiamat packages will incl
 * Pip packages: You need to ensure any 3rd party pip packages are installed in the correct Tiamat path.
   This can be accomplished in two ways:
 
-  * ``salt pip install <package name>``
+  * ``salt-pip install <package name>``
   * Using the ``pip.installed`` Salt state.
 
 To install python packages into the system python environment, user's must now provide the ``pip_bin`` or ``bin_env`` to the pip state module.
