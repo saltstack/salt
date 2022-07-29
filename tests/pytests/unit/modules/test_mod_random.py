@@ -79,17 +79,3 @@ def test_shadow_hash():
     """
     with patch.object(salt.utils.pycrypto, "gen_hash", return_value="A"):
         assert mod_random.shadow_hash() == "A"
-
-
-def test_sample():
-    lst = ["one", "two", "three", "four"]
-    assert len(mod_random.sample(lst, 0)) == 0
-    assert len(mod_random.sample(lst, 2)) == 2
-    pytest.raises(ValueError, mod_random.sample, lst, 5)
-    assert mod_random.sample(lst, 2, seed="static") == ["four", "two"]
-
-
-def test_shuffle():
-    lst = ["one", "two", "three", "four"]
-    assert len(mod_random.shuffle(lst)) == 4
-    assert mod_random.shuffle(lst, seed="static") == ["four", "two", "three", "one"]

@@ -9,6 +9,7 @@ import datetime
 import fnmatch
 import functools
 import logging
+import random
 import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
@@ -1612,3 +1613,44 @@ def flatten(data, levels=None, preserve_nulls=False, _ids=None):
             ret.append(element)
 
     return ret
+
+
+@jinja_filter("random_sample")
+def sample(value, size, seed=None):
+    """
+    Return a given sample size from a list. By default, the random number
+    generator uses the current system time unless given a seed value.
+
+    .. versionadded:: 3005
+
+    value
+        A list to e used as input.
+
+    size
+        The sample size to return.
+
+    seed
+        Any value which will be hashed as a seed for random.
+    """
+    if seed is None:
+        ret = random.sample(value, size)
+    else:
+        ret = random.Random(hash(seed)).sample(value, size)
+    return ret
+
+
+@jinja_filter("random_shuffle")
+def shuffle(value, seed=None):
+    """
+    Return a shuffled copy of an input list. By default, the random number
+    generator uses the current system time unless given a seed value.
+
+    .. versionadded:: 3005
+
+    value
+        A list to be used as input.
+
+    seed
+        Any value which will be hashed as a seed for random.
+    """
+    return sample(value, len(value), seed=seed)
