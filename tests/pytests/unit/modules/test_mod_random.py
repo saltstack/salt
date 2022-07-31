@@ -7,7 +7,7 @@ import re
 import pytest
 import salt.modules.mod_random as mod_random
 import salt.utils.pycrypto
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltException, SaltInvocationError
 from tests.support.mock import patch
 
 
@@ -43,7 +43,7 @@ def test_hash():
     Test for Encodes a value with the specified encoder.
     """
     assert mod_random.hash("value")[0:4] == "ec2c"
-    pytest.raises(SaltInvocationError, mod_random.hash, "value", "algorithm")
+    pytest.raises(SaltException, mod_random.hash, "value", "algorithm")
 
 
 def test_str_encode():

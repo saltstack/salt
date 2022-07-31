@@ -8,6 +8,7 @@ import copy
 import datetime
 import fnmatch
 import functools
+import hashlib
 import logging
 import random
 import re
@@ -25,6 +26,8 @@ try:
     import jmespath
 except ImportError:
     jmespath = None
+
+ALGORITHMS_ATTR_NAME = "algorithms_guaranteed"
 
 log = logging.getLogger(__name__)
 
@@ -1613,6 +1616,39 @@ def flatten(data, levels=None, preserve_nulls=False, _ids=None):
             ret.append(element)
 
     return ret
+
+
+def hash(value, algorithm="sha512"):
+    """
+    .. versionadded:: 2014.7.0
+
+    Encodes a value with the specified encoder.
+
+    value
+        The value to be hashed.
+
+    algorithm : sha512
+        The algorithm to use. May be any valid algorithm supported by
+        hashlib.
+    """
+    if isinstance(value, str):
+        # Under Python 3 we must work with bytes
+        value = value.encode(__salt_system_encoding__)
+
+    if hasattr(hashlib, ALGORITHMS_ATTR_NAME) and algorithm in getattr(
+        hashlib, ALGORITHMS_ATTR_NAME
+    ):
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    elif hasattr(hashlib, algorithm):
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    else:
+        raise SaltException("You must specify a valid algorithm.")
+
+    return out
 
 
 @jinja_filter("random_sample")

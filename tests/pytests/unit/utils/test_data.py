@@ -88,15 +88,15 @@ def test_sample():
     assert len(salt.utils.data.sample(lst, 0)) == 0
     assert len(salt.utils.data.sample(lst, 2)) == 2
     pytest.raises(ValueError, salt.utils.data.sample, lst, 5)
-    assert salt.utils.data.sample(lst, 2, seed="static") == ["two", "three"]
+    assert salt.utils.data.sample(lst, 2, seed="static") == ["four", "two"]
 
 
 def test_shuffle():
     lst = ["one", "two", "three", "four"]
     assert len(salt.utils.data.shuffle(lst)) == 4
     assert salt.utils.data.shuffle(lst, seed="static") == [
+        "four",
         "two",
         "three",
         "one",
-        "four",
     ]
