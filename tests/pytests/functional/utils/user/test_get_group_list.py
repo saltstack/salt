@@ -30,7 +30,7 @@ def dupegroup(user):
 
 
 @skipIf(
-    salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd(),
+    (salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd()),
     "This test should not run on FreeBSD and Mac due to lack of duplicate GID support",
 )
 def test_get_group_list_with_duplicate_gid_group(user, dupegroup):
