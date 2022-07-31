@@ -7,14 +7,11 @@ Provides access to randomness generators.
 """
 
 import base64
-import hashlib
 import random
 
 import salt.utils.data
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
-
-ALGORITHMS_ATTR_NAME = "algorithms_guaranteed"
 
 # Define the module's virtual name
 __virtualname__ = "random"
@@ -43,24 +40,7 @@ def hash(value, algorithm="sha512"):
 
         salt '*' random.hash 'I am a string' md5
     """
-    if isinstance(value, str):
-        # Under Python 3 we must work with bytes
-        value = value.encode(__salt_system_encoding__)
-
-    if hasattr(hashlib, ALGORITHMS_ATTR_NAME) and algorithm in getattr(
-        hashlib, ALGORITHMS_ATTR_NAME
-    ):
-        hasher = hashlib.new(algorithm)
-        hasher.update(value)
-        out = hasher.hexdigest()
-    elif hasattr(hashlib, algorithm):
-        hasher = hashlib.new(algorithm)
-        hasher.update(value)
-        out = hasher.hexdigest()
-    else:
-        raise SaltInvocationError("You must specify a valid algorithm.")
-
-    return out
+    return salt.utils.data.hash(value, algorithm=algorithm)
 
 
 def str_encode(value, encoder="base64"):
