@@ -40,7 +40,7 @@ import socket
 from salt._logging import LOG_LEVELS
 
 try:
-    from log4mongo.handlers import MongoHandler, MongoFormatter
+    from log4mongo.handlers import MongoFormatter, MongoHandler
 
     HAS_MONGO = True
 except ImportError:

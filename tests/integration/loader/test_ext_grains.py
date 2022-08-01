@@ -10,6 +10,7 @@ import os
 import time
 
 import pytest
+
 import salt.config
 import salt.loader
 from tests.support.case import ModuleCase

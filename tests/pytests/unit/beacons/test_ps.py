@@ -5,6 +5,7 @@
     ps usage beacon test cases
 """
 import pytest
+
 import salt.beacons.ps as ps
 from tests.support.mock import patch
 

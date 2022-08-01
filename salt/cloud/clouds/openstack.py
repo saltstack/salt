@@ -240,10 +240,10 @@ from salt.exceptions import (
 )
 
 try:
-    import shade
-    import shade.openstackcloud
-    import shade.exc
     import os_client_config
+    import shade
+    import shade.exc
+    import shade.openstackcloud
 
     HAS_SHADE = (
         salt.utils.versions._LooseVersion(shade.__version__)

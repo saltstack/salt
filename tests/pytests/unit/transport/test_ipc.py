@@ -1,9 +1,10 @@
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.ext.tornado.iostream
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
-from pytestshellutils.utils import ports
 
 
 def test_ipc_connect_in_async_methods():

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.renderers.tomlmod
 import salt.serializers.toml
 

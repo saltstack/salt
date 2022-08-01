@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 
 import pytest
+
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path

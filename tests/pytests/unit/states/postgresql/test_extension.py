@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.postgres as postgresmod
 import salt.states.postgres_extension as postgres_extension
 from tests.support.mock import Mock, patch

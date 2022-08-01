@@ -12,6 +12,7 @@ import types
 
 import psutil
 import pytest
+
 import salt.modules.gpg as gpg
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch

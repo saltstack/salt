@@ -2,6 +2,7 @@ import logging
 import shutil
 
 import pytest
+
 import salt.cache
 import salt.loader
 from tests.pytests.functional.cache.helpers import run_common_cache_tests

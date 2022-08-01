@@ -3,6 +3,7 @@ Integration tests for the docker swarm modules
 """
 
 import pytest
+
 import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
