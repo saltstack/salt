@@ -73,7 +73,9 @@ def rabbitmq_container(salt_factories, rabbitmq_image):
     )
     container = salt_factories.get_container(
         rabbitmq_image.container_id,
-        "{}:{}".format(combo.rabbitmq_name, combo.rabbitmq_version),
+        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+            combo.rabbitmq_name, combo.rabbitmq_version
+        ),
         container_run_kwargs={
             "ports": {"5672/tcp": None},
         },

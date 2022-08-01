@@ -41,6 +41,8 @@ Deprecated
 - Deprecated transport kwarg inside salt.utils.event.get_event (#61275)
 - Deprecated netmiko_conn and pyeapi_conn in napalm_mod.py as these function should not be called from the CLI (#61566)
 - Deprecate all Azure cloud modules (#62183)
+- Deprecated ``defaults`` and ``preserve_context`` for ``salt.utils.functools.namespaced_function``.
+  Additionally, the behavior when ``preserve_namespace=True`` was passed is now the default in order not to require duplicating imports on the modules that are namespacing functions. (#62272)
 
 
 Changed
@@ -236,6 +238,11 @@ Fixed
 - Fix sysctl functions hard-coded relative command name (#62164)
 - All of Salt's loaders now accept ``loaded_base_name`` as a keyword argument, allowing different namespacing the loaded modules. (#62186)
 - Only functions defined on the modules being loaded will be added to the lazy loader, functions imported from other modules, unless they are properly namespaced, are not included. (#62190)
+- Fixes issue in postgresql privileges detection: privileges on views were never retrieved and always recreated. (#57690)
+- Fix service.enabled error for unavailable service in test mode (#62258)
+- Fix variable reuse causing requisite_in problems (#62264)
+- Adding -G option to pkgdd cmd_prefix list when current_zone_only is True. (#62206)
+- Don't expect ``lsof`` to be installed when trying check which minions are connected. (#62303)
 
 
 Added
@@ -287,6 +294,31 @@ Added
   Added compatibility with Zabbix 4.0+ for `zabbix.user_getmedia` method
   Added support for setting medias in `zabbix.user_update` for Zabbix 3.4+ (#62012)
 - Add ignore_missing parameter to file.comment state (#62044)
+- General improvements on the "ansiblegate" module:
+  * Add "ansible.targets" method to gather Ansible inventory
+  * Add "ansible.discover_playbooks" method to help collecting playbooks
+  * Fix crash when running Ansible playbooks if ansible-playbook CLI output is not the expected JSON.
+  * Fix issues when processing inventory and there are groups with no members.
+  * Allow new types of targets for Ansible roster (#60056)
+- Add sample and shuffle functions from random (#62225)
+
+
+Salt 3004.2 (2022-05-12)
+========================
+
+Fixed
+-----
+
+- Expand environment variables in the root_dir registry key (#61445)
+- Update Markup and contextfunction imports for jinja versions >=3.1. (#61848)
+- Fix bug in tcp transport (#61865)
+- Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
+
+
+Security
+--------
+
+- Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
 
 
 Salt 3004.1 (2022-02-16)

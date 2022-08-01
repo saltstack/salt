@@ -35,7 +35,7 @@ def __virtual__():
         else:
             return (False, "yamllint below 1.20.0, please pip install a newer version")
     else:
-        return (False, "yamllint not installd")
+        return (False, "yamllint not installed")
 
 
 def lint(source, saltenv=None, pre_render=None, **kwargs):
@@ -54,7 +54,7 @@ def lint(source, saltenv=None, pre_render=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' yamllint.lint salt://example/bad_yaml.sls
+        salt '*' yaml.lint salt://example/bad_yaml.sls
     """
     if saltenv is None:
         saltenv = __salt__["config.get"]("saltenv", "base")
