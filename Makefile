@@ -55,7 +55,6 @@ $(SCRIPTS): $(SCRIPTS_DIR)/salt
 	mv $(TARGET_DIR)/bin/$@ $(SCRIPTS_DIR);
 	sed -i 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $(SCRIPTS_DIR)/$@;
 
-
 $(TARGET_DIR)/.onedir:
 	touch $(TARGET_DIR)/.onedir
 
@@ -68,7 +67,12 @@ $(TARGET_DIR)/install-salt:
 $(TARGET_DIR)/uninstall-salt: fixlibs
 	cp $(PWD)/scripts/uninstall-salt $(SCRIPTS_DIR)/uninstall-salt
 
-salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt
+$(TARGET_DIR)/share/service: $(TARGET_DIR)
+	mkdir -p $(TARGET_DIR)/share/service
+	cp $(PWD)/pkg/*.service $(SCRIPTS_DIR)/share/service/
+	cp $(PWD)/pkg/**/*.init $(SCRIPTS_DIR)/share/service/
+
+salt-$(SALT_VERSION)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install-salt $(TARGET_DIR)/uninstall-salt $(TARGET_DIR)/share/service
 	sh -c "find $(TARGET_DIR) -name '__pycache__' -type d -print0 |xargs -0 -n1 rm -rf --"
 	# Remove Python Headers
 	# rm -rf $(TARGET_DIR)/include
