@@ -31,6 +31,7 @@ HAS_LIBS = False
 
 try:
     import gnupg  # pylint: disable=unused-import
+
     import salt.modules.gpg
 
     HAS_LIBS = True

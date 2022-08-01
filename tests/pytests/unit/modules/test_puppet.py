@@ -6,6 +6,7 @@ import errno
 import os
 
 import pytest
+
 import salt.modules.puppet as puppet
 import salt.utils.args
 import salt.utils.files

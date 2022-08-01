@@ -194,10 +194,12 @@ try:
     from netmiko import __version__ as found_netmiko_version
 
     if _LooseVersion(found_netmiko_version) <= _LooseVersion("3.4.0"):
-        from netmiko.ssh_exception import NetMikoTimeoutException
-        from netmiko.ssh_exception import NetMikoAuthenticationException
+        from netmiko.ssh_exception import (
+            NetMikoAuthenticationException,
+            NetMikoTimeoutException,
+        )
     else:
-        from netmiko import NetMikoTimeoutException, NetMikoAuthenticationException
+        from netmiko import NetMikoAuthenticationException, NetMikoTimeoutException
 
     HAS_NETMIKO = True
 except ImportError:

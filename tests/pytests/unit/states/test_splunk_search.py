@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.splunk_search as splunk_search
 from tests.support.mock import MagicMock, patch
 

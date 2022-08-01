@@ -9,7 +9,7 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    from libcloud.storage.base import Container, BaseDriver, Object
+    from libcloud.storage.base import BaseDriver, Container, Object
 
     HAS_LIBCLOUD = True
 except ImportError:
@@ -52,7 +52,6 @@ if HAS_LIBCLOUD:
             assert container_name == "test_container"
             assert object_name == "test_obj"
             return self._TEST_OBJECT
-
 
 else:
     MockStorageDriver = object

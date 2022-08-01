@@ -8,6 +8,7 @@ import salt.utils.platform
 
 try:
     import wmi
+
     import salt.utils.winapi
 
     HAS_LIBS = True

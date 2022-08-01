@@ -2,7 +2,6 @@ import itertools
 import os
 import re
 
-import salt
 from docutils import nodes
 from docutils.parsers.rst import Directive
 from docutils.statemachine import ViewList
@@ -13,6 +12,8 @@ from sphinx.domains.python import PyObject
 from sphinx.locale import _
 from sphinx.roles import XRefRole
 from sphinx.util.nodes import make_refnode, nested_parse_with_titles, set_source_info
+
+import salt
 
 
 class Event(PyObject):

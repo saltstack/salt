@@ -2,6 +2,7 @@ import logging
 import sys
 
 import pytest
+
 import salt.modules.status as status
 from tests.support.mock import MagicMock, patch
 

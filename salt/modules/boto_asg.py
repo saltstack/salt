@@ -63,9 +63,9 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 try:
     import boto
     import boto.ec2
-    import boto.ec2.instance
-    import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
+    import boto.ec2.blockdevicemapping as blockdevicemapping
+    import boto.ec2.instance
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     import boto3  # pylint: disable=unused-import

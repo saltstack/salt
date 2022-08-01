@@ -2,6 +2,8 @@ from textwrap import dedent
 
 import jinja2
 import pytest
+import yaml as _yaml
+
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
@@ -10,7 +12,6 @@ import salt.serializers.python as python
 import salt.serializers.toml as toml
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
-import yaml as _yaml
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict

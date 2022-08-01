@@ -590,10 +590,9 @@ class LocalClient:
         # even though it has already been imported.
         # when cmd_batch is called via the NetAPI
         # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        import salt.utils.args
 
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {

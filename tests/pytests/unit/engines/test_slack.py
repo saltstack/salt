@@ -2,6 +2,7 @@
 unit tests for the slack engine
 """
 import pytest
+
 import salt.config
 import salt.engines.slack as slack
 from tests.support.mock import MagicMock, patch

@@ -9,6 +9,7 @@ import re
 
 import yaml
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
+
 from tasks import utils
 
 CODE_DIR = pathlib.Path(__file__).resolve().parent.parent

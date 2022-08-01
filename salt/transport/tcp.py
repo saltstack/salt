@@ -9,6 +9,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 import errno
 import logging
+import multiprocessing
 import os
 import queue
 import socket
@@ -42,8 +43,6 @@ else:
     USE_LOAD_BALANCER = False
 
 if USE_LOAD_BALANCER:
-    import multiprocessing
-
     import salt.ext.tornado.util
     from salt.utils.process import SignalHandlingProcess
 
