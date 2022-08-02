@@ -5,6 +5,7 @@ Integration tests for the rabbitmq_user states
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_upstream as rabbitmq_upstream
 

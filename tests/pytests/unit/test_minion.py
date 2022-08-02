@@ -3,6 +3,7 @@ import logging
 import os
 
 import pytest
+
 import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.testing

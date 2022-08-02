@@ -43,11 +43,11 @@ from functools import cmp_to_key
 __version__ = "0.1"
 
 try:
+    import pywintypes
     import win32api
     import win32con
     import win32process
     import win32security
-    import pywintypes
     import winerror
 
 except ImportError:
@@ -1474,8 +1474,9 @@ def __main():
         version_only = True
     if str(sys.argv[2]) == "system+user":
         user_pkgs = True
-    import salt.utils.json
     import timeit
+
+    import salt.utils.json
 
     def run():
         """

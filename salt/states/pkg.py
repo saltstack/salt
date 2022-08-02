@@ -84,15 +84,17 @@ from salt.utils.odict import OrderedDict as _OrderedDict
 _repack_pkgs = namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.platform.is_windows():
-    from salt.modules.win_pkg import _get_package_info
-    from salt.modules.win_pkg import get_repo_data
-    from salt.modules.win_pkg import _get_repo_details
-    from salt.modules.win_pkg import _refresh_db_conditional
-    from salt.modules.win_pkg import refresh_db
-    from salt.modules.win_pkg import genrepo
-    from salt.modules.win_pkg import _repo_process_pkg_sls
-    from salt.modules.win_pkg import _get_latest_pkg_version
-    from salt.modules.win_pkg import _reverse_cmp_pkg_versions
+    from salt.modules.win_pkg import (
+        _get_latest_pkg_version,
+        _get_package_info,
+        _get_repo_details,
+        _refresh_db_conditional,
+        _repo_process_pkg_sls,
+        _reverse_cmp_pkg_versions,
+        genrepo,
+        get_repo_data,
+        refresh_db,
+    )
 
     _get_package_info = namespaced_function(_get_package_info, globals())
     get_repo_data = namespaced_function(get_repo_data, globals())

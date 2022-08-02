@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 try:
     if salt.utils.platform.is_windows():
         import wmi
+
         import salt.utils.winapi
 
         HAS_WMI = True

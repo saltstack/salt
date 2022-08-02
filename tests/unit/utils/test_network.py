@@ -4,6 +4,7 @@ import textwrap
 import time
 
 import pytest
+
 import salt.exceptions
 import salt.utils.network as network
 from salt._compat import ipaddress

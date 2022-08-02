@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 import salt.utils.versions as versions
 
 try:

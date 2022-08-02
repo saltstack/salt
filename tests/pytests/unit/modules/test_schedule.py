@@ -6,6 +6,7 @@ import datetime
 import logging
 
 import pytest
+
 import salt.modules.schedule as schedule
 import salt.utils.odict
 from salt.utils.event import SaltEvent

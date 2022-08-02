@@ -14,6 +14,7 @@ import string
 import time
 
 import requests
+
 import salt.crypt
 import salt.exceptions
 

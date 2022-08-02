@@ -270,6 +270,7 @@ import re
 import sys
 
 import jinja2
+
 import salt.utils.files
 import salt.utils.yaml
 
@@ -597,8 +598,9 @@ if __name__ == "__main__":
         __opts__["pepa_validate"] = True
 
     if args.query_api:
-        import requests
         import getpass
+
+        import requests
 
         username = args.username
         password = args.password
@@ -660,8 +662,8 @@ if __name__ == "__main__":
             try:
                 # pylint: disable=import-error
                 import pygments
-                import pygments.lexers
                 import pygments.formatters
+                import pygments.lexers
 
                 # pylint: disable=no-member
                 print(

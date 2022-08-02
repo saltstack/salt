@@ -5,6 +5,7 @@
     ADB beacon test cases
 """
 import pytest
+
 import salt.beacons.adb as adb
 from tests.support.mock import Mock, patch
 

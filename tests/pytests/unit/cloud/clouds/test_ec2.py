@@ -1,4 +1,5 @@
 import pytest
+
 from salt.cloud.clouds import ec2
 
 pytestmark = [

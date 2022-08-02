@@ -4,6 +4,7 @@
 import sys
 
 import pytest
+
 import salt.modules.disk as disk
 import salt.utils.path
 import salt.utils.platform

@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.returners.etcd_return as etcd_return
 import salt.utils.json
 from salt.utils.etcd_util import get_conn

@@ -9,6 +9,8 @@ import pprint
 import re
 
 import pytest
+from jinja2 import DictLoader, Environment, exceptions
+
 import salt.config
 import salt.loader
 
@@ -18,7 +20,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
-from jinja2 import DictLoader, Environment, exceptions
 from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
