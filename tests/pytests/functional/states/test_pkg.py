@@ -47,7 +47,10 @@ def PKG_TARGETS(grains):
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             _PKG_TARGETS = ["wget", "zsh-html"]
-        elif grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        elif (
+            grains["os"] in ("CentOS Stream", "AlmaLinux")
+            and grains["osmajorrelease"] == 9
+        ):
             _PKG_TARGETS = ["units", "zsh"]
         else:
             _PKG_TARGETS = ["units", "zsh-html"]
