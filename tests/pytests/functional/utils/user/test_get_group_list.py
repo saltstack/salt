@@ -29,8 +29,8 @@ def dupegroup(user):
 
 
 @pytest.mark.skipif(
-    (salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd()),
-    "This test should not run on FreeBSD and Mac due to lack of duplicate GID support",
+    salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd(),
+    reason="This test should not run on FreeBSD and Mac due to lack of duplicate GID support",
 )
 def test_get_group_list_with_duplicate_gid_group(user, dupegroup):
     group_list = salt.utils.user.get_group_list(user.username)
