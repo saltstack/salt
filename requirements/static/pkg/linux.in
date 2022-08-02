@@ -1,5 +1,6 @@
 # This file only exists to trigger the right static compiled requirements destination.
 # Any non hard dependencies of Salt for linux can go here
+pycparser>=2.21; python_version >= '3.9'
 cherrypy
 backports.ssl_match_hostname>=3.7.0.1; python_version < '3.7'
 pyopenssl>=19.0.0
