@@ -59,11 +59,11 @@ def py_shell():
 
 def python_runtime():
     # extract the absolute script path to alter sys.path and specific dunder variables
-    script = pathlib.Path(sys.argv[2]).expanduser().absolute()
+    script = pathlib.Path(sys.argv[2]).expanduser().resolve()
     sys.path.insert(0, str(script.parent))
 
     # update passed args so they don't start with "<binary> python"
-    sys.argv = sys.argv[2:]
+    sys.argv[:] = sys.argv[2:]
     exec_locals = {"__name__": "__main__", "__file__": str(script), "__doc__": None}
     with open(script, encoding="utf-8") as rfh:
         try:
