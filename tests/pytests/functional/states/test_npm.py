@@ -78,6 +78,10 @@ def npm_version(shell, install_npm):
     return ret.stdout.strip()
 
 
+@pytest.mark.skipif(
+    True,
+    reason="This test tries to install from a git repo using ssh, at least now. Skipping.",
+)
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("git")
 def test_npm_install_url_referenced_package(modules, npm, npm_version, states):
