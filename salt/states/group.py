@@ -100,8 +100,18 @@ def _changes(name, gid=None, addusers=None, delusers=None, members=None):
     return change
 
 
-def present(name, gid=None, system=False, addusers=None, delusers=None, members=None):
+def present(
+    name,
+    gid=None,
+    system=False,
+    addusers=None,
+    delusers=None,
+    members=None,
+    non_unique=False,
+):
     r"""
+    .. versionchanged:: 3006.0
+
     Ensure that a group is present
 
     Args:
@@ -130,6 +140,11 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
         members (list):
             Replace existing group members with a list of new members. Cannot be
             used in conjunction with addusers or delusers.
+
+        non_unique (bool):
+            Allow creating groups with duplicate (non-unique) GIDs
+
+            .. versionadded:: 3006.0
 
     Example:
 
@@ -224,7 +239,7 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
 
         grps = __salt__["group.getent"]()
         # Test if gid is free
-        if gid is not None:
+        if gid is not None and not non_unique:
             gid_group = None
             for lgrp in grps:
                 if lgrp["gid"] == gid:
@@ -240,7 +255,7 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
                 return ret
 
         # Group is not present, make it.
-        if __salt__["group.add"](name, gid=gid, system=system):
+        if __salt__["group.add"](name, gid=gid, system=system, non_unique=non_unique):
             # if members to be added
             grp_members = None
             if members:
