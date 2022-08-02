@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.group as group
 from tests.support.mock import MagicMock, patch
 
