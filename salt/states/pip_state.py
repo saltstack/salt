@@ -699,6 +699,20 @@ def installed(
 
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
+
+    If you are using onedir packages and you need to install python packages into
+    the system python environment, you must provide the pip_bin or
+    bin_env to the pip state module.
+
+
+    .. code-block:: yaml
+
+        lib-foo:
+          pip.installed:
+            - pip_bin: /usr/bin/pip3
+        lib-bar:
+          pip.installed:
+            - bin_env: /usr/bin/python3
     """
     if pip_bin and not bin_env:
         bin_env = pip_bin
