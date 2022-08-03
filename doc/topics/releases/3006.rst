@@ -7,103 +7,25 @@ Salt 3006 release notes - Codename Sulfur
 Salt 3006 is currently under development.
 
 
-Classic, non-onedir packaging support
--------------------------------------
-The classic, non-onedir packaging system previously used for Salt will only be
-provided for platforms that support Python 3.7 and above. If a platform is using
-Python 3.5 or 3.6, only onedir packages will be available for that platform.
-This policy change will require users to update their repo files to point to
-the new repo path to use the new onedir packages. The full installation
-instructions can be found at
-https://docs.saltproject.io/salt/install-guide/en/latest/index.html . See also
-`Upgrade to onedir <https://docs.saltproject.io/salt/install-guide/en/latest/topics/upgrade-to-onedir.html>`_ .
+Onedir packaging
+----------------
+Going forward from the 3006 release, the Salt Project will only provide onedir
+packages to install or upgrade Salt. The classic, non-onedir packages will not
+be provided for supported operating systems. See
+`Upgrade to onedir <https://docs.saltproject.io/salt/install-guide/en/latest/topics/upgrade-to-onedir.html>`_
+in the `Salt Install Guide <https://docs.saltproject.io/salt/install-guide/en/latest/#>`_
+for information about upgrading from the classic packages to the onedir
+packages.
 
-This change impacts various OS platforms, including:
-
-* Ubuntu 18.04
-* CentOS 7
-* CentOS 8
-
-
-These platforms will only have onedir packages available.
-
-This is the last release we will provide classic, non-onedir packaging. The 3007
-release and those going forward will only provide the onedir packages.
 
 Dropping support for Python 3.5 and 3.6
 ---------------------------------------
 
 Python 3.5 and 3.6 will no longer be supported by Salt since they
 are end of life. Going forward our policy will be to align with Python's
-supported versions.
-
-Platform package support
-------------------------
-
-+--------------+---------------------+------------------------------+
-|     OS       | New onedir packages | Classic, Non-onedir packages |
-+==============+=====================+==============================+
-| RHEL 7       |         yes         |        no                    |
-+--------------+---------------------+------------------------------+
-| RHEL 8       |         yes         |        no                    |
-+--------------+---------------------+------------------------------+
-| RHEL 9       |         yes         |        no                    |
-+--------------+---------------------+------------------------------+
-| Ubuntu 18.04 |         yes         |        no                    |
-+--------------+---------------------+------------------------------+
-| Ubuntu 20.04 |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-| Ubuntu 22.04 |         yes         |        no                    |
-+--------------+---------------------+------------------------------+
-| Debian 10    |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-| Debian 11    |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-| Fedora 35    |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-| Fedora 36    |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-| MacOS        |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-| Windows      |         yes         |        yes                   |
-+--------------+---------------------+------------------------------+
-
-
-Repo paths
-----------
-
-+----------+-----------------------------------------------+-----------------------------------------+
-|     OS   | Tiamat Path                                   | Non-Tiamat Path                         |
-+==========+===============================================+=========================================+
-| RHEL     | https://repo.saltproject.io/salt/py3/redhat/  | https://repo.saltproject.io/py3/redhat/ |
-+----------+-----------------------------------------------+-----------------------------------------+
-| Ubuntu   | https://repo.saltproject.io/salt/py3/ubuntu/  | https://repo.saltproject.io/py3/ubuntu/ |
-+----------+-----------------------------------------------+-----------------------------------------+
-| Debian   | https://repo.saltproject.io/salt/py3/debian/  | https://repo.saltproject.io/py3/debian/ |
-+----------+-----------------------------------------------+-----------------------------------------+
-| Fedora   | Hosted on Fedora Repos                        | Hosted on Fedora Repos                  |
-+----------+-----------------------------------------------+-----------------------------------------+
-| MacOS    | https://repo.saltproject.io/salt/py3/osx/     | https://repo.saltproject.io/osx/        |
-+----------+-----------------------------------------------+-----------------------------------------+
-| Windows  | https://repo.saltproject.io/salt/py3/windows/ |  https://repo.saltproject.io/windows/   |
-+----------+-----------------------------------------------+-----------------------------------------+
-
-Note that the onedir paths above will not be available until the day of the Phosphorus release.
-
-
-My OS only provides onedir packages. What do I do?
---------------------------------------------------
-If you are using a platform that no longer provides the classic, non-onedir
-packages as shown in the previous tables, you will need to update your repo
-files to point to the new onedir packages. The new repo paths are provided in
-the previous tables, but the full instructions will be included
-at https://docs.saltproject.io/salt/install-guide/en/latest/index.html .
-
-
-My OS uses an unsupported version of Python. What do I do?
-----------------------------------------------------------
-If your OS is using an unsupported version of Python, you will need to use the
-onedir packages.
+supported versions. See
+`Salt support for Python versions <https://docs.saltproject.io/salt/install-guide/en/latest/topics/salt-python-version-support.html>`_
+for more information.
 
 
 How do I migrate to the onedir packages?
