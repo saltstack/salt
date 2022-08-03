@@ -7,6 +7,7 @@ import textwrap
 import time
 
 import pytest
+
 import salt.states.file
 import salt.utils.files
 import salt.utils.path

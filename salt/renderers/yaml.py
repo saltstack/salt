@@ -8,14 +8,15 @@ For YAML usage information see :ref:`Understanding YAML <yaml>`.
 import logging
 import warnings
 
+from yaml.constructor import ConstructorError
+from yaml.parser import ParserError
+from yaml.scanner import ScannerError
+
 import salt.utils.url
 import salt.utils.yamlloader as yamlloader_new
 import salt.utils.yamlloader_old as yamlloader_old
 from salt.exceptions import SaltRenderError
 from salt.utils.odict import OrderedDict
-from yaml.constructor import ConstructorError
-from yaml.parser import ParserError
-from yaml.scanner import ScannerError
 
 log = logging.getLogger(__name__)
 

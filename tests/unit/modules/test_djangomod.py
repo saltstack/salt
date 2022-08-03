@@ -4,6 +4,7 @@
 import sys
 
 import pytest
+
 import salt.modules.djangomod as djangomod
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

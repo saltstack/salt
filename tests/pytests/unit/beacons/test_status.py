@@ -6,6 +6,7 @@
 """
 
 import pytest
+
 import salt.modules.status as status_module
 from salt.beacons import status
 

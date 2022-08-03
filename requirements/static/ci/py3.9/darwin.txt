@@ -344,8 +344,6 @@ botocore==1.20.67
     #   boto3
     #   moto
     #   s3transfer
-cached-property==1.5.2
-    # via pygit2
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
@@ -691,7 +689,7 @@ pycurl==7.43.0.6 ; python_version <= "3.9"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.3
     # via napalm
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/darwin.in
 pyjwt==2.4.0
     # via adal
@@ -711,6 +709,8 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -740,6 +740,7 @@ pytest-timeout==1.4.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities

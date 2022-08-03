@@ -9,12 +9,11 @@
 
 try:
     # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import skipIf, TestCase
-    from tests.support.mock import MagicMock, patch
-
     # Import Salt Libs
     import salt.states.kernelpkg as kernelpkg
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.mock import MagicMock, patch
+    from tests.support.unit import TestCase, skipIf
 
     HAS_MODULES = True
 except ImportError:

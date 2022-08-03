@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.states.ssh_known_hosts as ssh_known_hosts
 from tests.support.mock import MagicMock, patch
 

@@ -714,6 +714,8 @@ pyserial==3.5
     # via
     #   junos-eznc
     #   netmiko
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -743,6 +745,7 @@ pytest-timeout==2.0.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities

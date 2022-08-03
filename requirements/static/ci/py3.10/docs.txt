@@ -652,7 +652,7 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
-pygit2==1.7.1 ; python_version >= "3.10"
+pygit2==1.9.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pygments==2.8.1
     # via sphinx

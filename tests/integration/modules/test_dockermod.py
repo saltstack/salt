@@ -7,8 +7,9 @@ import string
 import sys
 
 import pytest
-import salt.utils.path
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS

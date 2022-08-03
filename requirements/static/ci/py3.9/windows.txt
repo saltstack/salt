@@ -34,8 +34,6 @@ botocore==1.20.80
     #   boto3
     #   moto
     #   s3transfer
-cached-property==1.5.2
-    # via pygit2
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
@@ -233,7 +231,7 @@ pycurl==7.43.0.5 ; python_version <= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via -r requirements/windows.txt
@@ -247,6 +245,8 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -276,6 +276,7 @@ pytest-timeout==1.4.2
 pytest==7.1.2 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities

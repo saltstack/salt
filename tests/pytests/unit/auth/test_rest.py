@@ -1,4 +1,5 @@
 import pytest
+
 import salt.auth.rest as rest
 from tests.support.mock import MagicMock, patch
 
