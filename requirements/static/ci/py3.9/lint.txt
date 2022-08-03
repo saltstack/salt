@@ -676,6 +676,7 @@ pycodestyle==2.5.0
     # via saltpylint
 pycparser==2.21 ; python_version >= "3.9"
     # via
+    #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
 pycryptodomex==3.10.1
