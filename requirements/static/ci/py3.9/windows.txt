@@ -221,8 +221,9 @@ pyasn1==0.4.8
     #   -r requirements/windows.txt
     #   pyasn1-modules
     #   rsa
-pycparser==2.20
+pycparser==2.21 ; python_version >= "3.9"
     # via
+    #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
     #   cffi
     #   pythonnet

@@ -72,7 +72,7 @@ psutil==5.8.0
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/darwin.txt
-pycparser==2.19
+pycparser==2.21
     # via
     #   -r requirements/darwin.txt
     #   cffi
