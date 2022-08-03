@@ -136,7 +136,7 @@ SALT_EXTENSIONS_DATAS, SALT_EXTENSIONS_HIDDENIMPORTS = hooks.collect_entry_point
 
 # PyInstaller attributes
 datas = sorted(set(SALT_DATAS + SALT_EXTENSIONS_DATAS))
-binaries = sorted(set(SALT_BINARIES + _collect_python_stdlib_dynamic_libraries()))
+binaries = sorted(set(SALT_BINARIES))
 hiddenimports = sorted(
     set(
         SALT_HIDDENIMPORTS
