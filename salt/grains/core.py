@@ -724,6 +724,9 @@ def _windows_virtual(osdata):
     elif "CloudStack KVM Hypervisor" in productname:
         grains["virtual"] = "kvm"
         grains["virtual_subtype"] = "cloudstack"
+    # Nutanix AHV
+    elif "AHV" in productname:
+        grains["virtual"] = "Nutanix"   
     return grains
 
 
@@ -747,10 +750,12 @@ def _virtual(osdata):
     # list of commands to be executed to determine the 'virtual' grain
     _cmds = ["systemd-detect-virt", "virt-what", "dmidecode"]
     # test first for virt-what, which covers most of the desired functionality
-    # on most platforms
+    # on most platforms. next, test for dmidecode.
     if not salt.utils.platform.is_windows() and osdata["kernel"] not in skip_cmds:
         if salt.utils.path.which("virt-what"):
             _cmds = ["virt-what"]
+        elif salt.utils.path.which("dmidecode"):
+            _cmds = ["dmidecode"]
 
     # Check if enable_lspci is True or False
     if __opts__.get("enable_lspci", True) is True:
@@ -878,6 +883,7 @@ def _virtual(osdata):
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
+                # Nutanix AHV
                 elif "nutanix_ahv" in line:
                     grains["virtual"] = "Nutanix"
                     break
@@ -918,6 +924,9 @@ def _virtual(osdata):
                 grains["virtual"] = "Parallels"
             elif "Manufacturer: Google" in output:
                 grains["virtual"] = "kvm"
+            # Nutanix AHV
+            elif "Manufacturer: Nutanix" in output:
+                grains["virtual"] = "Nutanix"
             # Proxmox KVM
             elif "Vendor: SeaBIOS" in output:
                 grains["virtual"] = "kvm"
@@ -935,6 +944,9 @@ def _virtual(osdata):
                 grains["virtual"] = "VirtualBox"
             elif "qemu" in model:
                 grains["virtual"] = "kvm"
+            # Nutanix AHV
+            elif "nutanix" in model:
+                grains["virtual"] = "Nutanix"
             elif "virtio" in model:
                 grains["virtual"] = "kvm"
             # Break out of the loop so the next log message is not issued
@@ -1058,6 +1070,9 @@ def _virtual(osdata):
                         grains["virtual"] = "gce"
                     elif "BHYVE" in output:
                         grains["virtual"] = "bhyve"
+                    # Nutanix AHV
+                    elif "AHV" in output:
+                        grains["virtual"] = "Nutanix"
             except UnicodeDecodeError:
                 # Some firmwares provide non-valid 'product_name'
                 # files, ignore them
