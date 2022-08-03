@@ -187,21 +187,19 @@ import logging
 import time
 
 import salt.utils.args
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 try:
     from netmiko import ConnectHandler
-    from netmiko import __version__ as found_netmiko_version
 
-    if _LooseVersion(found_netmiko_version) <= _LooseVersion("3.4.0"):
-        from netmiko.ssh_exception import (
-            NetMikoTimeoutException,
-            NetMikoAuthenticationException,
-        )
-    else:
+    try:
         from netmiko import (
             NetMikoAuthenticationException,
             NetMikoTimeoutException,
+        )
+    except ImportError:
+        from netmiko.ssh_exception import (
+            NetMikoTimeoutException,
+            NetMikoAuthenticationException,
         )
 
     HAS_NETMIKO = True
