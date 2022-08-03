@@ -4,6 +4,7 @@ Tests for the Mandrill execution module.
 
 
 import pytest
+
 import salt.modules.mandrill as mandrill
 from tests.support.mock import MagicMock, patch
 

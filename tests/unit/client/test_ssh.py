@@ -8,6 +8,7 @@ import shutil
 import tempfile
 
 import pytest
+
 import salt.client.ssh.client
 import salt.config
 import salt.roster

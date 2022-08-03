@@ -24,6 +24,7 @@ import uuid
 from errno import EACCES, EPERM
 
 import distro
+
 import salt.exceptions
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -526,11 +527,11 @@ def _osx_memdata():
             .replace(",", ".")
         )
         if swap_total.endswith("K"):
-            _power = 2 ** 10
+            _power = 2**10
         elif swap_total.endswith("M"):
-            _power = 2 ** 20
+            _power = 2**20
         elif swap_total.endswith("G"):
-            _power = 2 ** 30
+            _power = 2**30
         swap_total = float(swap_total[:-1]) * _power
 
         grains["mem_total"] = int(mem) // 1024 // 1024
@@ -624,7 +625,7 @@ def _windows_memdata():
     # get the Total Physical memory as reported by msinfo32
     tot_bytes = win32api.GlobalMemoryStatusEx()["TotalPhys"]
     # return memory info in gigabytes
-    grains["mem_total"] = int(tot_bytes / (1024 ** 2))
+    grains["mem_total"] = int(tot_bytes / (1024**2))
     return grains
 
 
@@ -3022,7 +3023,7 @@ def get_server_id():
         return {}
     id_ = __opts__.get("id", "")
     hash_ = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
-    return {"server_id": abs(hash_ % (2 ** 31))}
+    return {"server_id": abs(hash_ % (2**31))}
 
 
 def get_master():

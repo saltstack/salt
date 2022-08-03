@@ -1,6 +1,7 @@
 import urllib.parse
 
 import pytest
+
 import salt.utils.json
 import salt.utils.yaml
 from tests.support.mock import patch

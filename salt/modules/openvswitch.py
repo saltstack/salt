@@ -407,7 +407,7 @@ def port_create_gre(br, port, id, remote):
 
        salt '*' openvswitch.port_create_gre br0 gre1 5001 192.168.1.10
     """
-    if not 0 <= id < 2 ** 32:
+    if not 0 <= id < 2**32:
         return False
     elif not __salt__["dig.check_ip"](remote):
         return False
@@ -451,7 +451,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
        salt '*' openvswitch.port_create_vxlan br0 vx1 5001 192.168.1.10 8472
     """
     dst_port = " options:dst_port=" + str(dst_port) if 0 < dst_port <= 65535 else ""
-    if not 0 <= id < 2 ** 64:
+    if not 0 <= id < 2**64:
         return False
     elif not __salt__["dig.check_ip"](remote):
         return False

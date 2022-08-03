@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.helpers import with_tempdir

@@ -597,6 +597,7 @@ from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
 
 import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
+
 import salt
 import salt.auth
 import salt.exceptions
@@ -627,8 +628,8 @@ except ImportError:
 
 try:
     # Imports related to websocket
-    from .tools import websockets
     from . import event_processor
+    from .tools import websockets
 
     HAS_WEBSOCKETS = True
 except ImportError:

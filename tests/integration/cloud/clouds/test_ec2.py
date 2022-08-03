@@ -5,10 +5,11 @@
 
 import os
 
+import yaml
+
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
-import yaml
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support import win_installer
 from tests.support.runtests import RUNTIME_VARS

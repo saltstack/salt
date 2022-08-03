@@ -8,6 +8,7 @@ Unit tests for salt's crypt module
 import uuid
 
 import pytest
+
 import salt.crypt
 import salt.master
 import salt.utils.files

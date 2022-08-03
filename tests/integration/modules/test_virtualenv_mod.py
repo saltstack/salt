@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import pytest
+
 import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase

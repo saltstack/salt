@@ -12,6 +12,7 @@ import time
 import uuid
 
 import pytest
+
 import salt.channel.client
 import salt.channel.server
 import salt.config

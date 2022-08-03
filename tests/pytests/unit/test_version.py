@@ -7,6 +7,7 @@ Test salt's regex git describe version parsing
 import re
 
 import pytest
+
 import salt.version
 from salt.version import (
     SaltStackVersion,

@@ -5,6 +5,7 @@ tests.pytests.unit.utils.win_dacl.test_get_name
 Test the get_name function in the win_dacl utility module
 """
 import pytest
+
 import salt.exceptions
 import salt.utils.win_dacl
 

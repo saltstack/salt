@@ -255,7 +255,7 @@ class TestFind(TestCase):
         self.assertEqual(option.match("", "", [1] * 9), False)
 
         option = salt.utils.find.MtimeOption("mtime", "-1s")
-        self.assertEqual(option.match("", "", [10 ** 10] * 9), True)
+        self.assertEqual(option.match("", "", [10**10] * 9), True)
 
 
 class TestGrepOption(TestCase):
@@ -376,7 +376,7 @@ class TestPrintOption(TestCase):
         self.assertEqual(option.execute("", [0] * 10), "root")
 
         option = salt.utils.find.PrintOption("print", "user")
-        self.assertEqual(option.execute("", [2 ** 31] * 10), 2 ** 31)
+        self.assertEqual(option.execute("", [2**31] * 10), 2**31)
 
     @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
     def test_print_group(self):
