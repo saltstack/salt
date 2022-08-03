@@ -651,9 +651,10 @@ pyasn1==0.4.8
     #   -r requirements/darwin.txt
     #   pyasn1-modules
     #   rsa
-pycparser==2.19
+pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -r requirements/darwin.txt
+    #   -r requirements/static/ci/common.in
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
