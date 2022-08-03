@@ -32,6 +32,13 @@ def test_attribute_value_set_eq():
     assert s == AttributeValueSet(["a", "b"])
 
 
+def test_attribute_value_set_eq_unordered():
+    s = AttributeValueSet(["a", "b"])
+    assert s == ["b", "a"]
+    assert s == {"b", "a"}
+    assert s == AttributeValueSet(["b", "a"])
+
+
 def test_ldap_error():
     cause = RuntimeError("cause")
     err = LDAPError("foo", cause)
