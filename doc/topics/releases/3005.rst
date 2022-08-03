@@ -41,7 +41,7 @@ Going forward, any new OS platforms supported by the Salt Project from version
 3005 can only be installed using onedir packages. For this release, this
 includes Redhat 9, Ubuntu 22.04, and Photon OS 3. The Salt Project will phase
 out the old ("classic") Salt package builds for currently supported operating
-systems by 3007. See
+systems by 3006. See
 `Upgrade to onedir <https://docs.saltproject.io/salt/install-guide/en/latest/topics/upgrade-to-onedir.html>`_
 for more information.
 
@@ -60,10 +60,8 @@ Classic, non-onedir packaging support
 -------------------------------------
 The classic, non-onedir packaging system previously used for Salt will also be
 provided for platforms supported in previous Salt versions. The classic
-packaging will only be available for two more releases. See the
-:ref:`release-3006` notes for more details on the availability of classic
-packaging for the 3006 release. The 3007 release and those going forward will
-only provide the onedir packages.
+packaging will only be available for the 3005 release. The 3006 release and
+all releases going forward will only provide the onedir packages.
 
 Platform package support
 ------------------------
@@ -139,7 +137,8 @@ will include:
   * ``salt-pip install <package name>``
   * Using the ``pip.installed`` Salt state.
 
-To install python packages into the system python environment, users must now provide the ``pip_bin`` or ``bin_env`` to the pip state module.
+To install python packages into the system python environment, users must now
+provide the ``pip_bin`` or ``bin_env`` to the pip state module.
 
 For example:
 
