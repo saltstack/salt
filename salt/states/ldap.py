@@ -9,10 +9,10 @@ their attributes.
 """
 
 import copy
-import inspect
 import logging
 from collections import OrderedDict
 
+from salt.utils.ldap import LDAPError
 from salt.utils.oset import OrderedSet
 
 log = logging.getLogger(__name__)
@@ -244,14 +244,7 @@ def managed(name, entries, connect_spec=None):
         # already a connection object
         pass
 
-    connect = __salt__["ldap3.connect"]
-
-    # hack to get at the ldap3 module to access the ldap3.LDAPError
-    # exception class.  https://github.com/saltstack/salt/issues/27578
-    ldap3 = inspect.getmodule(connect)
-
-    with connect(connect_spec) as l:
-
+    with __salt__["ldap3.connect"](connect_spec) as l:
         old, new = _process_entries(l, entries)
 
         dn_set = OrderedSet()
@@ -329,7 +322,7 @@ def managed(name, entries, connect_spec=None):
                     changed_old[dn] = o
                     changed_new[dn] = n
                     success_dn_set.add(dn)
-                except ldap3.LDAPError as err:
+                except LDAPError as err:
                     log.exception("failed to %s entry %s (%s)", op, dn, err)
                     errs.append((op, dn, err))
                     continue

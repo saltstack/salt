@@ -14,6 +14,7 @@ This is an alternative to the ``ldap`` interface provided by the
 import logging
 
 import salt.utils.data
+from salt.utils.ldap import LDAPError
 
 available_backends = set()
 try:
@@ -33,21 +34,6 @@ log = logging.getLogger(__name__)
 def __virtual__():
     """Only load this module if the Python ldap module is present"""
     return bool(len(available_backends))
-
-
-class LDAPError(Exception):
-    """Base class of all LDAP exceptions raised by backends.
-
-    This is only used for errors encountered while interacting with
-    the LDAP server; usage errors (e.g., invalid backend name) will
-    have a different type.
-
-    :ivar cause: backend exception object, if applicable
-    """
-
-    def __init__(self, message, cause=None):
-        super().__init__(message)
-        self.cause = cause
 
 
 def _convert_exception(e):
