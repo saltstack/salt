@@ -254,10 +254,7 @@ def managed(name, entries, connect_spec=None):
 
         old, new = _process_entries(l, entries)
 
-        # collect all of the affected entries (only the key is
-        # important in this dict; would have used an OrderedSet if
-        # there was one)
-        dn_set = OrderedDict()
+        dn_set = OrderedSet()
         dn_set.update(old)
         dn_set.update(new)
 
@@ -280,7 +277,7 @@ def managed(name, entries, connect_spec=None):
         for dn in dn_to_delete:
             for x in old, new:
                 x.pop(dn, None)
-            del dn_set[dn]
+            dn_set.remove(dn)
 
         ret = {
             "name": name,
@@ -307,7 +304,7 @@ def managed(name, entries, connect_spec=None):
             ret["result"] = True
             ret["comment"] = "Successfully updated LDAP entries"
             errs = []
-            success_dn_set = OrderedDict()
+            success_dn_set = OrderedSet()
             for dn in dn_set:
                 o = old.get(dn, {})
                 n = new.get(dn, {})
@@ -331,7 +328,7 @@ def managed(name, entries, connect_spec=None):
                     # is raised
                     changed_old[dn] = o
                     changed_new[dn] = n
-                    success_dn_set[dn] = True
+                    success_dn_set.add(dn)
                 except ldap3.LDAPError as err:
                     log.exception("failed to %s entry %s (%s)", op, dn, err)
                     errs.append((op, dn, err))
