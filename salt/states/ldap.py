@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def managed(name, entries, connect_spec=None):
-    """Ensure the existence (or not) of LDAP entries and their attributes
+    """Ensure the existence (or not) of LDAP entries and their attributes.
 
     Example:
 
@@ -162,10 +162,9 @@ def managed(name, entries, connect_spec=None):
             of the attribute's values are deleted.
 
         * ``'replace'``
-            Attributes to replace.  This is a dict mapping an
-            attribute name to an iterable of values.  Any existing
-            values for the attribute are deleted, then the given
-            values are added.  The iterable may be empty.
+            Attribute values that will replace any existing values.  This is a
+            dict (which may be empty) mapping an attribute name to an iterable
+            (which may be empty) of values.
 
         In the above directives, the iterables of attribute values may
         instead be ``None``, in which case an empty list is used, or a
@@ -367,46 +366,46 @@ def managed(name, entries, connect_spec=None):
 
 
 def _process_entries(l, entries):
-    """Helper for managed() to process entries and return before/after views
+    """Helper for managed() to process entries and obtain before/after views.
 
-    Collect the current database state and update it according to the
-    data in :py:func:`managed`'s ``entries`` parameter.  Return the
-    current database state and what it will look like after
-    modification.
+    Collects the current database state and updates it according to the data in
+    :py:func:`managed`'s ``entries`` parameter. Returns the current database
+    state and what it will look like after modification.
 
     :param l:
-        the LDAP connection object
+        The LDAP connection object.
 
     :param entries:
-        the same object passed to the ``entries`` parameter of
-        :py:func:`manage`
+        The same object passed to the ``entries`` parameter of
+        :py:func:`manage`.
 
-    :return:
-        an ``(old, new)`` tuple that describes the current state of
-        the entries and what they will look like after modification.
-        Each item in the tuple is an OrderedDict that maps an entry DN
-        to another dict that maps an attribute name to a set of its
-        values (it's a set because according to the LDAP spec,
-        attribute value ordering is unspecified and there can't be
-        duplicates).  The structure looks like this:
+    :returns:
+        An ``(old, new)`` tuple that describes the current state of the entries
+        and what they will look like after modification. Each item in the tuple
+        is an ``OrderedDict`` that maps an entry DN to a ``dict`` that maps an
+        attribute name to an ``OrderedSet`` of its values. (``OrderedSet`` is
+        used because the LDAP spec says there can't be duplicates, and it must
+        be ordered to support the `X-ORDERED
+        <https://datatracker.ietf.org/doc/html/draft-chu-ldap-xordered-00>`_
+        extension used by OpenLDAP.) The structure looks like this::
 
-            {dn1: {attr1: set([val1])},
-             dn2: {attr1: set([val2]), attr2: set([val3, val4])}}
+            OrderedDict([(dn1, {attr1: OrderedSet([val1])}),
+                         (dn2, {attr1: OrderedSet([val2]),
+                                attr2: OrderedSet([val3, val4])})])
 
-        All of an entry's attributes and values will be included, even
-        if they will not be modified.  If an entry mentioned in the
-        entries variable doesn't yet exist in the database, the DN in
-        ``old`` will be mapped to an empty dict.  If an entry in the
-        database will be deleted, the DN in ``new`` will be mapped to
-        an empty dict.  All value sets are non-empty:  An attribute
-        that will be added to an entry is not included in ``old``, and
-        an attribute that will be deleted frm an entry is not included
-        in ``new``.
+        All of an entry's attributes and values will be included, even if they
+        will not be modified. If an entry mentioned in ``entries`` does not yet
+        exist in the database, the DN in ``old`` will be mapped to an empty
+        ``dict``. If an entry in the database will be deleted, the DN in ``new``
+        will be mapped to an empty ``dict``. All value sets are non-empty: An
+        attribute that will be added to an entry is not included in ``old``, and
+        an attribute that will be deleted from an entry is not included in
+        ``new``.
 
-        These are OrderedDicts to ensure that the user-supplied
-        entries are processed in the user-specified order (in case
-        there are dependencies, such as ACL rules specified in an
-        early entry that make it possible to modify a later entry).
+        These are ``OrderedDicts`` to ensure that the user-supplied entries are
+        processed in the user-specified order (in case there are dependencies,
+        such as ACL rules specified in an early entry that make it possible to
+        modify a later entry).
     """
 
     old = OrderedDict()
@@ -495,26 +494,22 @@ def _update_entry(entry, status, directives):
 
 
 def _toset(thing):
-    """helper to convert various things to a set
+    """Helper to convert various things to an ``OrderedSet``.
 
-    This enables flexibility in what users provide as the list of LDAP
-    entry attribute values.  Note that the LDAP spec prohibits
-    duplicate values in an attribute.
+    This enables flexibility in what users provide as the list of LDAP entry
+    attribute values. Note that the LDAP spec prohibits duplicate values in an
+    attribute, so a set type is used.
 
-    RFC 2251 states that:
-    "The order of attribute values within the vals set is undefined and
-     implementation-dependent, and MUST NOT be relied upon."
-    However, OpenLDAP have an X-ORDERED that is used in the config schema.
-    Using sets would mean we can't pass ordered values and therefore can't
-    manage parts of the OpenLDAP configuration, hence the use of OrderedSet.
+    `RFC 4511 section 4.1.7
+    <https://datatracker.ietf.org/doc/html/rfc4511#section-4.1.7>`_ says, "The
+    set of attribute values is unordered." Despite this, the returned set is
+    ordered so that it can support the `X-ORDERED
+    <https://datatracker.ietf.org/doc/html/draft-chu-ldap-xordered-00>`_
+    extension. (OpenLDAP has some X-ORDERED attributes in its config schema.)
 
-    Sets are also good for automatically removing duplicates.
-
-    None becomes an empty set.  Iterables except for strings have
-    their elements added to a new set.  Non-None scalars (strings,
-    numbers, non-iterable objects, etc.) are added as the only member
-    of a new set.
-
+    ``None`` becomes an empty set.  Iterables except for strings have their
+    elements added to a new set.  Non-``None` scalars (strings, numbers,
+    non-iterable objects, etc.) are added as the only member of a new set.
     """
     if thing is None:
         return OrderedSet()

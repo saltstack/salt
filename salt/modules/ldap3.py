@@ -81,14 +81,15 @@ def _bind(l, bind=None):
 
 def _format_unicode_password(pwd):
     """Formats a string per Microsoft AD password specifications.
-    The string must be enclosed in double quotes and UTF-16 encoded.
+
     See: https://msdn.microsoft.com/en-us/library/cc223248.aspx
 
     :param pwd:
-       The desired password as a string
+        The desired password as a string.
 
     :returns:
-        A unicode string
+        A ``bytes`` object that is the result of enclosing ``pwd`` in double
+        quotes then encoding with UTF-16.
     """
     return '"{}"'.format(pwd).encode("utf-16-le")
 
@@ -250,13 +251,15 @@ def connect(connect_spec=None):
 
     .. code-block:: bash
 
-        salt '*' ldap3.connect "{
-            'url': 'ldaps://ldap.example.com/',
-            'bind': {
-                'method': 'simple',
-                'dn': 'cn=admin,dc=example,dc=com',
-                'password': 'secret'}
-        }"
+        salt minion.example.com ldap3.connect \
+            "{
+                'url': 'ldaps://ldap.example.com/',
+                'bind': {
+                    'method': 'simple',
+                    'dn': 'cn=admin,dc=example,dc=com',
+                    'password': 'secret',
+                },
+            }"
     """
     if isinstance(connect_spec, _connect_ctx):
         return connect_spec
@@ -357,14 +360,16 @@ def search(
 
     .. code-block:: bash
 
-        salt '*' ldap3.search "{
-            'url': 'ldaps://ldap.example.com/',
-            'bind': {
-                'method': 'simple',
-                'dn': 'cn=admin,dc=example,dc=com',
-                'password': 'secret',
-            },
-        }" "base='dc=example,dc=com'"
+        salt minion.example.com ldap3.search \
+            "{
+                'url': 'ldaps://ldap.example.com/',
+                'bind': {
+                    'method': 'simple',
+                    'dn': 'cn=admin,dc=example,dc=com',
+                    'password': 'secret',
+                },
+            }" \
+            "base='dc=example,dc=com'"
     """
     l = connect(connect_spec)
     scope = getattr(ldap, "SCOPE_" + scope.upper())
@@ -398,13 +403,16 @@ def add(connect_spec, dn, attributes):
 
     .. code-block:: bash
 
-        salt '*' ldap3.add "{
-            'url': 'ldaps://ldap.example.com/',
-            'bind': {
-                'method': 'simple',
-                'password': 'secret',
-            },
-        }" "dn='dc=example,dc=com'" "attributes={'example': 'values'}"
+        salt minion.example.com ldap3.add \
+            "{
+                'url': 'ldaps://ldap.example.com/',
+                'bind': {
+                    'method': 'simple',
+                    'password': 'secret',
+                },
+            }" \
+            "dn='dc=example,dc=com'" \
+            "attributes={'example': ['values']}"
     """
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
@@ -445,12 +453,15 @@ def delete(connect_spec, dn):
 
     .. code-block:: bash
 
-        salt '*' ldap3.delete "{
-            'url': 'ldaps://ldap.example.com/',
-            'bind': {
-                'method': 'simple',
-                'password': 'secret'}
-        }" dn='cn=admin,dc=example,dc=com'
+        salt minion.example.com ldap3.delete \
+            "{
+                'url': 'ldaps://ldap.example.com/',
+                'bind': {
+                    'method': 'simple',
+                    'password': 'secret',
+                },
+            }" \
+            "dn='cn=admin,dc=example,dc=com'"
     """
     l = connect(connect_spec)
     log.info("deleting entry: dn: %s", repr(dn))
@@ -500,13 +511,16 @@ def modify(connect_spec, dn, directives):
 
     .. code-block:: bash
 
-        salt '*' ldap3.modify "{
-            'url': 'ldaps://ldap.example.com/',
-            'bind': {
-                'method': 'simple',
-                'password': 'secret'}
-        }" dn='cn=admin,dc=example,dc=com'
-        directives="('add', 'example', ['example_val'])"
+        salt minion.example.com ldap3.modify \
+            "{
+                'url': 'ldaps://ldap.example.com/',
+                'bind': {
+                    'method': 'simple',
+                    'password': 'secret',
+                },
+            }" \
+            "dn='cn=admin,dc=example,dc=com'" \
+            "directives=[('add', 'example', ['example_val'])]"
     """
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
@@ -536,18 +550,17 @@ def modify(connect_spec, dn, directives):
 def change(connect_spec, dn, before, after):
     """Modify an entry in an LDAP database.
 
-    This does the same thing as :py:func:`modify`, but with a simpler
-    interface.  Instead of taking a list of directives, it takes a
-    before and after view of an entry, determines the differences
-    between the two, computes the directives, and executes them.
+    This does the same thing as :py:func:`modify`, but with a simpler interface.
+    Instead of taking a list of directives, it takes a before and after view of
+    an entry, determines the differences between the two, computes directives
+    based on the differences, and executes the directives.
 
-    Any attribute value present in ``before`` but missing in ``after``
-    is deleted.  Any attribute value present in ``after`` but missing
-    in ``before`` is added.  Any attribute value in the database that
-    is not mentioned in either ``before`` or ``after`` is not altered.
-    Any attribute value that is present in both ``before`` and
-    ``after`` is ignored, regardless of whether that attribute value
-    exists in the database.
+    Any attribute value present in ``before`` but missing in ``after`` is
+    deleted. Any attribute value present in ``after`` but missing in ``before``
+    is added. Any attribute value in the database that is not mentioned in
+    either ``before`` or ``after`` is not altered. Any attribute value that is
+    present in both ``before`` and ``after`` is ignored, regardless of whether
+    that attribute value exists in the database.
 
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
@@ -557,12 +570,12 @@ def change(connect_spec, dn, before, after):
         Distinguished name of the entry.
 
     :param before:
-        The expected state of the entry before modification.  This is
-        a dict mapping each attribute name to an iterable of values.
+        The expected state of the entry before modification. This is a mapping
+        that maps each attribute name to an iterable of values.
 
     :param after:
-        The desired state of the entry after modification.  This is a
-        dict mapping each attribute name to an iterable of values.
+        The desired state of the entry after modification. This is a mapping
+        that maps each attribute name to an iterable of values.
 
     :returns:
         ``True`` if successful, raises an exception otherwise.
@@ -571,14 +584,17 @@ def change(connect_spec, dn, before, after):
 
     .. code-block:: bash
 
-        salt '*' ldap3.change "{
-            'url': 'ldaps://ldap.example.com/',
-            'bind': {
-                'method': 'simple',
-                'password': 'secret'}
-        }" dn='cn=admin,dc=example,dc=com'
-        before="{'example_value': 'before_val'}"
-        after="{'example_value': 'after_val'}"
+        salt minion.example.com ldap3.change \
+            "{
+                'url': 'ldaps://ldap.example.com/',
+                'bind': {
+                    'method': 'simple',
+                    'password': 'secret',
+                },
+            }" \
+            "dn='cn=admin,dc=example,dc=com'" \
+            "before={'example_value': ['before_val']}" \
+            "after={'example_value': ['after_val']}"
     """
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what

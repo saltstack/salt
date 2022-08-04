@@ -1,0 +1,2 @@
+Improvements to `salt.state.ldap` and `salt.modules.ldap3`:
+  * Documentation improvements.
