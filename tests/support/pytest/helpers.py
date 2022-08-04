@@ -19,10 +19,11 @@ from contextlib import contextmanager
 import _pytest._version
 import attr
 import pytest
-import salt.utils.platform
-import salt.utils.pycrypto
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.platform
+import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -664,12 +665,23 @@ class EntropyGenerator:
     def generate_entropy(self):
         max_time = self.max_minutes * 60
         kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
+        kernel_poolsize_file = pathlib.Path("/proc/sys/kernel/random/poolsize")
         if not kernel_entropy_file.exists():
             log.info("The '%s' file is not avilable", kernel_entropy_file)
             return
 
         self.current_entropy = int(kernel_entropy_file.read_text().strip())
         log.info("Available Entropy: %s", self.current_entropy)
+
+        if not kernel_poolsize_file.exists():
+            log.info("The '%s' file is not avilable", kernel_poolsize_file)
+        else:
+            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            log.info("Entropy Poolsize: %s", self.current_poolsize)
+            # Account for smaller poolsizes using BLAKE2s
+            if self.current_poolsize == 256:
+                self.minimum_entropy = 192
+
         if self.current_entropy >= self.minimum_entropy:
             return
 
@@ -723,7 +735,7 @@ class EntropyGenerator:
                         "-out",
                         target_file.name,
                         "-base64",
-                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                        str(int(2**30 * 3 / 4)),  # 1GB
                     ],
                     shell=False,
                     check=True,

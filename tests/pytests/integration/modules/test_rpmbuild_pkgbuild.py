@@ -10,6 +10,7 @@ import subprocess
 import textwrap
 
 import pytest
+
 from tests.support.runtests import RUNTIME_VARS
 
 GPG_TEST_PRIV_KEY = """-----BEGIN PGP PRIVATE KEY BLOCK-----

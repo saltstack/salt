@@ -7,6 +7,7 @@
 import os
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import LooseVersion

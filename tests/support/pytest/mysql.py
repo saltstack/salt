@@ -50,6 +50,14 @@ class MySQLCombo:
     def _default_mysql_root_user_passwd(self):
         return self.mysql_passwd
 
+    def get_credentials(self, **kwargs):
+        return {
+            "connection_user": kwargs.get("connection_user") or self.mysql_root_user,
+            "connection_pass": kwargs.get("connection_pass") or self.mysql_root_passwd,
+            "connection_db": kwargs.get("connection_db") or "mysql",
+            "connection_port": kwargs.get("connection_port") or self.mysql_port,
+        }
+
 
 def get_test_versions():
     test_versions = []
@@ -130,6 +138,7 @@ def check_container_started(timeout_at, container, combo):
         sleeptime *= 2
     else:
         return False
+    time.sleep(0.5)
     return True
 
 
@@ -157,7 +166,9 @@ def mysql_container(salt_factories, mysql_combo):
 
     container = salt_factories.get_container(
         mysql_combo.container_id,
-        "{}:{}".format(mysql_combo.mysql_name, mysql_combo.mysql_version),
+        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+            mysql_combo.mysql_name, mysql_combo.mysql_version
+        ),
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,

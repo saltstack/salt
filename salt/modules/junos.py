@@ -20,13 +20,14 @@ import os
 import re
 from functools import wraps
 
+import yaml
+
 import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import yaml
 
 try:
     from lxml import etree

@@ -9,16 +9,16 @@
 
 import collections
 
-import salt.utils.context
 import yaml  # pylint: disable=blacklisted-import
+
+import salt.utils.context
 from salt.utils.odict import OrderedDict
 
 try:
     from yaml import CDumper as Dumper
     from yaml import CSafeDumper as SafeDumper
 except ImportError:
-    from yaml import Dumper
-    from yaml import SafeDumper
+    from yaml import Dumper, SafeDumper
 
 
 __all__ = [

@@ -6,6 +6,7 @@ import glob
 import os
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo

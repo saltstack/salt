@@ -183,7 +183,7 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args=[ '--force' ]
+        salt '*' pcs.auth nodes='[ node1.example.org, node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args=[ '--force' ]
     """
     if __use_new_commands():
         cmd = ["pcs", "host", "auth"]
@@ -215,7 +215,7 @@ def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
 
     .. code-block:: bash
 
-        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
+        salt '*' pcs.is_auth nodes='[node1.example.org, node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
     """
     if __use_new_commands():
         cmd = ["pcs", "host", "auth", "-u", pcsuser, "-p", pcspasswd]
@@ -244,7 +244,7 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.cluster_setup nodes='[ node1.example.org node2.example.org ]' pcsclustername=pcscluster
+        salt '*' pcs.cluster_setup nodes='[ node1.example.org, node2.example.org ]' pcsclustername=pcscluster
     """
     cmd = ["pcs", "cluster", "setup"]
 

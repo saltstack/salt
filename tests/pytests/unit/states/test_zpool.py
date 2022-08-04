@@ -9,6 +9,7 @@ Tests for salt.states.zpool
 """
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.zpool as zpool

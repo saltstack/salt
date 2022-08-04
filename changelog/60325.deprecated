@@ -1,4 +1,0 @@
-In etcd_util, the recursive kwarg in the read and delete methods has been deprecated in favor of recurse for both client versions.
-In etcd_util, the index kwarg in the watch method has been deprecated in favor of start_revision for both client versions.
-In etcd_util, the waitIndex kwarg in the read method has been deprecated in favor of start_revision for both client versions.
-The etcd API v2 implementation has been deprecated in favor of etcd API v3.

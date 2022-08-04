@@ -910,7 +910,7 @@ def _size_map(size):
             if re.search(r"[Kk]", size):
                 size = 1024 * float(re.sub(r"[Kk]", "", size))
             elif re.search(r"[Mm]", size):
-                size = 1024 ** 2 * float(re.sub(r"[Mm]", "", size))
+                size = 1024**2 * float(re.sub(r"[Mm]", "", size))
             size = int(size)
         return size
     except Exception:  # pylint: disable=broad-except
@@ -999,7 +999,7 @@ def _wipe(dev):
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
         # Some stuff (<cough>GPT</cough>) writes stuff at the end of a dev as well
-        cmd += " seek={}".format((size / 1024 ** 2) - blocks)
+        cmd += " seek={}".format((size / 1024**2) - blocks)
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
     elif wiper == "blkdiscard":

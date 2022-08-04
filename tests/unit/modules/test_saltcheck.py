@@ -3,6 +3,7 @@
 import os.path
 
 import pytest
+
 import salt.config
 import salt.modules.saltcheck as saltcheck
 import salt.syspaths as syspaths

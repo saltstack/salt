@@ -136,6 +136,7 @@ from xml.etree import ElementTree
 from xml.sax import saxutils
 
 import jinja2.exceptions
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -5778,7 +5779,6 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
-    sysctl_cmd = "sysctl hw.vmm.create"
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(

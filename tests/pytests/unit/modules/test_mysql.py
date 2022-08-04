@@ -10,6 +10,7 @@
 import logging
 
 import pytest
+
 import salt.modules.mysql as mysql
 from tests.support.mock import MagicMock, call, mock_open, patch
 

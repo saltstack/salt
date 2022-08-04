@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.saltcloudmod as saltcloudmod
 import salt.utils.json
 from tests.support.mock import MagicMock, patch

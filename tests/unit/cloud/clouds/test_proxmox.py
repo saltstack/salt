@@ -2,6 +2,7 @@
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
+import textwrap
 
 from salt.cloud.clouds import proxmox
 from tests.support.mixins import LoaderModuleMockMixin
@@ -215,3 +216,49 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 verify=True,
                 data={"username": ("fakeuser",), "password": "secretpassword"},
             )
+
+    def test__import_api_v6(self):
+        """
+        Test _import_api handling of a Proxmox VE 6 response.
+        """
+        response = textwrap.dedent(
+            """\
+            var pveapi = [
+               {
+                  "info" : {
+                  }
+               }
+            ]
+            ;
+            """
+        )
+        self._test__import_api(response)
+
+    def test__import_api_v7(self):
+        """
+        Test _import_api handling of a Proxmox VE 7 response.
+        """
+        response = textwrap.dedent(
+            """\
+            const apiSchema = [
+               {
+                  "info" : {
+                  }
+               }
+            ]
+            ;
+            """
+        )
+        self._test__import_api(response)
+
+    def _test__import_api(self, response):
+        """
+        Test _import_api recognition of varying Proxmox VE responses.
+        """
+        requests_get_mock = MagicMock()
+        requests_get_mock.return_value.status_code = 200
+        requests_get_mock.return_value.text = response
+        with patch("requests.get", requests_get_mock):
+            proxmox._import_api()
+        self.assertEqual(proxmox.api, [{"info": {}}])
+        return

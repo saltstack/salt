@@ -25,10 +25,11 @@ import time
 mswindows = sys.platform == "win32"
 
 try:
+    import msvcrt
+
     import pywintypes
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
-    import msvcrt
 except ImportError:
     import fcntl
 

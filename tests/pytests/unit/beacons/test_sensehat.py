@@ -1,4 +1,5 @@
 import pytest
+
 import salt.beacons.sensehat as sensehat
 from tests.support.mock import MagicMock
 

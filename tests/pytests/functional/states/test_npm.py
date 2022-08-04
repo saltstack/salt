@@ -1,4 +1,5 @@
 import pytest
+
 from salt.exceptions import CommandExecutionError
 
 

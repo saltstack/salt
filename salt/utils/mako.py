@@ -3,10 +3,10 @@ Functions for working with Mako templates
 """
 
 try:
-    from mako.lookup import (
-        TemplateCollection,
-        TemplateLookup,
-    )  # pylint: disable=import-error,3rd-party-module-not-gated
+    # pylint: disable=import-error,3rd-party-module-not-gated,no-name-in-module
+    from mako.lookup import TemplateCollection, TemplateLookup
+
+    # pylint: enable=import-error,3rd-party-module-not-gated,no-name-in-module
 
     HAS_MAKO = True
 except ImportError:
@@ -14,8 +14,8 @@ except ImportError:
 
 if HAS_MAKO:
     import os
-
     import urllib.parse
+
     import salt.fileclient
     import salt.utils.url
 

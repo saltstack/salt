@@ -5,6 +5,7 @@ Tests for file.symlink function
 import os
 
 import pytest
+
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
