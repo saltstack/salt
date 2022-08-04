@@ -2083,7 +2083,7 @@ pattern() = package-c"""
         if salt.utils.files.is_fcntl_available():
             zypper.__zypper__.exit_code = 1
             with patch.object(os.path, "exists", return_value=True), \
-                patch("fcntl.lockf", side_effect=OSError(errno.EAGAIN, 
+                patch("fcntl.lockf", side_effect=OSError(errno.EAGAIN,
                                                          "")) as lockf_mock, \
                     patch("salt.utils.files.fopen", mock_open()):
                 self.assertTrue(zypper.__zypper__._is_rpm_lock())
