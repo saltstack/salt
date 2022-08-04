@@ -352,10 +352,8 @@ class _Zypper:
             if self._check_result():
                 break
 
-            # Zypper lock
             if self._is_zypper_lock():
                 self._handle_zypper_lock_file()
-            # RPM lock
             if self._is_rpm_lock():
                 self._handle_rpm_lock_file()
             was_blocked = True
