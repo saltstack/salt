@@ -106,7 +106,7 @@ class _Zypper:
     XML_DIRECTIVES = ["-x", "--xmlout"]
     # ZYPPER_LOCK is not affected by --root
     ZYPPER_LOCK = "/var/run/zypp.pid"
-    RPM_LOCK = "/usr/lib/sysimage/rpm/.rpm.lock"
+    RPM_LOCK = "/var/lib/rpm/.rpm.lock"
     TAG_RELEASED = "zypper/released"
     TAG_BLOCKED = "zypper/blocked"
 
