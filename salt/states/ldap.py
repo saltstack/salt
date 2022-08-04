@@ -355,8 +355,8 @@ def managed(name, entries, connect_spec=None):
                 attr: list(vals)
                 for attr, vals in x.items()
                 if (
-                    o.get(attr, AttributeValueSet())
-                    != n.get(attr, AttributeValueSet())
+                    o.get(attr, AttributeValueSet(attr))
+                    != n.get(attr, AttributeValueSet(attr))
                 )
             }
 
@@ -384,9 +384,11 @@ def _process_entries(l, entries):
         attribute name to an :py:class:`~salt.utils.ldap.AttributeValueSet` of
         its values. The structure looks like this::
 
-            OrderedDict([(dn1, {attr1: AttributeValueSet([val1])}),
-                         (dn2, {attr1: AttributeValueSet([val2]),
-                                attr2: AttributeValueSet([val3, val4])})])
+            OrderedDict([
+                (dn1, {attr1: AttributeValueSet(attr1, [val1])}),
+                (dn2, {attr1: AttributeValueSet(attr1, [val2]),
+                       attr2: AttributeValueSet(attr2, [val3, val4])}),
+            ])
 
         All of an entry's attributes and values will be included, even if they
         will not be modified. If an entry mentioned in ``entries`` does not yet
@@ -417,7 +419,7 @@ def _process_entries(l, entries):
                 if len(results) == 1:
                     attrs = results[dn]
                     olde = {
-                        attr: AttributeValueSet(vals)
+                        attr: AttributeValueSet(attr, vals)
                         for attr, vals in attrs.items()
                         if len(vals)
                     }
@@ -428,7 +430,7 @@ def _process_entries(l, entries):
                 old[dn] = olde
             # Deep copy the old entry to create the new (don't do a simple
             # assignment or else modifications to `newe` will affect `olde`).
-            newe = {attr: AttributeValueSet(vals) for attr, vals in olde.items()}
+            newe = {attr: AttributeValueSet(attr, vals) for attr, vals in olde.items()}
             new[dn] = newe
 
             # process the directives
@@ -465,25 +467,25 @@ def _update_entry(entry, status, directives):
             continue
         for attr, vals in state.items():
             status["mentioned_attributes"].add(attr)
-            vals = _toset(vals)
+            vals = _toset(attr, vals)
             if directive == "default":
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == "add":
-                existing_vals = entry.get(attr, AttributeValueSet())
+                existing_vals = entry.get(attr, AttributeValueSet(attr))
                 # Preserve the order of pre-existing values by updating
                 # existing_vals with vals rather than the other way around.
                 existing_vals |= vals
                 if existing_vals:
                     entry[attr] = existing_vals
             elif directive == "delete":
-                existing_vals = entry.pop(attr, AttributeValueSet())
+                existing_vals = entry.pop(attr, AttributeValueSet(attr))
                 if vals:
                     existing_vals -= vals
                     if existing_vals:
                         entry[attr] = existing_vals
             elif directive == "replace":
-                existing_vals = entry.pop(attr, AttributeValueSet())
+                existing_vals = entry.pop(attr, AttributeValueSet(attr))
                 # Preserve the order of pre-existing values by first keeping
                 # the common values then inserting the new values.
                 existing_vals &= vals
@@ -495,12 +497,12 @@ def _update_entry(entry, status, directives):
 
 
 def _normalize(thing):
-    """Convert thing to bytes.
+    """Convert thing to a str or bytes.
 
     Details:
       * bytes-like values are copied and returned.
-      * str values are encoded to UTF-8 bytes.
-      * int values (including Booleans) are converted to str then encoded.
+      * str values are returned as-is.
+      * int values (including Booleans) are converted to str.
       * Everything else raises an exception.
     """
     try:
@@ -512,14 +514,12 @@ def _normalize(thing):
         pass
     if isinstance(thing, int):
         thing = str(thing)
-    if isinstance(thing, str):
-        thing = thing.encode()
-    if not isinstance(thing, bytes):
+    if not isinstance(thing, (str, bytes)):
         raise TypeError(f"expected an int, str, or bytes-like value, got {type(thing)}")
     return thing
 
 
-def _toset(thing):
+def _toset(attr, thing):
     """Helper to convert various things to an ``AttributeValueSet``.
 
     This enables flexibility in what users provide as the list of LDAP entry
@@ -540,4 +540,4 @@ def _toset(thing):
             coll = (_normalize(thing),)
         except TypeError:
             coll = (_normalize(x) for x in thing)
-    return AttributeValueSet(coll)
+    return AttributeValueSet(attr, coll)

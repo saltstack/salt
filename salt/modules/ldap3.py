@@ -13,8 +13,7 @@ This is an alternative to the ``ldap`` interface provided by the
 
 import logging
 
-import salt.utils.data
-from salt.utils.ldap import LDAPError
+from salt.utils.ldap import AttributeValueSet, LDAPError
 
 available_backends = set()
 try:
@@ -63,21 +62,6 @@ def _bind(l, bind=None):
             + method
             + '"; supported bind methods: simple sasl'
         )
-
-
-def _format_unicode_password(pwd):
-    """Formats a string per Microsoft AD password specifications.
-
-    See: https://msdn.microsoft.com/en-us/library/cc223248.aspx
-
-    :param pwd:
-        The desired password as a string.
-
-    :returns:
-        A ``bytes`` object that is the result of enclosing ``pwd`` in double
-        quotes then encoding with UTF-16.
-    """
-    return '"{}"'.format(pwd).encode("utf-16-le")
 
 
 class _connect_ctx:
@@ -307,6 +291,9 @@ def search(
 ):
     """Search an LDAP database.
 
+    .. versionchanged:: 3006.0
+        The returned attribute values are now decoded to strings when possible.
+
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
         :py:func:`connect`.
@@ -365,7 +352,13 @@ def search(
         results = []
     except ldap.LDAPError as e:
         _convert_exception(e)
-    return dict(results)
+    return {
+        dn: {
+            attr: list(AttributeValueSet(attr, encvals))
+            for attr, encvals in encattrs.items()
+        }
+        for dn, encattrs in results
+    }
 
 
 def add(connect_spec, dn, attributes):
@@ -401,20 +394,12 @@ def add(connect_spec, dn, attributes):
             "attributes={'example': ['values']}"
     """
     l = connect(connect_spec)
-    # convert the "iterable of values" to lists in case that's what
-    # addModlist() expects (also to ensure that the caller's objects
-    # are not modified)
-    attributes = {
-        attr: salt.utils.data.encode(list(vals)) for attr, vals in attributes.items()
-    }
     log.info("adding entry: dn: %s attributes: %s", repr(dn), repr(attributes))
-
-    if "unicodePwd" in attributes:
-        attributes["unicodePwd"] = [
-            _format_unicode_password(x) for x in attributes["unicodePwd"]
-        ]
-
-    modlist = ldap.modlist.addModlist(attributes)
+    encattrs = {
+        attr: AttributeValueSet(attr, vals).encode()
+        for attr, vals in attributes.items()
+    }
+    modlist = ldap.modlist.addModlist(encattrs)
     try:
         l.c.add_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -509,23 +494,14 @@ def modify(connect_spec, dn, directives):
             "directives=[('add', 'example', ['example_val'])]"
     """
     l = connect(connect_spec)
-    # convert the "iterable of values" to lists in case that's what
-    # modify_s() expects (also to ensure that the caller's objects are
-    # not modified)
     modlist = [
-        (getattr(ldap, "MOD_" + op.upper()), attr, list(vals))
+        (
+            getattr(ldap, "MOD_" + op.upper()),
+            attr,
+            AttributeValueSet(attr, vals).encode(),
+        )
         for op, attr, vals in directives
     ]
-
-    for idx, mod in enumerate(modlist):
-        if mod[1] == "unicodePwd":
-            modlist[idx] = (
-                mod[0],
-                mod[1],
-                [_format_unicode_password(x) for x in mod[2]],
-            )
-
-    modlist = salt.utils.data.decode(modlist, to_str=True, preserve_tuples=True)
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -583,15 +559,14 @@ def change(connect_spec, dn, before, after):
             "after={'example_value': ['after_val']}"
     """
     l = connect(connect_spec)
-    # convert the "iterable of values" to lists in case that's what
-    # modifyModlist() expects (also to ensure that the caller's dicts
-    # are not modified)
-    before = {attr: salt.utils.data.encode(list(vals)) for attr, vals in before.items()}
-    after = {attr: salt.utils.data.encode(list(vals)) for attr, vals in after.items()}
-
-    if "unicodePwd" in after:
-        after["unicodePwd"] = [_format_unicode_password(x) for x in after["unicodePwd"]]
-
+    before = {
+        attr: AttributeValueSet(attr, vals).encode()
+        for attr, vals in before.items()
+    }
+    after = {
+        attr: AttributeValueSet(attr, vals).encode()
+        for attr, vals in after.items()
+    }
     modlist = ldap.modlist.modifyModlist(before, after)
 
     try:

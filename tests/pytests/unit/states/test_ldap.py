@@ -10,17 +10,17 @@ def _toset_testcases():
 
     # Single values:
     for input, want_list in [
-        ("", [b""]),
-        (b"", [b""]),
-        (False, [b"False"]),
-        (True, [b"True"]),
-        (0, [b"0"]),
-        (-1, [b"-1"]),
-        (0xF, [b"15"]),
-        ("🚀", ["🚀".encode()]),
-        ("🚀".encode(), ["🚀".encode()]),
-        (bytearray("🚀".encode()), ["🚀".encode()]),
-        (memoryview("🚀".encode()), ["🚀".encode()]),
+        ("", [""]),
+        (b"", [""]),
+        (False, ["False"]),
+        (True, ["True"]),
+        (0, ["0"]),
+        (-1, ["-1"]),
+        (0xF, ["15"]),
+        ("🚀", ["🚀"]),
+        ("🚀".encode(), ["🚀"]),
+        (bytearray("🚀".encode()), ["🚀"]),
+        (memoryview("🚀".encode()), ["🚀"]),
         (b"\x80", [b"\x80"]),  # Intentionally invalid UTF-8.
     ]:
         # Single values can be provided directly or in an iterable.
@@ -38,17 +38,17 @@ def _toset_testcases():
         ([], []),
         ((), []),
         (set(), []),
-        (["a", "b"], [b"a", b"b"]),
-        ([b"a", b"b"], [b"a", b"b"]),
-        (["a", b"b", 0], [b"a", b"b", b"0"]),  # Mix of types.
+        (["a", "b"], ["a", "b"]),
+        ([b"a", b"b"], ["a", "b"]),
+        (["a", b"b", 0], ["a", "b", "0"]),  # Mix of types.
         # A sequence of integers in [0, 256) can be converted to a bytes object,
         # but they shouldn't be -- they should be treated as a sequence of
         # integers.  (Otherwise, it would be impossible to store integers unless
         # one of the values was outside [0, 256).)
-        ([128], [b"128"]),
-        ((128,), [b"128"]),
-        (list("🚀".encode()), [b"240", b"159", b"154", b"128"]),
-        (tuple("🚀".encode()), [b"240", b"159", b"154", b"128"]),
+        ([128], ["128"]),
+        ((128,), ["128"]),
+        (list("🚀".encode()), ["240", "159", "154", "128"]),
+        (tuple("🚀".encode()), ["240", "159", "154", "128"]),
         # Invalid values:
         (1.1, TypeError),
         ([[]], TypeError),
@@ -59,9 +59,9 @@ def _toset_testcases():
 def test__toset(input, want_list):
     if isinstance(want_list, type):
         with pytest.raises(want_list):
-            got = ldap._toset(input)
+            got = ldap._toset("attr", input)
     else:
-        want = AttributeValueSet(want_list)
-        got = ldap._toset(input)
+        want = AttributeValueSet("attr", want_list)
+        got = ldap._toset("attr", input)
         assert got == want
         assert list(got) == want_list

@@ -3,6 +3,7 @@ Improvements to `salt.state.ldap` and `salt.modules.ldap3`:
     writing to the LDAP server.
   * The order of an attribute's values is now ignored when checking value
     equality, as required by RFC 4511.
+  * Fixed attribute value encoding/decoding corner cases.
   * Fixed support for `bytes` attribute values that are not in a list.
   * Documentation improvements.
   * Miscellaneous code cleanups.

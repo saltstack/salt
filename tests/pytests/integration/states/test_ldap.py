@@ -35,6 +35,8 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
                         "description": [
                             "Non-ASCII characters should be supported: 🙂",
                             4567,
+                            # This will become a str when returned because it is
+                            # valid UTF-8.
                             b"abcd",
                         ],
                         # Non-list iterable to exercise support for arbitrary
