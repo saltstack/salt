@@ -10,3 +10,5 @@ SCRIPTS_DIR := $(TARGET_DIR)
 PYBIN := bin\/python3
 # The names of Salt's scripts
 SCRIPTS ?= salt salt-api salt-call salt-cloud salt-cp salt-key salt-master salt-minion salt-proxy salt-run salt-ssh salt-syndic spm
+# What openssl version will be installed
+OPENSSL_VERSION := 3.0.5
