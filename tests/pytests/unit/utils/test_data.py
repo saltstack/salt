@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+
 import salt.utils.data
 
 

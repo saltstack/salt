@@ -34,6 +34,10 @@ from contextlib import contextmanager
 
 import attr
 import pytest
+from pytestshellutils.exceptions import ProcessFailed
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import ProcessResult
+
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.utils.files
@@ -41,9 +45,6 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from pytestshellutils.exceptions import ProcessFailed
-from pytestshellutils.utils import ports
-from pytestshellutils.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -264,7 +265,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
                     teardown()
-                backoff_time = attempt ** 2
+                backoff_time = attempt**2
                 log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
         return cls

@@ -3,6 +3,7 @@ import sys
 import warnings
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.versions
 import salt.version

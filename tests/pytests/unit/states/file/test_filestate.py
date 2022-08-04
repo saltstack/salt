@@ -5,6 +5,7 @@ import pprint
 
 import msgpack
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer

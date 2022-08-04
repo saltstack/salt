@@ -7,6 +7,7 @@ import threading
 import time
 
 import pytest
+
 import salt.ext.tornado.gen
 import salt.ext.tornado.stack_context
 import salt.utils.json

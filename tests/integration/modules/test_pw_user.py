@@ -5,6 +5,7 @@ tests.integration.modules.pw_user
 
 import pytest
 from saltfactories.utils import random_string
+
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
 

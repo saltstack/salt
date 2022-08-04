@@ -8,6 +8,7 @@ import sys
 import _pytest._version
 import attr
 import pytest
+
 import salt.utils.files
 from tests.conftest import CODE_DIR
 

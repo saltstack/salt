@@ -3,6 +3,7 @@ import shutil
 import tempfile
 
 import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from salt import crypt

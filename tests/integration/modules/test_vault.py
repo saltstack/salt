@@ -6,6 +6,7 @@ import logging
 import time
 
 import pytest
+
 import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS

@@ -2,6 +2,7 @@
 Tests for win_file execution module
 """
 import pytest
+
 import salt.modules.win_file as win_file
 import salt.utils.files
 import salt.utils.path

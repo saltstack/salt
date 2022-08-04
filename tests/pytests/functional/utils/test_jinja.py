@@ -1,6 +1,7 @@
 import pytest
-import salt.utils.jinja
 from jinja2.exceptions import TemplateNotFound
+
+import salt.utils.jinja
 from salt.utils.odict import OrderedDict
 
 

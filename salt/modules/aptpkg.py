@@ -54,10 +54,7 @@ log = logging.getLogger(__name__)
 try:
     import apt.cache
     import apt.debfile
-    from aptsources.sourceslist import (
-        SourceEntry,
-        SourcesList,
-    )
+    from aptsources.sourceslist import SourceEntry, SourcesList
 
     HAS_APT = True
 except ImportError:
@@ -361,7 +358,7 @@ def _call_apt(args, scope=True, **kwargs):
     while "Could not get lock" in cmd_ret.get("stderr", "") and count < 10:
         count += 1
         log.warning("Waiting for dpkg lock release: retrying... %s/100", count)
-        time.sleep(2 ** count)
+        time.sleep(2**count)
         cmd_ret = __salt__["cmd.run_all"](cmd, **params)
     return cmd_ret
 

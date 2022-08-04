@@ -72,8 +72,7 @@ try:
         from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
         from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
     except ImportError:
-        from kubernetes.client import AppsV1beta1Deployment
-        from kubernetes.client import AppsV1beta1DeploymentSpec
+        from kubernetes.client import AppsV1beta1Deployment, AppsV1beta1DeploymentSpec
     # pylint: enable=no-name-in-module
 
     HAS_LIBS = True

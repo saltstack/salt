@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.states.webutil as htpasswd
 from tests.support.mock import MagicMock, patch
 

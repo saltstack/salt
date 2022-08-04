@@ -5,6 +5,7 @@ Test for ssh_pre_flight roster option
 import os
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import SSHCase
 from tests.support.runtests import RUNTIME_VARS

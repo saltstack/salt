@@ -1,6 +1,7 @@
 import shutil
 
 import pytest
+
 import salt.loader
 import salt.roster.ansible as ansible
 from tests.support.mock import patch

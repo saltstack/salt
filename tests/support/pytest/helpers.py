@@ -19,10 +19,11 @@ from contextlib import contextmanager
 import _pytest._version
 import attr
 import pytest
-import salt.utils.platform
-import salt.utils.pycrypto
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.platform
+import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -734,7 +735,7 @@ class EntropyGenerator:
                         "-out",
                         target_file.name,
                         "-base64",
-                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                        str(int(2**30 * 3 / 4)),  # 1GB
                     ],
                     shell=False,
                     check=True,

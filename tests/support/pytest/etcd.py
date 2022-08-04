@@ -4,8 +4,9 @@ import time
 import pytest
 import requests
 import requests.exceptions
-from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3
 from saltfactories.utils import random_string
+
+from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3
 
 
 class EtcdVersion(enum.Enum):

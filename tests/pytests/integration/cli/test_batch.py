@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.utils.platform
 
 pytestmark = [
