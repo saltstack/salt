@@ -4,6 +4,7 @@
 import textwrap
 
 import pytest
+
 import salt.modules.mac_brew_pkg as mac_brew
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError

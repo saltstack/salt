@@ -7,14 +7,14 @@ Salt 3005 release notes - Codename Phosphorus
 Salt 3005 is currently under development.
 
 
-Python 3.5 and 3.6 Deprecation
+Python 3.5 and 3.6 deprecation
 ------------------------------
 
 This will be the last release we will support Python versions 3.5 and 3.6.
 In Salt release 3006, we will only support Python versions 3.7 and higher.
 Going forward, our policy will be to align with Python's supported versions.
 
-OS Support End of Life
+OS support end of life
 ----------------------
 Debian and Raspbian 9 are now EOL, therefore we will no longer be building
 packages for these platforms.
@@ -29,73 +29,81 @@ https://saltproject.io/salt-project-announces-the-open-sourcing-of-several-salts
 New packages available
 ----------------------
 
-With the release of Salt 3005, we are pleased to announce the
-new packages using Tiamat and pyinstaller are now out of beta
-and ready for production. These new packages are self-contained
-binaries of Salt, which includes the version of Python needed by Salt
-and the required dependencies of Salt. The Tiamat packages allow users
-to use Salt without Python being installed on the box.
+With the release of Salt 3005, we are pleased to announce the new onedir
+packages using pyinstaller are now out of beta and ready for production. These
+new packages make the installation process easier. Onedir packages install Salt
+with one directory that includes all the executables Salt needs to run
+effectively, including the version of Python and the required dependencies that
+Salt needs. These packages make it easier to use Salt out of the box without
+installing Python first.
 
-Any new OS platforms we support going forward from version 3005 will only
-include Tiamat packages. For this release, this includes Redhat 9 and Ubuntu 22.04.
+Going forward, any new OS platforms supported by the Salt Project from version
+3005 can only be installed using onedir packages. For this release, this
+includes Redhat 9, Ubuntu 22.04, and Photon OS 3. The Salt Project will phase
+out the old ("classic") Salt package builds for currently supported operating
+systems by 3006. See
+`Upgrade to onedir <https://docs.saltproject.io/salt/install-guide/en/latest/topics/upgrade-to-onedir.html>`_
+for more information.
 
-On the day of the Phosphorus release, the instructions on how to install the
-new Tiamat packages will be available on https://repo.saltproject.io for each
-platform. If you want to test out the packages today you can install them
-from https://repo.saltproject.io/salt-dev/py3/ using the correct directory
+On the day of the Phosphorus release, the onedir packages will be available on
+https://repo.saltproject.io for each platform. The instructions for installing
+onedir packages and the classic packages will be available on the new
+`Salt Install Guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
+
+If you want to test out the packages today, you can install them from
+https://repo.saltproject.io/salt-dev/py3/ using the correct directory
 for your platform. If you find any issues with the packages, please open an
 issue on this repo: https://gitlab.com/saltstack/open/salt-pkg
 
 
-Non-Tiamat packaging support
-----------------------------
-The non-Tiamat packaging system previously used for Salt will also be provided
-for platforms supported in previous Salt versions. The non-Tiamat packaging will
-only be avilable for two more releases. Please see the :ref:`release-3006` notes for more
-details on the availablility of Non-Tiamat packaging for the 3006 release.
-The 3007 release and those going forward will only provide the Tiamat packages.
+Classic, non-onedir packaging support
+-------------------------------------
+The classic, non-onedir packaging system previously used for Salt will also be
+provided for platforms supported in previous Salt versions. The classic
+packaging will only be available for the 3005 release. The 3006 release and
+all releases going forward will only provide the onedir packages.
 
 Platform package support
 ------------------------
 
-+--------------+---------------------+---------------------+
-|     OS       | New Tiamat Packages | Non-Tiamat Packages |
-+==============+=====================+=====================+
-| RHEL 7       |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| RHEL 8       |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| RHEL 9       |         yes         |        no           |
-+--------------+---------------------+---------------------+
-| Ubuntu 18.04 |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Ubuntu 20.04 |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Ubuntu 22.04 |         yes         |        no           |
-+--------------+---------------------+---------------------+
-| Debian 10    |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Debian 11    |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Raspbian 10  |         no          |        yes          |
-+--------------+---------------------+---------------------+
-| Raspbian 11  |         no          |        yes          |
-+--------------+---------------------+---------------------+
-| Fedora 35    |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Fedora 36    |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| MacOS        |         yes         |        yes          |
-+--------------+---------------------+---------------------+
-| Windows      |         yes         |        yes          |
-+--------------+---------------------+---------------------+
++--------------+---------------------+------------------------------+
+|     OS       | New onedir packages | Classic, non-onedir packages |
++==============+=====================+==============================+
+| RHEL 7       |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| RHEL 8       |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| RHEL 9       |         yes         |        no                    |
++--------------+---------------------+------------------------------+
+| Ubuntu 18.04 |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| Ubuntu 20.04 |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| Ubuntu 22.04 |         yes         |        no                    |
++--------------+---------------------+------------------------------+
+| Debian 10    |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| Debian 11    |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| Raspbian 10  |         no          |        yes                   |
++--------------+---------------------+------------------------------+
+| Raspbian 11  |         no          |        yes                   |
++--------------+---------------------+------------------------------+
+| Fedora 35    |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| Fedora 36    |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| MacOS        |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
+| Windows      |         yes         |        yes                   |
++--------------+---------------------+------------------------------+
 
 
 Repo paths
 ----------
 
 +----------+-----------------------------------------------+-----------------------------------------+
-|     OS   | Tiamat Path                                   | Non-Tiamat Path                         |
+|     OS   | Onedir path                                   | Classic, Non-onedir path                |
 +==========+===============================================+=========================================+
 | RHEL     | https://repo.saltproject.io/salt/py3/redhat/  | https://repo.saltproject.io/py3/redhat/ |
 +----------+-----------------------------------------------+-----------------------------------------+
@@ -112,22 +120,25 @@ Repo paths
 | Windows  | https://repo.saltproject.io/salt/py3/windows/ |  https://repo.saltproject.io/windows/   |
 +----------+-----------------------------------------------+-----------------------------------------+
 
-Note that the Tiamat paths above will not be available until the day of the Phosphorus release.
+Note that the onedir paths above will not be available until the day of the
+Phosphorus release.
 
 
-How do I migrate to the Tiamat packages?
+How do I migrate to the onedir packages?
 ----------------------------------------
-The migration path from the non-Tiamat packages to the Tiamat packages will include:
+The migration path from the classic, non-onedir packages to the onedir packages
+will include:
 
-* Repo File: You need to update your repo file to point to the new repo paths for your platform. After the repo
-  file is updated, upgrade your Salt packages.
-* Pip packages: You need to ensure any 3rd party pip packages are installed in the correct Tiamat path.
-  This can be accomplished in two ways:
+* Repo File: You need to update your repo file to point to the new repo paths
+  for your platform. After the repo file is updated, upgrade your Salt packages.
+* Pip packages: You need to ensure any 3rd party pip packages are installed in
+  the correct onedir path. This can be accomplished in two ways:
 
   * ``salt-pip install <package name>``
   * Using the ``pip.installed`` Salt state.
 
-To install python packages into the system python environment, user's must now provide the ``pip_bin`` or ``bin_env`` to the pip state module.
+To install python packages into the system python environment, users must now
+provide the ``pip_bin`` or ``bin_env`` to the pip state module.
 
 For example:
 
@@ -139,6 +150,24 @@ For example:
     lib-bar:
       pip.installed:
         - bin_env: /usr/bin/python3
+
+
+Known issues
+------------
+To make use of Salt 3005 or later on a Salt master connected to SaltStack
+Config, you must use SaltStack Config version 8.9.0 or later.
+
+The root cause of the issue is a breaking change to
+``AsyncClient._proc_function()``` in Salt, which is the function that the
+raas-master uses to run ``salt-run`` commands. As this is a private API, there's
+no expectation that the API should remain backward-compatible.
+
+It is recommended to upgrade SaltStack Config before upgrading your Salt
+masters. However, if a Salt master is upgraded to version 3005 before
+upgrading SaltStack Config, the upgrade can still be completed.
+
+After upgrading SaltStack Config, including the SSC plugin on each Salt master,
+restart the Salt masters.
 
 
 Removed
@@ -418,8 +447,8 @@ Added
 - Add Etag support for archive.extracted web sources (#61763)
 - Add regex exclusions, full path matching, symlink following, and mtime/ctime comparison to file.tidied (#61823)
 - Add better handling for unit abbreviations and large values to salt.utils.stringutils.human_to_bytes (#61831)
-- Provide PyInstaller hooks that provide some runtime adjustments when Salt is running from a Tiamat(PyInstaller) bundled package. (#61864)
-- Add configurable tiamat pip pypath location (#61937)
+- Provide PyInstaller hooks that provide some runtime adjustments when Salt is running from a onedir (PyInstaller) bundled package. (#61864)
+- Add configurable onedir pip pypath location (#61937)
 - Add CNAME record support to the dig exec module (#61991)
 - Added support for changed user object in Zabbix 5.4+
   Added compatibility with Zabbix 4.0+ for `zabbix.user_getmedia` method

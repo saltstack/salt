@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.macdefaults as macdefaults
 from tests.support.mock import MagicMock, patch
 

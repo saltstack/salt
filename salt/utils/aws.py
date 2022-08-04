@@ -68,7 +68,7 @@ def sleep_exponential_backoff(attempts):
     A failure rate of >10% is observed when using the salt-api with an asynchronous client
     specified (runner_async).
     """
-    time.sleep(random.uniform(1, 2 ** attempts))
+    time.sleep(random.uniform(1, 2**attempts))
 
 
 def creds(provider):

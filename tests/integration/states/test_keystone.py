@@ -5,6 +5,7 @@ Tests for the Keystone states
 import logging
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf

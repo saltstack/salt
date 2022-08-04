@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.event
 from salt.netapi.rest_tornado import saltnado
 from tests.support.events import eventpublisher_process

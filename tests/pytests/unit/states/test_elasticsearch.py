@@ -2,6 +2,7 @@
     :codeauthor: Lukas Raska <lukas@raska.me>
 """
 import pytest
+
 import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import CommandExecutionError
 from salt.states import elasticsearch

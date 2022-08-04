@@ -16,8 +16,9 @@ import difflib
 import json
 import logging
 
-import salt.utils.odict
 import yaml
+
+import salt.utils.odict
 
 log = logging.getLogger(__file__)
 

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.powerpath as powerpath
 from tests.support.mock import MagicMock, patch
 

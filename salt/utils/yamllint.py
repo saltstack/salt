@@ -1,9 +1,10 @@
 import logging
 
-import salt.utils.stringutils
 import yamllint
 from yamllint import linter
 from yamllint.config import YamlLintConfig
+
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 

@@ -3,6 +3,7 @@ import random
 import string
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_lambda as boto_lambda

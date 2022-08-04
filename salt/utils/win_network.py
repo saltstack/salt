@@ -33,6 +33,7 @@ if IS_WINDOWS:
     USE_WMI = StrictVersion(platform.version()) < StrictVersion("6.2")
     if USE_WMI:
         import wmi
+
         import salt.utils.winapi
     else:
         import clr

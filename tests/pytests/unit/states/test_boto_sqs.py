@@ -4,6 +4,7 @@
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_sqs as boto_sqs

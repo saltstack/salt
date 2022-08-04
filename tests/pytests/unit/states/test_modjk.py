@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.modjk as modjk
 
 
