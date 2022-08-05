@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.file as filemod
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
