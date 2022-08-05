@@ -517,12 +517,24 @@ def change(connect_spec, dn, before, after):
     an entry, determines the differences between the two, computes directives
     based on the differences, and executes the directives.
 
-    Any attribute value present in ``before`` but missing in ``after`` is
-    deleted. Any attribute value present in ``after`` but missing in ``before``
-    is added. Any attribute value in the database that is not mentioned in
-    either ``before`` or ``after`` is not altered. Any attribute value that is
-    present in both ``before`` and ``after`` is ignored, regardless of whether
-    that attribute value exists in the database.
+    The directives are computed as follows:
+
+    * If an attribute name is present in ``before`` but missing or mapped to a
+      zero-length iterable of values in ``after``, the attribute is deleted
+      (regardless of whether the values in the database match the values in
+      ``before``).
+
+    * Otherwise, if some values are present in ``before`` but missing from
+      ``after`` and some values are present in ``after`` but missing from
+      ``before``, all of the attribute's values are replaced with the values in
+      ``after`` (regardless of whether the values in the database match the
+      values in ``before``).
+
+    * Otherwise, if some values are present in ``before`` but missing from
+      ``after``, those specific values are deleted.
+
+    * Otherwise, if some values are present in ``after`` but missing from
+      ``before``, those specific values are added.
 
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
@@ -558,19 +570,39 @@ def change(connect_spec, dn, before, after):
             "before={'example_value': ['before_val']}" \
             "after={'example_value': ['after_val']}"
     """
-    l = connect(connect_spec)
-    before = {
-        attr: AttributeValueSet(attr, vals).encode()
-        for attr, vals in before.items()
-    }
-    after = {
-        attr: AttributeValueSet(attr, vals).encode()
-        for attr, vals in after.items()
-    }
-    modlist = ldap.modlist.modifyModlist(before, after)
+    # This function could instead use `ldap.modlist.modifyModlist()` to build a
+    # modlist from `before` and `after`, but the behavior of that function is
+    # unfortunate: When adding attribute values, the modlist that function
+    # returns first deletes the attribute then adds it back with the
+    # original+new values. This is problematic for certain OpenLDAP `cn=config`
+    # entries where adding and removing values triggers behavioral changes
+    # (e.g., `olcModuleLoad` in `cn=module{0},cn=config`).
 
-    try:
-        l.c.modify_s(dn, modlist)
-    except ldap.LDAPError as e:
-        _convert_exception(e)
-    return True
+    # Don't encode the values here -- modify() will encode them for us.
+    before = {attr: AttributeValueSet(attr, vals) for attr, vals in before.items()}
+    after = {attr: AttributeValueSet(attr, vals) for attr, vals in after.items()}
+    directives = []
+    for attr, before_vals in before.items():
+        after_vals = after.get(attr, AttributeValueSet(attr))
+        if not after_vals:
+            directives.append(("delete", attr, ()))
+            continue
+        only_in_before = before_vals - after_vals
+        only_in_after = after_vals - before_vals
+        if only_in_before:
+            if only_in_after:
+                directives.append(("replace", attr, after_vals))
+            else:
+                directives.append(("delete", attr, only_in_before))
+        else:
+            if only_in_after:
+                directives.append(("add", attr, only_in_after))
+            else:
+                # Nothing to do for this attribute because they already match.
+                assert before_vals == after_vals
+    for attr, after_vals in after.items():
+        if attr in before or not after_vals:
+            # Either already handled above or nothing to add.
+            continue
+        directives.append(("add", attr, after_vals))
+    return modify(connect_spec, dn, directives)

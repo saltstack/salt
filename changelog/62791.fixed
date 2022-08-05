@@ -4,6 +4,9 @@ Improvements to `salt.state.ldap` and `salt.modules.ldap3`:
   * The order of an attribute's values is now ignored when checking value
     equality, as required by RFC 4511.
   * Fixed attribute value encoding/decoding corner cases.
+  * Worked around a flaw in the way `python-ldap` adds new attribute values (the
+    flaw only affects entries where attribute value changes can trigger server
+    behavior changes, such as some of OpenLDAP's `cn=config` entries).
   * Fixed support for `bytes` attribute values that are not in a list.
   * Documentation improvements.
   * Miscellaneous code cleanups.
