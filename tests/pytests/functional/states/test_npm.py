@@ -90,7 +90,7 @@ def test_npm_install_url_referenced_package(modules, npm, npm_version, states):
     """
     ret = npm.installed(
         name="request/request#v2.88.2",
-        registry="http://registry.npmjs.org/",
+        registry="https://registry.npmjs.org/",
     )
     assert ret.result is True
     ret = npm.removed(
@@ -108,7 +108,7 @@ def test_npm_installed_pkgs(npm):
     ret = npm.installed(
         name="unused",
         pkgs=["pm2@5.1.0", "grunt@1.5.3"],
-        registry="http://registry.npmjs.org/",
+        registry="https://registry.npmjs.org/",
     )
     assert ret.result is True
 
