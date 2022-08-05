@@ -1,3 +1,4 @@
 Improvements to `salt.state.ldap` and `salt.modules.ldap3`:
   * Fixed support for `bytes` attribute values that are not in a list.
   * Documentation improvements.
+  * Miscellaneous code cleanups.
