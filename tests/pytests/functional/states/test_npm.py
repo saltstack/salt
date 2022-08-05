@@ -107,7 +107,7 @@ def test_npm_installed_pkgs(npm):
     """
     ret = npm.installed(
         name="unused",
-        pkgs=["pm2@2.10.4", "grunt@1.0.2"],
+        pkgs=["pm2@5.1.0", "grunt@1.5.3"],
         registry="http://registry.npmjs.org/",
     )
     assert ret.result is True
