@@ -56,7 +56,7 @@ fixlibs_linux() {
             echo "Preserving existing rpath.."
             RPATH="$ORIG_RPATH:\$ORIGIN:\$ORIGIN/$RELLIBSDIR"
           fi
-          patchelf --set-rpath $RPATH $shlib
+          patchelf --force-rpath --set-rpath $RPATH $shlib
           SEENLIBS+=($shlib)
       else
           echo "Already processed $shlib"
