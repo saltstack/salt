@@ -27,10 +27,8 @@ __virtualname__ = "pkg"
 
 def __virtual__():
     """
-    Confine this module to Mac OS with Homebrew.
+    Confine this module to any OS with Homebrew.
     """
-    if __grains__["os"] != "MacOS":
-        return False, "brew module is macos specific"
     if not salt.utils.path.which("brew"):
         return False, "The 'brew' binary was not found"
     return __virtualname__
@@ -166,7 +164,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     )
 
     for package in package_info["formulae"]:
-        # Brew allows multiple versions of the same package to be installed.
+        # Brew allows multiple versions of the same formula to be installed.
         # Salt allows for this, so it must be accounted for.
         pkg_versions = [v["version"] for v in package["installed"]]
         # Brew allows for aliasing of packages, all of which will be
@@ -350,6 +348,7 @@ def _info(*pkgs):
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
+    ret = {}
     output = salt.utils.json.loads(brew_result["stdout"])
 
     meta_info = {"formulae": ["name", "full_name"], "casks": ["token", "full_token"]}
@@ -366,6 +365,33 @@ def _info(*pkgs):
                     pkgs_info[_pkg[key]] = _pkg
 
     return pkgs_info
+
+
+def _info_installed(*pkgs):
+    """
+    Get all info brew can provide about a list of installed packages.
+
+    Does not do any kind of processing, so the format depends entirely on
+    the output brew gives. This may change if a new version of the format is
+    requested.
+
+    On failure, returns an empty dict and logs failure.
+    On success, returns a dict mapping each item in pkgs to its corresponding
+    object in the output of 'brew info'.
+    """
+    brew_result = _call_brew("info", "--installed", "--json=v2")
+    if brew_result["retcode"]:
+        log.error("Failed to get info about installed packages: %s", " ".join(pkgs))
+        return {}
+    ret = {}
+    output = salt.utils.json.loads(brew_result["stdout"])
+    for pkg in output["formulae"]:
+        if "full_name" in pkg and (pkg["full_name"] in pkgs or pkg["name"] in pkgs):
+            ret[pkg["full_name"]] = pkg
+        if "full_token" in pkg and (pkg["full_token"] in pkgs or pkg["token"] in pkgs):
+            ret[pkg["full_token"]] = pkg
+
+    return ret
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
@@ -490,7 +516,7 @@ def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disab
     if refresh:
         refresh_db()
 
-    res = _call_brew("outdated", "--json=v2")
+    res = _call_brew("outdated", "--json=v2", "--greedy")
     ret = {}
 
     try:
@@ -586,8 +612,7 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
     """
-    return _info(*names)
-
+    return _info_installed(*names)
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     """
