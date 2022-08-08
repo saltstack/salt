@@ -219,7 +219,7 @@ pyasn1==0.4.8
     #   -r requirements/windows.txt
     #   pyasn1-modules
     #   rsa
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi

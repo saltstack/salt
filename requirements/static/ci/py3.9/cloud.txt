@@ -681,8 +681,11 @@ pyasn1==0.4.8
     #   pyasn1-modules
     #   rsa
     #   smbprotocol
-pycparser==2.19
-    # via cffi
+pycparser==2.21 ; python_version >= "3.9"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/linux.in
+    #   cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pycurl==7.44.1 ; python_version <= "3.9"
