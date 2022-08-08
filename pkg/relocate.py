@@ -131,29 +131,44 @@ def handle_macho(path, root_dir):
                 log.info("Changed %s to %s in %s", x, z, path)
     return obj
 
+def is_in_dir(filepath, directory):
+    return os.path.realpath(filepath).startswith(
+        os.path.realpath(directory) + os.sep)
 
-def handle_elf(path, root):
+def handle_elf(path, libs, root=None):
+    if root is None:
+        root = libs
     proc = subprocess.run(['ldd', path], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     needs_rpath = False
     for line in proc.stdout.decode().splitlines():
         if line.find("=>") == -1:
             continue
-        lib_name, lib_location = [_.strip() for _ in  line.split("=>", 1)]
-        if lib_location == "not found":
+
+        lib_name, location_info = [_.strip() for _ in  line.split("=>", 1)]
+        if location_info == "not found":
+            #XXX This could be considered an error
             log.warning("Unable to find library %s linked from %s", lib_name, path)
             continue
-        linked_lib = line.split("=>")[-1].split()[0].strip()
+
+        linked_lib = location_info.rsplit(' ', 1)[0].strip()
         lib_basename = os.path.basename(linked_lib)
+
         if lib_basename in LIBCLIBS:
             log.debug("Skipping glibc lib %s", lib_basename)
             continue
-        relocated_path = os.path.join(root, lib_basename)
+
+        if is_in_dir(linked_lib, root):
+            #XXX Validate the rpath of the elf points to this file's location
+            # and if not add it.
+            log.warning("Skip file already within root directory: %s", linked_lib)
+            continue
+
+        relocated_path = os.path.join(libs, lib_basename)
+
         if os.path.exists(relocated_path):
             log.debug("Relocated library exists: %s", relocated_path)
-            # Check hashes?
+            #XXX Check hashes?
         else:
-            if linked_lib == "not":
-                print(line)
             log.info("Copy %s to %s", linked_lib, relocated_path)
             shutil.copy(linked_lib, relocated_path)
             shutil.copymode(linked_lib, relocated_path)
@@ -161,7 +176,7 @@ def handle_elf(path, root):
 
     if needs_rpath:
         relpart = os.path.relpath(
-            root, os.path.dirname(path)
+            libs, os.path.dirname(path)
         )
         if relpart == '.':
             relpath = "$ORIGIN"
@@ -202,7 +217,7 @@ def main():
                         found = True
                 elif is_elf(path):
                     log.info("Found ELF %s", path)
-                    handle_elf(path, libs_dir)
+                    handle_elf(path, libs_dir, root_dir)
 
 
 if __name__ == "__main__":
