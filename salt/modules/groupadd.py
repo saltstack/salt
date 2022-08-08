@@ -209,8 +209,10 @@ def _chattrib(name, key, value, param, root=None):
     return info(name, root=root).get(key) == value
 
 
-def chgid(name, gid, root=None):
+def chgid(name, gid, root=None, non_unique=False):
     """
+    .. versionchanged:: 3006.0
+
     Change the gid for a named group
 
     name
@@ -222,13 +224,21 @@ def chgid(name, gid, root=None):
     root
         Directory to chroot into
 
+    non_unique
+        Allow modifying groups with duplicate (non-unique) GIDs
+
+        .. versionadded:: 3006.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.chgid foo 4376
     """
-    return _chattrib(name, "gid", gid, "-g", root=root)
+    param = "-g"
+    if non_unique:
+        param = "-og"
+    return _chattrib(name, "gid", gid, param, root=root)
 
 
 def adduser(name, username, root=None):

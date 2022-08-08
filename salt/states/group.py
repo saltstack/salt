@@ -205,7 +205,7 @@ def present(
 
         for key, val in changes.items():
             if key == "gid":
-                __salt__["group.chgid"](name, gid)
+                __salt__["group.chgid"](name, gid, non_unique=non_unique)
                 continue
             if key == "addusers":
                 for user in val:
