@@ -29,6 +29,11 @@ Removed
     - tplfile: When using tplfile in a SLS file in the root directory of file roots it returns empty. Now it returns the filename. (#61697)
 - Remove SaltMessageServer.shutdown in favor of close.
   Remove LoadBalancerWorker.stop in favor of close. (#61698)
+- Removed the PyObjC dependency.
+
+  This addresses problems with building a one dir build for macOS.
+  It became problematic because depending on the macOS version, it pulls different dependencies, and we would either have to build a macos onedir for each macOS supported release, or ship a crippled onedir(because it would be tied to the macOS version where the onedir was built).
+  Since it's currently not being used, it's removed. (#62432)
 
 
 Deprecated
@@ -243,6 +248,11 @@ Fixed
 - Fix variable reuse causing requisite_in problems (#62264)
 - Adding -G option to pkgdd cmd_prefix list when current_zone_only is True. (#62206)
 - Don't expect ``lsof`` to be installed when trying check which minions are connected. (#62303)
+- Added a pyinstaller hook that traverses the python used on the tiamat package to add all possible modules as hidden imports. (#62362)
+- Fix use of random shuffle and sample functions as Jinja filters (#62372)
+- All of the requirements provided in the requirements files are now included. The job of evaluating platform markers is not Salt's it's pip's. (#62392)
+- Update all platforms to use pycparser 2.21 or greater for Py 3.9 or higher, fixes fips fault with openssl v3.x (#62400)
+- Due to changes in the Netmiko library for the exception paths, need to check the version of Netmiko python library and then import the exceptions from different locations depending on the result. (#62405)
 
 
 Added
@@ -301,6 +311,7 @@ Added
   * Fix issues when processing inventory and there are groups with no members.
   * Allow new types of targets for Ansible roster (#60056)
 - Add sample and shuffle functions from random (#62225)
+- Add "<tiamat> python" subcommand to allow execution or arbitrary scripts via bundled Python runtime (#62381)
 
 
 Salt 3004.2 (2022-05-12)
