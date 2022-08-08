@@ -1,5 +1,5 @@
 include config.mk
-UNAME_S := $(shell uname -s)
+UNAME_S := $(shell uname -s | tr A-Z a-z)
 PYTHON_VERSION ?= 3.8.13
 PY_SUFFIX ?= $(shell echo $(PYTHON_VERSION) | sed -r 's/([0-9]+)(\.[0-9]+)(\.[0-9]+)/\1\2/')
 TARGET_DIRNAME := $(shell dirname $(TARGET_DIR))
@@ -8,13 +8,14 @@ TARGET_BASENAME := $(shell basename $(TARGET_DIR))
 SALT_VERSION = $(shell $(TARGET_DIR)/salt --version | awk '{ print $$2 }')
 ARCH := $(shell uname -m)
 
-ifeq ($(UNAME_S), Darwin)
+ifeq ($(UNAME_S), darwin)
   PKG_CONFIG = export PKG_CONFIG_PATH="$(shell brew --prefix tcl-tk)/lib/pkgconfig"
   PY_CONFIG := --with-openssl=$(shell brew --prefix openssl) --with-tcltk-libs="$(shell pkg-config --libs tcl tk)" --with-tcltk-includes="$(shell pkg-config --cflags tcl tk)"
   PY_MAKE_ENV := PKG_CONFIG_PATH="$(brew --prefix tcl-tk)/lib/pkgconfig"
 else
   PY_MAKE_ENV := LDFLAGS="-Wl,--as-needed"
 endif
+
 
 .PHONY: all requirements onedir clean $(SCRIPTS) download_python python
 
@@ -61,7 +62,7 @@ $(SCRIPTS_DIR)/salt-pip: $(TARGET_DIR)/bin/python$(PY_SUFFIX) $(TARGET_DIR)/.one
 $(SCRIPTS_DIR)/salt: $(SCRIPTS_DIR)/salt-pip
 	$(SCRIPTS_DIR)/salt-pip install wheel
 	$(SCRIPTS_DIR)/salt-pip install .
-	$(SCRIPTS_DIR)/salt-pip install -r $(PWD)/requirements/static/pkg/py$(PY_SUFFIX)/linux.txt
+	$(SCRIPTS_DIR)/salt-pip install -r $(PWD)/requirements/static/pkg/py$(PY_SUFFIX)/$(UNAME_S).txt
 
 $(SCRIPTS): $(SCRIPTS_DIR)/salt
 	mv $(TARGET_DIR)/bin/$@ $(SCRIPTS_DIR);
@@ -71,7 +72,8 @@ $(TARGET_DIR)/.onedir:
 	touch $(TARGET_DIR)/.onedir
 
 fixlibs:
-	pkg/fixlibs.sh $(TARGET_DIR)/lib
+	python3 ./pkg/relocate.py
+
 
 $(TARGET_DIR)/install-salt:
 	cp $(PWD)/scripts/install-salt $(SCRIPTS_DIR)/install-salt
