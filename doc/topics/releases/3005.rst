@@ -413,6 +413,7 @@ Fixed
 - Fix variable reuse causing requisite_in problems (#62264)
 - Adding -G option to pkgdd cmd_prefix list when current_zone_only is True. (#62206)
 - Don't expect ``lsof`` to be installed when trying check which minions are connected. (#62303)
+- Fixed urlparse typo in rpmbuild_pkgbuild.py (#62442)
 
 
 Added
