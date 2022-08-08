@@ -253,6 +253,7 @@ Fixed
 - All of the requirements provided in the requirements files are now included. The job of evaluating platform markers is not Salt's it's pip's. (#62392)
 - Update all platforms to use pycparser 2.21 or greater for Py 3.9 or higher, fixes fips fault with openssl v3.x (#62400)
 - Due to changes in the Netmiko library for the exception paths, need to check the version of Netmiko python library and then import the exceptions from different locations depending on the result. (#62405)
+- Fixed urlparse typo in rpmbuild_pkgbuild.py (#62442)
 
 
 Added
