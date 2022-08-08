@@ -15,18 +15,10 @@ ifeq ($(UNAME_S), darwin)
   SED_OPTS := -i ''
 else
   PY_MAKE_ENV := LDFLAGS="-Wl,--as-needed"
-<<<<<<< HEAD
+  PY_CONFIG := --with-openssl=$(TARGET_DIR)/depend/ssl -C
   SED_OPTS := -i
 endif
 
-
-.PHONY: all requirements onedir clean $(SCRIPTS) download_python python
-=======
-  PY_CONFIG := --with-openssl=$(TARGET_DIR)/depend/ssl -C
-endif
-
-.PHONY: all requirements onedir clean $(SCRIPTS) download_python python openssl
->>>>>>> 05219095e7 (Add openssl build dependency and require that openssl to build python)
 
 all: $(SCRIPTS_DIR)/salt
 
