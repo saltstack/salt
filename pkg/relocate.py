@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 
 
 LIBCLIBS=[
+   "linux-vdso.so.1",
    "libc.so.6",
    "librt.so.1",
    "libm.so.6",
@@ -153,8 +154,8 @@ def handle_elf(path, libs, root=None):
         linked_lib = location_info.rsplit(' ', 1)[0].strip()
         lib_basename = os.path.basename(linked_lib)
 
-        if lib_basename in LIBCLIBS:
-            log.debug("Skipping glibc lib %s", lib_basename)
+        if lib_name in LIBCLIBS:
+            log.debug("Skipping glibc lib %s", lib_name)
             continue
 
         if is_in_dir(linked_lib, root):
