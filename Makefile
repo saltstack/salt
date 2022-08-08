@@ -10,7 +10,7 @@ ARCH := $(shell uname -m)
 
 ifeq ($(UNAME_S), darwin)
   PKG_CONFIG = export PKG_CONFIG_PATH="$(shell brew --prefix tcl-tk)/lib/pkgconfig"
-  PY_CONFIG := --with-openssl=$(shell brew --prefix openssl) --with-tcltk-libs="$(shell pkg-config --libs tcl tk)" --with-tcltk-includes="$(shell pkg-config --cflags tcl tk)"
+  PY_CONFIG := --with-openssl=$(shell brew --prefix openssl@1.1) --with-tcltk-libs="$(shell pkg-config --libs tcl tk)" --with-tcltk-includes="$(shell pkg-config --cflags tcl tk)"
   PY_MAKE_ENV := PKG_CONFIG_PATH="$(brew --prefix tcl-tk)/lib/pkgconfig"
   SED_OPTS := -i ''
 else
