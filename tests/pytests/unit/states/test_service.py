@@ -34,6 +34,7 @@ def configure_loader_modules():
             "__low__": {},
             "__utils__": {},
             "__context__": {},
+            "__grains__": {},
         },
         beaconstate: {"__salt__": {}, "__opts__": {}},
         beaconmod: {"__salt__": {}, "__opts__": {}},
@@ -744,3 +745,17 @@ def test_running_with_reload():
     finally:
         if post_srv_disable:
             modules["service.disable"](service_name)
+
+
+@pytest.mark.parametrize(
+    "action", ["running", "dead", "disabled", "enabled", "masked", "unmasked"]
+)
+def test_chroot_ignore(action):
+    func = getattr(service, action)
+    with patch.dict(service.__grains__, {"virtual_subtype": "chroot"}):
+        ret = func("salt", chroot_ignore=True)
+        assert ret["result"] is None
+        assert (
+            ret["comment"]
+            == "Running in chroot and chroot_ignore is True. Nothing to do."
+        )

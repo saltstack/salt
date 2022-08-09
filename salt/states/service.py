@@ -127,6 +127,18 @@ def _enabled_used_error(ret):
     return ret
 
 
+def _chroot_noop(ret):
+    """
+    Take no action if running in chroot
+    """
+    msg = "Running in chroot and chroot_ignore is True. Nothing to do."
+    if __opts__.get("test"):
+        log.info(msg)
+    ret["result"] = None
+    ret["comment"] = msg
+    return ret
+
+
 def _enable(name, started, result=True, **kwargs):
     """
     Enable the service
@@ -377,8 +389,12 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, init_delay=None, **kwargs):
+def running(
+    name, enable=None, sig=None, init_delay=None, chroot_ignore=False, **kwargs
+):
     """
+    .. versionchanged:: 3006.0
+
     Ensure that the service is running
 
     name
@@ -399,6 +415,16 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         number of seconds after a service has started before returning. Useful
         for requisite states wherein a dependent state might assume a service
         has started but is not yet fully initialized.
+
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
 
     no_block : False
         **For systemd minions only.** Starts the service using ``--no-block``.
@@ -455,6 +481,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, str):
         enable = salt.utils.data.is_true(enable)
+
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+        return _chroot_noop(ret)
 
     if _offline():
         ret["result"] = True
@@ -607,8 +637,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     return ret
 
 
-def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
+def dead(name, enable=None, sig=None, init_delay=None, chroot_ignore=False, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Ensure that the named service is dead by stopping the service if it is running
 
     name
@@ -627,6 +659,16 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         is killed.
 
         .. versionadded:: 2017.7.0
+
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
 
     no_block : False
         **For systemd minions only.** Stops the service using ``--no-block``.
@@ -655,6 +697,10 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, str):
         enable = salt.utils.data.is_true(enable)
+
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+        return _chroot_noop(ret)
 
     if _offline():
         ret["result"] = True
@@ -768,8 +814,10 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     return ret
 
 
-def enabled(name, **kwargs):
+def enabled(name, chroot_ignore=False, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Ensure that the service is enabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
     enable a running service to use the enable: True option for the running
@@ -777,11 +825,25 @@ def enabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # used to let execution modules know which service state is being run.
     __context__["service.state"] = "enabled"
+
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+        return _chroot_noop(ret)
 
     ret.update(_enable(name, None, **kwargs))
     if __opts__.get("test") and ret.get(
@@ -795,8 +857,10 @@ def enabled(name, **kwargs):
     return ret
 
 
-def disabled(name, **kwargs):
+def disabled(name, chroot_ignore=False, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Ensure that the service is disabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
     disable a service to use the enable: False option for the running or dead
@@ -804,19 +868,34 @@ def disabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # used to let execution modules know which service state is being run.
     __context__["service.state"] = "disabled"
 
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+        return _chroot_noop(ret)
+
     ret.update(_disable(name, None, **kwargs))
     return ret
 
 
-def masked(name, runtime=False):
+def masked(name, runtime=False, chroot_ignore=False):
     """
     .. versionadded:: 2017.7.0
+    .. versionchanged:: 3006.0
 
     .. note::
         This state is only available on minions which use systemd_.
@@ -856,8 +935,22 @@ def masked(name, runtime=False):
 
     .. _systemd: https://freedesktop.org/wiki/Software/systemd/
 
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
+
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+        return _chroot_noop(ret)
 
     if "service.masked" not in __salt__:
         ret["comment"] = "Service masking not available on this minion"
@@ -896,9 +989,10 @@ def masked(name, runtime=False):
         return ret
 
 
-def unmasked(name, runtime=False):
+def unmasked(name, runtime=False, chroot_ignore=False):
     """
     .. versionadded:: 2017.7.0
+    .. versionchanged:: 3006.0
 
     .. note::
         This state is only available on minions which use systemd_.
@@ -922,8 +1016,22 @@ def unmasked(name, runtime=False):
 
     .. _systemd: https://freedesktop.org/wiki/Software/systemd/
 
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
+
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+        return _chroot_noop(ret)
 
     if "service.masked" not in __salt__:
         ret["comment"] = "Service masking not available on this minion"
