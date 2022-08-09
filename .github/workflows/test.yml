@@ -1,0 +1,193 @@
+name: Test Artifact
+
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        required: true
+        type: string
+        description: The workflow run ID from where to pull the artifact
+      run_number:
+        required: true
+        type: string
+        description: The workflow run ID number from where to pull the artifact
+      trigger_workflow:
+        required: true
+        type: string
+      artifact_name:
+        required: true
+        type: string
+        default: Salt Onedir X86_64
+        description: The artifact name to download
+      vagrant_box_name:
+        required: true
+        type: string
+        default: salt-project-ci/debian-11
+        description: The vagrant Box name to use to run tests
+
+
+jobs:
+
+  dependencies:
+    name: Setup Python Dependencies
+    runs-on: macos-12
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Cache nox.tar.xz
+      uses: actions/cache@v3
+      with:
+        path: nox.tar.xz
+        key: deps||${{ inputs.vagrant_box_name }}||${{ hashFiles('noxfile.py', 'requirements/**/*.txt') }}
+
+    - name: Install macOS Dependencies
+      run: |
+        brew install gnu-sed
+
+    - name: PyPi Proxy
+      run: |
+        gsed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+
+    - name: Show Vagrant Information
+      run: |
+        vagrant --version
+        vagrant plugin list
+        echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
+
+    - name: Cache Vagrant boxes and plugins
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.vagrant.d/boxes
+          ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
+        key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant_box_name }}|${{ hashFiles('Vagrantfile') }}
+
+    - name: Spin up VM
+      run: |
+        vagrant up ${{ inputs.vagrant_box_name }}
+
+    - name: Decompress .nox/
+      run: |
+        if [ -f nox.tar.xz ]; then
+          vagrant ssh --tty --color -c 'cd /vagrant; sudo tar xpf nox.tar.xz; rm nox.tar.xz' ${{ inputs.vagrant_box_name }}
+        fi
+
+    - name: Install Dependencies
+      run: |
+        vagrant ssh --tty --color -c 'env CI=1 PATH=/vagrant/salt-artifacts/salt/bin:${PATH} sudo -HE nox -f /vagrant/noxfile.py --force-color --install-only -e "pytest-zeromq-3(coverage=True)"' ${{ inputs.vagrant_box_name }}
+
+    - name: Compress .nox directory
+      run: |
+        vagrant ssh --tty --color -c 'cd /vagrant; sudo tar -cJf nox.tar.xz .nox' ${{ inputs.vagrant_box_name }}
+
+    - name: Download nox.tar.xz from Guest
+      run: |
+        vagrant ssh-config ${{ inputs.vagrant_box_name }} > .ssh-config
+        rsync -arzHh --stats -e "ssh -F .ssh-config" ${{ inputs.vagrant_box_name }}:/vagrant/nox.tar.xz .
+
+    - name: Destroy VM
+      if: always()
+      run: |
+        vagrant destroy --force ${{ inputs.vagrant_box_name }}
+
+    - name: Upload Dependencies
+      uses: actions/upload-artifact@v3
+      with:
+        name: nox
+        path: nox.tar.xz
+
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant_box_name }}-deps
+
+    - name: Upload Exit Status
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
+
+  test:
+    needs: dependencies
+    runs-on: macos-12
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        test-paths:
+          - tests/unit tests/pytests/unit
+          - tests/pytests/functional
+          - tests/pytests/scenarios
+          - --ignore=tests/unit --ignore=tests/pytests/unit --ignore=tests/pytests/functional --ignore=tests/pytests/scenarios
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install macOS Dependencies
+      run: |
+        brew install tree
+
+    - name: Download One Dir Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.artifact_name }}
+
+    - name: Extract Artifact
+      run: |
+        mkdir salt-artifacts
+        cp salt*tar.xz salt-artifacts/
+        cd salt-artifacts
+        tar -xpf salt*tar.xz
+
+    - name: Download Installed Dependencies
+      uses: actions/download-artifact@v3
+      with:
+        name: nox
+
+    - name: Spin up VM
+      run: |
+        vagrant up ${{ inputs.vagrant_box_name }}
+
+    - name: Decompress .nox/
+      run: |
+        vagrant ssh --tty --color -c 'cd /vagrant; sudo tar xpf nox.tar.xz; rm nox.tar.xz' ${{ inputs.vagrant_box_name }}
+
+    - name: Run Tests
+      run: |
+        vagrant ssh --tty --color -c 'sudo -HE nox -f /vagrant/noxfile.py --force-color -e "pytest-zeromq-3(coverage=True)" -- \
+            --color=yes -vv --scripts-dir=/vagrant/salt-artifacts/salt --run-slow --ssh-tests --output-columns=120 --sys-stats \
+            --sysinfo --junitxml=/tmp/kitchen/testing/artifacts/xml-unittests-output/test-results.xml \
+            --run-destructive ${{ matrix.test-paths }}' ${{ inputs.vagrant_box_name }}
+
+    - name: Download Artifacts from Guest
+      if: always()
+      run: |
+        vagrant ssh-config ${{ inputs.vagrant_box_name }} > .ssh-config
+        rsync -avH --compress --stats -e "ssh -F .ssh-config" ${{ inputs.vagrant_box_name }}:/vagrant/artifacts .
+        tree artifacts
+
+    - name: Destroy VM
+      if: always()
+      run: |
+        vagrant destroy --force ${{ inputs.vagrant_box_name }}
+
+    - name: Publish Test Report
+      uses: mikepenz/action-junit-report@v3
+      if: always() # always run even if the previous step fails
+      with:
+        report_paths: 'artifacts/xml-unittests-output/*.xml'
+
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant_box_name }}-tests
+
+    - name: Upload Exit Status
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus

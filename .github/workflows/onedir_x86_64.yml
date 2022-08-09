@@ -10,71 +10,89 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 1000
 
     - name: Build onedir
       run: CONTAINER_IMAGE=dwoz1/cicd:onedir-centos7-x86_64 ./pkg/onedir.sh
 
-    - name: Artifact
+    - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
         name: Salt Onedir X86_64
         path: salt*.tar.xz
 
-  dependencies:
-    needs: build
-    runs-on: macos-12
-    name: Install Dependencies on VM
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Fetch Artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: Salt Onedir X86_64
-
-    - name: Install Requirements
-      uses: leleliu008/github-actions-vagrant@v2
-      with:
-        mem: 4096
-        box: salt-project-ci/debian-11
-        run: |
-          sudo env PATH=salt-artifacts/salt/bin:${PATH} nox --force-color --install-only -e 'pytest-zeromq-3(coverage=True)'
-
-  test:
-    needs: dependencies
-    runs-on: macos-12
-    name: Run Tests in VM
-    strategy:
-      fail-fast: false
-      matrix:
-        test-paths:
-          - tests/unit tests/pytests/unit
-          - tests/pytests/functional
-          - tests/pytests/scenarios
-          - --ignore=tests/unit --ignore=tests/pytests/unit --ignore=tests/pytests/functional --ignore=tests/pytests/scenarios
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Fetch Artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: Salt Onedir X86_64
-
-    - name: Extract Artifact
+    - name: Set Exit Status
+      if: always()
       run: |
-        mkdir salt-artifacts
-        cp salt*tar.xz salt-artifacts/
-        cd salt-artifacts
-        tar -xvf salt*tar.xz
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}-build
 
-    - name: Run Tests
-      uses: leleliu008/github-actions-vagrant@v2
+    - name: Upload Exit Status
+      if: always()
+      uses: actions/upload-artifact@v3
       with:
-        mem: 4096
-        box: salt-project-ci/debian-11
-        run: |
-          sudo env SKIP_REQUIREMENTS_INSTALL=YES PATH=salt-artifacts/salt/bin:${PATH} \
-            nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- --color=yes \
-            -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
+        name: exitstatus
+        path: exitstatus
+
+  debian-10:
+    name: Debian 10
+    uses: ./.github/workflows/test.yml
+    needs: build
+    with:
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      artifact_name: Salt Onedir X86_64
+      vagrant_box_name: debian-10
+      trigger_workflow: ${{ github.workflow }}
+
+  debian-11:
+    name: Debian 11
+    uses: ./.github/workflows/test.yml
+    needs: build
+    with:
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      artifact_name: Salt Onedir X86_64
+      vagrant_box_name: debian-11
+      trigger_workflow: ${{ github.workflow }}
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - debian-10
+      - debian-11
+    steps:
+    - name: Download Exit Status Files
+      if: always()
+      uses: actions/download-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
+
+    - name: Delete Exit Status Artifacts
+      if: always()
+      uses: geekyeggo/delete-artifact@v1
+      with:
+        name: exitstatus
+        failOnError: false
+
+    - name: Delete The nox Artifact
+      if: always()
+      uses: geekyeggo/delete-artifact@v1
+      with:
+        name: nox
+        failOnError: false
+
+    - name: Set Pipeline Exit Status
+      run: |
+        grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
+
+    - name: Done
+      if: always()
+      run:
+        echo "All worflows finished"
