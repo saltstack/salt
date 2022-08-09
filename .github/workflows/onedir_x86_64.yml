@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
+    name: Build Onedir
 
     runs-on: ubuntu-latest
 
@@ -19,9 +20,31 @@ jobs:
         name: Salt Onedir X86_64
         path: salt*.tar.xz
 
-  test:
+  dependencies:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: macos-12
+    name: Install Dependencies on VM
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Fetch Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: Salt Onedir X86_64
+
+    - name: Install Requirements
+      uses: leleliu008/github-actions-vagrant@v2
+      with:
+        mem: 4096
+        box: salt-project-ci/debian-11
+        run: |
+          sudo env PATH=salt-artifacts/salt/bin:${PATH} nox --force-color --install-only -e 'pytest-zeromq-3(coverage=True)'
+
+  test:
+    needs: dependencies
+    runs-on: macos-12
+    name: Run Tests in VM
     strategy:
       fail-fast: false
       matrix:
@@ -46,17 +69,12 @@ jobs:
         cd salt-artifacts
         tar -xvf salt*tar.xz
 
-    - name: Install Nox
-      run: |
-        sudo apt-get install -y libcurl4-openssl-dev libssl-dev
-        sudo salt-artifacts/salt/bin/python3 -m pip install nox
-
-    - name: Install Requirements
-      run: |
-        sudo env PATH=salt-artifacts/salt/bin:${PATH} nox --force-color --install-only -e 'pytest-zeromq-3(coverage=True)'
-
     - name: Run Tests
-      run: |
-        sudo env SKIP_REQUIREMENTS_INSTALL=YES PATH=salt-artifacts/salt/bin:${PATH} \
-          nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- --color=yes \
-          -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
+      uses: leleliu008/github-actions-vagrant@v2
+      with:
+        mem: 4096
+        box: salt-project-ci/debian-11
+        run: |
+          sudo env SKIP_REQUIREMENTS_INSTALL=YES PATH=salt-artifacts/salt/bin:${PATH} \
+            nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- --color=yes \
+            -vv --scripts-dir=salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
