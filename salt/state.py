@@ -3115,6 +3115,13 @@ class State:
             # if the requisite that failed was due to a prereq on this low state
             # show the normal error
             if tag in self.pre:
+                # This is the previous run of the state with the prereq
+                # which was run with test=True, so it will include
+                # the proposed changes not actual changes.
+                # So we remove them from the final output
+                # since the prereq requisite failed.
+                if self.pre[tag].get("changes"):
+                    self.pre[tag]["changes"] = {}
                 running[tag] = self.pre[tag]
                 running[tag]["__run_num__"] = self.__run_num
                 running[tag]["__sls__"] = low["__sls__"]
