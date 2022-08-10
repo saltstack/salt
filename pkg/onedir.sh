@@ -17,6 +17,7 @@ SOURCE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 PROJECT_ROOT=$(dirname $SOURCE_DIR)
 SCRIPT=$(cat <<EOF
 set -e
+yum install -y perl-core
 cd /salt
 make clean
 make onedir
