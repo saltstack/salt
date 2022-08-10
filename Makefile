@@ -97,7 +97,6 @@ salt-$(SALT_VERSION)_$(UNAME_S)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install
 # <--------- Dependencies --------->
 
 $(TARGET_DIR)/depend/ssl/bin/openssl: $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION)
-	yum install -y perl-core
 	cd $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION); \
 	./config -Wl,-rpath=$(TARGET_DIR)/depend/ssl/lib shared --openssldir=$(TARGET_DIR)/depend/ssl --prefix=$(TARGET_DIR)/depend/ssl --libdir=lib; \
 	make; \
