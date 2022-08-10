@@ -483,7 +483,9 @@ def running(
         enable = salt.utils.data.is_true(enable)
 
     # Ignore all operations if chroot_ignore and virtual subtype is chroot
-    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
         return _chroot_noop(ret)
 
     if _offline():
@@ -699,7 +701,9 @@ def dead(name, enable=None, sig=None, init_delay=None, chroot_ignore=False, **kw
         enable = salt.utils.data.is_true(enable)
 
     # Ignore all operations if chroot_ignore and virtual subtype is chroot
-    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
         return _chroot_noop(ret)
 
     if _offline():
@@ -842,7 +846,9 @@ def enabled(name, chroot_ignore=False, **kwargs):
     __context__["service.state"] = "enabled"
 
     # Ignore all operations if chroot_ignore and virtual subtype is chroot
-    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
         return _chroot_noop(ret)
 
     ret.update(_enable(name, None, **kwargs))
@@ -885,7 +891,9 @@ def disabled(name, chroot_ignore=False, **kwargs):
     __context__["service.state"] = "disabled"
 
     # Ignore all operations if chroot_ignore and virtual subtype is chroot
-    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
         return _chroot_noop(ret)
 
     ret.update(_disable(name, None, **kwargs))
@@ -949,7 +957,9 @@ def masked(name, runtime=False, chroot_ignore=False):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # Ignore all operations if chroot_ignore and virtual subtype is chroot
-    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
         return _chroot_noop(ret)
 
     if "service.masked" not in __salt__:
@@ -1030,7 +1040,9 @@ def unmasked(name, runtime=False, chroot_ignore=False):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # Ignore all operations if chroot_ignore and virtual subtype is chroot
-    if chroot_ignore and "chroot" in __grains__.get("virtual_subtype", "").lower():
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
         return _chroot_noop(ret)
 
     if "service.masked" not in __salt__:

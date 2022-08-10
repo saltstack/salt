@@ -2450,6 +2450,23 @@ default configuration set up at install time.
 
     snapper_states_config: root
 
+.. conf_minion:: chroot_ignore
+
+``chroot_ignore``
+-------------------------
+
+Default: ``False``
+
+If set to ``True``, certain supported states will perform a check to determine
+if Salt is running in a chroot environment using the ``virtual_subtype`` grain.
+If that condition is also met, then any supported states will effectively
+become a no-op state where no action is taken. This can be valuable behavior to
+prevent wrapping multiple state blocks in templating to perform this check.
+
+.. code-block:: yaml
+
+    chroot_ignore: False
+
 File Directory Settings
 =======================
 
