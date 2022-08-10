@@ -753,9 +753,18 @@ def test_running_with_reload():
 def test_chroot_ignore(action):
     func = getattr(service, action)
     with patch.dict(service.__grains__, {"virtual_subtype": "chroot"}):
+        # state-local chroot_ignore true
         ret = func("salt", chroot_ignore=True)
         assert ret["result"] is None
         assert (
             ret["comment"]
             == "Running in chroot and chroot_ignore is True. Nothing to do."
         )
+        # global chroot_ignore true
+        with patch.dict(service.__opts__, {"chroot_ignore": True}):
+            ret = func("salt", chroot_ignore=False)
+            assert ret["result"] is None
+            assert (
+                ret["comment"]
+                == "Running in chroot and chroot_ignore is True. Nothing to do."
+            )
