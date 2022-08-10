@@ -10,9 +10,10 @@ import shutil
 import sys
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.platform
-from saltfactories.utils import random_string
 
 try:
     import grp

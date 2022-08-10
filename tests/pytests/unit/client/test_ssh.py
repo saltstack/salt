@@ -1,4 +1,5 @@
 import pytest
+
 import salt.client.ssh
 from tests.support.helpers import dedent
 

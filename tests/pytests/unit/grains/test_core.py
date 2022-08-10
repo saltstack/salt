@@ -15,6 +15,7 @@ import textwrap
 from collections import namedtuple
 
 import pytest
+
 import salt.grains.core as core
 import salt.loader
 import salt.modules.cmdmod

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.win_service as win_service
 import salt.utils.path
 from tests.support.mixins import LoaderModuleMockMixin
@@ -11,8 +12,8 @@ from tests.support.unit import TestCase, skipIf
 
 try:
     WINAPI = True
-    import win32serviceutil
     import pywintypes
+    import win32serviceutil
 except ImportError:
     WINAPI = False
 

@@ -6,6 +6,7 @@ Test case for the consul execution module
 import logging
 
 import pytest
+
 import salt.modules.consul as consul
 import salt.utils.http
 import salt.utils.json

@@ -8,9 +8,10 @@ import copy
 import logging
 
 import pytest
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.utils.platform
 import salt.utils.schedule
-from pytestshellutils.utils.processes import terminate_process
 from salt.modules.test import ping
 from salt.utils.process import SubprocessList
 from tests.support.mock import MagicMock, patch

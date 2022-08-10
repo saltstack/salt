@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.platform
 from tests.support.case import SSHCase
 from tests.support.unit import skipIf

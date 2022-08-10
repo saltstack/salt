@@ -1,6 +1,7 @@
 import pathlib
 
 import pytest
+
 import salt.spm.pkgfiles.local as spm
 import salt.syspaths
 from tests.support.mock import MagicMock

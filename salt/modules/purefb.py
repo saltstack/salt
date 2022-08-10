@@ -56,8 +56,15 @@ from datetime import datetime
 from salt.exceptions import CommandExecutionError
 
 try:
-    from purity_fb import PurityFb, FileSystem, FileSystemSnapshot, SnapshotSuffix
-    from purity_fb import rest, NfsRule, ProtocolRule
+    from purity_fb import (
+        FileSystem,
+        FileSystemSnapshot,
+        NfsRule,
+        ProtocolRule,
+        PurityFb,
+        SnapshotSuffix,
+        rest,
+    )
 
     HAS_PURITY_FB = True
 except ImportError:

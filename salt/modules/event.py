@@ -14,7 +14,7 @@ import salt.channel.client
 import salt.crypt
 import salt.payload
 import salt.utils.event
-import salt.utils.zeromq
+import salt.utils.network
 
 __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def fire_master(data, tag, preload=None):
         # slower because it has to independently authenticate)
         if "master_uri" not in __opts__:
             __opts__["master_uri"] = "tcp://{ip}:{port}".format(
-                ip=salt.utils.zeromq.ip_bracket(__opts__["interface"]),
+                ip=salt.utils.network.ip_bracket(__opts__["interface"]),
                 port=__opts__.get("ret_port", "4506"),  # TODO, no fallback
             )
         masters = list()

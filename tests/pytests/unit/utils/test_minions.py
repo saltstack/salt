@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.minions
 import salt.utils.network
 from tests.support.mock import patch

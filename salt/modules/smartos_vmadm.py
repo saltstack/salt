@@ -4,6 +4,7 @@ Module for running vmadm command on SmartOS
 
 import logging
 import os
+import shlex
 
 import salt.utils.args
 import salt.utils.files
@@ -12,12 +13,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.odict import OrderedDict
-
-try:
-    from shlex import quote as _quote_args  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _quote_args
-
 
 log = logging.getLogger(__name__)
 
@@ -688,7 +683,7 @@ def reprovision(vm, image, key="uuid"):
     # vmadm reprovision <uuid> [-f <filename>]
     cmd = "echo {image} | vmadm reprovision {uuid}".format(
         uuid=salt.utils.stringutils.to_unicode(vm),
-        image=_quote_args(salt.utils.json.dumps({"image_uuid": image})),
+        image=shlex.quote(salt.utils.json.dumps({"image_uuid": image})),
     )
     res = __salt__["cmd.run_all"](cmd, python_shell=True)
     retcode = res["retcode"]

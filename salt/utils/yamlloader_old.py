@@ -5,10 +5,11 @@ Custom YAML loading in Salt
 
 import re
 
-import salt.utils.stringutils
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
+
+import salt.utils.stringutils
 
 try:
     yaml.Loader = yaml.CLoader
