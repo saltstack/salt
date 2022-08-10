@@ -6,6 +6,9 @@ import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import pytest
+import zmq
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
@@ -22,8 +25,6 @@ import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-import zmq
-from pytestshellutils.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)

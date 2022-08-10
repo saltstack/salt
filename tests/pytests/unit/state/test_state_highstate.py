@@ -5,6 +5,7 @@
 import logging
 
 import pytest  # pylint: disable=unused-import
+
 import salt.state
 
 log = logging.getLogger(__name__)

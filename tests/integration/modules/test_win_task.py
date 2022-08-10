@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.win_task as task
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError

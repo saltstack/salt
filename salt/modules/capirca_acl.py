@@ -34,8 +34,8 @@ log = logging.getLogger(__file__)
 try:
     import capirca
     import capirca.aclgen
-    import capirca.lib.policy
     import capirca.lib.aclgenerator
+    import capirca.lib.policy
 
     HAS_CAPIRCA = True
 except ImportError:

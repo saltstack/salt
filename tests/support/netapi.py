@@ -2,6 +2,7 @@ import logging
 import socket
 
 import attr
+
 import salt.auth
 import salt.ext.tornado.escape
 import salt.ext.tornado.web

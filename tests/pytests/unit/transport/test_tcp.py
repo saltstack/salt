@@ -3,11 +3,12 @@ import socket
 
 import attr
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.channel.server
 import salt.exceptions
 import salt.ext.tornado
 import salt.transport.tcp
-from pytestshellutils.utils import ports
 from tests.support.mock import MagicMock, PropertyMock, patch
 
 

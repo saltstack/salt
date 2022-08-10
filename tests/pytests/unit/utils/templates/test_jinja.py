@@ -60,7 +60,7 @@ def test_jinja_undefined_error_context(minion_opts, local_salt):
     # exception was raised is to match on the initial wording of the exception
     # message.
     match_regex = re.compile(
-        fr"^Jinja variable .*; line .*{marker}$", re.DOTALL | re.MULTILINE
+        rf"^Jinja variable .*; line .*{marker}$", re.DOTALL | re.MULTILINE
     )
     with pytest.raises(SaltRenderError, match=match_regex):
         render_jinja_tmpl(

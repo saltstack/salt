@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.gitfs
 from salt.runners import winrepo
 from tests.support.mock import patch

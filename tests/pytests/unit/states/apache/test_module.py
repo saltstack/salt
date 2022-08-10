@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.apache_module as apache_module
 from tests.support.mock import MagicMock, patch
 
