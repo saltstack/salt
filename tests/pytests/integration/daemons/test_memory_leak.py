@@ -23,12 +23,18 @@ def file_add_delete_sls(testfile_path, base_env_state_tree_root_dir):
         - name: {path}
         - source: salt://testfile
         - makedirs: true
+        - require:
+          - cmd: echo
 
     delete_file:
       file.absent:
         - name: {path}
         - require:
           - file: add_file
+
+    echo:
+      cmd.run:
+        - name: \"echo 'This is a test!'\"
     """.format(
         path=testfile_path
     )
@@ -58,7 +64,7 @@ def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
         proc.start()
 
         # Try to drive up memory usage
-        for _ in range(3):
+        for _ in range(50):
             salt_cli.run("state.sls", file_add_delete_sls, minion_tgt=salt_minion.id)
 
         done_flag.append(1)
@@ -71,7 +77,7 @@ def test_memory_leak(salt_cli, salt_minion, file_add_delete_sls):
 
     # This would be weird, but should account for it
     if max_usg > start_usg:
-        max_tries = 10
+        max_tries = 50
         # The maximum that the current usage can be in order to pass the test
         threshold = (max_usg - start_usg) * 0.25 + start_usg
         for _ in range(max_tries):
