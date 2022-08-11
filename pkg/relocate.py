@@ -152,7 +152,7 @@ def handle_elf(path, libs, root=None):
         if line.find("=>") == -1:
             continue
 
-        lib_name, location_info = [_.strip() for _ in line.split("=>", 1)]
+        lib_name, location_info = (_.strip() for _ in line.split("=>", 1))
         if location_info == "not found":
             # XXX This could be considered an error
             log.warning("Unable to find library %s linked from %s", lib_name, path)
