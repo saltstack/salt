@@ -1798,7 +1798,7 @@ def installed(
         )
 
     comment = []
-    changes = {"installed": {}}
+    changes = {}
     if __opts__["test"]:
         if targets:
             if sources:
@@ -1806,9 +1806,7 @@ def installed(
             else:
                 _targets = [_get_desired_pkg(x, targets) for x in targets]
             summary = ", ".join(targets)
-            changes["installed"].update(
-                {x: {"new": "installed", "old": ""} for x in targets}
-            )
+            changes.update({x: {"new": "installed", "old": ""} for x in targets})
             comment.append(
                 "The following packages would be installed/updated: {}".format(summary)
             )
@@ -1817,9 +1815,7 @@ def installed(
                 "The following packages would have their selection status "
                 "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
             )
-            changes["installed"].update(
-                {x: {"new": "installed", "old": ""} for x in to_unpurge}
-            )
+            changes.update({x: {"new": "installed", "old": ""} for x in to_unpurge})
         if to_reinstall:
             # Add a comment for each package in to_reinstall with its
             # pkg.verify output
@@ -1832,7 +1828,7 @@ def installed(
                         reinstall_targets.append(
                             _get_desired_pkg(reinstall_pkg, to_reinstall)
                         )
-                    changes["installed"].update(
+                    changes.update(
                         {x: {"new": "installed", "old": ""} for x in reinstall_targets}
                     )
                 msg = "The following packages would be reinstalled: "
@@ -1848,7 +1844,7 @@ def installed(
                         "Package '{}' would be reinstalled because the "
                         "following files have been altered:".format(pkgstr)
                     )
-                    changes["installed"].update({reinstall_pkg: {}})
+                    changes.update({reinstall_pkg: {}})
                     comment.append(_nested_output(altered_files[reinstall_pkg]))
         ret = {
             "name": name,
@@ -1900,7 +1896,7 @@ def installed(
             refresh = False
 
         if isinstance(pkg_ret, dict):
-            changes["installed"].update(pkg_ret)
+            changes.update(pkg_ret)
         elif isinstance(pkg_ret, str):
             comment.append(pkg_ret)
             # Code below will be looking for a dictionary. If this is a string
@@ -1957,7 +1953,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes["installed"] if x in targets]
+        modified = [x for x in changes if x in targets]
         not_modified = [
             x for x in desired if x not in targets and x not in to_reinstall
         ]
@@ -1979,11 +1975,6 @@ def installed(
         modified = [x for x in _ok if x in targets]
         not_modified = [x for x in _ok if x not in targets and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
-
-    # If there was nothing unpurged, just set the changes dict to the contents
-    # of changes['installed'].
-    if not changes.get("purge_desired"):
-        changes = changes["installed"]
 
     if modified:
         if sources:
