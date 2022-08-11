@@ -7,6 +7,7 @@ import shutil
 import stat
 
 import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.runtests import RUNTIME_VARS
