@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 def get(
     key,
-    default=None,
+    default=...,
     merge=False,
     merge_nested_lists=None,
     delimiter=DEFAULT_TARGET_DELIM,
@@ -122,7 +122,7 @@ def get(
         salt '*' pillar.get pkg:apache
         salt '*' pillar.get abc::def|ghi delimiter='|'
     """
-    if default is None:
+    if default is ...:
         default = KeyError
     if not __opts__.get("pillar_raise_on_missing"):
         if default is KeyError:

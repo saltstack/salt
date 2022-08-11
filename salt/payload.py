@@ -77,6 +77,8 @@ def loads(msg, encoding=None, raw=False):
             if code == 78:
                 data = salt.utils.stringutils.to_unicode(data)
                 return datetime.datetime.strptime(data, "%Y%m%dT%H:%M:%S.%f")
+            if code == 79:
+                return ...
             return data
 
         gc.disable()  # performance optimization for msgpack
@@ -143,6 +145,14 @@ def dumps(msg, use_bin_type=False):
             return salt.utils.msgpack.ExtType(
                 78,
                 salt.utils.stringutils.to_bytes(obj.strftime("%Y%m%dT%H:%M:%S.%f")),
+            )
+        elif obj is ...:
+            # msgpack doesn't support the ellipsis object.
+            # So here we have converted these types to custom datatype
+            # This is msgpack Extended types numbered 79
+            return salt.utils.msgpack.ExtType(
+                79,
+                b"-|_ELLIPSIS_|-",
             )
         # The same for immutable types
         elif isinstance(obj, immutabletypes.ImmutableDict):

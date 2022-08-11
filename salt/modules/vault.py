@@ -183,7 +183,7 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False, default=None):
+def read_secret(path, key=None, metadata=False, default=...):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -211,7 +211,7 @@ def read_secret(path, key=None, metadata=False, default=None):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     """
-    if default is None:
+    if default is ...:
         default = CommandExecutionError
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
@@ -358,7 +358,7 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path, default=None):
+def list_secrets(path, default=...):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -374,7 +374,7 @@ def list_secrets(path, default=None):
 
             salt '*' vault.list_secrets "secret/my/"
     """
-    if default is None:
+    if default is ...:
         default = CommandExecutionError
     log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
     version2 = __utils__["vault.is_v2"](path)
