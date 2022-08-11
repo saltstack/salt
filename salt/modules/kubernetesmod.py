@@ -1,7 +1,8 @@
 """
 Module for handling kubernetes calls.
 
-:optdepends:    - kubernetes Python client
+:optdepends:    - kubernetes Python client < 4.0
+                - PyYAML < 6.0
 :configuration: The k8s API settings are provided either in a pillar, in
     the minion's config file, or in master's config file::
 
@@ -17,6 +18,8 @@ The data format for `kubernetes.kubeconfig-data` value is the content of
 
 Only `kubeconfig` or `kubeconfig-data` should be provided. In case both are
 provided `kubeconfig` entry is preferred.
+
+CLI Example:
 
 .. code-block:: bash
 
