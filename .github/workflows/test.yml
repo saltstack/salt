@@ -40,21 +40,33 @@ jobs:
         path: nox.tar.xz
         key: deps||${{ inputs.vagrant_box_name }}||${{ hashFiles('noxfile.py', 'requirements/**/*.txt') }}
 
+    # Check the existance of nox.tar.xz.
+    # If it exists, it means the cache was hit and we don't have to regenerate the nox.tar.xz again
+    - name: Check nox.tar.xz Exists
+      id: check-nox-tarball
+      uses: andstor/file-existence-action@v1
+      with:
+        files: "nox.tar.xz"
+
     - name: Install macOS Dependencies
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         brew install gnu-sed
 
     - name: PyPi Proxy
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         gsed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
 
     - name: Show Vagrant Information
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         vagrant --version
         vagrant plugin list
         echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
 
     - name: Cache Vagrant boxes and plugins
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       uses: actions/cache@v3
       with:
         path: |
@@ -63,30 +75,35 @@ jobs:
         key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant_box_name }}|${{ hashFiles('Vagrantfile') }}
 
     - name: Spin up VM
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         vagrant up ${{ inputs.vagrant_box_name }}
 
     - name: Decompress .nox/
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         if [ -f nox.tar.xz ]; then
           vagrant ssh --tty --color -c 'cd /vagrant; sudo tar xpf nox.tar.xz; rm nox.tar.xz' ${{ inputs.vagrant_box_name }}
         fi
 
     - name: Install Dependencies
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         vagrant ssh --tty --color -c 'env CI=1 PATH=/vagrant/salt-artifacts/salt/bin:${PATH} sudo -HE nox -f /vagrant/noxfile.py --force-color --install-only -e "pytest-zeromq-3(coverage=True)"' ${{ inputs.vagrant_box_name }}
 
     - name: Compress .nox directory
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         vagrant ssh --tty --color -c 'cd /vagrant; sudo tar -cJf nox.tar.xz .nox' ${{ inputs.vagrant_box_name }}
 
     - name: Download nox.tar.xz from Guest
+      if: steps.check-nox-tarball.outputs.files_exists != 'true'
       run: |
         vagrant ssh-config ${{ inputs.vagrant_box_name }} > .ssh-config
         rsync -arzHh --stats -e "ssh -F .ssh-config" ${{ inputs.vagrant_box_name }}:/vagrant/nox.tar.xz .
 
     - name: Destroy VM
-      if: always()
+      if: steps.check-nox-tarball.outputs.files_exists != 'true' && always()
       run: |
         vagrant destroy --force ${{ inputs.vagrant_box_name }}
 
@@ -158,7 +175,7 @@ jobs:
       run: |
         vagrant ssh --tty --color -c 'sudo -HE nox -f /vagrant/noxfile.py --force-color -e "pytest-zeromq-3(coverage=True)" -- \
             --color=yes -vv --scripts-dir=/vagrant/salt-artifacts/salt --run-slow --ssh-tests --output-columns=120 --sys-stats \
-            --sysinfo --junitxml=/tmp/kitchen/testing/artifacts/xml-unittests-output/test-results.xml \
+            --sysinfo --junitxml=artifacts/xml-unittests-output/test-results.xml \
             --run-destructive ${{ matrix.test-paths }}' ${{ inputs.vagrant_box_name }}
 
     - name: Download Artifacts from Guest
