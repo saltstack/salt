@@ -15,7 +15,7 @@ ifeq ($(UNAME_S), darwin)
   SED_OPTS := -i ''
 else
   PY_MAKE_ENV := LDFLAGS="-Wl,--as-needed"
-  PY_CONFIG := --with-openssl=$(TARGET_DIR)/depend/ssl -C
+  PY_CONFIG := --with-openssl=$(TARGET_DIR) -C
   SED_OPTS := -i
 endif
 
@@ -45,7 +45,7 @@ $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION): $(TARGET_DIRNAME)/Python-$(PYTHON_VE
 	cd $(PWD); \
 	touch $@;
 
-$(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION) $(TARGET_DIR)/depend/ssl/bin/openssl
+$(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION) $(TARGET_DIR)/bin/openssl
 	cd $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION); \
 	$(PY_MAKE_ENV) ./configure -v --prefix=$(TARGET_DIR) $(PY_CONFIG); \
 	$(PY_MAKE_ENV)  make -j4; \
@@ -74,7 +74,6 @@ $(TARGET_DIR)/.onedir:
 fixlibs:
 	python3 ./pkg/relocate.py
 
-
 $(TARGET_DIR)/install-salt:
 	cp $(PWD)/scripts/install-salt $(SCRIPTS_DIR)/install-salt
 
@@ -96,13 +95,13 @@ salt-$(SALT_VERSION)_$(UNAME_S)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install
 
 # <--------- Dependencies --------->
 
-$(TARGET_DIR)/depend/ssl/bin/openssl: $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION)
+$(TARGET_DIR)/bin/openssl: $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION)
 	cd $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION); \
-	./config -Wl,-rpath=$(TARGET_DIR)/depend/ssl/lib shared --openssldir=$(TARGET_DIR)/depend/ssl --prefix=$(TARGET_DIR)/depend/ssl --libdir=lib; \
+	./config -Wl,-rpath=$(TARGET_DIR)/lib shared --openssldir=$(TARGET_DIR) --prefix=$(TARGET_DIR) --libdir=lib; \
 	make; \
 	make install; \
 	cd $(PWD)
-	ldconfig $(TARGET_DIR)/depend/ssl/lib
+	ldconfig $(TARGET_DIR)/lib
 
 $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION): $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION).tar.gz
 	cd $(TARGET_DIRNAME); \
@@ -115,5 +114,5 @@ $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION).tar.gz: $(TARGET_DIR)
 	touch $@
 
 # This is for an easy target to build just this dependency
-openssl: $(TARGET_DIR)/depend/ssl/bin/openssl
-	$(TARGET_DIR)/depend/ssl/bin/openssl version -a
+openssl: $(TARGET_DIR)/bin/openssl
+	$(TARGET_DIR)/bin/openssl version -a
