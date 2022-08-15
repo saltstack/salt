@@ -57,6 +57,39 @@ jobs:
       vagrant_box_name: debian-11
       trigger_workflow: ${{ github.workflow }}
 
+  centos-stream-8:
+    name: CentOS Stream 8
+    uses: ./.github/workflows/test.yml
+    needs: build
+    with:
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      artifact_name: Salt Onedir X86_64
+      vagrant_box_name: centos-stream-8
+      trigger_workflow: ${{ github.workflow }}
+
+  fedora-35:
+    name: Fedora 35
+    uses: ./.github/workflows/test.yml
+    needs: build
+    with:
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      artifact_name: Salt Onedir X86_64
+      vagrant_box_name: fedora-35
+      trigger_workflow: ${{ github.workflow }}
+
+  fedora-36:
+    name: Fedora 36
+    uses: ./.github/workflows/test.yml
+    needs: build
+    with:
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      artifact_name: Salt Onedir X86_64
+      vagrant_box_name: fedora-36
+      trigger_workflow: ${{ github.workflow }}
+
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
@@ -66,6 +99,7 @@ jobs:
     needs:
       - debian-10
       - debian-11
+      - centos-stream-8
     steps:
     - name: Download Exit Status Files
       if: always()

@@ -27,4 +27,19 @@ Vagrant.configure("2") do |config|
     vmconfig.vm.box_version = "20220815.1816"
   end
 
+  config.vm.define "centos-stream-8" do |vmconfig|
+    vmconfig.vm.box = "salt-project-ci/centos-stream-8"
+    vmconfig.vm.box_version = "20220815.2010"
+  end
+
+  config.vm.define "fedora-35" do |vmconfig|
+    vmconfig.vm.box = "salt-project-ci/fedora-35"
+    vmconfig.vm.box_version = "20220815.2125"
+  end
+
+  config.vm.define "fedora-36" do |vmconfig|
+    vmconfig.vm.box = "salt-project-ci/fedora-36"
+    vmconfig.vm.box_version = "20220815.2125"
+  end
+
 end

@@ -130,14 +130,15 @@ jobs:
     needs: dependencies
     runs-on: macos-12
     name: Test
+    timeout-minutes: 600  # 10 Hours
     strategy:
       fail-fast: false
       matrix:
-        test-paths:
-          - tests/unit tests/pytests/unit
-          - tests/pytests/functional
-          - tests/pytests/scenarios
-          - --ignore=tests/unit --ignore=tests/pytests/unit --ignore=tests/pytests/functional --ignore=tests/pytests/scenarios
+        tests-chunk:
+          - unit
+          - functional
+          - integration
+          - scenarios
 
     steps:
     - uses: actions/checkout@v3
@@ -145,6 +146,15 @@ jobs:
     - name: Install macOS Dependencies
       run: |
         brew install tree
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+
+    - name: Install Nox
+      run: |
+        python3 -m pip install nox
 
     - name: Download One Dir Artifact
       uses: actions/download-artifact@v3
@@ -172,11 +182,10 @@ jobs:
         vagrant ssh --tty --color -c 'cd /vagrant; sudo tar xpf nox.tar.xz; rm nox.tar.xz' ${{ inputs.vagrant_box_name }}
 
     - name: Run Tests
+      env:
+        RERUN_FAILURES: "1"
       run: |
-        vagrant ssh --tty --color -c 'sudo -HE nox -f /vagrant/noxfile.py --force-color -e "pytest-zeromq-3(coverage=True)" -- \
-            --color=yes -vv --scripts-dir=/vagrant/salt-artifacts/salt --run-slow --ssh-tests --output-columns=120 --sys-stats \
-            --sysinfo --junitxml=artifacts/xml-unittests-output/test-results.xml \
-            --run-destructive ${{ matrix.test-paths }}' ${{ inputs.vagrant_box_name }}
+        nox -e vagrant -- ${{ inputs.vagrant_box_name }} ${{ matrix.tests-chunk }}
 
     - name: Download Artifacts from Guest
       if: always()
@@ -194,6 +203,7 @@ jobs:
       uses: mikepenz/action-junit-report@v3
       if: always() # always run even if the previous step fails
       with:
+        check_name: Test Results(${{ inputs.vagrant_box_name }} ${{ matrix.tests-chunk }})
         report_paths: 'artifacts/xml-unittests-output/*.xml'
 
     - name: Set Exit Status

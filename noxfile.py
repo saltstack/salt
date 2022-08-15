@@ -948,6 +948,126 @@ def report_coverage(session):
     _report_coverage(session)
 
 
+@nox.session(python=False)
+def vagrant(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+
+    chunks = {
+        "unit": [
+            "tests/unit",
+            "tests/pytests/unit",
+        ],
+        "functional": [
+            "tests/pytests/functional",
+        ],
+        "scenarios": ["tests/pytests/scenarios"],
+    }
+
+    if not session.posargs:
+        chunk = "all"
+        chunk_cmd = ["tests/"]
+        junit_report_filename = "test-results"
+        runtests_log_filename = "runtests"
+    else:
+        chunk = session.posargs.pop(0)
+        if chunk in ["unit", "functional", "integration", "scenarios", "all"]:
+            if chunk == "all":
+                chunk_cmd = ["tests/"]
+                junit_report_filename = "test-results"
+                runtests_log_filename = "runtests"
+            elif chunk == "integration":
+                chunk_cmd = []
+                for values in chunks.values():
+                    for value in values:
+                        chunk_cmd.append(f"--ignore={value}")
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            else:
+                chunk_cmd = chunks[chunk]
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+        else:
+            chunk_cmd = [chunk] + session.posargs
+            junit_report_filename = "test-results"
+            runtests_log_filename = f"runtests"
+
+    rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
+
+    common_remote_nox_command = [
+        "sudo",
+        "-HE",
+        "nox",
+        "-f",
+        "/vagrant/noxfile.py",
+        "--force-color",
+        "-e",
+        '"pytest-zeromq-3(coverage=True)"',
+        "--",
+        "--color=yes",
+        "-ra",
+        "-vv",
+        "--scripts-dir=/vagrant/salt-artifacts/salt",
+        "--run-slow",
+        "--ssh-tests",
+        "--output-columns=120",
+        "--sys-stats",
+        "--sysinfo",
+        "--run-destructive",
+    ]
+
+    try:
+        nox_command = (
+            common_remote_nox_command[:]
+            + [
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            ]
+            + chunk_cmd
+        )
+        session.run(
+            *[
+                "vagrant",
+                "ssh",
+                "--tty",
+                "--color",
+                "-c",
+                " ".join(nox_command),
+                distro,
+            ],
+            external=True,
+        )
+    except CommandFailed:
+        if rerun_failures is False:
+            raise
+        nox_command = (
+            common_remote_nox_command[:]
+            + [
+                "--lf",
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}-rerun.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}-rerun.log",
+            ]
+            + chunk_cmd
+        )
+        session.run(
+            *[
+                "vagrant",
+                "ssh",
+                "--tty",
+                "--color",
+                "-c",
+                " ".join(nox_command),
+                distro,
+            ],
+            external=True,
+        )
+
+
 class Tee:
     """
     Python class to mimic linux tee behaviour
