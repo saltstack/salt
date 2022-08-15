@@ -258,7 +258,10 @@ def latest_version(*names, **kwargs):
 
     def get_version(pkg_info):
         # Perhaps this will need an option to pick devel by default
-        return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        version = pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        if pkg_info["versions"]["bottle"] and pkg_info["urls"]["revision"] >= 1:
+            version = "{}_{}".format(version, pkg_info["urls"]["revision"])
+        return version
 
     versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
 
