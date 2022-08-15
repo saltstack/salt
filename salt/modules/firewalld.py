@@ -922,7 +922,7 @@ def change_interface(zone, interface, permanent=True):
     """
     Change zone the interface bound to
 
-    .. versionadded:: 300?.?.?
+    .. versionadded:: 3006
 
     CLI Example:
 
