@@ -676,7 +676,7 @@ def create_task_from_xml(
 
         except pythoncom.com_error as error:
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
-            error_code = hex(exc[5] + 2 ** 32)
+            error_code = hex(exc[5] + 2**32)
             fc = {
                 0x80041319: "Required element or attribute missing",
                 0x80041318: "Value incorrectly formatted or out of range",

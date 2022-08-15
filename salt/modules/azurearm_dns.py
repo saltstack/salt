@@ -3,6 +3,12 @@ Azure (ARM) DNS Execution Module
 
 .. versionadded:: 3000
 
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
 :maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
@@ -54,6 +60,9 @@ Optional provider parameters:
 # Python libs
 
 import logging
+from functools import wraps
+
+import salt.utils.azurearm
 
 # Azure libs
 HAS_LIBS = False
@@ -83,6 +92,28 @@ def __virtual__():
     return __virtualname__
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def record_set_create_or_update(name, zone_name, resource_group, record_type, **kwargs):
     """
     .. versionadded:: 3000
@@ -140,6 +171,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
     return result
 
 
+@_deprecation_message
 def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
     """
     .. versionadded:: 3000
@@ -181,6 +213,7 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
     return result
 
 
+@_deprecation_message
 def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
     """
     .. versionadded:: 3000
@@ -221,6 +254,7 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
     return result
 
 
+@_deprecation_message
 def record_sets_list_by_type(
     zone_name, resource_group, record_type, top=None, recordsetnamesuffix=None, **kwargs
 ):
@@ -274,6 +308,7 @@ def record_sets_list_by_type(
     return result
 
 
+@_deprecation_message
 def record_sets_list_by_dns_zone(
     zone_name, resource_group, top=None, recordsetnamesuffix=None, **kwargs
 ):
@@ -322,6 +357,7 @@ def record_sets_list_by_dns_zone(
     return result
 
 
+@_deprecation_message
 def zone_create_or_update(name, resource_group, **kwargs):
     """
     .. versionadded:: 3000
@@ -381,6 +417,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def zone_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 3000
@@ -414,6 +451,7 @@ def zone_delete(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def zone_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 3000
@@ -444,6 +482,7 @@ def zone_get(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def zones_list_by_resource_group(resource_group, top=None, **kwargs):
     """
     .. versionadded:: 3000
@@ -481,6 +520,7 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
     return result
 
 
+@_deprecation_message
 def zones_list(top=None, **kwargs):
     """
     .. versionadded:: 3000

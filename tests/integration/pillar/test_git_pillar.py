@@ -68,6 +68,8 @@ import string
 import sys
 
 import pytest
+from distro import linux_distribution
+
 import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
@@ -120,6 +122,13 @@ def _rand_key_name(length):
 
 def _windows_or_mac():
     return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
+
+
+def _centos_stream_9():
+    (osname, osrelease, oscodename) = (
+        x.strip('"').strip("'") for x in linux_distribution()
+    )
+    return osname == "CentOS Stream" and osrelease == "9"
 
 
 class GitPythonMixin:
@@ -733,6 +742,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @skipIf(salt.utils.platform.is_aarch64(), "Test is broken on aarch64")
 @skipIf(_windows_or_mac(), "minion is windows or mac")
+@skipIf(_centos_stream_9(), "CentOS Stream 9 has RSA keys disabled by default")
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),

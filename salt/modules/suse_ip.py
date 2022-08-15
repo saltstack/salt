@@ -10,6 +10,7 @@ import os
 
 import jinja2
 import jinja2.exceptions
+
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.templates

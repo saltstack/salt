@@ -5,6 +5,7 @@
 import logging
 
 import pytest  # pylint: disable=unused-import
+
 from salt.utils.decorators import state as statedecorators
 
 log = logging.getLogger(__name__)

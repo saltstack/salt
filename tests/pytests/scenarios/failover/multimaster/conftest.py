@@ -5,8 +5,9 @@ import subprocess
 import time
 
 import pytest
-import salt.utils.platform
 from pytestshellutils.exceptions import FactoryNotStarted, FactoryTimeout
+
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 

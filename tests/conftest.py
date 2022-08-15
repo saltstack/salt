@@ -26,6 +26,7 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
+
 import salt._logging
 import salt._logging.mixins
 import salt.config
@@ -267,7 +268,8 @@ def pytest_configure(config):
         "requiring a minimum value of random entropy. In the case where the value is lower "
         "than the provided 'minimum', an attempt will be made to raise that value up until "
         "the provided 'timeout' minutes have passed, at which time, depending on the value "
-        "of 'skip' the test will skip or fail.".format(
+        "of 'skip' the test will skip or fail.  For entropy poolsizes of 256 bits, the min "
+        "is adjusted to 192.".format(
             EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
         ),
     )
@@ -941,6 +943,7 @@ def salt_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
+    salt_api_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -978,6 +981,16 @@ def salt_master_factory(
         }
     )
     config_overrides["pillar_opts"] = True
+    config_overrides["external_auth"] = {
+        "auto": {
+            salt_api_account_factory.username: [
+                "@wheel",
+                "@runner",
+                "test.*",
+                "grains.*",
+            ],
+        }
+    }
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
@@ -1178,7 +1191,7 @@ def sshd_config_dir(salt_factories):
 
 
 @pytest.fixture(scope="module")
-def sshd_server(salt_factories, sshd_config_dir, salt_master):
+def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp
@@ -1209,6 +1222,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
         "Subsystem": "sftp /usr/lib/openssh/sftp-server",
         "UsePAM": "yes",
     }
+    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        sshd_config_dict["Subsystem"] = "sftp /usr/libexec/openssh/sftp-server"
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
@@ -1531,6 +1546,11 @@ def _disable_salt_logging():
     salt._logging.set_logging_options_dict(logging_config)
     # Run the test suite
     yield
+
+
+@pytest.fixture(scope="session")
+def salt_api_account_factory():
+    return TestAccount(username="saltdev_api", password="saltdev")
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

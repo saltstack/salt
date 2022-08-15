@@ -1,1 +1,0 @@
-Attempt to fix 56957 by detecting the broken recusion and stopping it.

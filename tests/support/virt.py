@@ -4,6 +4,7 @@ import uuid
 import attr
 from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
+
 from tests.support.runtests import RUNTIME_VARS
 
 

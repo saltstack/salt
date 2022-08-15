@@ -4,19 +4,18 @@ import re
 import textwrap
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.yaml
-from saltfactories.utils import random_string
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
 
-USERA = "saltdev-key"
-USERA_PWD = "saltdev"
 PUB_KEY = textwrap.dedent(
     """\
         -----BEGIN PUBLIC KEY-----
@@ -30,23 +29,6 @@ PUB_KEY = textwrap.dedent(
         -----END PUBLIC KEY-----
         """
 )
-
-
-@pytest.fixture(scope="module")
-def saltdev_account(sminion):
-    try:
-        assert sminion.functions.user.add(USERA, createhome=False)
-        assert sminion.functions.shadow.set_password(
-            USERA,
-            USERA_PWD
-            if salt.utils.platform.is_darwin()
-            else salt.utils.pycrypto.gen_hash(password=USERA_PWD),
-        )
-        assert USERA in sminion.functions.user.list_users()
-        # Run tests
-        yield
-    finally:
-        sminion.functions.user.delete(USERA, remove=True)
 
 
 def test_remove_key(salt_master, salt_key_cli):
@@ -94,7 +76,7 @@ def test_remove_key(salt_master, salt_key_cli):
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
-def test_remove_key_eauth(salt_key_cli, salt_master, saltdev_account):
+def test_remove_key_eauth(salt_key_cli, salt_master, salt_eauth_account):
     """
     test salt-key -d usage
     """
@@ -120,9 +102,9 @@ def test_remove_key_eauth(salt_key_cli, salt_master, saltdev_account):
             "--eauth",
             "pam",
             "--username",
-            USERA,
+            salt_eauth_account.username,
             "--password",
-            USERA_PWD,
+            salt_eauth_account.password,
         )
         assert ret.returncode == 0
         # We can't load JSON because we print to stdout!
@@ -221,12 +203,19 @@ def test_list_acc(salt_key_cli, salt_minion, salt_sub_minion):
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
-def test_list_acc_eauth(salt_key_cli, saltdev_account, salt_minion, salt_sub_minion):
+def test_list_acc_eauth(salt_key_cli, salt_minion, salt_sub_minion, salt_eauth_account):
     """
     test salt-key -l with eauth
     """
     ret = salt_key_cli.run(
-        "-l", "acc", "--eauth", "pam", "--username", USERA, "--password", USERA_PWD
+        "-l",
+        "acc",
+        "--eauth",
+        "pam",
+        "--username",
+        salt_eauth_account.username,
+        "--password",
+        salt_eauth_account.password,
     )
     assert ret.returncode == 0
     expected = {"minions": [salt_minion.id, salt_sub_minion.id]}
@@ -236,7 +225,7 @@ def test_list_acc_eauth(salt_key_cli, saltdev_account, salt_minion, salt_sub_min
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
-def test_list_acc_eauth_bad_creds(salt_key_cli, saltdev_account):
+def test_list_acc_eauth_bad_creds(salt_key_cli, salt_eauth_account):
     """
     test salt-key -l with eauth and bad creds
     """
@@ -246,17 +235,19 @@ def test_list_acc_eauth_bad_creds(salt_key_cli, saltdev_account):
         "--eauth",
         "pam",
         "--username",
-        USERA,
+        salt_eauth_account.username,
         "--password",
         "wrongpassword",
     )
     assert (
         ret.stdout
-        == 'Authentication failure of type "eauth" occurred for user {}.'.format(USERA)
+        == 'Authentication failure of type "eauth" occurred for user {}.'.format(
+            salt_eauth_account.username
+        )
     )
 
 
-def test_list_acc_wrong_eauth(salt_key_cli):
+def test_list_acc_wrong_eauth(salt_key_cli, salt_eauth_account):
     """
     test salt-key -l with wrong eauth
     """
@@ -266,9 +257,9 @@ def test_list_acc_wrong_eauth(salt_key_cli):
         "--eauth",
         "wrongeauth",
         "--username",
-        USERA,
+        salt_eauth_account.username,
         "--password",
-        USERA_PWD,
+        salt_eauth_account.password,
     )
     assert ret.returncode == 0, ret
     assert re.search(

@@ -28,8 +28,8 @@ import subprocess
 HAS_LIBS = False
 try:
     import splunklib.client
-    from splunklib.client import AuthenticationError
     from splunklib.binding import HTTPError
+    from splunklib.client import AuthenticationError
 
     HAS_LIBS = True
 except ImportError:

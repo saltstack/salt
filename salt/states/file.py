@@ -9050,3 +9050,77 @@ def mod_beacon(name, **kwargs):
             ),
             "result": False,
         }
+
+
+def pruned(name, recurse=False, ignore_errors=False, older_than=None):
+    """
+    .. versionadded:: 3006.0
+
+    Ensure that the named directory is absent. If it exists and is empty, it
+    will be deleted. An entire directory tree can be pruned of empty
+    directories as well, by using the ``recurse`` option.
+
+    name
+        The directory which should be deleted if empty.
+
+    recurse
+        If set to ``True``, this option will recursive deletion of empty
+        directories. This is useful if nested paths are all empty, and would
+        be the only items preventing removal of the named root directory.
+
+    ignore_errors
+        If set to ``True``, any errors encountered while attempting to delete a
+        directory are ignored. This **AUTOMATICALLY ENABLES** the ``recurse``
+        option since it's not terribly useful to ignore errors on the removal of
+        a single directory. Useful for pruning only the empty directories in a
+        tree which contains non-empty directories as well.
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+    """
+    name = os.path.expanduser(name)
+
+    ret = {"name": name, "changes": {}, "comment": "", "result": True}
+
+    if ignore_errors:
+        recurse = True
+
+    if os.path.isdir(name):
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["changes"]["deleted"] = name
+            ret["comment"] = "Directory {} is set for removal".format(name)
+            return ret
+
+        res = __salt__["file.rmdir"](
+            name, recurse=recurse, verbose=True, older_than=older_than
+        )
+        result = res.pop("result")
+
+        if result:
+            if recurse and res["deleted"]:
+                ret[
+                    "comment"
+                ] = "Recursively removed empty directories under {}".format(name)
+                ret["changes"]["deleted"] = sorted(res["deleted"])
+            elif not recurse:
+                ret["comment"] = "Removed directory {}".format(name)
+                ret["changes"]["deleted"] = name
+            return ret
+        elif ignore_errors and res["deleted"]:
+            ret["comment"] = "Recursively removed empty directories under {}".format(
+                name
+            )
+            ret["changes"]["deleted"] = sorted(res["deleted"])
+            return ret
+
+        ret["result"] = result
+        ret["changes"] = res
+        ret["comment"] = "Failed to remove directory {}".format(name)
+        return ret
+
+    ret["comment"] = "Directory {} is not present".format(name)
+    return ret

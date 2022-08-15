@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.eselect as eselect
 from tests.support.mock import MagicMock, patch
 

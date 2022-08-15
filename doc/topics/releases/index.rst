@@ -44,6 +44,7 @@ Upcoming Release
     :glob:
 
     3005*
+    3006*
 
 .. seealso:: :ref:`Legacy salt-cloud release docs <legacy-salt-cloud-release-notes>`
 

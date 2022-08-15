@@ -6,6 +6,7 @@ import copy
 import logging
 
 import pytest
+
 import salt.utils.platform
 from salt import client
 from salt.exceptions import (

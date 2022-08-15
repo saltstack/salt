@@ -512,7 +512,7 @@ libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 loguru==0.6.0
     # via ciscoconfparse
-lxml==4.7.1
+lxml==4.9.1
     # via
     #   junos-eznc
     #   napalm
@@ -700,7 +700,7 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==1.7.1
+pyjwt==2.4.0
     # via
     #   adal
     #   twilio
@@ -841,7 +841,6 @@ six==1.16.0
     #   responses
     #   textfsm
     #   transitions
-    #   twilio
     #   vcert
     #   virtualenv
     #   websocket-client
@@ -883,7 +882,7 @@ tornado==6.1
     # via python-telegram-bot
 transitions==0.8.8
     # via junos-eznc
-twilio==6.63.0
+twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
     # via

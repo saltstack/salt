@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_wusa as wusa
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch

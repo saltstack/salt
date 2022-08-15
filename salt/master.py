@@ -737,7 +737,10 @@ class Master(SMaster):
             # must be after channels
             log.info("Creating master maintenance process")
             self.process_manager.add_process(
-                Maintenance, args=(self.opts,), name="Maintenance"
+                Maintenance,
+                args=(self.opts,),
+                kwargs={"master_secrets": SMaster.secrets},
+                name="Maintenance",
             )
 
             if self.opts.get("event_return"):

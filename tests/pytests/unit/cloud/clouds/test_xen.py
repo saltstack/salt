@@ -8,6 +8,7 @@
 import logging
 
 import pytest
+
 from salt.cloud.clouds import xen
 from tests.support.mock import MagicMock, patch
 
