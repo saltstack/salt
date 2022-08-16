@@ -146,7 +146,15 @@ def _invalid(line):
         comment = line[idx + 1 :]
         line = line[:idx]
 
-    repo_line = line.strip().split()
+    cdrom_match = re.match(r"(.*)(cdrom:.*/)(.*)", line.strip())
+    if cdrom_match:
+        repo_line = (
+            [p.strip() for p in cdrom_match.group(1).split()]
+            + [cdrom_match.group(2).strip()]
+            + [p.strip() for p in cdrom_match.group(3).split()]
+        )
+    else:
+        repo_line = line.strip().split()
     if (
         not repo_line
         or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
@@ -1716,7 +1724,7 @@ def _get_opts(line):
     """
     Return all opts in [] for a repo line
     """
-    get_opts = re.search(r"\[.*\]", line)
+    get_opts = re.search(r"\[(.*=.*)\]", line)
     ret = {
         "arch": {"full": "", "value": "", "index": 0},
         "signedby": {"full": "", "value": "", "index": 0},
@@ -1848,7 +1856,6 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
 
     ret = {}
     pkg_name = None
-    skip_pkg = False
     new_pkg = re.compile("^Package: (.+)")
     for line in salt.utils.itertools.split(out["stdout"], "\n"):
         if not line.strip():
