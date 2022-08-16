@@ -59,6 +59,8 @@ if str(CODE_DIR) in sys.path:
     sys.path.remove(str(CODE_DIR))
 sys.path.insert(0, str(CODE_DIR))
 
+os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
+
 # Coverage
 if "COVERAGE_PROCESS_START" in os.environ:
     MAYBE_RUN_COVERAGE = True
