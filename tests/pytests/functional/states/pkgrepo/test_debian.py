@@ -69,6 +69,24 @@ def test_adding_repo_file_arch(pkgrepo, tmp_path):
         )
 
 
+@pytest.mark.requires_salt_states("pkgrepo.managed")
+def test_adding_repo_file_cdrom(pkgrepo, tmp_path):
+    """
+    test adding a repo file using pkgrepo.managed
+    The issue is that CDROM installs often have [] in the line, and we
+    should still add the repo even though it's not setting arch(for example)
+    """
+    repo_file = str(tmp_path / "cdrom.list")
+    repo_content = "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
+    pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    with salt.utils.files.fopen(repo_file, "r") as fp:
+        file_content = fp.read()
+        assert (
+            file_content.strip()
+            == "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
+        )
+
+
 def system_aptsources_ids(value):
     return "{}(aptsources.sourceslist)".format(value.title())
 
