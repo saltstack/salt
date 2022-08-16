@@ -8,6 +8,7 @@ import re
 import sys
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.version

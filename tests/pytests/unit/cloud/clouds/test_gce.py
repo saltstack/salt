@@ -8,6 +8,7 @@
 import collections
 
 import pytest
+
 from salt.cloud.clouds import gce
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion

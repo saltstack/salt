@@ -87,8 +87,8 @@ import salt.utils.stringutils
 
 # pylint: disable=no-name-in-module
 try:
-    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, SoapStubAdapter
-    from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVim.connect import Disconnect, GetSi, GetStub, SmartConnect, SoapStubAdapter
+    from pyVmomi import VmomiSupport, vim, vmodl
 
     HAS_PYVMOMI = True
 except ImportError:
@@ -104,8 +104,9 @@ except ImportError:
     HAS_VSPHERE_SDK = False
 # pylint: enable=no-name-in-module
 try:
-    import gssapi
     import base64
+
+    import gssapi
 
     HAS_GSSAPI = True
 except ImportError:

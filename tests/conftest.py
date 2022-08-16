@@ -26,6 +26,7 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
+
 import salt._logging
 import salt._logging.mixins
 import salt.config
@@ -267,7 +268,8 @@ def pytest_configure(config):
         "requiring a minimum value of random entropy. In the case where the value is lower "
         "than the provided 'minimum', an attempt will be made to raise that value up until "
         "the provided 'timeout' minutes have passed, at which time, depending on the value "
-        "of 'skip' the test will skip or fail.".format(
+        "of 'skip' the test will skip or fail.  For entropy poolsizes of 256 bits, the min "
+        "is adjusted to 192.".format(
             EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
         ),
     )
@@ -1189,7 +1191,7 @@ def sshd_config_dir(salt_factories):
 
 
 @pytest.fixture(scope="module")
-def sshd_server(salt_factories, sshd_config_dir, salt_master):
+def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp
@@ -1220,6 +1222,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
         "Subsystem": "sftp /usr/lib/openssh/sftp-server",
         "UsePAM": "yes",
     }
+    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        sshd_config_dict["Subsystem"] = "sftp /usr/libexec/openssh/sftp-server"
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,

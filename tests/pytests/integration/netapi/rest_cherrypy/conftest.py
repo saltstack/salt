@@ -1,4 +1,5 @@
 import pytest
+
 import salt.ext.tornado.wsgi
 import salt.netapi.rest_cherrypy.app
 import tests.support.netapi as netapi

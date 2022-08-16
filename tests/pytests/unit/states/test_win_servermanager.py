@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_servermanager as win_servermanager
 from tests.support.mock import MagicMock, patch
 

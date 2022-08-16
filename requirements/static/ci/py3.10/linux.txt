@@ -495,7 +495,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-lxml==4.7.1
+lxml==4.9.1
     # via
     #   junos-eznc
     #   ncclient
@@ -660,13 +660,16 @@ pyasn1==0.4.8
     # via
     #   pyasn1-modules
     #   rsa
-pycparser==2.17
-    # via cffi
+pycparser==2.21 ; python_version >= "3.9"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/linux.in
+    #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
-pygit2==1.7.1 ; python_version >= "3.10"
+pygit2==1.9.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
@@ -692,6 +695,8 @@ pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
     # via junos-eznc
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -699,7 +704,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc16 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.4.0
     # via pytest-salt-factories
@@ -721,6 +726,7 @@ pytest-timeout==1.4.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -767,7 +773,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

@@ -6,6 +6,7 @@ import logging
 
 import pytest
 from saltfactories.utils import random_string
+
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 

@@ -5,6 +5,7 @@ unit tests for the cache runner
 import os
 
 import pytest
+
 import salt.runners.queue as queue_mod
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

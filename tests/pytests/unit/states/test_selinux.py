@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.selinux as selinux
 from tests.support.mock import MagicMock, patch
 

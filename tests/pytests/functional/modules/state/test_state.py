@@ -5,6 +5,7 @@ import threading
 import time
 
 import pytest
+
 import salt.loader
 import salt.utils.atomicfile
 import salt.utils.files
@@ -727,6 +728,9 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
     duration = 4
     if salt.utils.platform.spawning_platform():
         duration = 30
+        # mac needs some more time to do its makeup
+        if salt.utils.platform.is_darwin():
+            duration += 15
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls(
@@ -968,3 +972,33 @@ def test_state_sls_lazyloader_allows_recursion(state, state_tree):
         for state_return in ret:
             assert state_return.result is True
             assert "Success!" in state_return.comment
+
+
+def test_issue_62264_requisite_not_found(state, state_tree):
+    """
+    This tests that the proper state module is referenced for _in requisites
+    when no explicit state module is given.
+    Context: https://github.com/saltstack/salt/pull/62264
+    """
+    sls_contents = """
+    stuff:
+      cmd.run:
+        - name: echo hello
+
+    thing_test:
+      cmd.run:
+        - name: echo world
+        - require_in:
+          - /stuff/*
+          - test: service_running
+
+    service_running:
+      test.succeed_without_changes:
+        - require:
+          - cmd: stuff
+    """
+    with pytest.helpers.temp_file("issue-62264.sls", sls_contents, state_tree):
+        ret = state.sls("issue-62264")
+        for state_return in ret:
+            assert state_return.result is True
+            assert "The following requisites were not found" not in state_return.comment

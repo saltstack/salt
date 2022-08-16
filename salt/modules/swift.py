@@ -61,9 +61,6 @@ def __virtual__():
     return suos.check_swift()
 
 
-__opts__ = {}
-
-
 def _auth(profile=None):
     """
     Set up openstack credentials

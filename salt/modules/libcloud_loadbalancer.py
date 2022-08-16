@@ -42,8 +42,8 @@ REQUIRED_LIBCLOUD_VERSION = "1.5.0"
 try:
     # pylint: disable=unused-import
     import libcloud
+    from libcloud.loadbalancer.base import Algorithm, Member
     from libcloud.loadbalancer.providers import get_driver
-    from libcloud.loadbalancer.base import Member, Algorithm
 
     # pylint: enable=unused-import
     if hasattr(libcloud, "__version__") and _LooseVersion(

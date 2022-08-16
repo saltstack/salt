@@ -6,6 +6,7 @@ import tempfile
 
 import jinja2.exceptions
 import pytest
+
 import salt.modules.debian_ip as debian_ip
 import salt.utils.files
 import salt.utils.platform

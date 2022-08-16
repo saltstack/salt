@@ -1,1 +1,0 @@
-Add possibility to pass extra parameters to salt-ssh pre flight script with `ssh_pre_flight_args`

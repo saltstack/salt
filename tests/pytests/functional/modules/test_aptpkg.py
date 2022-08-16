@@ -3,6 +3,7 @@ import pathlib
 import shutil
 
 import pytest
+
 import salt.exceptions
 import salt.modules.aptpkg as aptpkg
 import salt.modules.cmdmod as cmd
@@ -25,6 +26,9 @@ class Key:
         self.keyname = "salt-archive-keyring.gpg"
 
     def add_key(self):
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
+        if not keydir.is_dir():
+            keydir.mkdir()
         aptpkg.add_repo_key("salt://{}".format(self.keyname), aptkey=self.aptkey)
 
     def del_key(self):
@@ -284,6 +288,20 @@ def test_get_repo_keys(add_key):
     )
 
 
+@pytest.mark.parametrize("key", [False, True])
+@pytest.mark.destructive_test
+def test_get_repo_keys_keydir_not_exist(key):
+    """
+    Test aptpkg.get_repo_keys when aptkey is False and True
+    and keydir does not exist
+    """
+    ret = aptpkg.get_repo_keys(aptkey=key, keydir="/doesnotexist/")
+    if not key:
+        assert not ret
+    else:
+        assert ret
+
+
 @pytest.mark.parametrize("aptkey", [False, True])
 def test_add_del_repo_key(get_key_file, aptkey):
     """
@@ -292,7 +310,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
     """
     try:
         assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
-        keyfile = pathlib.Path("/usr", "share", "keyrings", get_key_file)
+        keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)

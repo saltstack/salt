@@ -1,2 +1,0 @@
-Remove SaltMessageServer.shutdown in favor of close.
-Remove LoadBalancerWorker.stop in favor of close.

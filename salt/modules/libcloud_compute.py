@@ -43,8 +43,8 @@ REQUIRED_LIBCLOUD_VERSION = "2.0.0"
 try:
     # pylint: disable=unused-import
     import libcloud
-    from libcloud.compute.providers import get_driver
     from libcloud.compute.base import Node
+    from libcloud.compute.providers import get_driver
 
     # pylint: enable=unused-import
     if hasattr(libcloud, "__version__") and _LooseVersion(

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.mac_user as mac_user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch

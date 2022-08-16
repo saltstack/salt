@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 
 REQ_ERROR = None
 try:
-    import libnacl.secret
     import libnacl.sealed
+    import libnacl.secret
 except (ImportError, OSError) as e:
     REQ_ERROR = (
         "libnacl import error, perhaps missing python libnacl package or should update."

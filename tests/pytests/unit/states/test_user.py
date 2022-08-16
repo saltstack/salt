@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.states.user as user
 from tests.support.mock import MagicMock, Mock, patch
 

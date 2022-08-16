@@ -22,7 +22,7 @@ from tests.support.mock import MagicMock, PropertyMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    from pyVmomi import vim, vmodl, pbm  # pylint: disable=no-name-in-module
+    from pyVmomi import pbm, vim, vmodl  # pylint: disable=no-name-in-module
 
     HAS_PYVMOMI = True
 except ImportError:
