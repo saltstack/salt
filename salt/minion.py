@@ -1622,7 +1622,7 @@ class Minion(MinionBase):
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
         ) as event:
-            ret = yield event.fire_event(
+            ret = yield event.fire_event_async(
                 load, "__master_req_channel_payload", timeout=timeout
             )
             raise salt.ext.tornado.gen.Return(ret)
