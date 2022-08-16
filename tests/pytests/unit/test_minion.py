@@ -126,7 +126,6 @@ async def test_send_req_async_regression_62453():
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
-    # with patch("salt.utils.event.get_event", return_value=event):
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     opts["random_startup_delay"] = 0
     opts["return_retry_tries"] = 30
