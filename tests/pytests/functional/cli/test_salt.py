@@ -1,14 +1,14 @@
-"""
-tests.pytests.functional.cli.test_salt
-~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
+import logging
+
 import pytest
 
 import salt.version
 
+log = logging.getLogger(__name__)
+
 
 @pytest.mark.windows_whitelisted
-def test_versions_report(salt_cli):
+def test_versions_report(request, salt_cli):
     """
     Test that we can re-parse the version report back into
     a similar format with the necessary headers
@@ -29,7 +29,16 @@ def test_versions_report(salt_cli):
     ret_lines = [line.strip() for line in ret_lines]
 
     for header in expected:
-        assert "{}:".format(header) in ret_lines
+        try:
+            assert "{}:".format(header) in ret_lines
+        except AssertionError as exc:
+            scripts_dir_passed = request.config.getoption("--scripts-dir") is not None
+            if scripts_dir_passed and header == "Salt Extensions":
+                # pytest-salt-factories is not installed in the onedir build, so
+                # there's currently no salt-extensions installed.
+                # Skip the header
+                continue
+            raise exc from None
 
     ret_dict = {}
     expected_keys = set()

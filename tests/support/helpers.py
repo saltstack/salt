@@ -1795,12 +1795,17 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        sminion = create_sminion()
-        sminion.functions.virtualenv.create(
-            str(self.venv_dir),
-            python=self.get_real_python(),
-            system_site_packages=self.system_site_packages,
-        )
+        virtualenv = shutil.which("virtualenv")
+        if not virtualenv:
+            pytest.fail("'virtualenv' binary not found")
+        cmd = [
+            virtualenv,
+            f"--python={self.get_real_python()}",
+        ]
+        if self.system_site_packages:
+            cmd.append("--system-site-packages")
+        cmd.append(str(self.venv_dir))
+        self.run(*cmd, cwd=str(self.venv_dir.parent))
         self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
