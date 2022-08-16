@@ -15,7 +15,6 @@ ifeq ($(UNAME_S), darwin)
   SED_OPTS := -i ''
 else
   PY_MAKE_ENV := LDFLAGS="-Wl,--as-needed"
-  PY_CONFIG := --with-openssl=$(TARGET_DIR)/depend/ssl -C
   SED_OPTS := -i
 endif
 
@@ -24,6 +23,7 @@ all: $(SCRIPTS_DIR)/salt
 
 clean:
 	rm -rf $(TARGET_DIRNAME)
+
 
 onedir: salt-$(SALT_VERSION)_$(UNAME_S)_$(ARCH).tar.xz
 	echo $(SALT_VERSION)
@@ -45,7 +45,7 @@ $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION): $(TARGET_DIRNAME)/Python-$(PYTHON_VE
 	cd $(PWD); \
 	touch $@;
 
-$(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION) $(TARGET_DIR)/depend/ssl/bin/openssl
+$(TARGET_DIR)/bin/python$(PY_SUFFIX):  $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION)
 	cd $(TARGET_DIRNAME)/Python-$(PYTHON_VERSION); \
 	$(PY_MAKE_ENV) ./configure -v --prefix=$(TARGET_DIR) $(PY_CONFIG); \
 	$(PY_MAKE_ENV)  make -j4; \
@@ -93,27 +93,3 @@ salt-$(SALT_VERSION)_$(UNAME_S)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install
 	# Remove python man pages
 	rm -rf $(TARGET_DIR)/share/man/**/python*
 	tar cJf salt-$(SALT_VERSION)_$(UNAME_S)_$(ARCH).tar.xz -C $(TARGET_DIRNAME) $(TARGET_BASENAME);
-
-# <--------- Dependencies --------->
-
-$(TARGET_DIR)/depend/ssl/bin/openssl: $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION)
-	cd $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION); \
-	./config -Wl,-rpath=$(TARGET_DIR)/depend/ssl/lib shared --openssldir=$(TARGET_DIR)/depend/ssl --prefix=$(TARGET_DIR)/depend/ssl --libdir=lib; \
-	make; \
-	make install; \
-	cd $(PWD)
-	ldconfig $(TARGET_DIR)/depend/ssl/lib
-
-$(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION): $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION).tar.gz
-	cd $(TARGET_DIRNAME); \
-	tar xvf openssl-$(OPENSSL_VERSION).tar.gz; \
-	cd $(PWD); \
-	touch $@;
-
-$(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION).tar.gz: $(TARGET_DIR)
-	curl https://www.openssl.org/source/openssl-$(OPENSSL_VERSION).tar.gz -o $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION).tar.gz
-	touch $@
-
-# This is for an easy target to build just this dependency
-openssl: $(TARGET_DIR)/depend/ssl/bin/openssl
-	$(TARGET_DIR)/depend/ssl/bin/openssl version -a
