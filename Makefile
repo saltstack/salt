@@ -97,7 +97,7 @@ salt-$(SALT_VERSION)_$(UNAME_S)_$(ARCH).tar.xz: $(SCRIPTS) $(TARGET_DIR)/install
 
 $(TARGET_DIR)/bin/openssl: $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION)
 	cd $(TARGET_DIRNAME)/openssl-$(OPENSSL_VERSION); \
-	./config -Wl,-rpath=$(TARGET_DIR)/lib shared --openssldir=$(TARGET_DIR) --prefix=$(TARGET_DIR) --libdir=lib; \
+	./config -Wl,-rpath='$$ORIGIN/../lib' shared --openssldir=$(TARGET_DIR) --prefix=$(TARGET_DIR) --libdir=lib; \
 	make; \
 	make install; \
 	cd $(PWD)

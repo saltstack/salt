@@ -170,7 +170,7 @@ def handle_elf(path, libs, root=None):
 
         lib_name, location_info = (_.strip() for _ in line.split("=>", 1))
         if location_info == "not found":
-            # XXX This could be considered an error
+            # It is likely something was not compiled correctly
             log.warning("Unable to find library %s linked from %s", lib_name, path)
             continue
 
@@ -182,8 +182,6 @@ def handle_elf(path, libs, root=None):
             continue
 
         if is_in_dir(linked_lib, root):
-            # XXX Validate the rpath of the elf points to this file's location
-            # and if not add it.
             needs_rpath = True
             log.warning("Skip file already within root directory: %s", linked_lib)
         else:
@@ -191,7 +189,6 @@ def handle_elf(path, libs, root=None):
 
             if os.path.exists(relocated_path):
                 log.debug("Relocated library exists: %s", relocated_path)
-                # XXX Check hashes?
             else:
                 log.info("Copy %s to %s", linked_lib, relocated_path)
                 shutil.copy(linked_lib, relocated_path)
