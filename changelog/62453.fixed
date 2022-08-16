@@ -1,0 +1,1 @@
+Use fire_event_async when expecting a coroutine
