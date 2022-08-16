@@ -852,8 +852,9 @@ def test__skip_source():
     assert ret is False
 
 
-def test__parse_source():
-    cases = (
+@pytest.mark.parametrize(
+    "case",
+    (
         {"ok": False, "line": "", "invalid": True, "disabled": False},
         {"ok": False, "line": "#", "invalid": True, "disabled": True},
         {"ok": False, "line": "##", "invalid": True, "disabled": True},
@@ -880,19 +881,31 @@ def test__parse_source():
             "invalid": False,
             "disabled": False,
         },
-    )
+        {
+            "ok": True,
+            "line": (
+                "# deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ bullseye main\n"
+                "\n"
+                "deb http://httpredir.debian.org/debian bullseye main\n"
+                "deb-src http://httpredir.debian.org/debian bullseye main\n"
+            ),
+            "invalid": False,
+            "disabled": True,
+        },
+    ),
+)
+def test__parse_source(case):
     with patch.dict("sys.modules", {"aptsources.sourceslist": None}):
         importlib.reload(aptpkg)
         NoAptSourceEntry = aptpkg.SourceEntry
     importlib.reload(aptpkg)
 
-    for case in cases:
-        source = NoAptSourceEntry(case["line"])
-        ok = source._parse_sources(case["line"])
+    source = NoAptSourceEntry(case["line"])
+    ok = source._parse_sources(case["line"])
 
-        assert ok is case["ok"]
-        assert source.invalid is case["invalid"]
-        assert source.disabled is case["disabled"]
+    assert ok is case["ok"]
+    assert source.invalid is case["invalid"]
+    assert source.disabled is case["disabled"]
 
 
 def test_normalize_name():
@@ -948,21 +961,49 @@ def test_list_repos():
                 assert repos[source_uri][0]["uri"][-1] == "/"
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is False, reason="The 'aptsources' library is missing."
-)
 def test_expand_repo_def():
     """
     Checks results from expand_repo_def
     """
-    source_type = "deb"
-    source_uri = "http://cdn-aws.deb.debian.org/debian/"
-    source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     source_file = "/etc/apt/sources.list"
 
     # Valid source
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
+
+    assert isinstance(sanitized, dict)
+    assert "uri" in sanitized
+
+    # Make sure last character in of the URI is still a /
+    assert sanitized["uri"][-1] == "/"
+
+    # Pass the architecture and make sure it is added the the line attribute
+    repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+    sanitized = aptpkg.expand_repo_def(
+        repo=repo, file=source_file, architectures="amd64"
+    )
+
+    # Make sure line is in the dict
+    assert isinstance(sanitized, dict)
+    assert "line" in sanitized
+
+    # Make sure the architecture is in line
+    assert (
+        sanitized["line"]
+        == "deb [arch=amd64] http://cdn-aws.deb.debian.org/debian/ stretch main"
+    )
+
+
+def test_expand_repo_def_cdrom():
+    """
+    Checks results from expand_repo_def
+    """
+    source_file = "/etc/apt/sources.list"
+
+    # Valid source
+    repo = "# deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ bullseye main\n"
+    sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
+    log.warning("SAN: %s", sanitized)
 
     assert isinstance(sanitized, dict)
     assert "uri" in sanitized
