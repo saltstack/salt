@@ -76,7 +76,7 @@ psutil==5.8.0
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
