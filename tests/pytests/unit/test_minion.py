@@ -139,7 +139,7 @@ async def test_send_req_async_regression_62453():
 
         # We are just validating no exception is raised
         rtn = await minion._send_req_async(load, timeout)
-        assert rtn == False
+        assert rtn is False
 
 
 @patch("salt.channel.client.ReqChannel.factory")
