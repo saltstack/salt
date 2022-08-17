@@ -398,9 +398,7 @@ class _Zypper:
                 data = {
                     "info": (
                         "Unable to retrieve information about "
-                        "blocking process: {}".format(
-                            err
-                        )
+                        "blocking process: {}".format(err)
                     ),
                     "success": False,
                 }
@@ -414,20 +412,14 @@ class _Zypper:
         else:
             log.debug("Collected data about blocking process.")
         __salt__["event.fire_master"](data, self.TAG_BLOCKED)
-        log.debug(
-            "Fired a Zypper blocked event to the master with the data: %s", data
-        )
+        log.debug("Fired a Zypper blocked event to the master with the data: %s", data)
         log.debug("Waiting 5 seconds for Zypper gets released...")
         time.sleep(5)
 
     def _handle_rpm_lock_file(self):
-        data = {
-            "info": "RPM is temporarily locked.",
-            "success": True
-        }
+        data = {"info": "RPM is temporarily locked.", "success": True}
         __salt__["event.fire_master"](data, self.TAG_BLOCKED)
-        log.debug("Fired an RPM blocked event to the master with the data: "
-                  "%s", data)
+        log.debug("Fired an RPM blocked event to the master with the data: %s", data)
         log.debug("Waiting 5 seconds for RPM to get released...")
         time.sleep(5)
 
