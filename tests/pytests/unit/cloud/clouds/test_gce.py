@@ -49,11 +49,6 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture(scope="module")
-def location():
-    return collections.namedtuple("Location", "name")("chicago")
-
-
 @pytest.fixture(
     params=[
         {"expected": "debian-7", "image": ""},
@@ -73,6 +68,18 @@ def config_image(request):
 )
 def config_labels(request):
     return request.param["expected"], request.param["label"]
+
+
+@pytest.fixture(
+    params=[
+        {
+            "expected": collections.namedtuple("Location", "name")("chicago"),
+            "location": collections.namedtuple("Location", "name")("chicago"),
+        },
+    ]
+)
+def config_location(request):
+    return request.param["expected"], request.param["location"]
 
 
 @pytest.fixture(
@@ -107,9 +114,10 @@ def config_tags(request):
 
 
 @pytest.fixture
-def config(location, config_image, config_labels, config_metadata, config_tags):
+def config(config_image, config_labels, config_location, config_metadata, config_tags):
     expected_image, image = config_image
     expected_labels, labels = config_labels
+    expected_location, location = config_location
     expected_metadata, metadata = config_metadata
     expected_tags, tags = config_tags
     expected_call_kwargs = {
@@ -128,7 +136,7 @@ def config(location, config_image, config_labels, config_metadata, config_tags):
         "ex_preemptible": False,
         "ex_can_ip_forward": False,
         "ex_on_host_maintenance": "TERMINATE",
-        "location": location,
+        "location": expected_location,
         "ex_subnetwork": None,
         "image": expected_image,
         "size": 1234,
