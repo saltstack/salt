@@ -1,0 +1,1 @@
+Fixed stacktrace on Windows when running pkg.list_pkgs
