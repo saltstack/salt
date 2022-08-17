@@ -127,6 +127,15 @@ def config_size(request):
 
 @pytest.fixture(
     params=[
+        {"expected": "mysubnetwork", "subnetwork": "mysubnetwork"},
+    ]
+)
+def config_subnetwork(request):
+    return request.param["expected"], request.param["subnetwork"]
+
+
+@pytest.fixture(
+    params=[
         {"expected": None, "tag": "{}"},
         {"expected": ["blerpy", "dude"], "tag": "['blerpy', 'dude']"},
     ]
@@ -143,6 +152,7 @@ def config(
     config_metadata,
     config_network,
     config_size,
+    config_subnetwork,
     config_tags,
 ):
     expected_image, image = config_image
@@ -151,6 +161,7 @@ def config(
     expected_metadata, metadata = config_metadata
     expected_network, network = config_network
     expected_size, size = config_size
+    expected_subnetwork, subnetwork = config_subnetwork
     expected_tags, tags = config_tags
     expected_call_kwargs = {
         "ex_disk_type": "pd-standard",
@@ -169,7 +180,7 @@ def config(
         "ex_can_ip_forward": False,
         "ex_on_host_maintenance": "TERMINATE",
         "location": expected_location,
-        "ex_subnetwork": None,
+        "ex_subnetwork": expected_subnetwork,
         "image": expected_image,
         "size": expected_size,
     }
@@ -183,7 +194,7 @@ def config(
         "ex_accelerator_type": "foo",
         "ex_accelerator_count": 42,
         "network": network,
-        "ex_subnetwork": "mysubnetwork",
+        "subnetwork": subnetwork,
         "ex_labels": labels,
         "ex_tags": tags,
         "ex_metadata": metadata,
