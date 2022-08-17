@@ -34,13 +34,6 @@ except ImportError:
     pass
 
 
-warn_until_date(
-    "20240101",
-    "The cassandra returner is broken and deprecated, and will be removed"
-    " after {date}. Use the cassandra_cql returner instead",
-)
-
-
 def __virtual__():
     """
     Only load if pycassa is available and the system is configured
@@ -50,6 +43,12 @@ def __virtual__():
             False,
             "The cassandra execution module cannot be loaded: pycassa not installed.",
         )
+
+    warn_until_date(
+        "20240101",
+        "The cassandra returner is broken and deprecated, and will be removed"
+        " after {date}. Use the cassandra_cql returner instead",
+    )
 
     if HAS_PYCASSA and salt.utils.path.which("nodetool"):
         return "cassandra"
