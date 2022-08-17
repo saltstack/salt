@@ -105,6 +105,17 @@ def config_metadata(request):
 
 @pytest.fixture(
     params=[
+        {"expected": "n1-standard-1", "size": ""},
+        {"expected": "n1-standard-1", "size": None},
+        {"expected": "e2-standard-2", "size": "e2-standard-2"},
+    ]
+)
+def config_size(request):
+    return request.param["expected"], request.param["size"]
+
+
+@pytest.fixture(
+    params=[
         {"expected": None, "tag": "{}"},
         {"expected": ["blerpy", "dude"], "tag": "['blerpy', 'dude']"},
     ]
@@ -114,11 +125,19 @@ def config_tags(request):
 
 
 @pytest.fixture
-def config(config_image, config_labels, config_location, config_metadata, config_tags):
+def config(
+    config_image,
+    config_labels,
+    config_location,
+    config_metadata,
+    config_size,
+    config_tags,
+):
     expected_image, image = config_image
     expected_labels, labels = config_labels
     expected_location, location = config_location
     expected_metadata, metadata = config_metadata
+    expected_size, size = config_size
     expected_tags, tags = config_tags
     expected_call_kwargs = {
         "ex_disk_type": "pd-standard",
@@ -139,13 +158,13 @@ def config(config_image, config_labels, config_location, config_metadata, config
         "location": expected_location,
         "ex_subnetwork": None,
         "image": expected_image,
-        "size": 1234,
+        "size": expected_size,
     }
     config = {
         "name": "new",
         "driver": "gce",
         "profile": None,
-        "size": 1234,
+        "size": size,
         "image": image,
         "location": location,
         "ex_accelerator_type": "foo",
