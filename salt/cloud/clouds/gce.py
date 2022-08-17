@@ -480,9 +480,12 @@ def __get_network(conn, vm_):
     """
     Return a GCE libcloud network object with matching name
     """
+    default_network = "default"
     network = config.get_cloud_config_value(
-        "network", vm_, __opts__, default="default", search_global=False
+        "network", vm_, __opts__, default=default_network, search_global=False
     )
+    if not network or not isinstance(network, str):
+        network = default_network
     return conn.ex_get_network(network)
 
 

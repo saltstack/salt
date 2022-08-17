@@ -105,6 +105,17 @@ def config_metadata(request):
 
 @pytest.fixture(
     params=[
+        {"expected": "default", "network": ""},
+        {"expected": "default", "network": None},
+        {"expected": "mynetwork", "network": "mynetwork"},
+    ]
+)
+def config_network(request):
+    return request.param["expected"], request.param["network"]
+
+
+@pytest.fixture(
+    params=[
         {"expected": "n1-standard-1", "size": ""},
         {"expected": "n1-standard-1", "size": None},
         {"expected": "e2-standard-2", "size": "e2-standard-2"},
@@ -130,6 +141,7 @@ def config(
     config_labels,
     config_location,
     config_metadata,
+    config_network,
     config_size,
     config_tags,
 ):
@@ -137,6 +149,7 @@ def config(
     expected_labels, labels = config_labels
     expected_location, location = config_location
     expected_metadata, metadata = config_metadata
+    expected_network, network = config_network
     expected_size, size = config_size
     expected_tags, tags = config_tags
     expected_call_kwargs = {
@@ -150,7 +163,7 @@ def config(
         "ex_tags": expected_tags,
         "ex_labels": expected_labels,
         "ex_disk_auto_delete": True,
-        "ex_network": "default",
+        "ex_network": expected_network,
         "ex_disks_gce_struct": None,
         "ex_preemptible": False,
         "ex_can_ip_forward": False,
@@ -169,7 +182,7 @@ def config(
         "location": location,
         "ex_accelerator_type": "foo",
         "ex_accelerator_count": 42,
-        "ex_network": "mynetwork",
+        "network": network,
         "ex_subnetwork": "mysubnetwork",
         "ex_labels": labels,
         "ex_tags": tags,
