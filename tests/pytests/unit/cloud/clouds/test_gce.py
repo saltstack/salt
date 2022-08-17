@@ -54,22 +54,101 @@ def location():
     return collections.namedtuple("Location", "name")("chicago")
 
 
-@pytest.fixture
-def config(location):
+@pytest.fixture(
+    params=[
+        {"expected": "debian-7", "image": ""},
+        {"expected": "debian-7", "image": None},
+        {"expected": "debian-10", "image": "debian-10"},
+    ]
+)
+def config_image(request):
+    return request.param["expected"], request.param["image"]
 
-    return {
+
+@pytest.fixture(
+    params=[
+        {"expected": None, "label": "{}"},
+        {"expected": {"blerpy": "dude"}, "label": "{'blerpy': 'dude'}"},
+    ]
+)
+def config_labels(request):
+    return request.param["expected"], request.param["label"]
+
+
+@pytest.fixture(
+    params=[
+        {
+            "expected": {"items": [{"key": "salt-cloud-profile", "value": None}]},
+            "metadata": {},
+        },
+        {
+            "expected": {
+                "items": [
+                    {"key": "mykey", "value": "myvalue"},
+                    {"key": "salt-cloud-profile", "value": None},
+                ]
+            },
+            "metadata": "{'mykey': 'myvalue'}",
+        },
+    ]
+)
+def config_metadata(request):
+    return request.param["expected"], request.param["metadata"]
+
+
+@pytest.fixture(
+    params=[
+        {"expected": None, "tag": "{}"},
+        {"expected": ["blerpy", "dude"], "tag": "['blerpy', 'dude']"},
+    ]
+)
+def config_tags(request):
+    return request.param["expected"], request.param["tag"]
+
+
+@pytest.fixture
+def config(location, config_image, config_labels, config_metadata, config_tags):
+    expected_image, image = config_image
+    expected_labels, labels = config_labels
+    expected_metadata, metadata = config_metadata
+    expected_tags, tags = config_tags
+    expected_call_kwargs = {
+        "ex_disk_type": "pd-standard",
+        "ex_metadata": expected_metadata,
+        "ex_accelerator_count": 42,
+        "name": "new",
+        "ex_service_accounts": None,
+        "external_ip": "ephemeral",
+        "ex_accelerator_type": "foo",
+        "ex_tags": expected_tags,
+        "ex_labels": expected_labels,
+        "ex_disk_auto_delete": True,
+        "ex_network": "default",
+        "ex_disks_gce_struct": None,
+        "ex_preemptible": False,
+        "ex_can_ip_forward": False,
+        "ex_on_host_maintenance": "TERMINATE",
+        "location": location,
+        "ex_subnetwork": None,
+        "image": expected_image,
+        "size": 1234,
+    }
+    config = {
         "name": "new",
         "driver": "gce",
         "profile": None,
         "size": 1234,
-        "image": "myimage",
+        "image": image,
         "location": location,
+        "ex_accelerator_type": "foo",
+        "ex_accelerator_count": 42,
         "ex_network": "mynetwork",
         "ex_subnetwork": "mysubnetwork",
-        "ex_labels": "mylabels",
-        "ex_tags": "mytags",
-        "ex_metadata": "metadata",
+        "ex_labels": labels,
+        "ex_tags": tags,
+        "ex_metadata": metadata,
     }
+    return expected_call_kwargs, config
 
 
 @pytest.fixture
@@ -196,37 +275,13 @@ def test_get_configured_provider_should_return_expected_result(fake_conf_provide
     assert actual_result is expected_result
 
 
-def test_request_instance_with_accelerator(config, location, conn, fake_libcloud_2_5_0):
+def test_request_instance_with_accelerator(config, conn):
     """
     Test requesting an instance with GCE accelerators
     """
-
-    config.update({"ex_accelerator_type": "foo", "ex_accelerator_count": 42})
-    call_kwargs = {
-        "ex_disk_type": "pd-standard",
-        "ex_metadata": {"items": [{"value": None, "key": "salt-cloud-profile"}]},
-        "ex_accelerator_count": 42,
-        "name": "new",
-        "ex_service_accounts": None,
-        "external_ip": "ephemeral",
-        "ex_accelerator_type": "foo",
-        "ex_tags": None,
-        "ex_labels": None,
-        "ex_disk_auto_delete": True,
-        "ex_network": "default",
-        "ex_disks_gce_struct": None,
-        "ex_preemptible": False,
-        "ex_can_ip_forward": False,
-        "ex_on_host_maintenance": "TERMINATE",
-        "location": location,
-        "ex_subnetwork": None,
-        "image": "myimage",
-        "size": 1234,
-    }
-
-    gce.request_instance(config)
-
-    conn.create_node.assert_called_once_with(**call_kwargs)
+    expected_call_kwargs, vm_config = config
+    gce.request_instance(vm_config)
+    conn.create_node.assert_called_once_with(**expected_call_kwargs)
 
 
 def test_create_address_should_fire_creating_and_created_events_with_expected_args(

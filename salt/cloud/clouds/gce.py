@@ -369,9 +369,12 @@ def __get_image(conn, vm_):
     The get_image for GCE allows partial name matching and returns a
     libcloud object.
     """
+    default_img = "debian-7"
     img = config.get_cloud_config_value(
-        "image", vm_, __opts__, default="debian-7", search_global=False
+        "image", vm_, __opts__, default=default_img, search_global=False
     )
+    if not img or not isinstance(img, str):
+        img = default_img
     return conn.ex_get_image(img)
 
 
@@ -398,7 +401,7 @@ def __get_labels(vm_):
     Get configured labels.
     """
     l = config.get_cloud_config_value(
-        "labels", vm_, __opts__, default="{}", search_global=False
+        "ex_labels", vm_, __opts__, default="{}", search_global=False
     )
     # Consider warning the user that the labels in the cloud profile
     # could not be interpreted, bad formatting?
@@ -416,7 +419,7 @@ def __get_tags(vm_):
     Get configured tags.
     """
     t = config.get_cloud_config_value(
-        "tags", vm_, __opts__, default="[]", search_global=False
+        "ex_tags", vm_, __opts__, default="[]", search_global=False
     )
     # Consider warning the user that the tags in the cloud profile
     # could not be interpreted, bad formatting?
@@ -434,7 +437,7 @@ def __get_metadata(vm_):
     Get configured metadata and add 'salt-cloud-profile'.
     """
     md = config.get_cloud_config_value(
-        "metadata", vm_, __opts__, default="{}", search_global=False
+        "ex_metadata", vm_, __opts__, default="{}", search_global=False
     )
     # Consider warning the user that the metadata in the cloud profile
     # could not be interpreted, bad formatting?
