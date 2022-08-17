@@ -49,7 +49,7 @@ echo "Signing Binaries"
 ################################################################################
 if [[ $(id -u) -ne 0 ]]; then
     echo ">>>>>> Re-launching as sudo <<<<<<"
-    exec sudo /bin/bash -E "$(printf '%q ' "$BASH_SOURCE" "$@")"
+    exec sudo -E /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
