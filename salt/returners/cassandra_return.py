@@ -48,16 +48,15 @@ __opts__ = {
 # Define the module's virtual name
 __virtualname__ = "cassandra"
 
-warn_until_date(
-    "20240101",
-    "The cassandra returner is broken and deprecated, and will be removed"
-    " after {date}. Use the cassandra_cql returner instead",
-)
-
 
 def __virtual__():
     if not HAS_PYCASSA:
         return False, "Could not import cassandra returner; pycassa is not installed."
+    warn_until_date(
+        "20240101",
+        "The cassandra returner is broken and deprecated, and will be removed"
+        " after {date}. Use the cassandra_cql returner instead",
+    )
     return __virtualname__
 
 
