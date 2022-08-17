@@ -379,6 +379,11 @@ def _check_user(user, group):
         gid = __salt__["file.group_to_gid"](group)
         if gid == "":
             err += "Group {} is not available".format(group)
+    if err and __opts__["test"]:
+        # Write the warning with error message, but prevent failing,
+        # in case of applying the state in test mode.
+        log.warning(err)
+        return ""
     return err
 
 
