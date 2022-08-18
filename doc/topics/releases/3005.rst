@@ -171,7 +171,7 @@ Known issues
 
 
 - Salt does not currently support napalm 4. Users will need to install napalm 3.x to
-  ensure they do run into issue #62468
+  ensure they do not run into issue #62468
 
 
 Removed
