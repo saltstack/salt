@@ -47,6 +47,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.modules.cmdmod import _parse_env
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -3013,7 +3014,7 @@ def file_dict(*packages, **kwargs):
     return __salt__["lowpkg.file_dict"](*packages)
 
 
-def expand_repo_def(**kwargs):
+def _expand_repo_def(os_name, lsb_distrib_codename=None, **kwargs):
     """
     Take a repository definition and expand it to the full pkg repository dict
     that can be used for comparison.  This is a helper function to make
@@ -3027,8 +3028,8 @@ def expand_repo_def(**kwargs):
 
     sanitized = {}
     repo = kwargs["repo"]
-    if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
-        dist = __grains__["lsb_distrib_codename"]
+    if repo.startswith("ppa:") and os_name in ("Ubuntu", "Mint", "neon"):
+        dist = lsb_distrib_codename
         owner_name, ppa_name = repo[4:].split("/", 1)
         if "ppa_auth" in kwargs:
             auth_info = "{}@".format(kwargs["ppa_auth"])
@@ -3106,6 +3107,32 @@ def expand_repo_def(**kwargs):
             sanitized["line"] = " ".join(line)
 
     return sanitized
+
+
+def expand_repo_def(**kwargs):
+    """
+    Take a repository definition and expand it to the full pkg repository dict
+    that can be used for comparison.  This is a helper function to make
+    the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
+
+    This is designed to be called from pkgrepo states and will have little use
+    being called on the CLI.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        NOT USABLE IN THE CLI
+    """
+    warn_until_date(
+        "20240101",
+        "The pkg.expand_repo_def function is deprecated and set for removal "
+        "after {date}. This is only unsed internally by the apt pkg state "
+        "module. If that's not the case, please file an new issue requesting "
+        "the removal of this deprecation warning",
+        stacklevel=3,
+    )
+    return _expand_repo_def(**kwargs)
 
 
 def _parse_selections(dpkgselection):

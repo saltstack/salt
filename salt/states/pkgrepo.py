@@ -446,8 +446,18 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if "pkg.expand_repo_def" in __salt__:
-        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
+    if __grains__.get("os_family") == "Debian":
+        from salt.modules.aptpkg import _expand_repo_def
+
+        os_name = __grains__["os"]
+        lsb_distrib_codename = __grains__["lsb_distrib_codename"]
+
+        sanitizedkwargs = _expand_repo_def(
+            os_name=os_name,
+            lsb_distrib_codename=lsb_distrib_codename,
+            repo=repo,
+            **kwargs
+        )
     else:
         sanitizedkwargs = kwargs
 
