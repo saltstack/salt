@@ -110,3 +110,28 @@ class VMWareTest(CloudTest):
         self.assertIn(i_clone_str, str(ret_val))
 
         self.assertDestroyInstance()
+
+    def test_remove_all_snapshots(self):
+        """
+        Tests remove_all_snapshots from a vm that was cloned from
+        """
+        # make sure we have cloned the instance at least once.
+        # salt-cloud -p my-instant-clone IC3
+        profile_name = "vmware-test-instant-clone"
+        # create the instance
+        ret_val = self.run_cloud(
+            "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+        )
+
+        i_clone_str = "Instant Clone created successfully"
+
+        self.assertIn(i_clone_str, str(ret_val))
+
+        self.assertDestroyInstance()
+
+        # now clean up snapshots and make sure re get the proper response.
+        ret_val = self.run_cloud("-a remove_all_snapshots cloud-tests-instant-clone")
+
+        s_ret_str = "Removed all snapshots"
+
+        self.assertIn(s_ret_str, str(ret_val))
