@@ -7,7 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3005 (2022-06-30)
+Salt 3005 (2022-08-17)
 ======================
 
 Removed
@@ -48,6 +48,7 @@ Deprecated
 - Deprecate all Azure cloud modules (#62183)
 - Deprecated ``defaults`` and ``preserve_context`` for ``salt.utils.functools.namespaced_function``.
   Additionally, the behavior when ``preserve_namespace=True`` was passed is now the default in order not to require duplicating imports on the modules that are namespacing functions. (#62272)
+- Deprecated the cassandra module in favor of the cassandra_cql module/returner. (#62327)
 
 
 Changed
@@ -254,6 +255,12 @@ Fixed
 - Update all platforms to use pycparser 2.21 or greater for Py 3.9 or higher, fixes fips fault with openssl v3.x (#62400)
 - Due to changes in the Netmiko library for the exception paths, need to check the version of Netmiko python library and then import the exceptions from different locations depending on the result. (#62405)
 - Fixed urlparse typo in rpmbuild_pkgbuild.py (#62442)
+- Fixing changes dict in pkg state to be consistent when installing and test=True. (#60995)
+- Use fire_event_async when expecting a coroutine (#62453)
+- Fixes import error under windows. (#62459)
+- account for revision number in formulas to account for difference between bottle and formula (#62466)
+- Fixed stacktrace on Windows when running pkg.list_pkgs (#62479)
+- Update sanitizing masking for Salt SSH to include additional password like strings. (#62483)
 
 
 Added
