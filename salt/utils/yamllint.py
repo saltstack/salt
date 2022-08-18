@@ -9,7 +9,7 @@ try:
 
     HAS_YAMLLINT = True
 except ImportError:
-    HAS_YAMLINT = False
+    HAS_YAMLLINT = False
 
 log = logging.getLogger(__name__)
 
