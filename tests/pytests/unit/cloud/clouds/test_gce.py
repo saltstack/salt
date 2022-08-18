@@ -63,7 +63,7 @@ def config_image(request):
 @pytest.fixture(
     params=[
         {"expected": None, "label": "{}"},
-        {"expected": {"blerpy": "dude"}, "label": "{'blerpy': 'dude'}"},
+        {"expected": {"mylabel": "myvalue"}, "label": "{'mylabel': 'myvalue'}"},
     ]
 )
 def config_labels(request):
@@ -137,7 +137,7 @@ def config_subnetwork(request):
 @pytest.fixture(
     params=[
         {"expected": None, "tag": "{}"},
-        {"expected": ["blerpy", "dude"], "tag": "['blerpy', 'dude']"},
+        {"expected": ["mytag", "myvalue"], "tag": "['mytag', 'myvalue']"},
     ]
 )
 def config_tags(request):
