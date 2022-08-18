@@ -15,7 +15,7 @@ import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, call, mock_open, patch 
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.unit import TestCase
 
 
@@ -2075,7 +2075,7 @@ pattern() = package-c"""
         if salt.utils.files.is_fcntl_available():
             zypper.__zypper__.exit_code = 1
             with patch.object(
-                    os.path, "exists", return_value=False
+                os.path, "exists", return_value=False
             ) as mock_path_exists:
                 self.assertFalse(zypper.__zypper__._is_rpm_lock())
                 mock_path_exists.assert_called_with(zypper.__zypper__.RPM_LOCK)
@@ -2085,7 +2085,7 @@ pattern() = package-c"""
         if salt.utils.files.is_fcntl_available():
             zypper.__zypper__.exit_code = 1
             with patch.object(os.path, "exists", return_value=True), patch(
-                    "fcntl.lockf", side_effect=OSError(errno.EAGAIN, "")
+                "fcntl.lockf", side_effect=OSError(errno.EAGAIN, "")
             ) as lockf_mock, patch("salt.utils.files.fopen", mock_open()):
                 self.assertTrue(zypper.__zypper__._is_rpm_lock())
                 lockf_mock.assert_called()
@@ -2095,7 +2095,7 @@ pattern() = package-c"""
         if salt.utils.files.is_fcntl_available():
             zypper.__zypper__.exit_code = 1
             with patch.object(os.path, "exists", return_value=True), patch(
-                    "fcntl.lockf"
+                "fcntl.lockf"
             ) as lockf_mock, patch("salt.utils.files.fopen", mock_open()):
                 self.assertFalse(zypper.__zypper__._is_rpm_lock())
                 self.assertEqual(lockf_mock.call_count, 2)
