@@ -45,6 +45,8 @@ jobs:
 #      artifact_name: Salt Onedir X86_64
 #      vagrant_box_name: debian-10
 #      trigger_workflow: ${{ github.workflow }}
+#    secrets:
+#      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
   debian-11:
     name: Debian 11
@@ -56,6 +58,8 @@ jobs:
       artifact_name: Salt Onedir X86_64
       vagrant_box_name: debian-11
       trigger_workflow: ${{ github.workflow }}
+    secrets:
+      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
   centos-stream-8:
     name: CentOS Stream 8
@@ -67,6 +71,8 @@ jobs:
       artifact_name: Salt Onedir X86_64
       vagrant_box_name: centos-stream-8
       trigger_workflow: ${{ github.workflow }}
+    secrets:
+      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
 #  fedora-35:
 #    name: Fedora 35
@@ -78,6 +84,8 @@ jobs:
 #      artifact_name: Salt Onedir X86_64
 #      vagrant_box_name: fedora-35
 #      trigger_workflow: ${{ github.workflow }}
+#    secrets:
+#      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
   fedora-36:
     name: Fedora 36
@@ -89,6 +97,8 @@ jobs:
       artifact_name: Salt Onedir X86_64
       vagrant_box_name: fedora-36
       trigger_workflow: ${{ github.workflow }}
+    secrets:
+      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks

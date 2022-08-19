@@ -25,6 +25,11 @@ on:
         default: salt-project-ci/debian-11
         description: The vagrant Box name to use to run tests
 
+    secrets:
+      VAGRANT_CLOUD_TOKEN:
+        required: true
+        description: The vagrant cloud token user to interact with vagrant cloud
+
 
 jobs:
 
@@ -32,100 +37,117 @@ jobs:
     name: Setup Python Dependencies
     runs-on: macos-12
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
 
-    - name: Cache nox.${{ inputs.vagrant_box_name }}.tar.xz
-      uses: actions/cache@v3
-      with:
-        path: nox.${{ inputs.vagrant_box_name }}.tar.xz
-        key: deps||${{ inputs.vagrant_box_name }}||${{ hashFiles('noxfile.py', 'requirements/**/*.txt') }}
+      - name: Cache nox.${{ inputs.vagrant_box_name }}.tar.xz
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.vagrant_box_name }}.tar.xz
+          key: deps||${{ inputs.vagrant_box_name }}||${{ hashFiles('noxfile.py', 'requirements/**/*.txt') }}
 
-    # Check the existance of nox.tar.xz.
-    # If it exists, it means the cache was hit and we don't have to regenerate the nox.tar.xz again
-    - name: Check nox.${{ inputs.vagrant_box_name }}.tar.xz Exists
-      id: check-nox-tarball
-      uses: andstor/file-existence-action@v1
-      with:
-        files: "nox.${{ inputs.vagrant_box_name }}.tar.xz"
+      - name: Show Vagrant Information
+        run: |
+          vagrant --version
+          vagrant plugin list
+          echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
 
-    - name: Install macOS Dependencies
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        brew install gnu-sed
+      - name: Cache Vagrant boxes and plugins
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.vagrant.d/boxes
+            ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
+          key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant_box_name }}|${{ hashFiles('Vagrantfile') }}
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
+      # Check the existance of nox.tar.xz.
+      # If it exists, it means the cache was hit and we don't have to regenerate the nox.tar.xz again
+      - name: Check nox.${{ inputs.vagrant_box_name }}.tar.xz Exists
+        id: check-nox-tarball
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "nox.${{ inputs.vagrant_box_name }}.tar.xz"
 
-    - name: Install Nox
-      run: |
-        python3 -m pip install nox
+      - name: Install macOS Dependencies
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          brew install gnu-sed
 
-    - name: PyPi Proxy
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        gsed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+      - name: Set up Python 3.9
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
 
-    - name: Show Vagrant Information
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        vagrant --version
-        vagrant plugin list
-        echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
+      - name: Install Nox
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          python3 -m pip install nox
 
-    - name: Cache Vagrant boxes and plugins
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.vagrant.d/boxes
-          ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
-        key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant_box_name }}|${{ hashFiles('Vagrantfile') }}
+      - name: Download One Dir Artifact
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact_name }}
 
-    - name: Spin up VM
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        vagrant up ${{ inputs.vagrant_box_name }}
+      - name: Extract Artifact
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          mkdir salt-artifacts
+          cp salt*tar.xz salt-artifacts/
+          cd salt-artifacts
+          tar -xpf salt*tar.xz
 
-    - name: Decompress .nox/
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        nox --force-color -e vagrant-upload-dependencies -- ${{ inputs.vagrant_box_name }}
+      - name: PyPi Proxy
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          gsed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
 
-    - name: Install Dependencies
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        nox --force-color -e vagrant-install-dependencies -- ${{ inputs.vagrant_box_name }}
+      - name: Spin up VM
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        env:
+          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+        run: |
+          vagrant up ${{ inputs.vagrant_box_name }}
 
-    - name: Compress And Download .nox Directory
-      if: steps.check-nox-tarball.outputs.files_exists != 'true'
-      run: |
-        nox --force-color -e vagrant-download-dependencies -- ${{ inputs.vagrant_box_name }}
+      - name: Decompress .nox/
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          nox --force-color -e vagrant-upload-dependencies -- ${{ inputs.vagrant_box_name }}
 
-    - name: Destroy VM
-      if: steps.check-nox-tarball.outputs.files_exists != 'true' && always()
-      run: |
-        vagrant destroy --force ${{ inputs.vagrant_box_name }}
+      - name: Install Dependencies
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          nox --force-color -e vagrant-install-dependencies -- ${{ inputs.vagrant_box_name }}
 
-    - name: Upload Dependencies
-      uses: actions/upload-artifact@v3
-      with:
-        name: nox-${{ inputs.vagrant_box_name }}
-        path: nox.${{ inputs.vagrant_box_name }}.tar.xz
+      - name: Compress And Download .nox Directory
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          nox --force-color -e vagrant-download-dependencies -- ${{ inputs.vagrant_box_name }}
 
-    - name: Set Exit Status
-      if: always()
-      run: |
-        mkdir exitstatus
-        echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant_box_name }}-deps
+      - name: Destroy VM
+        if: steps.check-nox-tarball.outputs.files_exists != 'true' && always()
+        run: |
+          vagrant destroy --force ${{ inputs.vagrant_box_name }}
 
-    - name: Upload Exit Status
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: exitstatus
-        path: exitstatus
+      - name: Upload Dependencies
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.vagrant_box_name }}
+          path: nox.${{ inputs.vagrant_box_name }}.tar.xz
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant_box_name }}-deps
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
 
   test:
     needs: dependencies
@@ -142,79 +164,96 @@ jobs:
           - scenarios
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
 
-    - name: Install macOS Dependencies
-      run: |
-        brew install tree
+      - name: Install macOS Dependencies
+        run: |
+          brew install tree
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
 
-    - name: Install Nox
-      run: |
-        python3 -m pip install nox
+      - name: Install Nox
+        run: |
+          python3 -m pip install nox
 
-    - name: Download One Dir Artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: ${{ inputs.artifact_name }}
+      - name: Download One Dir Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact_name }}
 
-    - name: Extract Artifact
-      run: |
-        mkdir salt-artifacts
-        cp salt*tar.xz salt-artifacts/
-        cd salt-artifacts
-        tar -xpf salt*tar.xz
+      - name: Extract Artifact
+        run: |
+          mkdir salt-artifacts
+          cp salt*tar.xz salt-artifacts/
+          cd salt-artifacts
+          tar -xpf salt*tar.xz
 
-    - name: Download Installed Dependencies
-      uses: actions/download-artifact@v3
-      with:
-        name: nox-${{ inputs.vagrant_box_name }}
+      - name: Show Vagrant Information
+        run: |
+          vagrant --version
+          vagrant plugin list
+          echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
 
-    - name: Spin up VM
-      run: |
-        vagrant up ${{ inputs.vagrant_box_name }}
+      - name: Cache Vagrant boxes and plugins
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.vagrant.d/boxes
+            ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
+          key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant_box_name }}|${{ hashFiles('Vagrantfile') }}
 
-    - name: Decompress .nox/
-      run: |
-        nox --force-color -e vagrant-upload-dependencies -- ${{ inputs.vagrant_box_name }}
+      - name: Download Installed Dependencies
+        uses: actions/download-artifact@v3
+        with:
+          name: nox-${{ inputs.vagrant_box_name }}
 
-    - name: Run Tests
-      env:
-        RERUN_FAILURES: "1"
-      run: |
-        nox --force-color -e vagrant -- ${{ inputs.vagrant_box_name }} ${{ matrix.tests-chunk }}
+      - name: Spin up VM
+        env:
+          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+        run: |
+          vagrant up ${{ inputs.vagrant_box_name }}
 
-    - name: Download Artifacts from Guest
-      if: always()
-      run: |
-        nox --force-color -e vagrant-download-artifacts -- ${{ inputs.vagrant_box_name }}
-        tree artifacts
+      - name: Decompress .nox/
+        run: |
+          nox --force-color -e vagrant-upload-dependencies -- ${{ inputs.vagrant_box_name }}
 
-    - name: Destroy VM
-      if: always()
-      run: |
-        vagrant destroy --force ${{ inputs.vagrant_box_name }}
+      - name: Run Tests
+        env:
+          RERUN_FAILURES: "1"
+        run: |
+          nox --force-color -e vagrant -- ${{ inputs.vagrant_box_name }} ${{ matrix.tests-chunk }}
 
-    - name: Publish Test Report
-      uses: mikepenz/action-junit-report@v3
-      if: always() # always run even if the previous step fails
-      with:
-        check_name: Test Results(${{ inputs.vagrant_box_name }} ${{ matrix.tests-chunk }})
-        report_paths: 'artifacts/xml-unittests-output/*.xml'
+      - name: Download Artifacts from Guest
+        if: always()
+        run: |
+          nox --force-color -e vagrant-download-artifacts -- ${{ inputs.vagrant_box_name }}
+          tree artifacts
 
-    - name: Set Exit Status
-      if: always()
-      run: |
-        mkdir exitstatus
-        echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant_box_name }}-tests
+      - name: Destroy VM
+        if: always()
+        run: |
+          vagrant destroy --force ${{ inputs.vagrant_box_name }}
 
-    - name: Upload Exit Status
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: exitstatus
-        path: exitstatus
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: always() # always run even if the previous step fails
+        with:
+          check_name: Test Results(${{ inputs.vagrant_box_name }} ${{ matrix.tests-chunk }})
+          report_paths: 'artifacts/xml-unittests-output/*.xml'
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant_box_name }}-tests
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
