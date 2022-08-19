@@ -1,0 +1,1 @@
+Fixes an issue where the minion could not connect to a master after 2 failed attempts
