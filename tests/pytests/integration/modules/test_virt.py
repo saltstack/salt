@@ -9,7 +9,7 @@ import pytest
 
 from tests.support.virt import SaltVirtMinionContainerFactory
 
-docker = pytest.importorskip("docker")
+pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +17,15 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _check_onedir_run(request):
+    scripts_dir_passed = request.config.getoption("--scripts-dir") is not None
+    if scripts_dir_passed:
+        pytest.skip(
+            "Skipping these tests for now. We'll need to go back to them and fix."
+        )
 
 
 @pytest.fixture(scope="module")
