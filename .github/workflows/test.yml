@@ -111,7 +111,7 @@ jobs:
     - name: Upload Dependencies
       uses: actions/upload-artifact@v3
       with:
-        name: nox
+        name: nox-${{ inputs.vagrant_box_name }}
         path: nox.${{ inputs.vagrant_box_name }}.tar.xz
 
     - name: Set Exit Status
@@ -172,7 +172,7 @@ jobs:
     - name: Download Installed Dependencies
       uses: actions/download-artifact@v3
       with:
-        name: nox
+        name: nox-${{ inputs.vagrant_box_name }}
 
     - name: Spin up VM
       run: |

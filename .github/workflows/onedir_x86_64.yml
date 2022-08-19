@@ -117,13 +117,6 @@ jobs:
         name: exitstatus
         failOnError: false
 
-    - name: Delete The nox Artifact
-      if: always()
-      uses: geekyeggo/delete-artifact@v1
-      with:
-        name: nox
-        failOnError: false
-
     - name: Set Pipeline Exit Status
       run: |
         grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
