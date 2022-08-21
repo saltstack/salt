@@ -2716,6 +2716,7 @@ def _hw_data(osdata):
 
     Provides
         biosversion
+        biosvendor
         productname
         manufacturer
         serialnumber
@@ -2734,6 +2735,7 @@ def _hw_data(osdata):
         # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
         sysfs_firmware_info = {
             "biosversion": "bios_version",
+            "biosvendor": "bios_vendor",
             "productname": "product_name",
             "manufacturer": "sys_vendor",
             "biosreleasedate": "bios_date",
@@ -2773,6 +2775,7 @@ def _hw_data(osdata):
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
         grains = {
             "biosversion": __salt__["smbios.get"]("bios-version"),
+            "biosvendor": __salt__["smbios.get"]("bios-vendor"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
@@ -2811,6 +2814,7 @@ def _hw_data(osdata):
             # In theory, it will be easier to add new fields to this later
             fbsd_hwdata = {
                 "biosversion": "smbios.bios.version",
+                "biosvendor": "smbios.bios.vendor",
                 "manufacturer": "smbios.system.maker",
                 "serialnumber": "smbios.system.serial",
                 "productname": "smbios.system.product",
@@ -2837,6 +2841,7 @@ def _hw_data(osdata):
         sysctl = salt.utils.path.which("sysctl")
         nbsd_hwdata = {
             "biosversion": "machdep.dmi.board-version",
+            "biosvendor": "machdep.dmi.bios-vendor",
             "manufacturer": "machdep.dmi.system-vendor",
             "serialnumber": "machdep.dmi.system-serial",
             "productname": "machdep.dmi.system-product",

@@ -2646,6 +2646,7 @@ def test__hw_data_linux_empty():
         assert core._hw_data({"kernel": "Linux"}) == {
             "biosreleasedate": "",
             "biosversion": "",
+            "biosvendor": "",
             "manufacturer": "",
             "productname": "",
             "serialnumber": "",
