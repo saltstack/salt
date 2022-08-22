@@ -7,7 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3005 (2022-08-17)
+Salt 3005 (2022-08-22)
 ======================
 
 Removed
@@ -261,6 +261,7 @@ Fixed
 - account for revision number in formulas to account for difference between bottle and formula (#62466)
 - Fixed stacktrace on Windows when running pkg.list_pkgs (#62479)
 - Update sanitizing masking for Salt SSH to include additional password like strings. (#62483)
+- Fixes an issue where the minion could not connect to a master after 2 failed attempts (#62489)
 
 
 Added
