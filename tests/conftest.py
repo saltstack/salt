@@ -683,14 +683,20 @@ def salt_factories_config():
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    return {
+    if os.environ.get("JENKINS_URL") or os.environ.get("CI"):
+        start_timeout = 120
+    else:
+        start_timeout = 60
+    kwargs = {
         "code_dir": str(CODE_DIR),
-        "inject_coverage": MAYBE_RUN_COVERAGE,
-        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
-        "start_timeout": 120
-        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
-        else 60,
+        "start_timeout": start_timeout,
     }
+    if MAYBE_RUN_COVERAGE:
+        kwargs["coverage_rc_path"] = str(COVERAGERC_FILE)
+    coverage_db_path = os.environ.get("COVERAGE_FILE")
+    if coverage_db_path:
+        kwargs["coverage_db_path"] = coverage_db_path
+    return kwargs
 
 
 @pytest.fixture
