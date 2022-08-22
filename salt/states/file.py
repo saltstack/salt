@@ -3784,10 +3784,7 @@ def directory(
         u_check = _check_user(user, group)
         if u_check:
             # The specified user or group do not exist
-            if __opts__["test"]:
-                log.warning(u_check)
-            else:
-                return _error(ret, u_check)
+            return _error(ret, u_check)
 
     # Must be an absolute path
     if not os.path.isabs(name):
