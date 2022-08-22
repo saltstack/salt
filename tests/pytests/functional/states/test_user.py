@@ -363,3 +363,51 @@ def test_user_present_existing(states, username):
     assert ret.changes["profile"] == win_profile
     assert "description" in ret.changes
     assert ret.changes["description"] == win_description
+
+
+def test_user_present_change_groups(modules, states, username, group_1, group_2):
+    ret = states.user.present(
+        name=username,
+        groups=[group_1.name, group_2.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["groups"] == [group_1.name, group_2.name]
+
+    # run again and remove group_2
+    ret = states.user.present(
+        name=username,
+        groups=[group_1.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["groups"] == [group_1.name]
+
+
+def test_user_present_change_optional_groups(
+    modules, states, username, group_1, group_2
+):
+    ret = states.user.present(
+        name=username,
+        optional_groups=[group_1.name, group_2.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["optional_groups"] == [group_1.name, group_2.name]
+
+    # run again and remove group_2
+    ret = states.user.present(
+        name=username,
+        optional_groups=[group_1.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["optional_groups"] == [group_1.name]
