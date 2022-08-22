@@ -11,6 +11,7 @@ from collections.abc import Mapping
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from salt.utils.decorators.jinja import jinja_global
 
 __func_alias__ = {"list_": "list"}
 
@@ -396,3 +397,57 @@ def search_by(lookup, tgt_type="compound", minion_id=None):
                 matches.append(key)
 
     return matches or None
+
+
+@jinja_global("ifelse")
+def ifelse(
+    *args,
+    tgt_type="compound",
+    minion_id=None,
+    merge=None,
+    merge_lists=False,
+):
+    """
+    .. versionadded:: 3006
+
+    Evaluate each pair of arguments up to the last one as a (matcher, value)
+    tuple, returning ``value`` if matched.  If none match, returns the last
+    argument.
+
+    The ``ifelse`` function is like a multi-level if-else statement. It was
+    inspired by CFEngine's ``ifelse`` function which in turn was inspired by
+    Oracle's ``DECODE`` function. It must have an odd number of arguments (from
+    1 to N). The last argument is the default value, like the ``else`` clause in
+    standard programming languages. Every pair of arguments before the last one
+    are evaluated as a pair. If the first one evaluates true then the second one
+    is returned, as if you had used the first one in a compound match
+    expression.
+
+    This is essentially another way to express the ``filter_by`` functionality
+    in way that's familiar to CFEngine or Oracle users. Consider using
+    ``filter_by`` unless this function fits your workflow.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' match.ifelse 'foo*' 'Foo!' 'bar*' 'Bar!' minion_id=bar03
+    """
+    if len(args) % 2 == 0:
+        raise SaltException("The ifelse function must have an odd number of arguments!")
+    elif len(args) == 1:
+        return args[0]
+
+    default_key = "SALT_IFELSE_FUNCTION_DEFAULT"
+
+    lookup = dict(zip(args[::2], args[1::2]))
+    lookup.update({default_key: args[-1]})
+
+    return filter_by(
+        lookup=lookup,
+        tgt_type=tgt_type,
+        minion_id=minion_id,
+        merge=merge,
+        merge_lists=merge_lists,
+        default=default_key,
+    )

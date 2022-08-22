@@ -13,6 +13,7 @@ import jinja2
 import jinja2.ext
 import jinja2.sandbox
 
+import salt.modules.match
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files

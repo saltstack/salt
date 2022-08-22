@@ -15,6 +15,7 @@ import salt.config
 import salt.loader
 
 # dateutils is needed so that the strftime jinja filter is loaded
+import salt.modules.match as match
 import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.json
@@ -54,6 +55,11 @@ def minion_opts(tmp_path):
         }
     )
     return _opts
+
+
+@pytest.fixture()
+def configure_loader_modules(minion_opts):
+    return {match: {"__opts__": minion_opts}}
 
 
 @pytest.fixture
@@ -1234,3 +1240,17 @@ def test_random_shuffle(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "['four', 'two', 'three', 'one']"
+
+
+def test_ifelse(minion_opts, local_salt):
+    """
+    Test the `ifelse` Jinja global function.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ifelse('default') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='foo03') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='bar03') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='baz03') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == ("default\n" "fooval\n" "barval\n" "default")

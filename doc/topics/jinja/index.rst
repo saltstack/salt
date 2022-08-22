@@ -2299,6 +2299,39 @@ will be rendered as:
 
   unique = ['foo', 'bar']
 
+Global Functions
+================
+
+Salt Project extends `builtin global functions`_ with these custom global functions:
+
+.. jinja_ref:: ifelse
+
+``ifelse``
+----------
+
+Evaluate each pair of arguments up to the last one as a (matcher, value)
+tuple, returning ``value`` if matched.  If none match, returns the last
+argument.
+
+The ``ifelse`` function is like a multi-level if-else statement. It was
+inspired by CFEngine's ``ifelse`` function which in turn was inspired by
+Oracle's ``DECODE`` function. It must have an odd number of arguments (from
+1 to N). The last argument is the default value, like the ``else`` clause in
+standard programming languages. Every pair of arguments before the last one
+are evaluated as a pair. If the first one evaluates true then the second one
+is returned, as if you had used the first one in a compound match
+expression.
+
+This is essentially another way to express the ``match.filter_by`` functionality
+in way that's familiar to CFEngine or Oracle users. Consider using
+``match.filter_by`` unless this function fits your workflow.
+
+.. code-block:: jinja
+
+    {{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'defaultval', minion_id='bar03') }}
+
+.. _`builtin global functions`: https://jinja.palletsprojects.com/en/2.11.x/templates/#builtin-globals
+
 Jinja in Files
 ==============
 
