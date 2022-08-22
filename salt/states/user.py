@@ -98,7 +98,7 @@ def _changes(
         return False
 
     change = {}
-    if groups is None:
+    if not remove_groups and groups is None:
         groups = lusr["groups"]
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
     if uid and lusr["uid"] != uid:
