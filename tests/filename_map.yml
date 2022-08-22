@@ -326,6 +326,10 @@ tests/support/pytest/mysql.py:
   - pytests.functional.states.test_mysql
   - pytests.functional.modules.test_mysql
 
+tests/support/pytest/transport.py:
+  - pytests.functional.transport.ipc.test_pub_server_channel
+  - pytests.functional.transport.zeromq.test_pub_server_channel
+
 tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.test_multimaster
   - pytests.scenarios.multimaster.test_offline_master
