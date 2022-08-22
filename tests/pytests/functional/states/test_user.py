@@ -399,7 +399,7 @@ def test_user_present_change_optional_groups(
 
     user_info = modules.user.info(username)
     assert user_info
-    assert user_info["optional_groups"] == [group_2.name, group_1.name]
+    assert user_info["groups"] == [group_2.name, group_1.name]
 
     # run again and remove group_2
     ret = states.user.present(
@@ -410,4 +410,4 @@ def test_user_present_change_optional_groups(
 
     user_info = modules.user.info(username)
     assert user_info
-    assert user_info["optional_groups"] == [group_1.name]
+    assert user_info["groups"] == [group_1.name]
