@@ -253,3 +253,40 @@ def test_list_match_different_minion_id():
 
     # passing minion_id, should return True
     assert match.list_("bar02,bar04", "bar04")
+
+
+def test_ifelse():
+    """
+    Tests if ifelse returns the correct value.
+    """
+    lookup = [
+        "foo*",
+        {"key1": "fooval1", "key2": "fooval2"},
+        "bar*",
+        {"key1": "barval1", "key2": "barval2"},
+    ]
+    default = {"key1": "default1", "key2": "default2"}
+
+    # even args
+    with pytest.raises(SaltException):
+        match.ifelse("matcher", "value")
+    # only default provided
+    assert match.ifelse(default, minion_id="foo03") == {
+        "key1": "default1",
+        "key2": "default2",
+    }
+    # match foo
+    assert match.ifelse(*lookup, default, minion_id="foo03") == {
+        "key1": "fooval1",
+        "key2": "fooval2",
+    }
+    # match bar
+    assert match.ifelse(*lookup, default, minion_id="bar03") == {
+        "key1": "barval1",
+        "key2": "barval2",
+    }
+    # no match
+    assert match.ifelse(*lookup, default, minion_id="baz03") == {
+        "key1": "default1",
+        "key2": "default2",
+    }
