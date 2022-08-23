@@ -1,0 +1,22 @@
+{
+  "debian-10": {
+    "box_name": "salt-project-ci/debian-10",
+    "box_version": "20220818.1810"
+  },
+  "debian-11": {
+    "box_name": "salt-project-ci/debian-11",
+    "box_version": "20220818.1804"
+  },
+  "centos-stream-8": {
+    "box_name": "salt-project-ci/centos-stream-8",
+    "box_version": "20220816.1514"
+  },
+  "fedora-35": {
+    "box_name": "salt-project-ci/fedora-35",
+    "box_version": "20220818.1806"
+  },
+  "fedora-36": {
+    "box_name": "salt-project-ci/fedora-36",
+    "box_version": "20220818.1822"
+  }
+}

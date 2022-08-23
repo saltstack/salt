@@ -1,3 +1,7 @@
+require 'json'
+boxes_json_file = File.read('Vagrantfile.boxes.json')
+vagrant_boxes = JSON.parse(boxes_json_file)
+
 Vagrant.configure("2") do |config|
 
   config.vm.provider "virtualbox" do |provider|
@@ -27,29 +31,17 @@ Vagrant.configure("2") do |config|
     ],
     rsync_verbose: true
 
-  config.vm.define "debian-10" do |vmconfig|
-    vmconfig.vm.box = "salt-project-ci/debian-10"
-    vmconfig.vm.box_version = "20220818.1810"
-  end
-
-  config.vm.define "debian-11" do |vmconfig|
-    vmconfig.vm.box = "salt-project-ci/debian-11"
-    vmconfig.vm.box_version = "20220818.1804"
-  end
-
-  config.vm.define "centos-stream-8" do |vmconfig|
-    vmconfig.vm.box = "salt-project-ci/centos-stream-8"
-    vmconfig.vm.box_version = "20220816.1514"
-  end
-
-  config.vm.define "fedora-35" do |vmconfig|
-    vmconfig.vm.box = "salt-project-ci/fedora-35"
-    vmconfig.vm.box_version = "20220818.1806"
-  end
-
-  config.vm.define "fedora-36" do |vmconfig|
-    vmconfig.vm.box = "salt-project-ci/fedora-36"
-    vmconfig.vm.box_version = "20220818.1822"
+  [
+    "debian-10",
+    "debian-11",
+    "centos-stream-8",
+    "fedora-35",
+    "fedora-36"
+  ].each do |vmname|
+    config.vm.define vmname do |vmconfig|
+      vmconfig.vm.box = ENV["box_name"] || vagrant_boxes[vmname]["box_name"]
+      vmconfig.vm.box_version = ENV["box_version"] || vagrant_boxes[vmname]["box_version"]
+    end
   end
 
 end
