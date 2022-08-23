@@ -32,8 +32,9 @@ CI_RUN = (
     or os.environ.get("DRONE") is not None
 )
 PIP_INSTALL_SILENT = CI_RUN is False
-SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
+SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
+COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT") or "coverage==5.2"
 
 # Global Path Definitions
 REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
@@ -307,7 +308,7 @@ def _install_requirements(
 def _run_with_coverage(session, *test_cmd, env=None):
     if SKIP_REQUIREMENTS_INSTALL is False:
         session.install(
-            "--progress-bar=off", "coverage==5.2", silent=PIP_INSTALL_SILENT
+            "--progress-bar=off", COVERAGE_REQUIREMENT, silent=PIP_INSTALL_SILENT
         )
     session.run("coverage", "erase")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
@@ -358,14 +359,6 @@ def _run_with_coverage(session, *test_cmd, env=None):
             "--include=tests/*",
             env=coverage_base_env,
         )
-        if os.environ.get("COVERAGE_REPORT", "1") == "1":
-            session.run(
-                "coverage",
-                "report",
-                "--omit=salt/*",
-                "--include=tests/*",
-                env=coverage_base_env,
-            )
         # Generate report for salt code coverage
         session.run(
             "coverage",
@@ -376,14 +369,78 @@ def _run_with_coverage(session, *test_cmd, env=None):
             "--include=salt/*",
             env=coverage_base_env,
         )
-        if os.environ.get("COVERAGE_REPORT", "1") == "1":
-            session.run(
-                "coverage",
-                "report",
-                "--omit=tests/*",
-                "--include=salt/*",
-                env=coverage_base_env,
+
+
+def _report_coverage(session):
+    if SKIP_REQUIREMENTS_INSTALL is False:
+        session.install(
+            "--progress-bar=off", COVERAGE_REQUIREMENT, silent=PIP_INSTALL_SILENT
+        )
+
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage"),
+    }
+
+    report_section = None
+    if session.posargs:
+        report_section = session.posargs.pop(0)
+        if report_section not in ("salt", "tests"):
+            session.error("The report section can only be one of 'salt', 'tests'.")
+        if session.posargs:
+            session.error(
+                "Only one argument can be passed to the session, which is optional "
+                "and is one of 'salt', 'tests'."
             )
+
+    # Always combine and generate the XML coverage report
+    try:
+        session.run("coverage", "combine", env=env)
+    except CommandFailed:
+        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+        # exception
+        pass
+
+    if report_section == "salt":
+        json_coverage_file = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-salt.json"
+        )
+        cmd_args = [
+            "--omit=tests/*",
+            "--include=salt/*",
+        ]
+
+    elif report_section == "tests":
+        json_coverage_file = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage-tests.json"
+        )
+        cmd_args = [
+            "--omit=salt/*",
+            "--include=tests/*",
+        ]
+    else:
+        json_coverage_file = (
+            COVERAGE_OUTPUT_DIR.relative_to(REPO_ROOT) / "coverage.json"
+        )
+        cmd_args = [
+            "--include=salt/*,tests/*",
+        ]
+
+    session.run(
+        "coverage",
+        "json",
+        "-o",
+        str(json_coverage_file),
+        *cmd_args,
+        env=env,
+    )
+    session.run(
+        "coverage",
+        "report",
+        *cmd_args,
+        env=env,
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-parametrized")
@@ -884,6 +941,11 @@ def _pytest(session, coverage, cmd_args):
         )
     else:
         session.run("python", "-m", "pytest", *args, env=env)
+
+
+@nox.session(python="3", name="report-coverage")
+def report_coverage(session):
+    _report_coverage(session)
 
 
 class Tee:
