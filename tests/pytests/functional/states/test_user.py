@@ -365,6 +365,7 @@ def test_user_present_existing(states, username):
     assert ret.changes["description"] == win_description
 
 
+@pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
 def test_user_present_change_groups(modules, states, username, group_1, group_2):
     ret = states.user.present(
         name=username,
@@ -388,6 +389,7 @@ def test_user_present_change_groups(modules, states, username, group_1, group_2)
     assert user_info["groups"] == [group_1.name]
 
 
+@pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
 def test_user_present_change_optional_groups(
     modules, states, username, group_1, group_2
 ):
