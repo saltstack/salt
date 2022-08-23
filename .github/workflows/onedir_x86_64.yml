@@ -35,70 +35,84 @@ jobs:
         name: exitstatus
         path: exitstatus
 
-#  debian-10:
-#    name: Debian 10
-#    uses: ./.github/workflows/test.yml
-#    needs: build
-#    with:
-#      run_id: ${{ github.run_id }}
-#      run_number: ${{ github.run_number }}
-#      artifact_name: Salt Onedir X86_64
-#      vagrant_box_name: debian-10
-#      trigger_workflow: ${{ github.workflow }}
-#    secrets:
-#      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-
   debian-11:
     name: Debian 11
     uses: ./.github/workflows/test.yml
     needs: build
     with:
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      artifact_name: Salt Onedir X86_64
-      vagrant_box_name: debian-11
-      trigger_workflow: ${{ github.workflow }}
+      artifact-name: Salt Onedir X86_64
+      vagrant-box-name: debian-11
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-
-  centos-stream-8:
-    name: CentOS Stream 8
-    uses: ./.github/workflows/test.yml
-    needs: build
-    with:
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      artifact_name: Salt Onedir X86_64
-      vagrant_box_name: centos-stream-8
-      trigger_workflow: ${{ github.workflow }}
-    secrets:
-      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-
-#  fedora-35:
-#    name: Fedora 35
-#    uses: ./.github/workflows/test.yml
-#    needs: build
-#    with:
-#      run_id: ${{ github.run_id }}
-#      run_number: ${{ github.run_number }}
-#      artifact_name: Salt Onedir X86_64
-#      vagrant_box_name: fedora-35
-#      trigger_workflow: ${{ github.workflow }}
-#    secrets:
-#      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
   fedora-36:
     name: Fedora 36
     uses: ./.github/workflows/test.yml
     needs: build
     with:
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      artifact_name: Salt Onedir X86_64
-      vagrant_box_name: fedora-36
-      trigger_workflow: ${{ github.workflow }}
+      artifact-name: Salt Onedir X86_64
+      vagrant-box-name: fedora-36
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+
+  report-code-coverage:
+    name: Report Global Code Coverage
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      #- debian-10
+      - debian-11
+      #- fedora-35
+      - fedora-36
+      #- centos-stream-8
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Download Code Coverage DB's
+        uses: actions/download-artifact@v3
+        with:
+          name: code-coverage
+          path: artifacts/coverage
+
+      - name: Show Test Run Artifacts
+        run: |
+          tree -a artifacts
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install nox
+
+      - name: Report Salt Code Coverage
+        run: |
+          nox --force-color -e report-coverage -- salt
+
+      - name: Report Tests Code Coverage
+        run: |
+          nox --force-color -e report-coverage -- tests
+
+      - name: Report Combined Code Coverage
+        run: |
+          nox --force-color -e report-coverage
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-code-coverage-report
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
@@ -107,11 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
-      #- debian-10
-      - debian-11
-      #- fedora-35
-      - fedora-36
-      - centos-stream-8
+      - report-code-coverage
     steps:
     - name: Download Exit Status Files
       if: always()
@@ -129,6 +139,7 @@ jobs:
 
     - name: Set Pipeline Exit Status
       run: |
+        tree exitstatus
         grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
 
     - name: Done
