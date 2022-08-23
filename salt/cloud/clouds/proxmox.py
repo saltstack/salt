@@ -1034,6 +1034,8 @@ def create_node(vm_, newid):
     if "clone" in vm_ and vm_["clone"] is True and vm_["technology"] == "qemu":
         postParams = {}
         postParams["newid"] = newnode["vmid"]
+        if "pool" in vm_:
+            postParams["pool"] = vm_["pool"]
 
         for prop in "description", "format", "full", "name":
             if (

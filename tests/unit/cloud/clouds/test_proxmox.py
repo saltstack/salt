@@ -6,6 +6,7 @@ import io
 import textwrap
 
 import requests
+
 from salt import config
 from salt.cloud.clouds import proxmox
 from tests.support.helpers import TstSuiteLoggingHandler
@@ -159,6 +160,31 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 "post",
                 "nodes/otherhost/qemu/123/clone",
                 {"newid": ANY},
+            )
+            assert result == {}
+
+    def test_clone_pool(self):
+        """
+        Test that cloning a VM passes the pool parameter if present
+        """
+        mock_query = MagicMock(return_value="")
+        with patch(
+            "salt.cloud.clouds.proxmox._get_properties", MagicMock(return_value=[])
+        ), patch("salt.cloud.clouds.proxmox.query", mock_query):
+            vm_ = {
+                "technology": "qemu",
+                "name": "new2",
+                "host": "myhost",
+                "clone": True,
+                "clone_from": 123,
+                "pool": "mypool",
+            }
+
+            result = proxmox.create_node(vm_, ANY)
+            mock_query.assert_called_once_with(
+                "post",
+                "nodes/myhost/qemu/123/clone",
+                {"newid": ANY, "pool": "mypool"},
             )
             assert result == {}
 
