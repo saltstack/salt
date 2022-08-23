@@ -52,10 +52,14 @@ def user_home(username, tmp_path):
 
 
 @pytest.fixture
-def group_1(username):
+def group_1(username, grains):
     groupname = username
     if salt.utils.platform.is_darwin():
         groupname = "staff"
+    elif salt.utils.platform.is_photonos():
+        groupname = "users"
+    elif grains["os_family"] in ("Suse",):
+        groupname = "users"
     with pytest.helpers.create_group(name=groupname) as group:
         yield group
 
@@ -110,7 +114,9 @@ def test_user_present_when_home_dir_does_not_18843(states, existing_account):
     """
     shutil.rmtree(existing_account.info.home)
     ret = states.user.present(
-        name=existing_account.username, home=existing_account.info.home
+        name=existing_account.username,
+        home=existing_account.info.home,
+        remove_groups=False,
     )
     assert ret.result is True
     assert pathlib.Path(existing_account.info.home).is_dir()
@@ -213,6 +219,7 @@ def test_user_present_unicode(states, username, subtests):
             roomnumber="①②③",
             workphone="١٢٣٤",
             homephone="६७८",
+            remove_groups=False,
         )
         assert ret.result is True
 
