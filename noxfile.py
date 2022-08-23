@@ -25,8 +25,6 @@ if __name__ == "__main__":
 import nox  # isort:skip
 from nox.command import CommandFailed  # isort:skip
 
-IS_PY3 = sys.version_info > (2,)
-
 # Be verbose when runing under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
@@ -66,6 +64,13 @@ RUNTESTS_LOGFILE = ARTIFACTS_DIR.joinpath(
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
+def session_warn(session, message):
+    try:
+        session.warn(message)
+    except AttributeError:
+        session.log("WARNING: {}".format(message))
+
+
 def session_run_always(session, *command, **kwargs):
     """
     Patch nox to allow running some commands which would be skipped if --install-only is passed.
@@ -86,16 +91,14 @@ def session_run_always(session, *command, **kwargs):
             session._runner.global_config.install_only = old_install_only_value
 
 
-def find_session_runner(session, name, **kwargs):
+def find_session_runner(session, name, python_version, **kwargs):
+    name += "-{}".format(python_version)
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
             continue
         for signature in s.signatures:
             for key, value in kwargs.items():
                 param = "{}={!r}".format(key, value)
-                if IS_PY3:
-                    # Under Python2 repr unicode string are always "u" prefixed, ie, u'a string'.
-                    param = param.replace("u'", "'")
                 if param not in signature:
                     break
             else:
@@ -345,16 +348,6 @@ def _run_with_coverage(session, *test_cmd, env=None):
             # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
             # exception
             pass
-        # Generate report for salt code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-            "--omit=tests/*",
-            "--include=salt/*",
-            env=coverage_base_env,
-        )
         # Generate report for tests code coverage
         session.run(
             "coverage",
@@ -365,13 +358,39 @@ def _run_with_coverage(session, *test_cmd, env=None):
             "--include=tests/*",
             env=coverage_base_env,
         )
+        if os.environ.get("COVERAGE_REPORT", "1") == "1":
+            session.run(
+                "coverage",
+                "report",
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+        # Generate report for salt code coverage
+        session.run(
+            "coverage",
+            "xml",
+            "-o",
+            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
+            "--omit=tests/*",
+            "--include=salt/*",
+            env=coverage_base_env,
+        )
+        if os.environ.get("COVERAGE_REPORT", "1") == "1":
+            session.run(
+                "coverage",
+                "report",
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-parametrized")
+@nox.session(python=_PYTHON_VERSIONS, name="test-parametrized")
 @nox.parametrize("coverage", [False, True])
 @nox.parametrize("transport", ["zeromq", "tcp"])
 @nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
-def pytest_parametrized(session, coverage, transport, crypto):
+def test_parametrized(session, coverage, transport, crypto):
     """
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
@@ -379,7 +398,8 @@ def pytest_parametrized(session, coverage, transport, crypto):
     if _install_requirements(session, transport):
 
         if crypto:
-            session.run(
+            session_run_always(
+                session,
                 "pip",
                 "uninstall",
                 "-y",
@@ -405,17 +425,55 @@ def pytest_parametrized(session, coverage, transport, crypto):
 
 @nox.session(python=_PYTHON_VERSIONS)
 @nox.parametrize("coverage", [False, True])
-def pytest(session, coverage):
+def test(session, coverage):
     """
     pytest session with zeromq transport and default crypto
     """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
             crypto=None,
             transport="zeromq",
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS)
+@nox.parametrize("coverage", [False, True])
+def pytest(session, coverage):
+    """
+    pytest session with zeromq transport and default crypto
+    """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-tcp")
+@nox.parametrize("coverage", [False, True])
+def test_tcp(session, coverage):
+    """
+    pytest session with TCP transport and default crypto
+    """
+    session.notify(
+        find_session_runner(
+            session,
+            "test-parametrized",
+            session.python,
+            coverage=coverage,
+            crypto=None,
+            transport="tcp",
         )
     )
 
@@ -426,13 +484,33 @@ def pytest_tcp(session, coverage):
     """
     pytest session with TCP transport and default crypto
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq")
+@nox.parametrize("coverage", [False, True])
+def test_zeromq(session, coverage):
+    """
+    pytest session with zeromq transport and default crypto
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
             crypto=None,
-            transport="tcp",
+            transport="zeromq",
         )
     )
 
@@ -443,12 +521,32 @@ def pytest_zeromq(session, coverage):
     """
     pytest session with zeromq transport and default crypto
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-m2crypto")
+@nox.parametrize("coverage", [False, True])
+def test_m2crypto(session, coverage):
+    """
+    pytest session with zeromq transport and m2crypto
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
-            crypto=None,
+            crypto="m2crypto",
             transport="zeromq",
         )
     )
@@ -460,13 +558,33 @@ def pytest_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-tcp-m2crypto")
+@nox.parametrize("coverage", [False, True])
+def test_tcp_m2crypto(session, coverage):
+    """
+    pytest session with TCP transport and m2crypto
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
             crypto="m2crypto",
-            transport="zeromq",
+            transport="tcp",
         )
     )
 
@@ -477,13 +595,33 @@ def pytest_tcp_m2crypto(session, coverage):
     """
     pytest session with TCP transport and m2crypto
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq-m2crypto")
+@nox.parametrize("coverage", [False, True])
+def test_zeromq_m2crypto(session, coverage):
+    """
+    pytest session with zeromq transport and m2crypto
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
             crypto="m2crypto",
-            transport="tcp",
+            transport="zeromq",
         )
     )
 
@@ -494,12 +632,32 @@ def pytest_zeromq_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-pycryptodome")
+@nox.parametrize("coverage", [False, True])
+def test_pycryptodome(session, coverage):
+    """
+    pytest session with zeromq transport and pycryptodome
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
-            crypto="m2crypto",
+            crypto="pycryptodome",
             transport="zeromq",
         )
     )
@@ -511,13 +669,33 @@ def pytest_pycryptodome(session, coverage):
     """
     pytest session with zeromq transport and pycryptodome
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-tcp-pycryptodome")
+@nox.parametrize("coverage", [False, True])
+def test_tcp_pycryptodome(session, coverage):
+    """
+    pytest session with TCP transport and pycryptodome
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
             crypto="pycryptodome",
-            transport="zeromq",
+            transport="tcp",
         )
     )
 
@@ -528,13 +706,33 @@ def pytest_tcp_pycryptodome(session, coverage):
     """
     pytest session with TCP transport and pycryptodome
     """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq-pycryptodome")
+@nox.parametrize("coverage", [False, True])
+def test_zeromq_pycryptodome(session, coverage):
+    """
+    pytest session with zeromq transport and pycryptodome
+    """
     session.notify(
         find_session_runner(
             session,
-            "pytest-parametrized-{}".format(session.python),
+            "test-parametrized",
+            session.python,
             coverage=coverage,
             crypto="pycryptodome",
-            transport="tcp",
+            transport="zeromq",
         )
     )
 
@@ -545,20 +743,22 @@ def pytest_zeromq_pycryptodome(session, coverage):
     """
     pytest session with zeromq transport and pycryptodome
     """
-    session.notify(
-        find_session_runner(
-            session,
-            "pytest-parametrized-{}".format(session.python),
-            coverage=coverage,
-            crypto="pycryptodome",
-            transport="zeromq",
-        )
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
     )
+    session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
+@nox.session(python=_PYTHON_VERSIONS, name="test-cloud")
 @nox.parametrize("coverage", [False, True])
-def pytest_cloud(session, coverage):
+def test_cloud(session, coverage):
     """
     pytest cloud tests session
     """
@@ -584,9 +784,28 @@ def pytest_cloud(session, coverage):
     _pytest(session, coverage, cmd_args)
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
+@nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
 @nox.parametrize("coverage", [False, True])
-def pytest_tornado(session, coverage):
+def pytest_cloud(session, coverage):
+    """
+    pytest cloud tests session
+    """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-tornado")
+@nox.parametrize("coverage", [False, True])
+def test_tornado(session, coverage):
     """
     pytest tornado tests session
     """
@@ -602,6 +821,25 @@ def pytest_tornado(session, coverage):
     _pytest(session, coverage, session.posargs)
 
 
+@nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
+@nox.parametrize("coverage", [False, True])
+def pytest_tornado(session, coverage):
+    """
+    pytest tornado tests session
+    """
+    try:
+        session_name = session.name
+    except AttributeError:
+        session_name = session._runner.friendly_name
+    session_warn(
+        session,
+        "This nox session is deprecated, please call {!r} instead".format(
+            session_name.replace("pytest-", "test-")
+        ),
+    )
+    session.notify(session_name.replace("pytest-", "test-"))
+
+
 def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
@@ -611,13 +849,17 @@ def _pytest(session, coverage, cmd_args):
     args = [
         "--rootdir",
         str(REPO_ROOT),
-        "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
         "-ra",
         "-s",
         "--showlocals",
     ]
+    for arg in cmd_args:
+        if arg == "--log-file" or arg.startswith("--log-file="):
+            break
+    else:
+        args.append("--log-file={}".format(RUNTESTS_LOGFILE))
     args.extend(cmd_args)
 
     if CI_RUN:
@@ -696,10 +938,7 @@ def _lint(
             stdout.seek(0)
             contents = stdout.read()
             if contents:
-                if IS_PY3:
-                    contents = contents.decode("utf-8")
-                else:
-                    contents = contents.encode("utf-8")
+                contents = contents.decode("utf-8")
                 sys.stdout.write(contents)
                 sys.stdout.flush()
                 if pylint_report_path:
@@ -823,7 +1062,8 @@ def docs(session, compress, update, clean):
     session.notify(
         find_session_runner(
             session,
-            "docs-man-{}".format(session.python),
+            "docs-man",
+            session.python,
             compress=compress,
             update=update,
             clean=clean,
