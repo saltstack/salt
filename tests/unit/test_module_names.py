@@ -134,7 +134,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
             "integration.modules.test_service",
-            "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
             "integration.netapi.rest_tornado.test_app",
             "integration.output.test_output",
