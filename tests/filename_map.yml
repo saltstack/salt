@@ -166,7 +166,7 @@ salt/proxy/*:
   - pytests.integration.proxy.test_simple
 
 salt/state.py:
-  - integration.modules.test_state_jinja_filters
+  - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_compiler
   - integration.states.test_handle_error
   - integration.states.test_handle_iorder
@@ -177,7 +177,7 @@ salt/utils/decorators/*:
   - integration.modules.test_decorators
 
 salt/(utils|renderers)/jinja\.py:
-  - integration.modules.test_state_jinja_filters
+  - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
 
 salt/utils/minions.py:
