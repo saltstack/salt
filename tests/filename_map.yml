@@ -197,8 +197,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - integration.ssh.test_deploy
   - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
-  - integration.ssh.test_master
-  - integration.ssh.test_mine
+  - pytests.integration.ssh.test_mine
   - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
@@ -304,7 +303,7 @@ salt/utils/vt.py:
   - integration.cli.test_custom_module
   - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
-  - integration.ssh.test_mine
+  - pytests.integration.ssh.test_mine
   - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
