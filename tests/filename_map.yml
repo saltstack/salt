@@ -194,7 +194,7 @@ salt/cli/daemons.py:
 
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
-  - integration.ssh.test_deploy
+  - pytests.integration.ssh.test_deploy
   - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_mine
