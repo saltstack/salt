@@ -858,13 +858,16 @@ class State:
         Aggregate the requisites
         """
         requisites = {}
-        low_state = low["state"]
         for chunk in chunks:
             # if the state function in the chunk matches
             # the state function in the low we're looking at
             # and __agg__ is True, add the requisites from the
             # chunk to those in the low.
-            if chunk["state"] == low["state"] and chunk.get("__agg__"):
+            if (
+                chunk["state"] == low["state"]
+                and chunk.get("__agg__")
+                and low["name"] != chunk["name"]
+            ):
                 for req in frozenset.union(
                     *[STATE_REQUISITE_KEYWORDS, STATE_REQUISITE_IN_KEYWORDS]
                 ):
@@ -889,13 +892,23 @@ class State:
             return low
         if low["state"] in agg_opt and not low.get("__agg__"):
             agg_fun = "{}.mod_aggregate".format(low["state"])
+            if "loader_cache" not in self.state_con:
+                self.state_con["loader_cache"] = {}
+            if (
+                agg_fun in self.state_con["loader_cache"]
+                and not self.state_con["loader_cache"][agg_fun]
+            ):
+                return low
             if agg_fun in self.states:
+                self.state_con["loader_cache"][agg_fun] = True
                 try:
-                    low = self.states[agg_fun](low, chunks, running)
-                    low = self._aggregate_requisites(low, chunks)
                     low["__agg__"] = True
+                    low = self._aggregate_requisites(low, chunks)
+                    low = self.states[agg_fun](low, chunks, running)
                 except TypeError:
                     log.error("Failed to execute aggregate for state %s", low["state"])
+            else:
+                self.state_con["loader_cache"][agg_fun] = False
         return low
 
     def _run_check(self, low_data):
@@ -2772,9 +2785,9 @@ class State:
                         req = {"id": req}
                     req = trim_req(req)
                     found = False
+                    req_key = next(iter(req))
+                    req_val = req[req_key]
                     for chunk in chunks:
-                        req_key = next(iter(req))
-                        req_val = req[req_key]
                         if req_val is None:
                             continue
                         if req_key == "sls":
