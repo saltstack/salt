@@ -60,6 +60,8 @@ RUNTESTS_LOGFILE = ARTIFACTS_DIR.joinpath(
     "logs",
     "runtests-{}.log".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S.%f")),
 )
+ONEDIR_ARTIFACT_PATH = REPO_ROOT / "salt-artifacts" / "salt"
+ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python"
 
 # Prevent Python from writing bytecode
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -92,8 +94,11 @@ def session_run_always(session, *command, **kwargs):
             session._runner.global_config.install_only = old_install_only_value
 
 
-def find_session_runner(session, name, python_version, **kwargs):
-    name += "-{}".format(python_version)
+def find_session_runner(session, name, python_version, onedir=False, **kwargs):
+    if onedir:
+        name += "-onedir-{}".format(ONEDIR_PYTHON_PATH)
+    else:
+        name += "-{}".format(python_version)
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
             continue
@@ -480,6 +485,32 @@ def test_parametrized(session, coverage, transport, crypto):
     _pytest(session, coverage, cmd_args)
 
 
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="test-parametrized-onedir",
+    venv_params=["--system-site-packages"],
+)
+@nox.parametrize("coverage", [False, True])
+@nox.parametrize("transport", ["zeromq", "tcp"])
+def test_parametrized_onedir(session, coverage, transport):
+    """
+    DO NOT CALL THIS NOX SESSION DIRECTLY
+    """
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    # Install requirements
+    _install_requirements(session, transport)
+    cmd_args = [
+        "--transport={}".format(transport),
+    ] + session.posargs
+    _pytest_onedir(session, coverage, cmd_args)
+
+
 @nox.session(python=_PYTHON_VERSIONS)
 @nox.parametrize("coverage", [False, True])
 def test(session, coverage):
@@ -515,6 +546,24 @@ def pytest(session, coverage):
         ),
     )
     session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=str(ONEDIR_PYTHON_PATH), name="test-onedir")
+@nox.parametrize("coverage", [False, True])
+def test_onedir(session, coverage):
+    """
+    pytest session with zeromq transport and default crypto
+    """
+    session.notify(
+        find_session_runner(
+            session,
+            "test-parametrized",
+            session.python,
+            onedir=True,
+            coverage=coverage,
+            transport="zeromq",
+        )
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-tcp")
@@ -554,6 +603,24 @@ def pytest_tcp(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
+@nox.session(python=str(ONEDIR_PYTHON_PATH), name="test-tcp-onedir")
+@nox.parametrize("coverage", [False, True])
+def test_tcp_onedir(session, coverage):
+    """
+    pytest session with TCP transport and default crypto
+    """
+    session.notify(
+        find_session_runner(
+            session,
+            "test-parametrized",
+            session.python,
+            onedir=True,
+            coverage=coverage,
+            transport="tcp",
+        )
+    )
+
+
 @nox.session(python=_PYTHON_VERSIONS, name="test-zeromq")
 @nox.parametrize("coverage", [False, True])
 def test_zeromq(session, coverage):
@@ -589,6 +656,24 @@ def pytest_zeromq(session, coverage):
         ),
     )
     session.notify(session_name.replace("pytest-", "test-"))
+
+
+@nox.session(python=str(ONEDIR_PYTHON_PATH), name="test-zeromq-onedir")
+@nox.parametrize("coverage", [False, True])
+def test_zeromq_onedir(session, coverage):
+    """
+    pytest session with zeromq transport and default crypto
+    """
+    session.notify(
+        find_session_runner(
+            session,
+            "test-parametrized",
+            session.python,
+            coverage=coverage,
+            transport="zeromq",
+            onedir=True,
+        )
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-m2crypto")
@@ -860,6 +945,38 @@ def pytest_cloud(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="test-cloud-onedir",
+    venv_params=["--system-site-packages"],
+)
+@nox.parametrize("coverage", [False, True])
+def test_cloud_onedir(session, coverage):
+    """
+    pytest cloud tests session
+    """
+    pydir = _get_pydir(session)
+    if pydir == "py3.5":
+        session.error(
+            "Due to conflicting and unsupported requirements the cloud tests only run on Py3.6+"
+        )
+    # Install requirements
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, "cloud.txt"
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    cmd_args = [
+        "--run-expensive",
+        "-k",
+        "cloud",
+    ] + session.posargs
+    _pytest_onedir(session, coverage, cmd_args)
+
+
 @nox.session(python=_PYTHON_VERSIONS, name="test-tornado")
 @nox.parametrize("coverage", [False, True])
 def test_tornado(session, coverage):
@@ -946,6 +1063,52 @@ def _pytest(session, coverage, cmd_args):
 @nox.session(python="3", name="report-coverage")
 def report_coverage(session):
     _report_coverage(session)
+
+
+def _pytest_onedir(session, coverage, cmd_args):
+    # Create required artifacts directories
+    _create_ci_directories()
+
+    env = {"CI_RUN": "1" if CI_RUN else "0"}
+
+    args = [
+        "--rootdir",
+        str(REPO_ROOT),
+        "--log-file-level=debug",
+        "--show-capture=no",
+        "-ra",
+        "-s",
+        "--showlocals",
+    ]
+    for arg in cmd_args:
+        if arg == "--log-file" or arg.startswith("--log-file="):
+            break
+    else:
+        args.append("--log-file={}".format(RUNTESTS_LOGFILE))
+    args.extend(cmd_args)
+
+    if os.environ.get("SHOW_TEST_COLLECTION", "0") == "1":
+        # We'll print out the collected tests.
+        # This will show a full list of what tests are going to run, in the right order, which,
+        # in case of a test suite hang, helps us pinpoint which test is hanging.
+        session.run(
+            "python", "-m", "pytest", *(args + ["--collect-only", "-qqq"]), env=env
+        )
+
+    if coverage is True:
+        _run_with_coverage(
+            session,
+            "python",
+            "-m",
+            "coverage",
+            "run",
+            "-m",
+            "pytest",
+            *args,
+            env=env,
+        )
+    else:
+        session.run("python", "-m", "pytest", *args, env=env)
 
 
 @nox.session(python=False, name="vagrant-install-dependencies")
@@ -1184,7 +1347,7 @@ def vagrant(session):
             "/vagrant/noxfile.py",
             "--force-color",
             "-e",
-            f'"pytest-zeromq-3(coverage={track_code_coverage})"',
+            f'"test-onedir(coverage={track_code_coverage})"',
             "--",
             "--color=yes",
             "-ra",
