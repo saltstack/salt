@@ -3,43 +3,41 @@ A module for working with the Windows Event log system.
 """
 # https://docs.microsoft.com/en-us/windows/win32/eventlog/event-logging
 
-from __future__ import absolute_import
-
-# Import Python libs
 import collections
 import logging
+
 import xmltodict
 
-# Import Salt Libs
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
-# Import Third Party Libs
 try:
+    import pywintypes
     import win32evtlog
     import win32evtlogutil
     import winerror
-    import pywintypes
+
     IMPORT_STATUS = True
 except ImportError:
     IMPORT_STATUS = False
 
 # keys of all the parts of a Event supported by the API
-EVENT_PARTS = ("closingRecordNumber",
-               "computerName",
-               "data",
-               "eventCategory",
-               "eventID",
-               "eventType",
-               "recordNumber",
-               "reserved",
-               "reservedFlags",
-               "sid",
-               "sourceName",
-               "stringInserts",
-               "timeGenerated",
-               "timeWritten",
+EVENT_PARTS = (
+    "closingRecordNumber",
+    "computerName",
+    "data",
+    "eventCategory",
+    "eventID",
+    "eventType",
+    "recordNumber",
+    "reserved",
+    "reservedFlags",
+    "sid",
+    "sourceName",
+    "stringInserts",
+    "timeGenerated",
+    "timeWritten",
 )
 
 EVENT_TYPES = {
@@ -58,14 +56,17 @@ EVENT_TYPES = {
 }
 
 # keys time
-TIME_PARTS = ("year",
-              "month",
-              "day",
-              "hour",
-              "minute",
-              "second",
+TIME_PARTS = (
+    "year",
+    "month",
+    "day",
+    "hour",
+    "minute",
+    "second",
 )
-TimeTuple = collections.namedtuple("TimeTuple", "year, month, day, hour, minute, second")
+TimeTuple = collections.namedtuple(
+    "TimeTuple", "year, month, day, hour, minute, second"
+)
 
 
 log = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ def __virtual__():
     """
 
     if not salt.utils.platform.is_windows():
-        return False, "win_event: Most be on Windows"
+        return False, "win_event: Must be on Windows"
     if not IMPORT_STATUS:
         return False, "win_event: Missing PyWin32"
     return __virtualname__
@@ -93,8 +94,11 @@ def _to_bytes(data, encoding="utf-8", encode_keys=False):
         to.
 
     Args:
+
         data (object): The string object to encode
+
         encoding(str): The encoding type
+
         encode_keys(bool): If false key strings will not be turned into bytes
 
     Returns:
@@ -135,13 +139,16 @@ def _raw_time(time):
     Will make a pywintypes.datetime into a TimeTuple.
 
     Args:
+
         time (ob): A datetime object
 
     Returns:
         TimeTuple: A TimeTuple
     """
 
-    return TimeTuple._make((time.year, time.month, time.day, time.hour, time.minute, time.second))
+    return TimeTuple(
+        time.year, time.month, time.day, time.hour, time.minute, time.second
+    )
 
 
 def _make_event_dict(event):
@@ -149,6 +156,7 @@ def _make_event_dict(event):
     Will make a PyEventLogRecord into a dictionary
 
     Args:
+
         event (PyEventLogRecord): An event to convert to a dictionary
 
     Returns:
@@ -158,7 +166,9 @@ def _make_event_dict(event):
     event_dict = {}
     for event_part in EVENT_PARTS:
         # get object value and add it to the event dict
-        event_dict[event_part] = getattr(event, event_part[0].upper() + event_part[1:], None)
+        event_dict[event_part] = getattr(
+            event, event_part[0].upper() + event_part[1:], None
+        )
 
     # format items
     event_dict["eventID"] = winerror.HRESULT_CODE(event_dict["eventID"])
@@ -175,6 +185,7 @@ def _get_handle(log_name):
     Will try to open a PyHANDLE to the Event System
 
     Args:
+
         log_name (str): The name of the log to open
 
     Returns:
@@ -185,9 +196,9 @@ def _get_handle(log_name):
     # "log close" can fail if this is not done
     try:
         return win32evtlog.OpenEventLog(None, log_name)
-    except pywintypes.error:
+    except pywintypes.error as exc:
         raise FileNotFoundError(
-            "{0} log can not be found or access was denied!".format(log_name)
+            "Failed to open log: {}\nError: {}".format(log_name, exc.strerror)
         )
 
 
@@ -196,6 +207,7 @@ def _close_handle(handle):
     Will close the handle to the event log
 
     Args:
+
         handle (PyHANDLE): The handle to the event log to close
     """
 
@@ -208,6 +220,7 @@ def _event_generator(log_name):
     Get all log events one by one. Events are not ordered
 
     Args:
+
         log_name(str): The name of the log to retrieve
 
     Yields:
@@ -230,11 +243,12 @@ def _event_generator(log_name):
     _close_handle(handle)
 
 
-def _event_generator_sorted(log_name):
+def _event_generator_with_time(log_name):
     """
     Sorts the results of the event generator
 
     Args:
+
         log_name (str): The name of the log to retrieve
 
     Yields:
@@ -254,33 +268,48 @@ def _event_generator_sorted(log_name):
 
 def _event_generator_filter(log_name, all_requirements=True, **kwargs):
     """
-    Will find events that meet the requirements in the filter
+    Will find events that meet the requirements in the filter. Can be any item
+    in the return for the event.
+
 
     Args:
+
         log_name (str): The name of the log to retrieve
+
         all_requirements (bool): Should the results match all requirements.
             ``True`` matches all requirements. ``False`` matches any
             requirement.
 
     Kwargs:
-        Can be any item in the return for the event. Common kwargs are:
+
         eventID (int): The event ID number
+
         eventType (int): The event type number. Valid options and their
             corresponding meaning are:
+
             - 0 : Success
             - 1 : Error
             - 2 : Warning
             - 4 : Information
             - 8 : Audit Success
             - 10 : Audit Failure
+
         year (int): The year
+
         month (int): The month
+
         day (int): The day of the month
+
         hour (int): The hour
+
         minute (int): The minute
+
         second (int): The second
+
         eventCategory (int): The event category number
+
         sid (sid): The SID of the user that created the event
+
         sourceName (str): The name of the event source
 
     Yields:
@@ -288,7 +317,7 @@ def _event_generator_filter(log_name, all_requirements=True, **kwargs):
 
     CLI Example:
 
-    .. code-block::python
+    .. code-block:: python
 
         # Return all events from the Security log with an ID of 1100
         _event_generator_filter("Security", eventID=1100)
@@ -300,7 +329,7 @@ def _event_generator_filter(log_name, all_requirements=True, **kwargs):
         _event_generator_filter("System", eventType=1, sourceName="Service Control Manager", data="netprofm")
     """
 
-    for event, info in _event_generator_sorted(log_name):
+    for event, info in _event_generator_with_time(log_name):
         if all_requirements:
             # all keys need to match each other
             for key in kwargs:
@@ -317,7 +346,7 @@ def _event_generator_filter(log_name, all_requirements=True, **kwargs):
                         log.trace(
                             "utf-8: Does %s == %s",
                             repr(kwargs[key]),
-                            repr(info[key].decode("utf-8"))
+                            repr(info[key].decode("utf-8")),
                         )
                         if kwargs[key] != info[key].decode("utf-8"):
                             # try utf-16 and strip null bytes
@@ -325,9 +354,11 @@ def _event_generator_filter(log_name, all_requirements=True, **kwargs):
                                 log.trace(
                                     "utf-16: Does %s == %s",
                                     repr(kwargs[key]),
-                                    repr(info[key].decode("utf-16").strip("\x00"))
+                                    repr(info[key].decode("utf-16").strip("\x00")),
                                 )
-                                if kwargs[key] != info[key].decode("utf-16").strip("\x00"):
+                                if kwargs[key] != info[key].decode("utf-16").strip(
+                                    "\x00"
+                                ):
                                     break
                             except UnicodeDecodeError:
                                 log.trace("Failed to decode (utf-16): %s", info[key])
@@ -355,7 +386,7 @@ def _event_generator_filter(log_name, all_requirements=True, **kwargs):
                         log.trace(
                             "utf-8: Does %s == %s",
                             repr(kwargs[key]),
-                            repr(info[key].decode("utf-8"))
+                            repr(info[key].decode("utf-8")),
                         )
                         if kwargs[key] == info[key].decode("utf-8"):
                             yield info
@@ -366,7 +397,7 @@ def _event_generator_filter(log_name, all_requirements=True, **kwargs):
                         log.trace(
                             "utf-16: Does %s == %s",
                             repr(kwargs[key]),
-                            repr(info[key].decode("utf-16").strip("\x00"))
+                            repr(info[key].decode("utf-16").strip("\x00")),
                         )
                         if kwargs[key] == info[key].decode("utf-16").strip("\x00"):
                             yield info
@@ -388,6 +419,7 @@ def get(log_name):
         ``Applications`` log, can take a long time.
 
     Args:
+
         log_name(str): The name of the log to retrieve.
 
     Returns
@@ -395,7 +427,7 @@ def get(log_name):
 
     CLI Example:
 
-    .. code-block::bash
+    .. code-block:: bash
 
         salt '*' win_event.get Application
     """
@@ -420,11 +452,16 @@ def query(log_name, query_text=None, records=20, latest=True, raw=False):
         put spaces between comparison operators. For example: ``this >= that``.
 
     Args:
+
         log_name (str): The name of the log to query
+
         query_text (str): The filter to apply to the log
+
         records (int): The number of records to return
+
         latest (bool): ``True`` will return the newest events. ``False`` will
             return the oldest events. Default is ``True``
+
         raw (bool): ``True`` will return the raw xml results. ``False`` will
             return the xml converted to a dictionary. Default is ``False``
 
@@ -433,7 +470,7 @@ def query(log_name, query_text=None, records=20, latest=True, raw=False):
 
     CLI Example:
 
-    .. code-block::bash
+    .. code-block:: bash
 
         # Return the 20 most recent events from the Application log with an event ID of 22
         salt '*' win_event.query Application "*[System[(EventID=22)]]"
@@ -467,12 +504,7 @@ def query(log_name, query_text=None, records=20, latest=True, raw=False):
     if not latest:
         direction = win32evtlog.EvtQueryForwardDirection
 
-    results = win32evtlog.EvtQuery(
-        log_name,
-        direction,
-        query_text,
-        None
-    )
+    results = win32evtlog.EvtQuery(log_name, direction, query_text, None)
 
     event_list = []
     for evt in win32evtlog.EvtNext(results, records):
@@ -485,68 +517,52 @@ def query(log_name, query_text=None, records=20, latest=True, raw=False):
     return event_list
 
 
-def get_sorted(log_name):
-    """
-    Make a list of events sorted by date.
-
-    .. warning::
-        Running this command on a log with thousands of events, such as the
-        ``Applications`` log, can take a long time.
-
-    Args:
-        log_name (str): The name of the log to retrieve
-
-    Returns:
-        dict: A dictionary of events
-
-    CLI Example:
-
-    .. code-block::bash
-
-        # This command can take a long time
-        salt "*" win_event.get_sorted Application
-    """
-
-    event_info = {event_part: collections.defaultdict(list) for event_part in EVENT_PARTS + TIME_PARTS}
-    for event, info in _event_generator_sorted(log_name):
-        for part in info:
-            event_info[part][info.get(part)].append(event)
-
-    return event_info
-
-
 def get_filtered(log_name, all_requirements=True, **kwargs):
     """
     Will find events that match the fields and values specified in the kwargs.
+    Kwargs can be any item in the return for the event.
 
     .. warning::
         Running this command on a log with thousands of events, such as the
         ``Applications`` log, can take a long time.
 
     Args:
+
         log_name (str): The name of the log to retrieve
+
         all_requirements (bool): ``True`` matches all requirements. ``False``
             matches any requirement. Default is ``True``
 
     Kwargs:
-        Can be any item in the return for the event. Common kwargs are:
+
         eventID (int): The event ID number
+
         eventType (int): The event type number. Valid options and their
             corresponding meaning are:
+
             - 0 : Success
             - 1 : Error
             - 2 : Warning
             - 4 : Information
             - 8 : Audit Success
             - 10 : Audit Failure
+
         year (int): The year
+
         month (int): The month
+
         day (int): The day of the month
+
         hour (int): The hour
+
         minute (int): The minute
+
         second (int): The second
+
         eventCategory (int): The event category number
+
         sid (sid): The SID of the user that created the event
+
         sourceName (str): The name of the event source
 
     Returns:
@@ -554,7 +570,7 @@ def get_filtered(log_name, all_requirements=True, **kwargs):
 
     CLI Example:
 
-    .. code-block::bash
+    .. code-block:: bash
 
         # Return all events from the Security log with an ID of 1100
         salt "*" win_event.get_filtered Security eventID=1100
@@ -581,7 +597,7 @@ def get_log_names():
 
     CLI Example:
 
-    .. code-block::bash
+    .. code-block:: bash
 
         salt "*" win_event.get_log_names
     """
@@ -605,18 +621,26 @@ def add(
     Adds an event to the application event log.
 
     Args:
+
         log_name (str): The name of the application or source
+
         event_id (int): The event ID
+
         event_category (int): The event category
+
         event_type (str): The event category. Must be one of:
+
             - Success
             - Error
             - Warning
             - Information
             - AuditSuccess
             - AuditFailure
+
         event_strings (list): A list of strings
+
         event_data (bytes): Event data. Strings will be converted to bytes
+
         event_sid (sid): The SID for the event
 
     Raises:
@@ -681,7 +705,7 @@ def add(
     )
 
 
-def clear_log(log_name):
+def clear(log_name, backup=None):
     """
     Clears the specified event log.
 
@@ -689,17 +713,20 @@ def clear_log(log_name):
         A clear log event will be added to the log after it is cleared.
 
     Args:
+
         log_name (str): The name of the log to clear
+
+        backup (str): Path to backup file
 
     CLI Example:
 
-    .. code-block::bash
+    .. code-block:: bash
 
-        salt "*" win_event.clear_log Application
+        salt "*" win_event.clear Application
     """
 
     handle = _get_handle(log_name)
-    win32evtlog.ClearEventLog(handle, log_name)
+    win32evtlog.ClearEventLog(handle, backup)
     _close_handle(handle)
 
 
@@ -708,6 +735,7 @@ def count(log_name):
     Gets the number of events in the specified.
 
     Args:
+
         log_name (str): The name of the log
 
     Returns:
@@ -715,7 +743,7 @@ def count(log_name):
 
     CLI Example:
 
-    .. code-block::bash
+    .. code-block:: bash
 
         salt "*" win_event.count Application
     """
