@@ -1223,7 +1223,7 @@ def vagrant_download_dependencies(session):
     session_run_always(
         session,
         "rsync",
-        "-arzHh",
+        "--archive",
         "--stats",
         "-e",
         f"ssh -F .ssh-config-{distro}",
@@ -1257,12 +1257,12 @@ def vagrant_download_artifacts(session):
     session_run_always(
         session,
         "rsync",
-        "-arzHh",
+        "--archive",
         "--stats",
         "-e",
         f"ssh -F .ssh-config-{distro}",
-        f"{distro}:/vagrant/artifacts",
-        ".",
+        f"{distro}:/vagrant/artifacts/",
+        "artifacts/",
     )
 
 
@@ -1407,6 +1407,71 @@ def vagrant(session):
             ],
             external=True,
         )
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="report-coverage-onedir",
+    venv_params=["--system-site-packages"],
+)
+def report_coverage_onedir(session):
+    _report_coverage(session)
+
+
+@nox.session(python=False, name="vagrant-report-coverage")
+def vagrant_report_coverage(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+
+    ssh_config_file = REPO_ROOT / f".ssh-config-{distro}"
+    if not ssh_config_file.exists():
+        ssh_config = session_run_always(
+            session,
+            "vagrant",
+            "ssh-config",
+            distro,
+            silent=True,
+            log=False,
+        )
+        ssh_config_file.write_text(ssh_config)
+
+    sudo_env = []
+    if SKIP_REQUIREMENTS_INSTALL:
+        sudo_env.extend(
+            [
+                "SKIP_REQUIREMENTS_INSTALL=1",
+            ]
+        )
+    nox_command = [
+        "sudo",
+        "-HE",
+        "env",
+        *sudo_env,
+        "nox",
+        "-f",
+        "/vagrant/noxfile.py",
+        "--force-color",
+        "-e",
+        "report-coverage-onedir",
+        "--",
+        *session.posargs,
+    ]
+    session_run_always(
+        session,
+        "vagrant",
+        "ssh",
+        "--tty",
+        "--color",
+        "-c",
+        " ".join(nox_command),
+        distro,
+        external=True,
+    )
 
 
 class Tee:
