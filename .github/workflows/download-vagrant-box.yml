@@ -1,0 +1,69 @@
+name: Download Box
+
+on:
+  workflow_call:
+    inputs:
+      vagrant-box-name:
+        required: true
+        type: string
+        default: salt-project-ci/debian-11
+        description: The vagrant Box name to use to run tests
+
+    secrets:
+      VAGRANT_CLOUD_TOKEN:
+        required: true
+        description: The vagrant cloud token user to interact with vagrant cloud
+
+
+jobs:
+
+  download-box:
+    name: Download Vagrant Box
+    runs-on: macos-12
+    concurrency:
+      # Limit the `vagrant up` concurrency to 1 - Avoids getting throttled on vagrant cloud
+      group: vagrant-boxes-${{ github.job }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Show Vagrant Information
+        run: |
+          vagrant --version
+          vagrant plugin list
+          echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
+
+      - name: Cache Vagrant boxes and plugins
+        id: boxes-cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.vagrant.d/boxes
+            ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
+          key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant-box-name }}|${{ hashFiles('Vagrantfile', 'Vagrantfile.boxes.json') }}
+
+      - name: Spin up VM
+        if: steps.boxes-cache.outputs.cache-hit != 'true'
+        env:
+          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+        run: |
+          vagrant up ${{ inputs.vagrant-box-name }}
+
+      - name: Destroy VM
+        if: steps.boxes-cache.outputs.cache-hit != 'true'
+        run: |
+          vagrant destroy --force ${{ inputs.vagrant-box-name }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant-box-name }}-download-box
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus

@@ -141,10 +141,11 @@ jobs:
           path: exitstatus
 
   test:
-    needs: dependencies
-    runs-on: macos-12
     name: Test
+    runs-on: macos-12
     timeout-minutes: 600  # 10 Hours
+    needs:
+      - dependencies
     strategy:
       fail-fast: false
       matrix:

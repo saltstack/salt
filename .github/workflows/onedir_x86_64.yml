@@ -39,25 +39,48 @@ jobs:
         name: exitstatus
         path: exitstatus
 
+
+  download-debian-11:
+    name: Debian 11
+    uses: ./.github/workflows/download-vagrant-box.yml
+    with:
+      vagrant-box-name: debian-11
+    secrets:
+      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+
   debian-11:
     name: Debian 11
     uses: ./.github/workflows/test.yml
-    needs: build
+    needs:
+      - build
+      - download-debian-11
     with:
       artifact-name: Salt Onedir X86_64
       vagrant-box-name: debian-11
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
+
+  download-fedora-36:
+    name: Fedora 36
+    uses: ./.github/workflows/download-vagrant-box.yml
+    with:
+      vagrant-box-name: fedora-36
+    secrets:
+      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+
   fedora-36:
     name: Fedora 36
     uses: ./.github/workflows/test.yml
-    needs: build
+    needs:
+      - build
+      - download-fedora-36
     with:
       artifact-name: Salt Onedir X86_64
       vagrant-box-name: fedora-36
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+
 
   report-code-coverage:
     name: Report Global Code Coverage
