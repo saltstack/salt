@@ -948,6 +948,160 @@ def report_coverage(session):
     _report_coverage(session)
 
 
+@nox.session(python=False, name="vagrant-install-dependencies")
+def vagrant_install_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+    track_code_coverage = os.environ.get("VAGRANT_TRACK_COVERAGE", "1") == "1"
+
+    sudo_env_vars = []
+    if CI_RUN:
+        sudo_env_vars.append("CI=1")
+
+    if sudo_env_vars:
+        sudo_env = ["env", *sudo_env_vars]
+    else:
+        sudo_env = []
+
+    nox_command = [
+        "sudo",
+        "-HE",
+        *sudo_env,
+        "nox",
+        "-f",
+        "/vagrant/noxfile.py",
+        "--force-color",
+        "--install-only",
+        "-e",
+        f'"pytest-zeromq-3(coverage={track_code_coverage})"',
+    ]
+    session_run_always(
+        session,
+        *[
+            "vagrant",
+            "ssh",
+            "--tty",
+            "--color",
+            "-c",
+            " ".join(nox_command),
+            distro,
+        ],
+        external=True,
+    )
+
+
+@nox.session(python=False, name="vagrant-upload-dependencies")
+def vagrant_upload_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+    nox_dependencies_tarball = REPO_ROOT / f"nox.{distro}.tar.xz"
+    if not nox_dependencies_tarball.exists():
+        session.log(
+            f"The {nox_dependencies_tarball.relative_to(REPO_ROOT)} file"
+            "does not exist. Not uploading anything."
+        )
+        return
+
+    session_run_always(
+        session,
+        "vagrant",
+        "ssh",
+        "--tty",
+        "--color",
+        "-c",
+        f"cd /vagrant; sudo tar xpf nox.{distro}.tar.xz; rm nox.{distro}.tar.xz",
+        distro,
+    )
+
+
+@nox.session(python=False, name="vagrant-download-dependencies")
+def vagrant_download_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+
+    session_run_always(
+        session,
+        "vagrant",
+        "ssh",
+        "--tty",
+        "--color",
+        "-c",
+        f"cd /vagrant; sudo tar -cJf nox.{distro}.tar.xz .nox",
+        distro,
+    )
+    ssh_config_file = REPO_ROOT / f".ssh-config-{distro}"
+    if not ssh_config_file.exists():
+        ssh_config = session_run_always(
+            session,
+            "vagrant",
+            "ssh-config",
+            distro,
+            silent=True,
+            log=False,
+        )
+        ssh_config_file.write_text(ssh_config)
+
+    session_run_always(
+        session,
+        "rsync",
+        "-arzHh",
+        "--stats",
+        "-e",
+        f"ssh -F .ssh-config-{distro}",
+        f"{distro}:/vagrant/nox.{distro}.tar.xz",
+        ".",
+    )
+
+
+@nox.session(python=False, name="vagrant-download-artifacts")
+def vagrant_download_artifacts(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+
+    ssh_config_file = REPO_ROOT / f".ssh-config-{distro}"
+    if not ssh_config_file.exists():
+        ssh_config = session_run_always(
+            session,
+            "vagrant",
+            "ssh-config",
+            distro,
+            silent=True,
+            log=False,
+        )
+        ssh_config_file.write_text(ssh_config)
+
+    session_run_always(
+        session,
+        "rsync",
+        "-arzHh",
+        "--stats",
+        "-e",
+        f"ssh -F .ssh-config-{distro}",
+        f"{distro}:/vagrant/artifacts",
+        ".",
+    )
+
+
 @nox.session(python=False)
 def vagrant(session):
     if not session.posargs:
@@ -970,15 +1124,14 @@ def vagrant(session):
     }
 
     if not session.posargs:
-        chunk = "all"
-        chunk_cmd = ["tests/"]
+        chunk_cmd = []
         junit_report_filename = "test-results"
         runtests_log_filename = "runtests"
     else:
         chunk = session.posargs.pop(0)
         if chunk in ["unit", "functional", "integration", "scenarios", "all"]:
             if chunk == "all":
-                chunk_cmd = ["tests/"]
+                chunk_cmd = []
                 junit_report_filename = "test-results"
                 runtests_log_filename = "runtests"
             elif chunk == "integration":
@@ -992,34 +1145,58 @@ def vagrant(session):
                 chunk_cmd = chunks[chunk]
                 junit_report_filename = f"test-results-{chunk}"
                 runtests_log_filename = f"runtests-{chunk}"
+            if session.posargs:
+                if session.posargs[0] != "--":
+                    session.error(
+                        "To pass additional arguments to pytest, use an extra '--'. "
+                        f"For example 'nox -e vagrant -- debian-11 {chunk} -- --maxfail=1'"
+                    )
+                session.posargs.pop(0)
+                chunk_cmd.extend(session.posargs)
         else:
-            chunk_cmd = [chunk] + session.posargs
+            if chunk != "--":
+                session.error(
+                    "To pass additional arguments to pytest, use an extra '--'. "
+                    "For example 'nox -e vagrant -- debian-11 functional -- --maxfail=1'"
+                )
+            chunk_cmd = session.posargs
             junit_report_filename = "test-results"
-            runtests_log_filename = f"runtests"
+            runtests_log_filename = "runtests"
 
     rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
 
+    track_code_coverage = os.environ.get("VAGRANT_TRACK_COVERAGE", "1") == "1"
     common_remote_nox_command = [
         "sudo",
         "-HE",
-        "nox",
-        "-f",
-        "/vagrant/noxfile.py",
-        "--force-color",
-        "-e",
-        '"pytest-zeromq-3(coverage=True)"',
-        "--",
-        "--color=yes",
-        "-ra",
-        "-vv",
-        "--scripts-dir=/vagrant/salt-artifacts/salt",
-        "--run-slow",
-        "--ssh-tests",
-        "--output-columns=120",
-        "--sys-stats",
-        "--sysinfo",
-        "--run-destructive",
     ]
+    if SKIP_REQUIREMENTS_INSTALL:
+        common_remote_nox_command.extend(
+            [
+                "env",
+                "SKIP_REQUIREMENTS_INSTALL=1",
+            ]
+        )
+    common_remote_nox_command.extend(
+        [
+            "nox",
+            "-f",
+            "/vagrant/noxfile.py",
+            "--force-color",
+            "-e",
+            f'"pytest-zeromq-3(coverage={track_code_coverage})"',
+            "--",
+            "--color=yes",
+            "-ra",
+            "-vv",
+            "--run-slow",
+            "--ssh-tests",
+            "--output-columns=120",
+            "--sys-stats",
+            "--sysinfo",
+            "--run-destructive",
+        ]
+    )
 
     try:
         nox_command = (
@@ -1030,7 +1207,8 @@ def vagrant(session):
             ]
             + chunk_cmd
         )
-        session.run(
+        session_run_always(
+            session,
             *[
                 "vagrant",
                 "ssh",
@@ -1054,7 +1232,8 @@ def vagrant(session):
             ]
             + chunk_cmd
         )
-        session.run(
+        session_run_always(
+            session,
             *[
                 "vagrant",
                 "ssh",

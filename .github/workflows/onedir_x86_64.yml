@@ -35,16 +35,16 @@ jobs:
         name: exitstatus
         path: exitstatus
 
-  debian-10:
-    name: Debian 10
-    uses: ./.github/workflows/test.yml
-    needs: build
-    with:
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      artifact_name: Salt Onedir X86_64
-      vagrant_box_name: debian-10
-      trigger_workflow: ${{ github.workflow }}
+#  debian-10:
+#    name: Debian 10
+#    uses: ./.github/workflows/test.yml
+#    needs: build
+#    with:
+#      run_id: ${{ github.run_id }}
+#      run_number: ${{ github.run_number }}
+#      artifact_name: Salt Onedir X86_64
+#      vagrant_box_name: debian-10
+#      trigger_workflow: ${{ github.workflow }}
 
   debian-11:
     name: Debian 11
@@ -68,16 +68,16 @@ jobs:
       vagrant_box_name: centos-stream-8
       trigger_workflow: ${{ github.workflow }}
 
-  fedora-35:
-    name: Fedora 35
-    uses: ./.github/workflows/test.yml
-    needs: build
-    with:
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      artifact_name: Salt Onedir X86_64
-      vagrant_box_name: fedora-35
-      trigger_workflow: ${{ github.workflow }}
+#  fedora-35:
+#    name: Fedora 35
+#    uses: ./.github/workflows/test.yml
+#    needs: build
+#    with:
+#      run_id: ${{ github.run_id }}
+#      run_number: ${{ github.run_number }}
+#      artifact_name: Salt Onedir X86_64
+#      vagrant_box_name: fedora-35
+#      trigger_workflow: ${{ github.workflow }}
 
   fedora-36:
     name: Fedora 36
@@ -97,8 +97,10 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
-      - debian-10
+      #- debian-10
       - debian-11
+      #- fedora-35
+      - fedora-36
       - centos-stream-8
     steps:
     - name: Download Exit Status Files
