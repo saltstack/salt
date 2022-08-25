@@ -2787,9 +2787,9 @@ class State:
                     found = False
                     req_key = next(iter(req))
                     req_val = req[req_key]
+                    if req_val is None:
+                        continue
                     for chunk in chunks:
-                        if req_val is None:
-                            continue
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(chunk["__sls__"], req_val):
