@@ -28,8 +28,12 @@ def get_script_path(bin_dir, script_name):
     script_path = os.path.join(bin_dir, cli_script_name)
 
     if not os.path.isfile(script_path):
+        if os.environ.get("ONEDIR_TEST_RUN", "0") == "1":
+            code_dir = None
+        else:
+            code_dir = str(RUNTIME_VARS.CODE_DIR)
         kwargs = {
-            "code_dir": str(RUNTIME_VARS.CODE_DIR),
+            "code_dir": code_dir,
             "bin_dir": bin_dir,
             "script_name": script_name,
             "coverage_rc_path": os.environ.get("COVERAGE_PROCESS_START"),

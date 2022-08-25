@@ -1079,6 +1079,7 @@ def _pytest_onedir(session, coverage, cmd_args):
         "-ra",
         "-s",
         "--showlocals",
+        "--onedir",
     ]
     for arg in cmd_args:
         if arg == "--log-file" or arg.startswith("--log-file="):
@@ -1141,7 +1142,7 @@ def vagrant_install_dependencies(session):
         "--force-color",
         "--install-only",
         "-e",
-        f'"pytest-zeromq-3(coverage={track_code_coverage})"',
+        f'"test-onedir(coverage={track_code_coverage})"',
     ]
     session_run_always(
         session,
@@ -1329,38 +1330,36 @@ def vagrant(session):
     rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
 
     track_code_coverage = os.environ.get("VAGRANT_TRACK_COVERAGE", "1") == "1"
+    sudo_env_vars = []
+    if SKIP_REQUIREMENTS_INSTALL:
+        sudo_env_vars.append("SKIP_REQUIREMENTS_INSTALL=1")
+
+    if sudo_env_vars:
+        sudo_env = ["env", *sudo_env_vars]
+    else:
+        sudo_env = []
+
     common_remote_nox_command = [
         "sudo",
         "-HE",
+        *sudo_env,
+        "nox",
+        "-f",
+        "/vagrant/noxfile.py",
+        "--force-color",
+        "-e",
+        f'"test-onedir(coverage={track_code_coverage})"',
+        "--",
+        "--color=yes",
+        "-ra",
+        "-vv",
+        "--run-slow",
+        "--ssh-tests",
+        "--output-columns=120",
+        "--sys-stats",
+        "--sysinfo",
+        "--run-destructive",
     ]
-    if SKIP_REQUIREMENTS_INSTALL:
-        common_remote_nox_command.extend(
-            [
-                "env",
-                "SKIP_REQUIREMENTS_INSTALL=1",
-            ]
-        )
-    common_remote_nox_command.extend(
-        [
-            "nox",
-            "-f",
-            "/vagrant/noxfile.py",
-            "--force-color",
-            "-e",
-            f'"test-onedir(coverage={track_code_coverage})"',
-            "--",
-            "--color=yes",
-            "-ra",
-            "-vv",
-            "--run-slow",
-            "--ssh-tests",
-            "--output-columns=120",
-            "--sys-stats",
-            "--sysinfo",
-            "--run-destructive",
-        ]
-    )
-
     try:
         nox_command = (
             common_remote_nox_command[:]

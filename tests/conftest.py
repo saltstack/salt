@@ -136,6 +136,13 @@ def pytest_addoption(parser):
     """
     register argparse-style options and ini-style config values.
     """
+    test_run_group = parser.getgroup("Tests Run Selection")
+    test_run_group.addoption(
+        "--onedir",
+        action="store_true",
+        default=False,
+        help="Run tests against a onedir artifact",
+    )
     test_selection_group = parser.getgroup("Tests Selection")
     test_selection_group.addoption(
         "--from-filenames",
@@ -231,6 +238,9 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
+    if config.getoption("--onedir"):
+        os.environ["ONEDIR_TEST_RUN"] = "1"
+
     for dirname in CODE_DIR.iterdir():
         if not dirname.is_dir():
             continue
@@ -682,16 +692,21 @@ def groups_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session")
-def salt_factories_config():
+def salt_factories_config(request):
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    if os.environ.get("JENKINS_URL") or os.environ.get("CI"):
+    if request.config.getoption("--onedir"):
+        code_dir = None
         start_timeout = 120
     else:
-        start_timeout = 60
+        code_dir = str(CODE_DIR)
+        if os.environ.get("JENKINS_URL") or os.environ.get("CI"):
+            start_timeout = 120
+        else:
+            start_timeout = 60
     kwargs = {
-        "code_dir": str(CODE_DIR),
+        "code_dir": code_dir,
         "start_timeout": start_timeout,
     }
     if MAYBE_RUN_COVERAGE:
