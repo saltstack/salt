@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.skip_on_windows(reason="Skip system functions on Windows"),
+    pytest.mark.skip_unless_on_linux,
 ]
 
 
