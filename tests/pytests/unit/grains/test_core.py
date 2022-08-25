@@ -3192,3 +3192,120 @@ def test_virtual_linux_proc_files_with_non_utf8_chars():
             environ_fh.close()
             virt_grains = core._virtual({"kernel": "Linux"})
             assert virt_grains == {"virtual": "physical"}
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtual_set_virtual_ec2():
+    osdata = {}
+
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    which_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            "/usr/sbin/virt-what",
+            "/usr/sbin/virt-what",
+            None,
+            "/usr/sbin/dmidecode",
+            # Check with systemd-detect-virt
+            None,
+            "/usr/bin/systemd-detect-virt",
+            None,
+            "/usr/sbin/dmidecode",
+            # Check with systemd-detect-virt when no dmidecode available
+            None,
+            "/usr/bin/systemd-detect-virt",
+            None,
+            None,
+        ]
+    )
+    cmd_run_all_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            {"retcode": 0, "stderr": "", "stdout": "xen"},
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.2",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.7 present.",
+                        "",
+                        "Handle 0x0100, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Xen",
+                        "	Product Name: HVM domU",
+                        "	Version: 4.11.amazon",
+                        "	Serial Number: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	UUID: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+            # Check with systemd-detect-virt
+            {"retcode": 0, "stderr": "", "stdout": "kvm"},
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.2",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.7 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Amazon EC2",
+                        "	Product Name: m5.large",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                    ]
+                ),
+            },
+            # Check with systemd-detect-virt when no dmidecode available
+            {"retcode": 0, "stderr": "", "stdout": "kvm"},
+        ]
+    )
+
+    with patch("salt.utils.path.which", which_mock), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": salt.modules.cmdmod.run,
+            "cmd.run_all": cmd_run_all_mock,
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+            "smbios.get": salt.modules.smbios.get,
+        },
+    ):
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "xen"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert "virtual_subtype" not in virtual_grains
