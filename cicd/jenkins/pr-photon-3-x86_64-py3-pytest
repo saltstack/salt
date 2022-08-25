@@ -7,7 +7,7 @@ runTestSuite(
     distro_arch: 'x86-64',
     env: env,
     jenkins_slave_label: 'kitchen-slave',
-    nox_env_name: 'pytest-zeromq',
+    nox_env_name: 'test',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
     testrun_timeout: 8,
