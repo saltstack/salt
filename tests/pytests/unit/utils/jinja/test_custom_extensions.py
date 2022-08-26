@@ -1250,7 +1250,8 @@ def test_ifelse(minion_opts, local_salt):
         "{{ ifelse('default') }}\n"
         "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='foo03') }}\n"
         "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='bar03') }}\n"
+        "{{ ifelse(False, 'fooval', True, 'barval', 'default', minion_id='foo03') }}\n"
         "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='baz03') }}",
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
-    assert rendered == ("default\n" "fooval\n" "barval\n" "default")
+    assert rendered == ("default\n" "fooval\n" "barval\n" "barval\n" "default")

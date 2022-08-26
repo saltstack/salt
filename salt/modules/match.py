@@ -421,7 +421,9 @@ def ifelse(
     standard programming languages. Every pair of arguments before the last one
     are evaluated as a pair. If the first one evaluates true then the second one
     is returned, as if you had used the first one in a compound match
-    expression.
+    expression. Boolean values can also be used as the first item in a pair,
+    as it will be translated to a match that will always match ("*") or never
+    match ("SALT_IFELSE_MATCH_NOTHING") a target system.
 
     This is essentially another way to express the ``filter_by`` functionality
     in way that's familiar to CFEngine or Oracle users. Consider using
@@ -440,7 +442,14 @@ def ifelse(
 
     default_key = "SALT_IFELSE_FUNCTION_DEFAULT"
 
-    lookup = dict(zip(args[::2], args[1::2]))
+    keys = list(args[::2])
+    for idx, key in enumerate(keys):
+        if key is True:
+            keys[idx] = "*"
+        elif key is False:
+            keys[idx] = "SALT_IFELSE_MATCH_NOTHING"
+
+    lookup = dict(zip(keys, args[1::2]))
     lookup.update({default_key: args[-1]})
 
     return filter_by(

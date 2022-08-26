@@ -2320,7 +2320,9 @@ Oracle's ``DECODE`` function. It must have an odd number of arguments (from
 standard programming languages. Every pair of arguments before the last one
 are evaluated as a pair. If the first one evaluates true then the second one
 is returned, as if you had used the first one in a compound match
-expression.
+expression. Boolean values can also be used as the first item in a pair, as it
+will be translated to a match that will always match ("*") or never match
+("SALT_IFELSE_MATCH_NOTHING") a target system.
 
 This is essentially another way to express the ``match.filter_by`` functionality
 in way that's familiar to CFEngine or Oracle users. Consider using

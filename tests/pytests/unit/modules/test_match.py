@@ -290,3 +290,8 @@ def test_ifelse():
         "key1": "default1",
         "key2": "default2",
     }
+    # boolean matchers
+    assert (
+        match.ifelse(False, "nuh uhn", True, "this is true", "default value")
+        == "this is true"
+    )
