@@ -69,7 +69,7 @@ salt/modules/dockermod.py:
   - pytests.unit.states.test_docker_volume
   - unit.utils.test_dockermod
   - pytests.functional.states.test_docker_container
-  - integration.states.test_docker_network
+  - pytests.functional.states.test_docker_network
 
 salt/modules/file.py:
   - pytests.integration.states.test_cron
@@ -200,7 +200,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - integration.ssh.test_master
   - integration.ssh.test_mine
   - pytests.integration.ssh.test_pillar
-  - integration.ssh.test_raw
+  - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
 
@@ -306,7 +306,7 @@ salt/utils/vt.py:
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_mine
   - pytests.integration.ssh.test_pillar
-  - integration.ssh.test_raw
+  - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
 
 salt/wheel/*:
