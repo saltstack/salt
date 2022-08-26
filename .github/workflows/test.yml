@@ -19,6 +19,8 @@ on:
         required: true
         description: The vagrant cloud token user to interact with vagrant cloud
 
+env:
+  NOX_VERSION: "2022.8.7"
 
 jobs:
 
@@ -71,7 +73,7 @@ jobs:
       - name: Install Nox
         if: steps.check-nox-tarball.outputs.files_exists != 'true'
         run: |
-          python3 -m pip install nox
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Download One Dir Artifact
         if: steps.check-nox-tarball.outputs.files_exists != 'true'
@@ -167,7 +169,7 @@ jobs:
 
       - name: Install Nox
         run: |
-          python3 -m pip install nox
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Download One Dir Artifact
         uses: actions/download-artifact@v3
@@ -308,7 +310,7 @@ jobs:
 
       - name: Install Nox
         run: |
-          python3 -m pip install nox
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Report Salt Code Coverage
         run: |

@@ -2,6 +2,10 @@ name: Build Linux Onedir x86_64
 
 on: [push, pull_request]
 
+env:
+  NOX_VERSION: "2022.8.7"
+
+
 jobs:
   build:
     name: Build Onedir
@@ -87,7 +91,7 @@ jobs:
 
       - name: Install Nox
         run: |
-          python3 -m pip install nox
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Report Salt Code Coverage
         run: |
