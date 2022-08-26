@@ -348,7 +348,7 @@ def make_request(
         else:
             log.error("Unable to connect to vault server: %s", response.text)
             return response
-    elif not response.ok:
+    elif not response.ok and response.status_code != 404:
         log.error("Error from vault: %s", response.text)
         return response
 
