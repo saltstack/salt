@@ -166,7 +166,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.spm.test_repo",
             "integration.ssh.test_deploy",
             "integration.ssh.test_grains",
-            "integration.ssh.test_jinja_filters",
             "integration.ssh.test_master",
             "integration.ssh.test_mine",
             "integration.ssh.test_pillar",
