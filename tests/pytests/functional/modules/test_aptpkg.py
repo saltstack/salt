@@ -312,6 +312,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
         keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
+            assert oct(keyfile.stat().st_mode)[-3:] == "644"
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert (
             query_key["0E08A149DE57BFBE"]["uid"]
