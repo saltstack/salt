@@ -2373,7 +2373,13 @@ def add_repo_key(
     cmd = ["apt-key"]
     kwargs = {}
 
-    current_repo_keys = get_repo_keys(aptkey=aptkey, keydir=keydir)
+    # If the keyid is provided or determined, check it against the existing
+    # repo key ids to determine whether it needs to be imported.
+    if keyid:
+        for current_keyid in get_repo_keys(aptkey=aptkey, keydir=keydir):
+            if current_keyid[-(len(keyid)) :] == keyid:
+                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
+                return True
 
     if path:
         cached_source_path = __salt__["cp.cache_file"](path, saltenv)
@@ -2386,7 +2392,9 @@ def add_repo_key(
             key = _decrypt_key(cached_source_path)
             if not key:
                 return False
-            cmd = ["cp", key, str(keydir)]
+            key = pathlib.Path(str(key))
+            shutil.copyfile(key, keydir / key.name)
+            return True
         else:
             cmd.extend(["add", cached_source_path])
     elif text:
@@ -2426,14 +2434,6 @@ def add_repo_key(
         raise TypeError(
             "{}() takes at least 1 argument (0 given)".format(add_repo_key.__name__)
         )
-
-    # If the keyid is provided or determined, check it against the existing
-    # repo key ids to determine whether it needs to be imported.
-    if keyid:
-        for current_keyid in current_repo_keys:
-            if current_keyid[-(len(keyid)) :] == keyid:
-                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
-                return True
 
     cmd_ret = _call_apt(cmd, **kwargs)
 
