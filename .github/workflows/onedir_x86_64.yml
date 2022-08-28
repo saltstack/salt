@@ -61,23 +61,23 @@ jobs:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
 
-  download-fedora-36:
-    name: Fedora 36
+  download-centos-stream-8:
+    name: CentOS Stream 8
     uses: ./.github/workflows/download-vagrant-box.yml
     with:
-      vagrant-box-name: fedora-36
+      vagrant-box-name: centos-stream-8
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
-  fedora-36:
-    name: Fedora 36
+  centos-stream-8:
+    name: CentOS Stream 8
     uses: ./.github/workflows/test.yml
     needs:
       - build
-      - download-fedora-36
+      - download-centos-stream-8
     with:
       artifact-name: Salt Onedir X86_64
-      vagrant-box-name: fedora-36
+      vagrant-box-name: centos-stream-8
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
@@ -87,11 +87,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
-      #- debian-10
       - debian-11
-      #- fedora-35
-      - fedora-36
-      #- centos-stream-8
+      - centos-stream-8
 
     steps:
       - name: Checkout Source Code

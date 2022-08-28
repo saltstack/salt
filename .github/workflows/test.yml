@@ -35,7 +35,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.vagrant-box-name }}.tar.xz
-          key: deps||${{ inputs.vagrant-box-name }}||${{ hashFiles('noxfile.py', 'requirements/**/*.txt') }}
+          key: deps||${{ inputs.vagrant-box-name }}||${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Show Vagrant Information
         run: |
