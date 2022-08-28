@@ -220,6 +220,11 @@ jobs:
         run: |
           nox --force-color -e vagrant -- ${{ inputs.vagrant-box-name }} ${{ matrix.tests-chunk }}
 
+      - name: Combine Coverage Reports
+        if: always() && steps.spin-up-vm.conclusion == 'success'
+        run: |
+          nox --force-color -e vagrant-combine-coverage -- ${{ inputs.vagrant-box-name }}
+
       - name: Download Artifacts from Guest
         id: download-artifacts-from-vm
         if: always() && steps.spin-up-vm.conclusion == 'success'

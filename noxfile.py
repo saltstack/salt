@@ -349,7 +349,7 @@ def _run_with_coverage(session, *test_cmd, env=None):
     finally:
         # Always combine and generate the XML coverage report
         try:
-            session.run("coverage", "combine", env=coverage_base_env)
+            combine_coverage(session)
         except CommandFailed:
             # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
             # exception
@@ -1065,6 +1065,27 @@ def report_coverage(session):
     _report_coverage(session)
 
 
+@nox.session(python="3", name="combine-coverage")
+def combine_coverage(session):
+    if SKIP_REQUIREMENTS_INSTALL is False:
+        session.install(
+            "--progress-bar=off", COVERAGE_REQUIREMENT, silent=PIP_INSTALL_SILENT
+        )
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage")
+    }
+
+    # Always combine and generate the XML coverage report
+    try:
+        session.run("coverage", "combine", env=env)
+    except CommandFailed:
+        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+        # exception
+        pass
+
+
 def _pytest_onedir(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
@@ -1229,6 +1250,50 @@ def vagrant_download_dependencies(session):
         f"ssh -F .ssh-config-{distro}",
         f"{distro}:/vagrant/nox.{distro}.tar.xz",
         ".",
+    )
+
+
+@nox.session(python=False, name="vagrant-combine-coverage")
+def vagrant_combine_coverage(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+
+    distro = session.posargs.pop(0)
+    sudo_env_vars = []
+    if CI_RUN:
+        sudo_env_vars.append("CI=1")
+
+    if sudo_env_vars:
+        sudo_env = ["env", *sudo_env_vars]
+    else:
+        sudo_env = []
+
+    nox_command = [
+        "sudo",
+        "-HE",
+        *sudo_env,
+        "nox",
+        "-f",
+        "/vagrant/noxfile.py",
+        "--force-color",
+        "-e",
+        "combine-coverage",
+    ]
+    session_run_always(
+        session,
+        *[
+            "vagrant",
+            "ssh",
+            "--tty",
+            "--color",
+            "-c",
+            " ".join(nox_command),
+            distro,
+        ],
+        external=True,
     )
 
 
