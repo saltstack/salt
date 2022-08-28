@@ -2294,13 +2294,11 @@ def _decrypt_key(key):
                         key,
                     )
                     return False
-                encrypted_key = key
-                if not pathlib.Path(key).suffix:
-                    encrypted_key = key + ".gpg"
-                cmd = ["gpg", "--yes", "--output", encrypted_key, "--dearmor", key]
+                decrypted_key = str(key) + ".decrypted"
+                cmd = ["gpg", "--yes", "--output", decrypted_key, "--dearmor", key]
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
-                return encrypted_key
+                return decrypted_key
     except UnicodeDecodeError:
         log.debug("Key is not ASCII Armored. Do not need to decrypt")
     return key
@@ -2390,7 +2388,11 @@ def add_repo_key(
             if not key:
                 return False
             key = pathlib.Path(str(key))
-            shutil.copyfile(key, keydir / key.name)
+            if not keyfile:
+                keyfile = key.name
+                if keyfile.endswith(".decrypted"):
+                    keyfile = keyfile[:-10]
+            shutil.copyfile(key, keydir / keyfile)
             return True
         else:
             cmd.extend(["add", cached_source_path])

@@ -35,13 +35,13 @@ class Key:
 
 
 @pytest.fixture
-def get_key_file(state_tree, functional_files_dir):
+def get_key_file(request, state_tree, functional_files_dir):
     """
-    Create the key file used for the repo
+    Create the key file used for the repo by file name passed to the test
     """
-    key = Key()
-    shutil.copy(str(functional_files_dir / key.keyname), str(state_tree))
-    yield key.keyname
+    keyname = request.param
+    shutil.copy(str(functional_files_dir / keyname), str(state_tree))
+    yield keyname
 
 
 @pytest.fixture
@@ -266,7 +266,7 @@ def test_mod_repo_no_file(tmp_path, revert_repo_file):
 
 
 @pytest.fixture()
-def add_key(request, get_key_file):
+def add_key(request):
     """ """
     key = Key(request.param)
     key.add_key()
@@ -301,11 +301,15 @@ def test_get_repo_keys_keydir_not_exist(key):
         assert ret
 
 
+@pytest.mark.parametrize(
+    "get_key_file", ["salt-archive-keyring.gpg", "SALTSTACK-GPG-KEY.pub"], indirect=True
+)
 @pytest.mark.parametrize("aptkey", [False, True])
 def test_add_del_repo_key(get_key_file, aptkey):
     """
     Test both add_repo_key and del_repo_key when
     aptkey is both False and True
+    and using both binary and armored gpg keys
     """
     try:
         assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
@@ -313,6 +317,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
         if not aptkey:
             assert keyfile.is_file()
             assert oct(keyfile.stat().st_mode)[-3:] == "644"
+            assert keyfile.read_bytes()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert (
             query_key["0E08A149DE57BFBE"]["uid"]
