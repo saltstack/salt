@@ -368,7 +368,12 @@ class _fstab_entry:
         """
         entry = self.dict_from_line(line)
         for key, value in self.criteria.items():
-            if entry[key] != value:
+            if key == "opts":
+                ex_opts = sorted(entry.get(key, "").split(","))
+                cr_opts = sorted(value.split(","))
+                if ex_opts != cr_opts:
+                    return False
+            elif entry[key] != value:
                 return False
         return True
 
@@ -467,7 +472,12 @@ class _vfstab_entry:
         """
         entry = self.dict_from_line(line)
         for key, value in self.criteria.items():
-            if entry[key] != value:
+            if key == "opts":
+                ex_opts = sorted(entry.get(key, "").split(","))
+                cr_opts = sorted(value.split(","))
+                if ex_opts != cr_opts:
+                    return False
+            elif entry[key] != value:
                 return False
         return True
 
@@ -628,7 +638,12 @@ class _FileSystemsEntry:
         evalue_dict = fsys_view[1]
         for key, value in self.criteria.items():
             if key in evalue_dict:
-                if evalue_dict[key] != value:
+                if key == "opts":
+                    ex_opts = sorted(evalue_dict.get(key, "").split(","))
+                    cr_opts = sorted(value.split(","))
+                    if ex_opts != cr_opts:
+                        return False
+                elif evalue_dict[key] != value:
                     return False
             else:
                 return False
@@ -867,6 +882,9 @@ def set_fstab(
                 line = salt.utils.stringutils.to_unicode(line)
                 try:
                     if criteria.match(line):
+                        log.debug(
+                            "Checking ( %s ) against current line ( %s )", entry, line
+                        )
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = "present"
