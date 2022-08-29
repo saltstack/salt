@@ -1088,6 +1088,7 @@ def mod_watch(
     full_restart=False,
     init_delay=None,
     force=False,
+    chroot_ignore=False,
     **kwargs
 ):
     """
@@ -1125,9 +1126,25 @@ def mod_watch(
 
     init_delay
         Add a sleep command (in seconds) before the service is restarted/reloaded.
+
+    chroot_ignore : False
+        If set to ``True``, a check will be performed to determine if Salt is
+        running in a chroot environment using the ``virtual_subtype`` grain. If
+        that condition is also met, then this state will effectively become a
+        no-op state where no action is taken. This can be valuable behavior to
+        prevent wrapping multiple state blocks in templating to perform this
+        check.
+
+        .. versionadded:: 3006.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     past_participle = None
+
+    # Ignore all operations if chroot_ignore and virtual subtype is chroot
+    if (chroot_ignore or __opts__.get("chroot_ignore")) and "chroot" in __grains__.get(
+        "virtual_subtype", ""
+    ).lower():
+        return _chroot_noop(ret)
 
     status_kwargs, warnings = _get_systemd_only(__salt__["service.status"], kwargs)
     if warnings:

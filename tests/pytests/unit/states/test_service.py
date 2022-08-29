@@ -572,6 +572,12 @@ def test_mod_watch():
             "name": "salt",
             "result": "salt",
         },
+        {
+            "changes": {},
+            "comment": "Running in chroot and chroot_ignore is True. Nothing to do.",
+            "name": "salt",
+            "result": None,
+        },
     ]
 
     mock = MagicMock(return_value=False)
@@ -584,6 +590,11 @@ def test_mod_watch():
 
             with patch.dict(service.__opts__, {"test": False}):
                 assert service.mod_watch("salt", "running") == ret[3]
+                with patch.dict(service.__grains__, {"virtual_subtype": "chroot"}):
+                    assert (
+                        service.mod_watch("salt", "running", chroot_ignore=True)
+                        == ret[4]
+                    )
 
         assert service.mod_watch("salt", "stack") == ret[1]
 
