@@ -1202,9 +1202,14 @@ def _virtual(osdata):
                 [dmidecode, "-t", "system"], ignore_retcode=True
             )
             output = ret["stdout"]
-            if "Manufacturer: Amazon EC2" in output or re.match(
-                r".*Version: .*amazon.*", output, flags=re.DOTALL
-            ):
+            if "Manufacturer: Amazon EC2" in output:
+                grains["virtual_subtype"] = "Amazon EC2"
+                product = re.match(
+                    r".*Product Name: ([^\r\n]*).*", output, flags=re.DOTALL
+                )
+                if product:
+                    grains["virtual_subtype"] = "Amazon EC2 ({})".format(product[1])
+            elif re.match(r".*Version: [^\r\n]+\.amazon.*", output, flags=re.DOTALL):
                 grains["virtual_subtype"] = "Amazon EC2"
 
     for command in failed_commands:
