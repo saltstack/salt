@@ -7,6 +7,7 @@ from xml.etree import ElementTree
 
 import pytest
 
+from tests.conftest import CODE_DIR
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 pytest.importorskip("docker")
@@ -26,6 +27,14 @@ def _check_onedir_run(request):
         pytest.skip(
             "Skipping these tests for now. We'll need to go back to them and fix."
         )
+
+
+@pytest.fixture(scope="session")
+def salt_factories_config(salt_factories_config):
+    config = salt_factories_config.copy()
+    if not config.get("code_dir"):
+        config["code_dir"] = str(CODE_DIR)
+    return config
 
 
 @pytest.fixture(scope="module")
