@@ -1,11 +1,14 @@
 """
-    salt.serializers.toml
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    salt.serializers.tomlmod
+    ~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements TOML serializer.
 
     It's just a wrapper around the python toml module.
 """
+
+import logging
 
 from salt.serializers import DeserializationError, SerializationError
 
@@ -17,7 +20,17 @@ except ImportError:
     HAS_TOML = False
 
 
+__virtualname__ = "toml"
+
 __all__ = ["deserialize", "serialize", "HAS_TOML"]
+
+log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    if HAS_TOML is False:
+        return (False, "The 'toml' library is missing")
+    return __virtualname__
 
 
 def deserialize(stream_or_string, **options):
