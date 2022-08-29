@@ -3798,6 +3798,16 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "post_master_init")
         return mp_call(self, master)
 
+    @salt.ext.tornado.gen.coroutine
+    def subproxy_post_master_init(self, minion_id, uid):
+        """
+        Function to finish init for the sub proxies
+
+        :rtype : None
+        """
+        mp_call = _metaproxy_call(self.opts, "subproxy_post_master_init")
+        return mp_call(self, minion_id, uid)
+
     def tune_in(self, start=True):
         """
         Lock onto the publisher. This is the main event loop for the minion
