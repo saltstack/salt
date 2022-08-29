@@ -3303,7 +3303,7 @@ def test_virtual_set_virtual_ec2():
         virtual_grains = core._virtual(osdata.copy())
 
         assert virtual_grains["virtual"] == "kvm"
-        assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2 (m5.large)"
 
         virtual_grains = core._virtual(osdata.copy())
 
