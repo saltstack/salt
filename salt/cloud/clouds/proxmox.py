@@ -676,10 +676,7 @@ def create(vm_):
 
     ret["creation_data"] = data
     name = vm_["name"]  # hostname which we know
-    if "clone" in vm_ and vm_["clone"] is True:
-        vmid = newid
-    else:
-        vmid = data["vmid"]  # vmid which we have received
+    vmid = data["vmid"]  # vmid which we have received
     host = data["node"]  # host which we have received
     nodeType = data["technology"]  # VM tech (Qemu / OpenVZ)
 
@@ -1015,6 +1012,7 @@ def create_node(vm_, newid):
         )
         for prop in _get_properties("/nodes/{node}/qemu", "POST", static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
+                # If specified, vmid will override newid.
                 newnode[prop] = vm_[prop]
 
     # The node is ready. Lets request it to be added
@@ -1057,7 +1055,12 @@ def create_node(vm_, newid):
         )
     else:
         node = query("post", "nodes/{}/{}".format(vmhost, vm_["technology"]), newnode)
-    return _parse_proxmox_upid(node, vm_)
+    result = _parse_proxmox_upid(node, vm_)
+
+    # When cloning, the upid contains the clone_from vmid instead of the new vmid
+    result["vmid"] = newnode["vmid"]
+
+    return result
 
 
 def show_instance(name, call=None):

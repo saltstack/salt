@@ -150,7 +150,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 "nodes/myhost/qemu/123/clone",
                 {"newid": ANY},
             )
-            assert result == {}
+            assert result == {"vmid": ANY}
 
             # CASE 2: host:ID notation
             mock_query.reset_mock()
@@ -161,7 +161,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 "nodes/otherhost/qemu/123/clone",
                 {"newid": ANY},
             )
-            assert result == {}
+            assert result == {"vmid": ANY}
 
     def test_clone_pool(self):
         """
@@ -186,7 +186,62 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 "nodes/myhost/qemu/123/clone",
                 {"newid": ANY, "pool": "mypool"},
             )
-            assert result == {}
+            assert result == {"vmid": ANY}
+
+    def test_clone_id(self):
+        """
+        Test cloning a VM with a specified vmid.
+        """
+        next_vmid = 101
+        explicit_vmid = 201
+        upid = "UPID:myhost:00123456:12345678:9ABCDEF0:qmclone:123:root@pam:"
+
+        def mock_query_response(conn_type, option, post_data=None):
+            if conn_type == "get" and option == "cluster/tasks":
+                return [{"upid": upid, "status": "OK"}]
+            if conn_type == "post" and option.endswith("/clone"):
+                return upid
+            return None
+
+        mock_wait_for_state = MagicMock(return_value=True)
+        with patch(
+            "salt.cloud.clouds.proxmox._get_properties",
+            MagicMock(return_value=["vmid"]),
+        ), patch(
+            "salt.cloud.clouds.proxmox._get_next_vmid",
+            MagicMock(return_value=next_vmid),
+        ), patch(
+            "salt.cloud.clouds.proxmox.start", MagicMock(return_value=True)
+        ), patch(
+            "salt.cloud.clouds.proxmox.wait_for_state", mock_wait_for_state
+        ), patch(
+            "salt.cloud.clouds.proxmox.query", side_effect=mock_query_response
+        ):
+            vm_ = {
+                "profile": "my_proxmox",
+                "driver": "proxmox",
+                "technology": "qemu",
+                "name": "new2",
+                "host": "myhost",
+                "clone": True,
+                "clone_from": 123,
+                "ip_address": "10.10.10.10",
+            }
+
+            # CASE 1: No vmid specified in profile (previous behavior)
+            proxmox.create(vm_)
+            mock_wait_for_state.assert_called_with(
+                next_vmid,
+                "running",
+            )
+
+            # CASE 2: vmid specified in profile
+            vm_["vmid"] = explicit_vmid
+            proxmox.create(vm_)
+            mock_wait_for_state.assert_called_with(
+                explicit_vmid,
+                "running",
+            )
 
     def test_find_agent_ips(self):
         """
