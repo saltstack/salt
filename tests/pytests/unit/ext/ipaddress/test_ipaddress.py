@@ -1,19 +1,4 @@
-# Copyright 2007 Google Inc.
-#  Licensed to PSF under a Contributor Agreement.
-#
-#
-
-# This is test_ipaddress.py from Python 3.9.5, verbatim, with minor compatility changes
-#    https://github.com/python/cpython/blob/v3.9.5/Lib/test/test_ipaddress.py
-#
-# Modifications:
-#  - Switch the ipaddress import to salt._compat
-#  - Copy the `LARGEST` and `SMALLEST` implementation, from 3.9.1
-#  - Adjust IpaddrUnitTest.testNetworkElementCaching because we're not using cached_property
-
-"""Unittest for ipaddress module."""
-
-# pylint: disable=string-substitution-usage-error,pointless-statement,abstract-method,cell-var-from-loop
+# pylint: disable=string-substitution-usage-error
 
 import sys
 
