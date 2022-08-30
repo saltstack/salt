@@ -196,7 +196,7 @@ def config(
         "network": network,
         "subnetwork": subnetwork,
         "ex_labels": labels,
-        "ex_tags": tags,
+        "tags": tags,
         "ex_metadata": metadata,
     }
     return expected_call_kwargs, config

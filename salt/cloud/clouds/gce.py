@@ -422,7 +422,7 @@ def __get_tags(vm_):
     Get configured tags.
     """
     t = config.get_cloud_config_value(
-        "ex_tags", vm_, __opts__, default="[]", search_global=False
+        "tags", vm_, __opts__, default="[]", search_global=False
     )
     # Consider warning the user that the tags in the cloud profile
     # could not be interpreted, bad formatting?
