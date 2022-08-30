@@ -9705,7 +9705,7 @@ def _get_policy_adm_setting(
                         full_name
                     ] = policy_item
             # go back and remove any "unpathed" policies that need a full path
-            for path_needed in unpathed_dict[policy_namespace]:
+            for path_needed in unpathed_dict.get(policy_namespace, {}):
                 # remove the item with the same full name and re-add it w/a path'd version
                 full_path_list = hierarchy[policy_namespace][
                     unpathed_dict[policy_namespace][path_needed]
