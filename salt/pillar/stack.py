@@ -98,7 +98,7 @@ Here is an example of such a configuration, which should speak by itself:
             value: /path/to/stack0.cfg
           opts:pillarenv:
             dev: /path/to/dev/stack.cfg
-            prod: /path/to/prod/stack.cfg
+            __env__: /path/to/__env__/stack.cfg
 
 PillarStack configuration files
 -------------------------------
