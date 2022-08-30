@@ -270,6 +270,7 @@ def init(opts):
     netmiko_connection_args.pop("proxytype", None)
     netmiko_connection_args.pop("multiprocessing", None)
     netmiko_connection_args.pop("skip_connect_on_init", None)
+    netmiko_connection_args.pop("connection_timeout", None)
 
     __context__["netmiko_device"]["args"] = netmiko_connection_args
 
