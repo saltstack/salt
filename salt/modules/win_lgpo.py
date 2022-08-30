@@ -5956,9 +5956,9 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                 "multiTextBox",
             ]:
                 if result.text:
-                    return result.text.rstrip().rstrip(":")
+                    return result.text.rstrip().rstrip(":").strip()
                 else:
-                    return alternate_label.rstrip(":")
+                    return alternate_label.rstrip(":").strip()
     return None
 
 
