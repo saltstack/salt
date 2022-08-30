@@ -31,6 +31,7 @@ import pprint
 import re
 import socket
 import time
+import urllib
 
 import salt.config as config
 import salt.utils.cloud
@@ -192,7 +193,12 @@ def query(conn_type, option, post_data=None):
     elif conn_type == "get":
         response = requests.get(full_url, verify=verify_ssl, cookies=ticket)
 
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.RequestException:
+        # Log the details of the response.
+        log.error("Error in %s query to %s:\n%s", conn_type, full_url, response.text)
+        raise
 
     try:
         returned_data = response.json()
@@ -560,20 +566,18 @@ def _reconfigure_clone(vm_, vmid):
         log.warning("Reconfiguring clones is only available under `qemu`")
         return
 
-    # TODO: Support other settings here too as these are not the only ones that can be modified after a clone operation
+    # Determine which settings can be reconfigured.
+    query_path = "nodes/{}/qemu/{}/config"
+    valid_settings = set(_get_properties(query_path.format("{node}", "{vmid}"), "POST"))
+
     log.info("Configuring cloned VM")
 
     # Modify the settings for the VM one at a time so we can see any problems with the values
     # as quickly as possible
     for setting in vm_:
-        if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
-            postParams = {setting: vm_[setting]}
-            query(
-                "post",
-                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
-                postParams,
-            )
-
+        postParams = None
+        if setting == "vmid":
+            pass  # vmid gets passed in the URL and can't be reconfigured
         elif re.match(r"^net(\d+)$", setting):
             # net strings are a list of comma seperated settings. We need to merge the settings so that
             # the setting in the profile only changes the settings it touches and the other settings
@@ -593,6 +597,13 @@ def _reconfigure_clone(vm_, vmid):
 
             # Convert the dictionary back into a string list
             postParams = {setting: _dictionary_to_stringlist(new_setting)}
+
+        elif setting == "sshkeys":
+            postParams = {setting: urllib.parse.quote(vm_[setting], safe="")}
+        elif setting in valid_settings:
+            postParams = {setting: vm_[setting]}
+
+        if postParams:
             query(
                 "post",
                 "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),

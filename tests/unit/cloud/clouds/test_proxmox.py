@@ -4,6 +4,7 @@
 
 import io
 import textwrap
+import urllib
 
 import requests
 
@@ -11,7 +12,7 @@ from salt import config
 from salt.cloud.clouds import proxmox
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import ANY, MagicMock, patch
+from tests.support.mock import ANY, MagicMock, call, patch
 from tests.support.unit import TestCase
 
 PROFILE = {
@@ -98,9 +99,12 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
         result = proxmox._dictionary_to_stringlist({"a": "a", "b": "b"})
         self.assertEqual(result, "a=a,b=b")
 
-    def test__reconfigure_clone(self):
+    def test__reconfigure_clone_net_hdd(self):
         # The return_value is for the net reconfigure assertions, it is irrelevant for the rest
-        with patch.object(
+        with patch(
+            "salt.cloud.clouds.proxmox._get_properties",
+            MagicMock(return_value=["net0", "ide0", "sata0", "scsi0"]),
+        ), patch.object(
             proxmox, "query", return_value={"net0": "c=overwritten,g=h"}
         ) as query:
             # Test a vm that lacks the required attributes
@@ -126,6 +130,59 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             query.assert_any_call(
                 "post", "nodes/127.0.0.1/qemu/0/config", {"scsi0": "data"}
             )
+
+    def test__reconfigure_clone_params(self):
+        """
+        Test cloning a VM with parameters to be reconfigured.
+        """
+        vmid = 201
+        properties = {
+            "ide2": "cdrom",
+            "sata1": "satatest",
+            "scsi0": "bootvol",
+            "net0": "model=virtio",
+            "agent": "1",
+            "args": "argsvalue",
+            "balloon": "128",
+            "ciuser": "root",
+            "cores": "2",
+            "description": "desc",
+            "memory": "256",
+            "name": "new2",
+            "onboot": "0",
+            "sshkeys": "ssh-rsa ABCDEF user@host\n",
+        }
+        query_calls = [call("get", "nodes/myhost/qemu/{}/config".format(vmid))]
+        for key, value in properties.items():
+            if key == "sshkeys":
+                value = urllib.parse.quote(value, safe="")
+            query_calls.append(
+                call(
+                    "post",
+                    "nodes/myhost/qemu/{}/config".format(vmid),
+                    {key: value},
+                )
+            )
+
+        mock_query = MagicMock(return_value="")
+        with patch(
+            "salt.cloud.clouds.proxmox._get_properties",
+            MagicMock(return_value=list(properties.keys())),
+        ), patch("salt.cloud.clouds.proxmox.query", mock_query):
+            vm_ = {
+                "profile": "my_proxmox",
+                "driver": "proxmox",
+                "technology": "qemu",
+                "name": "new2",
+                "host": "myhost",
+                "clone": True,
+                "clone_from": 123,
+                "ip_address": "10.10.10.10",
+            }
+            vm_.update(properties)
+
+            proxmox._reconfigure_clone(vm_, vmid)
+            mock_query.assert_has_calls(query_calls, any_order=True)
 
     def test_clone(self):
         """
