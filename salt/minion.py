@@ -1131,7 +1131,8 @@ class MinionManager(MinionBase):
                     minion.setup_beacons(before_connect=True)
                 if minion.opts.get("scheduler_before_connect", False):
                     minion.setup_scheduler(before_connect=True)
-                yield minion.connect_master(failed=failed)
+                if minion.opts.get("master_type", "str") != "disable":
+                    yield minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
                 self.minions.append(minion)
                 break

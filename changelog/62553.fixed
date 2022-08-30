@@ -1,0 +1,1 @@
+fixes #62553 by checking for disabled master_type before starting master connection and skipping it if set.
