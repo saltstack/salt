@@ -47,6 +47,8 @@ def _query(
     api_version="v1",
     data=None,
     query_params=None,
+    decode=True,
+    text=False,
 ):
     """
     Consul object method function to construct and execute on the API URL.
@@ -85,7 +87,8 @@ def _query(
         method=method,
         params=query_params,
         data=data,
-        decode=True,
+        decode=decode,
+        text=text,
         status=True,
         header_dict=headers,
         opts=__opts__,
@@ -974,7 +977,9 @@ def agent_check_fail(consul_url=None, token=None, checkid=None, **kwargs):
     return ret
 
 
-def agent_service_register(consul_url=None, token=None, **kwargs):
+def agent_service_register(
+    consul_url=None, token=None, decode=False, text=True, **kwargs
+):
     """
     The used to add a new service, with an optional
     health check, to the local agent.
@@ -1070,12 +1075,18 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             if "Interval" in check_dd:
                 del check_dd["Interval"]  # not required, so ignore it
 
-        if check_dd:
+        if len(check_dd.keys()) > 0:
             data["Check"] = check_dd  # if empty, ignore it
 
     function = "agent/service/register"
     res = _query(
-        consul_url=consul_url, function=function, token=token, method="PUT", data=data
+        consul_url=consul_url,
+        function=function,
+        token=token,
+        method="PUT",
+        data=data,
+        decode=decode,
+        text=text,
     )
     if res["res"]:
         ret["res"] = True
@@ -1086,7 +1097,9 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
     return ret
 
 
-def agent_service_deregister(consul_url=None, token=None, serviceid=None):
+def agent_service_deregister(
+    consul_url=None, token=None, serviceid=None, decode=False, text=True
+):
     """
     Used to remove a service.
 
@@ -1116,7 +1129,13 @@ def agent_service_deregister(consul_url=None, token=None, serviceid=None):
 
     function = "agent/service/deregister/{}".format(serviceid)
     res = _query(
-        consul_url=consul_url, function=function, token=token, method="PUT", data=data
+        consul_url=consul_url,
+        function=function,
+        token=token,
+        method="PUT",
+        data=data,
+        decode=decode,
+        text=text,
     )
     if res["res"]:
         ret["res"] = True
@@ -2085,9 +2104,6 @@ def acl_create(consul_url=None, token=None, **kwargs):
             ret["res"] = False
             return ret
 
-    if "id" in kwargs:
-        data["id"] = kwargs["id"]
-
     if "name" in kwargs:
         data["Name"] = kwargs["name"]
     else:
@@ -2097,7 +2113,16 @@ def acl_create(consul_url=None, token=None, **kwargs):
         data["Type"] = kwargs["type"]
 
     if "rules" in kwargs:
-        data["Rules"] = kwargs["rules"]
+        rules_str = ""
+        rules = kwargs["rules"]
+        for item in rules:
+            for k, v in item.items():
+                if k != "policy":
+                    rules_str += '{} "{}" {{\n'.format(k, v)
+                else:
+                    rules_str += '  {} = "{}"\n}}\n'.format(k, v)
+
+        data["Rules"] = rules_str
 
     function = "acl/create"
     res = _query(
@@ -2218,6 +2243,7 @@ def acl_delete(consul_url=None, token=None, **kwargs):
     else:
         ret["res"] = False
         ret["message"] = "Removing ACL {} failed.".format(kwargs["id"])
+        ret["changes"] = res
 
     return ret
 
