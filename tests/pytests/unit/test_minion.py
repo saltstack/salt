@@ -1088,3 +1088,35 @@ def test_valid_ipv4_master_address_ipv6_enabled():
             "master_ip": "127.0.0.1",
         }
         assert salt.minion.resolve_dns(opts) == expected
+
+
+async def test_master_type_disable():
+    """
+    Tests master_type "disable" to not even attempt connecting to a master.
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts.update(
+        {
+            "master_type": "disable",
+            "master": None,
+            "__role": "",
+            "pub_ret": False,
+            "file_client": "local",
+        }
+    )
+
+    minion = salt.minion.Minion(mock_opts)
+    try:
+
+        try:
+            minion_man = salt.minion.MinionManager(mock_opts)
+            minion_man._connect_minion(minion)
+        except RuntimeError:
+            pytest.fail("_connect_minion(minion) threw an error, This was not expected")
+
+        # Make sure beacons and sheduler are initialized
+        assert "beacons" in minion.periodic_callbacks
+        assert "schedule" in minion.periodic_callbacks
+        assert minion.connected is False
+    finally:
+        minion.destroy()
