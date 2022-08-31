@@ -1,8 +1,17 @@
-import os
+import logging
 
 import pytest
+
 import salt.modules.tls as tls
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 from tests.support.mock import MagicMock, patch
+
+log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    SKIP_INITIAL_PHOTONOS_FAILURES,
+]
 
 
 @pytest.fixture
@@ -29,86 +38,72 @@ def tls_test_data():
 
 
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
-def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data):
+def test_create_ca_permissions_on_cert_and_key(tmp_path, tls_test_data):
     ca_name = "test_ca"
-    certp = tmpdir.join(ca_name).join("{}_ca_cert.crt".format(ca_name)).strpath
-    certk = tmpdir.join(ca_name).join("{}_ca_cert.key".format(ca_name)).strpath
-    mock_opt = MagicMock(return_value=tmpdir)
+    certp = tmp_path / ca_name / "{}_ca_cert.crt".format(ca_name)
+    certk = tmp_path / ca_name / "{}_ca_cert.key".format(ca_name)
+    mock_opt = MagicMock(return_value=str(tmp_path))
     mock_ret = MagicMock(return_value=0)
 
     with patch.dict(
         tls.__salt__, {"config.option": mock_opt, "cmd.retcode": mock_ret}
-    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmpdir)}):
+    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmp_path)}):
         tls.create_ca(ca_name, days=365, fixmode=False, **tls_test_data["create_ca"])
-        certp_mode = os.stat(certp).st_mode & 0o7777
-        certk_mode = os.stat(certk).st_mode & 0o7777
-
-        assert 0o644 == certp_mode
-        assert 0o600 == certk_mode
+        assert certp.stat().st_mode & 0o7777 == 0o644
+        assert certk.stat().st_mode & 0o7777 == 0o600
 
 
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
-def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
+def test_create_csr_permissions_on_csr_and_key(tmp_path, tls_test_data):
     ca_name = "test_ca"
     csrp = (
-        tmpdir.join(ca_name)
-        .join("certs")
-        .join("{}.csr".format(tls_test_data["create_ca"]["CN"]))
-        .strpath
+        tmp_path / ca_name / "certs" / "{}.csr".format(tls_test_data["create_ca"]["CN"])
     )
     keyp = (
-        tmpdir.join(ca_name)
-        .join("certs")
-        .join("{}.key".format(tls_test_data["create_ca"]["CN"]))
-        .strpath
+        tmp_path / ca_name / "certs" / "{}.key".format(tls_test_data["create_ca"]["CN"])
     )
 
-    mock_opt = MagicMock(return_value=tmpdir)
+    mock_opt = MagicMock(return_value=str(tmp_path))
     mock_ret = MagicMock(return_value=0)
     mock_pgt = MagicMock(return_value=False)
 
     with patch.dict(
         tls.__salt__,
         {"config.option": mock_opt, "cmd.retcode": mock_ret, "pillar.get": mock_pgt},
-    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmpdir)}):
-        tls.create_ca(ca_name, days=365, **tls_test_data["create_ca"])
-        tls.create_csr(ca_name, **tls_test_data["create_ca"])
+    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmp_path)}):
+        ca_ret = tls.create_ca(ca_name, days=365, **tls_test_data["create_ca"])
+        assert ca_ret
+        csr_ret = tls.create_csr(ca_name, **tls_test_data["create_ca"])
+        assert csr_ret
 
-        csrp_mode = os.stat(csrp).st_mode & 0o7777
-        keyp_mode = os.stat(keyp).st_mode & 0o7777
+        assert csrp.exists()
+        assert keyp.exists()
 
-        assert 0o644 == csrp_mode
-        assert 0o600 == keyp_mode
+        assert csrp.stat().st_mode & 0o7777 == 0o644
+        assert keyp.stat().st_mode & 0o7777 == 0o600
 
 
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
-def test_create_self_signed_cert_permissions_on_csr_cert_and_key(tmpdir, tls_test_data):
+def test_create_self_signed_cert_permissions_on_csr_cert_and_key(
+    tmp_path, tls_test_data
+):
     ca_name = "test_ca"
     certp = (
-        tmpdir.join(ca_name)
-        .join("certs")
-        .join("{}.crt".format(tls_test_data["create_ca"]["CN"]))
-        .strpath
+        tmp_path / ca_name / "certs" / "{}.crt".format(tls_test_data["create_ca"]["CN"])
     )
     keyp = (
-        tmpdir.join(ca_name)
-        .join("certs")
-        .join("{}.key".format(tls_test_data["create_ca"]["CN"]))
-        .strpath
+        tmp_path / ca_name / "certs" / "{}.key".format(tls_test_data["create_ca"]["CN"])
     )
 
-    mock_opt = MagicMock(return_value=tmpdir)
+    mock_opt = MagicMock(return_value=str(tmp_path))
     mock_ret = MagicMock(return_value=0)
     mock_pgt = MagicMock(return_value=False)
 
     with patch.dict(
         tls.__salt__,
         {"config.option": mock_opt, "cmd.retcode": mock_ret, "pillar.get": mock_pgt},
-    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmpdir)}):
+    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmp_path)}):
         tls.create_self_signed_cert(ca_name, days=365, **tls_test_data["create_ca"])
 
-        certp_mode = os.stat(certp).st_mode & 0o7777
-        keyp_mode = os.stat(keyp).st_mode & 0o7777
-
-        assert 0o644 == certp_mode
-        assert 0o600 == keyp_mode
+        assert certp.stat().st_mode & 0o7777 == 0o644
+        assert keyp.stat().st_mode & 0o7777 == 0o600

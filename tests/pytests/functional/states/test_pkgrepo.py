@@ -1,6 +1,7 @@
 import platform
 
 import pytest
+
 import salt.utils.files
 
 

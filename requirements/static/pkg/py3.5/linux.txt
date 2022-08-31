@@ -6,7 +6,7 @@
 #
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
     # via -r requirements/static/pkg/linux.in
-certifi==2021.5.30
+certifi==2021.10.8
     # via requests
 cffi==1.14.6
     # via cryptography
@@ -64,9 +64,9 @@ pyopenssl==19.1.0
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-pytz==2021.1
+pytz==2022.1
     # via tempora
 pyyaml==5.3.1
     # via -r requirements/base.txt
@@ -76,7 +76,7 @@ requests==2.25.1
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

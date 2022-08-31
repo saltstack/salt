@@ -5,9 +5,10 @@
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 from salt.config import cloud_providers_config
 from tests.support.case import ShellCase
-from tests.support.helpers import random_string
 from tests.support.runtests import RUNTIME_VARS
 
 # Create the cloud instance name to be used throughout the tests

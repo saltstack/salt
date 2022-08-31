@@ -5,11 +5,14 @@ Integration tests for the rabbitmq_plugin states
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_plugin as rabbitmq_plugin
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
+
+pytest.importorskip("docker")
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -44,7 +47,6 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
     }
 
 
-@pytest.mark.slow_test
 def test_enabled_enabled_disabled(rabbitmq_container):
     """
     Test rabbitmq_plugin.enabled and rabbitmq_plugin_disabled
@@ -88,7 +90,6 @@ def test_enabled_enabled_disabled(rabbitmq_container):
         assert ret == expected
 
 
-@pytest.mark.slow_test
 def test_disabled(rabbitmq_container):
     """
     Test rabbitmq_plugin.enabled and rabbitmq_plugin_disabled

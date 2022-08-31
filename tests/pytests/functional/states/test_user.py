@@ -10,9 +10,10 @@ import shutil
 import sys
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.platform
-from saltfactories.utils import random_string
 
 try:
     import grp
@@ -136,6 +137,8 @@ def test_user_present_nondefault(grains, modules, states, username, user_home):
         expected_group_name = "staff"
     elif salt.utils.platform.is_windows():
         expected_group_name = []
+    elif grains["os"] == "VMware Photon OS":
+        expected_group_name = "users"
     else:
         expected_group_name = username
     assert group_name == expected_group_name

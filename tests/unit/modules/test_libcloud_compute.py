@@ -16,15 +16,15 @@ try:
     import libcloud
     from libcloud.compute.base import (
         BaseDriver,
+        KeyPair,
         Node,
+        NodeImage,
+        NodeLocation,
         NodeSize,
         NodeState,
-        NodeLocation,
         StorageVolume,
         StorageVolumeState,
         VolumeSnapshot,
-        NodeImage,
-        KeyPair,
     )
 
     if hasattr(libcloud, "__version__") and _LooseVersion(
@@ -193,7 +193,6 @@ if HAS_LIBCLOUD:
         def delete_key_pair(self, key_pair):
             assert key_pair.name == "test_key"
             return True
-
 
 else:
     MockComputeDriver = object

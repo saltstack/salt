@@ -3,6 +3,7 @@ unit tests for the script engine
 """
 
 import pytest
+
 import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
@@ -34,3 +35,13 @@ def test__read_stdout():
     with patch("subprocess.Popen") as popen_mock:
         popen_mock.stdout.readline.return_value = "test"
         assert next(script._read_stdout(popen_mock)) == "test"
+
+
+def test__read_stdout_terminates_properly():
+    """
+    Test that _read_stdout terminates with the sentinel
+    """
+    with patch("subprocess.Popen") as popen_mock:
+        popen_mock.stdout.readline.return_value = b""
+        with pytest.raises(StopIteration):
+            next(script._read_stdout(popen_mock))

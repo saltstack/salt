@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 
 import pytest
+
 import salt.cli.daemons as daemons
 from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch

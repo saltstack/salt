@@ -14,7 +14,7 @@
     get us into.
 
     .. __: http://code.activestate.com/recipes/440554/
-    .. __: https://github.com/python-mirror/python/blob/3.3/Lib/pty.py
+    .. __: https://github.com/python/cpython/blob/3.3/Lib/pty.py
     .. __: https://github.com/pexpect/pexpect
 
 """
@@ -32,23 +32,24 @@ import time
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.stringutils
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 mswindows = sys.platform == "win32"
 
 try:
     # pylint: disable=F0401,W0611
-    from win32file import ReadFile, WriteFile
-    from win32pipe import PeekNamedPipe
     import msvcrt
+
     import win32api
     import win32con
     import win32process
+    from win32file import ReadFile, WriteFile
+    from win32pipe import PeekNamedPipe
 
     # pylint: enable=F0401,W0611
 except ImportError:
-    import pty
     import fcntl
+    import pty
     import struct
     import termios
 
@@ -407,6 +408,7 @@ class Terminal:
             self.child_fd = parent
             self.child_fde = err_parent
             self.pid = proc.pid
+            self.proc = proc
             self.closed = False
             self.terminated = False
 
@@ -692,6 +694,14 @@ class Terminal:
 
             try:
                 pid, status = _waitpid(self.pid, waitpid_options)
+            except ChildProcessError:
+                # check if process is really dead or if it is just pretending and we should exit normally through the gift center
+                polled = self.proc.poll()
+                if polled is None:
+                    return True
+                # process must have returned on it's own process the return code
+                pid = self.pid
+                status = polled
             except _os_error:
                 err = sys.exc_info()[1]
                 # No child processes

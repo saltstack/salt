@@ -17,6 +17,7 @@ import tempfile
 from contextlib import closing
 
 import pytest
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
@@ -157,7 +158,7 @@ class GitModuleTest(ModuleCase):
                     )
                 )
         ret = self.run_function("git.add", [self.repo, newdir])
-        res = "\n".join(sorted(["add '{}'".format(x) for x in files_relpath]))
+        res = "\n".join(sorted("add '{}'".format(x) for x in files_relpath))
         if salt.utils.platform.is_windows():
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
@@ -783,7 +784,7 @@ class GitModuleTest(ModuleCase):
         )
         # Remove an entire dir
         expected = "\n".join(
-            sorted(["rm '" + os.path.join(entire_dir, x) + "'" for x in self.files])
+            sorted("rm '" + os.path.join(entire_dir, x) + "'" for x in self.files)
         )
         if salt.utils.platform.is_windows():
             expected = expected.replace("\\", "/")
@@ -882,7 +883,8 @@ class GitModuleTest(ModuleCase):
         # We don't need to enclose this comparison in a try/except, since the
         # decorator would skip this test if git is not installed and we'd never
         # get here in the first place.
-        if _git_version() >= LooseVersion("2.6.0"):
+        git_version = _git_version()
+        if git_version >= LooseVersion("2.6.0"):
             worktree_add_prefix = "Preparing "
         else:
             worktree_add_prefix = "Enter "

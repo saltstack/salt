@@ -13,7 +13,7 @@ import time
 import traceback
 from random import randint
 
-import salt.defaults.exitcodes  # pylint: disable=unused-import
+import salt.defaults.exitcodes
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -92,13 +92,18 @@ def minion_process():
     """
     Start a minion process
     """
-    import salt.utils.platform
-    import salt.utils.process
+    # Because the minion is going to start on a separate process,
+    # salt._logging.in_mainprocess() will return False.
+    # We'll just force it to return True for this particular case so
+    # that proper logging can be set up.
+    import salt._logging
+
+    salt._logging.in_mainprocess.__pid__ = os.getpid()
+    # Now the remaining required imports
     import salt.cli.daemons
+    import salt.utils.platform
 
     # salt_minion spawns this function in a new process
-
-    salt.utils.process.appendproctitle("KeepAlive")
 
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
@@ -164,8 +169,9 @@ def salt_minion():
 
     salt.utils.process.notify_systemd()
 
-    import salt.cli.daemons
     import multiprocessing
+
+    import salt.cli.daemons
 
     # Fix for setuptools generated scripts, so that it will
     # work with multiprocessing fork emulation.
@@ -202,7 +208,9 @@ def salt_minion():
     prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
-            process = multiprocessing.Process(target=minion_process)
+            process = multiprocessing.Process(
+                target=minion_process, name="MinionKeepAlive"
+            )
             process.start()
             signal.signal(
                 signal.SIGTERM,
@@ -321,9 +329,10 @@ def salt_proxy():
     """
     Start a proxy minion.
     """
+    import multiprocessing
+
     import salt.cli.daemons
     import salt.utils.platform
-    import multiprocessing
 
     if "" in sys.path:
         sys.path.remove("")
@@ -348,7 +357,9 @@ def salt_proxy():
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
             return
-        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
+        process = multiprocessing.Process(
+            target=proxy_minion_process, args=(queue,), name="ProxyMinion"
+        )
         process.start()
         try:
             process.join()

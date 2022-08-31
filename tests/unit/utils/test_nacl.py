@@ -1,4 +1,5 @@
 import os
+import sys
 
 import salt.modules.config as config
 import salt.utils.files
@@ -7,8 +8,9 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
+    import libnacl.secret  # pylint: disable=unused-import
+
     import salt.utils.nacl as nacl
 
     HAS_LIBNACL = True
@@ -16,6 +18,7 @@ except (ImportError, OSError, AttributeError):
     HAS_LIBNACL = False
 
 
+@skipIf(sys.version_info >= (3, 10), "Segfaults with python 3.10")
 @skipIf(not HAS_LIBNACL, "skipping test_nacl, libnacl is unavailable")
 class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):

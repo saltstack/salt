@@ -25,9 +25,11 @@ import time
 mswindows = sys.platform == "win32"
 
 try:
+    import msvcrt
+
+    import pywintypes
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
-    import msvcrt
 except ImportError:
     import fcntl
 
@@ -119,7 +121,7 @@ class NonBlockingPopen(subprocess.Popen):
                 # self._stdin_logger.debug(input.rstrip())
             except ValueError:
                 return self._close("stdin")
-            except (subprocess.pywintypes.error, Exception) as why:
+            except (pywintypes.error, Exception) as why:
                 if why.args[0] in (109, errno.ESHUTDOWN):
                     return self._close("stdin")
                 raise
@@ -140,7 +142,7 @@ class NonBlockingPopen(subprocess.Popen):
                     (errCode, read) = ReadFile(x, nAvail, None)
             except ValueError:
                 return self._close(which)
-            except (subprocess.pywintypes.error, Exception) as why:
+            except (pywintypes.error, Exception) as why:
                 if why.args[0] in (109, errno.ESHUTDOWN):
                     return self._close(which)
                 raise

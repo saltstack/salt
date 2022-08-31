@@ -983,7 +983,7 @@ def _get_veths(net_data):
             if sitem.startswith("#") or not sitem:
                 continue
             elif "=" in item:
-                item = tuple([a.strip() for a in item.split("=", 1)])
+                item = tuple(a.strip() for a in item.split("=", 1))
         if item[0] == "lxc.network.type":
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == "lxc.network.name":
@@ -1631,20 +1631,17 @@ def init(
         run(name, "rm -f '{}'".format(SEED_MARKER), path=path, python_shell=False)
     gid = "/.lxc.initial_seed"
     gids = [gid, "/lxc.initial_seed"]
-    if (
-        any(
-            retcode(
-                name,
-                "test -e {}".format(x),
-                path=path,
-                chroot_fallback=True,
-                ignore_retcode=True,
-            )
-            == 0
-            for x in gids
+    if any(
+        retcode(
+            name,
+            "test -e {}".format(x),
+            path=path,
+            chroot_fallback=True,
+            ignore_retcode=True,
         )
-        or not ret.get("result", True)
-    ):
+        == 0
+        for x in gids
+    ) or not ret.get("result", True):
         pass
     elif seed or seed_cmd:
         if seed:

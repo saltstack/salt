@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.tomcat as tomcat
 from salt.modules import tomcat as tomcatmod
 from tests.support.mock import MagicMock, patch

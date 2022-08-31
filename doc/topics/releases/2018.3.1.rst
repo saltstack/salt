@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **74**
 - Total PR References: **255**
 
-- Contributors: **55** (`Ch3LL`_, `DmitryKuzmenko`_, `Giandom`_, `Kimol`_, `L4rS6`_, `LukeCarrier`_, `OrlandoArcapix`_, `TamCore`_, `The-Loeki`_, `UtahDave`_, `aesposito91`_, `bbinet`_, `bdrung`_, `boltronics`_, `bosatsu`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_, `dnABic`_, `douglasjreynolds`_, `dwoz`_, `edgan`_, `ejparker12`_, `esell`_, `ezh`_, `femnad`_, `folti`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jasperla`_, `johnj`_, `mateiw`_, `mcalmer`_, `mirceaulinic`_, `morganwillcock`_, `opdude`_, `pcn`_, `pruiz`_, `psagers`_, `psyer`_, `rallytime`_, `robinro`_, `s0undt3ch`_, `samodid`_, `shengis`_, `skjaro`_, `tankywoo`_, `terminalmage`_, `twangboy`_, `vutny`_, `yannj-fr`_, `zmedico`_)
+- Contributors: **55** (`Ch3LL`_, `DmitryKuzmenko`_, `Giandom`_, `Kimol`_, `L4rS6`_,
+  `LukeCarrier`_, `OrlandoArcapix`_, `TamCore`_, `The-Loeki`_, `UtahDave`_, `aesposito91`_,
+  `bbinet`_, `bdrung`_, `boltronics`_, `bosatsu`_, `clan`_, `corywright`_, `damon-atkins`_,
+  `dincamihai`_, `dmurphy18`_, `dnABic`_, `douglasjreynolds`_, `dwoz`_, `edgan`_, `ejparker12`_,
+  `esell`_, `ezh`_, `femnad`_, `folti`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jasperla`_,
+  `johnj`_, `mateiw`_, `mcalmer`_, `mirceaulinic`_, `morganwillcock`_, `opdude`_, `pcn`_, `pruiz`_,
+  `psagers`_, `psyer`_, `rallytime`_, `robinro`_, `s0undt3ch`_, `samodid`_, `shengis`_, `skjaro`_,
+  `tankywoo`_, `terminalmage`_, `twangboy`_, `vutny`_, `yannj-fr`_, `zmedico`_)
 
 
 .. warning::
@@ -66,7 +73,7 @@ Changes to Automatically Updating the Roster File
 
 In ``2018.3.0`` salt-ssh was configured to automatically update the flat roster
 file if a minion was not found for salt-ssh. This was decided to be
-undesireable as a default.  The ``--skip-roster`` flag has been removed and
+undesirable as a default.  The ``--skip-roster`` flag has been removed and
 replaced  with ``--update-roster``, which will enable salt-ssh to add minions
 to the flat roster file.  This behavior can also be enabled by setting
 ``ssh_update_roster: True`` in the master config file.
@@ -497,7 +504,7 @@ Changelog for v2018.3.0..v2018.3.1
 
     * ed69821d19 Merge pull request `#47433`_ from s0undt3ch/2017.7
 
-      * 5abadf25d6 Add missing requirements files not commited in `#47106`_
+      * 5abadf25d6 Add missing requirements files not committed in `#47106`_
 
 * **ISSUE** `#47443`_: (`skylerberg`_) Input validation does not raise SaltInvocationError in win_dsc.py (refs: `#47505`_)
 
@@ -789,7 +796,7 @@ Changelog for v2018.3.0..v2018.3.1
 
       * 65c3ba7ff1 Remove useless documentation
 
-      * 5d67cb27de Remove unncessary commented line
+      * 5d67cb27de Remove unnecessary commented line
 
             * 8de3d41adb fixed vpc_peering_connection_name option
 
@@ -934,7 +941,7 @@ Changelog for v2018.3.0..v2018.3.1
 
       * b2ae5889b7 Close the temporary file handle
 
-      * 9f7f83a975 Use salt.utils.fopen for line ending consistancy
+      * 9f7f83a975 Use salt.utils.fopen for line ending consistency
 
     * b221860151 Merge pull request `#47335`_ from dwoz/pip_test_fix
 
@@ -1256,12 +1263,12 @@ Changelog for v2018.3.0..v2018.3.1
 
   * 9075070573 make sure not to send invalid information
 
-* **ISSUE** `#46977`_: (`gtmanfred`_) [2018.3.0] Backwards compatibilty breaking change in 2018.3.0 (refs: `#47038`_)
+* **ISSUE** `#46977`_: (`gtmanfred`_) [2018.3.0] Backwards compatibility breaking change in 2018.3.0 (refs: `#47038`_)
 
 * **PR** `#47038`_: (`garethgreenaway`_) [2018.3] fix to fileclient.py
   @ *2018-04-25 14:57:04 UTC*
 
-  * 205701dcbe Merge pull request `#47038`_ from garethgreenaway/46977_fixing_fileclient_forward_compatibilty
+  * 205701dcbe Merge pull request `#47038`_ from garethgreenaway/46977_fixing_fileclient_forward_compatibility
 
   * ba01d2133a Updating version.py to include Magnesium.
 
@@ -1394,7 +1401,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * 2ed4b38b02 Merge pull request `#47142`_ from garethgreenaway/47047_passing_pillar_to_slack_aliases
 
-  * 6f183e1d80 Initial commmit for unit/engines/test_slack_engine
+  * 6f183e1d80 Initial commit for unit/engines/test_slack_engine
 
   * a2840fc230 Only include the rest of the cmdline if the cmd is an alias.
 
@@ -1517,7 +1524,7 @@ Changelog for v2018.3.0..v2018.3.1
 
       * 4c07a3d1e9 fix other tests
 
-      * b71e3d8a04 dont allow using no_use_wheel for pip 10.0.0 or newer
+      * b71e3d8a04 don't allow using no_use_wheel for pip 10.0.0 or newer
 
     * c1dc42e67e Merge pull request `#47037`_ from twangboy/fix_dev_scripts
 
@@ -1753,7 +1760,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * a52137ee36 Merge pull request `#47109`_ from garethgreenaway/46943_slack_engine_fixes
 
-  * 02baa76595 Fixing a bug that occured when a comment was added to a message sent to Slack by Salt.  Also making `slack_engine:groups_pillar` optional.
+  * 02baa76595 Fixing a bug that occurred when a comment was added to a message sent to Slack by Salt.  Also making `slack_engine:groups_pillar` optional.
 
 * **PR** `#47045`_: (`tankywoo`_) Fix ba7d00f5 for gentoo pkg.installed method
   @ *2018-04-17 13:55:45 UTC*
@@ -1911,18 +1918,18 @@ Changelog for v2018.3.0..v2018.3.1
 
   * c33de7c82d Merge pull request `#47009`_ from garethgreenaway/46947_slack_documentation_update_catch_non_dicts
 
-  * f0fadbb4ce Fixing indention for slack documention.  Updating try..except to ensure we catch when groups aren't dicts.
+  * f0fadbb4ce Fixing indention for slack documentation.  Updating try..except to ensure we catch when groups aren't dicts.
 
 * **PR** `#47023`_: (`rallytime`_) Back-port `#46997`_ to 2018.3
   @ *2018-04-12 15:05:24 UTC*
 
-  * **PR** `#46997`_: (`LukeCarrier`_) Fix respository (=> repository) typo in sls_build (refs: `#47023`_)
+  * **PR** `#46997`_: (`LukeCarrier`_) Fix repository (=> repository) typo in sls_build (refs: `#47023`_)
 
   * **PR** `#44638`_: (`terminalmage`_) Many improvements to docker network and container states (refs: `#46997`_)
 
   * 68d17c71f1 Merge pull request `#47023`_ from rallytime/bp-46997
 
-  * c2c60f4ffc Fix respository (=> repository) typo in sls_build
+  * c2c60f4ffc Fix repository (=> repository) typo in sls_build
 
 * **PR** `#47026`_: (`rallytime`_) [2018.3] Merge forward from 2017.7 to 2018.3
   @ *2018-04-12 14:39:41 UTC*
@@ -2137,7 +2144,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * dceda5eb88 Moving all jinja filter tests into support/jinja_filters.py.  Updaitng integration/ssh/test_jinja_filters.py to use those tests.  Adding integration/modules/test_state_jinja_filters.py to also use the common jinja filter tests.
 
-  * 07d7e3ca01 Adding a new integration test and corresponding state files to test availabilty of jinja filters when using salt-ssh.
+  * 07d7e3ca01 Adding a new integration test and corresponding state files to test availability of jinja filters when using salt-ssh.
 
 * **ISSUE** `#46880`_: (`liquidgecka`_) rabbitmq_policy broken in 2018.3.0 (refs: `#46973`_)
 
@@ -2266,7 +2273,7 @@ Changelog for v2018.3.0..v2018.3.1
 
     * 058bbed221 Merge pull request `#46799`_ from garethgreenaway/46762_prereq_shenanigans_tests
 
-      * 13875e78cf Fixing documention string for test.
+      * 13875e78cf Fixing documentation string for test.
 
       * 3d288c44d4 Fixing test documentation
 
@@ -2654,7 +2661,7 @@ Changelog for v2018.3.0..v2018.3.1
 
     * 1222bdbc00 Merge pull request `#46732`_ from rallytime/bp-46032
 
-      * bf0b962dc0 Workaroung python bug in traceback.format_exc()
+      * bf0b962dc0 Workaround python bug in traceback.format_exc()
 
     * 50fe1e9480 Merge pull request `#46749`_ from vutny/doc-deprecate-copr
 
@@ -2856,7 +2863,7 @@ Changelog for v2018.3.0..v2018.3.1
 
     * f038e3c452 Merge pull request `#46571`_ from garethgreenaway/46552_onfail_and_require
 
-      * 152c43c843 Accounting for a case when multiple onfails are used along with requires.  Previously if you have multiple states using 'onfail' and two of those states using a 'require' against the first one state, the last two will run even if the 'onfail' isn't met because the 'require' is met because the first state returns true even though it didn't excute.  This change adds an additional hidden variable that is used when checking requisities to determine if the state actually ran.
+      * 152c43c843 Accounting for a case when multiple onfails are used along with requires.  Previously if you have multiple states using 'onfail' and two of those states using a 'require' against the first one state, the last two will run even if the 'onfail' isn't met because the 'require' is met because the first state returns true even though it didn't execute.  This change adds an additional hidden variable that is used when checking requisities to determine if the state actually ran.
 
     * 2677330e19 Merge pull request `#46520`_ from gtmanfred/2017.7
 
@@ -2930,7 +2937,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * f15f92318d Add tests for salt.utils.win_reg
 
-  * f7112b19a2 Submit `#46527`_ agains 2018.3
+  * f7112b19a2 Submit `#46527`_ against 2018.3
 
 * **ISSUE** `#46334`_: (`sjorge`_) [2018.3.0rc1] Stacktrace on call to nacl.dec (refs: `#46426`_)
 
@@ -3025,7 +3032,7 @@ Changelog for v2018.3.0..v2018.3.1
 
     * 5cc11129f1 Merge pull request `#46511`_ from rallytime/bp-45769
 
-      * a8ffceda53 Surpress boto WARNING during decode, reference: https://github.com/boto/boto/issues/2965
+      * a8ffceda53 Suppress boto WARNING during decode, reference: https://github.com/boto/boto/issues/2965
 
     * 0e90c8ca6f Merge pull request `#46493`_ from terminalmage/issue46207
 
@@ -3552,7 +3559,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * **PR** `#45932`_: (`The-Loeki`_) Fix cmd run_all bg error (refs: `#46172`_)
 
-  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function (refs: `#46172`_, `#45932`_)
+  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow using `bg` kwarg for `cmd.run` state function (refs: `#46172`_, `#45932`_)
 
   * 20d869c228 Merge pull request `#46172`_ from The-Loeki/fix_cmd_run_all_bg_oxygen
 

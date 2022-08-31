@@ -1,8 +1,11 @@
 import functools
 import os
+import pathlib
 import subprocess
+import tempfile
 
 import pytest
+
 import salt.utils.user
 
 pytestmark = [
@@ -24,81 +27,86 @@ def account_2(account_1):
         yield _account
 
 
-def test_chugid(account_1, tmp_path):
+def test_chugid(account_1):
 
     # Since we're changing accounts to touch the file, the parent directory must be user and group writable
-    tmp_path.chmod(0o770)
+    with tempfile.TemporaryDirectory() as tmp_path:
+        tmp_path = pathlib.Path(tmp_path)
+        tmp_path.chmod(0o770)
 
-    testfile = tmp_path / "testfile"
+        testfile = tmp_path / "testfile"
 
-    # We should fail because the parent directory group owner is not the account running the test
-    ret = subprocess.run(
-        ["touch", str(testfile)],
-        preexec_fn=functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas=account_1.username,
-            umask=None,
-            group=None,
-        ),
-        check=False,
-    )
-    assert ret.returncode != 0
+        # We should fail because the parent directory group owner is not the account running the test
+        ret = subprocess.run(
+            ["touch", str(testfile)],
+            preexec_fn=functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas=account_1.username,
+                umask=None,
+                group=None,
+            ),
+            check=False,
+        )
+        assert ret.returncode != 0
 
-    # However if we change the group ownership to one of the account's groups, it should succeed
-    os.chown(str(tmp_path), 0, account_1.group.info.gid)
+        # However if we change the group ownership to one of the account's groups, it should succeed
+        os.chown(str(tmp_path), 0, account_1.group.info.gid)
 
-    ret = subprocess.run(
-        ["touch", str(testfile)],
-        preexec_fn=functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas=account_1.username,
-            umask=None,
-            group=None,
-        ),
-        check=False,
-    )
-    assert ret.returncode == 0
-    assert testfile.exists()
-    testfile_stat = testfile.stat()
-    assert testfile_stat.st_uid == account_1.info.uid
-    assert testfile_stat.st_gid == account_1.info.gid
+        ret = subprocess.run(
+            ["touch", str(testfile)],
+            preexec_fn=functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas=account_1.username,
+                umask=None,
+                group=None,
+            ),
+            check=False,
+        )
+        assert ret.returncode == 0
+        assert testfile.exists()
+        testfile_stat = testfile.stat()
+        assert testfile_stat.st_uid == account_1.info.uid
+        assert testfile_stat.st_gid == account_1.info.gid
 
 
 def test_chugid_and_group(account_1, account_2, tmp_path):
 
     # Since we're changing accounts to touch the file, the parent directory must be world-writable
-    tmp_path.chmod(0o770)
+    with tempfile.TemporaryDirectory() as tmp_path:
+        tmp_path = pathlib.Path(tmp_path)
 
-    testfile = tmp_path / "testfile"
+        tmp_path.chmod(0o770)
 
-    # We should fail because the parent directory group owner is not the account running the test
-    ret = subprocess.run(
-        ["touch", str(testfile)],
-        preexec_fn=functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas=account_2.username,
-            umask=None,
-            group=account_1.group.name,
-        ),
-        check=False,
-    )
-    assert ret.returncode != 0
+        testfile = tmp_path / "testfile"
 
-    # However if we change the group ownership to one of the account's groups, it should succeed
-    os.chown(str(tmp_path), 0, account_1.group.info.gid)
+        # We should fail because the parent directory group owner is not the account running the test
+        ret = subprocess.run(
+            ["touch", str(testfile)],
+            preexec_fn=functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas=account_2.username,
+                umask=None,
+                group=account_1.group.name,
+            ),
+            check=False,
+        )
+        assert ret.returncode != 0
 
-    ret = subprocess.run(
-        ["touch", str(testfile)],
-        preexec_fn=functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas=account_2.username,
-            umask=None,
-            group=account_1.group.name,
-        ),
-        check=False,
-    )
-    assert ret.returncode == 0
-    assert testfile.exists()
-    testfile_stat = testfile.stat()
-    assert testfile_stat.st_uid == account_2.info.uid
-    assert testfile_stat.st_gid == account_1.group.info.gid
+        # However if we change the group ownership to one of the account's groups, it should succeed
+        os.chown(str(tmp_path), 0, account_1.group.info.gid)
+
+        ret = subprocess.run(
+            ["touch", str(testfile)],
+            preexec_fn=functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas=account_2.username,
+                umask=None,
+                group=account_1.group.name,
+            ),
+            check=False,
+        )
+        assert ret.returncode == 0
+        assert testfile.exists()
+        testfile_stat = testfile.stat()
+        assert testfile_stat.st_uid == account_2.info.uid
+        assert testfile_stat.st_gid == account_1.group.info.gid

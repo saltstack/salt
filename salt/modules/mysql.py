@@ -49,10 +49,10 @@ import salt.utils.stringutils
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+    import MySQLdb.cursors
     from MySQLdb import OperationalError
+    from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -60,10 +60,10 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+        import MySQLdb.cursors
         from MySQLdb import OperationalError
+        from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
     except ImportError:
         MySQLdb = None
 
@@ -75,9 +75,6 @@ except ImportError:
     HAS_SQLPARSE = False
 
 log = logging.getLogger(__name__)
-
-# TODO: this is not used anywhere in the code?
-__opts__ = {}
 
 __grants__ = [
     "ALL PRIVILEGES",
@@ -120,6 +117,7 @@ __grants__ = [
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
+    "SLAVE MONITOR",
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
@@ -676,6 +674,12 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
+    if not HAS_SQLPARSE:
+        log.error(
+            "_sanitize_comments unavailable, no python sqlparse library installed."
+        )
+        return content
+
     return sqlparse.format(content, strip_comments=True)
 
 
@@ -1104,8 +1108,9 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         return []
     cur = dbc.cursor()
     existing = db_get(name, **connection_args)
+    # escaping database name is not required because of backticks in query expression
     qry = "ALTER DATABASE `{}` CHARACTER SET {} COLLATE {};".format(
-        name.replace("%", r"\%").replace("_", r"\_"),
+        name,
         character_set or existing.get("character_set"),
         collate or existing.get("collate"),
     )

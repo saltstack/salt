@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.utils.json
 import salt.utils.path
 from tests.support.case import ModuleCase

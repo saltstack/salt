@@ -336,7 +336,6 @@ def test_requisites_require_ordering_and_errors_2(state, state_tree):
         assert ret.errors == [errmsg]
 
 
-@pytest.mark.skip("Skipped until a fix is made for issue #8772")
 def test_requisites_require_ordering_and_errors_3(state, state_tree):
     """
     Call sls file containing several require_in and require.
@@ -358,8 +357,10 @@ def test_requisites_require_ordering_and_errors_3(state, state_tree):
         - name: echo A first
     """
     errmsg = (
-        'Cannot extend state foobar for ID A in "base:requisite". It is not part of the'
-        " high state."
+        "Cannot extend ID 'A' in 'base:requisite'. It is not part of the high state.\n"
+        "This is likely due to a missing include statement or an incorrectly typed ID.\n"
+        "Ensure that a state with an ID of 'A' is available\n"
+        "in environment 'base' and to SLS 'requisite'"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
@@ -570,6 +571,7 @@ def test_issue_38683_require_order_failhard_combination(state, state_tree):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows
 def test_parallel_state_with_requires(state, state_tree):
     """
     This is a test case for https://github.com/saltstack/salt/issues/49273
@@ -595,7 +597,7 @@ def test_parallel_state_with_requires(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         start_time = time.time()
-        state.sls(
+        ret = state.sls(
             "requisite",
             __pub_jid="1",  # Because these run in parallel we need a fake JID)
         )
@@ -605,6 +607,10 @@ def test_parallel_state_with_requires(state, state_tree):
         # they'll run in parallel so we should be below 30 seconds
         # confirm that the total runtime is below 30s
         assert (end_time - start_time) < 30
+
+        for item in range(1, 10):
+            _id = "cmd_|-blah-{}_|-sleep 2_|-run".format(item)
+            assert "__parallel__" in ret[_id]
 
 
 def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
@@ -646,6 +652,42 @@ def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
             "comment": 'Command "echo B" run',
             "result": True,
             "changes": True,
+        },
+    }
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        result = normalize_ret(ret.raw)
+        assert result == expected_result
+
+
+def test_issue_61121_extend_is_to_strict(state, state_tree):
+    """
+    test that extend works as advertised with adding new service_types to
+    a state id
+    """
+
+    sls_contents = """
+    A:
+      test.succeed_without_changes:
+        - name: a
+    extend:
+      A:
+        cmd:
+          - run
+          - name: echo A
+    """
+    expected_result = {
+        "test_|-A_|-a_|-succeed_without_changes": {
+            "__run_num__": 0,
+            "changes": False,
+            "result": True,
+            "comment": "Success!",
+        },
+        "cmd_|-A_|-echo A_|-run": {
+            "__run_num__": 1,
+            "changes": True,
+            "result": True,
+            "comment": 'Command "echo A" run',
         },
     }
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):

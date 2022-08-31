@@ -5,6 +5,7 @@
 import logging
 
 import pytest  # pylint: disable=unused-import
+
 import salt.exceptions
 import salt.state
 import salt.utils.files
@@ -679,7 +680,7 @@ def test_verify_retry_parsing():
             assert set(expected_result).issubset(set(state_obj.call(low_data)))
 
 
-def test_render_requisite_require_disabled():
+def test_render_requisite_require_disabled(tmp_path):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -710,6 +711,7 @@ def test_render_requisite_require_disabled():
         }
 
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        minion_opts["cachedir"] = str(tmp_path)
         minion_opts["disabled_requisites"] = ["require"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
@@ -719,7 +721,7 @@ def test_render_requisite_require_disabled():
         assert run_num == 0
 
 
-def test_render_requisite_require_in_disabled():
+def test_render_requisite_require_in_disabled(tmp_path):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -755,6 +757,7 @@ def test_render_requisite_require_in_disabled():
         }
 
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        minion_opts["cachedir"] = str(tmp_path)
         minion_opts["disabled_requisites"] = ["require_in"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
