@@ -9,11 +9,10 @@ Perform an HTTP query and statefully return the result
 
 import logging
 import re
-import time
 import sys
+import time
 
 from salt.ext import six
-
 
 __monitor__ = [
     "query",
@@ -225,7 +224,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
 
         if time.time() > starttime + wait_for:
             if not ret and caught_exception:
-                six.reraise(exception_type, caught_exception, stacktrace)
+                raise caught_exception.with_traceback(stacktrace)
             return ret
         elif "request_interval" in kwargs:
             # Space requests out by delaying for an interval
