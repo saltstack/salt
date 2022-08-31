@@ -4,8 +4,6 @@
 Salt 3005 release notes - Codename Phosphorus
 =============================================
 
-Salt 3005 is currently under development.
-
 
 Python 3.5 and 3.6 deprecation
 ------------------------------
