@@ -395,7 +395,7 @@ strategies = ("overwrite", "merge-first", "merge-last", "remove")
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     stack = {}
     stack_config_files = list(args)
-    pillarenv = __opts__['pillarenv'] or __opts__['saltenv'] or 'base'
+    pillarenv = __opts__["pillarenv"] or __opts__["saltenv"] or "base"
     traverse = {
         "pillar": functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
         "grains": functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
@@ -403,8 +403,10 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     }
     for matcher, matchs in kwargs.items():
         t, matcher = matcher.split(":", 1)
-        if '__env__' in matchs:
-            matchs = {(pillarenv if k == '__env__' else k): v for k,v in matchs.items()}
+        if "__env__" in matchs:
+            matchs = {
+                (pillarenv if k == "__env__" else k): v for k, v in matchs.items()
+            }
 
         if t not in traverse:
             raise Exception(
@@ -447,7 +449,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             },
             "minion_id": minion_id,
             "pillar": pillar,
-            "pillarenv":  __opts__['pillarenv'],
+            "pillarenv": __opts__["pillarenv"],
         }
     )
     for item in _parse_stack_cfg(jenv.get_template(filename).render(stack=stack)):
@@ -475,7 +477,9 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                 obj = salt.utils.yaml.safe_load(yaml)
             except Exception as e:
                 raise Exception(
-                    'Stack pillar yaml parsing error in {}:\n{}\n{}'.format(path, e , yaml)
+                     "Stack pillar yaml parsing error in {}:\n{}\n{}".format(
+                        path, e, yaml
+                    )
                 )
             if isinstance(obj, dict):
                 stack = _merge_dict(stack, obj)
