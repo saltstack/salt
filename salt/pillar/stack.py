@@ -477,7 +477,8 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                 raise Exception(
                     'Stack pillar yaml parsing error in {}:\n{}\n{}'.format(path, e , yaml)
                 )
-            stack = _merge_dict(stack, obj)
+            if isinstance(obj, dict):
+                stack = _merge_dict(stack, obj)
     return stack
 
 
