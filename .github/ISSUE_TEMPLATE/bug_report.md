@@ -23,8 +23,9 @@ Please be as specific as possible and give set-up details.
 - [ ] jails if it is FreeBSD
 - [ ] classic packaging (rpm, deb as per OS)
 - [ ] onedir packaging
+- [ ] used bootstrap to install
 
- 
+
 **Steps to Reproduce the behavior**
 (Include debug logs if possible and relevant)
 
