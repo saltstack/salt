@@ -18,6 +18,11 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
 ]
 
+KEY_FILES = (
+    "salt-archive-keyring.gpg",
+    "SALTSTACK-GPG-KEY.pub",
+)
+
 
 class Key:
     def __init__(self, aptkey=True):
@@ -266,7 +271,7 @@ def test_mod_repo_no_file(tmp_path, revert_repo_file):
 
 
 @pytest.fixture()
-def add_key(request):
+def add_key(request, get_key_file):
     """ """
     key = Key(request.param)
     key.add_key()
@@ -274,9 +279,10 @@ def add_key(request):
     key.del_key()
 
 
+@pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("add_key", [False, True], indirect=True)
 @pytest.mark.destructive_test
-def test_get_repo_keys(add_key):
+def test_get_repo_keys(get_key_file, add_key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
     """
@@ -301,9 +307,7 @@ def test_get_repo_keys_keydir_not_exist(key):
         assert ret
 
 
-@pytest.mark.parametrize(
-    "get_key_file", ["salt-archive-keyring.gpg", "SALTSTACK-GPG-KEY.pub"], indirect=True
-)
+@pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("aptkey", [False, True])
 def test_add_del_repo_key(get_key_file, aptkey):
     """
