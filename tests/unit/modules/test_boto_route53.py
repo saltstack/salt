@@ -15,9 +15,10 @@ from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error
 try:
-    import salt.modules.boto_route53 as boto_route53
-    from boto.route53.exception import DNSServerError
     import boto
+    from boto.route53.exception import DNSServerError
+
+    import salt.modules.boto_route53 as boto_route53
 
     boto.ENDPOINTS_PATH = os.path.join(
         RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"

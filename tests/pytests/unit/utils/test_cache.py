@@ -8,12 +8,14 @@
 import time
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.payload
 import salt.utils.cache as cache
 import salt.utils.data
 import salt.utils.files
+from tests.support.mock import patch
 
 
 def test_sanity():
@@ -219,3 +221,36 @@ def test_everything(tmp_path):
     time.sleep(0.5)
     assert "foo" not in cd
     assert "foo" not in cd2
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"PK\x03\x04\n\x00\x00\x00\x00\x00\xb6B\x05S\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\x00\x1c\x00test2/",
+        b"\xc3\x83\xc2\xa6\xc3\x83\xc2\xb8\xc3\x83\xc2\xa5",
+    ],
+)
+def test_unicode_error(tmp_path, data):
+    """
+    Test when the data in the cache raises a UnicodeDecodeError
+    we do not raise an error.
+    """
+    path = tmp_path / "cachedir"
+    path.mkdir()
+    path = path / "minion"
+    path.touch()
+    cache_data = {
+        "CacheDisk_data": {
+            b"poc-minion": {
+                None: {
+                    b"secrets": {
+                        b"itsasecret": data,
+                        b"CacheDisk_cachetime": {b"poc-minion": 1649339137.1236317},
+                    }
+                }
+            }
+        }
+    }
+    with patch.object(salt.utils.msgpack, "load", return_value=cache_data):
+        cd = cache.CacheDisk(0.3, str(path))
+        assert cd._dict == cache_data

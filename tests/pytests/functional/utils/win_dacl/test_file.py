@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.win_dacl as win_dacl
 from tests.support.mock import patch
 

@@ -1691,13 +1691,13 @@ def host_cache_configured(
                     )
                 )
             else:
-                if (existing_datastore["capacity"] / 1024.0 ** 2) < swap_size_MiB:
+                if (existing_datastore["capacity"] / 1024.0**2) < swap_size_MiB:
 
                     raise ArgumentValueError(
                         "Capacity of host cache datastore '{}' ({} MiB) is "
                         "smaller than the required swap size ({} MiB)".format(
                             existing_datastore["name"],
-                            existing_datastore["capacity"] / 1024.0 ** 2,
+                            existing_datastore["capacity"] / 1024.0**2,
                             swap_size_MiB,
                         )
                     )

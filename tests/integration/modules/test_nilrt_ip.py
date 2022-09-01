@@ -8,6 +8,7 @@ import shutil
 import time
 
 import pytest
+
 import salt.modules.nilrt_ip as ip
 import salt.utils.files
 import salt.utils.platform

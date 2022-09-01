@@ -3118,6 +3118,7 @@ def managed(
                     setype=setype,
                     serange=serange,
                     verify_ssl=verify_ssl,
+                    follow_symlinks=follow_symlinks,
                     **kwargs
                 )
 
@@ -6004,8 +6005,11 @@ def blockreplace(
     return ret
 
 
-def comment(name, regex, char="#", backup=".bak"):
+def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     """
+    .. versionadded:: 0.9.5
+    .. versionchanged:: 3005
+
     Comment out specified lines in a file.
 
     name
@@ -6030,6 +6034,12 @@ def comment(name, regex, char="#", backup=".bak"):
             after the first invocation.
 
         Set to False/None to not keep a backup.
+    ignore_missing
+        Ignore a failure to find the regex in the file. This is useful for
+        scenarios where a line must only be commented if it is found in the
+        file.
+
+        .. versionadded:: 3005
 
     Usage:
 
@@ -6039,7 +6049,6 @@ def comment(name, regex, char="#", backup=".bak"):
           file.comment:
             - regex: ^bind 127.0.0.1
 
-    .. versionadded:: 0.9.5
     """
     name = os.path.expanduser(name)
 
@@ -6054,12 +6063,17 @@ def comment(name, regex, char="#", backup=".bak"):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
+    uncomment_regex = r"^(?!\s*{}).*".format(char) + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__["file.search"](name, regex, multiline=True):
+    if not __salt__["file.search"](name, uncomment_regex, multiline=True):
         if __salt__["file.search"](name, comment_regex, multiline=True):
             ret["comment"] = "Pattern already commented"
+            ret["result"] = True
+            return ret
+        elif ignore_missing:
+            ret["comment"] = "Pattern not found and ignore_missing set to True"
             ret["result"] = True
             return ret
         else:
@@ -6070,6 +6084,7 @@ def comment(name, regex, char="#", backup=".bak"):
         ret["comment"] = "File {} is set to be updated".format(name)
         ret["result"] = None
         return ret
+
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
         slines = slines.decode(__salt_system_encoding__)
@@ -6084,7 +6099,7 @@ def comment(name, regex, char="#", backup=".bak"):
         nlines = nlines.splitlines(True)
 
     # Check the result
-    ret["result"] = __salt__["file.search"](name, unanchor_regex, multiline=True)
+    ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
         if not __utils__["files.is_text"](name):
@@ -8470,6 +8485,10 @@ def shortcut(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     """
+    salt.utils.versions.warn_until(
+        version="Argon",
+        message="This function is being deprecated in favor of 'shortcut.present'",
+    )
     user = _test_owner(kwargs, user=user)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not salt.utils.platform.is_windows():
@@ -9031,3 +9050,77 @@ def mod_beacon(name, **kwargs):
             ),
             "result": False,
         }
+
+
+def pruned(name, recurse=False, ignore_errors=False, older_than=None):
+    """
+    .. versionadded:: 3006.0
+
+    Ensure that the named directory is absent. If it exists and is empty, it
+    will be deleted. An entire directory tree can be pruned of empty
+    directories as well, by using the ``recurse`` option.
+
+    name
+        The directory which should be deleted if empty.
+
+    recurse
+        If set to ``True``, this option will recursive deletion of empty
+        directories. This is useful if nested paths are all empty, and would
+        be the only items preventing removal of the named root directory.
+
+    ignore_errors
+        If set to ``True``, any errors encountered while attempting to delete a
+        directory are ignored. This **AUTOMATICALLY ENABLES** the ``recurse``
+        option since it's not terribly useful to ignore errors on the removal of
+        a single directory. Useful for pruning only the empty directories in a
+        tree which contains non-empty directories as well.
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+    """
+    name = os.path.expanduser(name)
+
+    ret = {"name": name, "changes": {}, "comment": "", "result": True}
+
+    if ignore_errors:
+        recurse = True
+
+    if os.path.isdir(name):
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["changes"]["deleted"] = name
+            ret["comment"] = "Directory {} is set for removal".format(name)
+            return ret
+
+        res = __salt__["file.rmdir"](
+            name, recurse=recurse, verbose=True, older_than=older_than
+        )
+        result = res.pop("result")
+
+        if result:
+            if recurse and res["deleted"]:
+                ret[
+                    "comment"
+                ] = "Recursively removed empty directories under {}".format(name)
+                ret["changes"]["deleted"] = sorted(res["deleted"])
+            elif not recurse:
+                ret["comment"] = "Removed directory {}".format(name)
+                ret["changes"]["deleted"] = name
+            return ret
+        elif ignore_errors and res["deleted"]:
+            ret["comment"] = "Recursively removed empty directories under {}".format(
+                name
+            )
+            ret["changes"]["deleted"] = sorted(res["deleted"])
+            return ret
+
+        ret["result"] = result
+        ret["changes"] = res
+        ret["comment"] = "Failed to remove directory {}".format(name)
+        return ret
+
+    ret["comment"] = "Directory {} is not present".format(name)
+    return ret

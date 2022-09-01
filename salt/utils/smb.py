@@ -19,23 +19,21 @@ log = logging.getLogger(__name__)
 
 try:
     from smbprotocol.connection import Connection
-    from smbprotocol.session import Session
-    from smbprotocol.tree import TreeConnect
-    from smbprotocol.open import (
-        Open,
-        ImpersonationLevel,
-        FilePipePrinterAccessMask,
-        FileAttributes,
-        CreateDisposition,
-        CreateOptions,
-        ShareAccess,
-        DirectoryAccessMask,
-        FileInformationClass,
-    )
     from smbprotocol.create_contexts import (
         CreateContextName,
         SMB2CreateContextRequest,
         SMB2CreateQueryMaximalAccessRequest,
+    )
+    from smbprotocol.open import (
+        CreateDisposition,
+        CreateOptions,
+        DirectoryAccessMask,
+        FileAttributes,
+        FileInformationClass,
+        FilePipePrinterAccessMask,
+        ImpersonationLevel,
+        Open,
+        ShareAccess,
     )
     from smbprotocol.security_descriptor import (
         AccessAllowedAce,
@@ -45,6 +43,8 @@ try:
         SIDPacket,
         SMB2CreateSDBuffer,
     )
+    from smbprotocol.session import Session
+    from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
     HAS_SMBPROTOCOL = True

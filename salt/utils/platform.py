@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from distro import linux_distribution
+
 from salt.utils.decorators import memoize as real_memoize
 
 
@@ -217,5 +218,6 @@ def spawning_platform():
     Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
 
     This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
+    Salt, however, will force macOS to spawning by default on all python versions
     """
     return multiprocessing.get_start_method(allow_none=False) == "spawn"

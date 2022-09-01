@@ -4,6 +4,7 @@ import random
 import time
 
 import pytest
+
 import salt.utils.platform
 import salt.utils.schedule
 from tests.support.mock import MagicMock, patch

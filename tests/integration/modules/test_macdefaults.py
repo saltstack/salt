@@ -2,6 +2,7 @@
 Validate the mac-defaults module
 """
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
 

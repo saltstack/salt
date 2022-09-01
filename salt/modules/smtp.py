@@ -51,10 +51,10 @@ log = logging.getLogger(__name__)
 
 HAS_LIBS = False
 try:
-    import smtplib
-    import email.mime.text
     import email.mime.application
     import email.mime.multipart
+    import email.mime.text
+    import smtplib
 
     HAS_LIBS = True
 except ImportError:

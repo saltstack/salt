@@ -37,7 +37,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
@@ -187,7 +187,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-lxml==4.7.1
+lxml==4.9.1
     # via -r requirements/static/pkg/py3.10/windows.txt
 mako==1.1.4
     # via
@@ -259,7 +259,7 @@ pycurl==7.43.0.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymysql==1.0.2
     # via -r requirements/static/pkg/py3.10/windows.txt
@@ -271,7 +271,7 @@ pyrsistent==0.17.3
     # via jsonschema
 pytest-helpers-namespace==2019.1.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories==1.0.0rc17
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -300,7 +300,7 @@ python-jose[cryptography]==3.2.0
     # via moto
 pythonnet==2.5.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   moto
@@ -321,7 +321,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   moto
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   pytest-salt-factories

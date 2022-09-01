@@ -6,6 +6,7 @@ import logging
 import os
 
 import pytest
+
 import salt.config
 import salt.modules.beacons as beacons
 from salt.utils.event import SaltEvent
@@ -89,24 +90,21 @@ def test_add():
     mock = MagicMock(return_value=True)
     with patch.dict(beacons.__salt__, {"event.fire": mock}):
         with patch.object(SaltEvent, "get_event", side_effect=event_returns):
-            assert (
-                beacons.add(
-                    "ps",
-                    [
-                        {
-                            "processes": {
-                                "salt-master": "stopped",
-                                "apache2": "stopped",
-                            }
+            assert beacons.add(
+                "ps",
+                [
+                    {
+                        "processes": {
+                            "salt-master": "stopped",
+                            "apache2": "stopped",
                         }
-                    ],
-                )
-                == {"comment": comm1, "result": True}
-            )
+                    }
+                ],
+            ) == {"comment": comm1, "result": True}
 
 
 @pytest.mark.slow_test
-def test_save(tmpdir):
+def test_save():
     """
     Test saving beacons.
     """
@@ -240,16 +238,13 @@ def test_add_beacon_module():
     mock = MagicMock(return_value=True)
     with patch.dict(beacons.__salt__, {"event.fire": mock}):
         with patch.object(SaltEvent, "get_event", side_effect=event_returns):
-            assert (
-                beacons.add(
-                    "watch_salt_master",
-                    [
-                        {"processes": {"salt-master": "stopped"}},
-                        {"beacon_module": "ps"},
-                    ],
-                )
-                == {"comment": comm1, "result": True}
-            )
+            assert beacons.add(
+                "watch_salt_master",
+                [
+                    {"processes": {"salt-master": "stopped"}},
+                    {"beacon_module": "ps"},
+                ],
+            ) == {"comment": comm1, "result": True}
 
 
 @pytest.mark.slow_test

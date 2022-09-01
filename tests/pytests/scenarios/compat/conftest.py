@@ -9,17 +9,18 @@ import os
 import shutil
 
 import pytest
-import salt.utils.path
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
+
+import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
 docker = pytest.importorskip("docker")
-# pylint: disable=3rd-party-module-not-gated
+# pylint: disable=3rd-party-module-not-gated,no-name-in-module
 from docker.errors import DockerException  # isort:skip
 
-# pylint: enable=3rd-party-module-not-gated
+# pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -32,6 +33,9 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def docker_client():
+    if docker is None:
+        pytest.skip("The docker python library is not available")
+
     if salt.utils.path.which("docker") is None:
         pytest.skip("The docker binary is not available")
     try:

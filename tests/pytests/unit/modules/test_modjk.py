@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.modjk as modjk
 from tests.support.mock import patch
 

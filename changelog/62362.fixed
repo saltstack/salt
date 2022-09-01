@@ -1,0 +1,1 @@
+Added a pyinstaller hook that traverses the python used on the tiamat package to add all possible modules as hidden imports.

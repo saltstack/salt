@@ -7,6 +7,9 @@ import shutil
 import time
 
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils import random_string
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
@@ -16,10 +19,15 @@ import salt.master
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.skip_on_spawning_platform(
+        reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
+    )
+]
 
 
 @pytest.fixture
@@ -57,8 +65,8 @@ def master_config(root_dir, transport):
     master_conf["root_dir"] = str(root_dir)
     master_conf["sock_dir"] = str(root_dir)
     master_conf["interface"] = "127.0.0.1"
-    master_conf["publish_port"] = get_unused_localhost_port()
-    master_conf["ret_port"] = get_unused_localhost_port()
+    master_conf["publish_port"] = ports.get_unused_localhost_port()
+    master_conf["ret_port"] = ports.get_unused_localhost_port()
     master_conf["pki_dir"] = str(root_dir / "pki")
     os.makedirs(master_conf["pki_dir"])
     salt.crypt.gen_keys(master_conf["pki_dir"], "master", 4096)

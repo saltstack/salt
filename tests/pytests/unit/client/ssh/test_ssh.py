@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.client.ssh.client
 import salt.utils.msgpack
 from salt.client import ssh
@@ -13,7 +14,7 @@ pytestmark = [
 
 
 @pytest.fixture
-def ssh_target(tmpdir):
+def ssh_target(tmp_path):
     argv = [
         "ssh.set_auth_key",
         "root",
@@ -23,8 +24,8 @@ def ssh_target(tmpdir):
     opts = {
         "argv": argv,
         "__role": "master",
-        "cachedir": tmpdir.strpath,
-        "extension_modules": tmpdir.join("extmods").strpath,
+        "cachedir": str(tmp_path),
+        "extension_modules": str(tmp_path / "extmods"),
     }
     target = {
         "passwd": "abc123",

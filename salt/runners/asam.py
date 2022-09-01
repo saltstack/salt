@@ -34,8 +34,9 @@ import logging
 
 HAS_LIBS = False
 try:
-    import requests
     import html.parser
+
+    import requests
 
     HAS_LIBS = True
 

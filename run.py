@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # see issue: https://gitlab.com/saltstack/open/salt-pkg/-/issues/19
-import _pyio
 import contextlib
 import multiprocessing
 import os
 import pathlib
 import sys
 
-import salt.scripts
-import salt.utils.platform
+import _pyio
 import tiamatpip.cli
 import tiamatpip.configure
 import tiamatpip.utils
+
+import salt.scripts
+import salt.utils.platform
 
 AVAIL = (
     "minion",
@@ -30,6 +31,7 @@ AVAIL = (
     "ssh",
     "support",
     "syndic",
+    "python",
 )
 
 
@@ -56,6 +58,22 @@ def py_shell():
     shell.interact()
 
 
+def python_runtime():
+    # extract the absolute script path to alter sys.path and specific dunder variables
+    script = pathlib.Path(sys.argv[2]).expanduser().resolve()
+    sys.path.insert(0, str(script.parent))
+
+    # update passed args so they don't start with "<binary> python"
+    sys.argv[:] = sys.argv[2:]
+    exec_locals = {"__name__": "__main__", "__file__": str(script), "__doc__": None}
+    with open(script, encoding="utf-8") as rfh:
+        try:
+            exec(rfh.read(), exec_locals)
+        except Exception:
+            traceback.print_exc()
+            sys.exit(1)
+
+
 def redirect(argv):
     """
     Change the args and redirect to another salt script
@@ -69,6 +87,14 @@ def redirect(argv):
     cmd = sys.argv[1]
     if cmd == "shell":
         py_shell()
+        return
+    if cmd == "python":
+        if len(argv) < 3:
+            msg = "Must pass script location to this command"
+            print(msg, file=sys.stderr, flush=True)
+            sys.exit(1)
+
+        python_runtime()
         return
     if tiamatpip.cli.should_redirect_argv(argv):
         tiamatpip.cli.process_pip_argv(argv)
@@ -87,6 +113,5 @@ def redirect(argv):
 
 
 if __name__ == "__main__":
-    if sys.platform.startswith("win"):
-        multiprocessing.freeze_support()
+    multiprocessing.freeze_support()
     redirect(sys.argv)

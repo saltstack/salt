@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.artifactory as artifactory
 from tests.support.mock import MagicMock, patch
 

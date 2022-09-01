@@ -11,6 +11,7 @@
 
 
 import pytest
+
 import salt.states.etcd_mod as etcd_state
 from tests.support.mock import MagicMock, patch
 
@@ -41,7 +42,7 @@ def test_set():
             "result": True,
             "changes": {"new_key": "new value"},
         }
-        assert etcd_state.set_("new_key", "new value") == expected
+        assert etcd_state.set_("new_key", "new value", profile="test") == expected
 
         # Test key updating
         get_mock.return_value = "old value"
@@ -52,7 +53,7 @@ def test_set():
             "result": True,
             "changes": {"new_key": "new value"},
         }
-        assert etcd_state.set_("new_key", "new value") == expected
+        assert etcd_state.set_("new_key", "new value", profile="test") == expected
 
         # Test setting the same value to a key
         get_mock.return_value = "value"
@@ -63,7 +64,7 @@ def test_set():
             "result": True,
             "changes": {},
         }
-        assert etcd_state.set_("key", "value") == expected
+        assert etcd_state.set_("key", "value", profile="test") == expected
 
 
 def test_wait_set():
@@ -76,7 +77,7 @@ def test_wait_set():
         "result": True,
         "comment": "",
     }
-    assert etcd_state.wait_set("key", "any value") == expected
+    assert etcd_state.wait_set("key", "any value", profile="test") == expected
 
 
 def test_directory():
@@ -100,7 +101,7 @@ def test_directory():
             "result": True,
             "changes": {"new_dir": "Created"},
         }
-        assert etcd_state.directory("new_dir") == expected
+        assert etcd_state.directory("new_dir", profile="test") == expected
 
         # Test creating an existing directory
         get_mock.return_value = "new_dir"
@@ -111,7 +112,7 @@ def test_directory():
             "result": True,
             "changes": {},
         }
-        assert etcd_state.directory("new_dir") == expected
+        assert etcd_state.directory("new_dir", profile="test") == expected
 
 
 def test_rm():
@@ -135,7 +136,7 @@ def test_rm():
             "result": True,
             "changes": {"key": "Deleted"},
         }
-        assert etcd_state.rm("key") == expected
+        assert etcd_state.rm("key", profile="test") == expected
 
         # Test failing to remove an existing key
         get_mock.return_value = "value"
@@ -146,7 +147,7 @@ def test_rm():
             "result": True,
             "changes": {},
         }
-        assert etcd_state.rm("key") == expected
+        assert etcd_state.rm("key", profile="test") == expected
 
         # Test removing a nonexistent key
         get_mock.return_value = False
@@ -156,7 +157,7 @@ def test_rm():
             "result": True,
             "changes": {},
         }
-        assert etcd_state.rm("key") == expected
+        assert etcd_state.rm("key", profile="test") == expected
 
 
 def test_wait_rm():
@@ -169,7 +170,7 @@ def test_wait_rm():
         "result": True,
         "comment": "",
     }
-    assert etcd_state.wait_rm("key") == expected
+    assert etcd_state.wait_rm("key", profile="test") == expected
 
 
 def test_mod_watch():

@@ -7,11 +7,12 @@ import shutil
 import textwrap
 
 import pytest
+import yaml
+from pytestshellutils.exceptions import FactoryTimeout
+from saltfactories.utils.functional import StateResult
+
 import salt.utils.files
 import salt.utils.path
-import yaml
-from saltfactories.exceptions import FactoryTimeout
-from saltfactories.utils.functional import StateResult
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -118,6 +119,6 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
                 if timeout == timeouts[-1]:
                     pytest.fail("Failed to run {}".format(name))
             else:
-                assert ret.exitcode == 0
-                assert StateResult(ret.json).result is True
+                assert ret.returncode == 0
+                assert StateResult(ret.data).result is True
                 break

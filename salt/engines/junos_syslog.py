@@ -92,22 +92,22 @@ import time
 import salt.utils.event as event
 
 try:
-    from twisted.internet.protocol import (  # pylint: disable=no-name-in-module
-        DatagramProtocol,
-    )
-    from twisted.internet import reactor, threads  # pylint: disable=no-name-in-module
     from pyparsing import (
-        Word,
-        alphas,
-        Suppress,
         Combine,
-        nums,
-        string,
+        LineEnd,
         Optional,
         Regex,
-        LineEnd,
         StringEnd,
+        Suppress,
+        Word,
+        alphas,
         delimitedList,
+        nums,
+        string,
+    )
+    from twisted.internet import reactor, threads  # pylint: disable=no-name-in-module
+    from twisted.internet.protocol import (  # pylint: disable=no-name-in-module
+        DatagramProtocol,
     )
 
     HAS_TWISTED_AND_PYPARSING = True

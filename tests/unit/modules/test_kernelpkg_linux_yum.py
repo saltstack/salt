@@ -9,15 +9,15 @@
 
 try:
     # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch
-
-    # Import Salt Libs
-    from tests.support.kernelpkg import KernelPkgTestCase
     import salt.modules.kernelpkg_linux_yum as kernelpkg
     import salt.modules.yumpkg as pkg
     from salt.exceptions import CommandExecutionError
+
+    # Import Salt Libs
+    from tests.support.kernelpkg import KernelPkgTestCase
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.mock import MagicMock, patch
+    from tests.support.unit import TestCase, skipIf
 
     HAS_MODULES = True
 except ImportError:
