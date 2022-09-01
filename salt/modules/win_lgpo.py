@@ -8443,9 +8443,11 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                 full_path_list.append(policy_display_name)
                 policy_aliases.append("\\".join(full_path_list))
             policies = "\n - ".join(policy_aliases)
-            msg = 'ADMX policy name/id "{}" is used in multiple ADMX files.\n' \
-                  "Try one of the following names:\n" \
-                  " - {}".format(policy_name, policies)
+            msg = (
+                'ADMX policy name/id "{}" is used in multiple ADMX files.\n'
+                "Try one of the following names:\n"
+                " - {}".format(policy_name, policies)
+            )
             return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(
