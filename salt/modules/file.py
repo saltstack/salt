@@ -868,7 +868,7 @@ def get_source_sum(
         ret = extract_hash(hash_fn, "", file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
-        ret["hsum"] = ret["hsum"].lower()
+        ret["hsum"] = [sh.lower() for sh in ret["hsum"]]
         return ret
     else:
         # The source_hash is a hash expression
@@ -5026,14 +5026,21 @@ def extract_hash(
                         ]
                     ),
                 )
-            ret = found[found_type][0]
-            log.debug(
-                "file.extract_hash: Returning %s hash '%s' as a match of %s",
-                ret["hash_type"],
-                ret["hsum"],
-                found_str,
-            )
-            return ret
+            ret = found[found_type]
+            _ret = {}
+            for item in ret:
+                log.debug(
+                    "file.extract_hash: Returning %s hash '%s' as a match of %s",
+                    item["hash_type"],
+                    item["hsum"],
+                    found_str,
+                )
+                if "hash_type" not in _ret:
+                    _ret["hash_type"] = item["hash_type"]
+                if "hsum" not in _ret:
+                    _ret["hsum"] = []
+                _ret["hsum"].append(item["hsum"])
+            return _ret
 
     if partial:
         log.debug(

@@ -8836,10 +8836,14 @@ def cached(
         if os.path.exists(full_path):
             if not skip_verify and source_sum:
                 # Enforce the hash
-                local_hash = __salt__["file.get_hash"](
-                    full_path, source_sum.get("hash_type", __opts__["hash_type"])
-                )
-                if local_hash == source_sum["hsum"]:
+                found = False
+                for _source_sum in source_sum:
+                    local_hash = __salt__["file.get_hash"](
+                        full_path, _source_sum.get("hash_type", __opts__["hash_type"])
+                    )
+                    if local_hash == source_sum["hsum"]:
+                        found = True
+                if found:
                     ret["result"] = True
                     ret[
                         "comment"
@@ -8875,11 +8879,12 @@ def cached(
             # specified via source_hash. If it matches, we can exit early from
             # the state without going any further, because the file is cached
             # with the correct hash.
-            if pre_hash == source_sum["hsum"]:
+            if pre_hash in source_sum["hsum"]:
                 ret["result"] = True
                 ret["comment"] = "File is already cached to {} with hash {}".format(
                     local_copy, pre_hash
                 )
+                return ret
     else:
         pre_hash = None
 
@@ -8893,34 +8898,41 @@ def cached(
     #      remote file hasn't changed since the last cache.
     # Remote, non salt:// sources _will_ download if a copy of the file was
     # not already present in the minion cache.
-    try:
-        local_copy = __salt__["cp.cache_file"](
-            name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
+    hsum_match = False
+    for hsum in source_sum.get("hsum"):
+        try:
+            local_copy = __salt__["cp.cache_file"](
+                name, saltenv=saltenv, source_hash=hsum, use_etag=use_etag
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+            return ret
+
+        if not local_copy:
+            ret[
+                "comment"
+            ] = "Failed to cache {}, check minion log for more information".format(
+                salt.utils.url.redact_http_basic_auth(name)
+            )
+            return ret
+
+        post_hash = __salt__["file.get_hash"](
+            local_copy, source_sum.get("hash_type", __opts__["hash_type"])
         )
-    except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
-        return ret
 
-    if not local_copy:
-        ret[
-            "comment"
-        ] = "Failed to cache {}, check minion log for more information".format(
-            salt.utils.url.redact_http_basic_auth(name)
-        )
-        return ret
+        if pre_hash != post_hash:
+            ret["changes"]["hash"] = {"old": pre_hash, "new": post_hash}
 
-    post_hash = __salt__["file.get_hash"](
-        local_copy, source_sum.get("hash_type", __opts__["hash_type"])
-    )
+        # Check the hash, if we're enforcing one. Note that this will be the first
+        # hash check if the file was not previously cached, and the 2nd hash check
+        # if it was cached and the
+        if not skip_verify and source_sum:
+            if post_hash == hsum:
+                hsum_match = True
+                break
 
-    if pre_hash != post_hash:
-        ret["changes"]["hash"] = {"old": pre_hash, "new": post_hash}
-
-    # Check the hash, if we're enforcing one. Note that this will be the first
-    # hash check if the file was not previously cached, and the 2nd hash check
-    # if it was cached and the
     if not skip_verify and source_sum:
-        if post_hash == source_sum["hsum"]:
+        if hsum_match:
             ret["result"] = True
             ret["comment"] = "File is already cached to {} with hash {}".format(
                 local_copy, post_hash
@@ -8928,16 +8940,13 @@ def cached(
         else:
             ret["comment"] = (
                 "File is cached to {}, but the hash ({}) does not match "
-                "the specified hash ({})".format(
-                    local_copy, post_hash, source_sum["hsum"]
-                )
+                "the specified hash ({})".format(local_copy, post_hash, hsum)
             )
-        return ret
-
-    # We're not enforcing a hash, and we already know that the file was
-    # successfully cached, so we know the state was successful.
-    ret["result"] = True
-    ret["comment"] = "File is cached to {}".format(local_copy)
+    else:
+        # We're not enforcing a hash, and we already know that the file was
+        # successfully cached, so we know the state was successful.
+        ret["result"] = True
+        ret["comment"] = "File is cached to {}".format(local_copy)
     return ret
 
 
