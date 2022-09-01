@@ -477,7 +477,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                 obj = salt.utils.yaml.safe_load(yaml)
             except Exception as e:
                 raise Exception(
-                     "Stack pillar yaml parsing error in {}:\n{}\n{}".format(
+                    "Stack pillar yaml parsing error in {}:\n{}\n{}".format(
                         path, e, yaml
                     )
                 )
