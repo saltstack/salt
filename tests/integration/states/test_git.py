@@ -13,6 +13,7 @@ import tempfile
 import urllib.parse
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion

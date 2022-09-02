@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.config
 import salt.renderers.pyobjects as pyobjects
 from salt.utils.odict import OrderedDict

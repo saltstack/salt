@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.status as status
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import Mock, patch

@@ -6,6 +6,8 @@ import copy
 import os
 
 import pytest
+from jinja2 import Environment, exceptions
+
 import salt.config
 import salt.loader
 
@@ -15,7 +17,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
-from jinja2 import Environment, exceptions
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import Mock, patch
 

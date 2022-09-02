@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.mongodb_user as mongodb_user
 from tests.support.mock import MagicMock, patch
 

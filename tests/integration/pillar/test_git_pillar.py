@@ -68,9 +68,10 @@ import string
 import sys
 
 import pytest
+from distro import linux_distribution
+
 import salt.utils.path
 import salt.utils.platform
-from distro import linux_distribution
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,

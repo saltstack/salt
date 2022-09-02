@@ -5,6 +5,7 @@ Tests for salt.utils.jinja
 import os
 
 import pytest
+
 import salt.config
 import salt.loader
 

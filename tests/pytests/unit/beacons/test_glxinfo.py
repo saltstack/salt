@@ -5,6 +5,7 @@
     glxinfo beacon test cases
 """
 import pytest
+
 import salt.beacons.glxinfo as glxinfo
 from tests.support.mock import Mock, patch
 

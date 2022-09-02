@@ -642,7 +642,7 @@ def create(vm_):
     if "use_dns" in vm_ and "ip_address" not in vm_:
         use_dns = vm_["use_dns"]
         if use_dns:
-            from socket import gethostbyname, gaierror
+            from socket import gaierror, gethostbyname
 
             try:
                 ip_address = gethostbyname(str(vm_["name"]))

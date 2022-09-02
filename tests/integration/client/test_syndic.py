@@ -1,4 +1,5 @@
 import pytest
+
 from tests.support.case import SyndicCase
 from tests.support.unit import skipIf
 

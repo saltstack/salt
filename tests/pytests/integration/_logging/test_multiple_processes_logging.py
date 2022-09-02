@@ -3,9 +3,10 @@ import time
 from types import SimpleNamespace
 
 import pytest
-import salt.utils.platform
 from _pytest.pytester import LineMatcher
 from saltfactories.utils import random_string
+
+import salt.utils.platform
 
 
 @pytest.fixture(scope="module")

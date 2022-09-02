@@ -2,6 +2,7 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 import pytest
+
 import salt.modules.ipset as ipset
 from tests.support.mock import MagicMock, patch
 

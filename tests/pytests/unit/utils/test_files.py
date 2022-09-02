@@ -7,6 +7,7 @@ import copy
 import os
 
 import pytest
+
 import salt.utils.files
 from tests.support.mock import patch
 

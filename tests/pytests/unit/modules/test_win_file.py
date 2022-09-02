@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 import salt.modules.win_file as win_file
 from salt.exceptions import CommandExecutionError
 

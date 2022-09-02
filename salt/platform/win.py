@@ -212,7 +212,7 @@ class LARGE_INTEGER(wintypes.LARGE_INTEGER):
 
     @classmethod
     def from_time(cls, t):
-        time100ns = int(t * 10 ** 7)
+        time100ns = int(t * 10**7)
         return cls(time100ns + cls._unix_epoch)
 
 
