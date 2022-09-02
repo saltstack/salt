@@ -844,3 +844,205 @@ def test_cmd_script_saltenv_from_config_windows():
                     assert mock_cp_get_template.call_args[0][3] == "base"
                     assert mock_run.call_count == 2
                     assert mock_run.call_args[1]["saltenv"] == "base"
+
+
+@pytest.mark.parametrize(
+    "test_os,test_family",
+    [
+        ("FreeBSD", "FreeBSD"),
+        ("linux", "Solaris"),
+        ("linux", "AIX"),
+        ("linux", "linux"),
+    ],
+)
+@pytest.mark.skip_on_darwin
+@pytest.mark.skip_on_windows
+def test_runas_env_all_os(test_os, test_family):
+    """
+    cmd.run executes command and the environment is returned
+    when the runas parameter is specified
+    on all different OS types and os_family
+    """
+    bundled = [False, True]
+
+    for _bundled in bundled:
+        with patch("pwd.getpwnam") as getpwnam_mock:
+            with patch("subprocess.Popen") as popen_mock:
+                popen_mock.return_value = Mock(
+                    communicate=lambda *args, **kwags: [b"", None],
+                    pid=lambda: 1,
+                    retcode=0,
+                )
+                file_name = "/tmp/doesnotexist"
+
+                with patch.dict(
+                    cmdmod.__grains__, {"os": test_os, "os_family": test_family}
+                ):
+                    with patch("salt.utils.pkg.check_bundled", return_value=_bundled):
+                        with patch("shutil.chown"):
+                            with patch("os.remove"):
+                                with patch.object(
+                                    tempfile, "NamedTemporaryFile"
+                                ) as mock_fp:
+                                    mock_fp.return_value.__enter__.return_value.name = (
+                                        file_name
+                                    )
+                                    if sys.platform.startswith(("freebsd", "openbsd")):
+                                        shell = "/bin/sh"
+                                    else:
+                                        shell = "/bin/bash"
+                                    _user = "foobar"
+                                    cmdmod._run(
+                                        "ls",
+                                        cwd=tempfile.gettempdir(),
+                                        runas=_user,
+                                        shell=shell,
+                                    )
+                                    if not _bundled:
+                                        if test_family in ("Solaris", "AIX"):
+                                            env_cmd = ["su", "-", _user, "-c"]
+                                        elif test_os == "FreeBSD":
+                                            env_cmd = ["su", "-", _user, "-c"]
+                                        else:
+                                            env_cmd = [
+                                                "su",
+                                                "-s",
+                                                shell,
+                                                "-",
+                                                _user,
+                                                "-c",
+                                            ]
+                                        if test_os == "FreeBSD":
+                                            env_cmd.extend(
+                                                [
+                                                    "{} -c {}".format(
+                                                        shell, sys.executable
+                                                    )
+                                                ]
+                                            )
+                                        else:
+                                            env_cmd.extend([sys.executable])
+                                        assert (
+                                            popen_mock.call_args_list[0][0][0]
+                                            == env_cmd
+                                        )
+                                    else:
+                                        if test_family in ("Solaris", "AIX"):
+                                            env_cmd = ["su", "-", _user, "-c"]
+                                        elif test_os == "FreeBSD":
+                                            env_cmd = ["su", "-", _user, "-c"]
+                                        else:
+                                            env_cmd = [
+                                                "su",
+                                                "-s",
+                                                shell,
+                                                "-",
+                                                _user,
+                                                "-c",
+                                            ]
+                                        if test_os == "FreeBSD":
+                                            env_cmd.extend(
+                                                [
+                                                    "{} -c {} python {}".format(
+                                                        shell, sys.executable, file_name
+                                                    )
+                                                ]
+                                            )
+                                        else:
+                                            env_cmd.extend(
+                                                [
+                                                    "{} python {}".format(
+                                                        sys.executable, file_name
+                                                    )
+                                                ]
+                                            )
+                                        assert (
+                                            popen_mock.call_args_list[0][0][0]
+                                            == env_cmd
+                                        )
+
+
+@pytest.mark.skip_on_darwin
+@pytest.mark.skip_on_windows
+def test_runas_env_sudo_group():
+    """
+    cmd.run executes command and the environment is returned
+    when the runas parameter is specified
+    when group is passed and use_sudo=True
+    """
+    bundled = [False, True]
+
+    for _bundled in bundled:
+
+        with patch("pwd.getpwnam") as getpwnam_mock:
+            with patch("subprocess.Popen") as popen_mock:
+                popen_mock.return_value = Mock(
+                    communicate=lambda *args, **kwags: [b"", None],
+                    pid=lambda: 1,
+                    retcode=0,
+                )
+                file_name = "/tmp/doesnotexist"
+
+                with patch.dict(
+                    cmdmod.__grains__, {"os": "linux", "os_family": "linux"}
+                ):
+                    with patch("grp.getgrnam"):
+                        with patch(
+                            "salt.utils.pkg.check_bundled", return_value=_bundled
+                        ):
+                            with patch("shutil.chown"):
+                                with patch("os.remove"):
+                                    with patch.object(
+                                        tempfile, "NamedTemporaryFile"
+                                    ) as mock_fp:
+                                        mock_fp.return_value.__enter__.return_value.name = (
+                                            file_name
+                                        )
+                                        if sys.platform.startswith(
+                                            ("freebsd", "openbsd")
+                                        ):
+                                            shell = "/bin/sh"
+                                        else:
+                                            shell = "/bin/bash"
+                                        _user = "foobar"
+                                        _group = "foobar"
+
+                                        cmdmod._run(
+                                            "ls",
+                                            cwd=tempfile.gettempdir(),
+                                            runas=_user,
+                                            shell=shell,
+                                            group=_group,
+                                        )
+                                        if not _bundled:
+                                            assert popen_mock.call_args_list[0][0][
+                                                0
+                                            ] == [
+                                                "sudo",
+                                                "-u",
+                                                _user,
+                                                "-g",
+                                                _group,
+                                                "-s",
+                                                "--",
+                                                shell,
+                                                "-c",
+                                                sys.executable,
+                                            ]
+                                        else:
+                                            assert popen_mock.call_args_list[0][0][
+                                                0
+                                            ] == [
+                                                "sudo",
+                                                "-u",
+                                                _user,
+                                                "-g",
+                                                _group,
+                                                "-s",
+                                                "--",
+                                                shell,
+                                                "-c",
+                                                "{} python {}".format(
+                                                    sys.executable, file_name
+                                                ),
+                                            ]
