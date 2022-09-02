@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.mac_assistive as assistive
 from tests.support.mock import MagicMock, patch
 

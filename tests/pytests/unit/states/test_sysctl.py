@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.sysctl as sysctl
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

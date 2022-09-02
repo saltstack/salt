@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.postgres_language as postgres_language
 from tests.support.mock import MagicMock, patch
 

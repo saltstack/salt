@@ -6,6 +6,7 @@ import os
 import shutil
 
 import pytest
+
 from tests.support.case import SPMCase
 
 

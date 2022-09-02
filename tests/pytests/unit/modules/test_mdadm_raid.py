@@ -9,6 +9,7 @@ import re
 import sys
 
 import pytest
+
 import salt.modules.mdadm_raid as mdadm
 from tests.support.mock import MagicMock, patch
 

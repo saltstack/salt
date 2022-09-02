@@ -4,6 +4,7 @@ import shutil
 import time
 
 import pytest
+
 import salt.utils.platform
 
 pytestmark = [
@@ -152,7 +153,9 @@ def test_minion_reconnection(
     assert (mm_failover_master_2_salt_cli, salt_mm_failover_minion_2) in returns
 
 
+@pytest.mark.skip_on_windows
 def test_minions_alive_with_no_master(
+    grains,
     event_listener,
     salt_mm_failover_master_1,
     salt_mm_failover_master_2,
@@ -162,6 +165,10 @@ def test_minions_alive_with_no_master(
     """
     Make sure the minions stay alive after all masters have stopped.
     """
+    if grains["os_family"] == "Debian" and grains["osmajorrelease"] == 9:
+        pytest.skip(
+            "Skipping on Debian 9 until flaky issues resolved. See issue #61749"
+        )
     start_time = time.time()
     with salt_mm_failover_master_1.stopped():
         with salt_mm_failover_master_2.stopped():

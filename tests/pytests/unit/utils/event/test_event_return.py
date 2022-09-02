@@ -1,9 +1,10 @@
 import pytest
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-from saltfactories.utils.processes import terminate_process
 
 
 @pytest.mark.slow_test

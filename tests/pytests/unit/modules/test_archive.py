@@ -1,6 +1,7 @@
 import os.path
 
 import pytest
+
 import salt.modules.archive as archive
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import MagicMock, patch

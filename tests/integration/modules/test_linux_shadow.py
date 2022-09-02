@@ -5,11 +5,12 @@ integration tests for shadow linux
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
 
 
 @pytest.mark.skip_if_not_root

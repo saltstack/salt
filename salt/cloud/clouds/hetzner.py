@@ -112,6 +112,9 @@ def _connect_client():
 
 
 def avail_locations(call=None):
+    """
+    Return a dictionary of available locations
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_locations function must be called with -f or --function"
@@ -125,6 +128,9 @@ def avail_locations(call=None):
 
 
 def avail_images(call=None):
+    """
+    Return a dictionary of available images
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The avail_images function must be called with -f or --function"
@@ -138,6 +144,9 @@ def avail_images(call=None):
 
 
 def avail_sizes(call=None):
+    """
+    Return a dictionary of available VM sizes
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The avail_sizes function must be called with -f or --function"
@@ -151,6 +160,9 @@ def avail_sizes(call=None):
 
 
 def list_ssh_keys(call=None):
+    """
+    Return a dictionary of available SSH keys configured in the current project
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_ssh_keys function must be called with -f or --function"
@@ -164,6 +176,9 @@ def list_ssh_keys(call=None):
 
 
 def list_nodes_full(call=None):
+    """
+    Return a dictionary of existing VMs in the current project, containing full details per VM
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_nodes_full function must be called with -f or --function"
@@ -189,6 +204,9 @@ def list_nodes_full(call=None):
 
 
 def list_nodes(call=None):
+    """
+    Return a dictionary of existing VMs in the current project, containing basic details of each VM
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_nodes function must be called with -f or --function"
@@ -220,6 +238,9 @@ def wait_until(name, state, timeout=300):
 
 
 def show_instance(name, call=None):
+    """
+    Return the details of a specific VM
+    """
     if call != "action":
         raise SaltCloudSystemExit(
             "The show_instance function must be called with -a or --action."
@@ -262,16 +283,35 @@ def create(vm_):
 
     client = _connect_client()
 
-    name = vm_.get("name")
+    name = config.get_cloud_config_value(
+        "name",
+        vm_,
+        __opts__,
+        search_global=False,
+    )
     if not name:
         raise SaltCloudException("Missing server name")
 
     # Get the required configuration
-    server_type = client.server_types.get_by_name(vm_.get("size"))
+    server_type = client.server_types.get_by_name(
+        config.get_cloud_config_value(
+            "size",
+            vm_,
+            __opts__,
+            search_global=False,
+        )
+    )
     if server_type is None:
         raise SaltCloudException("The server size is not supported")
 
-    image = client.images.get_by_name(vm_.get("image"))
+    image = client.images.get_by_name(
+        config.get_cloud_config_value(
+            "image",
+            vm_,
+            __opts__,
+            search_global=False,
+        )
+    )
     if image is None:
         raise SaltCloudException("The server image is not supported")
 
@@ -289,7 +329,10 @@ def create(vm_):
     )
 
     # Get the ssh_keys
-    ssh_keys = vm_.get("ssh_keys", None)
+    ssh_keys = config.get_cloud_config_value(
+        "ssh_keys", vm_, __opts__, search_global=False
+    )
+
     if ssh_keys:
         names, ssh_keys = ssh_keys[:], []
         for n in names:
@@ -300,7 +343,12 @@ def create(vm_):
                 ssh_keys.append(ssh_key)
 
     # Get the location
-    location = vm_.get("location", None)
+    location = config.get_cloud_config_value(
+        "location",
+        vm_,
+        __opts__,
+        search_global=False,
+    )
     if location:
         location = client.locations.get_by_name(location)
 
@@ -308,7 +356,12 @@ def create(vm_):
             raise SaltCloudException("The server location is not supported")
 
     # Get the datacenter
-    datacenter = vm_.get("datacenter", None)
+    datacenter = config.get_cloud_config_value(
+        "datacenter",
+        vm_,
+        __opts__,
+        search_global=False,
+    )
     if datacenter:
         datacenter = client.datacenters.get_by_name(datacenter)
 
@@ -316,12 +369,22 @@ def create(vm_):
             raise SaltCloudException("The server datacenter is not supported")
 
     # Get the volumes
-    volumes = vm_.get("volumes", None)
+    volumes = config.get_cloud_config_value(
+        "volumes",
+        vm_,
+        __opts__,
+        search_global=False,
+    )
     if volumes:
         volumes = [vol for vol in client.volumes.get_all() if vol in volumes]
 
     # Get the networks
-    networks = vm_.get("networks", None)
+    networks = config.get_cloud_config_value(
+        "networks",
+        vm_,
+        __opts__,
+        search_global=False,
+    )
     if networks:
         networks = [vol for vol in client.networks.get_all() if vol in networks]
 
@@ -334,10 +397,25 @@ def create(vm_):
         volumes=volumes,
         networks=networks,
         location=location,
-        user_data=vm_.get("user_data", None),
-        labels=vm_.get("labels", None),
         datacenter=datacenter,
-        automount=vm_.get("automount", None),
+        user_data=config.get_cloud_config_value(
+            "user_data",
+            vm_,
+            __opts__,
+            search_global=False,
+        ),
+        labels=config.get_cloud_config_value(
+            "labels",
+            vm_,
+            __opts__,
+            search_global=False,
+        ),
+        automount=config.get_cloud_config_value(
+            "automount",
+            vm_,
+            __opts__,
+            search_global=False,
+        ),
     )
 
     # Bootstrap if ssh keys are configured

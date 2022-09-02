@@ -12,6 +12,7 @@ import tempfile
 
 import jinja2
 import pytest
+
 import salt.exceptions
 import salt.utils.hashutils
 import salt.utils.json
@@ -1371,4 +1372,4 @@ class SSHThinTestCase(TestCase):
                 "--version",
                 check=False,
             )
-            assert ret.exitcode == 0, ret
+            assert ret.returncode == 0, ret

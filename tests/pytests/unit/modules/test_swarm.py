@@ -1,6 +1,7 @@
 import pytest
-import salt.modules.swarm as swarm
 from requests.models import Response
+
+import salt.modules.swarm as swarm
 from tests.support.mock import DEFAULT, MagicMock, patch
 
 HAS_DOCKER = False
