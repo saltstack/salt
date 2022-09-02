@@ -1,4 +1,5 @@
 import pytest
+
 import salt.ext.tornado
 from salt.cli.batch_async import BatchAsync
 from tests.support.mock import MagicMock, patch
