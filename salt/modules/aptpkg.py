@@ -54,10 +54,7 @@ log = logging.getLogger(__name__)
 try:
     import apt.cache
     import apt.debfile
-    from aptsources.sourceslist import (
-        SourceEntry,
-        SourcesList,
-    )
+    from aptsources.sourceslist import SourceEntry, SourcesList
 
     HAS_APT = True
 except ImportError:
@@ -184,6 +181,9 @@ if not HAS_APT:
             if not self.file:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
             self._parse_sources(line)
+
+        def str(self):
+            return self.repo_line()
 
         def repo_line(self):
             """
@@ -361,7 +361,7 @@ def _call_apt(args, scope=True, **kwargs):
     while "Could not get lock" in cmd_ret.get("stderr", "") and count < 10:
         count += 1
         log.warning("Waiting for dpkg lock release: retrying... %s/100", count)
-        time.sleep(2 ** count)
+        time.sleep(2**count)
         cmd_ret = __salt__["cmd.run_all"](cmd, **params)
     return cmd_ret
 
@@ -2949,7 +2949,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if mod_source.uri != repo_uri:
         mod_source.uri = repo_uri
-        mod_source.line = mod_source.repo_line()
+        mod_source.line = mod_source.str()
 
     sources.save()
     # on changes, explicitly refresh

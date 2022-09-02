@@ -5,6 +5,7 @@ import copy
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_cloudfront as boto_cloudfront

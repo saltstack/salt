@@ -102,13 +102,13 @@ pywin32==303
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==23.2.0
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
-setproctitle==1.1.10
+setproctitle==1.2.3 ; python_version >= "3.10"
     # via -r requirements/windows.txt
 six==1.15.0
     # via

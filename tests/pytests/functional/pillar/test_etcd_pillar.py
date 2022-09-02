@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.pillar.etcd_pillar as etcd_pillar
 from salt.utils.etcd_util import get_conn
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import

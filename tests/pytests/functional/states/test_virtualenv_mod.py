@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 

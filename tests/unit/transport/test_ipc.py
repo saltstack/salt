@@ -9,6 +9,7 @@ import os
 import threading
 
 import pytest
+
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen

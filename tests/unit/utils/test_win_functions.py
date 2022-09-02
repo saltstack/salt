@@ -11,7 +11,6 @@ try:
     class WinError(win32net.error):
         winerror = 0
 
-
 except ImportError:
     HAS_WIN32 = False
 

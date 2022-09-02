@@ -726,6 +726,8 @@ pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
     # via junos-eznc
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -733,9 +735,9 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.1
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc20 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.4.0
+pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
 pytest-skip-markers==1.2.0
     # via
@@ -755,6 +757,7 @@ pytest-timeout==1.4.2
 pytest==6.1.2 ; python_version < "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities

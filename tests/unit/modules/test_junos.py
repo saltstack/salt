@@ -3,8 +3,9 @@
 """
 import os
 
-import salt.modules.junos as junos
 import yaml
+
+import salt.modules.junos as junos
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -15,12 +16,12 @@ except ImportError:
     import xml.etree.ElementTree as etree
 
 try:
+    import jnpr.junos.op as tables_dir
+    import jxmlease  # pylint: disable=unused-import
+    from jnpr.junos.device import Device
+    from jnpr.junos.exception import ConnectClosedError, LockError, UnlockError
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.sw import SW
-    from jnpr.junos.device import Device
-    import jxmlease  # pylint: disable=unused-import
-    import jnpr.junos.op as tables_dir
-    from jnpr.junos.exception import ConnectClosedError, LockError, UnlockError
 
     HAS_JUNOS = True
 except ImportError:

@@ -18,16 +18,18 @@ except ImportError:
     HAS_PSUTIL = False
 
 try:
+    import msvcrt
+
+    import pywintypes
     import win32api
     import win32con
-    import win32process
-    import win32security
-    import win32pipe
     import win32event
+    import win32pipe
+    import win32process
     import win32profile
-    import msvcrt
+    import win32security
+
     import salt.platform.win
-    import pywintypes
 
     HAS_WIN32 = True
 except ImportError:

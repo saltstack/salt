@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.utils.path
 from salt.modules import mysql as mysqlmod
 from tests.support.case import ModuleCase

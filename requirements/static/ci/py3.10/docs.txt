@@ -643,13 +643,16 @@ pyasn1==0.4.8
     # via
     #   pyasn1-modules
     #   rsa
-pycparser==2.17
-    # via cffi
+pycparser==2.21 ; python_version >= "3.9"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/linux.in
+    #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
-pygit2==1.7.1 ; python_version >= "3.10"
+pygit2==1.9.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pygments==2.8.1
     # via sphinx
@@ -715,7 +718,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
 redis-py-cluster==2.1.3
     # via -r requirements/static/ci/linux.in
@@ -763,7 +766,7 @@ scp==0.13.6
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.2.2 ; python_version >= "3.10"
+setproctitle==1.2.3 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

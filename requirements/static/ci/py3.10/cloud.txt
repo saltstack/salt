@@ -649,8 +649,11 @@ pyasn1==0.4.8
     #   pyasn1-modules
     #   rsa
     #   smbprotocol
-pycparser==2.19
-    # via cffi
+pycparser==2.21 ; python_version >= "3.9"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/static/pkg/linux.in
+    #   cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pycurl==7.44.1 ; python_version >= "3.10"
@@ -675,6 +678,8 @@ pyrsistent==0.18.0
     # via jsonschema
 pyserial==3.5
     # via junos-eznc
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -682,9 +687,9 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc20 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.4.0
+pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
 pytest-skip-markers==1.2.0
     # via
@@ -704,6 +709,7 @@ pytest-timeout==2.0.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -742,7 +748,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -788,7 +794,7 @@ scp==0.14.1
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.2.2 ; python_version >= "3.10"
+setproctitle==1.2.3 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

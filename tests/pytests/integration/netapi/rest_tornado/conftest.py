@@ -1,4 +1,5 @@
 import pytest
+
 import tests.support.netapi as netapi
 from salt.netapi.rest_tornado import saltnado
 

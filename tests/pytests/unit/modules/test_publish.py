@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.publish as publish
 from salt.exceptions import SaltReqTimeoutError
 from tests.support.mock import MagicMock, patch

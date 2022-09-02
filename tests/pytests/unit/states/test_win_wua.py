@@ -4,6 +4,7 @@ Test the win_wua state module
 from collections import namedtuple
 
 import pytest
+
 import salt.states.win_wua as win_wua
 import salt.utils.platform
 import salt.utils.win_update as win_update

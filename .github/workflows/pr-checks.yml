@@ -4,9 +4,15 @@ on:
   pull_request_target:
     types: [opened, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
 
   Check-Changed-Files-Docstrings:
+    permissions:
+      contents: read
+      pull-requests: write
     name: Check Docstrings For Changed Files On PR
     runs-on: ubuntu-latest
 

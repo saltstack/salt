@@ -7,6 +7,7 @@
 import copy
 
 import pytest
+
 import salt.returners.etcd_return as etcd_return
 import salt.utils.etcd_util as etcd_util
 import salt.utils.jid

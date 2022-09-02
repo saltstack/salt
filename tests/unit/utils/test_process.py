@@ -10,6 +10,7 @@ import threading
 import time
 
 import pytest
+
 import salt._logging
 import salt.utils.platform
 import salt.utils.process

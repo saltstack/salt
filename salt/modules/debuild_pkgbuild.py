@@ -33,6 +33,7 @@ REPREPRO_SIGN_PROMPT_RE = re.compile(r"Passphrase: ", re.M)
 
 try:
     import gnupg  # pylint: disable=unused-import
+
     import salt.modules.gpg
 
     HAS_LIBS = True

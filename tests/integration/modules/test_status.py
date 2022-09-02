@@ -1,6 +1,7 @@
 import random
 
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase
 

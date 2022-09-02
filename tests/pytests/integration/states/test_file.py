@@ -8,9 +8,10 @@ import re
 import textwrap
 
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.utils.files
 import salt.utils.path
-from pytestshellutils.utils import ports
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 

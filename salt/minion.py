@@ -820,11 +820,11 @@ class MinionBase:
                     self.connected = True
                     raise salt.ext.tornado.gen.Return((opts["master"], pub_channel))
                 except SaltClientError:
+                    if pub_channel:
+                        pub_channel.close()
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
-                        if pub_channel:
-                            pub_channel.close()
                         raise
 
     def _discover_masters(self):
@@ -1622,7 +1622,7 @@ class Minion(MinionBase):
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
         ) as event:
-            ret = yield event.fire_event(
+            ret = yield event.fire_event_async(
                 load, "__master_req_channel_payload", timeout=timeout
             )
             raise salt.ext.tornado.gen.Return(ret)
