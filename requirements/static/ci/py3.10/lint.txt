@@ -766,7 +766,7 @@ scp==0.13.6
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.2.2 ; python_version >= "3.10"
+setproctitle==1.2.3 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
