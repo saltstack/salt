@@ -6,7 +6,6 @@ Execute puppet routines
 import datetime
 import logging
 import os
-from distutils import version  # pylint: disable=no-name-in-module
 
 import salt.utils.args
 import salt.utils.files
@@ -67,8 +66,8 @@ class _Puppet:
         conf = salt.utils.yaml.safe_load(
           __salt__["cmd.run"]("puppet config print --render-as yaml vardir rundir confdir")
         )
-        self.vardir  = conf["vardir"]
-        self.rundir  = conf["rundir"]
+        self.vardir = conf["vardir"]
+        self.rundir = conf["rundir"]
         self.confdir = conf["confdir"]
 
         self.disabled_lockfile = self.vardir + "/state/agent_disabled.lock"
