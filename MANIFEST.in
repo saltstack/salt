@@ -6,6 +6,7 @@ include NOTICE
 include README.rst
 include SUPPORT.rst
 include run.py
+include pyproject.toml
 include tests/*.py
 recursive-include tests *
 recursive-include requirements *.txt
@@ -20,3 +21,4 @@ recursive-include salt *.jinja
 recursive-include templates *
 include salt/templates/git/*
 include salt/templates/lxc/*
+include salt/utils/pyinstaller/rthooks.dat

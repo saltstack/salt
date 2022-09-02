@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files

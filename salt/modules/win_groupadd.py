@@ -15,9 +15,9 @@ import salt.utils.win_functions
 import salt.utils.winapi
 
 try:
+    import pywintypes
     import win32api
     import win32com.client
-    import pywintypes
 
     HAS_DEPENDENCIES = True
 except ImportError:

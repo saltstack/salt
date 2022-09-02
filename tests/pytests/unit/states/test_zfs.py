@@ -9,6 +9,7 @@ Tests for salt.states.zfs
 """
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.zfs as zfs

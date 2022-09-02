@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.locale as locale
 from tests.support.mock import MagicMock, patch
 

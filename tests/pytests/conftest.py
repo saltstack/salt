@@ -6,22 +6,51 @@ import functools
 import inspect
 import logging
 import os
+import pathlib
 import shutil
 import stat
 import sys
+import tempfile
 
 import attr
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils import random_string
+
 import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
-from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import get_virtualenv_binary_path
+from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def salt_auth_account_1_factory():
+    return TestAccount(username="saltdev-auth-1")
+
+
+@pytest.fixture(scope="session")
+def salt_auth_account_2_factory():
+    return TestAccount(username="saltdev-auth-2", group_name="saltops")
+
+
+@pytest.fixture(scope="session")
+def salt_netapi_account_factory():
+    return TestAccount(username="saltdev-netapi")
+
+
+@pytest.fixture(scope="session")
+def salt_eauth_account_factory():
+    return TestAccount(username="saltdev-eauth")
+
+
+@pytest.fixture(scope="session")
+def salt_auto_account_factory():
+    return TestAccount(username="saltdev_auto", password="saltdev")
 
 
 @pytest.fixture(scope="session")
@@ -36,12 +65,12 @@ def salt_sub_minion_id():
 
 @pytest.fixture(scope="session")
 def sdb_etcd_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="session")
 def vault_port():
-    return get_unused_localhost_port()
+    return ports.get_unused_localhost_port()
 
 
 @attr.s(slots=True, frozen=True)
@@ -97,6 +126,11 @@ def salt_master_factory(
     vault_port,
     reactor_event,
     master_id,
+    salt_auth_account_1_factory,
+    salt_auth_account_2_factory,
+    salt_netapi_account_factory,
+    salt_eauth_account_factory,
+    salt_auto_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
     conf_dir = root_dir / "conf"
@@ -170,6 +204,28 @@ def salt_master_factory(
         }
     )
     config_overrides["pillar_opts"] = True
+    config_overrides["external_auth"] = {
+        "pam": {
+            salt_auth_account_1_factory.username: ["test.*"],
+            "{}%".format(salt_auth_account_2_factory.group_name): [
+                "@wheel",
+                "@runner",
+                "test.*",
+            ],
+            salt_netapi_account_factory.username: ["@wheel", "@runner", "test.*"],
+            salt_eauth_account_factory.username: ["@wheel", "@runner", "test.*"],
+        },
+        "auto": {
+            salt_netapi_account_factory.username: [
+                "@wheel",
+                "@runner",
+                "test.*",
+                "grains.*",
+            ],
+            salt_auto_account_factory.username: ["@wheel", "@runner", "test.*"],
+            "*": ["@wheel", "@runner", "test.*"],
+        },
+    }
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
@@ -441,6 +497,21 @@ def get_python_executable():
     return python_binary
 
 
+@pytest.fixture
+def tmp_path_world_rw(request):
+    """
+    Temporary path which is world read/write for tests that run under a different account
+    """
+    tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
+    path = tempdir_path / "world-rw-{}".format(id(request.node))
+    path.mkdir(exist_ok=True)
+    path.chmod(0o777)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(str(path), ignore_errors=True)
+
+
 @pytest.fixture(scope="session")
 def bridge_pytest_and_runtests():
     """
@@ -456,8 +527,13 @@ def bridge_pytest_and_runtests():
 
 def get_test_timeout(pyfuncitem):
     default_timeout = 30
-    marker = pyfuncitem.get_closest_marker("timeout")
+    marker = pyfuncitem.get_closest_marker("async_timeout")
     if marker:
+        if marker.args:
+            raise pytest.UsageError(
+                "The 'async_timeout' marker does not accept any arguments "
+                "only 'seconds' as a keyword argument"
+            )
         return marker.kwargs.get("seconds") or default_timeout
     return default_timeout
 
@@ -499,6 +575,8 @@ def pytest_pyfunc_call(pyfuncitem):
         loop = funcargs["io_loop"]
     except KeyError:
         loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    __tracebackhide__ = True
 
     loop.run_sync(
         CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.pillar.netbox as netbox
 from tests.support.mock import patch
 

@@ -142,11 +142,11 @@ def beacon(config):
             )
         if "onchangeonly" in service_config and service_config["onchangeonly"] is True:
             if service not in LAST_STATUS:
+                if not service_config["emitatstartup"]:
+                    continue
                 LAST_STATUS[service] = ret_dict[service]
                 if service_config["delay"] > 0:
                     LAST_STATUS[service]["time"] = currtime
-                elif not service_config["emitatstartup"]:
-                    continue
                 else:
                     ret.append(ret_dict)
 

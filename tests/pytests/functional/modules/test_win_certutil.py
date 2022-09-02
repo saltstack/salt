@@ -3,6 +3,7 @@ Tests for win_certutil execution module
 """
 
 import pytest
+
 import salt.exceptions
 import salt.utils.files
 

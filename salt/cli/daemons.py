@@ -3,26 +3,20 @@ Make me some salt!
 """
 
 
+import logging
 import os
 import warnings
 
-# We import log ASAP because we NEED to make sure that any logger instance salt
-# instantiates is using salt.log.setup.SaltLoggingClass
-import salt.log.setup
 import salt.utils.kinds as kinds
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
-
-# the try block below bypasses an issue at build time so that modules don't
-# cause the build to fail
 from salt.utils import migrations
 from salt.utils.platform import is_junos
 from salt.utils.process import HAS_PSUTIL
-from salt.utils.verify import verify_log
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
-    "",  # No deprecation message matchHAS_PSUTIL
+    "",  # No deprecation message match
     DeprecationWarning,  # This filter is for DeprecationWarnings
     r"^(salt|salt\.(.*))$",  # Match module(s) 'salt' and 'salt.<whatever>'
     append=True,
@@ -46,18 +40,18 @@ warnings.filterwarnings(
 )
 
 
+# the try block below bypasses an issue at build time so that modules don't
+# cause the build to fail
 try:
     import salt.utils.parsers
+    from salt.utils.network import ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
-    from salt.utils.zeromq import ip_bracket
 except ImportError as exc:
     if exc.args[0] != "No module named _msgpack":
         raise
 
 
-# Let's instantiate log using salt.log.setup.logging.getLogger() so pylint
-# leaves us alone and stops complaining about an un-used import
-log = salt.log.setup.logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class DaemonsMixin:  # pylint: disable=no-init
@@ -172,8 +166,6 @@ class Master(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
         self.action_log_info("Setting up")
 
         # TODO: AIO core is separate from transport
@@ -286,8 +278,6 @@ class Minion(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
         log.info('Setting up the Salt Minion "%s"', self.config["id"])
         migrations.migrate_paths(self.config)
 
@@ -479,8 +469,6 @@ class ProxyMinion(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
         self.action_log_info('Setting up "{}"'.format(self.config["id"]))
 
         migrations.migrate_paths(self.config)
@@ -587,8 +575,6 @@ class Syndic(
         except OSError as error:
             self.environment_failure(error)
 
-        self.setup_logfile_logger()
-        verify_log(self.config)
         self.action_log_info('Setting up "{}"'.format(self.config["id"]))
 
         # Late import so logging works correctly

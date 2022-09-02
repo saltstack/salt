@@ -7,6 +7,7 @@ import os
 
 import jinja2
 import jinja2.exceptions
+
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
@@ -1262,7 +1263,10 @@ def apply_network_settings(**settings):
         )
         res = True
     else:
-        res = __salt__["service.restart"]("network")
+        if __grains__["osmajorrelease"] >= 8:
+            res = __salt__["service.restart"]("NetworkManager")
+        else:
+            res = __salt__["service.restart"]("network")
 
     return hostname_res and res
 

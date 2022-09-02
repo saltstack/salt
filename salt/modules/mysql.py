@@ -49,10 +49,10 @@ import salt.utils.stringutils
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+    import MySQLdb.cursors
     from MySQLdb import OperationalError
+    from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -60,10 +60,10 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+        import MySQLdb.cursors
         from MySQLdb import OperationalError
+        from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
     except ImportError:
         MySQLdb = None
 
@@ -75,9 +75,6 @@ except ImportError:
     HAS_SQLPARSE = False
 
 log = logging.getLogger(__name__)
-
-# TODO: this is not used anywhere in the code?
-__opts__ = {}
 
 __grants__ = [
     "ALL PRIVILEGES",

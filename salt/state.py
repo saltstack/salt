@@ -737,6 +737,17 @@ class State:
         loader="states",
         initial_pillar=None,
     ):
+        self._init_kwargs = {
+            "opts": opts,
+            "pillar_override": pillar_override,
+            "jid": jid,
+            "pillar_enc": pillar_enc,
+            "proxy": proxy,
+            "context": context,
+            "mocked": mocked,
+            "loader": loader,
+            "initial_pillar": initial_pillar,
+        }
         self.states_loader = loader
         if "grains" not in opts:
             opts["grains"] = salt.loader.grains(opts)
@@ -1841,18 +1852,18 @@ class State:
                                     else:
                                         found = False
                                         for _id in iter(high):
-                                            for state in [
-                                                state
-                                                for state in iter(high[_id])
-                                                if not state.startswith("__")
+                                            for st8 in [
+                                                _st8
+                                                for _st8 in iter(high[_id])
+                                                if not _st8.startswith("__")
                                             ]:
-                                                for j in iter(high[_id][state]):
+                                                for j in iter(high[_id][st8]):
                                                     if (
                                                         isinstance(j, dict)
                                                         and "name" in j
                                                     ):
                                                         if j["name"] == ind:
-                                                            ind = {state: _id}
+                                                            ind = {st8: _id}
                                                             found = True
                                         if not found:
                                             continue
@@ -1989,18 +2000,21 @@ class State:
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def _call_parallel_target(self, name, cdata, low):
+    @classmethod
+    def _call_parallel_target(cls, instance, init_kwargs, name, cdata, low):
         """
         The target function to call that will create the parallel thread/process
         """
+        if instance is None:
+            instance = cls(**init_kwargs)
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
-        self.format_slots(cdata)
+        instance.format_slots(cdata)
         tag = _gen_tag(low)
         try:
-            ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
+            ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -2016,12 +2030,78 @@ class State:
             }
 
         utc_finish_time = datetime.datetime.utcnow()
+        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
+        local_finish_time = utc_finish_time - timezone_delta
+        local_start_time = utc_start_time - timezone_delta
+        ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
+        ret["__parallel__"] = True
 
-        troot = os.path.join(self.opts["cachedir"], self.jid)
+        if "retry" in low:
+            retries = 1
+            low["retry"] = instance.verify_retry_data(low["retry"])
+            if not sys.modules[instance.states[cdata["full"]].__module__].__opts__[
+                "test"
+            ]:
+                while low["retry"]["attempts"] >= retries:
+
+                    if low["retry"]["until"] == ret["result"]:
+                        break
+
+                    interval = low["retry"]["interval"]
+                    if low["retry"]["splay"] != 0:
+                        interval = interval + random.randint(0, low["retry"]["splay"])
+                    log.info(
+                        "State result does not match retry until value, "
+                        "state will be re-run in %s seconds",
+                        interval,
+                    )
+                    time.sleep(interval)
+                    retry_ret = instance.states[cdata["full"]](
+                        *cdata["args"], **cdata["kwargs"]
+                    )
+
+                    utc_start_time = datetime.datetime.utcnow()
+                    utc_finish_time = datetime.datetime.utcnow()
+                    delta = utc_finish_time - utc_start_time
+                    duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+                    retry_ret["duration"] = duration
+
+                    orig_ret = ret
+                    ret = retry_ret
+                    if not ret["comment"]:
+                        _comment = ""
+                    else:
+                        _comment = (
+                            'Attempt {}: Returned a result of "{}", '
+                            'with the following comment: "{}"'.format(
+                                retries, ret["result"], ret["comment"]
+                            )
+                        )
+
+                    ret["comment"] = "\n".join([orig_ret["comment"], _comment])
+                    ret["duration"] = (
+                        ret["duration"] + orig_ret["duration"] + (interval * 1000)
+                    )
+                    if retries == 1:
+                        ret["start_time"] = orig_ret["start_time"]
+                    retries = retries + 1
+
+            else:
+                ret["comment"] = "  ".join(
+                    [
+                        "" if not ret["comment"] else str(ret["comment"]),
+                        "The state would be retried every {interval} seconds "
+                        "(with a splay of up to {splay} seconds) a maximum of "
+                        "{attempts} times or until a result of {until} "
+                        "is returned".format(**low["retry"]),
+                    ]
+                )
+
+        troot = os.path.join(instance.opts["cachedir"], instance.jid)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
@@ -2046,9 +2126,14 @@ class State:
         if not name:
             name = low.get("name", low.get("__id__"))
 
+        if salt.utils.platform.spawning_platform():
+            instance = None
+        else:
+            instance = self
+
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
-            args=(name, cdata, low),
+            args=(instance, self._init_kwargs, name, cdata, low),
             name="ParallelState({})".format(name),
         )
         proc.start()
@@ -2263,7 +2348,7 @@ class State:
             local_finish_time.time().isoformat(),
             duration,
         )
-        if "retry" in low:
+        if "retry" in low and "parallel" not in low:
             low["retry"] = self.verify_retry_data(low["retry"])
             if not sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]:
                 if low["retry"]["until"] != ret["result"]:
@@ -2864,7 +2949,7 @@ class State:
             preload = {"jid": self.jid}
             ev_func(ret, tag, preload=preload)
 
-    def call_chunk(self, low, running, chunks):
+    def call_chunk(self, low, running, chunks, depth=0):
         """
         Check if a chunk has any requires, execute the requires and then
         the chunk
@@ -3004,7 +3089,20 @@ class State:
                     self.pre[tag]["changes"] = {"watch": "watch"}
                     self.pre[tag]["result"] = None
             else:
-                running = self.call_chunk(low, running, chunks)
+                depth += 1
+                # even this depth is being generous. This shouldn't exceed 1 no
+                # matter how the loops are happening
+                if depth >= 20:
+                    log.error("Recursive requisite found")
+                    running[tag] = {
+                        "changes": {},
+                        "result": False,
+                        "comment": "Recursive requisite found",
+                        "__run_num__": self.__run_num,
+                        "__sls__": low["__sls__"],
+                    }
+                else:
+                    running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
                 running["__FAILHARD__"] = True
                 return running
@@ -3017,6 +3115,13 @@ class State:
             # if the requisite that failed was due to a prereq on this low state
             # show the normal error
             if tag in self.pre:
+                # This is the previous run of the state with the prereq
+                # which was run with test=True, so it will include
+                # the proposed changes not actual changes.
+                # So we remove them from the final output
+                # since the prereq requisite failed.
+                if self.pre[tag].get("changes"):
+                    self.pre[tag]["changes"] = {}
                 running[tag] = self.pre[tag]
                 running[tag]["__run_num__"] = self.__run_num
                 running[tag]["__sls__"] = low["__sls__"]

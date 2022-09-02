@@ -110,3 +110,10 @@ class VMWareTest(CloudTest):
         self.assertIn(i_clone_str, str(ret_val))
 
         self.assertDestroyInstance()
+
+        # now clean up snapshots and make sure re get the proper response.
+        ret_val = self.run_cloud("-a remove_all_snapshots cloud-tests-instant-clone")
+
+        s_ret_str = "Removed all snapshots"
+
+        self.assertIn(s_ret_str, str(ret_val))

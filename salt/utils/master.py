@@ -13,7 +13,6 @@ from threading import Event, Thread
 import salt.cache
 import salt.client
 import salt.config
-import salt.log
 import salt.payload
 import salt.pillar
 import salt.utils.atomicfile
@@ -797,6 +796,9 @@ class ConnectedCache(Process):
 
 
 def ping_all_connected_minions(opts):
+    """
+    Ping all connected minions.
+    """
     if opts["minion_data_cache"]:
         tgt = list(salt.utils.minions.CkMinions(opts).connected_ids())
         form = "list"
@@ -808,6 +810,9 @@ def ping_all_connected_minions(opts):
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):
+    """
+    Return the master key.
+    """
     if key_user == "root":
         if opts.get("user", "root") != "root":
             key_user = opts.get("user", "root")

@@ -7,6 +7,7 @@ import logging
 import os
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.config as config
@@ -777,7 +778,7 @@ def test_highstate():
         }
 
         mock = MagicMock(side_effect=["A", None, None])
-        with patch.object(state, "_check_queue", mock):
+        with patch.object(state, "running", mock):
             assert state.highstate("whitelist=sls1.sls") == "A"
 
             with patch.dict(state.__opts__, {"test": "A"}):

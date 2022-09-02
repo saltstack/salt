@@ -13,12 +13,13 @@ import sys
 import tempfile
 
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+from salt._logging import LOG_LEVELS
 from salt.exceptions import CommandExecutionError
-from salt.log.setup import LOG_LEVELS
 from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 

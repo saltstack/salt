@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 
 import salt.channel.client
 import salt.ext.tornado.gen
@@ -262,6 +263,9 @@ class AsyncRemotePillar(RemotePillarMixin):
                 load,
                 dictkey="pillar",
             )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
@@ -1136,8 +1140,8 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.utils.gitfs
                 import salt.pillar.git_pillar
+                import salt.utils.gitfs
 
                 git_pillar = salt.utils.gitfs.GitPillar(
                     self.opts,

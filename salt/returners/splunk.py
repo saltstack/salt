@@ -23,6 +23,7 @@ import socket
 import time
 
 import requests
+
 import salt.utils.json
 
 _max_content_bytes = 100000

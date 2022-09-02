@@ -1,8 +1,12 @@
 import pathlib
 
 import pytest
-import salt.utils.platform
 from saltfactories.utils import random_string
+
+import salt.modules.useradd as useradd
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError
+from tests.support.unit import skipIf
 
 pytestmark = [
     pytest.mark.skip_if_not_root,
@@ -72,3 +76,17 @@ def test_info_after_deletion(user, account):
     ret = user.delete(account.username, **kwargs)
     assert ret is True
     assert not user.info(account.username)
+
+
+@skipIf(
+    not (salt.utils.platform.is_darwin() or salt.utils.platform.is_windows()),
+    "This test should only run (and raise an expected exception) on Windows/Mac due to lack of useradd command",
+)
+def test_errors_out_when_no_useradd_exists(username):
+    """
+    This test is fairly contrived, as we're calling the useradd module
+    directly instead of letting the loader grab the appropriate user
+    module for the given OS
+    """
+    with pytest.raises(CommandExecutionError):
+        useradd.add(username)
