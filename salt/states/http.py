@@ -12,8 +12,6 @@ import re
 import sys
 import time
 
-from salt.ext import six
-
 __monitor__ = [
     "query",
 ]
