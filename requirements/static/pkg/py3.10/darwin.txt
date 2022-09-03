@@ -93,7 +93,7 @@ requests==2.25.1
     #   -r requirements/base.txt
     #   apache-libcloud
     #   vultr
-setproctitle==1.1.10
+setproctitle==1.3.2 ; python_version >= "3.10"
     # via -r requirements/darwin.txt
 six==1.16.0
     # via
