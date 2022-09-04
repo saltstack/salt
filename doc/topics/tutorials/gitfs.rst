@@ -281,7 +281,7 @@ is executed. For example:
 * A request for the file :strong:`salt://haproxy/haproxy.conf` will be served from the
   :strong:`file:///root/third` repo.
 
-Also a requested state file overrules a directories with an `init.sls`-file.
+Also a requested state file overrules a directory with an `init.sls`-file.
 For example:
 
 * A request for :strong:`state.apply shell` will be served from the
