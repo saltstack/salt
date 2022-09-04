@@ -96,7 +96,7 @@ Here is an example of such a configuration, which should speak by itself:
               - /path/to/stack2.cfg
           opts:custom:opt:
             value: /path/to/stack0.cfg
-          opts:pillarenv:
+          opts:saltenv:
             dev: /path/to/dev/stack.cfg
             __env__: /path/to/__env__/stack.cfg
 
