@@ -667,7 +667,6 @@ def mounted(
                 ret["comment"] = "{} not present and not mounted".format(name)
         else:
             if __opts__["test"]:
-                ret["result"] = None
                 ret["comment"] = "{} would not be mounted".format(name)
             else:
                 ret["comment"] = "{} not mounted".format(name)
