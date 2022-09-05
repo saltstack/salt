@@ -93,6 +93,10 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):
+        if payload.get("load", {}).get("raise_exception", False):
+            raise Exception(payload["load"]["raise_exception"])
+        if payload.get("load", {}).get("server_side_exception", False):
+            raise salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
         if self.req_channel_crypt == "clear":
             raise tornado.gen.Return((payload, {"fun": "send_clear"}))
         raise tornado.gen.Return((payload, {"fun": "send"}))
@@ -176,3 +180,33 @@ def test_badload(push_channel, req_channel_crypt):
         for msg in msgs:
             with pytest.raises(salt.exceptions.AuthenticationError):
                 push_channel.send(msg, timeout=5, tries=1)
+
+
+def test_payload_handling_exception(push_channel, req_channel_crypt):
+    """
+    Test of getting exception on payload handling
+    """
+    if req_channel_crypt == "clear":
+        ret = push_channel.send(
+            {"raise_exception": "Test exception"}, timeout=5, tries=1
+        )
+        assert ret == "Some exception handling minion payload"
+    else:
+        with pytest.raises(salt.exceptions.AuthenticationError):
+            push_channel.send({"raise_exception": "Test exception"}, timeout=5, tries=1)
+
+
+def test_serverside_exception(push_channel, req_channel_crypt):
+    """
+    Test of getting server side exception on payload handling
+    """
+    if req_channel_crypt == "clear":
+        ret = push_channel.send(
+            {"server_side_exception": "Test exception"}, timeout=5, tries=1
+        )
+        assert ret == "Server-side exception handling payload"
+    else:
+        with pytest.raises(salt.exceptions.AuthenticationError):
+            push_channel.send(
+                {"server_side_exception": "Test exception"}, timeout=5, tries=1
+            )
