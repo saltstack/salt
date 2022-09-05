@@ -1,5 +1,5 @@
 """
-.. versionadded:: 3005
+.. versionadded:: 3007.0
 
 Execute a job on the targeted minions by using a moving window of fixed size `batch`.
 """

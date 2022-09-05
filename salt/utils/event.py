@@ -904,7 +904,7 @@ class SaltEvent:
         """
         Remove the event_handler callback
 
-        .. versionadded:: 3005
+        .. versionadded:: 3007.0
         """
         if event_handler in self.subscriber.callbacks:
             self.subscriber.callbacks.remove(event_handler)

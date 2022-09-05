@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 def get_bnum(opts, minions, quiet):
     """
-    .. versionadded:: 3005
+    .. versionadded:: 3007.0
 
     Return the active number of minions to maintain
 
@@ -56,7 +56,7 @@ def batch_get_opts(
     tgt, fun, batch, parent_opts, arg=(), tgt_type="glob", ret="", kwarg=None, **kwargs
 ):
     """
-    .. versionadded:: 3005
+    .. versionadded:: 3007.0
 
     Return the dictionary with batch options populated
 
@@ -129,7 +129,7 @@ def batch_get_opts(
 
 def batch_get_eauth(kwargs):
     """
-    .. versionadded:: 3005
+    .. versionadded:: 3007.0
 
     Return the dictionary with eauth information
 

@@ -2329,7 +2329,7 @@ class ClearFuncs(TransportMethods):
         """
         This method sends out publications to the minions in case of using batch
 
-        .. versionadded:: 3005
+        .. versionadded:: 3007.0
         """
         batch_load = {}
         batch_load.update(clear_load)
