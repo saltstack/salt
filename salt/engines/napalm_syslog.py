@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM syslog engine
 ====================
@@ -168,40 +167,28 @@ the variable name ``openconfig_structure``. Inside the Jinja template, the user
 can process the object from ``openconfig_structure`` and define the bussiness
 logic as required.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import logging
 
-# Import salt libs
 import salt.utils.event as event
 import salt.utils.network
 import salt.utils.stringutils
-
-# Import third party libraries
 from salt.utils.zeromq import zmq
 
 try:
-    # pylint: disable=W0611
+    # pylint: disable=import-error
     import napalm_logs
     import napalm_logs.utils
 
-    # pylint: enable=W0611
+    # pylint: enable=import-error
     HAS_NAPALM_LOGS = True
 except ImportError:
     HAS_NAPALM_LOGS = False
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# module properties
-# ----------------------------------------------------------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
-__virtualname__ = "napalm_syslog"
 
-# ----------------------------------------------------------------------------------------------------------------------
-# helpers
-# ----------------------------------------------------------------------------------------------------------------------
+__virtualname__ = "napalm_syslog"
 
 
 def __virtual__():
@@ -211,8 +198,8 @@ def __virtual__():
     if not HAS_NAPALM_LOGS or not zmq:
         return (
             False,
-            "napalm_syslog could not be loaded. \
-            Please install napalm-logs library amd ZeroMQ.",
+            "napalm_syslog could not be loaded. Please install "
+            "napalm-logs library and ZeroMQ.",
         )
     return True
 
@@ -235,10 +222,6 @@ def _get_transport_recv(name="zmq", address="0.0.0.0", port=49017, **kwargs):
 
 
 TRANSPORT_FUN_MAP = {"zmq": _zmq, "zeromq": _zmq}
-
-# ----------------------------------------------------------------------------------------------------------------------
-# main
-# ----------------------------------------------------------------------------------------------------------------------
 
 
 def start(

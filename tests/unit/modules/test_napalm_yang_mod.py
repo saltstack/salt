@@ -1,62 +1,74 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.modules.napalm_network as napalm_network
+import salt.modules.napalm_yang_mod as napalm_yang_mod
 import tests.support.napalm as napalm_test_support
-
-# Import Salt Testing Libs
+from salt.utils.immutabletypes import freeze
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-import salt.modules.napalm_yang_mod as napalm_yang_mod  # NOQA
-import salt.modules.napalm_network as napalm_network  # NOQA
 
-
-TEST_DIFF = {"diff1": "value"}
-
-
-class MockNapalmYangModel(object):
+class MockNapalmYangModel:
     def Root(self):
         return MagicMock()
 
 
-class MockNapalmYangModels(object):
+class MockNapalmYangModels:
     openconfig_interfaces = MockNapalmYangModel()
 
 
-class MockUtils(object):
+class MockUtils:
+    def __init__(self, test_diff):
+        self.test_diff = test_diff
+
     def diff(self, *args):
-        return TEST_DIFF
+        return self.test_diff
 
 
-class MockNapalmYangModule(object):
-    base = MockNapalmYangModel()
-    models = MockNapalmYangModels()
-    utils = MockUtils()
-
-
-TEST_CONFIG = {
-    "comment": "Configuration discarded.",
-    "already_configured": False,
-    "result": True,
-    "diff": '[edit interfaces xe-0/0/5]+   description "Adding a description";',
-}
-
-
-def mock_net_load_config(**kwargs):
-    return TEST_CONFIG
+class MockNapalmYangModule:
+    def __init__(self, test_diff):
+        self.base = MockNapalmYangModel()
+        self.models = MockNapalmYangModels()
+        self.utils = MockUtils(test_diff)
 
 
 class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
+    @classmethod
+    def setUpClass(cls):
+        cls._test_config = freeze(
+            {
+                "comment": "Configuration discarded.",
+                "already_configured": False,
+                "result": True,
+                "diff": (
+                    '[edit interfaces xe-0/0/5]+   description "Adding a description";'
+                ),
+            }
+        )
+        cls._test_diff = freeze({"diff1": "value"})
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._test_config = cls._test_diff = None
+
     def setup_loader_modules(self):
+        patcher = patch(
+            "salt.utils.napalm.get_device",
+            MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        def mock_net_load_config(**kwargs):
+            return self._test_config.copy()
+
         module_globals = {
             "__salt__": {
-                "config.option": MagicMock(
+                "config.get": MagicMock(
                     return_value={"test": {"driver": "test", "key": "2orgk34kgk34g"}}
                 ),
                 "file.file_exists": napalm_test_support.true,
@@ -65,22 +77,22 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "random.hash": napalm_test_support.random_hash,
                 "net.load_template": napalm_network.load_template,
                 "net.load_config": mock_net_load_config,
-            }
+            },
+            "napalm_yang": MockNapalmYangModule(self._test_diff.copy()),
         }
-        module_globals["napalm_yang"] = MockNapalmYangModule()
 
         return {napalm_yang_mod: module_globals, napalm_network: module_globals}
 
     def test_diff(self):
         ret = napalm_yang_mod.diff({}, {"test": True}, "models.openconfig_interfaces")
-        assert ret == TEST_DIFF
+        assert ret == self._test_diff.copy()
 
     def test_diff_list(self):
         """
         Test it with an actual list
         """
         ret = napalm_yang_mod.diff({}, {"test": True}, ["models.openconfig_interfaces"])
-        assert ret == TEST_DIFF
+        assert ret == self._test_diff.copy()
 
     def test_parse(self):
         ret = napalm_yang_mod.parse("models.openconfig_interfaces")
@@ -92,7 +104,7 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_load_config(self):
         ret = napalm_yang_mod.load_config({}, "models.openconfig_interfaces")
-        assert ret is TEST_CONFIG
+        assert ret == self._test_config.copy()
 
     def test_compliance_report(self):
         ret = napalm_yang_mod.compliance_report({}, "models.openconfig_interfaces")

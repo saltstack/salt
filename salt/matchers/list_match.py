@@ -1,36 +1,37 @@
-# -*- coding: utf-8 -*-
 """
 This is the default list matcher.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 log = logging.getLogger(__name__)
 
 
-def match(tgt, opts=None):
+def match(tgt, opts=None, minion_id=None):
     """
     Determines if this host is on the list
     """
 
     if not opts:
         opts = __opts__
+    if not minion_id:
+        minion_id = opts.get("id")
+
     try:
         if (
-            "," + opts["id"] + "," in tgt
-            or tgt.startswith(opts["id"] + ",")
-            or tgt.endswith("," + opts["id"])
+            ",{},".format(minion_id) in tgt
+            or tgt.startswith(minion_id + ",")
+            or tgt.endswith("," + minion_id)
         ):
             return True
         # tgt is a string, which we know because the if statement above did not
         # cause one of the exceptions being caught. Therefore, look for an
         # exact match. (e.g. salt -L foo test.ping)
-        return opts["id"] == tgt
+        return minion_id == tgt
     except (AttributeError, TypeError):
         # tgt is not a string, maybe it's a sequence type?
         try:
-            return opts["id"] in tgt
+            return minion_id in tgt
         except Exception:  # pylint: disable=broad-except
             # tgt was likely some invalid type
             return False

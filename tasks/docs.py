@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tasks.docstrings
     ~~~~~~~~~~~~~~~~
@@ -13,6 +12,7 @@ import pathlib
 import re
 
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
+
 from tasks import utils
 
 CODE_DIR = pathlib.Path(__file__).resolve().parent.parent
@@ -115,7 +115,8 @@ def build_path_cache():
             )
         stub_path = stub_path.relative_to(CODE_DIR)
         python_module_to_doc_path[path] = stub_path
-        doc_path_to_python_module[stub_path] = path
+        if path.exists():
+            doc_path_to_python_module[stub_path] = path
 
 
 build_path_cache()
@@ -191,7 +192,7 @@ def check_inline_markup(ctx, files):
                     "The {} function in {} contains ':doc:' usage", funcdef.name, path
                 )
                 exitcode += 1
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -216,7 +217,7 @@ def check_stubs(ctx, files):
             utils.error(
                 "The module at {} does not have a sphinx stub at {}", path, stub_path
             )
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -231,13 +232,23 @@ def check_virtual(ctx, files):
     for path in files:
         if path.name == "index.rst":
             continue
-        contents = path.read_text()
+        try:
+            contents = path.read_text()
+        except Exception as exc:  # pylint: disable=broad-except
+            utils.error(
+                "Error while processing '{}': {}".format(
+                    path,
+                    exc,
+                )
+            )
+            exitcode += 1
+            continue
         if ".. _virtual-" in contents:
             try:
                 python_module = doc_path_to_python_module[path]
                 utils.error(
-                    "The doc file at {} indicates that it's virtual, yet, there's a python module "
-                    "at {} that will shaddow it.",
+                    "The doc file at {} indicates that it's virtual, yet, there's a"
+                    " python module at {} that will shaddow it.",
                     path,
                     python_module,
                 )
@@ -245,7 +256,7 @@ def check_virtual(ctx, files):
             except KeyError:
                 # This is what we're expecting
                 continue
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -305,9 +316,9 @@ def check_module_indexes(ctx, files):
             package = "cloud"
         if package == "file_server":
             package = "fileserver"
-        if package == "configuration":
-            package = "log"
-            path_parts = ["handlers"]
+        if package == "configuration" and path_parts == ["logging"]:
+            package = "log_handlers"
+            path_parts = []
         python_package = SALT_CODE_DIR.joinpath(package, *path_parts).relative_to(
             CODE_DIR
         )
@@ -360,7 +371,7 @@ def check_module_indexes(ctx, files):
                 path,
                 ", ".join(extra_modules_in_index),
             )
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -401,7 +412,7 @@ def check_stray(ctx, files):
         DOCS_DIR / "ref" / "states" / "writing.rst",
         DOCS_DIR / "topics",
     )
-    exclude_paths = tuple([str(p.relative_to(CODE_DIR)) for p in exclude_paths])
+    exclude_paths = tuple(str(p.relative_to(CODE_DIR)) for p in exclude_paths)
     files = build_docs_paths(files)
     for path in files:
         if not str(path).startswith(str((DOCS_DIR / "ref").relative_to(CODE_DIR))):
@@ -418,42 +429,24 @@ def check_stray(ctx, files):
                 continue
             exitcode += 1
             utils.error(
-                "The doc at {} doesn't have a corresponding python module an is considered a stray "
-                "doc. Please remove it.",
+                "The doc at {} doesn't have a corresponding python module and is"
+                " considered a stray doc. Please remove it.",
                 path,
             )
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
 def check(ctx, files):
-    try:
-        utils.info("Checking inline :doc: markup")
-        check_inline_markup(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking python module stubs")
-        check_stubs(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking virtual modules")
-        check_virtual(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking doc module indexes")
-        check_module_indexes(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking stray docs")
-        check_stray(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
+    exitcode = 0
+    utils.info("Checking inline :doc: markup")
+    exitcode += check_inline_markup(ctx, files)
+    utils.info("Checking python module stubs")
+    exitcode += check_stubs(ctx, files)
+    utils.info("Checking virtual modules")
+    exitcode += check_virtual(ctx, files)
+    utils.info("Checking stray docs")
+    exitcode += check_stray(ctx, files)
+    utils.info("Checking doc module indexes")
+    exitcode += check_module_indexes(ctx, files)
+    utils.exit_invoke(exitcode)

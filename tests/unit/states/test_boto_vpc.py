@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os.path
 import random
 import string
 import sys
 
+import pytest
+
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -35,7 +31,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -150,8 +146,9 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     """
@@ -163,7 +160,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_vpc_does_not_exist(self):
         """
         Tests present on a VPC that does not exist.
@@ -207,7 +204,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_vpc_does_not_exist(self):
         """
         Tests absent on a VPC that does not exist.
@@ -222,7 +219,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
@@ -258,7 +255,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_resource_does_not_exist(self):
         """
         Tests present on a resource that does not exist.
@@ -266,7 +263,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states[
-                "boto_vpc.{0}_present".format(self.resource_type)
+                "boto_vpc.{}_present".format(self.resource_type)
             ](name="test", vpc_name="test", **self.extra_kwargs)
 
         self.assertTrue(resource_present_result["result"])
@@ -281,13 +278,13 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states[
-                "boto_vpc.{0}_present".format(self.resource_type)
+                "boto_vpc.{}_present".format(self.resource_type)
             ](name="test", vpc_name="test", **self.extra_kwargs)
         self.assertTrue(resource_present_result["result"])
         self.assertEqual(resource_present_result["changes"], {})
@@ -297,11 +294,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     def test_present_with_failure(self):
         vpc = self._create_vpc(name="test")
         with patch(
-            "moto.ec2.models.{0}".format(self.backend_create),
+            "moto.ec2.models.{}".format(self.backend_create),
             side_effect=BotoServerError(400, "Mocked error"),
         ):
             resource_present_result = self.salt_states[
-                "boto_vpc.{0}_present".format(self.resource_type)
+                "boto_vpc.{}_present".format(self.resource_type)
             ](name="test", vpc_name="test", **self.extra_kwargs)
 
             self.assertFalse(resource_present_result["result"])
@@ -312,14 +309,14 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_resource_does_not_exist(self):
         """
         Tests absent on a resource that does not exist.
         """
         with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{0}_absent".format(self.resource_type)
+                "boto_vpc.{}_absent".format(self.resource_type)
             ]("test")
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(resource_absent_result["changes"], {})
@@ -329,14 +326,14 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_resource_exists(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")
 
         with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{0}_absent".format(self.resource_type)
+                "boto_vpc.{}_absent".format(self.resource_type)
             ]("test")
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(
@@ -354,11 +351,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self._create_resource(vpc_id=vpc.id, name="test")
 
         with patch(
-            "moto.ec2.models.{0}".format(self.backend_delete),
+            "moto.ec2.models.{}".format(self.backend_delete),
             side_effect=BotoServerError(400, "Mocked error"),
         ):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{0}_absent".format(self.resource_type)
+                "boto_vpc.{}_absent".format(self.resource_type)
             ]("test")
             self.assertFalse(resource_absent_result["result"])
             self.assertTrue("Mocked error" in resource_absent_result["comment"])
@@ -368,8 +365,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "subnet"
@@ -382,8 +380,9 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcInternetGatewayTestCase(
     BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin
@@ -394,7 +393,7 @@ class BotoVpcInternetGatewayTestCase(
 
 
 @skipIf(
-    six.PY3,
+    True,
     "Disabled for Python 3 due to upstream bugs: "
     "https://github.com/spulec/moto/issues/548 and "
     "https://github.com/gabrielfalcao/HTTPretty/issues/325",
@@ -403,8 +402,9 @@ class BotoVpcInternetGatewayTestCase(
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "route_table"
@@ -433,7 +433,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         ]
 
         assoc_subnets = [x["subnet_id"] for x in associations]
-        self.assertEqual(set(assoc_subnets), set([subnet1.id, subnet2.id]))
+        self.assertEqual(set(assoc_subnets), {subnet1.id, subnet2.id})
 
         route_table_present_result = self.salt_states["boto_vpc.route_table_present"](
             name="test", vpc_name="test", subnet_ids=[subnet2.id]
@@ -468,7 +468,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
             for x in route_table_present_result["changes"]["new"]["routes"]
         ]
 
-        self.assertEqual(set(routes), set(["local", igw.id]))
+        self.assertEqual(set(routes), {"local", igw.id})
 
         route_table_present_result = self.salt_states["boto_vpc.route_table_present"](
             name="test",

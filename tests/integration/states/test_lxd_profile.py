@@ -1,23 +1,27 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the lxd states
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
-# Import Lxd Test Case
-import tests.integration.states.test_lxd
+import salt.modules.lxd
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class LxdProfileTestCase(tests.integration.states.test_lxd.LxdTestCase):
+@pytest.mark.skipif(salt.modules.lxd.HAS_PYLXD is False, reason="pylxd not installed")
+@pytest.mark.skip_if_binaries_missing("lxd", reason="LXD not installed")
+@pytest.mark.skip_if_binaries_missing("lxc", reason="LXC not installed")
+class LxdProfileTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.run_state(
-            "lxd_profile.absent", name="test-profile",
+            "lxd_profile.absent",
+            name="test-profile",
         )
 
     def test_02__create_profile(self):
         self.run_state(
-            "lxd_profile.absent", name="test-profile",
+            "lxd_profile.absent",
+            name="test-profile",
         )
         ret = self.run_state(
             "lxd_profile.present",
@@ -58,7 +62,10 @@ class LxdProfileTestCase(tests.integration.states.test_lxd.LxdTestCase):
             name="test-profile",
             config=[{"key": "boot.autostart", "value": 1}],
         )
-        ret = self.run_state("lxd_profile.absent", name="test-profile",)
+        ret = self.run_state(
+            "lxd_profile.absent",
+            name="test-profile",
+        )
         name = "lxd_profile_|-test-profile_|-test-profile_|-absent"
         self.assertSaltTrueReturn(ret)
         assert name in ret

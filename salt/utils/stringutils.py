@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Functions for manipulating or otherwise processing strings
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import difflib
@@ -17,11 +14,6 @@ import shlex
 import time
 import unicodedata
 
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
-# Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
@@ -43,25 +35,22 @@ def to_bytes(s, encoding=None, errors="strict"):
         raise ValueError("encoding cannot be empty")
 
     exc = None
-    if six.PY3:
-        if isinstance(s, bytes):
-            return s
-        if isinstance(s, bytearray):
-            return bytes(s)
-        if isinstance(s, six.string_types):
-            for enc in encoding:
-                try:
-                    return s.encode(enc, errors)
-                except UnicodeEncodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeEncodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
-    else:
-        return to_str(s, encoding, errors)
+    if isinstance(s, bytes):
+        return s
+    if isinstance(s, bytearray):
+        return bytes(s)
+    if isinstance(s, str):
+        for enc in encoding:
+            try:
+                return s.encode(enc, errors)
+            except UnicodeEncodeError as err:
+                exc = err
+                continue
+        # The only way we get this far is if a UnicodeEncodeError was
+        # raised, otherwise we would have already returned (or raised some
+        # other exception).
+        raise exc  # pylint: disable=raising-bad-type
+    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
 
 
 def to_str(s, encoding=None, errors="strict", normalize=False):
@@ -84,42 +73,22 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
     if not encoding:
         raise ValueError("encoding cannot be empty")
 
-    # This shouldn't be six.string_types because if we're on PY2 and we already
-    # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
 
     exc = None
-    if six.PY3:
-        if isinstance(s, (bytes, bytearray)):
-            for enc in encoding:
-                try:
-                    return _normalize(s.decode(enc, errors))
-                except UnicodeDecodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeDecodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
-    else:
-        if isinstance(s, bytearray):
-            return str(s)  # future lint: disable=blacklisted-function
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if isinstance(s, unicode):
-            for enc in encoding:
-                try:
-                    return _normalize(s).encode(enc, errors)
-                except UnicodeEncodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeDecodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        # pylint: enable=incompatible-py3-code,undefined-variable
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    if isinstance(s, (bytes, bytearray)):
+        for enc in encoding:
+            try:
+                return _normalize(s.decode(enc, errors))
+            except UnicodeDecodeError as err:
+                exc = err
+                continue
+        # The only way we get this far is if a UnicodeDecodeError was
+        # raised, otherwise we would have already returned (or raised some
+        # other exception).
+        raise exc  # pylint: disable=raising-bad-type
+    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
 
 
 def to_unicode(s, encoding=None, errors="strict", normalize=False):
@@ -139,33 +108,11 @@ def to_unicode(s, encoding=None, errors="strict", normalize=False):
     if not encoding:
         raise ValueError("encoding cannot be empty")
 
-    exc = None
-    if six.PY3:
-        if isinstance(s, str):
-            return _normalize(s)
-        elif isinstance(s, (bytes, bytearray)):
-            return _normalize(to_str(s, encoding, errors))
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
-    else:
-        # This needs to be str and not six.string_types, since if the string is
-        # already a unicode type, it does not need to be decoded (and doing so
-        # will raise an exception).
-        # pylint: disable=incompatible-py3-code
-        if isinstance(s, unicode):  # pylint: disable=E0602
-            return _normalize(s)
-        elif isinstance(s, (str, bytearray)):
-            for enc in encoding:
-                try:
-                    return _normalize(s.decode(enc, errors))
-                except UnicodeDecodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeDecodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        # pylint: enable=incompatible-py3-code
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    if isinstance(s, str):
+        return _normalize(s)
+    elif isinstance(s, (bytes, bytearray)):
+        return _normalize(to_str(s, encoding, errors))
+    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
 
 
 @jinja_filter("str_to_num")
@@ -190,7 +137,7 @@ def to_none(text):
     """
     Convert a string to None if the string is empty or contains only spaces.
     """
-    if six.text_type(text).strip():
+    if str(text).strip():
         return text
     return None
 
@@ -202,7 +149,7 @@ def is_quoted(value):
     """
     ret = ""
     if (
-        isinstance(value, six.string_types)
+        isinstance(value, str)
         and value[0] == value[-1]
         and value.startswith(("'", '"'))
     ):
@@ -235,35 +182,25 @@ def is_binary(data):
     """
     Detects if the passed string of data is binary or text
     """
-    if not data or not isinstance(data, (six.string_types, six.binary_type)):
+    if not data or not isinstance(data, ((str,), bytes)):
         return False
 
-    if isinstance(data, six.binary_type):
+    if isinstance(data, bytes):
         if b"\0" in data:
             return True
-    elif str("\0") in data:
+    elif "\0" in data:
         return True
 
     text_characters = "".join([chr(x) for x in range(32, 127)] + list("\n\r\t\b"))
     # Get the non-text characters (map each character to itself then use the
     # 'remove' option to get rid of the text characters.)
-    if six.PY3:
-        if isinstance(data, six.binary_type):
-            import salt.utils.data
+    if isinstance(data, bytes):
+        import salt.utils.data
 
-            nontext = data.translate(None, salt.utils.data.encode(text_characters))
-        else:
-            trans = "".maketrans("", "", text_characters)
-            nontext = data.translate(trans)
+        nontext = data.translate(None, salt.utils.data.encode(text_characters))
     else:
-        if isinstance(data, six.text_type):
-            trans_args = ({ord(x): None for x in text_characters},)
-        else:
-            trans_args = (
-                None,
-                str(text_characters),
-            )  # future lint: blacklisted-function
-        nontext = data.translate(*trans_args)
+        trans = "".maketrans("", "", text_characters)
+        nontext = data.translate(trans)
 
     # If more than 30% non-text characters, then
     # this is considered binary data
@@ -286,31 +223,36 @@ def contains_whitespace(text):
     return any(x.isspace() for x in text)
 
 
-def human_to_bytes(size):
+@jinja_filter("human_to_bytes")
+def human_to_bytes(size, default_unit="B", handle_metric=False):
     """
-    Given a human-readable byte string (e.g. 2G, 30M),
+    Given a human-readable byte string (e.g. 2G, 30MB, 64KiB),
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
     .. versionadded:: 2018.3.0
+    .. versionchanged:: 3005
     """
-    sbytes = size[:-1]
-    unit = size[-1]
-    if sbytes.isdigit():
-        sbytes = int(sbytes)
-        if unit == "P":
-            sbytes *= 1125899906842624
-        elif unit == "T":
-            sbytes *= 1099511627776
-        elif unit == "G":
-            sbytes *= 1073741824
-        elif unit == "M":
-            sbytes *= 1048576
-        else:
-            sbytes = 0
-    else:
-        sbytes = 0
-    return sbytes
+    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(size).strip())
+    value = m.group("value")
+    # default unit
+    unit = m.group("unit").lower() or default_unit.lower()
+    try:
+        value = int(value)
+    except ValueError:
+        try:
+            value = float(value)
+        except ValueError:
+            return 0
+    # flag for base ten
+    dec = False
+    if re.match(r"[kmgtpezy]b$", unit):
+        dec = True if handle_metric else False
+    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
+        return 0
+    p = "bkmgtpezy".index(unit[0])
+    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
+    return int(value)
 
 
 def build_whitespace_split_regex(text):
@@ -358,8 +300,8 @@ def build_whitespace_split_regex(text):
     regex = r""
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
-        regex += r"(?:[\s]+)?{0}(?:[\s]+)?".format(r"(?:[\s]+)?".join(parts))
-    return r"(?m)^{0}$".format(regex)
+        regex += r"(?:[\s]+)?{}(?:[\s]+)?".format(r"(?:[\s]+)?".join(parts))
+    return r"(?m)^{}$".format(regex)
 
 
 def expr_match(line, expr):
@@ -381,7 +323,7 @@ def expr_match(line, expr):
         if fnmatch.fnmatch(line, expr):
             return True
         try:
-            if re.match(r"\A{0}\Z".format(expr), line):
+            if re.match(r"\A{}\Z".format(expr), line):
                 return True
         except re.error:
             pass
@@ -415,11 +357,11 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     """
     # Normalize the input so that we have a list
     if blacklist:
-        if isinstance(blacklist, six.string_types):
+        if isinstance(blacklist, str):
             blacklist = [blacklist]
         if not hasattr(blacklist, "__iter__"):
             raise TypeError(
-                "Expecting iterable blacklist, but got {0} ({1})".format(
+                "Expecting iterable blacklist, but got {} ({})".format(
                     type(blacklist).__name__, blacklist
                 )
             )
@@ -427,11 +369,11 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
         blacklist = []
 
     if whitelist:
-        if isinstance(whitelist, six.string_types):
+        if isinstance(whitelist, str):
             whitelist = [whitelist]
         if not hasattr(whitelist, "__iter__"):
             raise TypeError(
-                "Expecting iterable whitelist, but got {0} ({1})".format(
+                "Expecting iterable whitelist, but got {} ({})".format(
                     type(whitelist).__name__, whitelist
                 )
             )
@@ -517,8 +459,8 @@ def print_cli(msg, retries=10, step=0.01):
                 print(msg)
             except UnicodeEncodeError:
                 print(msg.encode("utf-8"))
-        except IOError as exc:
-            err = "{0}".format(exc)
+        except OSError as exc:
+            err = "{}".format(exc)
             if exc.errno != errno.EPIPE:
                 if (
                     "temporarily unavailable" in err or exc.errno in (errno.EAGAIN,)
@@ -563,7 +505,7 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
-    return "---\n{0}\n---".format("\n".join(buf))
+    return "---\n{}\n---".format("\n".join(buf))
 
 
 def get_diff(a, b, *args, **kwargs):

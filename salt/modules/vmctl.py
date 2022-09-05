@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
 
@@ -12,16 +11,12 @@ Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
     target machine.
 """
 
-from __future__ import absolute_import
 
-# Import python libs
 import logging
 import re
 
-# Imoprt salt libs:
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +30,8 @@ def __virtual__():
 
     return (
         False,
-        "The vmm execution module cannot be loaded: either the system is not OpenBSD or the vmctl binary was not found",
+        "The vmm execution module cannot be loaded: either the system is not OpenBSD or"
+        " the vmctl binary was not found",
     )
 
 
@@ -64,7 +60,7 @@ def create_disk(name, size):
         salt '*' vmctl.create_disk /path/to/disk.img size=10G
     """
     ret = False
-    cmd = "vmctl create {0} -s {1}".format(name, size)
+    cmd = "vmctl create {} -s {}".format(name, size)
 
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
@@ -93,7 +89,7 @@ def load(path):
         salt '*' vmctl.load path=/etc/vm.switches.conf
     """
     ret = False
-    cmd = "vmctl load {0}".format(path)
+    cmd = "vmctl load {}".format(path)
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     if result["retcode"] == 0:
         ret = True
@@ -142,7 +138,6 @@ def reset(all=False, vms=False, switches=False):
 
     vms:
         Reset and terminate all VMs.
-
 
     CLI Example:
 
@@ -232,7 +227,7 @@ def start(
         name = _id_to_name(id)
 
     if nics > 0:
-        cmd.append("-i {0}".format(nics))
+        cmd.append("-i {}".format(nics))
 
     # Paths cannot be appended as otherwise the inserted whitespace is treated by
     # vmctl as being part of the path.
@@ -240,10 +235,10 @@ def start(
         cmd.extend(["-b", bootpath])
 
     if memory:
-        cmd.append("-m {0}".format(memory))
+        cmd.append("-m {}".format(memory))
 
     if switch:
-        cmd.append("-n {0}".format(switch))
+        cmd.append("-n {}".format(switch))
 
     if local_iface:
         cmd.append("-L")
@@ -316,7 +311,7 @@ def status(name=None, id=None):
 
     # Grab the header and save it with the lowercase names.
     header = result["stdout"].splitlines()[0].split()
-    header = list([x.lower() for x in header])
+    header = [x.lower() for x in header]
 
     # A VM can be in one of the following states (from vmm.c:vcpu_state_decode())
     # - stopped

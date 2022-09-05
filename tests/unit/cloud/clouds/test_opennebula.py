@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 from salt.cloud.clouds import opennebula
 from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import Third Party Libs
 try:
-    from lxml import etree  # pylint: disable=W0611
+    from lxml import etree  # pylint: disable=unused-import
 
     HAS_XML_LIBS = True
 except ImportError:
@@ -34,7 +26,6 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             opennebula: {
-                "__virtual__": MagicMock(return_value="opennebula"),
                 "__utils__": {"cloud.cache_node": MagicMock()},
                 "__active_provider_name__": "",
             }
@@ -1717,6 +1708,5 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         self.assertRaises(
             SaltCloudSystemExit,
             opennebula._get_xml,
-            "[VirtualMachinePoolInfo] User couldn't be"
-            " authenticated, aborting call.",
+            "[VirtualMachinePoolInfo] User couldn't be authenticated, aborting call.",
         )

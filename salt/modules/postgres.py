@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide Postgres compatibility to salt.
 
@@ -31,29 +30,25 @@ Module to provide Postgres compatibility to salt.
 # This pylint error is popping up where there are no colons?
 # pylint: disable=E8203
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import base64
 import datetime
 import hashlib
+import hmac
+import io
 import logging
 import os
 import pipes
 import re
 import tempfile
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import StringIO
+from salt.ext.saslprep import saslprep
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 try:
@@ -63,11 +58,16 @@ try:
 except ImportError:
     HAS_CSV = False
 
+try:
+    from secrets import token_bytes
+except ImportError:
+    # python <3.6
+    from os import urandom as token_bytes
 
 log = logging.getLogger(__name__)
 
 
-_DEFAULT_PASSWORDS_ENCRYPTION = True
+_DEFAULT_PASSWORDS_ENCRYPTION = "md5"
 _EXTENSION_NOT_INSTALLED = "EXTENSION NOT INSTALLED"
 _EXTENSION_INSTALLED = "EXTENSION INSTALLED"
 _EXTENSION_TO_UPGRADE = "EXTENSION TO UPGRADE"
@@ -127,13 +127,13 @@ def __virtual__():
     for util in utils:
         if not salt.utils.path.which(util):
             if not _find_pg_binary(util):
-                return (False, "{0} was not found".format(util))
+                return (False, "{} was not found".format(util))
     return True
 
 
 def _find_pg_binary(util):
     """
-    ... versionadded::  2016.3.2
+    .. versionadded:: 2016.3.2
 
     Helper function to locate various psql related binaries
     """
@@ -160,7 +160,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
             host = __salt__["config.option"]("postgres.host")
         if not host or host.startswith("/"):
             if "FreeBSD" in __grains__["os_family"]:
-                runas = "pgsql"
+                runas = "postgres"
             elif "OpenBSD" in __grains__["os_family"]:
                 runas = "_postgresql"
             else:
@@ -179,7 +179,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         with salt.utils.files.fopen(pgpassfile, "w") as fp_:
             fp_.write(
                 salt.utils.stringutils.to_str(
-                    "{0}:{1}:*:{2}:{3}".format(
+                    "{}:{}:*:{}:{}".format(
                         "localhost" if not host or host.startswith("/") else host,
                         port if port else "*",
                         user if user else "*",
@@ -216,7 +216,7 @@ def _run_initdb(
     """
     if runas is None:
         if "FreeBSD" in __grains__["os_family"]:
-            runas = "pgsql"
+            runas = "postgres"
         elif "OpenBSD" in __grains__["os_family"]:
             runas = "_postgresql"
         else:
@@ -229,14 +229,14 @@ def _run_initdb(
         raise CommandExecutionError("initdb executable not found.")
     cmd = [
         _INITDB_BIN,
-        "--pgdata={0}".format(name),
-        "--username={0}".format(user),
-        "--auth={0}".format(auth),
-        "--encoding={0}".format(encoding),
+        "--pgdata={}".format(name),
+        "--username={}".format(user),
+        "--auth={}".format(auth),
+        "--encoding={}".format(encoding),
     ]
 
     if locale is not None:
-        cmd.append("--locale={0}".format(locale))
+        cmd.append("--locale={}".format(locale))
 
     # intentionally use short option, as the long option name has been
     # renamed from "xlogdir" to "waldir" in PostgreSQL 10
@@ -250,9 +250,9 @@ def _run_initdb(
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.files.fopen(pgpassfile, "w") as fp_:
-            fp_.write(salt.utils.stringutils.to_str("{0}".format(password)))
+            fp_.write(salt.utils.stringutils.to_str("{}".format(password)))
             __salt__["file.chown"](pgpassfile, runas, "")
-        cmd.extend(["--pwfile={0}".format(pgpassfile)])
+        cmd.extend(["--pwfile={}".format(pgpassfile)])
 
     kwargs = dict(runas=runas, clean_env=True)
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
@@ -279,9 +279,7 @@ def version(
 
         salt '*' postgres.version
     """
-    query = (
-        "SELECT setting FROM pg_catalog.pg_settings " "WHERE name = 'server_version'"
-    )
+    query = "SELECT setting FROM pg_catalog.pg_settings WHERE name = 'server_version'"
     cmd = _psql_cmd(
         "-c",
         query,
@@ -373,7 +371,7 @@ def _psql_cmd(*args, **kwargs):
     if host:
         cmd += ["--host", host]
     if port:
-        cmd += ["--port", six.text_type(port)]
+        cmd += ["--port", str(port)]
     if not maintenance_db:
         maintenance_db = "postgres"
     cmd.extend(["--dbname", maintenance_db])
@@ -443,12 +441,12 @@ def psql_query(
     """
     ret = []
 
-    csv_query = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(query.strip().rstrip(";"))
+    csv_query = "COPY ({}) TO STDOUT WITH CSV HEADER".format(query.strip().rstrip(";"))
 
     # Mark transaction as R/W to achieve write will be allowed
     # Commit is necessary due to transaction
     if write:
-        csv_query = "START TRANSACTION READ WRITE; {0}; COMMIT TRANSACTION;".format(
+        csv_query = "START TRANSACTION READ WRITE; {}; COMMIT TRANSACTION;".format(
             csv_query
         )
 
@@ -466,7 +464,7 @@ def psql_query(
     if cmdret["retcode"] > 0:
         return ret
 
-    csv_file = StringIO(cmdret["stdout"])
+    csv_file = io.StringIO(cmdret["stdout"])
     header = {}
     for row in csv.reader(
         csv_file,
@@ -567,7 +565,7 @@ def _quote_ddl_value(value, quote="'"):
         return None
     if quote in value:  # detect trivial sqli
         raise SaltInvocationError(
-            "Unsupported character {0} in value: {1}".format(quote, value)
+            "Unsupported character {} in value: {}".format(quote, value)
         )
     return "{quote}{value}{quote}".format(quote=quote, value=value)
 
@@ -601,7 +599,7 @@ def db_create(
     """
 
     # Base query to create a database
-    query = 'CREATE DATABASE "{0}"'.format(name)
+    query = 'CREATE DATABASE "{}"'.format(name)
 
     # "With"-options to create a database
     with_args = salt.utils.odict.OrderedDict(
@@ -669,10 +667,10 @@ def db_alter(
     else:
         queries = []
         if owner:
-            queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(name, owner))
+            queries.append('ALTER DATABASE "{}" OWNER TO "{}"'.format(name, owner))
         if tablespace:
             queries.append(
-                'ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(name, tablespace)
+                'ALTER DATABASE "{}" SET TABLESPACE "{}"'.format(name, tablespace)
             )
         for query in queries:
             ret = _psql_prepare_and_run(
@@ -711,9 +709,8 @@ def db_remove(
     """
     for query in [
         'REVOKE CONNECT ON DATABASE "{db}" FROM public;'.format(db=name),
-        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db}' AND pid <> pg_backend_pid();".format(
-            db=name
-        ),
+        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname ="
+        " '{db}' AND pid <> pg_backend_pid();".format(db=name),
         'DROP DATABASE "{db}";'.format(db=name),
     ]:
         ret = _psql_prepare_and_run(
@@ -831,13 +828,13 @@ def tablespace_create(
     owner_query = ""
     options_query = ""
     if owner:
-        owner_query = 'OWNER "{0}"'.format(owner)
+        owner_query = 'OWNER "{}"'.format(owner)
         # should come out looking like: 'OWNER postgres'
     if options:
-        optionstext = ["{0} = {1}".format(k, v) for k, v in six.iteritems(options)]
-        options_query = "WITH ( {0} )".format(", ".join(optionstext))
+        optionstext = ["{} = {}".format(k, v) for k, v in options.items()]
+        options_query = "WITH ( {} )".format(", ".join(optionstext))
         # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
-    query = "CREATE TABLESPACE \"{0}\" {1} LOCATION '{2}' {3}".format(
+    query = "CREATE TABLESPACE \"{}\" {} LOCATION '{}' {}".format(
         name, owner_query, location, options_query
     )
 
@@ -887,17 +884,17 @@ def tablespace_alter(
     queries = []
 
     if new_name:
-        queries.append('ALTER TABLESPACE "{0}" RENAME TO "{1}"'.format(name, new_name))
+        queries.append('ALTER TABLESPACE "{}" RENAME TO "{}"'.format(name, new_name))
     if new_owner:
-        queries.append('ALTER TABLESPACE "{0}" OWNER TO "{1}"'.format(name, new_owner))
+        queries.append('ALTER TABLESPACE "{}" OWNER TO "{}"'.format(name, new_owner))
     if set_option:
         queries.append(
-            'ALTER TABLESPACE "{0}" SET ({1} = {2})'.format(
-                name, set_option.keys()[0], set_option.values()[0]
+            'ALTER TABLESPACE "{}" SET ({} = {})'.format(
+                name, *(next(iter(set_option.items())))
             )
         )
     if reset_option:
-        queries.append('ALTER TABLESPACE "{0}" RESET ({1})'.format(name, reset_option))
+        queries.append('ALTER TABLESPACE "{}" RESET ({})'.format(name, reset_option))
 
     for query in queries:
         ret = _psql_prepare_and_run(
@@ -935,7 +932,7 @@ def tablespace_remove(
 
     .. versionadded:: 2015.8.0
     """
-    query = 'DROP TABLESPACE "{0}"'.format(name)
+    query = 'DROP TABLESPACE "{}"'.format(name)
     ret = _psql_prepare_and_run(
         ["-c", query],
         user=user,
@@ -1000,22 +997,16 @@ def user_list(
 
     query = "".join(
         [
-            "SELECT "
-            'pg_roles.rolname as "name",'
-            'pg_roles.rolsuper as "superuser", '
-            'pg_roles.rolinherit as "inherits privileges", '
-            'pg_roles.rolcreaterole as "can create roles", '
-            'pg_roles.rolcreatedb as "can create databases", '
-            '{0} as "can update system catalogs", '
-            'pg_roles.rolcanlogin as "can login", '
-            '{1} as "replication", '
-            'pg_roles.rolconnlimit as "connections", '
-            "(SELECT array_agg(pg_roles2.rolname)"
-            "    FROM pg_catalog.pg_auth_members"
-            "    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)"
-            '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
-            'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-            'pg_roles.rolconfig  as "defaults variables" ',
+            'SELECT pg_roles.rolname as "name",pg_roles.rolsuper as "superuser",'
+            ' pg_roles.rolinherit as "inherits privileges", pg_roles.rolcreaterole as'
+            ' "can create roles", pg_roles.rolcreatedb as "can create databases", {0}'
+            ' as "can update system catalogs", pg_roles.rolcanlogin as "can login", {1}'
+            ' as "replication", pg_roles.rolconnlimit as "connections", (SELECT'
+            " array_agg(pg_roles2.rolname)    FROM pg_catalog.pg_auth_members    JOIN"
+            " pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)"
+            "    WHERE pg_auth_members.member = pg_roles.oid) as"
+            ' "groups",pg_roles.rolvaliduntil::timestamp(0) as "expiry time",'
+            ' pg_roles.rolconfig  as "defaults variables" ',
             _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
             "FROM pg_roles ",
             _x("LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid "),
@@ -1149,27 +1140,96 @@ def _add_role_flag(string, test, flag, cond=None, prefix="NO", addtxt="", skip=F
             cond = test
         if test is not None:
             if cond:
-                string = "{0} {1}".format(string, flag)
+                string = "{} {}".format(string, flag)
             else:
                 string = "{0} {2}{1}".format(string, flag, prefix)
         if addtxt:
-            string = "{0} {1}".format(string, addtxt)
+            string = "{} {}".format(string, addtxt)
     return string
 
 
 def _maybe_encrypt_password(role, password, encrypted=_DEFAULT_PASSWORDS_ENCRYPTION):
-    """
-    pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
-    """
     if password is not None:
-        password = six.text_type(password)
-    if encrypted and password and not password.startswith("md5"):
-        password = "md5{0}".format(
-            hashlib.md5(
-                salt.utils.stringutils.to_bytes("{0}{1}".format(password, role))
-            ).hexdigest()
-        )
+        password = str(password)
+    else:
+        return None
+
+    if encrypted is True:
+        encrypted = "md5"
+    if encrypted not in (False, "md5", "scram-sha-256"):
+        raise ValueError("Unknown password algorithm: " + str(encrypted))
+
+    if encrypted == "scram-sha-256" and not password.startswith("SCRAM-SHA-256"):
+        password = _scram_sha_256(password)
+    elif encrypted == "md5" and not password.startswith("md5"):
+        log.warning("The md5 password algorithm was deprecated in PostgreSQL 10")
+        password = _md5_password(role, password)
+    elif encrypted is False:
+        log.warning("Unencrypted passwords were removed in PostgreSQL 10")
+
     return password
+
+
+def _verify_password(role, password, verifier, method):
+    """
+    Test the given password against the verifier.
+
+    The given password may already be a verifier, in which case test for
+     simple equality.
+    """
+    if method == "md5" or method is True:
+        if password.startswith("md5"):
+            expected = password
+        else:
+            expected = _md5_password(role, password)
+    elif method == "scram-sha-256":
+        if password.startswith("SCRAM-SHA-256"):
+            expected = password
+        else:
+            match = re.match(r"^SCRAM-SHA-256\$(\d+):([^\$]+?)\$", verifier)
+            if match:
+                iterations = int(match.group(1))
+                salt_bytes = base64.b64decode(match.group(2))
+                expected = _scram_sha_256(
+                    password, salt_bytes=salt_bytes, iterations=iterations
+                )
+            else:
+                expected = object()
+    elif method is False:
+        expected = password
+    else:
+        expected = object()
+
+    return verifier == expected
+
+
+def _md5_password(role, password):
+    return "md5{}".format(
+        hashlib.md5(
+            salt.utils.stringutils.to_bytes("{}{}".format(password, role))
+        ).hexdigest()
+    )
+
+
+def _scram_sha_256(password, salt_bytes=None, iterations=4096):
+    """
+    Build a SCRAM-SHA-256 password verifier.
+
+    Ported from https://doxygen.postgresql.org/scram-common_8c.html
+    """
+    if salt_bytes is None:
+        salt_bytes = token_bytes(16)
+    password = salt.utils.stringutils.to_bytes(saslprep(password))
+    salted_password = hashlib.pbkdf2_hmac("sha256", password, salt_bytes, iterations)
+    stored_key = hmac.new(salted_password, b"Client Key", "sha256").digest()
+    stored_key = hashlib.sha256(stored_key).digest()
+    server_key = hmac.new(salted_password, b"Server Key", "sha256").digest()
+    return "SCRAM-SHA-256${}:{}${}:{}".format(
+        iterations,
+        base64.b64encode(salt_bytes).decode("ascii"),
+        base64.b64encode(stored_key).decode("ascii"),
+        base64.b64encode(server_key).decode("ascii"),
+    )
 
 
 def _role_cmd_args(
@@ -1197,7 +1257,7 @@ def _role_cmd_args(
             login = True
         if typ_ == "group":
             login = False
-    # defaults to encrypted passwords (md5{password}{rolename})
+    # defaults to encrypted passwords
     if encrypted is None:
         encrypted = _DEFAULT_PASSWORDS_ENCRYPTION
     skip_passwd = False
@@ -1207,18 +1267,20 @@ def _role_cmd_args(
         rolepassword is not None
         # first is passwd set
         # second is for handling NOPASSWD
-        and (isinstance(rolepassword, six.string_types) and bool(rolepassword))
+        and (isinstance(rolepassword, str) and bool(rolepassword))
         or (isinstance(rolepassword, bool))
     ):
         skip_passwd = True
-    if isinstance(rolepassword, six.string_types) and bool(rolepassword):
-        escaped_password = "'{0}'".format(
+    if isinstance(rolepassword, str) and bool(rolepassword):
+        escaped_password = "'{}'".format(
             _maybe_encrypt_password(
                 name, rolepassword.replace("'", "''"), encrypted=encrypted
             )
         )
-    if isinstance(valid_until, six.string_types) and bool(valid_until):
-        escaped_valid_until = "'{0}'".format(valid_until.replace("'", "''"),)
+    if isinstance(valid_until, str) and bool(valid_until):
+        escaped_valid_until = "'{}'".format(
+            valid_until.replace("'", "''"),
+        )
     skip_superuser = False
     if bool(db_role) and bool(superuser) == bool(db_role["superuser"]):
         skip_superuser = True
@@ -1232,14 +1294,14 @@ def _role_cmd_args(
         {
             "flag": "CONNECTION LIMIT",
             "test": bool(connlimit),
-            "addtxt": six.text_type(connlimit),
+            "addtxt": str(connlimit),
             "skip": connlimit is None,
         },
         {
             "flag": "ENCRYPTED",
             "test": (encrypted is not None and bool(rolepassword)),
             "skip": skip_passwd or isinstance(rolepassword, bool),
-            "cond": encrypted,
+            "cond": bool(encrypted),
             "prefix": "UN",
         },
         {
@@ -1263,7 +1325,7 @@ def _role_cmd_args(
         if isinstance(groups, list):
             groups = ",".join(groups)
         for group in groups.split(","):
-            sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
+            sub_cmd = '{}; GRANT "{}" TO "{}"'.format(sub_cmd, group, name)
     return sub_cmd
 
 
@@ -1300,8 +1362,8 @@ def _role_create(
         log.info("%s '%s' already exists", typ_.capitalize(), name)
         return False
 
-    sub_cmd = 'CREATE ROLE "{0}" WITH'.format(name)
-    sub_cmd = "{0} {1}".format(
+    sub_cmd = 'CREATE ROLE "{}" WITH'.format(name)
+    sub_cmd = "{} {}".format(
         sub_cmd,
         _role_cmd_args(
             name,
@@ -1426,8 +1488,8 @@ def _role_update(
         log.info("%s '%s' could not be found", typ_.capitalize(), name)
         return False
 
-    sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
-    sub_cmd = "{0} {1}".format(
+    sub_cmd = 'ALTER ROLE "{}" WITH'.format(name)
+    sub_cmd = "{} {}".format(
         sub_cmd,
         _role_cmd_args(
             name,
@@ -1533,7 +1595,7 @@ def _role_remove(
         return False
 
     # user exists, proceed
-    sub_cmd = 'DROP ROLE "{0}"'.format(name)
+    sub_cmd = 'DROP ROLE "{}"'.format(name)
     _psql_prepare_and_run(
         ["-c", sub_cmd],
         runas=runas,
@@ -1567,7 +1629,7 @@ def available_extensions(
 
     """
     exts = []
-    query = "select * " "from pg_available_extensions();"
+    query = "select * from pg_available_extensions();"
     ret = psql_query(
         query,
         user=user,
@@ -1915,14 +1977,14 @@ def create_extension(
             args = ["CREATE EXTENSION"]
             if if_not_exists:
                 args.append("IF NOT EXISTS")
-            args.append('"{0}"'.format(name))
+            args.append('"{}"'.format(name))
             sargs = []
             if schema:
-                sargs.append('SCHEMA "{0}"'.format(schema))
+                sargs.append('SCHEMA "{}"'.format(schema))
             if ext_version:
-                sargs.append("VERSION {0}".format(ext_version))
+                sargs.append("VERSION {}".format(ext_version))
             if from_version:
-                sargs.append("FROM {0}".format(from_version))
+                sargs.append("FROM {}".format(from_version))
             if sargs:
                 args.append("WITH")
                 args.extend(sargs)
@@ -1932,11 +1994,11 @@ def create_extension(
             args = []
             if schema and _EXTENSION_TO_MOVE in mtdata:
                 args.append(
-                    'ALTER EXTENSION "{0}" SET SCHEMA "{1}";'.format(name, schema)
+                    'ALTER EXTENSION "{}" SET SCHEMA "{}";'.format(name, schema)
                 )
             if ext_version and _EXTENSION_TO_UPGRADE in mtdata:
                 args.append(
-                    'ALTER EXTENSION "{0}" UPDATE TO {1};'.format(name, ext_version)
+                    'ALTER EXTENSION "{}" UPDATE TO {};'.format(name, ext_version)
                 )
             cmd = " ".join(args).strip()
         if cmd:
@@ -2147,7 +2209,7 @@ def owner_to(
 
     sqlfile = tempfile.NamedTemporaryFile()
     sqlfile.write("begin;\n")
-    sqlfile.write('alter database "{0}" owner to "{1}";\n'.format(dbname, ownername))
+    sqlfile.write('alter database "{}" owner to "{}";\n'.format(dbname, ownername))
 
     queries = (
         # schemas
@@ -2255,9 +2317,9 @@ def schema_create(
         log.info("'%s' already exists in '%s'", name, dbname)
         return False
 
-    sub_cmd = 'CREATE SCHEMA "{0}"'.format(name)
+    sub_cmd = 'CREATE SCHEMA "{}"'.format(name)
     if owner is not None:
-        sub_cmd = '{0} AUTHORIZATION "{1}"'.format(sub_cmd, owner)
+        sub_cmd = '{} AUTHORIZATION "{}"'.format(sub_cmd, owner)
 
     ret = _psql_prepare_and_run(
         ["-c", sub_cmd],
@@ -2321,7 +2383,7 @@ def schema_remove(
         return False
 
     # schema exists, proceed
-    sub_cmd = 'DROP SCHEMA "{0}"'.format(name)
+    sub_cmd = 'DROP SCHEMA "{}"'.format(name)
     _psql_prepare_and_run(
         ["-c", sub_cmd],
         runas=user,
@@ -2641,7 +2703,7 @@ def language_create(
         log.info("Language %s already exists in %s", name, maintenance_db)
         return False
 
-    query = "CREATE LANGUAGE {0}".format(name)
+    query = "CREATE LANGUAGE {}".format(name)
 
     ret = _psql_prepare_and_run(
         ["-c", query],
@@ -2696,7 +2758,7 @@ def language_remove(
         log.info("Language %s does not exist in %s", name, maintenance_db)
         return False
 
-    query = "DROP LANGUAGE {0}".format(name)
+    query = "DROP LANGUAGE {}".format(name)
 
     ret = _psql_prepare_and_run(
         ["-c", query],
@@ -2725,7 +2787,7 @@ def _make_privileges_list_query(name, object_type, prepend):
                     "ON n.oid = c.relnamespace",
                     "WHERE nspname = '{0}'",
                     "AND relname = '{1}'",
-                    "AND relkind = 'r'",
+                    "AND relkind in ('r', 'v')",
                     "ORDER BY relname",
                 ]
             )
@@ -2884,6 +2946,8 @@ def _get_object_owner(
                     "FROM pg_catalog.pg_proc p",
                     "JOIN pg_catalog.pg_namespace n",
                     "ON n.oid = p.pronamespace",
+                    "JOIN pg_catalog.pg_roles r",
+                    "ON p.proowner = r.oid",
                     "WHERE nspname = '{0}'",
                     "AND p.oid::regprocedure::text = '{1}'",
                     "ORDER BY proname, proargtypes",
@@ -2954,19 +3018,19 @@ def _validate_privileges(object_type, privs, privileges):
 
         if object_type not in _PRIVILEGES_OBJECTS:
             raise SaltInvocationError(
-                "Invalid object_type: {0} provided".format(object_type)
+                "Invalid object_type: {} provided".format(object_type)
             )
 
         if not set(privs).issubset(set(_perms)):
             raise SaltInvocationError(
-                "Invalid privilege(s): {0} provided for object {1}".format(
+                "Invalid privilege(s): {} provided for object {}".format(
                     privileges, object_type
                 )
             )
     else:
         if privileges:
             raise SaltInvocationError(
-                "The privileges option should not " "be set for object_type group"
+                "The privileges option should not be set for object_type group"
             )
 
 
@@ -3064,7 +3128,7 @@ def privileges_list(
 
     if object_type not in _PRIVILEGES_OBJECTS:
         raise SaltInvocationError(
-            "Invalid object_type: {0} provided".format(object_type)
+            "Invalid object_type: {} provided".format(object_type)
         )
 
     rows = psql_query(
@@ -3229,14 +3293,14 @@ def has_privileges(
         else:
             _perms = _PRIVILEGE_TYPE_MAP[object_type]
             if grant_option:
-                perms = dict((_PRIVILEGES_MAP[perm], True) for perm in _perms)
+                perms = {_PRIVILEGES_MAP[perm]: True for perm in _perms}
                 retval = perms == _privileges[name]
             else:
                 perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
                 if "ALL" in _privs:
-                    retval = perms.sort() == _privileges[name].keys().sort()
+                    retval = sorted(perms) == sorted(_privileges[name])
                 else:
-                    retval = set(_privs).issubset(set(_privileges[name].keys()))
+                    retval = set(_privs).issubset(set(_privileges[name]))
             return retval
 
     return False
@@ -3357,35 +3421,32 @@ def privileges_grant(
     _grants = ",".join(_privs)
 
     if object_type in ["table", "sequence"]:
-        on_part = '{0}."{1}"'.format(prepend, object_name)
+        on_part = '{}."{}"'.format(prepend, object_name)
     elif object_type == "function":
-        on_part = "{0}".format(object_name)
+        on_part = "{}".format(object_name)
     else:
-        on_part = '"{0}"'.format(object_name)
+        on_part = '"{}"'.format(object_name)
 
     if grant_option:
         if object_type == "group":
-            query = 'GRANT {0} TO "{1}" WITH ADMIN OPTION'.format(object_name, name)
+            query = 'GRANT {} TO "{}" WITH ADMIN OPTION'.format(object_name, name)
         elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
-            query = (
-                "GRANT {0} ON ALL {1}S IN SCHEMA {2} TO "
-                '"{3}" WITH GRANT OPTION'.format(
-                    _grants, object_type.upper(), prepend, name
-                )
+            query = 'GRANT {} ON ALL {}S IN SCHEMA {} TO "{}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), prepend, name
             )
         else:
-            query = 'GRANT {0} ON {1} {2} TO "{3}" WITH GRANT OPTION'.format(
+            query = 'GRANT {} ON {} {} TO "{}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), on_part, name
             )
     else:
         if object_type == "group":
-            query = 'GRANT {0} TO "{1}"'.format(object_name, name)
+            query = 'GRANT {} TO "{}"'.format(object_name, name)
         elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
-            query = 'GRANT {0} ON ALL {1}S IN SCHEMA {2} TO "{3}"'.format(
+            query = 'GRANT {} ON ALL {}S IN SCHEMA {} TO "{}"'.format(
                 _grants, object_type.upper(), prepend, name
             )
         else:
-            query = 'GRANT {0} ON {1} {2} TO "{3}"'.format(
+            query = 'GRANT {} ON {} {} TO "{}"'.format(
                 _grants, object_type.upper(), on_part, name
             )
 
@@ -3498,7 +3559,7 @@ def privileges_revoke(
         runas=runas,
     ):
         log.info(
-            "The object: %s of type: %s does not" " have privileges: %s set",
+            "The object: %s of type: %s does not have privileges: %s set",
             object_name,
             object_type,
             privileges,
@@ -3508,14 +3569,14 @@ def privileges_revoke(
     _grants = ",".join(_privs)
 
     if object_type in ["table", "sequence"]:
-        on_part = "{0}.{1}".format(prepend, object_name)
+        on_part = "{}.{}".format(prepend, object_name)
     else:
         on_part = object_name
 
     if object_type == "group":
-        query = "REVOKE {0} FROM {1}".format(object_name, name)
+        query = "REVOKE {} FROM {}".format(object_name, name)
     else:
-        query = "REVOKE {0} ON {1} {2} FROM {3}".format(
+        query = "REVOKE {} ON {} {} FROM {}".format(
             _grants, object_type.upper(), on_part, name
         )
 
@@ -3581,7 +3642,7 @@ def datadir_init(
     checksums
         If True, the cluster will be created with data page checksums.
 
-        .. note::  Data page checksums are supported since PostgreSQL 9.3.
+        .. note:: Data page checksums are supported since PostgreSQL 9.3.
 
         .. versionadded:: 2019.2.0
 
@@ -3600,6 +3661,7 @@ def datadir_init(
         password=password,
         encoding=encoding,
         locale=locale,
+        waldir=waldir,
         checksums=checksums,
         runas=runas,
     )

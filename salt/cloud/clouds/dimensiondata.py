@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Dimension Data Cloud Module
 ===========================
@@ -22,9 +21,6 @@ using the existing Libcloud driver for Dimension Data.
 :depends: libcloud >= 1.2.1
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import pprint
 import socket
@@ -43,13 +39,12 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 # Import libcloud
 try:
     import libcloud
-    from libcloud.compute.base import NodeDriver, NodeState
-    from libcloud.compute.base import NodeAuthPassword
-    from libcloud.compute.types import Provider
+    from libcloud.compute.base import NodeAuthPassword, NodeDriver, NodeState
     from libcloud.compute.providers import get_driver
+    from libcloud.compute.types import Provider
     from libcloud.loadbalancer.base import Member
-    from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
+    from libcloud.loadbalancer.types import Provider as Provider_lb
 
     # This work-around for Issue #32743 is no longer needed for libcloud >=
     # 1.4.0. However, older versions of libcloud must still be supported with
@@ -107,11 +102,18 @@ def __virtual__():
     if get_dependencies() is False:
         return False
 
-    for provider, details in six.iteritems(__opts__["providers"]):
+    for provider, details in __opts__["providers"].items():
         if "dimensiondata" not in details:
             continue
 
     return __virtualname__
+
+
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
 
 
 def get_configured_provider():
@@ -120,7 +122,7 @@ def get_configured_provider():
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or "dimensiondata",
+        _get_active_provider_name() or "dimensiondata",
         ("user_id", "key", "region"),
     )
 
@@ -203,7 +205,7 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "dimensiondata", vm_["profile"]
+                __opts__, _get_active_provider_name() or "dimensiondata", vm_["profile"]
             )
             is False
         ):
@@ -214,7 +216,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -267,7 +269,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", event_data, list(event_data)
         ),
@@ -313,7 +315,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug("VM is now running")
     if ssh_interface(vm_) == "private_ips":
@@ -351,7 +353,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -365,6 +367,7 @@ def create(vm_):
 def create_lb(kwargs=None, call=None):
     r"""
     Create a load-balancer configuration.
+
     CLI Example:
 
     .. code-block:: bash

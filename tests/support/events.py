@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.events
     ~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import multiprocessing
 import os
 import time
 from contextlib import contextmanager
 
-# Import Salt libs
 import salt.utils.event
 from salt.utils.process import clean_proc
 
@@ -26,7 +22,7 @@ def eventpublisher_process(sock_dir):
             # Travis is slow
             time.sleep(10)
         else:
-            time.sleep(2)
+            time.sleep(8)
         yield
     finally:
         clean_proc(proc)
@@ -34,22 +30,22 @@ def eventpublisher_process(sock_dir):
 
 class EventSender(multiprocessing.Process):
     def __init__(self, data, tag, wait, sock_dir):
-        super(EventSender, self).__init__()
+        super().__init__()
         self.data = data
         self.tag = tag
         self.wait = wait
         self.sock_dir = sock_dir
 
     def run(self):
-        me = salt.utils.event.MasterEvent(self.sock_dir, listen=False)
-        time.sleep(self.wait)
-        me.fire_event(self.data, self.tag)
-        # Wait a few seconds before tearing down the zmq context
-        if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:
-            # Travis is slow
-            time.sleep(10)
-        else:
-            time.sleep(2)
+        with salt.utils.event.MasterEvent(self.sock_dir, listen=False) as me:
+            time.sleep(self.wait)
+            me.fire_event(self.data, self.tag)
+            # Wait a few seconds before tearing down the zmq context
+            if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:
+                # Travis is slow
+                time.sleep(10)
+            else:
+                time.sleep(2)
 
 
 @contextmanager

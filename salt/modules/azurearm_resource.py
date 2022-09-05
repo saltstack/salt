@@ -1,10 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Resource Execution Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -47,11 +52,12 @@ Azure (ARM) Resource Execution Module
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
+from functools import wraps
 
 # Salt Libs
+import salt.utils.azurearm
 import salt.utils.json
 
 # Azure libs
@@ -82,6 +88,28 @@ def __virtual__():
     return __virtualname__
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def resource_groups_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -111,6 +139,7 @@ def resource_groups_list(**kwargs):
     return result
 
 
+@_deprecation_message
 def resource_group_check_existence(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -137,6 +166,7 @@ def resource_group_check_existence(name, **kwargs):
     return result
 
 
+@_deprecation_message
 def resource_group_get(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -165,6 +195,7 @@ def resource_group_get(name, **kwargs):
     return result
 
 
+@_deprecation_message
 def resource_group_create_or_update(
     name, location, **kwargs
 ):  # pylint: disable=invalid-name
@@ -202,6 +233,7 @@ def resource_group_create_or_update(
     return result
 
 
+@_deprecation_message
 def resource_group_delete(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -229,6 +261,7 @@ def resource_group_delete(name, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -265,6 +298,7 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -306,6 +340,7 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -338,6 +373,7 @@ def deployment_delete(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_check_existence(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -368,6 +404,7 @@ def deployment_check_existence(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_create_or_update(
     name,
     resource_group,
@@ -452,9 +489,7 @@ def deployment_create_or_update(
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -477,12 +512,13 @@ def deployment_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
 
 
+@_deprecation_message
 def deployment_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -514,6 +550,7 @@ def deployment_get(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_cancel(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -545,6 +582,7 @@ def deployment_cancel(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployment_validate(
     name,
     resource_group,
@@ -630,9 +668,7 @@ def deployment_validate(
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -651,12 +687,13 @@ def deployment_validate(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
 
 
+@_deprecation_message
 def deployment_export_template(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -688,6 +725,7 @@ def deployment_export_template(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def deployments_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -719,6 +757,7 @@ def deployments_list(resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def subscriptions_list_locations(subscription_id=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -758,6 +797,7 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
     return result
 
 
+@_deprecation_message
 def subscription_get(subscription_id=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -794,6 +834,7 @@ def subscription_get(subscription_id=None, **kwargs):
     return result
 
 
+@_deprecation_message
 def subscriptions_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -821,6 +862,7 @@ def subscriptions_list(**kwargs):
     return result
 
 
+@_deprecation_message
 def tenants_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -848,6 +890,7 @@ def tenants_list(**kwargs):
     return result
 
 
+@_deprecation_message
 def policy_assignment_delete(name, scope, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -880,6 +923,7 @@ def policy_assignment_delete(name, scope, **kwargs):
     return result
 
 
+@_deprecation_message
 def policy_assignment_create(name, scope, definition_name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -918,7 +962,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
         definition = definition_list[definition_name]
     else:
         definition = {
-            "error": 'The policy definition named "{0}" could not be found.'.format(
+            "error": 'The policy definition named "{}" could not be found.'.format(
                 definition_name
             )
         }
@@ -938,7 +982,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
             )
         except TypeError as exc:
             result = {
-                "error": "The object model could not be built. ({0})".format(str(exc))
+                "error": "The object model could not be built. ({})".format(str(exc))
             }
             return result
 
@@ -952,11 +996,11 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
             result = {"error": str(exc)}
         except SerializationError as exc:
             result = {
-                "error": "The object model could not be parsed. ({0})".format(str(exc))
+                "error": "The object model could not be parsed. ({})".format(str(exc))
             }
     else:
         result = {
-            "error": 'The policy definition named "{0}" could not be found.'.format(
+            "error": 'The policy definition named "{}" could not be found.'.format(
                 definition_name
             )
         }
@@ -964,6 +1008,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
     return result
 
 
+@_deprecation_message
 def policy_assignment_get(name, scope, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -995,6 +1040,7 @@ def policy_assignment_get(name, scope, **kwargs):
     return result
 
 
+@_deprecation_message
 def policy_assignments_list_for_resource_group(
     resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -1030,6 +1076,7 @@ def policy_assignments_list_for_resource_group(
     return result
 
 
+@_deprecation_message
 def policy_assignments_list(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1059,6 +1106,7 @@ def policy_assignments_list(**kwargs):
     return result
 
 
+@_deprecation_message
 def policy_definition_create_or_update(
     name, policy_rule, **kwargs
 ):  # pylint: disable=invalid-name
@@ -1098,9 +1146,7 @@ def policy_definition_create_or_update(
             "resource.policy", "PolicyDefinition", **policy_kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -1113,12 +1159,13 @@ def policy_definition_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
 
 
+@_deprecation_message
 def policy_definition_delete(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1146,6 +1193,7 @@ def policy_definition_delete(name, **kwargs):
     return result
 
 
+@_deprecation_message
 def policy_definition_get(name, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1172,6 +1220,7 @@ def policy_definition_get(name, **kwargs):
     return result
 
 
+@_deprecation_message
 def policy_definitions_list(hide_builtin=False, **kwargs):
     """
     .. versionadded:: 2019.2.0

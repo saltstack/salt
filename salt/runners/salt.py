@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This runner makes Salt's
 execution modules available
@@ -29,20 +28,17 @@ Execution modules are also available to salt runners:
     __salt__['salt.cmd'](fun=fun, args=args, kwargs=kwargs)
 
 """
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 
-# import salt libs
 import salt.client
 import salt.loader
 import salt.pillar
 import salt.utils.args
 from salt.exceptions import SaltClientError
 
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 
 def cmd(fun, *args, **kwargs):
@@ -71,7 +67,7 @@ def cmd(fun, *args, **kwargs):
             overridden by setting an ``id`` configuration parameter in the
             master config file.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -106,7 +102,7 @@ def cmd(fun, *args, **kwargs):
     return (
         functions[fun](*args, **kwargs)
         if fun in functions
-        else "'{0}' is not available.".format(fun)
+        else "'{}' is not available.".format(fun)
     )
 
 
@@ -152,21 +148,20 @@ def execute(
                 days: 1
                 returner: redis
     """
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    try:
-        ret = client.cmd(
-            tgt,
-            fun,
-            arg=arg,
-            timeout=timeout or __opts__["timeout"],
-            tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
-            ret=ret,
-            jid=jid,
-            kwarg=kwarg,
-            **kwargs
-        )
-    except SaltClientError as client_error:
-        log.error("Error while executing %s on %s (%s)", fun, tgt, tgt_type)
-        log.error(client_error)
-        return {}
-    return ret
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        try:
+            return client.cmd(
+                tgt,
+                fun,
+                arg=arg,
+                timeout=timeout or __opts__["timeout"],
+                tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
+                ret=ret,
+                jid=jid,
+                kwarg=kwarg,
+                **kwargs
+            )
+        except SaltClientError as client_error:
+            log.error("Error while executing %s on %s (%s)", fun, tgt, tgt_type)
+            log.error(client_error)
+            return {}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.cloud.exceptions
     ~~~~~~~~~~~~~~~~~~~~
@@ -7,9 +6,7 @@
 
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.defaults.exitcodes
 from salt.exceptions import SaltException
 
@@ -27,8 +24,9 @@ class SaltCloudSystemExit(SaltCloudException):
 
     def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
-        self.message = "{0} [WARNING: salt.cloud.exceptions is deprecated. Please migrate to salt.exceptions!]".format(
-            message
+        self.message = (
+            "{} [WARNING: salt.cloud.exceptions is deprecated. Please migrate to"
+            " salt.exceptions!]".format(message)
         )
         self.exit_code = exit_code
 

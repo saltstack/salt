@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An engine that reads messages from the salt event bus and pushes
 them onto a fluent endpoint.
@@ -36,17 +35,12 @@ All arguments are optional
 :depends: fluent-logger
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.event
 
-# Import third-party libs
 try:
-    from fluent import sender, event
+    from fluent import event, sender
 except ImportError:
     sender = None
 
@@ -84,14 +78,14 @@ def start(host="localhost", port=24224, app="engine"):
     else:
         event_bus = salt.utils.event.get_event(
             "minion",
-            transport=__opts__["transport"],
             opts=__opts__,
             sock_dir=__opts__["sock_dir"],
             listen=True,
         )
     log.info("Fluent engine started")
 
-    while True:
-        salt_event = event_bus.get_event_block()
-        if salt_event:
-            event.Event(app, salt_event)
+    with event_bus:
+        while True:
+            salt_event = event_bus.get_event_block()
+            if salt_event:
+                event.Event(app, salt_event)

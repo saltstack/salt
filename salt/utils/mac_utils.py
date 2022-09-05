@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions for use by mac modules
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, unicode_literals
 
-# Import Python Libraries
 import logging
 import os
 import plistlib
@@ -14,8 +11,6 @@ import time
 import xml.parsers.expat
 
 import salt.grains.extra
-
-# Import Salt Libs
 import salt.modules.cmdmod
 import salt.utils.args
 import salt.utils.files
@@ -28,10 +23,6 @@ from salt.exceptions import (
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.ext import six
-
-# Import Third Party Libs
-from salt.ext.six.moves import range
 
 try:
     import pwd
@@ -51,13 +42,6 @@ __salt__ = {
     "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
     "cmd.run": salt.modules.cmdmod._run_quiet,
 }
-
-if six.PY2:
-
-    class InvalidFileException(Exception):
-        pass
-
-    plistlib.InvalidFileException = InvalidFileException
 
 
 def __virtual__():
@@ -87,8 +71,8 @@ def _run_all(cmd):
         cmd = salt.utils.args.shlex_split(cmd, posix=False)
 
     for idx, item in enumerate(cmd):
-        if not isinstance(cmd[idx], six.string_types):
-            cmd[idx] = six.text_type(cmd[idx])
+        if not isinstance(cmd[idx], str):
+            cmd[idx] = str(cmd[idx])
 
     cmd = " ".join(cmd)
 
@@ -109,10 +93,11 @@ def _run_all(cmd):
     try:
         proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
 
-    except (OSError, IOError) as exc:
+    except OSError as exc:
         raise CommandExecutionError(
-            "Unable to run command '{0}' with the context '{1}', "
-            "reason: {2}".format(cmd, kwargs, exc)
+            "Unable to run command '{}' with the context '{}', reason: {}".format(
+                cmd, kwargs, exc
+            )
         )
 
     ret = {}
@@ -120,7 +105,7 @@ def _run_all(cmd):
     try:
         proc.run()
     except TimedProcTimeoutError as exc:
-        ret["stdout"] = six.text_type(exc)
+        ret["stdout"] = str(exc)
         ret["stderr"] = ""
         ret["retcode"] = 1
         ret["pid"] = proc.process.pid
@@ -169,10 +154,10 @@ def execute_return_success(cmd):
     log.debug("Execute return success %s: %r", cmd, ret)
 
     if ret["retcode"] != 0 or "not supported" in ret["stdout"].lower():
-        msg = "Command Failed: {0}\n".format(cmd)
-        msg += "Return Code: {0}\n".format(ret["retcode"])
-        msg += "Output: {0}\n".format(ret["stdout"])
-        msg += "Error: {0}\n".format(ret["stderr"])
+        msg = "Command Failed: {}\n".format(cmd)
+        msg += "Return Code: {}\n".format(ret["retcode"])
+        msg += "Output: {}\n".format(ret["stdout"])
+        msg += "Error: {}\n".format(ret["stderr"])
         raise CommandExecutionError(msg)
 
     return True
@@ -193,10 +178,10 @@ def execute_return_result(cmd):
     ret = _run_all(cmd)
 
     if ret["retcode"] != 0 or "not supported" in ret["stdout"].lower():
-        msg = "Command Failed: {0}\n".format(cmd)
-        msg += "Return Code: {0}\n".format(ret["retcode"])
-        msg += "Output: {0}\n".format(ret["stdout"])
-        msg += "Error: {0}\n".format(ret["stderr"])
+        msg = "Command Failed: {}\n".format(cmd)
+        msg += "Return Code: {}\n".format(ret["retcode"])
+        msg += "Output: {}\n".format(ret["stdout"])
+        msg += "Error: {}\n".format(ret["stderr"])
         raise CommandExecutionError(msg)
 
     return ret["stdout"]
@@ -237,12 +222,12 @@ def validate_enabled(enabled):
     :return: "on" or "off" or errors
     :rtype: str
     """
-    if isinstance(enabled, six.string_types):
+    if isinstance(enabled, str):
         if enabled.lower() not in ["on", "off", "yes", "no"]:
             msg = (
                 "\nMac Power: Invalid String Value for Enabled.\n"
                 "String values must be 'on' or 'off'/'yes' or 'no'.\n"
-                "Passed: {0}".format(enabled)
+                "Passed: {}".format(enabled)
             )
             raise SaltInvocationError(msg)
 
@@ -314,6 +299,12 @@ def launchctl(sub_cmd, *args, **kwargs):
     cmd = ["launchctl", sub_cmd]
     cmd.extend(args)
 
+    # fix for https://github.com/saltstack/salt/issues/57436
+    if sub_cmd == "bootout":
+        kwargs["success_retcodes"] = [
+            36,
+        ]
+
     # Run command
     kwargs["python_shell"] = False
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
@@ -322,10 +313,10 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Raise an error or return successful result
     if ret["retcode"] or error:
-        out = "Failed to {0} service:\n".format(sub_cmd)
-        out += "stdout: {0}\n".format(ret["stdout"])
-        out += "stderr: {0}\n".format(ret["stderr"])
-        out += "retcode: {0}".format(ret["retcode"])
+        out = "Failed to {} service:\n".format(sub_cmd)
+        out += "stdout: {}\n".format(ret["stdout"])
+        out += "stderr: {}\n".format(ret["stderr"])
+        out += "retcode: {}".format(ret["retcode"])
         raise CommandExecutionError(out)
     else:
         return ret["stdout"] if return_stdout else True
@@ -338,70 +329,51 @@ def _read_plist_file(root, file_name):
     :return:  An empty dictionary if the plist file was invalid, otherwise, a dictionary with plist data
     """
     file_path = os.path.join(root, file_name)
-    log.debug("read_plist: Gathering service info for {}".format(file_path))
+    log.debug("read_plist: Gathering service info for %s", file_path)
 
     # Must be a plist file
     if not file_path.lower().endswith(".plist"):
-        log.debug("read_plist: Not a plist file: {}".format(file_path))
+        log.debug("read_plist: Not a plist file: %s", file_path)
         return {}
 
     # ignore broken symlinks
     if not os.path.exists(os.path.realpath(file_path)):
-        log.warning("read_plist: Ignoring broken symlink: {}".format(file_path))
+        log.warning("read_plist: Ignoring broken symlink: %s", file_path)
         return {}
 
     try:
-        if six.PY2:
-            # py2 plistlib can't read binary plists, and
-            # uses a different API than py3.
-            plist = plistlib.readPlist(file_path)
-        else:
-            with salt.utils.files.fopen(file_path, "rb") as handle:
-                plist = plistlib.load(handle)
+        with salt.utils.files.fopen(file_path, "rb") as handle:
+            plist = plistlib.load(handle)
 
     except plistlib.InvalidFileException:
         # Raised in python3 if the file is not XML.
         # There's nothing we can do; move on to the next one.
         log.warning(
-            'read_plist: Unable to parse "{}" as it is invalid XML: InvalidFileException.'.format(
-                file_path
-            )
+            'read_plist: Unable to parse "%s" as it is invalid XML: InvalidFileException.',
+            file_path,
+        )
+        return {}
+
+    except ValueError as err:
+        # fixes https://github.com/saltstack/salt/issues/58143
+        # choosing not to log a Warning as this would happen on BigSur+ machines.
+        log.debug(
+            "Caught ValueError: '%s', while trying to parse '%s'.", err, file_path
         )
         return {}
 
     except xml.parsers.expat.ExpatError:
-        # Raised by py2 for all errors.
         # Raised by py3 if the file is XML, but with errors.
-        if six.PY3:
-            # There's an error in the XML, so move on.
-            log.warning(
-                'read_plist: Unable to parse "{}" as it is invalid XML: xml.parsers.expat.ExpatError.'.format(
-                    file_path
-                )
-            )
-            return {}
-
-        # Use the system provided plutil program to attempt
-        # conversion from binary.
-        cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(file_path)
-        try:
-            plist_xml = __salt__["cmd.run"](cmd)
-            plist = plistlib.readPlistFromString(plist_xml)
-        except xml.parsers.expat.ExpatError:
-            # There's still an error in the XML, so move on.
-            log.warning(
-                'read_plist: Unable to parse "{}" as it is invalid XML: xml.parsers.expat.ExpatError.'.format(
-                    file_path
-                )
-            )
-            return {}
+        log.warning(
+            'read_plist: Unable to parse "%s" as it is invalid XML: xml.parsers.expat.ExpatError.',
+            file_path,
+        )
+        return {}
 
     if "Label" not in plist:
         # not all launchd plists contain a Label key
         log.debug(
-            "read_plist: Service does not contain a Label key. Skipping {}.".format(
-                file_path
-            )
+            "read_plist: Service does not contain a Label key. Skipping %s.", file_path
         )
         return {}
 
@@ -513,3 +485,25 @@ def console_user(username=False):
         return pwd.getpwuid(uid)[0]
 
     return uid
+
+
+def git_is_stub():
+    """
+    Return whether macOS git is the standard OS stub or a real binary.
+    """
+    # On a fresh macOS install, /usr/bin/git is a stub, which if
+    # accessed, triggers a UI dialog box prompting the user to install
+    # the developer command line tools. We don't want that! So instead,
+    # running the below command will return a path to the installed dev
+    # tools and retcode 0, or print a bunch of info to stderr and
+    # retcode 2.
+    try:
+        cmd = ["/usr/bin/xcode-select", "-p"]
+        _ = subprocess.check_call(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1
+        )
+        log.debug("Xcode command line tools present")
+        return False
+    except subprocess.CalledProcessError:
+        log.debug("Xcode command line tools not present")
+        return True

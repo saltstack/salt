@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 r"""
 Proxy Minion for Cisco NX-OS Switches
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 The Cisco NX-OS Proxy Minion is supported on NX-OS devices for the following connection types:
 1) Connection Type SSH
@@ -69,7 +68,7 @@ save_config:
     instead of this option to improve performance.  The default behavior
     controlled by this option is preserved for backwards compatibility.
 
-Conection SSH Args:
+Connection SSH Args:
 
     prompt_name:
         (REQUIRED when `connection` is `ssh`)
@@ -119,7 +118,7 @@ Conection SSH Args:
         Extra optional arguments used for connecting to switch.
 
     key_accept:
-        Wheather or not to accept the host key of the switch on initial login.
+        Whether or not to accept the host key of the switch on initial login.
         Default: `False`
 
 Connection NXAPI Args:
@@ -162,15 +161,11 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import multiprocessing
 import re
 
-# Import Salt libs
 import salt.utils.nxos
 from salt.exceptions import CommandExecutionError, NxosCliError
 from salt.utils.args import clean_kwargs
@@ -215,7 +210,7 @@ def init(opts=None):
         log.info("NXOS PROXY: Initialize nxapi proxy connection")
         return _init_nxapi(opts)
     else:
-        log.error("Unknown Connection Type: {0}".format(CONNECTION))
+        log.error("Unknown Connection Type: %s", CONNECTION)
         return False
 
 
@@ -252,7 +247,7 @@ def grains():
         if CONNECTION == "nxapi":
             data = data[0]
         ret = salt.utils.nxos.system_info(data)
-        log.debug(ret)
+        log.debug("System Info: %s", ret)
         DEVICE_DETAILS["grains_cache"].update(ret["nxos"])
     return {"nxos": DEVICE_DETAILS["grains_cache"]}
 
@@ -342,7 +337,7 @@ def _init_ssh(opts=None):
         if "prompt_regex" in opts["proxy"]:
             this_prompt = opts["proxy"]["prompt_regex"]
         elif "prompt_name" in opts["proxy"]:
-            this_prompt = "{0}.*#".format(opts["proxy"]["prompt_name"])
+            this_prompt = "{}.*#".format(opts["proxy"]["prompt_name"])
         else:
             log.warning("nxos proxy configuration does not specify a prompt match.")
             this_prompt = ".+#$"
@@ -356,7 +351,7 @@ def _init_ssh(opts=None):
             prompt=this_prompt,
         )
         out, err = DEVICE_DETAILS[_worker_name()].sendline("terminal length 0")
-        log.info("SSH session establised for process {}".format(_worker_name()))
+        log.info("SSH session establised for process %s", _worker_name())
     except Exception as ex:  # pylint: disable=broad-except
         log.error("Unable to connect to %s", opts["proxy"]["host"])
         log.error("Please check the following:\n")
@@ -469,11 +464,12 @@ def _init_nxapi(opts):
             conn_args["host"],
         )
         log.error(
-            "-- Verify that nxapi settings on the NX-OS device and proxy minion config file match"
+            "-- Verify that nxapi settings on the NX-OS device and proxy minion config"
+            " file match"
         )
         log.error("-- Exception Generated: %s", ex)
         raise
-    log.info("nxapi DEVICE_DETAILS info: {}".format(DEVICE_DETAILS))
+    log.info("nxapi DEVICE_DETAILS info: %s", DEVICE_DETAILS)
     return True
 
 

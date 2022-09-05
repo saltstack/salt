@@ -1,5 +1,5 @@
-salt.states.win_iis module
-==========================
+salt.states.win_iis
+===================
 
 .. automodule:: salt.states.win_iis
     :members:

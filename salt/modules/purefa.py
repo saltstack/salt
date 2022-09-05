@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##
 # Copyright 2017 Pure Storage Inc
 #
@@ -51,17 +49,12 @@ Installation Prerequisites
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import platform
 from datetime import datetime
 
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
 
 # Import 3rd party modules
 try:
@@ -111,7 +104,7 @@ def _get_system():
     2) From environment (PUREFA_IP and PUREFA_API)
     3) From the pillar (PUREFA_IP and PUREFA_API)
 
-  """
+    """
     agent = {
         "base": USER_AGENT_BASE,
         "class": __name__,
@@ -241,7 +234,7 @@ def snap_create(name, suffix=None):
     """
     array = _get_system()
     if suffix is None:
-        suffix = "snap-" + six.text_type(
+        suffix = "snap-" + str(
             (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
         )
         suffix = suffix.replace(".", "")

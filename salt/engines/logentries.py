@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An engine that sends events to the Logentries logging service.
 
@@ -7,7 +6,7 @@ An engine that sends events to the Logentries logging service.
 :depends:     ssl, certifi
 :platform:    all
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 To enable this engine the master and/or minion will need the following
 python libraries
@@ -42,21 +41,16 @@ To test this engine
          salt '*' test.ping cmd.run uptime
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
-
-# Import Python libs
 import socket
 import time
 import uuid
 
-# Import Salt libs
 import salt.utils.event
 import salt.utils.json
 
-# Import third party libs
 try:
     import certifi
 
@@ -64,8 +58,7 @@ try:
 except ImportError:
     HAS_CERTIFI = False
 
-# This is here for older python installs, it is needed to setup an
-# encrypted tcp connection
+# This is here for older python installs, it is needed to setup an encrypted tcp connection
 try:
     import ssl
 
@@ -81,7 +74,7 @@ def __virtual__():
     return True if HAS_CERTIFI and HAS_SSL else False
 
 
-class PlainTextSocketAppender(object):
+class PlainTextSocketAppender:
     def __init__(
         self, verbose=True, LE_API="data.logentries.com", LE_PORT=80, LE_TLS_PORT=443
     ):
@@ -135,14 +128,12 @@ class PlainTextSocketAppender(object):
 
     def put(self, data):
         # Replace newlines with Unicode line separator for multi-line events
-        multiline = data.replace("\n", self.LINE_SEP) + str(
-            "\n"
-        )  # future lint: disable=blacklisted-function
+        multiline = data.replace("\n", self.LINE_SEP) + "\n"
         # Send data, reconnect if needed
         while True:
             try:
                 self._conn.send(multiline)
-            except socket.error:
+            except OSError:
                 self.reopen_connection()
                 continue
             break
@@ -187,7 +178,6 @@ def event_bus_context(opts):
     else:
         event_bus = salt.utils.event.get_event(
             "minion",
-            transport=opts["transport"],
             opts=opts,
             sock_dir=opts["sock_dir"],
             listen=True,
@@ -217,15 +207,13 @@ def start(
         while True:
             event = event_bus.get_event()
             if event:
-                # future lint: disable=blacklisted-function
-                msg = str(" ").join(
+                msg = " ".join(
                     (
                         salt.utils.stringutils.to_str(token),
                         salt.utils.stringutils.to_str(tag),
                         salt.utils.json.dumps(event),
                     )
                 )
-                # future lint: enable=blacklisted-function
                 appender.put(msg)
 
         appender.close_connection()

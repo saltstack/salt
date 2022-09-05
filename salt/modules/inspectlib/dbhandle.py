@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2015 SUSE LLC
 #
@@ -15,7 +14,6 @@
 # limitations under the License.
 
 # Import Python LIbs
-from __future__ import absolute_import
 
 from salt.modules.inspectlib.entities import (
     AllowedDir,
@@ -27,7 +25,7 @@ from salt.modules.inspectlib.entities import (
 from salt.modules.inspectlib.fsdb import CsvDB
 
 
-class DBHandleBase(object):
+class DBHandleBase:
     """
     Handle for the *volatile* database, which serves the purpose of caching
     the inspected data. This database can be destroyed or corrupted, so it should
@@ -95,7 +93,7 @@ class DBHandle(DBHandleBase):
         Keep singleton.
         """
         if not cls.__instance:
-            cls.__instance = super(DBHandle, cls).__new__(cls)
+            cls.__instance = super().__new__(cls)
         return cls.__instance
 
     def __init__(self, path):

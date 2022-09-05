@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt runner
 
 .. versionadded:: 2016.11.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
+
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -17,7 +15,7 @@ class SaltRunnerTest(ShellCase):
     Test the salt runner
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_salt_cmd(self):
         """
         test return values of salt.cmd
@@ -29,7 +27,7 @@ class SaltRunnerTest(ShellCase):
         self.assertEqual(out_ret, "True")
         self.assertTrue(return_ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_salt_cmd_invalid(self):
         """
         test return values of salt.cmd invalid parameters

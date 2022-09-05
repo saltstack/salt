@@ -1,21 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm install utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
 from tests.support.case import SPMCase
-from tests.support.helpers import Webserver, destructiveTest, slowTest
+from tests.support.helpers import Webserver
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class SPMInstallTest(SPMCase):
     """
@@ -60,7 +59,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_install_local_dir(self):
         """
         test spm install from local directory
@@ -74,7 +73,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_install_from_repo(self):
         """
         test spm install from repo

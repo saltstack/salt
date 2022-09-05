@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL clusters
 =================================
@@ -13,7 +12,6 @@ Clusters can be set as either absent or present
           - name: 'main'
           - version: '9.3'
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -70,15 +68,15 @@ def present(
     wal_segsize
         Set the WAL segment size, in megabytes
 
-        .. versionadded:: 2015.XX
+        .. versionadded:: 2016.3.0
     """
-    msg = "Cluster {0}/{1} is already present".format(version, name)
+    msg = "Cluster {}/{} is already present".format(version, name)
     ret = {"name": name, "changes": {}, "result": True, "comment": msg}
 
     if __salt__["postgres.cluster_exists"](version, name):
         # check cluster config is correct
         infos = __salt__["postgres.cluster_list"](verbose=True)
-        info = infos["{0}/{1}".format(version, name)]
+        info = infos["{}/{}".format(version, name)]
         # TODO: check locale en encoding configs also
         if any(
             (
@@ -87,7 +85,7 @@ def present(
             )
         ):
             ret["comment"] = (
-                "Cluster {0}/{1} has wrong parameters "
+                "Cluster {}/{} has wrong parameters "
                 "which couldn't be changed on fly.".format(version, name)
             )
             ret["result"] = False
@@ -113,7 +111,7 @@ def present(
     if cluster:
         msg = "The cluster {0}/{1} has been created"
         ret["comment"] = msg.format(version, name)
-        ret["changes"]["{0}/{1}".format(version, name)] = "Present"
+        ret["changes"]["{}/{}".format(version, name)] = "Present"
     else:
         msg = "Failed to create cluster {0}/{1}"
         ret["comment"] = msg.format(version, name)
@@ -131,7 +129,7 @@ def absent(version, name):
     name
         The name of the cluster to remove
 
-        .. versionadded:: 2015.XX
+        .. versionadded:: 2016.3.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
@@ -149,8 +147,7 @@ def absent(version, name):
             return ret
 
     # fallback
-    ret["comment"] = (
-        "Cluster {0}/{1} is not present, so it cannot "
-        "be removed".format(version, name)
+    ret["comment"] = "Cluster {}/{} is not present, so it cannot be removed".format(
+        version, name
     )
     return ret

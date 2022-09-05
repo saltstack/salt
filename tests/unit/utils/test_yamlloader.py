@@ -1,26 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     Unit tests for salt.utils.yamlloader.SaltYamlSafeLoader
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import collections
 import textwrap
 
-import salt.utils.files
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.utils.yamlloader import SaltYamlSafeLoader
-from tests.support.mock import mock_open, patch
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase
-
-# Import Salt Libs
 from yaml.constructor import ConstructorError
+
+import salt.utils.files
+from salt.utils.yamlloader import SaltYamlSafeLoader, yaml
+from tests.support.mock import mock_open, patch
+from tests.support.unit import TestCase
 
 
 class YamlLoaderTestCase(TestCase):
@@ -34,47 +23,15 @@ class YamlLoaderTestCase(TestCase):
         Takes a YAML string, puts it into a mock file, passes that to the YAML
         SaltYamlSafeLoader and then returns the rendered/parsed YAML data
         """
-        if six.PY2:
-            # On Python 2, data read from a filehandle will not already be
-            # unicode, so we need to encode it first to properly simulate
-            # reading from a file. This is because unicode_literals is imported
-            # and all of the data to be used in mock_open will be a unicode
-            # type. Encoding will make it a str.
-            data = salt.utils.data.encode(data)
         with patch("salt.utils.files.fopen", mock_open(read_data=data)) as mocked_file:
             with salt.utils.files.fopen(mocked_file) as mocked_stream:
                 return SaltYamlSafeLoader(mocked_stream).get_data()
-
-    @staticmethod
-    def raise_error(value):
-        raise TypeError("{0!r} is not a unicode string".format(value))
-
-    def assert_unicode(self, value):
-        """
-        Make sure the entire data structure is unicode
-        """
-        if six.PY3:
-            return
-        if isinstance(value, six.string_types):
-            if not isinstance(value, six.text_type):
-                self.raise_error(value)
-        elif isinstance(value, collections.Mapping):
-            for k, v in six.iteritems(value):
-                self.assert_unicode(k)
-                self.assert_unicode(v)
-        elif isinstance(value, collections.Iterable):
-            for item in value:
-                self.assert_unicode(item)
-
-    def assert_matches(self, ret, expected):
-        self.assertEqual(ret, expected)
-        self.assert_unicode(ret)
 
     def test_yaml_basics(self):
         """
         Test parsing an ordinary path
         """
-        self.assert_matches(
+        self.assertEqual(
             self.render_yaml(
                 textwrap.dedent(
                     """\
@@ -91,7 +48,7 @@ class YamlLoaderTestCase(TestCase):
         Test YAML anchors
         """
         # Simple merge test
-        self.assert_matches(
+        self.assertEqual(
             self.render_yaml(
                 textwrap.dedent(
                     """\
@@ -106,7 +63,7 @@ class YamlLoaderTestCase(TestCase):
         )
 
         # Test that keys/nodes are overwritten
-        self.assert_matches(
+        self.assertEqual(
             self.render_yaml(
                 textwrap.dedent(
                     """\
@@ -121,7 +78,7 @@ class YamlLoaderTestCase(TestCase):
         )
 
         # Test merging of lists
-        self.assert_matches(
+        self.assertEqual(
             self.render_yaml(
                 textwrap.dedent(
                     """\
@@ -167,7 +124,7 @@ class YamlLoaderTestCase(TestCase):
         Test that plain (i.e. unqoted) string and non-string scalars are
         properly handled
         """
-        self.assert_matches(
+        self.assertEqual(
             self.render_yaml(
                 textwrap.dedent(
                     """\
@@ -177,3 +134,7 @@ class YamlLoaderTestCase(TestCase):
             ),
             {"foo": {"b": {"foo": "bar", "one": 1, "list": [1, "two", 3]}}},
         )
+
+    def test_not_yaml_monkey_patching(self):
+        if hasattr(yaml, "CSafeLoader"):
+            assert yaml.SafeLoader != yaml.CSafeLoader

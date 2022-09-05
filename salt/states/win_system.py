@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Windows system information
 ========================================
@@ -16,15 +15,11 @@ description.
     This is Erik's computer, don't touch!:
       system.computer_desc: []
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.functools
 import salt.utils.platform
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -51,13 +46,13 @@ def computer_desc(name):
         The desired computer description
     """
     # Just in case someone decides to enter a numeric description
-    name = six.text_type(name)
+    name = str(name)
 
     ret = {
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Computer description already set to '{0}'".format(name),
+        "comment": "Computer description already set to '{}'".format(name),
     }
 
     before_desc = __salt__["system.get_computer_desc"]()
@@ -67,18 +62,18 @@ def computer_desc(name):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Computer description will be changed to '{0}'".format(name)
+        ret["comment"] = "Computer description will be changed to '{}'".format(name)
         return ret
 
     result = __salt__["system.set_computer_desc"](name)
     if result["Computer Description"] == name:
-        ret["comment"] = "Computer description successfully changed to '{0}'".format(
+        ret["comment"] = "Computer description successfully changed to '{}'".format(
             name
         )
         ret["changes"] = {"old": before_desc, "new": name}
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to set computer description to " "'{0}'".format(name)
+        ret["comment"] = "Unable to set computer description to '{}'".format(name)
     return ret
 
 
@@ -95,13 +90,13 @@ def computer_name(name):
         The desired computer name
     """
     # Just in case someone decides to enter a numeric description
-    name = six.text_type(name)
+    name = str(name)
 
     ret = {
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Computer name already set to '{0}'".format(name),
+        "comment": "Computer name already set to '{}'".format(name),
     }
 
     before_name = __salt__["system.get_computer_name"]()
@@ -111,14 +106,14 @@ def computer_name(name):
         return ret
     elif pending_name == name.upper():
         ret["comment"] = (
-            "The current computer name is '{0}', but will be "
-            "changed to '{1}' on the next reboot".format(before_name, name)
+            "The current computer name is '{}', but will be "
+            "changed to '{}' on the next reboot".format(before_name, name)
         )
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Computer name will be changed to '{0}'".format(name)
+        ret["comment"] = "Computer name will be changed to '{}'".format(name)
         return ret
 
     result = __salt__["system.set_computer_name"](name)
@@ -128,13 +123,13 @@ def computer_name(name):
         if (after_pending is not None and after_pending == name) or (
             after_pending is None and after_name == name
         ):
-            ret["comment"] = "Computer name successfully set to '{0}'".format(name)
+            ret["comment"] = "Computer name successfully set to '{}'".format(name)
             if after_pending is not None:
                 ret["comment"] += " (reboot required for change to take effect)"
         ret["changes"] = {"old": before_name, "new": name}
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to set computer name to '{0}'".format(name)
+        ret["comment"] = "Unable to set computer name to '{}'".format(name)
     return ret
 
 
@@ -152,15 +147,15 @@ def hostname(name):
     current_hostname = __salt__["system.get_hostname"]()
 
     if current_hostname.upper() == name.upper():
-        ret["comment"] = "Hostname is already set to '{0}'".format(name)
+        ret["comment"] = "Hostname is already set to '{}'".format(name)
         return ret
 
     out = __salt__["system.set_hostname"](name)
 
     if out:
         ret["comment"] = (
-            "The current hostname is '{0}', "
-            "but will be changed to '{1}' on the next reboot".format(
+            "The current hostname is '{}', "
+            "but will be changed to '{}' on the next reboot".format(
                 current_hostname, name
             )
         )
@@ -174,7 +169,7 @@ def hostname(name):
 
 def workgroup(name):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Manage the workgroup of the computer
 
@@ -204,14 +199,14 @@ def workgroup(name):
     # Notify the user if the requested workgroup is the same
     if current_workgroup.upper() == name.upper():
         ret["result"] = True
-        ret["comment"] = "Workgroup is already set to '{0}'".format(name.upper())
+        ret["comment"] = "Workgroup is already set to '{}'".format(name.upper())
         return ret
 
     # If being run in test-mode, inform the user what is supposed to happen
     if __opts__["test"]:
         ret["result"] = None
         ret["changes"] = {}
-        ret["comment"] = "Computer will be joined to workgroup '{0}'".format(name)
+        ret["comment"] = "Computer will be joined to workgroup '{}'".format(name)
         return ret
 
     # Set our new workgroup, and then immediately ask the machine what it
@@ -227,15 +222,14 @@ def workgroup(name):
     )
 
     # Return our results based on the changes
-    ret = {}
     if res and current_workgroup.upper() == new_workgroup.upper():
         ret["result"] = True
-        ret["comment"] = "The new workgroup '{0}' is the same as '{1}'".format(
+        ret["comment"] = "The new workgroup '{}' is the same as '{}'".format(
             current_workgroup.upper(), new_workgroup.upper()
         )
     elif res:
         ret["result"] = True
-        ret["comment"] = "The workgroup has been changed from '{0}' to '{1}'".format(
+        ret["comment"] = "The workgroup has been changed from '{}' to '{}'".format(
             current_workgroup.upper(), new_workgroup.upper()
         )
         ret["changes"] = {
@@ -244,7 +238,7 @@ def workgroup(name):
         }
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to join the requested workgroup '{0}'".format(
+        ret["comment"] = "Unable to join the requested workgroup '{}'".format(
             new_workgroup.upper()
         )
 
@@ -305,7 +299,7 @@ def join_domain(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Computer already added to '{0}'".format(name),
+        "comment": "Computer already added to '{}'".format(name),
     }
 
     current_domain_dic = __salt__["system.get_domain_workgroup"]()
@@ -317,12 +311,12 @@ def join_domain(
         current_domain = None
 
     if name.lower() == current_domain.lower():
-        ret["comment"] = "Computer already added to '{0}'".format(name)
+        ret["comment"] = "Computer already added to '{}'".format(name)
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Computer will be added to '{0}'".format(name)
+        ret["comment"] = "Computer will be added to '{}'".format(name)
         return ret
 
     result = __salt__["system.join_domain"](
@@ -334,14 +328,14 @@ def join_domain(
         restart=restart,
     )
     if result is not False:
-        ret["comment"] = "Computer added to '{0}'".format(name)
+        ret["comment"] = "Computer added to '{}'".format(name)
         if restart:
             ret["comment"] += "\nSystem will restart"
         else:
             ret["comment"] += "\nSystem needs to be restarted"
         ret["changes"] = {"old": current_domain, "new": name}
     else:
-        ret["comment"] = "Computer failed to join '{0}'".format(name)
+        ret["comment"] = "Computer failed to join '{}'".format(name)
         ret["result"] = False
     return ret
 
@@ -467,18 +461,20 @@ def shutdown(
 
     if only_on_pending_reboot and not __salt__["system.get_pending_reboot"]():
         if __opts__["test"]:
-            ret["comment"] = (
-                "System {0} will be skipped because " "no reboot is pending"
-            ).format(action)
+            ret[
+                "comment"
+            ] = "System {} will be skipped because no reboot is pending".format(action)
         else:
-            ret["comment"] = (
-                "System {0} has been skipped because " "no reboot was pending"
-            ).format(action)
+            ret[
+                "comment"
+            ] = "System {} has been skipped because no reboot was pending".format(
+                action
+            )
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Will attempt to schedule a {0}".format(action)
+        ret["comment"] = "Will attempt to schedule a {}".format(action)
         return ret
 
     ret["result"] = __salt__["system.shutdown"](
@@ -493,9 +489,9 @@ def shutdown(
     if ret["result"]:
         ret["changes"] = {
             "old": "No reboot or shutdown was scheduled",
-            "new": "A {0} has been scheduled".format(action),
+            "new": "A {} has been scheduled".format(action),
         }
-        ret["comment"] = "Request to {0} was successful".format(action)
+        ret["comment"] = "Request to {} was successful".format(action)
     else:
-        ret["comment"] = "Request to {0} failed".format(action)
+        ret["comment"] = "Request to {} failed".format(action)
     return ret

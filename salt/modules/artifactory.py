@@ -1,34 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Module for fetching artifacts from Artifactory
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import base64
+import http.client
 import logging
 import os
+import urllib.request
+import xml.etree.ElementTree as ET
+from urllib.error import HTTPError, URLError
 
-import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
-
-# Import Salt libs
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
-from salt.ext.six.moves.urllib.error import (  # pylint: disable=no-name-in-module
-    HTTPError,
-    URLError,
-)
-
-# Import 3rd party libs
-try:
-    from salt._compat import ElementTree as ET
-
-    HAS_ELEMENT_TREE = True
-except ImportError:
-    HAS_ELEMENT_TREE = False
 
 log = logging.getLogger(__name__)
 
@@ -39,15 +23,7 @@ def __virtual__():
     """
     Only load if elementtree xml library is available.
     """
-    if not HAS_ELEMENT_TREE:
-        return (
-            False,
-            "Cannot load {0} module: ElementTree library unavailable".format(
-                __virtualname__
-            ),
-        )
-    else:
-        return True
+    return True
 
 
 def get_latest_snapshot(
@@ -64,31 +40,33 @@ def get_latest_snapshot(
     use_literal_group_id=False,
 ):
     """
-       Gets latest snapshot of the given artifact
+    Gets latest snapshot of the given artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: artifactory.get_latest_snapshot,"
+        " artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s,"
+        " target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -100,8 +78,10 @@ def get_latest_snapshot(
 
     headers = {}
     if username and password:
-        headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+        headers["Authorization"] = "Basic {}".format(
+            salt.utils.hashutils.base64_encodestring(
+                "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     artifact_metadata = _get_artifact_metadata(
         artifactory_url=artifactory_url,
@@ -144,33 +124,35 @@ def get_snapshot(
     use_literal_group_id=False,
 ):
     """
-       Gets snapshot of the desired version of the artifact
+    Gets snapshot of the desired version of the artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -182,8 +164,10 @@ def get_snapshot(
     )
     headers = {}
     if username and password:
-        headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+        headers["Authorization"] = "Basic {}".format(
+            salt.utils.hashutils.base64_encodestring(
+                "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     snapshot_url, file_name = _get_snapshot_url(
         artifactory_url=artifactory_url,
@@ -216,31 +200,33 @@ def get_latest_release(
     use_literal_group_id=False,
 ):
     """
-       Gets the latest release of the artifact
+    Gets the latest release of the artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Release repository in artifactory to retrieve artifact from, for example: libs-releases
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Release repository in artifactory to retrieve artifact from, for example: libs-releases
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_latest_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " artifactory.get_latest_release(artifactory_url=%s, repository=%s,"
+        " group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -251,8 +237,10 @@ def get_latest_release(
     )
     headers = {}
     if username and password:
-        headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+        headers["Authorization"] = "Basic {}".format(
+            salt.utils.hashutils.base64_encodestring(
+                "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     version = __find_latest_version(
         artifactory_url=artifactory_url,
@@ -291,33 +279,35 @@ def get_release(
     use_literal_group_id=False,
 ):
     """
-       Gets the specified release of the artifact
+    Gets the specified release of the artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Release repository in artifactory to retrieve artifact from, for example: libs-releases
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Release repository in artifactory to retrieve artifact from, for example: libs-releases
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -329,8 +319,10 @@ def get_release(
     )
     headers = {}
     if username and password:
-        headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+        headers["Authorization"] = "Basic {}".format(
+            salt.utils.hashutils.base64_encodestring(
+                "{}:{}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     release_url, file_name = _get_release_url(
         repository,
@@ -527,7 +519,7 @@ def _get_artifact_metadata_xml(
         request = urllib.request.Request(artifact_metadata_url, None, headers)
         artifact_metadata_xml = urllib.request.urlopen(request).read()
     except (HTTPError, URLError) as err:
-        message = "Could not fetch data from url: {0}. ERROR: {1}".format(
+        message = "Could not fetch data from url: {}. ERROR: {}".format(
             artifact_metadata_url, err
         )
         raise CommandExecutionError(message)
@@ -605,7 +597,7 @@ def _get_snapshot_version_metadata_xml(
         request = urllib.request.Request(snapshot_version_metadata_url, None, headers)
         snapshot_version_metadata_xml = urllib.request.urlopen(request).read()
     except (HTTPError, URLError) as err:
-        message = "Could not fetch data from url: {0}. ERROR: {1}".format(
+        message = "Could not fetch data from url: {}. ERROR: {}".format(
             snapshot_version_metadata_url, err
         )
         raise CommandExecutionError(message)
@@ -681,7 +673,7 @@ def __find_latest_version(
         request = urllib.request.Request(latest_version_url, None, headers)
         version = urllib.request.urlopen(request).read()
     except (HTTPError, URLError) as err:
-        message = "Could not fetch data from url: {0}. ERROR: {1}".format(
+        message = "Could not fetch data from url: {}. ERROR: {}".format(
             latest_version_url, err
         )
         raise CommandExecutionError(message)
@@ -706,6 +698,7 @@ def __save_artifact(artifact_url, target_file, headers):
             checksum_url, headers
         )
         if checksum_success:
+            artifact_sum = salt.utils.stringutils.to_unicode(artifact_sum)
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__["file.get_hash"](path=target_file, form="sha1")
             log.debug("Target file (%s) SHA1 SUM: %s", target_file, file_sum)
@@ -714,14 +707,14 @@ def __save_artifact(artifact_url, target_file, headers):
                 result["status"] = True
                 result["target_file"] = target_file
                 result["comment"] = (
-                    "File {0} already exists, checksum matches with Artifactory.\n"
-                    "Checksum URL: {1}".format(target_file, checksum_url)
+                    "File {} already exists, checksum matches with Artifactory.\n"
+                    "Checksum URL: {}".format(target_file, checksum_url)
                 )
                 return result
             else:
                 result["comment"] = (
-                    "File {0} already exists, checksum does not match with Artifactory!\n"
-                    "Checksum URL: {1}".format(target_file, checksum_url)
+                    "File {} already exists, checksum does not match with"
+                    " Artifactory!\nChecksum URL: {}".format(target_file, checksum_url)
                 )
 
         else:
@@ -738,7 +731,7 @@ def __save_artifact(artifact_url, target_file, headers):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            ("Artifact downloaded from URL: {0}".format(artifact_url)),
+            "Artifact downloaded from URL: {}".format(artifact_url),
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file
@@ -780,12 +773,12 @@ def __download(request_url, headers):
 
 
 def __get_error_comment(http_error, request_url):
-    if http_error.code == salt.ext.six.moves.http_client.NOT_FOUND:
+    if http_error.code == http.client.NOT_FOUND:
         comment = "HTTP Error 404. Request URL: " + request_url
-    elif http_error.code == salt.ext.six.moves.http_client.CONFLICT:
+    elif http_error.code == http.client.CONFLICT:
         comment = (
-            "HTTP Error 409: Conflict. Requested URL: {0}. \n"
-            "This error may be caused by reading snapshot artifact from non-snapshot repository.".format(
+            "HTTP Error 409: Conflict. Requested URL: {}. \nThis error may be caused by"
+            " reading snapshot artifact from non-snapshot repository.".format(
                 request_url
             )
         )
@@ -803,7 +796,7 @@ def __append_comment(new_comment, current_comment=""):
 
 class ArtifactoryError(Exception):
     def __init__(self, value):
-        super(ArtifactoryError, self).__init__()
+        super().__init__()
         self.value = value
 
     def __str__(self):

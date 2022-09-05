@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module allows you to manage assistive access on macOS minions with 10.9+
 
@@ -9,13 +8,10 @@ This module allows you to manage assistive access on macOS minions with 10.9+
     salt '*' assistive.install /usr/bin/osascript
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import hashlib
 import logging
-import re
+import sqlite3
 
-# Import salt libs
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
@@ -24,6 +20,9 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 log = logging.getLogger(__name__)
 
 __virtualname__ = "assistive"
+__func_alias__ = {"enable_": "enable"}
+
+TCC_DB_PATH = "/Library/Application Support/com.apple.TCC/TCC.db"
 
 
 def __virtual__():
@@ -55,42 +54,13 @@ def install(app_id, enable=True):
         salt '*' assistive.install /usr/bin/osascript
         salt '*' assistive.install com.smileonmymac.textexpander
     """
-    ge_el_capitan = (
-        True
-        if _LooseVersion(__grains__["osrelease"])
-        >= salt.utils.stringutils.to_str("10.11")
-        else False
-    )
-    ge_mojave = (
-        True
-        if _LooseVersion(__grains__["osrelease"])
-        >= salt.utils.stringutils.to_str("10.14")
-        else False
-    )
-    client_type = _client_type(app_id)
-    enable_str = "1" if enable else "0"
-    cmd = (
-        'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-        "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{0}',{1},{2},1,NULL{3}{4})\"".format(
-            app_id,
-            client_type,
-            enable_str,
-            ",NULL" if ge_el_capitan else "",
-            ",NULL,NULL,NULL,NULL,''" if ge_mojave else "",
-        )
-    )
-
-    call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
-    if call["retcode"] != 0:
-        comment = ""
-        if "stderr" in call:
-            comment += call["stderr"]
-        if "stdout" in call:
-            comment += call["stdout"]
-
-        raise CommandExecutionError("Error installing app: {0}".format(comment))
-
-    return True
+    with TccDB() as db:
+        try:
+            return db.install(app_id, enable=enable)
+        except sqlite3.Error as exc:
+            raise CommandExecutionError(
+                "Error installing app({}): {}".format(app_id, exc)
+            )
 
 
 def installed(app_id):
@@ -108,14 +78,16 @@ def installed(app_id):
         salt '*' assistive.installed /usr/bin/osascript
         salt '*' assistive.installed com.smileonmymac.textexpander
     """
-    for a in _get_assistive_access():
-        if app_id == a[0]:
-            return True
+    with TccDB() as db:
+        try:
+            return db.installed(app_id)
+        except sqlite3.Error as exc:
+            raise CommandExecutionError(
+                "Error checking if app({}) is installed: {}".format(app_id, exc)
+            )
 
-    return False
 
-
-def enable(app_id, enabled=True):
+def enable_(app_id, enabled=True):
     """
     Enable or disable an existing assistive access application.
 
@@ -132,32 +104,16 @@ def enable(app_id, enabled=True):
         salt '*' assistive.enable /usr/bin/osascript
         salt '*' assistive.enable com.smileonmymac.textexpander enabled=False
     """
-    enable_str = "1" if enabled else "0"
-    for a in _get_assistive_access():
-        if app_id == a[0]:
-            cmd = (
-                'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-                "\"UPDATE access SET allowed='{0}' WHERE client='{1}'\"".format(
-                    enable_str, app_id
-                )
+    with TccDB() as db:
+        try:
+            if enabled:
+                return db.enable(app_id)
+            else:
+                return db.disable(app_id)
+        except sqlite3.Error as exc:
+            raise CommandExecutionError(
+                "Error setting enable to {} on app({}): {}".format(enabled, app_id, exc)
             )
-
-            call = __salt__["cmd.run_all"](
-                cmd, output_loglevel="debug", python_shell=False
-            )
-
-            if call["retcode"] != 0:
-                comment = ""
-                if "stderr" in call:
-                    comment += call["stderr"]
-                if "stdout" in call:
-                    comment += call["stdout"]
-
-                raise CommandExecutionError("Error enabling app: {0}".format(comment))
-
-            return True
-
-    return False
 
 
 def enabled(app_id):
@@ -175,11 +131,13 @@ def enabled(app_id):
         salt '*' assistive.enabled /usr/bin/osascript
         salt '*' assistive.enabled com.smileonmymac.textexpander
     """
-    for a in _get_assistive_access():
-        if app_id == a[0] and a[1] == "1":
-            return True
-
-    return False
+    with TccDB() as db:
+        try:
+            return db.enabled(app_id)
+        except sqlite3.Error as exc:
+            raise CommandExecutionError(
+                "Error checking if app({}) is enabled: {}".format(app_id, exc)
+            )
 
 
 def remove(app_id):
@@ -196,52 +154,212 @@ def remove(app_id):
         salt '*' assistive.remove /usr/bin/osascript
         salt '*' assistive.remove com.smileonmymac.textexpander
     """
-    cmd = (
-        'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-        "\"DELETE from access where client='{0}'\"".format(app_id)
-    )
-    call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
-
-    if call["retcode"] != 0:
-        comment = ""
-        if "stderr" in call:
-            comment += call["stderr"]
-        if "stdout" in call:
-            comment += call["stdout"]
-
-        raise CommandExecutionError("Error removing app: {0}".format(comment))
-
-    return True
+    with TccDB() as db:
+        try:
+            return db.remove(app_id)
+        except sqlite3.Error as exc:
+            raise CommandExecutionError(
+                "Error removing app({}): {}".format(app_id, exc)
+            )
 
 
-def _client_type(app_id):
-    """
-    Determine whether the given ID is a bundle ID or a
-    a path to a command
-    """
-    return "1" if app_id[0] == "/" else "0"
+class TccDB:
+    def __init__(self, path=None):
+        if path is None:
+            path = TCC_DB_PATH
+        self.path = path
+        self.connection = None
+        self.ge_mojave_and_catalina = False
+        self.ge_bigsur_and_later = False
 
+    def _check_table_digest(self):
+        # This logic comes from https://github.com/jacobsalmela/tccutil which is
+        # Licensed under GPL-2.0
+        with self.connection as conn:
+            cursor = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE name='access' and type='table'"
+            )
+            for row in cursor.fetchall():
+                digest = hashlib.sha1(row["sql"].encode()).hexdigest()[:10]
+                if digest in ("ecc443615f", "80a4bb6912"):
+                    # Mojave and Catalina
+                    self.ge_mojave_and_catalina = True
+                elif digest in ("3d1c2a0e97", "cef70648de"):
+                    # BigSur and later
+                    self.ge_bigsur_and_later = True
+                else:
+                    raise CommandExecutionError(
+                        "TCC Database structure unknown for digest '{}'".format(digest)
+                    )
 
-def _get_assistive_access():
-    """
-    Get a list of all of the assistive access applications installed,
-    returns as a ternary showing whether each app is enabled or not.
-    """
-    cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "SELECT * FROM access"'
-    call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
+    def _get_client_type(self, app_id):
+        if app_id[0] == "/":
+            # This is a command line utility
+            return 1
+        # This is a bundle ID
+        return 0
 
-    if call["retcode"] != 0:
-        comment = ""
-        if "stderr" in call:
-            comment += call["stderr"]
-        if "stdout" in call:
-            comment += call["stdout"]
+    def installed(self, app_id):
+        with self.connection as conn:
+            cursor = conn.execute(
+                "SELECT * from access WHERE client=? and service='kTCCServiceAccessibility'",
+                (app_id,),
+            )
+            for row in cursor.fetchall():
+                if row:
+                    return True
+        return False
 
-        raise CommandExecutionError("Error: {0}".format(comment))
+    def install(self, app_id, enable=True):
+        client_type = self._get_client_type(app_id)
+        auth_value = 1 if enable else 0
+        if self.ge_bigsur_and_later:
+            # CREATE TABLE IF NOT EXISTS "access" (
+            #   service        TEXT        NOT NULL,
+            #   client         TEXT        NOT NULL,
+            #   client_type    INTEGER     NOT NULL,
+            #   auth_value     INTEGER     NOT NULL,
+            #   auth_reason    INTEGER     NOT NULL,
+            #   auth_version   INTEGER     NOT NULL,
+            #   csreq          BLOB,     policy_id      INTEGER,
+            #   indirect_object_identifier_type    INTEGER,
+            #   indirect_object_identifier         TEXT NOT NULL DEFAULT 'UNUSED',
+            #   indirect_object_code_identity      BLOB,
+            #   flags          INTEGER,
+            #   last_modified  INTEGER     NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER)),
+            #   PRIMARY KEY (
+            #       service,
+            #       client,
+            #       client_type,
+            #       indirect_object_identifier
+            #   ),
+            #   FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE ON UPDATE CASCADE);
+            with self.connection as conn:
+                conn.execute(
+                    """
+                    INSERT or REPLACE INTO access VALUES (
+                        'kTCCServiceAccessibility',
+                        ?,
+                        ?,
+                        ?,
+                        4,
+                        1,
+                        NULL,
+                        NULL,
+                        0,
+                        'UNUSED',
+                        NULL,
+                        0,
+                        0
+                    )
+                    """,
+                    (app_id, client_type, auth_value),
+                )
+        elif self.ge_mojave_and_catalina:
+            # CREATE TABLE IF NOT EXISTS "access" (
+            #   service        TEXT        NOT NULL,
+            #   client         TEXT        NOT NULL,
+            #   client_type    INTEGER     NOT NULL,
+            #   allowed        INTEGER     NOT NULL,
+            #   prompt_count   INTEGER     NOT NULL,
+            #   csreq          BLOB,
+            #   policy_id      INTEGER,
+            #   indirect_object_identifier_type    INTEGER,
+            #   indirect_object_identifier         TEXT DEFAULT 'UNUSED',
+            #   indirect_object_code_identity      BLOB,
+            #   flags          INTEGER,
+            #   last_modified  INTEGER     NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER)),
+            #   PRIMARY KEY (
+            #       service,
+            #       client,
+            #       client_type,
+            #       indirect_object_identifier
+            #   ),
+            #   FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE ON UPDATE CASCADE);
+            with self.connection as conn:
+                conn.execute(
+                    """
+                    INSERT or REPLACE INTO access VALUES(
+                        'kTCCServiceAccessibility',
+                        ?,
+                        ?,
+                        ?,
+                        1,
+                        NULL,
+                        NULL,
+                        NULL,
+                        'UNUSED',
+                        NULL,
+                        0,
+                        0
+                    )
+                    """,
+                    (app_id, client_type, auth_value),
+                )
+        return True
 
-    out = call["stdout"]
-    return re.findall(
-        r"kTCCServiceAccessibility\|(.*)\|[0-9]{1}\|([0-9]{1})\|[0-9]{1}\|",
-        out,
-        re.MULTILINE,
-    )
+    def enabled(self, app_id):
+        if self.ge_bigsur_and_later:
+            column = "auth_value"
+        elif self.ge_mojave_and_catalina:
+            column = "allowed"
+        with self.connection as conn:
+            cursor = conn.execute(
+                "SELECT * from access WHERE client=? and service='kTCCServiceAccessibility'",
+                (app_id,),
+            )
+            for row in cursor.fetchall():
+                if row[column]:
+                    return True
+        return False
+
+    def enable(self, app_id):
+        if not self.installed(app_id):
+            return False
+        if self.ge_bigsur_and_later:
+            column = "auth_value"
+        elif self.ge_mojave_and_catalina:
+            column = "allowed"
+        with self.connection as conn:
+            conn.execute(
+                "UPDATE access SET {} = ? WHERE client=? AND service IS 'kTCCServiceAccessibility'".format(
+                    column
+                ),
+                (1, app_id),
+            )
+        return True
+
+    def disable(self, app_id):
+        if not self.installed(app_id):
+            return False
+        if self.ge_bigsur_and_later:
+            column = "auth_value"
+        elif self.ge_mojave_and_catalina:
+            column = "allowed"
+        with self.connection as conn:
+            conn.execute(
+                "UPDATE access SET {} = ? WHERE client=? AND service IS 'kTCCServiceAccessibility'".format(
+                    column
+                ),
+                (0, app_id),
+            )
+        return True
+
+    def remove(self, app_id):
+        if not self.installed(app_id):
+            return False
+        with self.connection as conn:
+            conn.execute(
+                "DELETE from access where client IS ? AND service IS 'kTCCServiceAccessibility'",
+                (app_id,),
+            )
+        return True
+
+    def __enter__(self):
+        self.connection = sqlite3.connect(self.path)
+        self.connection.row_factory = sqlite3.Row
+        self._check_table_digest()
+        return self
+
+    def __exit__(self, *_):
+        self.connection.close()

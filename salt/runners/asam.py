@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Novell ASAM Runner
 ==================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Runner to interact with Novell ASAM Fan-Out Driver
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 
 To use this runner, set up the Novell Fan-Out Driver URL, username and password in the
 master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``:
@@ -18,9 +17,11 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``
       prov1.domain.com
         username: "testuser"
         password: "verybadpass"
+        verify_ssl: true
       prov2.domain.com
         username: "testuser"
         password: "verybadpass"
+        verify_ssl: true
 
 .. note::
 
@@ -28,24 +29,22 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``
     is not using the defaults. Default is ``protocol: https`` and ``port: 3451``.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 HAS_LIBS = False
 try:
+    import html.parser
+
     import requests
-    from salt.ext.six.moves.html_parser import HTMLParser  # pylint: disable=E0611
 
     HAS_LIBS = True
 
-    class ASAMHTMLParser(HTMLParser):  # fix issue #30477
+    # pylint: disable=abstract-method
+
+    class ASAMHTMLParser(html.parser.HTMLParser):  # fix issue #30477
         def __init__(self):
-            HTMLParser.__init__(self)
+            html.parser.HTMLParser.__init__(self)
             self.data = []
 
         def handle_starttag(self, tag, attrs):
@@ -55,6 +54,8 @@ try:
                 if attr[0] != "href":
                     return
                 self.data.append(attr[1])
+
+    # pylint: enable=abstract-method
 
 
 except ImportError:
@@ -85,11 +86,15 @@ def _get_asam_configuration(driver_url=""):
 
     if asam_config:
         try:
-            for asam_server, service_config in six.iteritems(asam_config):
+            for asam_server, service_config in asam_config.items():
                 username = service_config.get("username", None)
                 password = service_config.get("password", None)
                 protocol = service_config.get("protocol", "https")
                 port = service_config.get("port", 3451)
+                verify_ssl = service_config.get("verify_ssl")
+
+                if verify_ssl is None:
+                    verify_ssl = True
 
                 if not username or not password:
                     log.error(
@@ -100,20 +105,27 @@ def _get_asam_configuration(driver_url=""):
                     return False
 
                 ret = {
-                    "platform_edit_url": "{0}://{1}:{2}/config/PlatformEdit.html".format(
+                    "platform_edit_url": "{}://{}:{}/config/PlatformEdit.html".format(
                         protocol, asam_server, port
                     ),
-                    "platform_config_url": "{0}://{1}:{2}/config/PlatformConfig.html".format(
-                        protocol, asam_server, port
+                    "platform_config_url": (
+                        "{}://{}:{}/config/PlatformConfig.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
-                    "platformset_edit_url": "{0}://{1}:{2}/config/PlatformSetEdit.html".format(
-                        protocol, asam_server, port
+                    "platformset_edit_url": (
+                        "{}://{}:{}/config/PlatformSetEdit.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
-                    "platformset_config_url": "{0}://{1}:{2}/config/PlatformSetConfig.html".format(
-                        protocol, asam_server, port
+                    "platformset_config_url": (
+                        "{}://{}:{}/config/PlatformSetConfig.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
                     "username": username,
                     "password": password,
+                    "verify_ssl": verify_ssl,
                 }
 
                 if (not driver_url) or (driver_url == asam_server):
@@ -212,9 +224,9 @@ def remove_platform(name, server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Failed to look up existing platforms on {0}".format(server_url)
+        err_msg = "Failed to look up existing platforms on {}".format(server_url)
         log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
@@ -224,26 +236,26 @@ def remove_platform(name, server_url):
     if platformset_name:
         log.debug(platformset_name)
         data["platformName"] = name
-        data["platformSetName"] = six.text_type(platformset_name)
+        data["platformSetName"] = str(platformset_name)
         data["postType"] = "platformRemove"
         data["Submit"] = "Yes"
         try:
-            html_content = _make_post_request(url, data, auth, verify=False)
+            html_content = _make_post_request(
+                url, data, auth, verify=config["verify_ssl"]
+            )
         except Exception as exc:  # pylint: disable=broad-except
-            err_msg = "Failed to delete platform from {1}".format(server_url)
+            err_msg = "Failed to delete platform from {}".format(server_url)
             log.error("%s:\n%s", err_msg, exc)
             return {name: err_msg}
 
         parser = _parse_html_content(html_content)
         platformset_name = _get_platformset_name(parser.data, name)
         if platformset_name:
-            return {name: "Failed to delete platform from {0}".format(server_url)}
+            return {name: "Failed to delete platform from {}".format(server_url)}
         else:
-            return {name: "Successfully deleted platform from {0}".format(server_url)}
+            return {name: "Successfully deleted platform from {}".format(server_url)}
     else:
-        return {
-            name: "Specified platform name does not exist on {0}".format(server_url)
-        }
+        return {name: "Specified platform name does not exist on {}".format(server_url)}
 
 
 def list_platforms(server_url):
@@ -269,7 +281,7 @@ def list_platforms(server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms"
         log.error("%s:\n%s", err_msg, exc)
@@ -307,7 +319,7 @@ def list_platform_sets(server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platform sets"
         log.error("%s:\n%s", err_msg, exc)
@@ -339,11 +351,11 @@ def add_platform(name, platform_set, server_url):
 
     platforms = list_platforms(server_url)
     if name in platforms[server_url]:
-        return {name: "Specified platform already exists on {0}".format(server_url)}
+        return {name: "Specified platform already exists on {}".format(server_url)}
 
     platform_sets = list_platform_sets(server_url)
     if platform_set not in platform_sets[server_url]:
-        return {name: "Specified platform set does not exist on {0}".format(server_url)}
+        return {name: "Specified platform set does not exist on {}".format(server_url)}
 
     url = config["platform_edit_url"]
 
@@ -359,14 +371,14 @@ def add_platform(name, platform_set, server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Failed to add platform on {0}".format(server_url)
+        err_msg = "Failed to add platform on {}".format(server_url)
         log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
     platforms = list_platforms(server_url)
     if name in platforms[server_url]:
-        return {name: "Successfully added platform on {0}".format(server_url)}
+        return {name: "Successfully added platform on {}".format(server_url)}
     else:
-        return {name: "Failed to add platform on {0}".format(server_url)}
+        return {name: "Failed to add platform on {}".format(server_url)}

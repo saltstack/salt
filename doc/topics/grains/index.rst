@@ -125,6 +125,8 @@ For this example to work, you would need to have defined the grain
 Writing Grains
 ==============
 
+.. include:: ../../_incl/grains_passwords.rst
+
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
@@ -146,12 +148,12 @@ dictionary. For example:
 .. code-block:: python
 
    def yourfunction():
-        # initialize a grains dictionary
-        grains = {}
-        # Some code for logic that sets grains like
-        grains['yourcustomgrain'] = True
-        grains['anothergrain'] = 'somevalue'
-        return grains
+       # initialize a grains dictionary
+       grains = {}
+       # Some code for logic that sets grains like
+       grains["yourcustomgrain"] = True
+       grains["anothergrain"] = "somevalue"
+       return grains
 
 The name of the function does not matter and will not factor into the grains
 data at all; only the keys/values returned become part of the grains.
@@ -205,19 +207,19 @@ grain data structure. For example, consider this custom grain file:
 
     #!/usr/bin/env python
     def _my_custom_grain():
-        my_grain = {'foo': 'bar', 'hello': 'world'}
+        my_grain = {"foo": "bar", "hello": "world"}
         return my_grain
 
 
     def main():
         # initialize a grains dictionary
         grains = {}
-        grains['my_grains'] = _my_custom_grain()
+        grains["my_grains"] = _my_custom_grain()
         return grains
 
 The output of this example renders like so:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local grains.items
     local:
@@ -235,7 +237,7 @@ the function will be rendered twice by Salt in the items output: once for the
 ``my_custom_grain`` call itself, and again when it is called in the ``main``
 function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local grains.items
     local:

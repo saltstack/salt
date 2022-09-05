@@ -1,5 +1,5 @@
-salt.beacons.bonjour_announce module
-====================================
+salt.beacons.bonjour_announce
+=============================
 
 .. automodule:: salt.beacons.bonjour_announce
     :members:

@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Validate the mac-keychain module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
+import pytest
+
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root, slowTest
+from tests.support.helpers import runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 
-@destructiveTest
-@skip_if_not_root
+@pytest.mark.destructive_test
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacKeychainModuleTest(ModuleCase):
     """
     Integration tests for the mac_keychain module
@@ -39,7 +37,7 @@ class MacKeychainModuleTest(ModuleCase):
         if self.cert_alias in certs_list:
             self.run_function("keychain.uninstall", [self.cert_alias])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_keychain_install(self):
         """
         Tests that attempts to install a certificate
@@ -51,7 +49,7 @@ class MacKeychainModuleTest(ModuleCase):
         certs_list = self.run_function("keychain.list_certs")
         self.assertIn(self.cert_alias, certs_list)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_keychain_uninstall(self):
         """
         Tests that attempts to uninstall a certificate
@@ -69,11 +67,11 @@ class MacKeychainModuleTest(ModuleCase):
 
         # check to ensure the cert was uninstalled
         try:
-            self.assertNotIn(self.cert_alias, six.text_type(certs_list))
+            self.assertNotIn(self.cert_alias, str(certs_list))
         except CommandExecutionError:
             self.run_function("keychain.uninstall", [self.cert_alias])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_keychain_get_friendly_name(self):
         """
         Test that attempts to get friendly name of a cert
@@ -89,7 +87,7 @@ class MacKeychainModuleTest(ModuleCase):
         )
         self.assertEqual(get_name, self.cert_alias)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_keychain_get_default_keychain(self):
         """
         Test that attempts to get the default keychain

@@ -1,20 +1,98 @@
+{%- from 'libvirt_macros.jinja' import opt_attribute as opt_attribute -%}
 <network>
   <name>{{ name }}</name>
+{%- if bridge %}
   <bridge name='{{ bridge }}'/>
-  <forward mode='{{ forward }}'/>{% if vport != None %}
-  <virtualport type='{{ vport }}'/>{% endif %}{% if tag != None %}
-  <vlan>
-    <tag id='{{ tag }}'/>
-  </vlan>{% endif %}
-  {% for ip_config in ip_configs %}
+{%- endif %}
+{%- if mtu %}
+  <mtu size='{{ mtu }}'/>
+{%- endif %}
+{%- if domain %}
+  <domain name='{{ domain.name }}'{{ opt_attribute(domain, "localOnly", yesno) }}/>
+{%- endif %}
+{%- if forward %}
+  <forward mode='{{ forward }}'{% if forward == 'hostdev' %} managed='yes'{% endif %}>
+{%- endif %}
+{%- if nat %}
+    <nat>
+  {%- if nat.address %}
+      <address start='{{ nat.address.start }}' end='{{ nat.address.end }}'/>
+  {%- endif %}
+  {%- if nat.port %}
+      <port start='{{ nat.port.start }}' end='{{ nat.port.end }}'/>
+  {%- endif %}
+    </nat>
+{%- endif %}
+{%- for iface in interfaces %}
+    <interface dev='{{ iface }}'/>
+{%- endfor %}
+{%- for addr in addresses %}
+    <address type='pci' domain='0x{{ addr.domain }}' bus='0x{{ addr.bus }}' slot='0x{{ addr.slot }}' function='0x{{ addr.function }}'/>
+{%- endfor %}
+{%- if pf %}
+    <pf dev='{{ pf }}'/>
+{%- endif %}
+{%- if forward %}
+  </forward>
+{%- endif %}
+{%- if vport %}
+  <virtualport type='{{ vport.type }}'>
+  {%- if vport.parameters %}
+    <parameters{%- for atr, val in vport.parameters.items() %} {{ atr }}='{{ val }}' {%- endfor %}/>
+  {%- endif %}
+  </virtualport>
+{%- endif %}
+{%- if vlan %}
+  <vlan{{ opt_attribute(vlan, "trunk", yesno) }}>
+  {%- for tag in vlan.tags %}
+    <tag id='{{ tag.id }}'{{ opt_attribute(tag, "nativeMode") }}/>
+  {%- endfor %}
+  </vlan>
+{%- endif %}
+{%- if dns %}
+  <dns>
+  {%- for forwarder in dns.forwarders %}
+    <forwarder{{ opt_attribute(forwarder, "domain") }}{{ opt_attribute(forwarder, "addr") }}/>
+  {%- endfor %}
+  {%- for key in dns.txt.keys()|sort %}
+    <txt name='{{ key }}' value='{{ dns.txt[key] }}'/>
+  {%- endfor %}
+  {%- for ip in dns.hosts.keys()|sort %}
+    <host ip='{{ ip }}'>
+    {%- for hostname in dns.hosts[ip] %}
+      <hostname>{{ hostname }}</hostname>
+    {%- endfor %}
+    </host>
+  {%- endfor %}
+  {%- for srv in dns.srvs %}
+    <srv service='{{ srv.name }}' protocol='{{ srv.protocol }}'
+       {{ opt_attribute(srv, "port") }}
+       {{ opt_attribute(srv, "target") }}
+       {{ opt_attribute(srv, "priority") }}
+       {{ opt_attribute(srv, "weight") }}
+       {{ opt_attribute(srv, "domain") }}/>
+  {%- endfor %}
+  </dns>
+{%- endif %}
+{%- for ip_config in ip_configs %}
   <ip family='ipv{{ ip_config.address.version }}'
-      address='{{ ip_config.address.network_address }}'
+      address='{{ ip_config.address.hosts()|first }}'
       prefix='{{ ip_config.address.prefixlen }}'>
     <dhcp>
-      {% for range in ip_config.dhcp_ranges %}
+    {%- for range in ip_config.dhcp_ranges %}
       <range start='{{ range.start }}' end='{{ range.end }}' />
-      {% endfor %}
+    {%- endfor %}
+    {%- for ip in ip_config.hosts.keys()|sort %}
+      {%- set host = ip_config.hosts[ip] %}
+      <host ip='{{ ip }}'{{ opt_attribute(host, 'mac') }}{{ opt_attribute(host, 'id') }}{{ opt_attribute(host, 'name') }}/>
+    {%- endfor %}
+    {%- if ip_config.bootp %}
+      <bootp file='{{ ip_config.bootp.file }}'{{ opt_attribute(ip_config.bootp, "server") }}/>
+    {%- endif %}
     </dhcp>
+  {%- if ip_config.tftp %}
+    <tftp root='{{ ip_config.tftp }}'/>
+  {%- endif %}
   </ip>
-  {% endfor %}
+{%- endfor %}
 </network>

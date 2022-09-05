@@ -41,9 +41,10 @@ connection object, then that connection object is returned. For instance, the
 
 .. code-block:: python
 
-    conn = sqlite3.connect(__opts__['spm_db'], isolation_level=None)
-    ...
-    return conn
+   def myfunc():
+       conn = sqlite3.connect(__opts__["spm_db"], isolation_level=None)
+       ...
+       return conn
 
 SPM itself will not use this connection object; it will be passed in as-is to
 the other functions in the module. Therefore, when you set up this object, make
@@ -259,7 +260,7 @@ This function will not generally be more complex than:
 .. code-block:: python
 
     def hash_file(path, hashobj, conn=None):
-        with salt.utils.files.fopen(path, 'r') as f:
+        with salt.utils.files.fopen(path, "r") as f:
             hashobj.update(f.read())
             return hashobj.hexdigest()
 

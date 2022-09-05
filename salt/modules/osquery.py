@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Support for OSQuery - https://osquery.io.
 
 .. versionadded:: 2015.8.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
@@ -40,7 +36,7 @@ def _table_attrs(table):
     """
     Helper function to find valid table attributes
     """
-    cmd = ["osqueryi"] + ["--json"] + ["pragma table_info({0})".format(table)]
+    cmd = ["osqueryi"] + ["--json"] + ["pragma table_info({})".format(table)]
     res = __salt__["cmd.run_all"](cmd)
     if res["retcode"] == 0:
         attrs = []
@@ -87,14 +83,12 @@ def _osquery_cmd(table, attrs=None, where=None, format="json"):
                         ret["result"] = False
                         ret[
                             "comment"
-                        ] = "{0} is not a valid attribute for table {1}".format(
-                            a, table
-                        )
+                        ] = "{} is not a valid attribute for table {}".format(a, table)
                         return ret
                 _attrs = ",".join(attrs)
             else:
                 ret["result"] = False
-                ret["comment"] = "Invalid table {0}.".format(table)
+                ret["comment"] = "Invalid table {}.".format(table)
                 return ret
         else:
             ret["comment"] = "attrs must be specified as a list."
@@ -103,12 +97,12 @@ def _osquery_cmd(table, attrs=None, where=None, format="json"):
     else:
         _attrs = "*"
 
-    sql = "select {0} from {1}".format(_attrs, table)
+    sql = "select {} from {}".format(_attrs, table)
 
     if where:
-        sql = "{0} where {1}".format(sql, where)
+        sql = "{} where {}".format(sql, where)
 
-    sql = "{0};".format(sql)
+    sql = "{};".format(sql)
 
     res = _osquery(sql)
     if res["result"]:

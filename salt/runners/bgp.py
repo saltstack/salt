@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 BGP Finder
 ==========
@@ -97,25 +96,19 @@ Configuration
               - flap_count
             outputter: yaml
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt lib
 import salt.output
-from salt.ext import six
-from salt.ext.six.moves import map
 
-# Import third party libs
 try:
-    from netaddr import IPNetwork
-    from netaddr import IPAddress
+    # pylint: disable=unused-import,no-name-in-module
+    from napalm.base import helpers as napalm_helpers
+    from netaddr import IPAddress, IPNetwork
 
-    # pylint: disable=unused-import
-    from napalm_base import helpers as napalm_helpers
+    # pylint: enable=unused-import,no-name-in-module
 
-    # pylint: enable=unused-import
-    HAS_NAPALM_BASE = True
+    HAS_NAPALM = True
 except ImportError:
-    HAS_NAPALM_BASE = False
+    HAS_NAPALM = False
 
 
 # -----------------------------------------------------------------------------
@@ -150,9 +143,9 @@ _DEFAULT_LABELS_MAPPING = {
 
 
 def __virtual__():
-    if HAS_NAPALM_BASE:
+    if HAS_NAPALM:
         return __virtualname__
-    return (False, "The napalm-base module could not be imported")
+    return (False, "The napalm module could not be imported")
 
 
 # -----------------------------------------------------------------------------
@@ -189,7 +182,7 @@ def _compare_match(dict1, dict2):
     """
     Compare two dictionaries and return a boolean value if their values match.
     """
-    for karg, warg in six.iteritems(dict1):
+    for karg, warg in dict1.items():
         if karg in dict2 and dict2[karg] != warg:
             return False
     return True
@@ -298,7 +291,7 @@ def neighbors(*asns, **kwargs):
     # __pub args not used in this runner (yet)
     kwargs_copy = {}
     kwargs_copy.update(kwargs)
-    for karg, _ in six.iteritems(kwargs_copy):
+    for karg, _ in kwargs_copy.items():
         if karg.startswith("__pub"):
             kwargs.pop(karg)
     if not asns and not kwargs:
@@ -328,7 +321,7 @@ def neighbors(*asns, **kwargs):
         if asns:
             title_parts.append(
                 "BGP Neighbors for {asns}".format(
-                    asns=", ".join([six.text_type(asn) for asn in asns])
+                    asns=", ".join([str(asn) for asn in asns])
                 )
             )
         if neighbor_ip:
@@ -355,19 +348,21 @@ def neighbors(*asns, **kwargs):
                 )
             )
         title = "\n".join(title_parts)
-    for minion, get_bgp_neighbors_minion in six.iteritems(
-        get_bgp_neighbors_all
-    ):  # pylint: disable=too-many-nested-blocks
+    for (
+        minion,
+        get_bgp_neighbors_minion,
+    ) in get_bgp_neighbors_all.items():  # pylint: disable=too-many-nested-blocks
         if not get_bgp_neighbors_minion.get("result"):
             continue  # ignore empty or failed mines
         if device and minion != device:
             # when requested to display only the neighbors on a certain device
             continue
         get_bgp_neighbors_minion_out = get_bgp_neighbors_minion.get("out", {})
-        for vrf, vrf_bgp_neighbors in six.iteritems(
-            get_bgp_neighbors_minion_out
-        ):  # pylint: disable=unused-variable
-            for asn, get_bgp_neighbors_minion_asn in six.iteritems(vrf_bgp_neighbors):
+        for (
+            vrf,
+            vrf_bgp_neighbors,
+        ) in get_bgp_neighbors_minion_out.items():  # pylint: disable=unused-variable
+            for asn, get_bgp_neighbors_minion_asn in vrf_bgp_neighbors.items():
                 if asns and asn not in asns:
                     # if filtering by AS number(s),
                     # will ignore if this AS number key not in that list
@@ -394,12 +389,14 @@ def neighbors(*asns, **kwargs):
                     if "vrf" in display_fields:
                         row["vrf"] = vrf
                     if "connection_stats" in display_fields:
-                        connection_stats = "{state} {active}/{received}/{accepted}/{damped}".format(
-                            state=neighbor.get("connection_state", -1),
-                            active=neighbor.get("active_prefix_count", -1),
-                            received=neighbor.get("received_prefix_count", -1),
-                            accepted=neighbor.get("accepted_prefix_count", -1),
-                            damped=neighbor.get("suppressed_prefix_count", -1),
+                        connection_stats = (
+                            "{state} {active}/{received}/{accepted}/{damped}".format(
+                                state=neighbor.get("connection_state", -1),
+                                active=neighbor.get("active_prefix_count", -1),
+                                received=neighbor.get("received_prefix_count", -1),
+                                accepted=neighbor.get("accepted_prefix_count", -1),
+                                damped=neighbor.get("suppressed_prefix_count", -1),
+                            )
                         )
                         row["connection_stats"] = connection_stats
                     if (

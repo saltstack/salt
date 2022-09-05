@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Subversion Fileserver Backend
 
@@ -31,8 +30,6 @@ This backend assumes a standard svn layout with directories for ``branches``,
     :conf_master:`documentation <svnfs_remotes>` for more information.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import errno
@@ -44,8 +41,6 @@ import shutil
 from datetime import datetime
 
 import salt.fileserver
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
@@ -55,9 +50,6 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
-
-# Import third party libs
-from salt.ext import six
 from salt.utils.event import tagify
 
 PER_REMOTE_OVERRIDES = ("mountpoint", "root", "trunk", "branches", "tags")
@@ -78,7 +70,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = "svn"
+__virtualname__ = "svnfs"
+__virtual_aliases__ = ("svn",)
 
 
 def __virtual__():
@@ -97,7 +90,7 @@ def __virtual__():
     for param in ("svnfs_trunk", "svnfs_branches", "svnfs_tags"):
         if os.path.isabs(__opts__[param]):
             errors.append(
-                "Master configuration parameter '{0}' (value: {1}) cannot "
+                "Master configuration parameter '{}' (value: {}) cannot "
                 "be an absolute path".format(param, __opts__[param])
             )
     if errors:
@@ -113,10 +106,10 @@ def _rev(repo):
     Returns revision ID of repo
     """
     try:
-        repo_info = dict(six.iteritems(CLIENT.info(repo["repo"])))
+        repo_info = dict(CLIENT.info(repo["repo"]).items())
     except (pysvn._pysvn.ClientError, TypeError, KeyError, AttributeError) as exc:
         log.error(
-            "Error retrieving revision ID for svnfs remote %s " "(cachedir: %s): %s",
+            "Error retrieving revision ID for svnfs remote %s (cachedir: %s): %s",
             repo["url"],
             repo["repo"],
             exc,
@@ -143,20 +136,18 @@ def init():
 
     per_remote_defaults = {}
     for param in PER_REMOTE_OVERRIDES:
-        per_remote_defaults[param] = six.text_type(__opts__["svnfs_{0}".format(param)])
+        per_remote_defaults[param] = str(__opts__["svnfs_{}".format(param)])
 
     for remote in __opts__["svnfs_remotes"]:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
-            per_remote_conf = dict(
-                [
-                    (key, six.text_type(val))
-                    for key, val in six.iteritems(
-                        salt.utils.data.repack_dictlist(remote[repo_url])
-                    )
-                ]
-            )
+            per_remote_conf = {
+                key: str(val)
+                for key, val in salt.utils.data.repack_dictlist(
+                    remote[repo_url]
+                ).items()
+            }
             if not per_remote_conf:
                 log.error(
                     "Invalid per-remote configuration for remote %s. If no "
@@ -185,7 +176,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, six.string_types):
+        if not isinstance(repo_url, str):
             log.error(
                 "Invalid svnfs remote %s. Remotes must be strings, you may "
                 "need to enclose the URL in quotes",
@@ -248,11 +239,11 @@ def init():
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# svnfs_remote map as of {0}\n".format(timestamp))
+                fp_.write("# svnfs_remote map as of {}\n".format(timestamp))
                 for repo_conf in repos:
                     fp_.write(
                         salt.utils.stringutils.to_str(
-                            "{0} = {1}\n".format(repo_conf["hash"], repo_conf["url"])
+                            "{} = {}\n".format(repo_conf["hash"], repo_conf["url"])
                         )
                     )
         except OSError:
@@ -315,7 +306,7 @@ def clear_cache():
             try:
                 shutil.rmtree(rdir)
             except OSError as exc:
-                errors.append("Unable to delete {0}: {1}".format(rdir, exc))
+                errors.append("Unable to delete {}: {}".format(rdir, exc))
     return errors
 
 
@@ -330,7 +321,7 @@ def clear_lock(remote=None):
 
     def _do_clear_lock(repo):
         def _add_error(errlist, repo, exc):
-            msg = "Unable to remove update lock for {0} ({1}): {2} ".format(
+            msg = "Unable to remove update lock for {} ({}): {} ".format(
                 repo["url"], repo["lockfile"], exc
             )
             log.debug(msg)
@@ -353,7 +344,7 @@ def clear_lock(remote=None):
                 else:
                     _add_error(failed, repo, exc)
             else:
-                msg = "Removed lock for {0}".format(repo["url"])
+                msg = "Removed lock for {}".format(repo["url"])
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -370,7 +361,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if six.text_type(remote) not in repo["url"]:
+                if str(remote) not in repo["url"]:
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -394,14 +385,14 @@ def lock(remote=None):
             try:
                 with salt.utils.files.fopen(repo["lockfile"], "w+") as fp_:
                     fp_.write("")
-            except (IOError, OSError) as exc:
-                msg = "Unable to set update lock for {0} ({1}): {2} ".format(
+            except OSError as exc:
+                msg = "Unable to set update lock for {} ({}): {} ".format(
                     repo["url"], repo["lockfile"], exc
                 )
                 log.debug(msg)
                 failed.append(msg)
             else:
-                msg = "Set lock for {0}".format(repo["url"])
+                msg = "Set lock for {}".format(repo["url"])
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -418,7 +409,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo["url"], six.text_type(remote)):
+                if not fnmatch.fnmatch(repo["url"], str(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)
@@ -467,7 +458,7 @@ def update():
             )
 
         new_rev = _rev(repo)
-        if any((x is None for x in (old_rev, new_rev))):
+        if any(x is None for x in (old_rev, new_rev)):
             # There were problems getting the revision ID
             continue
         if new_rev != old_rev:
@@ -481,9 +472,8 @@ def update():
         if not os.path.exists(env_cachedir):
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
-        serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(env_cache, "wb+") as fp_:
-            fp_.write(serial.dumps(new_envs))
+            fp_.write(salt.payload.dumps(new_envs))
             log.trace("Wrote env cache data to %s", env_cache)
 
     # if there is a change, fire an event
@@ -491,7 +481,6 @@ def update():
         with salt.utils.event.get_event(
             "master",
             __opts__["sock_dir"],
-            __opts__["transport"],
             opts=__opts__,
             listen=False,
         ) as event:
@@ -500,7 +489,7 @@ def update():
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__["cachedir"], "svnfs/hash"), find_file
         )
-    except (IOError, OSError):
+    except OSError:
         # Hash file won't exist if no files have yet been served up
         pass
 
@@ -652,7 +641,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])
-        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
+        if data and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -692,7 +681,7 @@ def file_hash(load, fnd):
         "svnfs",
         "hash",
         saltenv,
-        "{0}.hash.{1}".format(relpath, __opts__["hash_type"]),
+        "{}.hash.{}".format(relpath, __opts__["hash_type"]),
     )
     # If we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
@@ -711,7 +700,7 @@ def file_hash(load, fnd):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
     with salt.utils.files.fopen(cache_path, "w") as fp_:
-        fp_.write("{0}:{1}".format(ret["hsum"], os.path.getmtime(path)))
+        fp_.write("{}:{}".format(ret["hsum"], os.path.getmtime(path)))
 
     return ret
 
@@ -734,8 +723,8 @@ def _file_lists(load, form):
         except os.error:
             log.critical("Unable to make cachedir %s", list_cachedir)
             return []
-    list_cache = os.path.join(list_cachedir, "{0}.p".format(load["saltenv"]))
-    w_lock = os.path.join(list_cachedir, ".{0}.w".format(load["saltenv"]))
+    list_cache = os.path.join(list_cachedir, "{}.p".format(load["saltenv"]))
+    w_lock = os.path.join(list_cachedir, ".{}.w".format(load["saltenv"]))
     cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
         __opts__, form, list_cache, w_lock
     )

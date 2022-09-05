@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to fire events at failed login of users
 
@@ -91,25 +90,14 @@ Match the event like so in the master config file:
     on how to set up a bot user.
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import datetime
 import logging
 import os
 import struct
 
-# Import 3rd-party libs
-import salt.ext.six
+import salt.utils.beacons
 import salt.utils.files
-
-# Import Salt Libs
 import salt.utils.stringutils
-
-# pylint: disable=import-error
-from salt.ext.six.moves import map
-
-# pylint: enable=import-error
 
 __virtualname__ = "btmp"
 BTMP = "/var/log/btmp"
@@ -131,7 +119,6 @@ LOC_KEY = "btmp.loc"
 
 log = logging.getLogger(__name__)
 
-# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
 
@@ -143,7 +130,9 @@ except ImportError:
 def __virtual__():
     if os.path.isfile(BTMP):
         return __virtualname__
-    return False
+    err_msg = "{} does not exist.".format(BTMP)
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def _validate_time_range(trange, status, msg):
@@ -156,14 +145,12 @@ def _validate_time_range(trange, status, msg):
 
     if not isinstance(trange, dict):
         status = False
-        msg = "The time_range parameter for " "btmp beacon must " "be a dictionary."
+        msg = "The time_range parameter for btmp beacon must be a dictionary."
 
     if not all(k in trange for k in ("start", "end")):
         status = False
         msg = (
-            "The time_range parameter for "
-            "btmp beacon must contain "
-            "start & end options."
+            "The time_range parameter for btmp beacon must contain start & end options."
         )
 
     return status, msg
@@ -216,40 +203,39 @@ def validate(config):
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
         vstatus = False
-        vmsg = "Configuration for btmp beacon must " "be a list."
+        vmsg = "Configuration for btmp beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "users" in _config:
-            if not isinstance(_config["users"], dict):
+        if "users" in config:
+            if not isinstance(config["users"], dict):
                 vstatus = False
-                vmsg = "User configuration for btmp beacon must " "be a dictionary."
+                vmsg = "User configuration for btmp beacon must be a dictionary."
             else:
-                for user in _config["users"]:
-                    _time_range = _config["users"][user].get("time_range", {})
+                for user in config["users"]:
+                    _time_range = config["users"][user].get("time_range", {})
                     vstatus, vmsg = _validate_time_range(_time_range, vstatus, vmsg)
 
             if not vstatus:
                 return vstatus, vmsg
 
-        if "groups" in _config:
-            if not isinstance(_config["groups"], dict):
+        if "groups" in config:
+            if not isinstance(config["groups"], dict):
                 vstatus = False
-                vmsg = "Group configuration for btmp beacon must " "be a dictionary."
+                vmsg = "Group configuration for btmp beacon must be a dictionary."
             else:
-                for group in _config["groups"]:
-                    _time_range = _config["groups"][group].get("time_range", {})
+                for group in config["groups"]:
+                    _time_range = config["groups"][group].get("time_range", {})
                     vstatus, vmsg = _validate_time_range(_time_range, vstatus, vmsg)
             if not vstatus:
                 return vstatus, vmsg
 
-        if "defaults" in _config:
-            if not isinstance(_config["defaults"], dict):
+        if "defaults" in config:
+            if not isinstance(config["defaults"], dict):
                 vstatus = False
-                vmsg = "Defaults configuration for btmp beacon must " "be a dictionary."
+                vmsg = "Defaults configuration for btmp beacon must be a dictionary."
             else:
-                _time_range = _config["defaults"].get("time_range", {})
+                _time_range = config["defaults"].get("time_range", {})
                 vstatus, vmsg = _validate_time_range(_time_range, vstatus, vmsg)
             if not vstatus:
                 return vstatus, vmsg
@@ -295,7 +281,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], salt.ext.six.string_types):
+                if isinstance(event[field], (str, bytes)):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip("\x00")

@@ -7,8 +7,10 @@ Salt :index:`Best Practices`
 Salt's extreme flexibility leads to many questions concerning the structure of
 configuration files.
 
-This document exists to clarify these points through examples and
-code.
+This document exists to clarify these points through examples and code.
+
+.. important::
+   The guidance here should be taken in combination with :ref:`hardening-salt`.
 
 General rules
 -------------
@@ -20,6 +22,7 @@ General rules
 5. Don't use grains for matching in your pillar top file for any sensitive
    pillars.
 
+   .. include:: ../_incl/grains_passwords.rst
 
 Structuring States and Formulas
 -------------------------------

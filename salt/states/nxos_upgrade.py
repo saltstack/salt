@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2018 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +14,7 @@
 """
 Manage NX-OS System Image Upgrades.
 
-.. versionadded: xxxx.xx.x
+.. versionadded:: 3001
 
 :maturity:   new
 :platform:   nxos
@@ -24,7 +23,6 @@ Manage NX-OS System Image Upgrades.
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

@@ -1,23 +1,23 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk (bo@suse.de)
     unit.utils.decorators_test
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 
-# Import Salt libs
 import salt.utils.decorators as decorators
-from salt.exceptions import CommandExecutionError, SaltConfigurationError
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltConfigurationError,
+    SaltInvocationError,
+)
 from salt.version import SaltStackVersion
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class DummyLogger(object):
+class DummyLogger:
     """
     Dummy logger accepts everything and simply logs
     """
@@ -53,6 +53,9 @@ class DecoratorsTest(TestCase):
         :return:
         """
         return name, SaltStackVersion.from_name(name)
+
+    def arg_function(self, arg1=None, arg2=None, arg3=None):
+        return "old"
 
     def setUp(self):
         """
@@ -250,9 +253,10 @@ class DecoratorsTest(TestCase):
         self.assertEqual(
             self.messages,
             [
-                'Although function "new_function" is called, an alias "new_function" '
-                "is configured as its deprecated version. The lifetime of the function "
-                '"new_function" expired. Please use its successor "new_function" instead.'
+                'Although function "new_function" is called, an alias "new_function" is'
+                " configured as its deprecated version. The lifetime of the function"
+                ' "new_function" expired. Please use its successor "new_function"'
+                " instead."
             ],
         )
 
@@ -273,9 +277,10 @@ class DecoratorsTest(TestCase):
         self.assertEqual(
             self.messages,
             [
-                'Although function "new_function" is called, an alias "new_function" '
-                "is configured as its deprecated version. The lifetime of the function "
-                '"new_function" expired. Please use its successor "new_function" instead.'
+                'Although function "new_function" is called, an alias "new_function" is'
+                " configured as its deprecated version. The lifetime of the function"
+                ' "new_function" expired. Please use its successor "new_function"'
+                " instead."
             ],
         )
 
@@ -310,8 +315,8 @@ class DecoratorsTest(TestCase):
         self.assertEqual(
             self.messages,
             [
-                'The function "old_function" is deprecated and will expire in version "Beryllium". '
-                'Use its successor "new_function" instead.'
+                'The function "old_function" is deprecated and will expire in version'
+                ' "Beryllium". Use its successor "new_function" instead.'
             ],
         )
 
@@ -412,6 +417,73 @@ class DecoratorsTest(TestCase):
         depr._curr_version = self._mk_version("Helium")[1]
         with self.assertRaises(SaltConfigurationError):
             assert depr(self.new_function)() == self.new_function()
+
+    def test_allow_one_of(self):
+        """
+        Test allow_one_of properly does not error when only one of the
+        required arguments is passed.
+
+        :return:
+        """
+        allow_one_of = decorators.allow_one_of("arg1", "arg2", "arg3")
+        assert allow_one_of(self.arg_function)(arg1="good") == self.arg_function(
+            arg1="good"
+        )
+
+    def test_allow_one_of_succeeds_when_no_arguments_supplied(self):
+        """
+        Test allow_one_of properly does not error when none of the allowed
+        arguments are supplied.
+
+        :return:
+        """
+        allow_one_of = decorators.allow_one_of("arg1", "arg2", "arg3")
+        assert allow_one_of(self.arg_function)() == self.arg_function()
+
+    def test_allow_one_of_raises_error_when_multiple_allowed_arguments_supplied(self):
+        """
+        Test allow_one_of properly does not error when only one of the
+        required arguments is passed.
+
+        :return:
+        """
+        allow_one_of = decorators.allow_one_of("arg1", "arg2", "arg3")
+        with self.assertRaises(SaltInvocationError):
+            allow_one_of(self.arg_function)(arg1="good", arg2="bad")
+
+    def test_require_one_of(self):
+        """
+        Test require_one_of properly does not error when only one of the
+        required arguments is passed.
+
+        :return:
+        """
+        require_one_of = decorators.require_one_of("arg1", "arg2", "arg3")
+        assert require_one_of(self.arg_function)(arg1="good") == self.arg_function(
+            arg1="good"
+        )
+
+    def test_require_one_of_raises_error_when_none_of_allowed_arguments_supplied(self):
+        """
+        Test require_one_of properly raises an error when none of the required
+        arguments are supplied.
+
+        :return:
+        """
+        require_one_of = decorators.require_one_of("arg1", "arg2", "arg3")
+        with self.assertRaises(SaltInvocationError):
+            require_one_of(self.arg_function)()
+
+    def test_require_one_of_raises_error_when_multiple_allowed_arguments_supplied(self):
+        """
+        Test require_one_of properly raises an error when multiples of the
+        allowed arguments are supplied.
+
+        :return:
+        """
+        require_one_of = decorators.require_one_of("arg1", "arg2", "arg3")
+        with self.assertRaises(SaltInvocationError):
+            require_one_of(self.new_function)(arg1="good", arg2="bad")
 
     def test_with_depreciated_should_wrap_function(self):
         wrapped = decorators.with_deprecated({}, "Beryllium")(self.old_function)

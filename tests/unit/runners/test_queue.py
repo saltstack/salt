@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the cache runner
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 import salt.runners.queue as queue_mod
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -40,7 +39,7 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         }
         queue_insert.assert_called_once_with(**expected_call)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_process_runner(self):
         ret = [{"fun": "test.stdout_print", "args": [], "kwargs": {}}]
 

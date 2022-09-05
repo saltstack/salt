@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon IAM
 
@@ -37,28 +36,21 @@ Connection module for Amazon IAM
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
+import urllib.parse
 
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
 
-# Import salt libs
-from salt.ext import six
-
-# Import third party libs
 # pylint: disable=unused-import
-from salt.ext.six.moves.urllib.parse import unquote as _unquote
-
 try:
     import boto
-    import boto.iam
     import boto3
+    import boto.iam
     import botocore
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
@@ -79,7 +71,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto.assign_funcs"](__name__, "iam", pack=__salt__)
 
@@ -190,7 +181,7 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
             return False
         role = info.get_role_response.get_role_result.role
         role["assume_role_policy_document"] = salt.utils.json.loads(
-            _unquote(role.assume_role_policy_document)
+            urllib.parse.unquote(role.assume_role_policy_document)
         )
         # If Sid wasn't defined by the user, boto will still return a Sid in
         # each policy. To properly check idempotently, let's remove the Sid
@@ -260,7 +251,7 @@ def get_all_access_keys(
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.error("Failed to get access keys for IAM user %s.", user_name)
-        return six.text_type(e)
+        return str(e)
 
 
 def create_access_key(user_name, region=None, key=None, keyid=None, profile=None):
@@ -281,7 +272,7 @@ def create_access_key(user_name, region=None, key=None, keyid=None, profile=None
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.error("Failed to create access key.")
-        return six.text_type(e)
+        return str(e)
 
 
 def delete_access_key(
@@ -304,7 +295,7 @@ def delete_access_key(
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.error("Failed to delete access key id %s.", access_key_id)
-        return six.text_type(e)
+        return str(e)
 
 
 def delete_user(user_name, region=None, key=None, keyid=None, profile=None):
@@ -329,7 +320,7 @@ def delete_user(user_name, region=None, key=None, keyid=None, profile=None):
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.error("Failed to delete IAM user %s", user_name)
-        return six.text_type(e)
+        return str(e)
 
 
 def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
@@ -568,7 +559,7 @@ def put_group_policy(
         return False
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        if not isinstance(policy_json, six.string_types):
+        if not isinstance(policy_json, str):
             policy_json = salt.utils.json.dumps(policy_json)
         created = conn.put_group_policy(group_name, policy_name, policy_json)
         if created:
@@ -587,7 +578,7 @@ def delete_group_policy(
     """
     Delete a group policy.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -634,7 +625,7 @@ def get_group_policy(
         if not info:
             return False
         info = info.get_group_policy_response.get_group_policy_result.policy_document
-        info = _unquote(info)
+        info = urllib.parse.unquote(info)
         info = salt.utils.json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
@@ -650,6 +641,8 @@ def get_all_groups(path_prefix="/", region=None, key=None, keyid=None, profile=N
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_iam.get_all_groups
     """
@@ -678,6 +671,8 @@ def get_all_instance_profiles(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.get_all_instance_profiles
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -701,6 +696,8 @@ def list_instance_profiles(
     .. versionadded:: 2016.11.0
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_iam.list_instance_profiles
     """
@@ -734,7 +731,7 @@ def delete_group(group_name, region=None, key=None, keyid=None, profile=None):
     """
     Delete a group policy.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -905,7 +902,7 @@ def delete_virtual_mfa_device(serial, region=None, key=None, keyid=None, profile
         return True
     except botocore.exceptions.ClientError as e:
         log.debug(e)
-        if "NoSuchEntity" in six.text_type(e):
+        if "NoSuchEntity" in str(e):
             log.info("Virtual MFA device %s not found.", serial)
             return True
         log.error("Failed to delete virtual MFA device %s.", serial)
@@ -1195,7 +1192,7 @@ def get_role_policy(
         # I _hate_ you for not giving me an object boto.
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
-        _policy = _unquote(_policy)
+        _policy = urllib.parse.unquote(_policy)
         _policy = salt.utils.json.loads(_policy, object_pairs_hook=odict.OrderedDict)
         return _policy
     except boto.exception.BotoServerError:
@@ -1222,7 +1219,7 @@ def create_role_policy(
         if _policy == policy:
             return True
         mode = "modify"
-    if isinstance(policy, six.string_types):
+    if isinstance(policy, str):
         policy = salt.utils.json.loads(policy, object_pairs_hook=odict.OrderedDict)
     try:
         _policy = salt.utils.json.dumps(policy)
@@ -1286,7 +1283,7 @@ def update_assume_role_policy(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(policy_document, six.string_types):
+    if isinstance(policy_document, str):
         policy_document = salt.utils.json.loads(
             policy_document, object_pairs_hook=odict.OrderedDict
         )
@@ -1383,6 +1380,8 @@ def get_all_roles(path_prefix=None, region=None, key=None, keyid=None, profile=N
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.get_all_roles
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1405,6 +1404,8 @@ def get_all_users(path_prefix="/", region=None, key=None, keyid=None, profile=No
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_iam.get_all_users
     """
@@ -1475,7 +1476,7 @@ def get_user_policy(
         if not info:
             return False
         info = info.get_user_policy_response.get_user_policy_result.policy_document
-        info = _unquote(info)
+        info = urllib.parse.unquote(info)
         info = salt.utils.json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
@@ -1504,7 +1505,7 @@ def put_user_policy(
         return False
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        if not isinstance(policy_json, six.string_types):
+        if not isinstance(policy_json, str):
             policy_json = salt.utils.json.dumps(policy_json)
         created = conn.put_user_policy(user_name, policy_name, policy_json)
         if created:
@@ -1649,6 +1650,8 @@ def export_users(path_prefix="/", region=None, key=None, keyid=None, profile=Non
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.export_users --out=txt | sed "s/local: //" > iam_users.sls
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1666,7 +1669,7 @@ def export_users(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         for policy_name in _policies:
             _policy = conn.get_user_policy(name, policy_name)
             _policy = salt.utils.json.loads(
-                _unquote(
+                urllib.parse.unquote(
                     _policy.get_user_policy_response.get_user_policy_result.policy_document
                 )
             )
@@ -1686,6 +1689,8 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.export_roles --out=txt | sed "s/local: //" > iam_roles.sls
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1703,7 +1708,7 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         for policy_name in _policies:
             _policy = conn.get_role_policy(name, policy_name)
             _policy = salt.utils.json.loads(
-                _unquote(
+                urllib.parse.unquote(
                     _policy.get_role_policy_response.get_role_policy_result.policy_document
                 )
             )
@@ -1714,7 +1719,7 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         role_sls.append(
             {
                 "policy_document": salt.utils.json.loads(
-                    _unquote(role.assume_role_policy_document)
+                    urllib.parse.unquote(role.assume_role_policy_document)
                 )
             }
         )
@@ -1728,7 +1733,7 @@ def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
         return name
 
     account_id = get_account_id(region=region, key=key, keyid=keyid, profile=profile)
-    return "arn:aws:iam::{0}:policy/{1}".format(account_id, name)
+    return "arn:aws:iam::{}:policy/{}".format(account_id, name)
 
 
 def policy_exists(policy_name, region=None, key=None, keyid=None, profile=None):
@@ -1798,7 +1803,7 @@ def create_policy(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not isinstance(policy_document, six.string_types):
+    if not isinstance(policy_document, str):
         policy_document = salt.utils.json.dumps(policy_document)
     params = {}
     for arg in "path", "description":
@@ -1918,7 +1923,7 @@ def get_policy_version(
             .get("get_policy_version_result", {})
             .get("policy_version", {})
         )
-        retval["document"] = _unquote(retval.get("document"))
+        retval["document"] = urllib.parse.unquote(retval.get("document"))
         return {"policy_version": retval}
     except boto.exception.BotoServerError:
         return None
@@ -1944,7 +1949,7 @@ def create_policy_version(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not isinstance(policy_document, six.string_types):
+    if not isinstance(policy_document, str):
         policy_document = salt.utils.json.dumps(policy_document)
     params = {}
     for arg in ("set_as_default",):
@@ -2252,7 +2257,7 @@ def list_entities_for_policy(
             for ret in __utils__["boto.paged_call"](
                 conn.list_entities_for_policy, policy_arn=policy_arn, **params
             ):
-                for k, v in six.iteritems(allret):
+                for k, v in allret.items():
                     v.extend(
                         ret.get("list_entities_for_policy_response", {})
                         .get("list_entities_for_policy_result", {})

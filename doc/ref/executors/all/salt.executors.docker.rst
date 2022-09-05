@@ -1,5 +1,5 @@
-salt.executors.docker module
-============================
+salt.executors.docker
+=====================
 
 .. automodule:: salt.executors.docker
     :members:

@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.client
 from salt.cloud.clouds import saltify
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
@@ -114,28 +107,29 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         mock_sleep = MagicMock()
         mock_cmd = MagicMock(return_value=True)
         mm_cmd = MagicMock(return_value={"friend1": True})
-        lcl = salt.client.LocalClient()
-        lcl.cmd = mm_cmd
-        with patch("time.sleep", mock_sleep):
-            with patch("salt.client.LocalClient", return_value=lcl):
-                with patch.dict(
-                    "salt.cloud.clouds.saltify.__utils__", {"cloud.bootstrap": mock_cmd}
-                ):
-                    vm_ = {
-                        "deploy": True,
-                        "driver": "saltify",
-                        "name": "new1",
-                        "profile": "testprofile3",
-                    }
-                    result = saltify.create(vm_)
-                    mock_cmd.assert_called_once_with(vm_, ANY)
-                    mm_cmd.assert_called_with(
-                        "friend1", "network.wol", ["aa-bb-cc-dd-ee-ff"]
-                    )
-                    # The test suite might call time.sleep, look for any call
-                    # that has the expected wait time.
-                    mock_sleep.assert_any_call(0.01)
-                    self.assertTrue(result)
+        with salt.client.LocalClient() as lcl:
+            lcl.cmd = mm_cmd
+            with patch("time.sleep", mock_sleep):
+                with patch("salt.client.LocalClient", return_value=lcl):
+                    with patch.dict(
+                        "salt.cloud.clouds.saltify.__utils__",
+                        {"cloud.bootstrap": mock_cmd},
+                    ):
+                        vm_ = {
+                            "deploy": True,
+                            "driver": "saltify",
+                            "name": "new1",
+                            "profile": "testprofile3",
+                        }
+                        result = saltify.create(vm_)
+                        mock_cmd.assert_called_once_with(vm_, ANY)
+                        mm_cmd.assert_called_with(
+                            "friend1", "network.wol", ["aa-bb-cc-dd-ee-ff"]
+                        )
+                        # The test suite might call time.sleep, look for any call
+                        # that has the expected wait time.
+                        mock_sleep.assert_any_call(0.01)
+                        self.assertTrue(result)
 
     def test_avail_locations(self):
         """
@@ -184,19 +178,19 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         mm_cmd = MagicMock(return_value=testgrains)
-        lcl = salt.client.LocalClient()
-        lcl.cmd = mm_cmd
-        with patch("salt.client.LocalClient", return_value=lcl):
-            self.assertEqual(saltify.list_nodes(), expected_result)
+        with salt.client.LocalClient() as lcl:
+            lcl.cmd = mm_cmd
+            with patch("salt.client.LocalClient", return_value=lcl):
+                self.assertEqual(saltify.list_nodes(), expected_result)
 
     def test_saltify_reboot(self):
         mm_cmd = MagicMock(return_value=True)
-        lcl = salt.client.LocalClient()
-        lcl.cmd = mm_cmd
-        with patch("salt.client.LocalClient", return_value=lcl):
-            result = saltify.reboot("nodeS1", "action")
-            mm_cmd.assert_called_with("nodeS1", "system.reboot")
-            self.assertTrue(result)
+        with salt.client.LocalClient() as lcl:
+            lcl.cmd = mm_cmd
+            with patch("salt.client.LocalClient", return_value=lcl):
+                result = saltify.reboot("nodeS1", "action")
+                mm_cmd.assert_called_with("nodeS1", "system.reboot")
+                self.assertTrue(result)
 
     def test_saltify_destroy(self):
         # destroy calls local.cmd several times and expects
@@ -216,13 +210,15 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             #    testprofile2 has remove_config_on_destroy: False
             #    and shutdown_on_destroy: True
             {
-                "nodeS1": "a system.shutdown worked message"  # last call shuts down the minion
+                "nodeS1": (  # last call shuts down the minion
+                    "a system.shutdown worked message"
+                )
             },
         ]
         mm_cmd = MagicMock(side_effect=result_list)
-        lcl = salt.client.LocalClient()
-        lcl.cmd = mm_cmd
-        with patch("salt.client.LocalClient", return_value=lcl):
-            result = saltify.destroy("nodeS1", "action")
-            mm_cmd.assert_called_with("nodeS1", "system.shutdown")
-            self.assertTrue(result)
+        with salt.client.LocalClient() as lcl:
+            lcl.cmd = mm_cmd
+            with patch("salt.client.LocalClient", return_value=lcl):
+                result = saltify.destroy("nodeS1", "action")
+                mm_cmd.assert_called_with("nodeS1", "system.shutdown")
+                self.assertTrue(result)

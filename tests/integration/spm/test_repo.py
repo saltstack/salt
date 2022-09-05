@@ -1,19 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm repo
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
 import pytest
+
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMRepoTest(SPMCase):
     """
     Validate commands related to spm repo

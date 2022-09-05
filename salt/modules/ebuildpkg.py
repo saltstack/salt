@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Portage
 
@@ -13,17 +12,13 @@ Support for Portage
 For now all package names *MUST* include the package category,
 i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
 import logging
-
-# Import python libs
 import os
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.compat
 import salt.utils.data
@@ -33,9 +28,7 @@ import salt.utils.pkg
 import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.ext import six
 
-# Import third party libs
 HAS_PORTAGE = False
 try:
     import portage
@@ -69,7 +62,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.",
+        "The ebuild execution module cannot be loaded: either the system is not Gentoo"
+        " or the portage python library is not available.",
     )
 
 
@@ -224,7 +218,7 @@ def ex_mod_init(low):
     .. versionadded:: 0.17.0
        Initial automatic enforcement added when pkg is used on a Gentoo system.
 
-    .. versionchanged:: 2014.1.0-Hydrogen
+    .. versionchanged:: 2014.7.0
        Configure option added to make this behaviour optional, defaulting to
        off.
 
@@ -309,7 +303,7 @@ def _get_upgradable(backtrack=3):
         "--ask",
         "n",
         "--backtrack",
-        "{0}".format(backtrack),
+        "{}".format(backtrack),
         "--pretend",
         "--update",
         "--newuse",
@@ -362,7 +356,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -375,7 +369,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
     return _get_upgradable(backtrack)
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 
@@ -418,6 +412,18 @@ def porttree_matches(name):
     return matches
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed in a dict::
@@ -437,13 +443,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     ret = {}
     pkgs = _vartree().dbapi.cpv_all()
@@ -456,7 +457,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     """
     Update the portage tree using the first available method from the following
     list:
@@ -679,11 +680,11 @@ def install(
         if not version_num:
             version_num = ""
             if slot is not None:
-                version_num += ":{0}".format(slot)
+                version_num += ":{}".format(slot)
             if fromrepo is not None:
-                version_num += "::{0}".format(fromrepo)
+                version_num += "::{}".format(fromrepo)
             if uses is not None:
-                version_num += "[{0}]".format(",".join(uses))
+                version_num += "[{}]".format(",".join(uses))
             pkg_params = {name: version_num}
 
     if not pkg_params:
@@ -704,7 +705,7 @@ def install(
 
     if pkg_type == "repository":
         targets = list()
-        for param, version_num in six.iteritems(pkg_params):
+        for param, version_num in pkg_params.items():
             original_param = param
             param = _p_to_cp(param)
             if param is None:
@@ -723,11 +724,11 @@ def install(
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ":" and verstr[0] != "[":
                         prefix = prefix or "="
-                        target = "{0}{1}-{2}".format(prefix, param, verstr)
+                        target = "{}{}-{}".format(prefix, param, verstr)
                     else:
-                        target = "{0}{1}".format(param, verstr)
+                        target = "{}{}".format(param, verstr)
                 else:
-                    target = "{0}".format(param)
+                    target = "{}".format(param)
 
                 if "[" in target:
                     old = __salt__["portage_config.get_flags_from_package_conf"](
@@ -794,7 +795,7 @@ def install(
     return changes
 
 
-def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
+def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None, **kwargs):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -841,10 +842,10 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     full_atom = pkg
 
     if slot is not None:
-        full_atom = "{0}:{1}".format(full_atom, slot)
+        full_atom = "{}:{}".format(full_atom, slot)
 
     if fromrepo is not None:
-        full_atom = "{0}::{1}".format(full_atom, fromrepo)
+        full_atom = "{}::{}".format(full_atom, fromrepo)
 
     if binhost == "try":
         bin_opts = ["-g"]
@@ -881,7 +882,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     return ret
 
 
-def upgrade(refresh=True, binhost=None, backtrack=3):
+def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -909,7 +910,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     Returns a dictionary containing the changes:
 
@@ -917,7 +918,6 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 
@@ -950,7 +950,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
             "n",
             "--quiet",
             "--backtrack",
-            "{0}".format(backtrack),
+            "{}".format(backtrack),
             "--update",
             "--newuse",
             "--deep",
@@ -1034,9 +1034,9 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     ):
         fullatom = name
         if slot is not None:
-            targets = ["{0}:{1}".format(fullatom, slot)]
+            targets = ["{}:{}".format(fullatom, slot)]
         if fromrepo is not None:
-            targets = ["{0}::{1}".format(fullatom, fromrepo)]
+            targets = ["{}::{}".format(fullatom, fromrepo)]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
@@ -1165,9 +1165,9 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     ):
         fullatom = name
         if slot is not None:
-            targets = ["{0}:{1}".format(fullatom, slot)]
+            targets = ["{}:{}".format(fullatom, slot)]
         if fromrepo is not None:
-            targets = ["{0}::{1}".format(fullatom, fromrepo)]
+            targets = ["{}::{}".format(fullatom, fromrepo)]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
@@ -1245,9 +1245,9 @@ def check_extra_requirements(pkgname, pkgver):
         # If no prefix characters were supplied and verstr contains a version, use '='
         if verstr[0] != ":" and verstr[0] != "[":
             prefix = prefix or "="
-            atom = "{0}{1}-{2}".format(prefix, pkgname, verstr)
+            atom = "{}{}-{}".format(prefix, pkgname, verstr)
         else:
-            atom = "{0}{1}".format(pkgname, verstr)
+            atom = "{}{}".format(pkgname, verstr)
     else:
         return True
 

@@ -1,30 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Windows Service module.
 
-.. versionchanged:: 2016.11.0 - Rewritten to use PyWin32
+.. versionchanged:: 2016.11.0
+
+    Rewritten to use PyWin32
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import fnmatch
 import logging
 import re
 import time
 
 import salt.utils.path
-
-# Import Salt libs
 import salt.utils.platform
+import salt.utils.win_service
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd party libs
 try:
-    import win32security
+    import pywintypes
     import win32service
     import win32serviceutil
-    import pywintypes
 
     HAS_WIN32_MODS = True
 except ImportError:
@@ -35,71 +29,9 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = "service"
 
-SERVICE_TYPE = {
-    1: "Kernel Driver",
-    2: "File System Driver",
-    4: "Adapter Driver",
-    8: "Recognizer Driver",
-    16: "Win32 Own Process",
-    32: "Win32 Share Process",
-    256: "Interactive",
-    "kernel": 1,
-    "filesystem": 2,
-    "adapter": 4,
-    "recognizer": 8,
-    "own": 16,
-    "share": 32,
-}
-
-SERVICE_CONTROLS = {
-    1: "Stop",
-    2: "Pause/Continue",
-    4: "Shutdown",
-    8: "Change Parameters",
-    16: "Netbind Change",
-    32: "Hardware Profile Change",
-    64: "Power Event",
-    128: "Session Change",
-    256: "Pre-Shutdown",
-    512: "Time Change",
-    1024: "Trigger Event",
-}
-
-SERVICE_STATE = {
-    1: "Stopped",
-    2: "Start Pending",
-    3: "Stop Pending",
-    4: "Running",
-    5: "Continue Pending",
-    6: "Pause Pending",
-    7: "Paused",
-}
-
-SERVICE_ERRORS = {0: "No Error", 1066: "Service Specific Error"}
-
-SERVICE_START_TYPE = {
-    "boot": 0,
-    "system": 1,
-    "auto": 2,
-    "manual": 3,
-    "disabled": 4,
-    0: "Boot",
-    1: "System",
-    2: "Auto",
-    3: "Manual",
-    4: "Disabled",
-}
-
-SERVICE_ERROR_CONTROL = {
-    0: "Ignore",
-    1: "Normal",
-    2: "Severe",
-    3: "Critical",
-    "ignore": 0,
-    "normal": 1,
-    "severe": 2,
-    "critical": 3,
-}
+SERVICE_TYPE = salt.utils.win_service.SERVICE_TYPE
+SERVICE_START_TYPE = salt.utils.win_service.SERVICE_START_TYPE
+SERVICE_ERROR_CONTROL = salt.utils.win_service.SERVICE_ERROR_CONTROL
 
 
 def __virtual__():
@@ -180,7 +112,7 @@ def _cmd_quote(cmd):
         cmd = cmd.strip('"').strip("'")
     # Ensure the path to the binary is wrapped in double quotes to account for
     # spaces in the path
-    cmd = '"{0}"'.format(cmd)
+    cmd = '"{}"'.format(cmd)
     return cmd
 
 
@@ -369,102 +301,7 @@ def info(name):
 
         salt '*' service.info spooler
     """
-    try:
-        handle_scm = win32service.OpenSCManager(
-            None, None, win32service.SC_MANAGER_CONNECT
-        )
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            "Failed to connect to the SCM: {0}".format(exc.strerror)
-        )
-
-    try:
-        handle_svc = win32service.OpenService(
-            handle_scm,
-            name,
-            win32service.SERVICE_ENUMERATE_DEPENDENTS
-            | win32service.SERVICE_INTERROGATE
-            | win32service.SERVICE_QUERY_CONFIG
-            | win32service.SERVICE_QUERY_STATUS,
-        )
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            "Failed To Open {0}: {1}".format(name, exc.strerror)
-        )
-
-    try:
-        config_info = win32service.QueryServiceConfig(handle_svc)
-        status_info = win32service.QueryServiceStatusEx(handle_svc)
-
-        try:
-            description = win32service.QueryServiceConfig2(
-                handle_svc, win32service.SERVICE_CONFIG_DESCRIPTION
-            )
-        except pywintypes.error:
-            description = "Failed to get description"
-
-        delayed_start = win32service.QueryServiceConfig2(
-            handle_svc, win32service.SERVICE_CONFIG_DELAYED_AUTO_START_INFO
-        )
-    finally:
-        win32service.CloseServiceHandle(handle_scm)
-        win32service.CloseServiceHandle(handle_svc)
-
-    ret = dict()
-    try:
-        sid = win32security.LookupAccountName("", "NT Service\\{0}".format(name))[0]
-        ret["sid"] = win32security.ConvertSidToStringSid(sid)
-    except pywintypes.error:
-        ret["sid"] = "Failed to get SID"
-
-    ret["BinaryPath"] = config_info[3]
-    ret["LoadOrderGroup"] = config_info[4]
-    ret["TagID"] = config_info[5]
-    ret["Dependencies"] = config_info[6]
-    ret["ServiceAccount"] = config_info[7]
-    ret["DisplayName"] = config_info[8]
-    ret["Description"] = description
-    ret["Status_ServiceCode"] = status_info["ServiceSpecificExitCode"]
-    ret["Status_CheckPoint"] = status_info["CheckPoint"]
-    ret["Status_WaitHint"] = status_info["WaitHint"]
-    ret["StartTypeDelayed"] = delayed_start
-
-    flags = list()
-    for bit in SERVICE_TYPE:
-        if isinstance(bit, int):
-            if config_info[0] & bit:
-                flags.append(SERVICE_TYPE[bit])
-
-    ret["ServiceType"] = flags if flags else config_info[0]
-
-    flags = list()
-    for bit in SERVICE_CONTROLS:
-        if status_info["ControlsAccepted"] & bit:
-            flags.append(SERVICE_CONTROLS[bit])
-
-    ret["ControlsAccepted"] = flags if flags else status_info["ControlsAccepted"]
-
-    try:
-        ret["Status_ExitCode"] = SERVICE_ERRORS[status_info["Win32ExitCode"]]
-    except KeyError:
-        ret["Status_ExitCode"] = status_info["Win32ExitCode"]
-
-    try:
-        ret["StartType"] = SERVICE_START_TYPE[config_info[1]]
-    except KeyError:
-        ret["StartType"] = config_info[1]
-
-    try:
-        ret["ErrorControl"] = SERVICE_ERROR_CONTROL[config_info[2]]
-    except KeyError:
-        ret["ErrorControl"] = config_info[2]
-
-    try:
-        ret["Status"] = SERVICE_STATE[status_info["CurrentState"]]
-    except KeyError:
-        ret["Status"] = status_info["CurrentState"]
-
-    return ret
+    return salt.utils.win_service.info(name=name)
 
 
 def start(name, timeout=90):
@@ -503,9 +340,9 @@ def start(name, timeout=90):
     except pywintypes.error as exc:
         if exc.winerror != 1056:
             raise CommandExecutionError(
-                "Failed To Start {0}: {1}".format(name, exc.strerror)
+                "Failed To Start {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{0}" is running'.format(name))
+        log.debug('Service "%s" is running', name)
 
     srv_status = _status_wait(
         service_name=name,
@@ -544,9 +381,9 @@ def stop(name, timeout=90):
     except pywintypes.error as exc:
         if exc.winerror != 1062:
             raise CommandExecutionError(
-                "Failed To Stop {0}: {1}".format(name, exc.strerror)
+                "Failed To Stop {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{0}" is not running'.format(name))
+        log.debug('Service "%s" is not running', name)
 
     srv_status = _status_wait(
         service_name=name,
@@ -610,7 +447,7 @@ def create_win_salt_restart_task():
     """
     # Updated to use full name for Nessus agent
     cmd = salt.utils.path.which("cmd")
-    args = "/c ping -n 3 127.0.0.1 && net stop salt-minion && net start " "salt-minion"
+    args = "/c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion"
     return __salt__["task.create_task"](
         name="restart-salt-minion",
         user_name="System",
@@ -790,7 +627,7 @@ def modify(
             - NT Authority\\LocalService
             - NT Authority\\NetworkService
             - NT Authority\\LocalSystem
-            - .\LocalSystem
+            - .\\LocalSystem
 
         account_password (str):
             The password for the account name specified in ``account_name``. For
@@ -824,9 +661,7 @@ def modify(
             win32service.SERVICE_CHANGE_CONFIG | win32service.SERVICE_QUERY_CONFIG,
         )
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            "Failed To Open {0}: {1}".format(name, exc.strerror)
-        )
+        raise CommandExecutionError("Failed To Open {}: {}".format(name, exc.strerror))
 
     config_info = win32service.QueryServiceConfig(handle_svc)
 
@@ -837,7 +672,7 @@ def modify(
         # shlex.quote the path to the binary
         bin_path = _cmd_quote(bin_path)
         if exe_args is not None:
-            bin_path = "{0} {1}".format(bin_path, exe_args)
+            bin_path = "{} {}".format(bin_path, exe_args)
         changes["BinaryPath"] = bin_path
 
     if service_type is not None:
@@ -846,9 +681,7 @@ def modify(
             if run_interactive:
                 service_type = service_type | win32service.SERVICE_INTERACTIVE_PROCESS
         else:
-            raise CommandExecutionError(
-                "Invalid Service Type: {0}".format(service_type)
-            )
+            raise CommandExecutionError("Invalid Service Type: {}".format(service_type))
     else:
         if run_interactive is True:
             service_type = config_info[0] | win32service.SERVICE_INTERACTIVE_PROCESS
@@ -869,7 +702,7 @@ def modify(
         if start_type.lower() in SERVICE_START_TYPE:
             start_type = SERVICE_START_TYPE[start_type.lower()]
         else:
-            raise CommandExecutionError("Invalid Start Type: {0}".format(start_type))
+            raise CommandExecutionError("Invalid Start Type: {}".format(start_type))
         changes["StartType"] = SERVICE_START_TYPE[start_type]
     else:
         start_type = win32service.SERVICE_NO_CHANGE
@@ -879,7 +712,7 @@ def modify(
             error_control = SERVICE_ERROR_CONTROL[error_control.lower()]
         else:
             raise CommandExecutionError(
-                "Invalid Error Control: {0}".format(error_control)
+                "Invalid Error Control: {}".format(error_control)
             )
         changes["ErrorControl"] = SERVICE_ERROR_CONTROL[error_control]
     else:
@@ -1163,29 +996,29 @@ def create(
 
     # Test if the service already exists
     if name in get_all():
-        raise CommandExecutionError("Service Already Exists: {0}".format(name))
+        raise CommandExecutionError("Service Already Exists: {}".format(name))
 
     # shlex.quote the path to the binary
     bin_path = _cmd_quote(bin_path)
     if exe_args is not None:
-        bin_path = "{0} {1}".format(bin_path, exe_args)
+        bin_path = "{} {}".format(bin_path, exe_args)
 
     if service_type.lower() in SERVICE_TYPE:
         service_type = SERVICE_TYPE[service_type.lower()]
         if run_interactive:
             service_type = service_type | win32service.SERVICE_INTERACTIVE_PROCESS
     else:
-        raise CommandExecutionError("Invalid Service Type: {0}".format(service_type))
+        raise CommandExecutionError("Invalid Service Type: {}".format(service_type))
 
     if start_type.lower() in SERVICE_START_TYPE:
         start_type = SERVICE_START_TYPE[start_type.lower()]
     else:
-        raise CommandExecutionError("Invalid Start Type: {0}".format(start_type))
+        raise CommandExecutionError("Invalid Start Type: {}".format(start_type))
 
     if error_control.lower() in SERVICE_ERROR_CONTROL:
         error_control = SERVICE_ERROR_CONTROL[error_control.lower()]
     else:
-        raise CommandExecutionError("Invalid Error Control: {0}".format(error_control))
+        raise CommandExecutionError("Invalid Error Control: {}".format(error_control))
 
     if start_delayed:
         if start_type != 2:
@@ -1281,16 +1114,16 @@ def delete(name, timeout=90):
         win32service.CloseServiceHandle(handle_scm)
         if exc.winerror != 1060:
             raise CommandExecutionError(
-                "Failed to open {0}. {1}".format(name, exc.strerror)
+                "Failed to open {}. {}".format(name, exc.strerror)
             )
-        log.debug('Service "{0}" is not present'.format(name))
+        log.debug('Service "%s" is not present', name)
         return True
 
     try:
         win32service.DeleteService(handle_svc)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            "Failed to delete {0}. {1}".format(name, exc.strerror)
+            "Failed to delete {}. {}".format(name, exc.strerror)
         )
     finally:
         log.debug("Cleaning up")

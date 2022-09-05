@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.utils.master
     -----------------
@@ -6,10 +5,6 @@
     Utilities that can only be used on a salt master.
 
 """
-
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import os
 import signal
@@ -18,9 +13,6 @@ from threading import Event, Thread
 import salt.cache
 import salt.client
 import salt.config
-
-# Import salt libs
-import salt.log
 import salt.payload
 import salt.pillar
 import salt.utils.atomicfile
@@ -30,9 +22,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.exceptions import SaltException
-
-# Import third party libs
-from salt.ext import six
 from salt.utils.cache import CacheCli as cache_cli
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
@@ -55,7 +44,7 @@ def get_running_jobs(opts):
             data = _read_proc_file(path, opts)
             if data is not None:
                 ret.append(data)
-        except (IOError, OSError):
+        except OSError:
             # proc files may be removed at any time during this process by
             # the master process that is executing the JID in question, so
             # we must ignore ENOENT during this process
@@ -67,17 +56,16 @@ def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
     """
-    serial = salt.payload.Serial(opts)
     with salt.utils.files.fopen(path, "rb") as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
-            data = serial.loads(buf)
+            data = salt.payload.loads(buf)
         else:
             # Proc file is empty, remove
             try:
                 os.remove(path)
-            except IOError:
+            except OSError:
                 log.debug("Unable to remove proc file %s.", path)
             return None
     if not isinstance(data, dict):
@@ -88,7 +76,7 @@ def _read_proc_file(path, opts):
         # continue
         try:
             os.remove(path)
-        except IOError:
+        except OSError:
             log.debug("Unable to remove proc file %s.", path)
         return None
 
@@ -98,7 +86,7 @@ def _read_proc_file(path, opts):
             log.warning("PID %s exists but does not appear to be a salt process.", pid)
         try:
             os.remove(path)
-        except IOError:
+        except OSError:
             log.debug("Unable to remove proc file %s.", path)
         return None
     return data
@@ -120,17 +108,17 @@ def _check_cmdline(data):
         return False
     if not os.path.isdir("/proc"):
         return True
-    path = os.path.join("/proc/{0}/cmdline".format(pid))
+    path = os.path.join("/proc/{}/cmdline".format(pid))
     if not os.path.isfile(path):
         return False
     try:
         with salt.utils.files.fopen(path, "rb") as fp_:
             return b"salt" in fp_.read()
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
-class MasterPillarUtil(object):
+class MasterPillarUtil:
     """
     Helper utility for easy access to targeted minion grain and
     pillar data, either from cached data on the master or retrieved
@@ -172,11 +160,10 @@ class MasterPillarUtil(object):
         if opts is None:
             log.error("%s: Missing master opts init arg.", self.__class__.__name__)
             raise SaltException(
-                "{0}: Missing master opts init arg.".format(self.__class__.__name__)
+                "{}: Missing master opts init arg.".format(self.__class__.__name__)
             )
         else:
             self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)
         self.tgt = tgt
         self.tgt_type = tgt_type
         self.saltenv = saltenv
@@ -200,7 +187,7 @@ class MasterPillarUtil(object):
 
     def _get_cached_mine_data(self, *minion_ids):
         # Return one dict with the cached mine data of the targeted minions
-        mine_data = dict([(minion_id, {}) for minion_id in minion_ids])
+        mine_data = {minion_id: {} for minion_id in minion_ids}
         if not self.opts.get("minion_data_cache", False) and not self.opts.get(
             "enforce_mine_cache", False
         ):
@@ -214,7 +201,7 @@ class MasterPillarUtil(object):
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
-            mdata = self.cache.fetch("minions/{0}".format(minion_id), "mine")
+            mdata = self.cache.fetch("minions/{}".format(minion_id), "mine")
             if isinstance(mdata, dict):
                 mine_data[minion_id] = mdata
         return mine_data
@@ -222,22 +209,21 @@ class MasterPillarUtil(object):
     def _get_cached_minion_data(self, *minion_ids):
         # Return two separate dicts of cached grains and pillar data of the
         # minions
-        grains = dict([(minion_id, {}) for minion_id in minion_ids])
+        grains = {minion_id: {} for minion_id in minion_ids}
         pillars = grains.copy()
         if not self.opts.get("minion_data_cache", False):
-            log.debug(
-                "Skipping cached data because minion_data_cache is not " "enabled."
-            )
+            log.debug("Skipping cached data because minion_data_cache is not enabled.")
             return grains, pillars
         if not minion_ids:
             minion_ids = self.cache.list("minions")
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
-            mdata = self.cache.fetch("minions/{0}".format(minion_id), "data")
+            mdata = self.cache.fetch("minions/{}".format(minion_id), "data")
             if not isinstance(mdata, dict):
                 log.warning(
-                    "cache.fetch should always return a dict. ReturnedType: %s, MinionId: %s",
+                    "cache.fetch should always return a dict. ReturnedType: %s,"
+                    " MinionId: %s",
                     type(mdata).__name__,
                     minion_id,
                 )
@@ -251,14 +237,13 @@ class MasterPillarUtil(object):
     def _get_live_minion_grains(self, minion_ids):
         # Returns a dict of grains fetched directly from the minions
         log.debug('Getting live grains for minions: "%s"', minion_ids)
-        client = salt.client.get_local_client(self.opts["conf_file"])
-        ret = client.cmd(
-            ",".join(minion_ids),
-            "grains.items",
-            timeout=self.opts["timeout"],
-            tgt_type="list",
-        )
-        return ret
+        with salt.client.get_local_client(self.opts["conf_file"]) as client:
+            return client.cmd(
+                ",".join(minion_ids),
+                "grains.items",
+                timeout=self.opts["timeout"],
+                tgt_type="list",
+            )
 
     def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
         # Returns a dict of pillar data for one minion
@@ -284,13 +269,11 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_grains:
-            cret = dict(
-                [
-                    (minion_id, mcache)
-                    for (minion_id, mcache) in six.iteritems(cached_grains)
-                    if mcache
-                ]
-            )
+            cret = {
+                minion_id: mcache
+                for (minion_id, mcache) in cached_grains.items()
+                if mcache
+            }
             missed_minions = [
                 minion_id for minion_id in minion_ids if minion_id not in cret
             ]
@@ -298,7 +281,7 @@ class MasterPillarUtil(object):
             if self.grains_fallback:
                 lret = self._get_live_minion_grains(missed_minions)
             ret = dict(
-                list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids])))
+                list({minion_id: {} for minion_id in minion_ids}.items())
                 + list(lret.items())
                 + list(cret.items())
             )
@@ -309,15 +292,13 @@ class MasterPillarUtil(object):
             ]
             log.debug("Missed live minion grains for: %s", missed_minions)
             if self.grains_fallback:
-                cret = dict(
-                    [
-                        (minion_id, mcache)
-                        for (minion_id, mcache) in six.iteritems(cached_grains)
-                        if mcache
-                    ]
-                )
+                cret = {
+                    minion_id: mcache
+                    for (minion_id, mcache) in cached_grains.items()
+                    if mcache
+                }
             ret = dict(
-                list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids])))
+                list({minion_id: {} for minion_id in minion_ids}.items())
                 + list(lret.items())
                 + list(cret.items())
             )
@@ -333,60 +314,46 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_pillar:
-            cret = dict(
-                [
-                    (minion_id, mcache)
-                    for (minion_id, mcache) in six.iteritems(cached_pillar)
-                    if mcache
-                ]
-            )
+            cret = {
+                minion_id: mcache
+                for (minion_id, mcache) in cached_pillar.items()
+                if mcache
+            }
             missed_minions = [
                 minion_id for minion_id in minion_ids if minion_id not in cret
             ]
             log.debug("Missed cached minion pillars for: %s", missed_minions)
             if self.pillar_fallback:
-                lret = dict(
-                    [
-                        (
-                            minion_id,
-                            self._get_live_minion_pillar(
-                                minion_id, grains.get(minion_id, {})
-                            ),
-                        )
-                        for minion_id in missed_minions
-                    ]
-                )
+                lret = {
+                    minion_id: self._get_live_minion_pillar(
+                        minion_id, grains.get(minion_id, {})
+                    )
+                    for minion_id in missed_minions
+                }
             ret = dict(
-                list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids])))
+                list({minion_id: {} for minion_id in minion_ids}.items())
                 + list(lret.items())
                 + list(cret.items())
             )
         else:
-            lret = dict(
-                [
-                    (
-                        minion_id,
-                        self._get_live_minion_pillar(
-                            minion_id, grains.get(minion_id, {})
-                        ),
-                    )
-                    for minion_id in minion_ids
-                ]
-            )
+            lret = {
+                minion_id: self._get_live_minion_pillar(
+                    minion_id, grains.get(minion_id, {})
+                )
+                for minion_id in minion_ids
+            }
             missed_minions = [
                 minion_id for minion_id in minion_ids if minion_id not in lret
             ]
             log.debug("Missed live minion pillars for: %s", missed_minions)
             if self.pillar_fallback:
-                cret = dict(
-                    [
-                        (minion_id, mcache)
-                        for (minion_id, mcache) in six.iteritems(cached_pillar)
-                        if mcache
-                    ]
-                )
+                cret = {
+                    minion_id: mcache
+                    for (minion_id, mcache) in cached_pillar.items()
+                    if mcache
+                }
             ret = dict(
-                list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids])))
+                list({minion_id: {} for minion_id in minion_ids}.items())
                 + list(lret.items())
                 + list(cret.items())
             )
@@ -398,7 +365,7 @@ class MasterPillarUtil(object):
         ckminions = salt.utils.minions.CkMinions(self.opts)
         _res = ckminions.check_minions(self.tgt, self.tgt_type)
         minion_ids = _res["minions"]
-        if len(minion_ids) == 0:
+        if not minion_ids:
             log.debug(
                 'No minions matched for tgt="%s" and tgt_type="%s"',
                 self.tgt,
@@ -521,7 +488,7 @@ class MasterPillarUtil(object):
         if clear_mine:
             clear_what.append("mine")
         if clear_mine_func is not None:
-            clear_what.append("mine_func: '{0}'".format(clear_mine_func))
+            clear_what.append("mine_func: '{}'".format(clear_mine_func))
         if not clear_what:
             log.debug("No cached data types specified for clearing.")
             return False
@@ -547,7 +514,7 @@ class MasterPillarUtil(object):
                 if minion_id not in c_minions:
                     # Cache bank for this minion does not exist. Nothing to do.
                     continue
-                bank = "minions/{0}".format(minion_id)
+                bank = "minions/{}".format(minion_id)
                 minion_pillar = pillars.pop(minion_id, False)
                 minion_grains = grains.pop(minion_id, False)
                 if (
@@ -570,7 +537,7 @@ class MasterPillarUtil(object):
                     if isinstance(mine_data, dict):
                         if mine_data.pop(clear_mine_func, False):
                             self.cache.store(bank, "mine", mine_data)
-        except (OSError, IOError):
+        except OSError:
             return True
         return True
 
@@ -586,7 +553,6 @@ class CacheTimer(Thread):
         self.opts = opts
         self.stopped = event
         self.daemon = True
-        self.serial = salt.payload.Serial(opts.get("serial", ""))
         self.timer_sock = os.path.join(self.opts["sock_dir"], "con_timer.ipc")
 
     def run(self):
@@ -602,7 +568,7 @@ class CacheTimer(Thread):
         count = 0
         log.debug("ConCache-Timer started")
         while not self.stopped.wait(1):
-            socket.send(self.serial.dumps(count))
+            socket.send(salt.payload.dumps(count))
 
             count += 1
             if count >= 60:
@@ -620,25 +586,8 @@ class CacheWorker(Process):
         """
         Sets up the zmq-connection to the ConCache
         """
-        super(CacheWorker, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.opts = opts
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def run(self):
         """
@@ -663,7 +612,7 @@ class ConnectedCache(Process):
         """
         starts the timer and inits the cache itself
         """
-        super(ConnectedCache, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         log.debug("ConCache initializing...")
 
         # the possible settings for the cache
@@ -684,23 +633,6 @@ class ConnectedCache(Process):
         self.timer = CacheTimer(self.opts, self.timer_stop)
         self.timer.start()
         self.running = True
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def signal_handler(self, sig, frame):
         """
@@ -771,9 +703,6 @@ class ConnectedCache(Process):
         poller.register(cupd_in, zmq.POLLIN)
         poller.register(timer_in, zmq.POLLIN)
 
-        # our serializer
-        serial = salt.payload.Serial(self.opts.get("serial", ""))
-
         # register a signal handler
         signal.signal(signal.SIGINT, self.signal_handler)
 
@@ -796,19 +725,19 @@ class ConnectedCache(Process):
 
             # check for next cache-request
             if socks.get(creq_in) == zmq.POLLIN:
-                msg = serial.loads(creq_in.recv())
+                msg = salt.payload.loads(creq_in.recv())
                 log.debug("ConCache Received request: %s", msg)
 
                 # requests to the minion list are send as str's
-                if isinstance(msg, six.string_types):
+                if isinstance(msg, str):
                     if msg == "minions":
                         # Send reply back to client
-                        reply = serial.dumps(self.minions)
+                        reply = salt.payload.dumps(self.minions)
                         creq_in.send(reply)
 
             # check for next cache-update from workers
             if socks.get(cupd_in) == zmq.POLLIN:
-                new_c_data = serial.loads(cupd_in.recv())
+                new_c_data = salt.payload.loads(cupd_in.recv())
                 # tell the worker to exit
                 # cupd_in.send(serial.dumps('ACK'))
 
@@ -826,13 +755,13 @@ class ConnectedCache(Process):
 
                 try:
 
-                    if len(new_c_data) == 0:
+                    if not new_c_data:
                         log.debug("ConCache Got empty update from worker")
                         continue
 
                     data = new_c_data[0]
 
-                    if isinstance(data, six.string_types):
+                    if isinstance(data, str):
                         if data not in self.minions:
                             log.debug(
                                 "ConCache Adding minion %s to cache", new_c_data[0]
@@ -851,7 +780,7 @@ class ConnectedCache(Process):
 
             # check for next timer-event to start new jobs
             if socks.get(timer_in) == zmq.POLLIN:
-                sec_event = serial.loads(timer_in.recv())
+                sec_event = salt.payload.loads(timer_in.recv())
 
                 # update the list every 30 seconds
                 if int(sec_event % 30) == 0:
@@ -867,17 +796,23 @@ class ConnectedCache(Process):
 
 
 def ping_all_connected_minions(opts):
-    client = salt.client.LocalClient()
+    """
+    Ping all connected minions.
+    """
     if opts["minion_data_cache"]:
         tgt = list(salt.utils.minions.CkMinions(opts).connected_ids())
         form = "list"
     else:
         tgt = "*"
         form = "glob"
-    client.cmd_async(tgt, "test.ping", tgt_type=form)
+    with salt.client.LocalClient() as client:
+        client.cmd_async(tgt, "test.ping", tgt_type=form)
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):
+    """
+    Return the master key.
+    """
     if key_user == "root":
         if opts.get("user", "root") != "root":
             key_user = opts.get("user", "root")
@@ -887,14 +822,14 @@ def get_master_key(key_user, opts, skip_perm_errors=False):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         key_user = key_user.replace("\\", "_")
-    keyfile = os.path.join(opts["cachedir"], ".{0}_key".format(key_user))
+    keyfile = os.path.join(opts["cachedir"], ".{}_key".format(key_user))
     # Make sure all key parent directories are accessible
     salt.utils.verify.check_path_traversal(opts["cachedir"], key_user, skip_perm_errors)
 
     try:
         with salt.utils.files.fopen(keyfile, "r") as key:
             return key.read()
-    except (OSError, IOError):
+    except OSError:
         # Fall back to eauth
         return ""
 

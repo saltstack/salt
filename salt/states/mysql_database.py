@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of MySQL databases (schemas)
 =======================================
@@ -14,12 +13,13 @@ Databases can be set as either absent or present.
     frank:
       mysql_database.present
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
 
 log = logging.getLogger(__name__)
+
+# pylint: disable=undefined-variable
 
 
 def __virtual__():
@@ -52,28 +52,61 @@ def present(name, character_set=None, collate=None, **connection_args):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {0} is already present".format(name),
+        "comment": "Database {} is already present".format(name),
     }
     # check if database exists
     existing = __salt__["mysql.db_get"](name, **connection_args)
     if existing:
-        alter = False
-        if character_set and character_set != existing.get("character_set"):
+        alter_charset = False
+        alter_collate = False
+        existing_charset = bytes(str(existing.get("character_set")).encode()).decode()
+        if character_set and character_set != existing_charset:
+            alter_charset = True
             log.debug(
                 "character set differes from %s : %s",
                 character_set,
-                existing.get("character_set"),
+                existing_charset,
             )
-            alter = True
-        if collate and collate != existing.get("collate"):
+
+            comment = "Database character set {} != {} needs to be updated".format(
+                character_set, existing_charset
+            )
+            if __opts__.get("test", False):
+                ret["result"] = None
+                ret["comment"] = comment
+            else:
+                ret["comment"] = comment
+
+        existing_collate = bytes(str(existing.get("collate")).encode()).decode()
+        if collate and collate != existing_collate:
+            alter_collate = True
             log.debug(
-                "collate set differs from %s : %s", collate, existing.get("collate")
+                "collate set differs from %s : %s",
+                collate,
+                existing_collate,
             )
-            alter = True
-        if alter:
-            __salt__["mysql.alter_db"](
-                name, character_set=character_set, collate=collate, **connection_args
+
+            comment = "Database collate {} != {} needs to be updated".format(
+                collate, existing_collate
             )
+            if __opts__.get("test", False):
+                ret["result"] = None
+                ret["comment"] += "\n{}".format(comment)
+                return ret
+            else:
+                ret["comment"] += "\n{}".format(comment)
+
+        if alter_charset or alter_collate:
+            if __opts__.get("test", False):
+                ret["comment"] += "\nDatabase {} is going to be updated".format(name)
+            else:
+                __salt__["mysql.alter_db"](
+                    name,
+                    character_set=character_set,
+                    collate=collate,
+                    **connection_args
+                )
+
         current = __salt__["mysql.db_get"](name, **connection_args)
         if existing.get("collate", None) != current.get("collate", None):
             ret["changes"].update(
@@ -101,23 +134,24 @@ def present(name, character_set=None, collate=None, **connection_args):
             ret["result"] = False
             return ret
 
-    if __opts__["test"]:
+    if __opts__.get("test", False):
         ret["result"] = None
-        ret["comment"] = ("Database {0} is not present and needs to be created").format(
+        ret["comment"] = "Database {} is not present and needs to be created".format(
             name
         )
         return ret
+
     # The database is not present, make it!
     if __salt__["mysql.db_create"](
         name, character_set=character_set, collate=collate, **connection_args
     ):
-        ret["comment"] = "The database {0} has been created".format(name)
+        ret["comment"] = "The database {} has been created".format(name)
         ret["changes"][name] = "Present"
     else:
-        ret["comment"] = "Failed to create database {0}".format(name)
+        ret["comment"] = "Failed to create database {}".format(name)
         err = _get_mysql_error()
         if err is not None:
-            ret["comment"] += " ({0})".format(err)
+            ret["comment"] += " ({})".format(err)
         ret["result"] = False
 
     return ret
@@ -134,22 +168,20 @@ def absent(name, **connection_args):
 
     # check if db exists and remove it
     if __salt__["mysql.db_exists"](name, **connection_args):
-        if __opts__["test"]:
+        if __opts__.get("test", False):
             ret["result"] = None
-            ret["comment"] = "Database {0} is present and needs to be removed".format(
+            ret["comment"] = "Database {} is present and needs to be removed".format(
                 name
             )
             return ret
         if __salt__["mysql.db_remove"](name, **connection_args):
-            ret["comment"] = "Database {0} has been removed".format(name)
+            ret["comment"] = "Database {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
         else:
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] = "Unable to remove database {0} " "({1})".format(
-                    name, err
-                )
+                ret["comment"] = "Unable to remove database {} ({})".format(name, err)
                 ret["result"] = False
                 return ret
     else:
@@ -160,7 +192,5 @@ def absent(name, **connection_args):
             return ret
 
     # fallback
-    ret["comment"] = ("Database {0} is not present, so it cannot be removed").format(
-        name
-    )
+    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
     return ret

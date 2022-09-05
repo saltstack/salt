@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.jid
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import datetime
 import os
 
-# Import Salt libs
 import salt.utils.jid
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -37,23 +33,20 @@ class JidTestCase(TestCase):
         with patch("salt.utils.jid._utc_now", return_value=now):
             ret = salt.utils.jid.gen_jid({})
             self.assertEqual(ret, "20021225120000000000")
-            salt.utils.jid.LAST_JID_DATETIME = None
-            ret = salt.utils.jid.gen_jid({"unique_jid": True})
-            self.assertEqual(ret, "20021225120000000000_{0}".format(os.getpid()))
-            ret = salt.utils.jid.gen_jid({"unique_jid": True})
-            self.assertEqual(ret, "20021225120000000001_{0}".format(os.getpid()))
+            with patch("salt.utils.jid.LAST_JID_DATETIME", None):
+                ret = salt.utils.jid.gen_jid({"unique_jid": True})
+                self.assertEqual(ret, "20021225120000000000_{}".format(os.getpid()))
+                ret = salt.utils.jid.gen_jid({"unique_jid": True})
+                self.assertEqual(ret, "20021225120000000001_{}".format(os.getpid()))
 
-    def test_gen_jid_utc(self):
-        utcnow = datetime.datetime(2002, 12, 25, 12, 7, 0, 0)
-        with patch("salt.utils.jid._utc_now", return_value=utcnow):
-            ret = salt.utils.jid.gen_jid({"utc_jid": True})
-            self.assertEqual(ret, "20021225120700000000")
+    def test_deprecation_58225(self):
+        # check that type error will be raised
+        self.assertRaises(TypeError, salt.utils.jid.gen_jid)
 
-    def test_gen_jid_utc_unique(self):
-        utcnow = datetime.datetime(2002, 12, 25, 12, 7, 0, 0)
-        with patch("salt.utils.jid._utc_now", return_value=utcnow):
-            salt.utils.jid.LAST_JID_DATETIME = None
-            ret = salt.utils.jid.gen_jid({"utc_jid": True, "unique_jid": True})
-            self.assertEqual(ret, "20021225120700000000_{0}".format(os.getpid()))
-            ret = salt.utils.jid.gen_jid({"utc_jid": True, "unique_jid": True})
-            self.assertEqual(ret, "20021225120700000001_{0}".format(os.getpid()))
+        # check that opts is missing and not another arg
+        try:
+            salt.utils.jid.gen_jid()  # pylint: disable=no-value-for-parameter
+        except TypeError as no_opts:
+            self.assertEqual(
+                str(no_opts), "gen_jid() missing 1 required positional argument: 'opts'"
+            )

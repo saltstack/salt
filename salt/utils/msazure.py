@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 .. versionadded:: 2015.8.0
 
 Utilities for accessing storage container blobs on Azure
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
-# Import salt libs
 from salt.exceptions import SaltSystemExit
 
-# Import azure libs
 HAS_LIBS = False
 try:
     import azure
@@ -92,8 +87,10 @@ def put_blob(storage_conn=None, **kwargs):
     if "blob_path" not in kwargs and "blob_content" not in kwargs:
         raise SaltSystemExit(
             code=42,
-            msg='Either a path to a file needs to be passed in as "blob_path" '
-            'or the contents of a blob as "blob_content."',
+            msg=(
+                'Either a path to a file needs to be passed in as "blob_path" '
+                'or the contents of a blob as "blob_content."'
+            ),
         )
 
     blob_kwargs = {
@@ -142,8 +139,10 @@ def get_blob(storage_conn=None, **kwargs):
     if "local_path" not in kwargs and "return_content" not in kwargs:
         raise SaltSystemExit(
             code=42,
-            msg='Either a local path needs to be passed in as "local_path", '
-            'or "return_content" to return the blob contents directly',
+            msg=(
+                'Either a local path needs to be passed in as "local_path", '
+                'or "return_content" to return the blob contents directly'
+            ),
         )
 
     blob_kwargs = {

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 SUSE LLC
 #
@@ -18,19 +17,12 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import io
 
-from salt.ext import six
-from salt.ext.six.moves import StringIO
 from salt.modules.inspectlib.entities import CsvDBEntity
 from salt.modules.inspectlib.fsdb import CsvDB
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
@@ -41,7 +33,7 @@ def mock_open(data=None):
     :param data:
     :return:
     """
-    data = StringIO(data)
+    data = io.StringIO(data)
     mock = MagicMock(spec=io.FileIO)
     handle = MagicMock(spec=io.FileIO)
     handle.write.return_value = None
@@ -51,12 +43,12 @@ def mock_open(data=None):
     return mock
 
 
-class Writable(StringIO):
+class Writable(io.StringIO):
     def __init__(self, data=None):
         if data:
-            StringIO.__init__(self, data)
+            io.StringIO.__init__(self, data)
         else:
-            StringIO.__init__(self)
+            io.StringIO.__init__(self)
         self.data = []
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -134,18 +126,16 @@ class InspectorFSDBTestCase(TestCase):
             "os.listdir", MagicMock(return_value=["some_table"])
         ):
             writable = Writable()
-            with patch("gzip.open", MagicMock(return_value=writable)):
+            with patch("gzip.open", MagicMock(return_value=writable)) as gzip_mock_open:
                 csvdb = CsvDB("/foobar")
                 csvdb.open()
                 csvdb.create_table_from_object(FoobarEntity())
 
+            # test the second call to gzip.open, the first is in the list_tables function
+            assert gzip_mock_open.call_args_list[1][0][1] == "wt"
+
             sorted_writable_data = sorted(writable.data[0].strip().split(","))
-            if six.PY2:
-                sorted_expected_data = sorted(
-                    "foo:int,bar:unicode,spam:float".split(",")
-                )
-            else:
-                sorted_expected_data = sorted("foo:int,bar:str,spam:float".split(","))
+            sorted_expected_data = sorted("foo:int,bar:str,spam:float".split(","))
             self.assertEqual(sorted_writable_data, sorted_expected_data)
 
     def test_list_databases(self):
@@ -166,7 +156,7 @@ class InspectorFSDBTestCase(TestCase):
             "os.listdir", MagicMock(return_value=["some_table"])
         ):
             writable = Writable()
-            with patch("gzip.open", MagicMock(return_value=writable)):
+            with patch("gzip.open", MagicMock(return_value=writable)) as gzip_mock_open:
                 obj = FoobarEntity()
                 obj.foo = 123
                 obj.bar = "test entity"
@@ -183,6 +173,10 @@ class InspectorFSDBTestCase(TestCase):
                     )
                 }
                 csvdb.store(obj)
+
+                # test the second call to gzip.open, the first is in the list_tables function
+                assert gzip_mock_open.call_args_list[1][0][1] == "at"
+
                 assert writable.data[0].strip() == "123,test entity,0.123"
 
     def test_delete_object(self):
@@ -282,7 +276,7 @@ class InspectorFSDBTestCase(TestCase):
         """
         with patch("os.listdir", MagicMock(return_value=["test_db"])), patch(
             "gzip.open", MagicMock()
-        ), patch(
+        ) as gzip_mock_open, patch(
             "csv.reader",
             MagicMock(
                 return_value=iter(
@@ -298,6 +292,10 @@ class InspectorFSDBTestCase(TestCase):
             csvdb = CsvDB("/foobar")
             csvdb.open()
             entities = csvdb.get(FoobarEntity)
+
+            # test the second call to gzip.open, the first is in the open function
+            assert gzip_mock_open.call_args_list[1][0][1] == "rt"
+
             assert list == type(entities)
             assert len(entities) == 2
 

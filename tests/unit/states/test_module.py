@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas (nicole@saltstack.com)
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from inspect import ArgSpec
 
-# Import Salt Libs
 import salt.states.module as module
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -71,7 +65,13 @@ STATE_APPLY_RET = {
 }
 
 
-def _mocked_func_named(name, names=("Fred", "Swen",)):
+def _mocked_func_named(
+    name,
+    names=(
+        "Fred",
+        "Swen",
+    ),
+):
     """
     Mocked function with named defaults.
 
@@ -107,7 +107,13 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {module: {"__opts__": {"test": False}, "__salt__": {CMD: MagicMock()}}}
+        return {
+            module: {
+                "__opts__": {"test": False},
+                "__salt__": {CMD: MagicMock()},
+                "__low__": {"__id__": "test"},
+            },
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -131,8 +137,36 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: None})
-        if ret["comment"] != "Unavailable function: {0}.".format(CMD) or ret["result"]:
-            self.fail("module.run did not fail as expected: {0}".format(ret))
+        if ret["comment"] != "Unavailable function: {}.".format(CMD) or ret["result"]:
+            self.fail("module.run did not fail as expected: {}".format(ret))
+
+    def test_run_module_not_available_testmode(self):
+        """
+        Tests the return of module.run state when the module function is not available
+        when run with test=True
+        :return:
+        """
+        with patch.dict(module.__salt__, {}, clear=True), patch.dict(
+            module.__opts__, {"test": True, "use_superseded": ["module.run"]}
+        ):
+            ret = module.run(**{CMD: None})
+        if (
+            ret["comment"] != "Unavailable function: {}.".format(CMD)
+            or ret["result"] is not False
+        ):
+            self.fail("module.run did not fail as expected: {}".format(ret))
+
+    def test_run_module_noop(self):
+        """
+        Tests the return of module.run state when no module function is provided
+        :return:
+        """
+        with patch.dict(module.__salt__, {}, clear=True), patch.dict(
+            module.__opts__, {"test": True, "use_superseded": ["module.run"]}
+        ):
+            ret = module.run()
+        if ret["comment"] != "No function provided." or ret["result"] is not False:
+            self.fail("module.run did not fail as expected: {}".format(ret))
 
     def test_module_run_hidden_varargs(self):
         """
@@ -142,7 +176,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.utils.args.get_function_argspec", MagicMock(return_value=self.bspec)
         ):
-            ret = module._run(CMD, m_names="anyname")
+            ret = module._legacy_run(CMD, m_names="anyname")
         self.assertEqual(ret["comment"], "'names' must be a list.")
 
     def test_run_testmode(self):
@@ -155,10 +189,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Function {0} to be executed.".format(CMD)
-            or not ret["result"]
+            ret["comment"] != "Function {} to be executed.".format(CMD)
+            or ret["result"] is not None
         ):
-            self.fail("module.run failed: {0}".format(ret))
+            self.fail("module.run failed: {}".format(ret))
 
     def test_run_missing_arg(self):
         """
@@ -182,8 +216,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: ["Fred"]})
-        if ret["comment"] != "{0}: Success".format(CMD) or not ret["result"]:
-            self.fail("module.run failed: {0}".format(ret))
+        if ret["comment"] != "{}: Success".format(CMD) or not ret["result"]:
+            self.fail("module.run failed: {}".format(ret))
 
     def test_run_state_apply_result_false(self):
         """
@@ -196,6 +230,31 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret = module.run(**{"name": "state.apply", "mods": "test2"})
         self.assertFalse(ret["result"])
 
+    def test_run_service_status_dead(self):
+        """
+        Tests the 'result' of module.run that calls service.status when
+        service is dead or does not exist
+        """
+        func = "service.status"
+        with patch.dict(
+            module.__salt__, {func: MagicMock(return_value=False)}
+        ), patch.dict(module.__opts__, {"use_superseded": ["module.run"]}):
+            ret = module.run(
+                **{
+                    "name": "test_service_state",
+                    "service.status": {"name": "doesnotexist"},
+                }
+            )
+            self.assertEqual(
+                ret,
+                {
+                    "name": ["service.status"],
+                    "changes": {},
+                    "comment": "'service.status': False",
+                    "result": False,
+                },
+            )
+
     def test_run_unexpected_keywords(self):
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}), patch.dict(
             module.__opts__, {"use_superseded": ["module.run"]}
@@ -204,9 +263,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module_function = module.__salt__[CMD].__name__
         self.assertEqual(
             ret["comment"],
-            (
-                "'{0}' failed: {1}() got an unexpected keyword argument "
-                "'foo'".format(CMD, module_function)
+            "'{}' failed: {}() got an unexpected keyword argument 'foo'".format(
+                CMD, module_function
             ),
         )
         self.assertFalse(ret["result"])
@@ -280,7 +338,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             0,
             "a",
             "",
-            (1, 2,),
+            (
+                1,
+                2,
+            ),
             (),
             [1, 2],
             [],
@@ -294,7 +355,11 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ):
                 log.debug("test_run_typed_return: trying %s", val)
                 ret = module.run(**{CMD: [{"ret": val}]})
-            self.assertTrue(ret["result"])
+            if val is False:
+                self.assertFalse(ret["result"])
+                self.assertEqual(ret["comment"], "'foo.bar': False")
+            else:
+                self.assertTrue(ret["result"])
 
     def test_run_batch_call(self):
         """
@@ -306,9 +371,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             module.__salt__,
             {
-                "first": _mocked_none_return,
-                "second": _mocked_none_return,
-                "third": _mocked_none_return,
+                "first.one": _mocked_none_return,
+                "second.one": _mocked_none_return,
+                "third.one": _mocked_none_return,
             },
             clear=True,
         ):
@@ -323,10 +388,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         name isn't available
         """
         with patch.dict(module.__salt__, {}, clear=True):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertFalse(ret["result"])
         self.assertEqual(
-            ret["comment"], "Module function {0} is not available".format(CMD)
+            ret["comment"], "Module function {} is not available".format(CMD)
         )
 
     def test_module_run_test_true(self):
@@ -334,9 +399,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         Tests the return of module.run state when test=True is passed in
         """
         with patch.dict(module.__opts__, {"test": True}):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertEqual(
-            ret["comment"], "Module function {0} is set to execute".format(CMD)
+            ret["comment"], "Module function {} is set to execute".format(CMD)
         )
 
     def test_module_run_missing_arg(self):
@@ -346,7 +411,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.utils.args.get_function_argspec", MagicMock(return_value=self.aspec)
         ):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertIn("The following arguments are missing:", ret["comment"])
         self.assertIn("world", ret["comment"])
         self.assertIn("hello", ret["comment"])

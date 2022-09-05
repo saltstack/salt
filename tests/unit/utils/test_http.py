@@ -1,15 +1,25 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import socket
 from contextlib import closing
 
+import pytest
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.utils.http as http
-from tests.support.helpers import MirrorPostHandler, Webserver, slowTest
-from tests.support.unit import TestCase
+from tests.support.helpers import MirrorPostHandler, Webserver
+from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
+
+try:
+    import salt.ext.tornado.curl_httpclient  # pylint: disable=unused-import
+
+    HAS_CURL = True
+except ImportError:
+    HAS_CURL = False
 
 
 class HTTPTestCase(TestCase):
@@ -107,7 +117,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the
@@ -132,6 +142,30 @@ class HTTPTestCase(TestCase):
         self.assertTrue(isinstance(ret, dict))
         self.assertTrue(isinstance(ret.get("error", None), str))
 
+    def test_parse_cookie_header(self):
+        header = "; ".join(
+            [
+                "foo=bar",
+                "expires=Mon, 03-Aug-20 14:26:27 GMT",
+                "path=/",
+                "domain=.mydomain.tld",
+                "HttpOnly",
+                "SameSite=Lax",
+                "Secure",
+            ]
+        )
+        ret = http.parse_cookie_header(header)
+        cookie = ret.pop(0)
+        assert cookie.name == "foo", cookie.name
+        assert cookie.value == "bar", cookie.value
+        assert cookie.expires == 1596464787, cookie.expires
+        assert cookie.path == "/", cookie.path
+        assert cookie.domain == ".mydomain.tld", cookie.domain
+        assert cookie.secure
+        # Only one cookie should have been returned, if anything is left in the
+        # parse_cookie_header return then something went wrong.
+        assert not ret
+
 
 class HTTPPostTestCase(TestCase):
     """
@@ -154,7 +188,10 @@ class HTTPPostTestCase(TestCase):
         """
         Test handling of a multipart/form-data POST using the requests backend
         """
-        match_this = '{0}\r\nContent-Disposition: form-data; name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        match_this = (
+            "{0}\r\nContent-Disposition: form-data;"
+            ' name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        )
         ret = http.query(
             self.post_web_root,
             method="POST",
@@ -166,6 +203,45 @@ class HTTPPostTestCase(TestCase):
         body = ret.get("body", "")
         boundary = body[: body.find("\r")]
         self.assertEqual(body, match_this.format(boundary))
+
+    @skipIf(
+        HAS_CURL is False, "Missing prerequisites for tornado.curl_httpclient library"
+    )
+    def test_query_proxy(self):
+        """
+        Test http.query with tornado and with proxy opts set
+        and then test with no_proxy set to ensure we dont
+        run into issue #55192 again.
+        """
+        data = "mydatahere"
+        opts = {
+            "proxy_host": "127.0.0.1",
+            "proxy_port": 88,
+            "proxy_username": "salt_test",
+            "proxy_password": "super_secret",
+        }
+
+        mock_curl = MagicMock()
+
+        with patch("tornado.httpclient.HTTPClient.fetch", mock_curl):
+            ret = http.query(
+                self.post_web_root,
+                method="POST",
+                data=data,
+                backend="tornado",
+                opts=opts,
+            )
+
+        for opt in opts:
+            assert opt in mock_curl.call_args_list[0][1].keys()
+
+        opts["no_proxy"] = ["127.0.0.1"]
+
+        ret = http.query(
+            self.post_web_root, method="POST", data=data, backend="tornado", opts=opts
+        )
+        body = ret.get("body", "")
+        assert body == data
 
 
 class HTTPGetTestCase(TestCase):
@@ -205,7 +281,18 @@ class HTTPGetTestCase(TestCase):
         decode_body=True that it returns
         string and decodes it.
         """
-        for backend in ["tornado", "requests", "urllib2"]:
-            ret = http.query(self.get_webserver.url("core.sls"), backend=backend,)
-            body = ret.get("body", "")
-            assert isinstance(body, str)
+        core_state = """
+        {}:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file("core.sls", core_state, self.get_webserver.root):
+            for backend in ["tornado", "requests", "urllib2"]:
+                ret = http.query(self.get_webserver.url("core.sls"), backend=backend)
+                body = ret.get("body", "")
+                assert isinstance(body, str)

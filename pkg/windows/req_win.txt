@@ -1,3 +1,0 @@
-pythonnet==2.4.0
-pywin32==227
-wmi==1.4.9

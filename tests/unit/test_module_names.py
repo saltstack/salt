@@ -1,60 +1,54 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.test_test_module_name
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import
-
 import fnmatch
 import os
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.paths import list_test_mods
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 EXCLUDED_DIRS = [
-    os.path.join("tests", "pkg"),
-    os.path.join("tests", "perf"),
-    os.path.join("tests", "support"),
-    os.path.join("tests", "unit", "setup"),
-    os.path.join("tests", "unit", "utils", "cache_mods"),
-    os.path.join("tests", "unit", "modules", "inspectlib"),
-    os.path.join("tests", "unit", "modules", "zypp"),
-    os.path.join("tests", "unit", "templates", "files"),
-    os.path.join("tests", "integration", "files"),
-    os.path.join("tests", "unit", "files"),
     os.path.join("tests", "integration", "cloud", "helpers"),
+    os.path.join("tests", "integration", "files"),
     os.path.join("tests", "kitchen", "tests"),
+    os.path.join("tests", "perf"),
+    os.path.join("tests", "pkg"),
+    os.path.join("tests", "support"),
+    os.path.join("tests", "unit", "files"),
+    os.path.join("tests", "unit", "modules", "inspectlib"),
     os.path.join("tests", "unit", "modules", "nxos"),
+    os.path.join("tests", "unit", "modules", "zypp"),
+    os.path.join("tests", "unit", "setup"),
+    os.path.join("tests", "unit", "templates", "files"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
 ]
 EXCLUDED_FILES = [
-    os.path.join("tests", "eventlisten.py"),
     os.path.join("tests", "buildpackage.py"),
-    os.path.join("tests", "saltsh.py"),
-    os.path.join("tests", "minionswarm.py"),
-    os.path.join("tests", "wheeltest.py"),
-    os.path.join("tests", "runtests.py"),
-    os.path.join("tests", "jenkins.py"),
-    os.path.join("tests", "salt-tcpdump.py"),
-    os.path.join("tests", "packdump.py"),
-    os.path.join("tests", "consist.py"),
-    os.path.join("tests", "modparser.py"),
-    os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "committer_parser.py"),
-    os.path.join("tests", "zypp_plugin.py"),
-    os.path.join("tests", "unit", "utils", "scheduler", "base.py"),
+    os.path.join("tests", "consist.py"),
+    os.path.join("tests", "eventlisten.py"),
+    os.path.join("tests", "jenkins.py"),
+    os.path.join("tests", "minionswarm.py"),
+    os.path.join("tests", "modparser.py"),
+    os.path.join("tests", "packdump.py"),
+    os.path.join("tests", "runtests.py"),
+    os.path.join("tests", "salt-tcpdump.py"),
+    os.path.join("tests", "saltsh.py"),
+    os.path.join("tests", "unit", "test_pytest_pass_fail.py"),
     os.path.join("tests", "unit", "transport", "mixins.py"),
-    os.path.join("tests", "integration", "utils", "testprogram.py"),
+    os.path.join("tests", "unit", "utils", "scheduler", "base.py"),
+    os.path.join("tests", "virtualname.py"),
+    os.path.join("tests", "wheeltest.py"),
+    os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "pytests", "functional", "cache", "helpers.py"),
+    os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
 
@@ -99,15 +93,13 @@ class BadTestModuleNamesTestCase(TestCase):
                 path, directory, filename.split("_test")[0]
             )
 
-        error_msg += "\nIf you believe one of the entries above should be ignored, please add it to either\n"
-        error_msg += "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
-        error_msg += "If it is a tests module, then please rename as suggested."
+        error_msg += (
+            "\nIf you believe one of the entries above should be ignored, please add it to either\n"
+            "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
+            "If it is a tests module, then please rename as suggested."
+        )
         self.assertEqual([], bad_names, error_msg)
 
-    @skipIf(
-        not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
-        "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
-    )
     def test_module_name_source_match(self):
         """
         Check all the test mods and check if they correspond to actual files in
@@ -120,26 +112,6 @@ class BadTestModuleNamesTestCase(TestCase):
         consider mapping it to files manually via tests/filename_map.yml.
         """
         ignore = (
-            "unit.test_doc",
-            "unit.test_mock",
-            "unit.test_module_names",
-            "unit.test_virtualname",
-            "unit.test_simple",
-            "unit.test_zypp_plugins",
-            "unit.test_proxy_minion",
-            "unit.cache.test_cache",
-            "unit.serializers.test_serializers",
-            "unit.setup.test_man",
-            "unit.states.test_postgres",
-            "unit.utils.scheduler.test_run_job",
-            "unit.utils.scheduler.test_maxrunning",
-            "unit.utils.scheduler.test_eval",
-            "unit.utils.scheduler.test_helpers",
-            "unit.utils.scheduler.test_error",
-            "unit.utils.scheduler.test_postpone",
-            "unit.utils.scheduler.test_skip",
-            "unit.utils.scheduler.test_schedule",
-            "unit.setup.test_install",
             "integration.cli.test_custom_module",
             "integration.cli.test_grains",
             "integration.client.test_kwarg",
@@ -152,22 +124,18 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.grains.test_custom",
             "integration.loader.test_ext_grains",
             "integration.loader.test_ext_modules",
-            "integration.logging.test_jid_logging",
             "integration.logging.handlers.test_logstash_mod",
-            "integration.master.test_event_return",
+            "integration.logging.test_jid_logging",
             "integration.master.test_clear_funcs",
-            "integration.minion.test_blackout",
+            "integration.master.test_event_return",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
-            "integration.minion.test_pillar",
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
-            "integration.modules.test_state_jinja_filters",
+            "integration.modules.test_service",
             "integration.modules.test_sysctl",
-            "integration.netapi.test_client",
             "integration.netapi.rest_tornado.test_app",
-            "integration.netapi.rest_cherrypy.test_app_pam",
             "integration.output.test_output",
             "integration.pillar.test_pillar_include",
             "integration.proxy.test_shell",
@@ -175,22 +143,21 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.reactor.test_reactor",
             "integration.returners.test_noop_return",
             "integration.runners.test_runner_returns",
-            "integration.shell.test_spm",
-            "integration.shell.test_cp",
-            "integration.shell.test_syndic",
-            "integration.shell.test_proxy",
+            "integration.shell.test_arguments",
             "integration.shell.test_auth",
             "integration.shell.test_call",
-            "integration.shell.test_arguments",
-            "integration.shell.test_matcher",
-            "integration.shell.test_master_tops",
-            "integration.shell.test_saltcli",
-            "integration.shell.test_master",
-            "integration.shell.test_key",
-            "integration.shell.test_runner",
             "integration.shell.test_cloud",
+            "integration.shell.test_cp",
             "integration.shell.test_enabled",
+            "integration.shell.test_key",
+            "integration.shell.test_master",
+            "integration.shell.test_master_tops",
             "integration.shell.test_minion",
+            "integration.shell.test_proxy",
+            "integration.shell.test_runner",
+            "integration.shell.test_saltcli",
+            "integration.shell.test_spm",
+            "integration.shell.test_syndic",
             "integration.spm.test_build",
             "integration.spm.test_files",
             "integration.spm.test_info",
@@ -199,27 +166,48 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.spm.test_repo",
             "integration.ssh.test_deploy",
             "integration.ssh.test_grains",
-            "integration.ssh.test_jinja_filters",
             "integration.ssh.test_master",
             "integration.ssh.test_mine",
             "integration.ssh.test_pillar",
+            "integration.ssh.test_pre_flight",
             "integration.ssh.test_raw",
             "integration.ssh.test_saltcheck",
             "integration.ssh.test_state",
-            "integration.ssh.test_pre_flight",
             "integration.states.test_compiler",
             "integration.states.test_handle_error",
             "integration.states.test_handle_iorder",
             "integration.states.test_match",
             "integration.states.test_renderers",
             "integration.wheel.test_client",
-            "multimaster.minion.test_event",
+            "unit.cache.test_cache",
+            "unit.logging.test_deferred_stream_handler",
+            "unit.serializers.test_serializers",
+            "unit.setup.test_install",
+            "unit.setup.test_man",
+            "unit.states.test_postgres",
+            "unit.test_doc",
+            "unit.test_mock",
+            "unit.test_module_names",
+            "unit.test_proxy_minion",
+            "unit.test_pytest_pass_fail",
+            "unit.test_simple",
+            "unit.test_virtualname",
+            "unit.test_zypp_plugins",
+            "unit.utils.scheduler.test_error",
+            "unit.utils.scheduler.test_eval",
+            "unit.utils.scheduler.test_helpers",
+            "unit.utils.scheduler.test_maxrunning",
+            "unit.utils.scheduler.test_postpone",
+            "unit.utils.scheduler.test_run_job",
+            "unit.utils.scheduler.test_schedule",
+            "unit.utils.scheduler.test_skip",
+            "unit.auth.test_auth",
         )
         errors = []
 
         def _format_errors(errors):
             msg = (
-                "The following {0} test module(s) could not be matched to a "
+                "The following {} test module(s) could not be matched to a "
                 "source code file:\n\n".format(len(errors))
             )
             msg += "".join(errors)
@@ -242,11 +230,11 @@ class BadTestModuleNamesTestCase(TestCase):
 
             # The path from the root of the repo
             relpath = salt.utils.path.join(
-                "salt", stem.replace(".", os.sep), ".".join((flower[5:], "py"))
+                stem.replace(".", os.sep), ".".join((flower[5:], "py"))
             )
 
             # The full path to the file we expect to find
-            abspath = salt.utils.path.join(RUNTIME_VARS.CODE_DIR, relpath)
+            abspath = salt.utils.path.join(RUNTIME_VARS.SALT_CODE_DIR, relpath)
 
             if not os.path.isfile(abspath):
                 # Maybe this is in a dunder init?
@@ -256,6 +244,6 @@ class BadTestModuleNamesTestCase(TestCase):
                     # Yep, it is. Carry on!
                     continue
 
-                errors.append("{0} (expected: {1})\n".format(mod_name, relpath))
+                errors.append("{} (expected: {})\n".format(mod_name, relpath))
 
         assert not errors, _format_errors(errors)

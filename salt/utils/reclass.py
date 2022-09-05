@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Common utility functions for the reclass adapters
 http://reclass.pantsfullofunix.net
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-
-# Import python libs
 import sys
 
 
@@ -29,5 +25,5 @@ def set_inventory_base_uri_default(config, opts):
         return
 
     base_roots = config.get("file_roots", {}).get("base", [])
-    if len(base_roots) > 0:
+    if base_roots:
         opts["inventory_base_uri"] = base_roots[0]

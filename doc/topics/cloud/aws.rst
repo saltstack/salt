@@ -949,7 +949,7 @@ Alternate Endpoint
 Normally, EC2 endpoints are build using the region and the service_url. The
 resulting endpoint would follow this pattern:
 
-.. code-block:: bash
+.. code-block:: text
 
     ec2.<region>.<service_url>
 

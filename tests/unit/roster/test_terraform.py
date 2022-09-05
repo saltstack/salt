@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 unittests for terraform roster
 """
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import os.path
 
-# Import Salt Libs
 import salt.config
 import salt.loader
 from salt.roster import terraform
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -33,7 +26,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_default_output(self):
         """
-        Test the output of a fixture tfstate file wich contains libvirt
+        Test the output of a fixture tfstate file which contains libvirt
         resources.
         """
         tfstate = os.path.join(
@@ -82,7 +75,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_default_matching(self):
         """
-        Test the output of a fixture tfstate file wich contains libvirt
+        Test the output of a fixture tfstate file which contains libvirt
         resources using matching
         """
         tfstate = os.path.join(

@@ -1,25 +1,21 @@
-# -*- coding: utf-8 -*-
-
 """
 Tests for the rabbitmq state
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class RabbitVHostTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the rabbitmq virtual host states.
     """
 
     def setUp(self):
-        super(RabbitVHostTestCase, self).setUp()
+        super().setUp()
         rabbit_installed = self.run_function("cmd.has_exec", ["rabbitmqctl"])
 
         if not rabbit_installed:

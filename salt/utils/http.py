@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
 
 .. versionadded:: 2015.5.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import cgi
 import gzip
+import http.client
+import http.cookiejar
 import io
 import logging
 import os
@@ -16,12 +16,13 @@ import pprint
 import re
 import socket
 import ssl
+import urllib.error
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
 import zlib
 
 import salt.config
-import salt.ext.six.moves.http_client
-import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib.request as urllib_request
 import salt.ext.tornado.httputil
 import salt.ext.tornado.simple_httpclient
 import salt.loader
@@ -37,33 +38,23 @@ import salt.utils.stringutils
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-from salt._compat import ElementTree as ET
-from salt.ext import six
-from salt.ext.six.moves import StringIO
-from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urlparse
 from salt.ext.tornado.httpclient import HTTPClient
 from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
-    from ssl import CertificateError
-    from ssl import match_hostname
+    from ssl import CertificateError, match_hostname
 
     HAS_MATCHHOSTNAME = True
 except ImportError:
     # pylint: disable=no-name-in-module
     try:
-        from backports.ssl_match_hostname import CertificateError
-        from backports.ssl_match_hostname import match_hostname
+        from backports.ssl_match_hostname import CertificateError, match_hostname
 
         HAS_MATCHHOSTNAME = True
     except ImportError:
         try:
-            from salt.ext.ssl_match_hostname import CertificateError
-            from salt.ext.ssl_match_hostname import match_hostname
+            from salt.ext.ssl_match_hostname import CertificateError, match_hostname
 
             HAS_MATCHHOSTNAME = True
         except ImportError:
@@ -93,7 +84,7 @@ except ImportError:
     HAS_CERTIFI = False
 
 log = logging.getLogger(__name__)
-USERAGENT = "Salt/{0}".format(salt.version.__version__)
+USERAGENT = "Salt/{}".format(salt.version.__version__)
 
 
 def __decompressContent(coding, pgctnt):
@@ -304,7 +295,7 @@ def query(
             auth = (username, password)
 
     if agent == USERAGENT:
-        agent = "{0} http.query()".format(agent)
+        agent = "{} http.query()".format(agent)
     header_dict["User-agent"] = agent
 
     if backend == "requests":
@@ -322,11 +313,9 @@ def query(
 
     if cookies is not None:
         if cookie_format == "mozilla":
-            sess_cookies = salt.ext.six.moves.http_cookiejar.MozillaCookieJar(
-                cookie_jar
-            )
+            sess_cookies = http.cookiejar.MozillaCookieJar(cookie_jar)
         else:
-            sess_cookies = salt.ext.six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
+            sess_cookies = http.cookiejar.LWPCookieJar(cookie_jar)
         if not os.path.isfile(cookie_jar):
             sess_cookies.save()
         sess_cookies.load()
@@ -349,7 +338,7 @@ def query(
 
         # Client-side cert handling
         if cert is not None:
-            if isinstance(cert, six.string_types):
+            if isinstance(cert, str):
                 if os.path.exists(cert):
                     req_kwargs["cert"] = cert
             elif isinstance(cert, list):
@@ -357,8 +346,7 @@ def query(
                     req_kwargs["cert"] = cert
             else:
                 log.error(
-                    "The client-side certificate path that"
-                    " was passed is not valid: %s",
+                    "The client-side certificate path that was passed is not valid: %s",
                     cert,
                 )
 
@@ -371,7 +359,7 @@ def query(
                 method,
                 url,
                 params=params,
-                files={formdata_fieldname: (formdata_filename, StringIO(data))},
+                files={formdata_fieldname: (formdata_filename, io.StringIO(data))},
                 **req_kwargs
             )
         else:
@@ -379,7 +367,7 @@ def query(
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
-            header_callback("HTTP/1.0 {0} MESSAGE".format(result.status_code))
+            header_callback("HTTP/1.0 {} MESSAGE".format(result.status_code))
             # fake streaming the content
             streaming_callback(result.content)
             return {
@@ -401,19 +389,19 @@ def query(
         result_text = result.content
         result_cookies = result.cookies
         body = result.content
-        if not isinstance(body, six.text_type) and decode_body:
+        if not isinstance(body, str) and decode_body:
             body = body.decode(result.encoding or "utf-8")
         ret["body"] = body
     elif backend == "urllib2":
-        request = urllib_request.Request(url_full, data)
+        request = urllib.request.Request(url_full, data)
         handlers = [
-            urllib_request.HTTPHandler,
-            urllib_request.HTTPCookieProcessor(sess_cookies),
+            urllib.request.HTTPHandler,
+            urllib.request.HTTPCookieProcessor(sess_cookies),
         ]
 
         if url.startswith("https"):
             hostname = request.get_host()
-            handlers[0] = urllib_request.HTTPSHandler(1)
+            handlers[0] = urllib.request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warning(
                     "match_hostname() not available, SSL hostname checking "
@@ -437,16 +425,17 @@ def query(
                 try:
                     match_hostname(sockwrap.getpeercert(), hostname)
                 except CertificateError as exc:
-                    ret["error"] = (
-                        "The certificate was invalid. Error returned was: %s",
-                        pprint.pformat(exc),
+                    ret[
+                        "error"
+                    ] = "The certificate was invalid. Error returned was: {}".format(
+                        pprint.pformat(exc)
                     )
                     return ret
 
                 # Client-side cert handling
                 if cert is not None:
                     cert_chain = None
-                    if isinstance(cert, six.string_types):
+                    if isinstance(cert, str):
                         if os.path.exists(cert):
                             cert_chain = cert
                     elif isinstance(cert, list):
@@ -463,7 +452,7 @@ def query(
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
                         handlers.append(
-                            urllib_request.HTTPSHandler(context=context)
+                            urllib.request.HTTPSHandler(context=context)
                         )  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
@@ -474,18 +463,16 @@ def query(
                         }
                         if len(cert_chain) > 1:
                             cert_kwargs["key_file"] = cert_chain[1]
-                        handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(
-                            **cert_kwargs
-                        )
+                        handlers[0] = http.client.HTTPSConnection(**cert_kwargs)
 
-        opener = urllib_request.build_opener(*handlers)
+        opener = urllib.request.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
         try:
             result = opener.open(request)
-        except URLError as exc:
-            return {"Error": six.text_type(exc)}
+        except urllib.error.URLError as exc:
+            return {"Error": str(exc)}
         if stream is True or handle is True:
             return {
                 "handle": result,
@@ -502,10 +489,10 @@ def query(
             if (
                 res_content_type.startswith("text/")
                 and "charset" in res_params
-                and not isinstance(result_text, six.text_type)
+                and not isinstance(result_text, str)
             ):
                 result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes) and decode_body:
+        if isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
     else:
@@ -514,7 +501,7 @@ def query(
 
         # Client-side cert handling
         if cert is not None:
-            if isinstance(cert, six.string_types):
+            if isinstance(cert, str):
                 if os.path.exists(cert):
                     req_kwargs["client_cert"] = cert
             elif isinstance(cert, list):
@@ -523,13 +510,12 @@ def query(
                     req_kwargs["client_key"] = cert[1]
             else:
                 log.error(
-                    "The client-side certificate path that "
-                    "was passed is not valid: %s",
+                    "The client-side certificate path that was passed is not valid: %s",
                     cert,
                 )
 
         if isinstance(data, dict):
-            data = _urlencode(data)
+            data = urllib.parse.urlencode(data)
 
         if verify_ssl:
             req_kwargs["ca_certs"] = ca_bundle
@@ -565,16 +551,18 @@ def query(
 
         # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
         # except we remove the valid ones if a url has a no_proxy hostname in it
-        if urlparse(url_full).hostname in no_proxy:
+        if urllib.parse.urlparse(url_full).hostname in no_proxy:
             proxy_host = None
             proxy_port = None
+            proxy_username = None
+            proxy_password = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
             if HAS_CURL_HTTPCLIENT is False:
                 ret["error"] = (
-                    "proxy_host and proxy_port has been set. This requires pycurl and tornado, "
-                    "but the libraries does not seem to be installed"
+                    "proxy_host and proxy_port has been set. This requires pycurl and"
+                    " tornado, but the libraries does not seem to be installed"
                 )
                 log.error(ret["error"])
                 return ret
@@ -586,6 +574,7 @@ def query(
                 salt.ext.tornado.curl_httpclient.CurlAsyncHTTPClient.initialize
             )
         else:
+            salt.ext.tornado.httpclient.AsyncHTTPClient.configure(None)
             client_argspec = salt.utils.args.get_function_argspec(
                 salt.ext.tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
             )
@@ -628,15 +617,13 @@ def query(
             result = download_client.fetch(url_full, **req_kwargs)
         except salt.ext.tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
-            ret["error"] = six.text_type(exc)
+            ret["error"] = str(exc)
             return ret
-        except (socket.herror, socket.error, socket.timeout, socket.gaierror) as exc:
+        except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
             if status is True:
                 ret["status"] = 0
-            ret["error"] = six.text_type(exc)
-            log.debug(
-                "Cannot perform 'http.query': {0} - {1}".format(url_full, ret["error"])
-            )
+            ret["error"] = str(exc)
+            log.debug("Cannot perform 'http.query': %s - %s", url_full, ret["error"])
             return ret
 
         if stream is True or handle is True:
@@ -655,10 +642,10 @@ def query(
             if (
                 res_content_type.startswith("text/")
                 and "charset" in res_params
-                and not isinstance(result_text, six.text_type)
+                and not isinstance(result_text, str)
             ):
                 result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes) and decode_body:
+        if isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
         if "Set-Cookie" in result_headers and cookies is not None:
@@ -736,9 +723,10 @@ def query(
 
         valid_decodes = ("json", "xml", "yaml", "plain")
         if decode_type not in valid_decodes:
-            ret["error"] = (
-                "Invalid decode_type specified. "
-                "Valid decode types are: {0}".format(pprint.pformat(valid_decodes))
+            ret[
+                "error"
+            ] = "Invalid decode_type specified. Valid decode types are: {}".format(
+                pprint.pformat(valid_decodes)
             )
             log.error(ret["error"])
             return ret
@@ -816,7 +804,10 @@ def get_ca_bundle(opts=None):
 
 
 def update_ca_bundle(
-    target=None, source=None, opts=None, merge_files=None,
+    target=None,
+    source=None,
+    opts=None,
+    merge_files=None,
 ):
     """
     Attempt to update the CA bundle file from a URL
@@ -853,7 +844,7 @@ def update_ca_bundle(
     query(source, text=True, decode=False, headers=False, status=False, text_out=target)
 
     if merge_files is not None:
-        if isinstance(merge_files, six.string_types):
+        if isinstance(merge_files, str):
             merge_files = [merge_files]
 
         if not isinstance(merge_files, list):
@@ -871,7 +862,7 @@ def update_ca_bundle(
                 try:
                     with salt.utils.files.fopen(cert_file, "r") as fcf:
                         merge_content = "\n".join((merge_content, fcf.read()))
-                except IOError as exc:
+                except OSError as exc:
                     log.error(
                         "Reading from %s caused the following error: %s", cert_file, exc
                     )
@@ -882,7 +873,7 @@ def update_ca_bundle(
                 with salt.utils.files.fopen(target, "a") as tfp:
                     tfp.write("\n")
                     tfp.write(merge_content)
-            except IOError as exc:
+            except OSError as exc:
                 log.error("Writing to %s caused the following error: %s", target, exc)
 
 
@@ -903,10 +894,8 @@ def _render(template, render, renderer, template_dict, opts):
         )
         if salt.utils.stringio.is_readable(ret):
             ret = ret.read()
-        if six.text_type(ret).startswith("#!") and not six.text_type(ret).startswith(
-            "#!/"
-        ):
-            ret = six.text_type(ret).split("\n", 1)[1]
+        if str(ret).startswith("#!") and not str(ret).startswith("#!/"):
+            ret = str(ret).split("\n", 1)[1]
         return ret
     with salt.utils.files.fopen(template, "r") as fh_:
         return fh_.read()
@@ -927,6 +916,7 @@ def parse_cookie_header(header):
         "secure",
         "comment",
         "max-age",
+        "samesite",
     )
 
     # Split into cookie(s); handles headers with multiple cookies defined
@@ -945,7 +935,8 @@ def parse_cookie_header(header):
     value_set = False
     for morsel in morsels:
         parts = morsel.split("=")
-        if parts[0].lower() in attribs:
+        parts[0] = parts[0].lower()
+        if parts[0] in attribs:
             if parts[0] in cookie:
                 cookies.append(cookie)
                 cookie = {}
@@ -996,9 +987,7 @@ def parse_cookie_header(header):
 
         # cookielib.Cookie() requires an epoch
         if "expires" in cookie:
-            cookie["expires"] = salt.ext.six.moves.http_cookiejar.http2time(
-                cookie["expires"]
-            )
+            cookie["expires"] = http.cookiejar.http2time(cookie["expires"])
 
         # Fill in missing required fields
         for req in reqd:
@@ -1011,11 +1000,10 @@ def parse_cookie_header(header):
         if cookie["expires"] == "":
             cookie["expires"] = 0
 
-        if "httponly" in cookie:
-            del cookie["httponly"]
-        ret.append(
-            salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie)
-        )
+        # Remove attribs that don't apply to Cookie objects
+        cookie.pop("httponly", None)
+        cookie.pop("samesite", None)
+        ret.append(http.cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
 
@@ -1025,7 +1013,7 @@ def sanitize_url(url, hide_fields):
     Make sure no secret fields show up in logs
     """
     if isinstance(hide_fields, list):
-        url_comps = splitquery(url)
+        url_comps = urllib.parse.splitquery(url)
         log_url = url_comps[0]
         if len(url_comps) > 1:
             log_url += "?"
@@ -1041,20 +1029,40 @@ def sanitize_url(url, hide_fields):
             log_url += url_tmp
         return log_url.rstrip("&")
     else:
-        return six.text_type(url)
+        return str(url)
 
 
 def _sanitize_url_components(comp_list, field):
     """
     Recursive function to sanitize each component of the url.
     """
-    if len(comp_list) == 0:
+    if not comp_list:
         return ""
-    elif comp_list[0].startswith("{0}=".format(field)):
-        ret = "{0}=XXXXXXXXXX&".format(field)
+    elif comp_list[0].startswith("{}=".format(field)):
+        ret = "{}=XXXXXXXXXX&".format(field)
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
     else:
-        ret = "{0}&".format(comp_list[0])
+        ret = "{}&".format(comp_list[0])
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
+
+
+def session(user=None, password=None, verify_ssl=True, ca_bundle=None, headers=None):
+    """
+    create a requests session
+    """
+    session = requests.session()
+    if user and password:
+        session.auth = (user, password)
+    if ca_bundle and not verify_ssl:
+        log.error("You cannot use both ca_bundle and verify_ssl False together")
+        return False
+    if ca_bundle:
+        opts = {"ca_bundle": ca_bundle}
+        session.verify = get_ca_bundle(opts)
+    if not verify_ssl:
+        session.verify = False
+    if headers:
+        session.headers.update(headers)
+    return session

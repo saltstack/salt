@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Functions to translate input for network creation
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import helpers
 from . import helpers
 
 ALIASES = {
@@ -25,7 +17,7 @@ IPAM_ALIASES = {
 }
 # ALIASES is a superset of IPAM_ALIASES
 ALIASES.update(IPAM_ALIASES)
-ALIASES_REVMAP = dict([(y, x) for x, y in six.iteritems(ALIASES)])
+ALIASES_REVMAP = {y: x for x, y in ALIASES.items()}
 
 DEFAULTS = {"check_duplicate": True}
 
@@ -138,6 +130,6 @@ def aux_addresses(val, **kwargs):  # pylint: disable=unused-argument
     validate_ip_addrs = kwargs.get("validate_ip_addrs", True)
     val = helpers.translate_key_val(val, delimiter="=")
     if validate_ip_addrs:
-        for address in six.itervalues(val):
+        for address in val.values():
             helpers.validate_ip(address)
     return val

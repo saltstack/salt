@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Amazon S3 Fileserver Backend
 
@@ -78,30 +77,20 @@ structure::
     https://docs.aws.amazon.com/cli/latest/topic/s3-config.html
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 import pickle
 import time
+import urllib.parse
 
-# Import salt libs
 import salt.fileserver as fs
 import salt.modules
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
 import salt.utils.versions
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import filter
-from salt.ext.six.moves.urllib.parse import quote as _quote
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -130,9 +119,9 @@ def update():
     if S3_SYNC_ON_UPDATE:
         # sync the buckets to the local cache
         log.info("Syncing local cache from S3...")
-        for saltenv, env_meta in six.iteritems(metadata):
+        for saltenv, env_meta in metadata.items():
             for bucket_files in _find_files(env_meta):
-                for bucket, files in six.iteritems(bucket_files):
+                for bucket, files in bucket_files.items():
                     for file_path in files:
                         cached_file_path = _get_cached_file_name(
                             bucket, saltenv, file_path
@@ -170,7 +159,7 @@ def find_file(path, saltenv="base", **kwargs):
 
     # look for the files and check if they're ignored globally
     for bucket in env_files:
-        for bucket_name, files in six.iteritems(bucket):
+        for bucket_name, files in bucket.items():
             if path in files and not fs.is_file_ignored(__opts__, path):
                 fnd["bucket"] = bucket_name
                 fnd["path"] = path
@@ -245,7 +234,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(cached_file_path, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])
-        if data and six.PY3 and not salt.utils.files.is_binary(cached_file_path):
+        if data and not salt.utils.files.is_binary(cached_file_path):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -273,7 +262,7 @@ def file_list(load):
     if not metadata or saltenv not in metadata:
         return ret
     for bucket in _find_files(metadata[saltenv]):
-        for buckets in six.itervalues(bucket):
+        for buckets in bucket.values():
             files = [f for f in buckets if not fs.is_file_ignored(__opts__, f)]
             ret += _trim_env_off_path(files, saltenv)
 
@@ -311,7 +300,7 @@ def dir_list(load):
 
     # grab all the dirs from the buckets cache file
     for bucket in _find_dirs(metadata[saltenv]):
-        for dirs in six.itervalues(bucket):
+        for dirs in bucket.values():
             # trim env and trailing slash
             dirs = _trim_env_off_path(dirs, saltenv, trim_slash=True)
             # remove empty string left by the base env dir in single bucket mode
@@ -459,7 +448,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     if _is_env_per_bucket():
         # Single environment per bucket
-        for saltenv, buckets in six.iteritems(_get_buckets()):
+        for saltenv, buckets in _get_buckets().items():
             bucket_files_list = []
             for bucket_name in buckets:
                 bucket_files = {}
@@ -499,7 +488,7 @@ def _refresh_buckets_cache_file(cache_file):
                             continue
                         else:
                             log.warning(
-                                "S3 Error! Do you have any files " "in your S3 bucket?"
+                                "S3 Error! Do you have any files in your S3 bucket?"
                             )
                             return {}
 
@@ -543,7 +532,7 @@ def _refresh_buckets_cache_file(cache_file):
                         continue
                     else:
                         log.warning(
-                            "S3 Error! Do you have any files " "in your S3 bucket?"
+                            "S3 Error! Do you have any files in your S3 bucket?"
                         )
                         return {}
 
@@ -568,15 +557,22 @@ def _refresh_buckets_cache_file(cache_file):
                     metadata[saltenv].append({bucket_name: env_files})
 
     # write the metadata to disk
+    _write_buckets_cache_file(metadata, cache_file)
+
+    return metadata
+
+
+def _write_buckets_cache_file(metadata, cache_file):
+    """
+    Write the contents of the buckets cache file
+    """
     if os.path.isfile(cache_file):
         os.remove(cache_file)
 
     log.debug("Writing buckets cache file")
 
-    with salt.utils.files.fopen(cache_file, "w") as fp_:
+    with salt.utils.files.fopen(cache_file, "wb") as fp_:
         pickle.dump(metadata, fp_)
-
-    return metadata
 
 
 def _read_buckets_cache_file(cache_file):
@@ -596,7 +592,9 @@ def _read_buckets_cache_file(cache_file):
             ImportError,
             IndexError,
             KeyError,
-        ):
+            ValueError,
+        ) as exc:
+            log.debug("Exception reading buckets cache file: '%s'", exc)
             data = None
 
     return data
@@ -611,7 +609,7 @@ def _find_files(metadata):
     found = {}
 
     for bucket_dict in metadata:
-        for bucket_name, data in six.iteritems(bucket_dict):
+        for bucket_name, data in bucket_dict.items():
             filepaths = [k["Key"] for k in data]
             filepaths = [k for k in filepaths if not k.endswith("/")]
             if bucket_name not in found:
@@ -637,7 +635,7 @@ def _find_dirs(metadata):
     found = {}
 
     for bucket_dict in metadata:
-        for bucket_name, data in six.iteritems(bucket_dict):
+        for bucket_name, data in bucket_dict.items():
             dirpaths = set()
             for path in [k["Key"] for k in data]:
                 prefix = ""
@@ -743,7 +741,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         service_url=service_url,
                         verify_ssl=verify_ssl,
                         location=location,
-                        path=_quote(path),
+                        path=urllib.parse.quote(path),
                         local_file=cached_file_path,
                         full_headers=True,
                         path_style=path_style,
@@ -753,11 +751,11 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         for header_name, header_value in ret["headers"].items():
                             name = header_name.strip()
                             value = header_value.strip()
-                            if six.text_type(name).lower() == "last-modified":
+                            if str(name).lower() == "last-modified":
                                 s3_file_mtime = datetime.datetime.strptime(
                                     value, "%a, %d %b %Y %H:%M:%S %Z"
                                 )
-                            elif six.text_type(name).lower() == "content-length":
+                            elif str(name).lower() == "content-length":
                                 s3_file_size = int(value)
                         if (
                             cached_file_size == s3_file_size
@@ -781,7 +779,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         service_url=service_url,
         verify_ssl=verify_ssl,
         location=location,
-        path=_quote(path),
+        path=urllib.parse.quote(path),
         local_file=cached_file_path,
         path_style=path_style,
         https_enable=https_enable,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NET Finder
 ==========
@@ -68,23 +67,21 @@ Configuration
               - fxp0
             outputter: yaml
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt lib
 import salt.output
 import salt.utils.network
-from salt.ext import six
-from salt.ext.six.moves import map
 
-# Import third party libs
 try:
-    from netaddr import IPNetwork  # netaddr is already required by napalm-base
+    # pylint: disable=no-name-in-module
+    from napalm.base import helpers as napalm_helpers
+    from netaddr import IPNetwork  # netaddr is already required by napalm
     from netaddr.core import AddrFormatError
-    from napalm_base import helpers as napalm_helpers
 
-    HAS_NAPALM_BASE = True
+    # pylint: enable=no-name-in-module
+
+    HAS_NAPALM = True
 except ImportError:
-    HAS_NAPALM_BASE = False
+    HAS_NAPALM = False
 
 # -----------------------------------------------------------------------------
 # module properties
@@ -114,9 +111,9 @@ __virtualname__ = "net"
 
 
 def __virtual__():
-    if HAS_NAPALM_BASE:
+    if HAS_NAPALM:
         return __virtualname__
-    return (False, "The napalm-base module could not be imported")
+    return (False, "The napalm module could not be imported")
 
 
 def _get_net_runner_opts():
@@ -195,12 +192,10 @@ def _find_interfaces_ip(mac):
     all_interfaces = _get_mine("net.interfaces")
     all_ipaddrs = _get_mine("net.ipaddrs")
 
-    for device, device_interfaces in six.iteritems(all_interfaces):
+    for device, device_interfaces in all_interfaces.items():
         if not device_interfaces.get("result", False):
             continue
-        for interface, interface_details in six.iteritems(
-            device_interfaces.get("out", {})
-        ):
+        for interface, interface_details in device_interfaces.get("out", {}).items():
             try:
                 interface_mac = napalm_helpers.convert(
                     napalm_helpers.mac, interface_details.get("mac_address")
@@ -215,8 +210,8 @@ def _find_interfaces_ip(mac):
             ip_addresses = interface_ipaddrs.get("ipv4", {})
             ip_addresses.update(interface_ipaddrs.get("ipv6", {}))
             interface_ips = [
-                "{0}/{1}".format(ip_addr, addr_details.get("prefix_length", "32"))
-                for ip_addr, addr_details in six.iteritems(ip_addresses)
+                "{}/{}".format(ip_addr, addr_details.get("prefix_length", "32"))
+                for ip_addr, addr_details in ip_addresses.items()
             ]
             return device, interface, interface_ips
 
@@ -230,14 +225,12 @@ def _find_interfaces_mac(ip):  # pylint: disable=invalid-name
     all_interfaces = _get_mine("net.interfaces")
     all_ipaddrs = _get_mine("net.ipaddrs")
 
-    for device, device_ipaddrs in six.iteritems(all_ipaddrs):
+    for device, device_ipaddrs in all_ipaddrs.items():
         if not device_ipaddrs.get("result", False):
             continue
-        for interface, interface_ipaddrs in six.iteritems(
-            device_ipaddrs.get("out", {})
-        ):
-            ip_addresses = interface_ipaddrs.get("ipv4", {}).keys()
-            ip_addresses.extend(interface_ipaddrs.get("ipv6", {}).keys())
+        for interface, interface_ipaddrs in device_ipaddrs.get("out", {}).items():
+            ip_addresses = set(interface_ipaddrs.get("ipv4", {}).keys())
+            ip_addresses.update(set(interface_ipaddrs.get("ipv6", {}).keys()))
             for ipaddr in ip_addresses:
                 if ip != ipaddr:
                     continue
@@ -346,19 +339,21 @@ def interfaces(
     net_runner_opts = _get_net_runner_opts()
 
     if pattern:
-        title = 'Pattern "{0}" found in the description of the following interfaces'.format(
-            pattern
+        title = (
+            'Pattern "{}" found in the description of the following interfaces'.format(
+                pattern
+            )
         )
     if not title:
         title = "Details"
         if interface:
-            title += " for interface {0}".format(interface)
+            title += " for interface {}".format(interface)
         else:
             title += " for all interfaces"
         if device:
-            title += " on device {0}".format(device)
+            title += " on device {}".format(device)
         if ipnet:
-            title += " that include network {net}".format(net=six.text_type(ipnet))
+            title += " that include network {net}".format(net=str(ipnet))
             if best:
                 title += " - only best match returned"
 
@@ -372,10 +367,11 @@ def interfaces(
         ipnet = _get_network_obj(ipnet)
 
     best_row = {}
-    best_net_match = None
-    for device, net_interfaces_out in six.iteritems(
-        all_interfaces
-    ):  # pylint: disable=too-many-nested-blocks
+    best_net_match = IPNetwork("0.0.0.0/0")
+    for (
+        device,
+        net_interfaces_out,
+    ) in all_interfaces.items():  # pylint: disable=too-many-nested-blocks
         if not net_interfaces_out:
             continue
         if not net_interfaces_out.get("result", False):
@@ -385,9 +381,7 @@ def interfaces(
             selected_device_interfaces = {
                 interface: selected_device_interfaces.get(interface, {})
             }
-        for interface_name, interface_details in six.iteritems(
-            selected_device_interfaces
-        ):
+        for interface_name, interface_details in selected_device_interfaces.items():
             if not interface_details:
                 continue
             if ipnet and interface_name in net_runner_opts.get("ignore_interfaces"):
@@ -412,8 +406,8 @@ def interfaces(
                 "ips": [],
             }
             intf_entry_found = False
-            for intrf, interface_ips in six.iteritems(
-                all_ipaddrs.get(device, {}).get("out", {})
+            for intrf, interface_ips in (
+                all_ipaddrs.get(device, {}).get("out", {}).items()
             ):
                 if intrf.split(".")[0] == interface_name:
                     ip_addresses = interface_ips.get("ipv4", {})  # all IPv4 addresses
@@ -421,10 +415,8 @@ def interfaces(
                         interface_ips.get("ipv6", {})
                     )  # and all IPv6 addresses
                     ips = [
-                        "{0}/{1}".format(
-                            ip_addr, addr_details.get("prefix_length", "32")
-                        )
-                        for ip_addr, addr_details in six.iteritems(ip_addresses)
+                        "{}/{}".format(ip_addr, addr_details.get("prefix_length", "32"))
+                        for ip_addr, addr_details in ip_addresses.items()
                     ]
                     interf_entry = {}
                     interf_entry.update(device_entry)
@@ -433,7 +425,7 @@ def interfaces(
                         interf_entry["ips"] = "\n".join(interf_entry["ips"])
                     if ipnet:
                         inet_ips = [
-                            six.text_type(ip) for ip in ips if _ipnet_belongs(ip)
+                            str(ip) for ip in ips if _ipnet_belongs(ip)
                         ]  # filter and get only IP include ipnet
                         if inet_ips:  # if any
                             if best:
@@ -530,7 +522,7 @@ def findarp(
     if device:
         all_arp = {device: all_arp.get(device)}
 
-    for device, device_arp in six.iteritems(all_arp):
+    for device, device_arp in all_arp.items():
         if not device_arp:
             continue
         if not device_arp.get("result", False):
@@ -632,7 +624,7 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
     if device:
         all_mac = {device: all_mac.get(device)}
 
-    for device, device_mac in six.iteritems(all_mac):
+    for device, device_mac in all_mac.items():
         if not device_mac:
             continue
         if not device_mac.get("result", False):
@@ -648,10 +640,7 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
                     == napalm_helpers.convert(napalm_helpers.mac, mac)
                 )
                 or (interface and interface in mac_entry.get("interface", ""))
-                or (
-                    vlan
-                    and six.text_type(mac_entry.get("vlan", "")) == six.text_type(vlan)
-                )
+                or (vlan and str(mac_entry.get("vlan", "")) == str(vlan))
             ):
                 rows.append(
                     {
@@ -757,24 +746,24 @@ def lldp(
     rows = []
 
     if pattern:
-        title = 'Pattern "{0}" found in one of the following LLDP details'.format(
+        title = 'Pattern "{}" found in one of the following LLDP details'.format(
             pattern
         )
     if not title:
         title = "LLDP Neighbors"
         if interface:
-            title += " for interface {0}".format(interface)
+            title += " for interface {}".format(interface)
         else:
             title += " for all interfaces"
         if device:
-            title += " on device {0}".format(device)
+            title += " on device {}".format(device)
         if chassis:
-            title += " having Chassis ID {0}".format(chassis)
+            title += " having Chassis ID {}".format(chassis)
 
     if device:
         all_lldp = {device: all_lldp.get(device)}
 
-    for device, device_lldp in six.iteritems(all_lldp):
+    for device, device_lldp in all_lldp.items():
         if not device_lldp:
             continue
         if not device_lldp.get("result", False):
@@ -782,7 +771,7 @@ def lldp(
         lldp_interfaces = device_lldp.get("out", {})
         if interface:
             lldp_interfaces = {interface: lldp_interfaces.get(interface, [])}
-        for intrf, interface_lldp in six.iteritems(lldp_interfaces):
+        for intrf, interface_lldp in lldp_interfaces.items():
             if not interface_lldp:
                 continue
             for lldp_row in interface_lldp:
@@ -969,8 +958,10 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     elif ip:
         device, interface, mac = _find_interfaces_mac(ip)
         if device and interface:
-            title = "IP Address {ip} is set for interface {interface}, on {device}".format(
-                interface=interface, device=device, ip=ip
+            title = (
+                "IP Address {ip} is set for interface {interface}, on {device}".format(
+                    interface=interface, device=device, ip=ip
+                )
             )
             results["int_ip"] = interfaces(
                 device=device, interface=interface, title=title, display=display
@@ -997,7 +988,6 @@ def multi_find(*patterns, **kwargs):
 
     display: ``True``
         Display on the screen or return structured object? Default: `True` (return on the CLI).
-
 
     CLI Example:
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Compendium of generic DNS utilities
 # Examples:
@@ -10,9 +9,7 @@ dns.srv_data('my1.example.com', 389, prio=10, weight=100)
 dns.srv_name('ldap/tcp', 'example.com')
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import base64
 import binascii
 import functools
@@ -27,22 +24,16 @@ import ssl
 import string
 
 import salt.modules.cmdmod
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 from salt._compat import ipaddress
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 
 # Integrations
 try:
-    import dns.resolver
+    import dns.resolver  # pylint: disable=no-name-in-module
 
     HAS_DNSPYTHON = True
 except ImportError:
@@ -63,7 +54,7 @@ __salt__ = {"cmd.run_all": salt.modules.cmdmod.run_all}
 log = logging.getLogger(__name__)
 
 
-class RFC(object):
+class RFC:
     """
     Simple holding class for all RFC/IANA registered lists & standards
     """
@@ -72,18 +63,46 @@ class RFC(object):
     CAA_TAGS = ("issue", "issuewild", "iodef")
 
     # http://www.iana.org/assignments/dns-sshfp-rr-parameters/dns-sshfp-rr-parameters.xhtml
-    SSHFP_ALGO = OrderedDict(((1, "rsa"), (2, "dsa"), (3, "ecdsa"), (4, "ed25519"),))
+    SSHFP_ALGO = OrderedDict(
+        (
+            (1, "rsa"),
+            (2, "dsa"),
+            (3, "ecdsa"),
+            (4, "ed25519"),
+        )
+    )
 
-    SSHFP_HASH = OrderedDict(((1, "sha1"), (2, "sha256"),))
+    SSHFP_HASH = OrderedDict(
+        (
+            (1, "sha1"),
+            (2, "sha256"),
+        )
+    )
 
     # http://www.iana.org/assignments/dane-parameters/dane-parameters.xhtml
     TLSA_USAGE = OrderedDict(
-        ((0, "pkixta"), (1, "pkixee"), (2, "daneta"), (3, "daneee"),)
+        (
+            (0, "pkixta"),
+            (1, "pkixee"),
+            (2, "daneta"),
+            (3, "daneee"),
+        )
     )
 
-    TLSA_SELECT = OrderedDict(((0, "cert"), (1, "spki"),))
+    TLSA_SELECT = OrderedDict(
+        (
+            (0, "cert"),
+            (1, "spki"),
+        )
+    )
 
-    TLSA_MATCHING = OrderedDict(((0, "full"), (1, "sha256"), (2, "sha512"),))
+    TLSA_MATCHING = OrderedDict(
+        (
+            (0, "full"),
+            (1, "sha256"),
+            (2, "sha512"),
+        )
+    )
 
     SRV_PROTO = ("tcp", "udp", "sctp")
 
@@ -95,7 +114,7 @@ class RFC(object):
             return [code for code, name in ref.items() if lookup in name][-1]
         else:
             # OrderedDicts only!(?)
-            return ref.keys()[ref.values().index(lookup)]
+            return {name: code for code, name in ref.items()}[lookup]
 
 
 def _to_port(port):
@@ -104,7 +123,7 @@ def _to_port(port):
         assert 1 <= port <= 65535
         return port
     except (ValueError, AssertionError):
-        raise ValueError("Invalid port {0}".format(port))
+        raise ValueError("Invalid port {}".format(port))
 
 
 def _tree(domain, tld=False):
@@ -130,9 +149,7 @@ def _tree(domain, tld=False):
                 domain,
             ).group()
             log.info(
-                "Without tldextract, dns.util resolves the TLD of {0} to {1}".format(
-                    domain, tld
-                )
+                "Without tldextract, dns.util resolves the TLD of %s to %s", domain, tld
             )
 
     res = [domain]
@@ -165,7 +182,7 @@ def _weighted_order(recs):
 
 def _cast(rec_data, rec_cast):
     if isinstance(rec_cast, dict):
-        rec_data = type(rec_cast.keys()[0])(rec_data)
+        rec_data = type(next(iter(rec_cast.keys())))(rec_data)
         res = rec_cast[rec_data]
         return res
     elif isinstance(rec_cast, (list, tuple)):
@@ -197,14 +214,10 @@ def _data2rec(schema, rec_data):
         if len(schema) == 1:
             res = _cast(rec_fields[0], next(iter(schema.values())))
         else:
-            res = dict(
-                (
-                    (field_name, _cast(rec_field, rec_cast))
-                    for (field_name, rec_cast), rec_field in zip(
-                        schema.items(), rec_fields
-                    )
-                )
-            )
+            res = {
+                field_name: _cast(rec_field, rec_cast)
+                for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
+            }
         return res
     except (AssertionError, AttributeError, TypeError, ValueError) as e:
         raise ValueError(
@@ -236,7 +249,7 @@ def _data2rec_group(schema, recs_data, group_key):
         return res
     except (AssertionError, ValueError) as e:
         raise ValueError(
-            'Unable to cast "{0}" as a group of "{1}": {2}'.format(
+            'Unable to cast "{}" as a group of "{}": {}'.format(
                 ",".join(recs_data), " ".join(schema.keys()), e
             )
         )
@@ -263,20 +276,20 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     :param servers: [] of servers to use
     :return: [] of records or False if error
     """
-    cmd = "dig {0} -t {1} ".format(DIG_OPTIONS, rdtype)
+    cmd = "dig {} -t {} ".format(DIG_OPTIONS, rdtype)
     if servers:
-        cmd += "".join(["@{0} ".format(srv) for srv in servers])
+        cmd += "".join(["@{} ".format(srv) for srv in servers])
     if timeout is not None:
         if servers:
             timeout = int(float(timeout) / len(servers))
         else:
             timeout = int(timeout)
-        cmd += "+time={0} ".format(timeout)
+        cmd += "+time={} ".format(timeout)
     if secure:
         cmd += "+dnssec +adflag "
 
     cmd = __salt__["cmd.run_all"](
-        "{0} {1}".format(cmd, name), python_shell=False, output_loglevel="quiet"
+        "{} {}".format(cmd, name), python_shell=False, output_loglevel="quiet"
     )
 
     if "ignoring invalid type" in cmd["stderr"]:
@@ -320,9 +333,9 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
     cmd = "drill "
     if secure:
         cmd += "-D -o ad "
-    cmd += "{0} {1} ".format(rdtype, name)
+    cmd += "{} {} ".format(rdtype, name)
     if servers:
-        cmd += "".join(["@{0} ".format(srv) for srv in servers])
+        cmd += "".join(["@{} ".format(srv) for srv in servers])
     cmd = __salt__["cmd.run_all"](
         cmd, timeout=timeout, python_shell=False, output_loglevel="quiet"
     )
@@ -399,13 +412,13 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     :param timeout: server response wait
     :return: [] of records or False if error
     """
-    cmd = "host -t {0} ".format(rdtype)
+    cmd = "host -t {} ".format(rdtype)
 
     if timeout:
-        cmd += "-W {0} ".format(int(timeout))
+        cmd += "-W {} ".format(int(timeout))
     cmd += name
     if server is not None:
-        cmd += " {0}".format(server)
+        cmd += " {}".format(server)
 
     cmd = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="quiet")
 
@@ -476,12 +489,12 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     :param server: server to query
     :return: [] of records or False if error
     """
-    cmd = "nslookup -query={0} {1}".format(rdtype, name)
+    cmd = "nslookup -query={} {}".format(rdtype, name)
 
     if timeout is not None:
-        cmd += " -timeout={0}".format(int(timeout))
+        cmd += " -timeout={}".format(int(timeout))
     if server is not None:
-        cmd += " {0}".format(server)
+        cmd += " {}".format(server)
 
     cmd = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="quiet")
 
@@ -823,7 +836,12 @@ def mx_rec(rdatas):
     :param rdata: DNS record data
     :return: dict w/fields
     """
-    rschema = OrderedDict((("preference", int), ("name", str),))
+    rschema = OrderedDict(
+        (
+            ("preference", int),
+            ("name", str),
+        )
+    )
     return _data2rec_group(rschema, rdatas, "preference")
 
 
@@ -877,7 +895,7 @@ def spf_rec(rdata):
             # It's a modifier
             mod, val = mech_spec.split("=", 1)
             if mod in mods:
-                raise KeyError("Modifier {0} can only appear once".format(mod))
+                raise KeyError("Modifier {} can only appear once".format(mod))
 
             mods.add(mod)
             continue
@@ -941,7 +959,7 @@ def srv_name(svc, proto="tcp", domain=None):
 
     if domain:
         domain = "." + domain
-    return "_{0}._{1}{2}".format(svc, proto, domain)
+    return "_{}._{}{}".format(svc, proto, domain)
 
 
 def srv_rec(rdatas):
@@ -951,7 +969,12 @@ def srv_rec(rdatas):
     :return: dict w/fields
     """
     rschema = OrderedDict(
-        (("prio", int), ("weight", int), ("port", _to_port), ("name", str),)
+        (
+            ("prio", int),
+            ("weight", int),
+            ("port", _to_port),
+            ("name", str),
+        )
     )
     return _data2rec_group(rschema, rdatas, "prio")
 
@@ -1110,7 +1133,7 @@ def services(services_file="/etc/services"):
                         if not curr_desc:
                             pp_res["desc"] = comment
                         elif comment != curr_desc:
-                            pp_res["desc"] = "{0}, {1}".format(curr_desc, comment)
+                            pp_res["desc"] = "{}, {}".format(curr_desc, comment)
                 res[name] = svc_res
 
     for svc, data in res.items():
@@ -1181,13 +1204,13 @@ def parse_resolv(src="/etc/resolv.conf"):
                                     # No netmask has been provided, guess
                                     # the "natural" one
                                     if ip_net.version == 4:
-                                        ip_addr = six.text_type(ip_net.network_address)
+                                        ip_addr = str(ip_net.network_address)
                                         # pylint: disable=protected-access
                                         mask = salt.utils.network.natural_ipv4_netmask(
                                             ip_addr
                                         )
                                         ip_net = ipaddress.ip_network(
-                                            "{0}{1}".format(ip_addr, mask), strict=False
+                                            "{}{}".format(ip_addr, mask), strict=False
                                         )
                                     if ip_net.version == 6:
                                         # TODO
@@ -1218,5 +1241,5 @@ def parse_resolv(src="/etc/resolv.conf"):
             "search": search,
             "options": options,
         }
-    except IOError:
+    except OSError:
         return {}

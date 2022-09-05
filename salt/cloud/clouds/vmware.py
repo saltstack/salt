@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=C0302
 """
 VMware Cloud Module
@@ -10,7 +9,7 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
 See :ref:`Getting started with VMware <cloud-getting-started-vmware>` to get started.
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 
 
 Dependencies
@@ -114,9 +113,6 @@ To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os.path
 import pprint
@@ -125,19 +121,13 @@ import subprocess
 import time
 from random import randint
 
-# Import salt cloud libs
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.vmware
 import salt.utils.xmlutil
 from salt.exceptions import SaltCloudSystemExit
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     # Attempt to import pyVmomi libs
@@ -149,9 +139,9 @@ except ImportError:
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
-    from requests.packages.urllib3 import (
+    from requests.packages.urllib3 import (  # pylint: disable=no-name-in-module
         disable_warnings,
-    )  # pylint: disable=no-name-in-module
+    )
 
     disable_warnings()
 except ImportError:
@@ -187,14 +177,25 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
-        ("url", "user", "password",),
+        _get_active_provider_name() or __virtualname__,
+        (
+            "url",
+            "user",
+            "password",
+        ),
     )
 
 
@@ -230,7 +231,7 @@ def _str_to_bool(var):
     if isinstance(var, bool):
         return var
 
-    if isinstance(var, six.string_types):
+    if isinstance(var, str):
         return True if var.lower() == "true" else False
 
     return None
@@ -260,9 +261,15 @@ def _get_si():
     port = config.get_cloud_config_value(
         "port", get_configured_provider(), __opts__, search_global=False, default=443
     )
-
+    verify_ssl = config.get_cloud_config_value(
+        "verify_ssl",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=True,
+    )
     return salt.utils.vmware.get_service_instance(
-        url, username, password, protocol=protocol, port=port
+        url, username, password, protocol=protocol, port=port, verify_ssl=verify_ssl
     )
 
 
@@ -299,7 +306,7 @@ def _add_new_hard_disk_helper(
     disk_spec.device.key = random_key
     disk_spec.device.deviceInfo = vim.Description()
     disk_spec.device.deviceInfo.label = disk_label
-    disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
+    disk_spec.device.deviceInfo.summary = "{} GB".format(size_gb)
 
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.thinProvisioned = thin_provision
@@ -320,9 +327,8 @@ def _add_new_hard_disk_helper(
             if not datastore_cluster_ref:
                 # datastore/datastore cluster specified does not exist
                 raise SaltCloudSystemExit(
-                    "Specified datastore/datastore cluster ({0}) for disk ({1}) does not exist".format(
-                        datastore, disk_label
-                    )
+                    "Specified datastore/datastore cluster ({}) for disk ({}) does not"
+                    " exist".format(datastore, disk_label)
                 )
 
             # datastore cluster has been specified
@@ -351,12 +357,11 @@ def _add_new_hard_disk_helper(
             if not datastore_ref:
                 # datastore cluster specified does not have any accessible datastores
                 raise SaltCloudSystemExit(
-                    "Specified datastore cluster ({0}) for disk ({1}) does not have any accessible datastores available".format(
-                        datastore, disk_label
-                    )
+                    "Specified datastore cluster ({}) for disk ({}) does not have any"
+                    " accessible datastores available".format(datastore, disk_label)
                 )
 
-        datastore_path = "[" + six.text_type(datastore_ref.name) + "] " + vm_name
+        datastore_path = "[" + str(datastore_ref.name) + "] " + vm_name
         disk_spec.device.backing.fileName = datastore_path + "/" + disk_label + ".vmdk"
         disk_spec.device.backing.datastore = datastore_ref
         log.trace(
@@ -429,11 +434,13 @@ def _edit_existing_network_adapter(
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
-            err_msg = "The switch type to be used by '{0}' has not been specified".format(
-                network_adapter.deviceInfo.label
+            err_msg = (
+                "The switch type to be used by '{}' has not been specified".format(
+                    network_adapter.deviceInfo.label
+                )
             )
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(
+            err_msg = "Cannot create '{}'. Invalid/unsupported switch type '{}'".format(
                 network_adapter.deviceInfo.label, switch_type
             )
         raise SaltCloudSystemExit(err_msg)
@@ -516,11 +523,13 @@ def _add_new_network_adapter_helper(
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
-            err_msg = "The switch type to be used by '{0}' has not been specified".format(
-                network_adapter_label
+            err_msg = (
+                "The switch type to be used by '{}' has not been specified".format(
+                    network_adapter_label
+                )
             )
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(
+            err_msg = "Cannot create '{}'. Invalid/unsupported switch type '{}'".format(
                 network_adapter_label, switch_type
             )
         raise SaltCloudSystemExit(err_msg)
@@ -572,11 +581,11 @@ def _add_new_scsi_controller_helper(scsi_controller_label, properties, bus_numbe
     else:
         # If type not specified or does not match, show error and return
         if not adapter_type:
-            err_msg = "The type of '{0}' has not been specified".format(
+            err_msg = "The type of '{}' has not been specified".format(
                 scsi_controller_label
             )
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(
+            err_msg = "Cannot create '{}'. Invalid/unsupported type '{}'".format(
                 scsi_controller_label, adapter_type
             )
         raise SaltCloudSystemExit(err_msg)
@@ -653,7 +662,7 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
         if datastore_ref:
             drive.backing.datastore = datastore_ref
 
-        drive.deviceInfo.summary = "ISO {0}".format(iso_path)
+        drive.deviceInfo.summary = "ISO {}".format(iso_path)
 
     elif device_type == "client_device":
         if mode == "passthrough":
@@ -735,8 +744,8 @@ def _set_network_adapter_mapping(adapter_specs):
         gateway = adapter_specs["gateway"]
         adapter_mapping.adapter.gateway = gateway
     if "ip" in list(adapter_specs.keys()):
-        ip = six.text_type(adapter_specs["ip"])
-        subnet_mask = six.text_type(adapter_specs["subnet_mask"])
+        ip = str(adapter_specs["ip"])
+        subnet_mask = str(adapter_specs["subnet_mask"])
         adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
         adapter_mapping.adapter.subnetMask = subnet_mask
     else:
@@ -823,8 +832,8 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
 
                         if device.capacityInKB > size_kb:
                             raise SaltCloudSystemExit(
-                                "The specified disk size '{0}GB' for '{1}' is "
-                                "smaller than the disk image size '{2}GB'. It must "
+                                "The specified disk size '{}GB' for '{}' is "
+                                "smaller than the disk image size '{}GB'. It must "
                                 "be equal to or greater than the disk image".format(
                                     float(
                                         devices["disk"][device.deviceInfo.label]["size"]
@@ -846,7 +855,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                                 disk_spec = _get_mode_spec(device, mode, disk_spec)
                             else:
                                 raise SaltCloudSystemExit(
-                                    "Invalid disk" " backing mode" " specified!"
+                                    "Invalid disk backing mode specified!"
                                 )
                         if disk_spec is not None:
                             device_specs.append(disk_spec)
@@ -908,7 +917,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                             else None
                         )
                         if bus_sharing and bus_sharing in ["virtual", "physical", "no"]:
-                            bus_sharing = "{0}Sharing".format(bus_sharing)
+                            bus_sharing = "{}Sharing".format(bus_sharing)
                             if bus_sharing != device.sharedBus:
                                 # Only edit the SCSI controller if bus_sharing is different
                                 scsi_spec = _edit_existing_scsi_controller(
@@ -1112,7 +1121,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         ide_controllers[controller_key] = 0
                         break
             else:
-                for ide_controller_key, num_devices in six.iteritems(ide_controllers):
+                for ide_controller_key, num_devices in ide_controllers.items():
                     if num_devices < 2:
                         controller_key = ide_controller_key
                         break
@@ -1145,10 +1154,7 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
                 vm_ref.name,
                 time_counter,
             )
-        if (
-            six.text_type(vm_ref.summary.guest.toolsRunningStatus)
-            == "guestToolsRunning"
-        ):
+        if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
             log.info(
                 "[ %s ] Successfully got VMware tools running on the guest in "
                 "%s seconds",
@@ -1217,7 +1223,7 @@ def _wait_for_ip(vm_ref, max_wait):
         vm_name = vm_ref.summary.config.name
         resolved_ips = salt.utils.network.host_to_ips(vm_name)
         log.debug(
-            "Timeout waiting for VMware tools. The name %s resolved " "to %s",
+            "Timeout waiting for VMware tools. The name %s resolved to %s",
             vm_name,
             resolved_ips,
         )
@@ -1314,23 +1320,21 @@ def _format_instance_info_select(vm, selection):
         vm_select_info["id"] = vm["name"]
 
     if "image" in selection:
-        vm_select_info["image"] = "{0} (Detected)".format(
+        vm_select_info["image"] = "{} (Detected)".format(
             defaultto(vm, "config.guestFullName")
         )
 
     if "size" in selection:
         cpu = defaultto(vm, "config.hardware.numCPU")
-        ram = "{0} MB".format(defaultto(vm, "config.hardware.memoryMB"))
-        vm_select_info["size"] = "cpu: {0}\nram: {1}".format(cpu, ram)
+        ram = "{} MB".format(defaultto(vm, "config.hardware.memoryMB"))
+        vm_select_info["size"] = "cpu: {}\nram: {}".format(cpu, ram)
         vm_select_info["size_dict"] = {
             "cpu": cpu,
             "memory": ram,
         }
 
     if "state" in selection:
-        vm_select_info["state"] = six.text_type(
-            defaultto(vm, "summary.runtime.powerState")
-        )
+        vm_select_info["state"] = str(defaultto(vm, "summary.runtime.powerState"))
 
     if "guest_id" in selection:
         vm_select_info["guest_id"] = defaultto(vm, "config.guestId")
@@ -1342,9 +1346,7 @@ def _format_instance_info_select(vm, selection):
         vm_select_info["path"] = defaultto(vm, "config.files.vmPathName")
 
     if "tools_status" in selection:
-        vm_select_info["tools_status"] = six.text_type(
-            defaultto(vm, "guest.toolsStatus")
-        )
+        vm_select_info["tools_status"] = str(defaultto(vm, "guest.toolsStatus"))
 
     if "private_ips" in selection or "networks" in selection:
         network_full_info = {}
@@ -1585,18 +1587,18 @@ def _format_instance_info(vm):
 
     cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
     ram = (
-        "{0} MB".format(vm["config.hardware.memoryMB"])
+        "{} MB".format(vm["config.hardware.memoryMB"])
         if "config.hardware.memoryMB" in vm
         else "N/A"
     )
     vm_full_info = {
-        "id": six.text_type(vm["name"]),
-        "image": "{0} (Detected)".format(vm["config.guestFullName"])
+        "id": str(vm["name"]),
+        "image": "{} (Detected)".format(vm["config.guestFullName"])
         if "config.guestFullName" in vm
         else "N/A",
-        "size": "cpu: {0}\nram: {1}".format(cpu, ram),
+        "size": "cpu: {}\nram: {}".format(cpu, ram),
         "size_dict": {"cpu": cpu, "memory": ram},
-        "state": six.text_type(vm["summary.runtime.powerState"])
+        "state": str(vm["summary.runtime.powerState"])
         if "summary.runtime.powerState" in vm
         else "N/A",
         "private_ips": ip_addresses,
@@ -1604,16 +1606,14 @@ def _format_instance_info(vm):
         "devices": device_full_info,
         "storage": storage_full_info,
         "files": file_full_info,
-        "guest_id": six.text_type(vm["config.guestId"])
-        if "config.guestId" in vm
-        else "N/A",
-        "hostname": six.text_type(vm["object"].guest.hostName),
+        "guest_id": str(vm["config.guestId"]) if "config.guestId" in vm else "N/A",
+        "hostname": str(vm["object"].guest.hostName),
         "mac_addresses": device_mac_addresses,
         "networks": network_full_info,
-        "path": six.text_type(vm["config.files.vmPathName"])
+        "path": str(vm["config.files.vmPathName"])
         if "config.files.vmPathName" in vm
         else "N/A",
-        "tools_status": six.text_type(vm["guest.toolsStatus"])
+        "tools_status": str(vm["guest.toolsStatus"])
         if "guest.toolsStatus" in vm
         else "N/A",
     }
@@ -1624,11 +1624,11 @@ def _format_instance_info(vm):
 def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
     snapshots = {}
     for snapshot in snapshot_list:
-        snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
+        snapshot_path = "{}/{}".format(parent_snapshot_path, snapshot.name)
         snapshots[snapshot_path] = {
             "name": snapshot.name,
             "description": snapshot.description,
-            "created": six.text_type(snapshot.createTime).split(".")[0],
+            "created": str(snapshot.createTime).split(".")[0],
             "state": snapshot.state,
             "path": snapshot_path,
         }
@@ -1752,15 +1752,14 @@ def test_vcenter_connection(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The test_vcenter_connection function must be called with "
-            "-f or --function."
+            "The test_vcenter_connection function must be called with -f or --function."
         )
 
     try:
         # Get the service instance object
         _get_si()
     except Exception as exc:  # pylint: disable=broad-except
-        return "failed to connect: {0}".format(exc)
+        return "failed to connect: {}".format(exc)
 
     return "connection successful"
 
@@ -1777,7 +1776,7 @@ def get_vcenter_version(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The get_vcenter_version function must be called with " "-f or --function."
+            "The get_vcenter_version function must be called with -f or --function."
         )
 
     # Get the inventory
@@ -1798,7 +1797,7 @@ def list_datacenters(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_datacenters function must be called with " "-f or --function."
+            "The list_datacenters function must be called with -f or --function."
         )
 
     return {"Datacenters": salt.utils.vmware.list_datacenters(_get_si())}
@@ -1816,7 +1815,7 @@ def list_portgroups(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_portgroups function must be called with " "-f or --function."
+            "The list_portgroups function must be called with -f or --function."
         )
 
     return {"Portgroups": salt.utils.vmware.list_portgroups(_get_si())}
@@ -1834,7 +1833,7 @@ def list_clusters(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_clusters function must be called with " "-f or --function."
+            "The list_clusters function must be called with -f or --function."
         )
 
     return {"Clusters": salt.utils.vmware.list_clusters(_get_si())}
@@ -1852,8 +1851,7 @@ def list_datastore_clusters(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_datastore_clusters function must be called with "
-            "-f or --function."
+            "The list_datastore_clusters function must be called with -f or --function."
         )
 
     return {"Datastore Clusters": salt.utils.vmware.list_datastore_clusters(_get_si())}
@@ -1871,7 +1869,7 @@ def list_datastores(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_datastores function must be called with " "-f or --function."
+            "The list_datastores function must be called with -f or --function."
         )
 
     return {"Datastores": salt.utils.vmware.list_datastores(_get_si())}
@@ -1889,7 +1887,7 @@ def list_hosts(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_hosts function must be called with " "-f or --function."
+            "The list_hosts function must be called with -f or --function."
         )
 
     return {"Hosts": salt.utils.vmware.list_hosts(_get_si())}
@@ -1907,7 +1905,7 @@ def list_resourcepools(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_resourcepools function must be called with " "-f or --function."
+            "The list_resourcepools function must be called with -f or --function."
         )
 
     return {"Resource Pools": salt.utils.vmware.list_resourcepools(_get_si())}
@@ -1925,7 +1923,7 @@ def list_networks(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_networks function must be called with " "-f or --function."
+            "The list_networks function must be called with -f or --function."
         )
 
     return {"Networks": salt.utils.vmware.list_networks(_get_si())}
@@ -1943,7 +1941,7 @@ def list_nodes_min(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_min function must be called " "with -f or --function."
+            "The list_nodes_min function must be called with -f or --function."
         )
 
     ret = {}
@@ -1980,7 +1978,7 @@ def list_nodes(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called " "with -f or --function."
+            "The list_nodes function must be called with -f or --function."
         )
 
     ret = {}
@@ -2000,18 +1998,18 @@ def list_nodes(kwargs=None, call=None):
     for vm in vm_list:
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
         ram = (
-            "{0} MB".format(vm["config.hardware.memoryMB"])
+            "{} MB".format(vm["config.hardware.memoryMB"])
             if "config.hardware.memoryMB" in vm
             else "N/A"
         )
         vm_info = {
             "id": vm["name"],
-            "image": "{0} (Detected)".format(vm["config.guestFullName"])
+            "image": "{} (Detected)".format(vm["config.guestFullName"])
             if "config.guestFullName" in vm
             else "N/A",
-            "size": "cpu: {0}\nram: {1}".format(cpu, ram),
+            "size": "cpu: {}\nram: {}".format(cpu, ram),
             "size_dict": {"cpu": cpu, "memory": ram},
-            "state": six.text_type(vm["summary.runtime.powerState"])
+            "state": str(vm["summary.runtime.powerState"])
             if "summary.runtime.powerState" in vm
             else "N/A",
             "private_ips": [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
@@ -2043,7 +2041,7 @@ def list_nodes_full(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called " "with -f or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     ret = {}
@@ -2096,7 +2094,7 @@ def list_nodes_select(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_select function must be called " "with -f or --function."
+            "The list_nodes_select function must be called with -f or --function."
         )
 
     ret = {}
@@ -2179,7 +2177,7 @@ def show_instance(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The show_instance action must be called with " "-a or --action."
+            "The show_instance action must be called with -a or --action."
         )
 
     vm_properties = [
@@ -2319,7 +2317,7 @@ def list_templates(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_templates function must be called with " "-f or --function."
+            "The list_templates function must be called with -f or --function."
         )
 
     return {"Templates": avail_images(call="function")}
@@ -2337,7 +2335,7 @@ def list_folders(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_folders function must be called with " "-f or --function."
+            "The list_folders function must be called with -f or --function."
         )
 
     return {"Folders": salt.utils.vmware.list_folders(_get_si())}
@@ -2366,7 +2364,7 @@ def list_snapshots(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_snapshots function must be called with " "-f or --function."
+            "The list_snapshots function must be called with -f or --function."
         )
 
     ret = {}
@@ -2401,7 +2399,7 @@ def start(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The start action must be called with " "-a or --action."
+            "The start action must be called with -a or --action."
         )
 
     vm_properties = ["name", "summary.runtime.powerState"]
@@ -2453,9 +2451,7 @@ def stop(name, soft=False, call=None):
         salt-cloud -a stop vmname soft=True
     """
     if call != "action":
-        raise SaltCloudSystemExit(
-            "The stop action must be called with " "-a or --action."
-        )
+        raise SaltCloudSystemExit("The stop action must be called with -a or --action.")
 
     vm_properties = ["name", "summary.runtime.powerState"]
 
@@ -2501,7 +2497,7 @@ def suspend(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The suspend action must be called with " "-a or --action."
+            "The suspend action must be called with -a or --action."
         )
 
     vm_properties = ["name", "summary.runtime.powerState"]
@@ -2558,7 +2554,7 @@ def reset(name, soft=False, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The reset action must be called with " "-a or --action."
+            "The reset action must be called with -a or --action."
         )
 
     vm_properties = ["name", "summary.runtime.powerState"]
@@ -2609,7 +2605,7 @@ def terminate(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The terminate action must be called with " "-a or --action."
+            "The terminate action must be called with -a or --action."
         )
 
     vm_properties = ["name", "summary.runtime.powerState"]
@@ -2654,13 +2650,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2706,14 +2702,14 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return True
@@ -2737,7 +2733,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "vmware", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "vmware",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -2748,7 +2747,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -2771,6 +2770,9 @@ def create(vm_):
     num_cpus = config.get_cloud_config_value("num_cpus", vm_, __opts__, default=None)
     cores_per_socket = config.get_cloud_config_value(
         "cores_per_socket", vm_, __opts__, default=None
+    )
+    instant_clone = config.get_cloud_config_value(
+        "instant_clone", vm_, __opts__, default=False
     )
     memory = config.get_cloud_config_value("memory", vm_, __opts__, default=None)
     devices = config.get_cloud_config_value("devices", vm_, __opts__, default=None)
@@ -2824,6 +2826,21 @@ def create(vm_):
     win_run_once = config.get_cloud_config_value(
         "win_run_once", vm_, __opts__, search_global=False, default=None
     )
+    cpu_hot_add = config.get_cloud_config_value(
+        "cpu_hot_add", vm_, __opts__, search_global=False, default=None
+    )
+    cpu_hot_remove = config.get_cloud_config_value(
+        "cpu_hot_remove", vm_, __opts__, search_global=False, default=None
+    )
+    mem_hot_add = config.get_cloud_config_value(
+        "mem_hot_add", vm_, __opts__, search_global=False, default=None
+    )
+    nested_hv = config.get_cloud_config_value(
+        "nested_hv", vm_, __opts__, search_global=False, default=None
+    )
+    vpmc = config.get_cloud_config_value(
+        "vpmc", vm_, __opts__, search_global=False, default=None
+    )
 
     # Get service instance object
     si = _get_si()
@@ -2853,7 +2870,8 @@ def create(vm_):
             clone_type = "template" if object_ref.config.template else "vm"
         else:
             raise SaltCloudSystemExit(
-                "The VM/template that you have specified under clonefrom does not exist."
+                "The VM/template that you have specified under clonefrom does not"
+                " exist."
             )
     else:
         clone_type = None
@@ -2882,7 +2900,8 @@ def create(vm_):
             resourcepool_ref = cluster_ref.resourcePool
     elif clone_type == "template":
         raise SaltCloudSystemExit(
-            "You must either specify a cluster or a resource pool when cloning from a template."
+            "You must either specify a cluster or a resource pool when cloning from a"
+            " template."
         )
     elif not clone_type:
         raise SaltCloudSystemExit(
@@ -2921,7 +2940,8 @@ def create(vm_):
             folder_ref = datacenter_ref.vmFolder
     elif not clone_type:
         raise SaltCloudSystemExit(
-            "You must either specify a folder or a datacenter when creating not cloning."
+            "You must either specify a folder or a datacenter when creating not"
+            " cloning."
         )
     else:
         log.debug(
@@ -2971,6 +2991,111 @@ def create(vm_):
                 reloc_spec.host = host_ref
             else:
                 log.error("Specified host: '%s' does not exist", host)
+
+        if instant_clone:
+            instant_clone_spec = vim.vm.InstantCloneSpec()
+            instant_clone_spec.name = vm_name
+            instant_clone_spec.location = reloc_spec
+
+            event_kwargs = vm_.copy()
+            if event_kwargs.get("password"):
+                del event_kwargs["password"]
+
+            try:
+                __utils__["cloud.fire_event"](
+                    "event",
+                    "requesting instance",
+                    "salt/cloud/{}/requesting".format(vm_["name"]),
+                    args=__utils__["cloud.filter_event"](
+                        "requesting", event_kwargs, list(event_kwargs)
+                    ),
+                    sock_dir=__opts__["sock_dir"],
+                    transport=__opts__["transport"],
+                )
+
+                log.info(
+                    "Creating %s from %s(%s)", vm_["name"], clone_type, vm_["clonefrom"]
+                )
+
+                if datastore and not datastore_ref and datastore_cluster_ref:
+                    # datastore cluster has been specified so apply Storage DRS recommendations
+                    pod_spec = vim.storageDrs.PodSelectionSpec(
+                        storagePod=datastore_cluster_ref
+                    )
+
+                    storage_spec = vim.storageDrs.StoragePlacementSpec(
+                        type="clone",
+                        vm=object_ref,
+                        podSelectionSpec=pod_spec,
+                        cloneName=vm_name,
+                        folder=folder_ref,
+                    )
+
+                    # get recommended datastores
+                    recommended_datastores = (
+                        si.content.storageResourceManager.RecommendDatastores(
+                            storageSpec=storage_spec
+                        )
+                    )
+
+                    # apply storage DRS recommendations
+                    task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(
+                        recommended_datastores.recommendations[0].key
+                    )
+                    salt.utils.vmware.wait_for_task(
+                        task, vm_name, "apply storage DRS recommendations", 5, "info"
+                    )
+                else:
+                    # Instant clone the VM
+                    task = object_ref.InstantClone_Task(spec=instant_clone_spec)
+                    salt.utils.vmware.wait_for_task(
+                        task, vm_name, "Instantclone", 5, "info"
+                    )
+
+            except Exception as exc:  # pylint: disable=broad-except
+                err_msg = "Error Instant cloning {}: {}".format(vm_["name"], exc)
+                log.error(
+                    err_msg,
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                return {"Error": err_msg}
+
+            new_vm_ref = salt.utils.vmware.get_mor_by_property(
+                si, vim.VirtualMachine, vm_name, container_ref=container_ref
+            )
+            out = None
+            if not template and power:
+                ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
+                if ip:
+                    log.info("[ %s ] IPv4 is: %s", vm_name, ip)
+                    # ssh or smb using ip and install salt only if deploy is True
+                    if deploy:
+                        vm_["key_filename"] = key_filename
+                        # if specified, prefer ssh_host to the discovered ip address
+                        if "ssh_host" not in vm_:
+                            vm_["ssh_host"] = ip
+                        log.info("[ %s ] Deploying to %s", vm_name, vm_["ssh_host"])
+
+                        out = __utils__["cloud.bootstrap"](vm_, __opts__)
+
+            data = show_instance(vm_name, call="action")
+
+            if deploy and isinstance(out, dict):
+                data["deploy_kwargs"] = out.get("deploy_kwargs", {})
+
+            __utils__["cloud.fire_event"](
+                "event",
+                "created instance",
+                "salt/cloud/{}/created".format(vm_["name"]),
+                args=__utils__["cloud.filter_event"](
+                    "created", vm_, ["name", "profile", "provider", "driver"]
+                ),
+                sock_dir=__opts__["sock_dir"],
+                transport=__opts__["transport"],
+            )
+            return {"Instant Clone created successfully": data}
+
     else:
         if not datastore:
             raise SaltCloudSystemExit(
@@ -2982,7 +3107,7 @@ def create(vm_):
             )
             if not datastore_ref:
                 raise SaltCloudSystemExit(
-                    "Specified datastore: '{0}' does not exist".format(datastore)
+                    "Specified datastore: '{}' does not exist".format(datastore)
                 )
 
         if host:
@@ -2998,7 +3123,7 @@ def create(vm_):
     # If the hardware version is specified and if it is different from the current
     # hardware version, then schedule a hardware version upgrade
     if hardware_version and object_ref is not None:
-        hardware_version = "vmx-{0:02}".format(hardware_version)
+        hardware_version = "vmx-{:02}".format(hardware_version)
         if hardware_version != object_ref.config.version:
             log.debug(
                 "Scheduling hardware version upgrade from %s to %s",
@@ -3028,7 +3153,7 @@ def create(vm_):
             elif memory_unit.lower() == "gb":
                 memory_mb = int(float(memory_num) * 1024.0)
             else:
-                err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                err_msg = "Invalid memory type specified: '{}'".format(memory_unit)
                 log.error(err_msg)
                 return {"Error": err_msg}
         except (TypeError, ValueError):
@@ -3042,13 +3167,28 @@ def create(vm_):
         )
         config_spec.deviceChange = specs["device_specs"]
 
+    if cpu_hot_add and hasattr(config_spec, "cpuHotAddEnabled"):
+        config_spec.cpuHotAddEnabled = bool(cpu_hot_add)
+
+    if cpu_hot_remove and hasattr(config_spec, "cpuHotRemoveEnabled"):
+        config_spec.cpuHotRemoveEnabled = bool(cpu_hot_remove)
+
+    if mem_hot_add and hasattr(config_spec, "memoryHotAddEnabled"):
+        config_spec.memoryHotAddEnabled = bool(mem_hot_add)
+
+    if nested_hv and hasattr(config_spec, "nestedHVEnabled"):
+        config_spec.nestedHVEnabled = bool(nested_hv)
+
+    if vpmc and hasattr(config_spec, "vPMCEnabled"):
+        config_spec.vPMCEnabled = bool(vpmc)
+
     if extra_config:
-        for key, value in six.iteritems(extra_config):
+        for key, value in extra_config.items():
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
 
     if annotation:
-        config_spec.annotation = six.text_type(annotation)
+        config_spec.annotation = str(annotation)
 
     if "clonefrom" in vm_:
         clone_spec = handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_)
@@ -3064,6 +3204,9 @@ def create(vm_):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if "dns_servers" in list(vm_.keys()):
                 global_ip.dnsServerList = vm_["dns_servers"]
+
+            if "domain" in list(vm_.keys()):
+                global_ip.dnsSuffixList = vm_["domain"]
 
             non_hostname_chars = re.compile(r"[^\w-]")
             if re.search(non_hostname_chars, vm_name):
@@ -3122,7 +3265,7 @@ def create(vm_):
         __utils__["cloud.fire_event"](
             "event",
             "requesting instance",
-            "salt/cloud/{0}/requesting".format(vm_["name"]),
+            "salt/cloud/{}/requesting".format(vm_["name"]),
             args=__utils__["cloud.filter_event"](
                 "requesting", event_kwargs, list(event_kwargs)
             ),
@@ -3151,8 +3294,10 @@ def create(vm_):
                 )
 
                 # get recommended datastores
-                recommended_datastores = si.content.storageResourceManager.RecommendDatastores(
-                    storageSpec=storage_spec
+                recommended_datastores = (
+                    si.content.storageResourceManager.RecommendDatastores(
+                        storageSpec=storage_spec
+                    )
                 )
 
                 # apply storage DRS recommendations
@@ -3175,7 +3320,7 @@ def create(vm_):
                 task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
             salt.utils.vmware.wait_for_task(task, vm_name, "create", 15, "info")
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Error creating {0}: {1}".format(vm_["name"], exc)
+        err_msg = "Error creating {}: {}".format(vm_["name"], exc)
         log.error(
             err_msg,
             # Show the traceback if the debug logging level is enabled
@@ -3220,7 +3365,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -3250,9 +3395,9 @@ def handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
     )
     if not clone_spec:
         raise SaltCloudSystemExit(
-            "Invalid disk move type specified"
-            " supported types are"
-            " {0}".format(" ".join(allowed_types))
+            "Invalid disk move type specified supported types are {}".format(
+                " ".join(allowed_types)
+            )
         )
     return clone_spec
 
@@ -3308,7 +3453,7 @@ def create_datacenter(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The create_datacenter function must be called with " "-f or --function."
+            "The create_datacenter function must be called with -f or --function."
         )
 
     datacenter_name = kwargs.get("name") if kwargs and "name" in kwargs else None
@@ -3367,7 +3512,7 @@ def create_cluster(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The create_cluster function must be called with " "-f or --function."
+            "The create_cluster function must be called with -f or --function."
         )
 
     cluster_name = kwargs.get("name") if kwargs and "name" in kwargs else None
@@ -3380,7 +3525,8 @@ def create_cluster(kwargs=None, call=None):
 
     if not datacenter:
         raise SaltCloudSystemExit(
-            "You must specify name of the datacenter where the cluster should be created."
+            "You must specify name of the datacenter where the cluster should be"
+            " created."
         )
 
     # Get the service instance
@@ -3438,7 +3584,7 @@ def rescan_hba(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The rescan_hba function must be called with " "-f or --function."
+            "The rescan_hba function must be called with -f or --function."
         )
 
     hba = kwargs.get("hba") if kwargs and "hba" in kwargs else None
@@ -3455,7 +3601,7 @@ def rescan_hba(kwargs=None, call=None):
         if hba:
             log.info("Rescanning HBA %s on host %s", hba, host_name)
             host_ref.configManager.storageSystem.RescanHba(hba)
-            ret = "rescanned HBA {0}".format(hba)
+            ret = "rescanned HBA {}".format(hba)
         else:
             log.info("Rescanning all HBAs on host %s", host_name)
             host_ref.configManager.storageSystem.RescanAllHba()
@@ -3492,7 +3638,7 @@ def upgrade_tools_all(call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The upgrade_tools_all function must be called with " "-f or --function."
+            "The upgrade_tools_all function must be called with -f or --function."
         )
 
     ret = {}
@@ -3527,7 +3673,7 @@ def upgrade_tools(name, reboot=False, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The upgrade_tools action must be called with " "-a or --action."
+            "The upgrade_tools action must be called with -a or --action."
         )
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
@@ -3558,8 +3704,7 @@ def list_hosts_by_cluster(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_hosts_by_cluster function must be called with "
-            "-f or --function."
+            "The list_hosts_by_cluster function must be called with -f or --function."
         )
 
     ret = {}
@@ -3724,7 +3869,7 @@ def list_hbas(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_hbas function must be called with " "-f or --function."
+            "The list_hbas function must be called with -f or --function."
         )
 
     ret = {}
@@ -3734,7 +3879,7 @@ def list_hbas(kwargs=None, call=None):
 
     if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
         raise SaltCloudSystemExit(
-            "Specified hba type {0} currently not supported.".format(hba_type)
+            "Specified hba type {} currently not supported.".format(hba_type)
         )
 
     host_list = salt.utils.vmware.get_mors_with_properties(
@@ -3778,7 +3923,7 @@ def list_dvs(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_dvs function must be called with " "-f or --function."
+            "The list_dvs function must be called with -f or --function."
         )
 
     return {"Distributed Virtual Switches": salt.utils.vmware.list_dvs(_get_si())}
@@ -3796,7 +3941,7 @@ def list_vapps(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_vapps function must be called with " "-f or --function."
+            "The list_vapps function must be called with -f or --function."
         )
 
     return {"vApps": salt.utils.vmware.list_vapps(_get_si())}
@@ -3814,8 +3959,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The enter_maintenance_mode function must be called with "
-            "-f or --function."
+            "The enter_maintenance_mode function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -3858,8 +4002,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The exit_maintenance_mode function must be called with "
-            "-f or --function."
+            "The exit_maintenance_mode function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -3920,7 +4063,7 @@ def create_folder(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The create_folder function must be called with " "-f or --function."
+            "The create_folder function must be called with -f or --function."
         )
 
     # Get the service instance object
@@ -3965,7 +4108,7 @@ def create_folder(kwargs=None, call=None):
                 folder_refs.append(folder_refs[index - 1].CreateFolder(folder_name))
 
     if path_exists:
-        return {inventory_path: "specfied path already exists"}
+        return {inventory_path: "specified path already exists"}
 
     return {inventory_path: "created the specified path"}
 
@@ -4001,7 +4144,7 @@ def create_snapshot(name, kwargs=None, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_snapshot action must be called with " "-a or --action."
+            "The create_snapshot action must be called with -a or --action."
         )
 
     if kwargs is None:
@@ -4083,7 +4226,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The revert_to_snapshot action must be called with " "-a or --action."
+            "The revert_to_snapshot action must be called with -a or --action."
         )
 
     if kwargs is None:
@@ -4109,10 +4252,10 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
         else:
             log.debug("Reverting VM %s to snapshot %s", name, snapshot_name)
-            msg = "reverted to snapshot {0}".format(snapshot_name)
+            msg = "reverted to snapshot {}".format(snapshot_name)
             snapshot_ref = _get_snapshot_ref_by_name(vm_ref, snapshot_name)
             if snapshot_ref is None:
-                return "specified snapshot '{0}' does not exist".format(snapshot_name)
+                return "specified snapshot '{}' does not exist".format(snapshot_name)
             task = snapshot_ref.snapshot.Revert(suppressPowerOn=suppress_power_on)
 
         salt.utils.vmware.wait_for_task(task, name, "revert to snapshot", 5, "info")
@@ -4144,7 +4287,7 @@ def remove_snapshot(name, kwargs=None, call=None):
 
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_snapshot action must be called with " "-a or --action."
+            "The create_snapshot action must be called with -a or --action."
         )
 
     if kwargs is None:
@@ -4211,7 +4354,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The remove_all_snapshots action must be called with " "-a or --action."
+            "The remove_all_snapshots action must be called with -a or --action."
         )
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
@@ -4244,13 +4387,13 @@ def convert_to_template(name, kwargs=None, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The convert_to_template action must be called with " "-a or --action."
+            "The convert_to_template action must be called with -a or --action."
         )
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     if vm_ref.config.template:
-        raise SaltCloudSystemExit("{0} already a template".format(name))
+        raise SaltCloudSystemExit("{} already a template".format(name))
 
     try:
         vm_ref.MarkAsTemplate()
@@ -4264,7 +4407,7 @@ def convert_to_template(name, kwargs=None, call=None):
         )
         return "failed to convert to teamplate"
 
-    return "{0} converted to template".format(name)
+    return "{} converted to template".format(name)
 
 
 def add_host(kwargs=None, call=None):
@@ -4309,7 +4452,7 @@ def add_host(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The add_host function must be called with " "-f or --function."
+            "The add_host function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -4369,7 +4512,9 @@ def add_host(kwargs=None, call=None):
             raise SaltCloudSystemExit("Specified datacenter does not exist.")
 
     spec = vim.host.ConnectSpec(
-        hostName=host_name, userName=host_user, password=host_password,
+        hostName=host_name,
+        userName=host_user,
+        password=host_password,
     )
 
     if host_ssl_thumbprint:
@@ -4384,7 +4529,7 @@ def add_host(kwargs=None, call=None):
                 ("echo", "-n"), stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             p2 = subprocess.Popen(
-                ("openssl", "s_client", "-connect", "{0}:443".format(host_name)),
+                ("openssl", "s_client", "-connect", "{}:443".format(host_name)),
                 stdin=p1.stdout,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -4414,12 +4559,12 @@ def add_host(kwargs=None, call=None):
     try:
         if cluster_name:
             task = cluster_ref.AddHost(spec=spec, asConnected=True)
-            ret = "added host system to cluster {0}".format(cluster_name)
+            ret = "added host system to cluster {}".format(cluster_name)
         if datacenter_name:
             task = datacenter_ref.hostFolder.AddStandaloneHost(
                 spec=spec, addConnected=True
             )
-            ret = "added host system to datacenter {0}".format(datacenter_name)
+            ret = "added host system to datacenter {}".format(datacenter_name)
         salt.utils.vmware.wait_for_task(task, host_name, "add host system", 5, "info")
     except Exception as exc:  # pylint: disable=broad-except
         if isinstance(exc, vim.fault.SSLVerifyFault):
@@ -4453,7 +4598,7 @@ def remove_host(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The remove_host function must be called with " "-f or --function."
+            "The remove_host function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -4503,7 +4648,7 @@ def connect_host(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The connect_host function must be called with " "-f or --function."
+            "The connect_host function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -4549,7 +4694,7 @@ def disconnect_host(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The disconnect_host function must be called with " "-f or --function."
+            "The disconnect_host function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -4603,7 +4748,7 @@ def reboot_host(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The reboot_host function must be called with " "-f or --function."
+            "The reboot_host function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -4621,7 +4766,8 @@ def reboot_host(kwargs=None, call=None):
 
     if host_ref.runtime.connectionState == "notResponding":
         raise SaltCloudSystemExit(
-            "Specified host system cannot be rebooted in it's current state (not responding)."
+            "Specified host system cannot be rebooted in it's current state (not"
+            " responding)."
         )
 
     if not host_ref.capability.rebootSupported:
@@ -4629,9 +4775,9 @@ def reboot_host(kwargs=None, call=None):
 
     if not host_ref.runtime.inMaintenanceMode and not force:
         raise SaltCloudSystemExit(
-            "Specified host system is not in maintenance mode. Specify force=True to "
-            "force reboot even if there are virtual machines running or other operations "
-            "in progress."
+            "Specified host system is not in maintenance mode. Specify force=True to"
+            " force reboot even if there are virtual machines running or other"
+            " operations in progress."
         )
 
     try:
@@ -4678,12 +4824,14 @@ def create_datastore_cluster(kwargs=None, call=None):
 
     if not datastore_cluster_name or len(datastore_cluster_name) >= 80:
         raise SaltCloudSystemExit(
-            "The datastore cluster name must be a non empty string of less than 80 characters."
+            "The datastore cluster name must be a non empty string of less than 80"
+            " characters."
         )
 
     if not datacenter_name:
         raise SaltCloudSystemExit(
-            "You must specify name of the datacenter where the datastore cluster should be created."
+            "You must specify name of the datacenter where the datastore cluster should"
+            " be created."
         )
 
     # Get the service instance
@@ -4735,7 +4883,7 @@ def shutdown_host(kwargs=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The shutdown_host function must be called with " "-f or --function."
+            "The shutdown_host function must be called with -f or --function."
         )
 
     host_name = kwargs.get("host") if kwargs and "host" in kwargs else None
@@ -4753,7 +4901,8 @@ def shutdown_host(kwargs=None, call=None):
 
     if host_ref.runtime.connectionState == "notResponding":
         raise SaltCloudSystemExit(
-            "Specified host system cannot be shut down in it's current state (not responding)."
+            "Specified host system cannot be shut down in it's current state (not"
+            " responding)."
         )
 
     if not host_ref.capability.rebootSupported:
@@ -4761,9 +4910,9 @@ def shutdown_host(kwargs=None, call=None):
 
     if not host_ref.runtime.inMaintenanceMode and not force:
         raise SaltCloudSystemExit(
-            "Specified host system is not in maintenance mode. Specify force=True to "
-            "force reboot even if there are virtual machines running or other operations "
-            "in progress."
+            "Specified host system is not in maintenance mode. Specify force=True to"
+            " force reboot even if there are virtual machines running or other"
+            " operations in progress."
         )
 
     try:

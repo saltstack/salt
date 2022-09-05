@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd Party Libs
 try:
     import win32net
 
@@ -20,14 +11,13 @@ try:
     class WinError(win32net.error):
         winerror = 0
 
-
 except ImportError:
     HAS_WIN32 = False
 
 
 class WinFunctionsTestCase(TestCase):
     """
-    Test cases for salt.utils.win_functions
+    Test cases for salt.utils.win_functions.
     """
 
     def test_escape_argument_simple(self):
@@ -65,7 +55,7 @@ class WinFunctionsTestCase(TestCase):
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
     def test_broadcast_setting_change(self):
         """
-            Test to rehash the Environment variables
+        Test to rehash the Environment variables
         """
         self.assertTrue(win_functions.broadcast_setting_change())
 

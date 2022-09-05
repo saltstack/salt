@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Telemetry
 
@@ -24,27 +23,20 @@ In the minion's config file:
 :depends: requests
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.stringutils
 
-# Import 3rd-party libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
-
-# Import third party libs
 try:
     import requests
 
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "telemetry"
 
@@ -66,7 +58,7 @@ def _auth(api_key=None, profile="telemetry"):
     if api_key is None and profile is None:
         raise Exception("Missing api_key and profile")
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, str):
             _profile = __salt__["config.option"](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -80,7 +72,7 @@ def _auth(api_key=None, profile="telemetry"):
 
 
 def _update_cache(deployment_id, metric_name, alert):
-    key = "telemetry.{0}.alerts".format(deployment_id)
+    key = "telemetry.{}.alerts".format(deployment_id)
 
     if key in __context__:
         alerts = __context__[key]
@@ -132,6 +124,8 @@ def get_alert_config(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.get_alert_config rs-ds033197 currentConnections profile=telemetry
         salt myminion telemetry.get_alert_config rs-ds033197 profile=telemetry
     """
@@ -139,16 +133,16 @@ def get_alert_config(
     auth = _auth(profile=profile)
     alert = False
 
-    key = "telemetry.{0}.alerts".format(deployment_id)
+    key = "telemetry.{}.alerts".format(deployment_id)
 
     if key not in __context__:
         try:
-            get_url = _get_telemetry_base(profile) + "/alerts?deployment={0}".format(
+            get_url = _get_telemetry_base(profile) + "/alerts?deployment={}".format(
                 deployment_id
             )
             response = requests.get(get_url, headers=auth)
         except requests.exceptions.RequestException as e:
-            log.error(six.text_type(e))
+            log.error(str(e))
             return False
 
         http_result = {}
@@ -181,6 +175,8 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.get_notification_channel_id userx@company.com profile=telemetry
     """
 
@@ -205,7 +201,8 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
         )
         if response.status_code == 200:
             log.info(
-                "Successfully created EscalationPolicy %s with EmailNotificationChannel %s",
+                "Successfully created EscalationPolicy %s with"
+                " EmailNotificationChannel %s",
                 data.get("name"),
                 notify_channel,
             )
@@ -213,7 +210,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
             __context__["telemetry.channels"][notify_channel] = notification_channel_id
         else:
             raise Exception(
-                "Failed to created notification channel {0}".format(notify_channel)
+                "Failed to created notification channel {}".format(notify_channel)
             )
 
     return notification_channel_id
@@ -227,6 +224,8 @@ def get_alarms(deployment_id, profile="telemetry"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.get_alarms rs-ds033197 profile=telemetry
 
     """
@@ -235,11 +234,11 @@ def get_alarms(deployment_id, profile="telemetry"):
     try:
         response = requests.get(
             _get_telemetry_base(profile)
-            + "/alerts?deployment={0}".format(deployment_id),
+            + "/alerts?deployment={}".format(deployment_id),
             headers=auth,
         )
     except requests.exceptions.RequestException as e:
-        log.error(six.text_type(e))
+        log.error(str(e))
         return False
 
     if response.status_code == 200:
@@ -248,7 +247,7 @@ def get_alarms(deployment_id, profile="telemetry"):
         if len(alarms) > 0:
             return alarms
 
-        return "No alarms defined for deployment: {0}".format(deployment_id)
+        return "No alarms defined for deployment: {}".format(deployment_id)
     else:
         # Non 200 response, sent back the error response'
         return {
@@ -267,6 +266,8 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.create_alarm rs-ds033197 {} profile=telemetry
 
     """
@@ -274,7 +275,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     auth = _auth(api_key, profile)
     request_uri = _get_telemetry_base(profile) + "/alerts"
 
-    key = "telemetry.{0}.alerts".format(deployment_id)
+    key = "telemetry.{}.alerts".format(deployment_id)
 
     # set the notification channels if not already set
     post_body = {
@@ -296,7 +297,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         )
     except requests.exceptions.RequestException as e:
         # TODO: May be we should retry?
-        log.error(six.text_type(e))
+        log.error(str(e))
 
     if response.status_code >= 200 and response.status_code < 300:
         # update cache
@@ -312,7 +313,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         _update_cache(deployment_id, metric_name, response.json())
     else:
         log.error(
-            "Failed to create alarm on metric: %s in " "deployment %s: payload: %s",
+            "Failed to create alarm on metric: %s in deployment %s: payload: %s",
             metric_name,
             deployment_id,
             salt.utils.json.dumps(post_body),
@@ -329,6 +330,8 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.update_alarm rs-ds033197 {} profile=telemetry
 
     """
@@ -338,7 +341,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     if not alert:
         return (
             False,
-            "No entity found matching deployment {0} and alarms {1}".format(
+            "No entity found matching deployment {} and alarms {}".format(
                 deployment_id, metric_name
             ),
         )
@@ -365,7 +368,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         )
     except requests.exceptions.RequestException as e:
         log.error("Update failed: %s", e)
-        return False, six.text_type(e)
+        return False, str(e)
 
     if response.status_code >= 200 and response.status_code < 300:
         # Also update cache
@@ -381,12 +384,12 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         )
         return True, response.json()
 
-    err_msg = six.text_type(  # future lint: disable=blacklisted-function
-        "Failed to create alarm on metric: {0} in deployment: {1} " "payload: {2}"
-    ).format(
-        salt.utils.stringutils.to_unicode(metric_name),
-        salt.utils.stringutils.to_unicode(deployment_id),
-        salt.utils.json.dumps(post_body),
+    err_msg = (
+        "Failed to create alarm on metric: {} in deployment: {} payload: {}".format(
+            salt.utils.stringutils.to_unicode(metric_name),
+            salt.utils.stringutils.to_unicode(deployment_id),
+            salt.utils.json.dumps(post_body),
+        )
     )
     log.error(err_msg)
     return False, err_msg
@@ -402,6 +405,8 @@ def delete_alarms(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.delete_alarms rs-ds033197 profile=telemetry
 
     """
@@ -416,14 +421,12 @@ def delete_alarms(
     if len(alert_ids) == 0:
         return (
             False,
-            "failed to find alert associated with deployment: {0}".format(
-                deployment_id
-            ),
+            "failed to find alert associated with deployment: {}".format(deployment_id),
         )
 
     failed_to_delete = []
     for id in alert_ids:
-        delete_url = _get_telemetry_base(profile) + "/alerts/{0}".format(id)
+        delete_url = _get_telemetry_base(profile) + "/alerts/{}".format(id)
 
         try:
             response = requests.delete(delete_url, headers=auth)
@@ -444,14 +447,14 @@ def delete_alarms(
     if len(failed_to_delete) > 0:
         return (
             False,
-            "Failed to delete {0} alarms in deployment: {1}".format(
+            "Failed to delete {} alarms in deployment: {}".format(
                 ", ".join(failed_to_delete), deployment_id
             ),
         )
 
     return (
         True,
-        "Successfully deleted {0} alerts in deployment: {1}".format(
+        "Successfully deleted {} alerts in deployment: {}".format(
             ", ".join(alert_ids), deployment_id
         ),
     )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Daniel Mizyrycki (mzdaniel@glidelink.net)
 
@@ -28,17 +27,11 @@
     $ salt-ssh localhost state.sls custom_module
     localhost:
         olleh
-
-
-    This test can be run in a small test suite with:
-
-    $ python tests/runtests.py -C --ssh
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
+
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -47,7 +40,7 @@ class SSHCustomModuleTest(SSHCase):
     Test sls with custom module functionality using ssh
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_regular_module(self):
         """
         Test regular module work using SSHCase environment
@@ -56,7 +49,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("test.echo", arg=["hello"])
         self.assertEqual(expected, cmd)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_custom_module(self):
         """
         Test custom module work using SSHCase environment
@@ -65,7 +58,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("test.recho", arg=["hello"])
         self.assertEqual(expected, cmd)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_sls_with_custom_module(self):
         """
         Test sls with custom module work using SSHCase environment
@@ -77,7 +70,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("state.sls", arg=["custom_module"])
         for key in cmd:
             if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
-                raise AssertionError("{0} is not a proper state return".format(cmd))
+                raise AssertionError("{} is not a proper state return".format(cmd))
             elif not cmd[key]["result"]:
                 raise AssertionError(cmd[key]["comment"])
             cmd_ret = cmd[key]["changes"].get("ret", None)

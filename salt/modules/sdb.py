@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Module for Manipulating Data via the Salt DB API
 ================================================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+
 import salt.utils.sdb
 
 __func_alias__ = {
@@ -13,18 +11,18 @@ __func_alias__ = {
 }
 
 
-def get(uri):
+def get(uri, strict=False):
     """
-    Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
-    the uri provided does not start with sdb://, then it will be returned as-is.
+    Get a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
+    the uri provided is not valid, then it will be returned as-is, unless ``strict=True`` was passed.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' sdb.get sdb://mymemcached/foo
+        salt '*' sdb.get sdb://mymemcached/foo strict=True
     """
-    return salt.utils.sdb.sdb_get(uri, __opts__, __utils__)
+    return salt.utils.sdb.sdb_get(uri, __opts__, __utils__, strict)
 
 
 def set_(uri, value):

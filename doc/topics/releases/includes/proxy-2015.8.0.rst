@@ -95,7 +95,7 @@ proxy:
 
 Proxies can be better tracked via system process utilities:
 
-..code-block:: bash
+.. code-block:: bash
 
     root@raring64:/var/log/salt# ps guax | grep p8
     root     15215  pts/3    S+   10:57   0:00 python salt-proxy -l debug --proxyid=p8000

@@ -18,7 +18,6 @@ skip="salt/ext,tests/kitchen,templates"
 
 [tool.towncrier]
     package = "salt"
-    package_dir = "salt"
     filename = "CHANGELOG.md"
     directory = "changelog/"
     start_string = "# Changelog\n"
@@ -46,4 +45,9 @@ skip="salt/ext,tests/kitchen,templates"
     [[tool.towncrier.type]]
         directory = "added"
         name = "Added"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "security"
+        name = "Security"
         showcontent = true

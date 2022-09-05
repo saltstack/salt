@@ -1,31 +1,29 @@
-# -*- coding: utf-8 -*-
 """
 Classes for working with Windows Update Agent
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import subprocess
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import range
 
-# Import 3rd-party libs
 try:
-    import win32com.client
     import pywintypes
+    import win32com.client
 
     HAS_PYWIN32 = True
 except ImportError:
     HAS_PYWIN32 = False
 
 log = logging.getLogger(__name__)
+
+REBOOT_BEHAVIOR = {
+    0: "Never Requires Reboot",
+    1: "Always Requires Reboot",
+    2: "Can Require Reboot",
+}
 
 __virtualname__ = "win_update"
 
@@ -38,7 +36,7 @@ def __virtual__():
     return __virtualname__
 
 
-class Updates(object):
+class Updates:
     """
     Wrapper around the 'Microsoft.Update.UpdateColl' instance
     Adds the list and summary functions. For use by the WindowUpdateAgent class.
@@ -70,12 +68,6 @@ class Updates(object):
     """
 
     update_types = {1: "Software", 2: "Driver"}
-
-    reboot_behavior = {
-        0: "Never Requires Reboot",
-        1: "Always Requires Reboot",
-        2: "Can Require Reboot",
-    }
 
     def __init__(self):
         """
@@ -149,9 +141,31 @@ class Updates(object):
         results = {}
         for update in self.updates:
 
+            # Windows 10 build 2004 introduced some problems with the
+            # InstallationBehavior COM Object. See
+            # https://github.com/saltstack/salt/issues/57762 for more details.
+            # The following 2 try/except blocks will output sane defaults
+            try:
+                user_input = bool(update.InstallationBehavior.CanRequestUserInput)
+            except AttributeError:
+                log.debug(
+                    "Windows Update: Error reading InstallationBehavior COM Object"
+                )
+                user_input = False
+
+            try:
+                requires_reboot = update.InstallationBehavior.RebootBehavior
+            except AttributeError:
+                log.debug(
+                    "Windows Update: Error reading InstallationBehavior COM Object"
+                )
+                requires_reboot = 2
+
+            # IUpdate Properties
+            # https://docs.microsoft.com/en-us/windows/win32/wua_sdk/iupdate-properties
             results[update.Identity.UpdateID] = {
                 "guid": update.Identity.UpdateID,
-                "Title": six.text_type(update.Title),
+                "Title": str(update.Title),
                 "Type": self.update_types[update.Type],
                 "Description": update.Description,
                 "Downloaded": bool(update.IsDownloaded),
@@ -159,13 +173,12 @@ class Updates(object):
                 "Mandatory": bool(update.IsMandatory),
                 "EULAAccepted": bool(update.EulaAccepted),
                 "NeedsReboot": bool(update.RebootRequired),
-                "Severity": six.text_type(update.MsrcSeverity),
-                "UserInput": bool(update.InstallationBehavior.CanRequestUserInput),
-                "RebootBehavior": self.reboot_behavior[
-                    update.InstallationBehavior.RebootBehavior
-                ],
+                "Severity": str(update.MsrcSeverity),
+                "UserInput": user_input,
+                "RebootBehavior": REBOOT_BEHAVIOR[requires_reboot],
                 "KBs": ["KB" + item for item in update.KBArticleIDs],
                 "Categories": [item.Name for item in update.Categories],
+                "SupportUrl": update.SupportUrl,
             }
 
         return results
@@ -252,7 +265,7 @@ class Updates(object):
         return results
 
 
-class WindowsUpdateAgent(object):
+class WindowsUpdateAgent:
     """
     Class for working with the Windows update agent
     """
@@ -301,7 +314,7 @@ class WindowsUpdateAgent(object):
                 update database. ``True`` will go online. ``False`` will use the
                 local update database as is. Default is ``True``
 
-                .. versionadded:: Sodium
+                .. versionadded:: 3001
 
         Need to look at the possibility of loading this into ``__context__``
         """
@@ -362,7 +375,7 @@ class WindowsUpdateAgent(object):
                 update database. ``True`` will go online. ``False`` will use the
                 local update database as is. Default is ``True``
 
-                .. versionadded:: Sodium
+                .. versionadded:: 3001
 
         Code Example:
 
@@ -373,7 +386,7 @@ class WindowsUpdateAgent(object):
             wua.refresh()
         """
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386526(v=vs.85).aspx
-        search_string = "Type='Software' or " "Type='Driver'"
+        search_string = "Type='Software' or Type='Driver'"
 
         # Create searcher object
         searcher = self._session.CreateUpdateSearcher()
@@ -385,14 +398,14 @@ class WindowsUpdateAgent(object):
             results = searcher.Search(search_string)
             if results.Updates.Count == 0:
                 log.debug("No Updates found for:\n\t\t%s", search_string)
-                return "No Updates found: {0}".format(search_string)
+                return "No Updates found: {}".format(search_string)
         except pywintypes.com_error as error:
             # Something happened, raise an error
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
             try:
                 failure_code = self.fail_codes[exc[5]]
             except KeyError:
-                failure_code = "Unknown Failure: {0}".format(error)
+                failure_code = "Unknown Failure: {}".format(error)
 
             log.error("Search Failed: %s\n\t\t%s", failure_code, search_string)
             raise CommandExecutionError(failure_code)
@@ -524,10 +537,21 @@ class WindowsUpdateAgent(object):
             if salt.utils.data.is_true(update.IsMandatory) and skip_mandatory:
                 continue
 
-            if (
-                salt.utils.data.is_true(update.InstallationBehavior.RebootBehavior)
-                and skip_reboot
-            ):
+            # Windows 10 build 2004 introduced some problems with the
+            # InstallationBehavior COM Object. See
+            # https://github.com/saltstack/salt/issues/57762 for more details.
+            # The following try/except block will default to True
+            try:
+                requires_reboot = salt.utils.data.is_true(
+                    update.InstallationBehavior.RebootBehavior
+                )
+            except AttributeError:
+                log.debug(
+                    "Windows Update: Error reading InstallationBehavior COM Object"
+                )
+                requires_reboot = True
+
+            if requires_reboot and skip_reboot:
                 continue
 
             if not software and update.Type == 1:
@@ -586,11 +610,11 @@ class WindowsUpdateAgent(object):
         updates = Updates()
         found = updates.updates
 
-        if isinstance(search_string, six.string_types):
+        if isinstance(search_string, str):
             search_string = [search_string]
 
-        if isinstance(search_string, six.integer_types):
-            search_string = [six.text_type(search_string)]
+        if isinstance(search_string, int):
+            search_string = [str(search_string)]
 
         for update in self._updates:
 
@@ -695,7 +719,7 @@ class WindowsUpdateAgent(object):
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {0}".format(error)
+                    failure_code = "Unknown Failure: {}".format(error)
 
                 log.error("Download Failed: %s", failure_code)
                 raise CommandExecutionError(failure_code)
@@ -804,7 +828,7 @@ class WindowsUpdateAgent(object):
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {0}".format(error)
+                    failure_code = "Unknown Failure: {}".format(error)
 
                 log.error("Install Failed: %s", failure_code)
                 raise CommandExecutionError(failure_code)
@@ -831,15 +855,25 @@ class WindowsUpdateAgent(object):
                 log.debug("Install Failed")
                 ret["Success"] = False
 
-            reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
             for i in range(install_list.Count):
                 uid = install_list.Item(i).Identity.UpdateID
                 ret["Updates"][uid]["Result"] = result_code[
                     result.GetUpdateResult(i).ResultCode
                 ]
-                ret["Updates"][uid]["RebootBehavior"] = reboot[
-                    install_list.Item(i).InstallationBehavior.RebootBehavior
-                ]
+                # Windows 10 build 2004 introduced some problems with the
+                # InstallationBehavior COM Object. See
+                # https://github.com/saltstack/salt/issues/57762 for more details.
+                # The following try/except block will default to 2
+                try:
+                    reboot_behavior = install_list.Item(
+                        i
+                    ).InstallationBehavior.RebootBehavior
+                except AttributeError:
+                    log.debug(
+                        "Windows Update: Error reading InstallationBehavior COM Object"
+                    )
+                    reboot_behavior = 2
+                ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[reboot_behavior]
 
         return ret
 
@@ -928,7 +962,7 @@ class WindowsUpdateAgent(object):
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {0}".format(error)
+                    failure_code = "Unknown Failure: {}".format(error)
 
                 # If "Uninstall Not Allowed" error, try using DISM
                 if exc[5] == -2145124312:
@@ -958,7 +992,7 @@ class WindowsUpdateAgent(object):
                                             "dism",
                                             "/Online",
                                             "/Remove-Package",
-                                            "/PackageName:{0}".format(pkg),
+                                            "/PackageName:{}".format(pkg),
                                             "/Quiet",
                                             "/NoRestart",
                                         ]
@@ -970,7 +1004,7 @@ class WindowsUpdateAgent(object):
                         log.debug("Command: %s", " ".join(cmd))
                         log.debug("Error: %s", exc)
                         raise CommandExecutionError(
-                            "Uninstall using DISM failed: {0}".format(exc)
+                            "Uninstall using DISM failed: {}".format(exc)
                         )
 
                     # DISM Uninstall Completed Successfully
@@ -985,8 +1019,6 @@ class WindowsUpdateAgent(object):
                     # Refresh the Updates Table
                     self.refresh(online=False)
 
-                    reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
-
                     # Check the status of each update
                     for update in self._updates:
                         uid = update.Identity.UpdateID
@@ -1000,8 +1032,22 @@ class WindowsUpdateAgent(object):
                                     ret["Updates"][uid][
                                         "Result"
                                     ] = "Uninstallation Failed"
-                                ret["Updates"][uid]["RebootBehavior"] = reboot[
-                                    update.InstallationBehavior.RebootBehavior
+                                # Windows 10 build 2004 introduced some problems with the
+                                # InstallationBehavior COM Object. See
+                                # https://github.com/saltstack/salt/issues/57762 for more details.
+                                # The following try/except block will default to 2
+                                try:
+                                    requires_reboot = (
+                                        update.InstallationBehavior.RebootBehavior
+                                    )
+                                except AttributeError:
+                                    log.debug(
+                                        "Windows Update: Error reading"
+                                        " InstallationBehavior COM Object"
+                                    )
+                                    requires_reboot = 2
+                                ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[
+                                    requires_reboot
                                 ]
 
                     return ret
@@ -1032,15 +1078,25 @@ class WindowsUpdateAgent(object):
                 log.debug("Uninstall Failed")
                 ret["Success"] = False
 
-            reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
             for i in range(uninstall_list.Count):
                 uid = uninstall_list.Item(i).Identity.UpdateID
                 ret["Updates"][uid]["Result"] = result_code[
                     result.GetUpdateResult(i).ResultCode
                 ]
-                ret["Updates"][uid]["RebootBehavior"] = reboot[
-                    uninstall_list.Item(i).InstallationBehavior.RebootBehavior
-                ]
+                # Windows 10 build 2004 introduced some problems with the
+                # InstallationBehavior COM Object. See
+                # https://github.com/saltstack/salt/issues/57762 for more details.
+                # The following try/except block will default to 2
+                try:
+                    reboot_behavior = uninstall_list.Item(
+                        i
+                    ).InstallationBehavior.RebootBehavior
+                except AttributeError:
+                    log.debug(
+                        "Windows Update: Error reading InstallationBehavior COM Object"
+                    )
+                    reboot_behavior = 2
+                ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[reboot_behavior]
 
         return ret
 
@@ -1056,17 +1112,15 @@ class WindowsUpdateAgent(object):
             str: The stdout of the command
         """
 
-        if isinstance(cmd, six.string_types):
+        if isinstance(cmd, str):
             cmd = salt.utils.args.shlex_split(cmd)
 
         try:
             log.debug(cmd)
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return p.communicate()
 
-        except (OSError, IOError) as exc:
+        except OSError as exc:
             log.debug("Command Failed: %s", " ".join(cmd))
             log.debug("Error: %s", exc)
             raise CommandExecutionError(exc)
@@ -1092,5 +1146,10 @@ def needs_reboot():
     # Initialize the PyCom system
     with salt.utils.winapi.Com():
         # Create an AutoUpdate object
-        obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
+        try:
+            obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
+        except pywintypes.com_error as exc:
+            _, msg, _, _ = exc.args
+            log.debug("Failed to create SystemInfo object: %s", msg)
+            return False
         return salt.utils.data.is_true(obj_sys.RebootRequired)

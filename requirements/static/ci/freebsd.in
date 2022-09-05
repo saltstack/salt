@@ -1,0 +1,5 @@
+# FreeBSD static CI requirements
+pygit2==1.8.0; python_version >= '3.7'
+yamllint
+mercurial
+hglib

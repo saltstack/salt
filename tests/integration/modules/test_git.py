@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for git execution module
 
@@ -7,11 +6,9 @@ destructive as a result. If no values are set for user.name or user.email in
 the user's global .gitconfig, then these tests will set one.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-import errno
 import logging
 import os
+import pathlib
 import re
 import shutil
 import subprocess
@@ -20,13 +17,13 @@ import tempfile
 from contextlib import closing
 
 import pytest
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
-from salt.ext import six
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing, slowTest
+from tests.support.helpers import change_cwd
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -48,8 +45,7 @@ def _git_version():
         log.debug("Git not installed")
         return False
     git_version = git_version.strip().split()[-1]
-    if six.PY3:
-        git_version = git_version.decode(__salt_system_encoding__)
+    git_version = git_version.decode(__salt_system_encoding__)
     log.debug("Detected git version: %s", git_version)
     return LooseVersion(git_version)
 
@@ -64,86 +60,76 @@ def _worktrees_supported():
         return False
 
 
-def _makedirs(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:
-        # Don't raise an exception if the directory exists
-        if exc.errno != errno.EEXIST:
-            raise
-
-
-@skip_if_binaries_missing("git")
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_if_binaries_missing("git")
 class GitModuleTest(ModuleCase):
     def setUp(self):
-        super(GitModuleTest, self).setUp()
-        self.orig_cwd = os.getcwd()
-        self.addCleanup(os.chdir, self.orig_cwd)
+        super().setUp()
         self.repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
+        self.addCleanup(delattr, self, "repo")
         self.files = ("foo", "bar", "baz", "питон")
+        self.addCleanup(delattr, self, "files")
         self.dirs = ("", "qux")
+        self.addCleanup(delattr, self, "dirs")
         self.branches = ("master", "iamanewbranch")
+        self.addCleanup(delattr, self, "branches")
         self.tags = ("git_testing",)
+        self.addCleanup(delattr, self, "tags")
         for dirname in self.dirs:
-            dir_path = os.path.join(self.repo, dirname)
-            _makedirs(dir_path)
+            dir_path = pathlib.Path(self.repo) / dirname
+            dir_path.mkdir(parents=True, exist_ok=True)
             for filename in self.files:
-                with salt.utils.files.fopen(
-                    os.path.join(dir_path, filename), "wb"
-                ) as fp_:
+                with salt.utils.files.fopen(str(dir_path / filename), "wb") as fp_:
                     fp_.write(
-                        "This is a test file named {0}.".format(filename).encode(
-                            "utf-8"
-                        )
+                        "This is a test file named {}.".format(filename).encode("utf-8")
                     )
         # Navigate to the root of the repo to init, stage, and commit
-        os.chdir(self.repo)
-        # Initialize a new git repository
-        subprocess.check_call(["git", "init", "--quiet", self.repo])
+        with change_cwd(self.repo):
+            # Initialize a new git repository
+            subprocess.check_call(["git", "init", "--quiet", self.repo])
 
-        # Set user.name and user.email config attributes if not present
-        for key, value in (
-            ("user.name", "Jenkins"),
-            ("user.email", "qa@saltstack.com"),
-        ):
-            # Check if key is missing
-            keycheck = subprocess.Popen(
-                ["git", "config", "--get", "--global", key],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+            # Set user.name and user.email config attributes if not present
+            for key, value in (
+                ("user.name", "Jenkins"),
+                ("user.email", "qa@saltstack.com"),
+            ):
+                # Check if key is missing
+                keycheck = subprocess.Popen(
+                    ["git", "config", "--get", "--global", key],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                if keycheck.wait() != 0:
+                    # Set the key if it is not present
+                    subprocess.check_call(["git", "config", "--global", key, value])
+
+            subprocess.check_call(["git", "add", "."])
+            subprocess.check_call(
+                ["git", "commit", "--quiet", "--message", "Initial commit"]
             )
-            if keycheck.wait() != 0:
-                # Set the key if it is not present
-                subprocess.check_call(["git", "config", "--global", key, value])
-
-        subprocess.check_call(["git", "add", "."])
-        subprocess.check_call(
-            ["git", "commit", "--quiet", "--message", "Initial commit"]
-        )
-        # Add a tag
-        subprocess.check_call(["git", "tag", "-a", self.tags[0], "-m", "Add tag"])
-        # Checkout a second branch
-        subprocess.check_call(["git", "checkout", "--quiet", "-b", self.branches[1]])
-        # Add a line to the file
-        with salt.utils.files.fopen(self.files[0], "a") as fp_:
-            fp_.write(salt.utils.stringutils.to_str("Added a line\n"))
-        # Commit the updated file
-        subprocess.check_call(
-            [
-                "git",
-                "commit",
-                "--quiet",
-                "--message",
-                "Added a line to " + self.files[0],
-                self.files[0],
-            ]
-        )
-        # Switch back to master
-        subprocess.check_call(["git", "checkout", "--quiet", "master"])
-        # Go back to original cwd
-        os.chdir(self.orig_cwd)
+            # Add a tag
+            subprocess.check_call(["git", "tag", "-a", self.tags[0], "-m", "Add tag"])
+            # Checkout a second branch
+            subprocess.check_call(
+                ["git", "checkout", "--quiet", "-b", self.branches[1]]
+            )
+            # Add a line to the file
+            with salt.utils.files.fopen(self.files[0], "a") as fp_:
+                fp_.write(salt.utils.stringutils.to_str("Added a line\n"))
+            # Commit the updated file
+            subprocess.check_call(
+                [
+                    "git",
+                    "commit",
+                    "--quiet",
+                    "--message",
+                    "Added a line to " + self.files[0],
+                    self.files[0],
+                ]
+            )
+            # Switch back to master
+            subprocess.check_call(["git", "checkout", "--quiet", "master"])
 
     def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """
@@ -151,40 +137,33 @@ class GitModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         """
-        return salt.utils.data.decode(
-            super(GitModuleTest, self).run_function(*args, **kwargs)
-        )
+        return salt.utils.data.decode(super().run_function(*args, **kwargs))
 
-    def tearDown(self):
-        for key in ("orig_cwd", "repo", "files", "dirs", "branches", "tags"):
-            delattr(self, key)
-        super(GitModuleTest, self).tearDown()
-
-    @slowTest
+    @pytest.mark.slow_test
     def test_add_dir(self):
         """
         Test git.add with a directory
         """
         newdir = "quux"
         # Change to the repo dir
-        newdir_path = os.path.join(self.repo, newdir)
-        _makedirs(newdir_path)
-        files = [os.path.join(newdir_path, x) for x in self.files]
+        newdir_path = pathlib.Path(self.repo) / newdir
+        newdir_path.mkdir(parents=True, exist_ok=True)
+        files = [str(newdir_path / x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
             with salt.utils.files.fopen(path, "wb") as fp_:
                 fp_.write(
-                    "This is a test file with relative path {0}.\n".format(path).encode(
+                    "This is a test file with relative path {}.\n".format(path).encode(
                         "utf-8"
                     )
                 )
         ret = self.run_function("git.add", [self.repo, newdir])
-        res = "\n".join(sorted(["add '{0}'".format(x) for x in files_relpath]))
+        res = "\n".join(sorted("add '{}'".format(x) for x in files_relpath))
         if salt.utils.platform.is_windows():
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_add_file(self):
         """
         Test git.add with a file
@@ -194,13 +173,13 @@ class GitModuleTest(ModuleCase):
         with salt.utils.files.fopen(file_path, "w") as fp_:
             fp_.write(
                 salt.utils.stringutils.to_str(
-                    "This is a test file named {0}.\n".format(filename)
+                    "This is a test file named {}.\n".format(filename)
                 )
             )
         ret = self.run_function("git.add", [self.repo, filename])
-        self.assertEqual(ret, "add '{0}'".format(filename))
+        self.assertEqual(ret, "add '{}'".format(filename))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_archive(self):
         """
         Test git.archive
@@ -238,7 +217,7 @@ class GitModuleTest(ModuleCase):
             except OSError:
                 pass
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_archive_subdir(self):
         """
         Test git.archive on a subdir, giving only a partial copy of the repo in
@@ -265,7 +244,7 @@ class GitModuleTest(ModuleCase):
             except OSError:
                 pass
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_branch(self):
         """
         Test creating, renaming, and deleting a branch using git.branch
@@ -281,7 +260,7 @@ class GitModuleTest(ModuleCase):
             self.run_function("git.branch", [self.repo, renamed_branch], opts="-D")
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_checkout(self):
         """
         Test checking out a new branch and then checking out master again
@@ -298,7 +277,7 @@ class GitModuleTest(ModuleCase):
             in self.run_function("git.checkout", [self.repo, "master"]),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_checkout_no_rev(self):
         """
         Test git.checkout without a rev, both with -b in opts and without
@@ -315,7 +294,7 @@ class GitModuleTest(ModuleCase):
             in self.run_function("git.checkout", [self.repo])
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clone(self):
         """
         Test cloning an existing repo
@@ -325,7 +304,7 @@ class GitModuleTest(ModuleCase):
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir, True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clone_with_alternate_name(self):
         """
         Test cloning an existing repo with an alternate name for the repo dir
@@ -341,7 +320,7 @@ class GitModuleTest(ModuleCase):
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir, True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_commit(self):
         """
         Test git.commit two ways:
@@ -370,7 +349,7 @@ class GitModuleTest(ModuleCase):
         )
         self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_config(self):
         """
         Test setting, getting, and unsetting config values
@@ -407,13 +386,13 @@ class GitModuleTest(ModuleCase):
                     cwd=self.repo,
                 )
             )
-            log.debug(
-                "Try to set single local value without cwd (should raise " "error)"
-            )
+            log.debug("Try to set single local value without cwd (should raise error)")
             self.assertTrue(
                 "'cwd' argument required unless global=True"
                 in self.run_function(
-                    "git.config_set", ["foo.single"], value=cfg_local["foo.single"][0],
+                    "git.config_set",
+                    ["foo.single"],
+                    value=cfg_local["foo.single"][0],
                 )
             )
             log.debug("Set single local value")
@@ -534,7 +513,11 @@ class GitModuleTest(ModuleCase):
 
             log.debug("Unset a single local value")
             self.assertTrue(
-                self.run_function("git.config_unset", ["foo.single"], cwd=self.repo,)
+                self.run_function(
+                    "git.config_unset",
+                    ["foo.single"],
+                    cwd=self.repo,
+                )
             )
             log.debug("Unset an entire local multivar")
             self.assertTrue(
@@ -557,14 +540,14 @@ class GitModuleTest(ModuleCase):
         finally:
             _clear_config()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_current_branch(self):
         """
         Test git.current_branch
         """
         self.assertEqual(self.run_function("git.current_branch", [self.repo]), "master")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_describe(self):
         """
         Test git.describe
@@ -574,7 +557,7 @@ class GitModuleTest(ModuleCase):
     # Test for git.fetch would be unreliable on Jenkins, skipping for now
     # The test should go into test_remotes when ready
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_init(self):
         """
         Use git.init to init a new repo
@@ -603,14 +586,12 @@ class GitModuleTest(ModuleCase):
         else:
             self.assertEqual(
                 self.run_function("git.init", [new_repo]).lower(),
-                "Initialized empty Git repository in {0}/.git/".format(
-                    new_repo
-                ).lower(),
+                "Initialized empty Git repository in {}/.git/".format(new_repo).lower(),
             )
 
         shutil.rmtree(new_repo)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_branches(self):
         """
         Test git.list_branches
@@ -619,7 +600,7 @@ class GitModuleTest(ModuleCase):
             self.run_function("git.list_branches", [self.repo]), sorted(self.branches)
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_tags(self):
         """
         Test git.list_tags
@@ -631,7 +612,7 @@ class GitModuleTest(ModuleCase):
     # Test for git.ls_remote will need to wait for now, while I think of how to
     # properly mock it.
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_merge(self):
         """
         Test git.merge
@@ -643,7 +624,7 @@ class GitModuleTest(ModuleCase):
         # Merge should be a fast-forward
         self.assertTrue("Fast-forward" in ret.splitlines())
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_merge_base_and_tree(self):
         """
         Test git.merge_base, git.merge_tree and git.revision
@@ -680,7 +661,7 @@ class GitModuleTest(ModuleCase):
 
     # Test for git.push would be unreliable on Jenkins, skipping for now
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_rebase(self):
         """
         Test git.rebase
@@ -719,7 +700,7 @@ class GitModuleTest(ModuleCase):
 
     # Test for git.remote_set is in test_remotes
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_remotes(self):
         """
         Test setting a remote (git.remote_set), and getting a remote
@@ -749,7 +730,7 @@ class GitModuleTest(ModuleCase):
         )
         self.assertEqual(self.run_function("git.remotes", [self.repo]), remotes)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_reset(self):
         """
         Test git.reset
@@ -774,7 +755,7 @@ class GitModuleTest(ModuleCase):
         # The two revisions should be the same
         self.assertEqual(head_rev, master_rev)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_rev_parse(self):
         """
         Test git.rev_parse
@@ -789,7 +770,7 @@ class GitModuleTest(ModuleCase):
 
     # Test for git.revision happens in test_merge_base
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_rm(self):
         """
         Test git.rm
@@ -803,7 +784,7 @@ class GitModuleTest(ModuleCase):
         )
         # Remove an entire dir
         expected = "\n".join(
-            sorted(["rm '" + os.path.join(entire_dir, x) + "'" for x in self.files])
+            sorted("rm '" + os.path.join(entire_dir, x) + "'" for x in self.files)
         )
         if salt.utils.platform.is_windows():
             expected = expected.replace("\\", "/")
@@ -811,7 +792,7 @@ class GitModuleTest(ModuleCase):
             self.run_function("git.rm", [self.repo, entire_dir], opts="-r"), expected
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_stash(self):
         """
         Test git.stash
@@ -841,7 +822,7 @@ class GitModuleTest(ModuleCase):
             )
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_status(self):
         """
         Test git.status
@@ -859,7 +840,7 @@ class GitModuleTest(ModuleCase):
             with salt.utils.files.fopen(os.path.join(self.repo, filename), "w") as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_str(
-                        "This is a new file named {0}.".format(filename)
+                        "This is a new file named {}.".format(filename)
                     )
                 )
             # Stage the new file so it shows up as a 'new' file
@@ -872,14 +853,14 @@ class GitModuleTest(ModuleCase):
             with salt.utils.files.fopen(os.path.join(self.repo, filename), "w") as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_str(
-                        "This is a new file named {0}.".format(filename)
+                        "This is a new file named {}.".format(filename)
                     )
                 )
         self.assertEqual(self.run_function("git.status", [self.repo]), changes)
 
     # TODO: Add git.submodule test
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_symbolic_ref(self):
         """
         Test git.symbolic_ref
@@ -892,7 +873,7 @@ class GitModuleTest(ModuleCase):
     @skipIf(
         not _worktrees_supported(), "Git 2.5 or newer required for worktree support"
     )
-    @slowTest
+    @pytest.mark.slow_test
     def test_worktree_add_rm(self):
         """
         This tests git.worktree_add, git.is_worktree, git.worktree_rm, and
@@ -902,7 +883,8 @@ class GitModuleTest(ModuleCase):
         # We don't need to enclose this comparison in a try/except, since the
         # decorator would skip this test if git is not installed and we'd never
         # get here in the first place.
-        if _git_version() >= LooseVersion("2.6.0"):
+        git_version = _git_version()
+        if git_version >= LooseVersion("2.6.0"):
             worktree_add_prefix = "Preparing "
         else:
             worktree_add_prefix = "Enter "
@@ -918,7 +900,10 @@ class GitModuleTest(ModuleCase):
             worktree_path2 = worktree_path2.replace("\\", "/")
 
         # Add the worktrees
-        ret = self.run_function("git.worktree_add", [self.repo, worktree_path],)
+        ret = self.run_function(
+            "git.worktree_add",
+            [self.repo, worktree_path],
+        )
         self.assertTrue(worktree_add_prefix in ret)
         self.assertTrue(worktree_basename in ret)
         ret = self.run_function("git.worktree_add", [self.repo, worktree_path2])
@@ -936,8 +921,9 @@ class GitModuleTest(ModuleCase):
         self.assertTrue(self.run_function("git.worktree_rm", [worktree_path]))
         # Prune the worktrees
         prune_message = (
-            "Removing worktrees/{0}: gitdir file points to non-existent "
-            "location".format(worktree_basename)
+            "Removing worktrees/{}: gitdir file points to non-existent location".format(
+                worktree_basename
+            )
         )
         # Test dry run output. It should match the same output we get when we
         # actually prune the worktrees.

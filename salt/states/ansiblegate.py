@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -33,13 +32,10 @@ state:
           - state: installed
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import sys
-
-import salt.ext.six as six
 
 # Import salt modules
 import salt.fileclient
@@ -51,7 +47,7 @@ __virtualname__ = "ansible"
 
 
 @depends("ansible")
-class AnsibleState(object):
+class AnsibleState:
     """
     Ansible state caller.
     """
@@ -89,11 +85,11 @@ class AnsibleState(object):
         for mod_name, mod_params in kwargs.items():
             args, kwargs = self.get_args(mod_params)
             try:
-                ans_mod_out = __salt__["ansible.{0}".format(mod_name)](
+                ans_mod_out = __salt__["ansible.{}".format(mod_name)](
                     **{"__pub_arg": [args, kwargs]}
                 )
             except Exception as err:  # pylint: disable=broad-except
-                ans_mod_out = 'Module "{0}" failed. Error message: ({1}) {2}'.format(
+                ans_mod_out = 'Module "{}" failed. Error message: ({}) {}'.format(
                     mod_name, err.__class__.__name__, err
                 )
                 ret["result"] = False
@@ -124,13 +120,16 @@ def _changes(plays):
     Find changes in ansible return data
     """
     changes = {}
+
     for play in plays["plays"]:
         task_changes = {}
         for task in play["tasks"]:
             host_changes = {}
-            for host, data in six.iteritems(task["hosts"]):
-                if data["changed"] is True:
+            for host, data in task["hosts"].items():
+                if data.get("changed", False) is True:
                     host_changes[host] = data.get("diff", data.get("changes", {}))
+                elif any(x in data for x in ["failed", "skipped", "unreachable"]):
+                    host_changes[host] = data.get("results", data.get("msg", {}))
             if host_changes:
                 task_changes[task["task"]["name"]] = host_changes
         if task_changes:
@@ -167,11 +166,11 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     ret = {
         "result": False,
         "changes": {},
-        "comment": "Running playbook {0}".format(name),
+        "comment": "Running playbook {}".format(name),
         "name": name,
     }
     if git_repo:
-        if not isinstance(rundir, six.text_type) or not os.path.isdir(rundir):
+        if not isinstance(rundir, str) or not os.path.isdir(rundir):
             rundir = _client()._extrn_path(git_repo, "base")
             log.trace("rundir set to %s", rundir)
         if not isinstance(git_kwargs, dict):
@@ -181,24 +180,58 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     if not isinstance(ansible_kwargs, dict):
         log.debug("Setting ansible_kwargs to empty dict: %s", ansible_kwargs)
         ansible_kwargs = {}
-    checks = __salt__["ansible.playbooks"](
-        name, rundir=rundir, check=True, diff=True, **ansible_kwargs
-    )
-    if all(not check["changed"] for check in six.itervalues(checks["stats"])):
-        ret["comment"] = "No changes to be made from playbook {0}".format(name)
-        ret["result"] = True
-    elif __opts__["test"]:
-        ret["comment"] = "Changes will be made from playbook {0}".format(name)
-        ret["result"] = None
-        ret["changes"] = _changes(checks)
+    if __opts__["test"]:
+        checks = __salt__["ansible.playbooks"](
+            name, rundir=rundir, check=True, diff=True, **ansible_kwargs
+        )
+        if "stats" not in checks:
+            ret["comment"] = checks.get("stderr", checks)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
+            not check["changed"] and not check["failures"] and not check["unreachable"]
+            for check in checks["stats"].values()
+        ):
+            ret["comment"] = "No changes to be made from playbook {}".format(name)
+            ret["result"] = True
+        elif any(
+            check["changed"] and not check["failures"] and not check["unreachable"]
+            for check in checks["stats"].values()
+        ):
+            ret["comment"] = "Changes will be made from playbook {}".format(name)
+            ret["result"] = None
+            ret["changes"] = _changes(checks)
+        else:
+            ret["comment"] = "There were some issues running the playbook {}".format(
+                name
+            )
+            ret["result"] = False
+            ret["changes"] = _changes(checks)
     else:
         results = __salt__["ansible.playbooks"](
             name, rundir=rundir, diff=True, **ansible_kwargs
         )
-        ret["comment"] = "Changes were made by playbook {0}".format(name)
-        ret["changes"] = _changes(results)
-        ret["result"] = all(
-            not check["failures"] and not check["unreachable"]
-            for check in six.itervalues(checks["stats"])
-        )
+        if "stats" not in results:
+            ret["comment"] = results.get("stderr", results)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
+            not check["changed"] and not check["failures"] and not check["unreachable"]
+            for check in results["stats"].values()
+        ):
+            ret["comment"] = "No changes to be made from playbook {}".format(name)
+            ret["result"] = True
+            ret["changes"] = _changes(results)
+        else:
+            ret["changes"] = _changes(results)
+            ret["result"] = all(
+                not check["failures"] and not check["unreachable"]
+                for check in results["stats"].values()
+            )
+            if ret["result"]:
+                ret["comment"] = "Changes were made by playbook {}".format(name)
+            else:
+                ret[
+                    "comment"
+                ] = "There were some issues running the playbook {}".format(name)
     return ret

@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Module for editing date/time settings on macOS
 
  .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 from datetime import datetime
 
-# Import Salt libs
 import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
@@ -57,7 +53,7 @@ def _get_date_time_format(dt_string):
             return dt_format
         except ValueError:
             continue
-    msg = "Invalid Date/Time Format: {0}".format(dt_string)
+    msg = "Invalid Date/Time Format: {}".format(dt_string)
     raise SaltInvocationError(msg)
 
 
@@ -104,7 +100,7 @@ def set_date(date):
     date_format = _get_date_time_format(date)
     dt_obj = datetime.strptime(date, date_format)
 
-    cmd = "systemsetup -setdate {0}".format(dt_obj.strftime("%m:%d:%Y"))
+    cmd = "systemsetup -setdate {}".format(dt_obj.strftime("%m:%d:%Y"))
     return salt.utils.mac_utils.execute_return_success(cmd)
 
 
@@ -148,7 +144,7 @@ def set_time(time):
     time_format = _get_date_time_format(time)
     dt_obj = datetime.strptime(time, time_format)
 
-    cmd = "systemsetup -settime {0}".format(dt_obj.strftime("%H:%M:%S"))
+    cmd = "systemsetup -settime {}".format(dt_obj.strftime("%H:%M:%S"))
     return salt.utils.mac_utils.execute_return_success(cmd)
 
 
@@ -241,10 +237,10 @@ def set_zone(time_zone):
         salt '*' timezone.set_zone America/Denver
     """
     if time_zone not in list_zones():
-        raise SaltInvocationError("Invalid Timezone: {0}".format(time_zone))
+        raise SaltInvocationError("Invalid Timezone: {}".format(time_zone))
 
     salt.utils.mac_utils.execute_return_success(
-        "systemsetup -settimezone {0}".format(time_zone)
+        "systemsetup -settimezone {}".format(time_zone)
     )
 
     return time_zone in get_zone()
@@ -307,7 +303,7 @@ def set_using_network_time(enable):
     """
     state = salt.utils.mac_utils.validate_enabled(enable)
 
-    cmd = "systemsetup -setusingnetworktime {0}".format(state)
+    cmd = "systemsetup -setusingnetworktime {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return state == salt.utils.mac_utils.validate_enabled(get_using_network_time())
@@ -353,7 +349,7 @@ def set_time_server(time_server="time.apple.com"):
 
         salt '*' timezone.set_time_server time.acme.com
     """
-    cmd = "systemsetup -setnetworktimeserver {0}".format(time_server)
+    cmd = "systemsetup -setnetworktimeserver {}".format(time_server)
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return time_server in get_time_server()

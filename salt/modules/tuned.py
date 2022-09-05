@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interface to Red Hat tuned-adm module
 
@@ -8,12 +7,9 @@ Interface to Red Hat tuned-adm module
 :platform:      Linux
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
-# Import Salt libs
 import salt.utils.path
 
 __func_alias__ = {
@@ -32,7 +28,8 @@ def __virtual__():
     if not tuned_adm:
         return (
             False,
-            "The tuned execution module failed to load: the tuned-adm binary is not in the path.",
+            "The tuned execution module failed to load: the tuned-adm binary is not in"
+            " the path.",
         )
     return __virtualname__
 
@@ -51,6 +48,11 @@ def list_():
     result = __salt__["cmd.run"]("tuned-adm list").splitlines()
     # Remove "Available profiles:"
     result.pop(0)
+    # Cut off any warnings
+    try:
+        result = result[: result.index("** COLLECTED WARNINGS **") - 1]
+    except ValueError:
+        pass
     # Remove "Current active profile:.*"
     result.pop()
     # Output can be : " - <profile name> - <description>" (v2.7.1)
@@ -76,7 +78,7 @@ def active():
         return "none"
     pattern = re.compile(r"""(?P<stmt>Current active profile:) (?P<profile>\w+.*)""")
     match = re.match(pattern, result["stdout"])
-    return "{0}".format(match.group("profile"))
+    return "{}".format(match.group("profile"))
 
 
 def off():
@@ -109,7 +111,7 @@ def profile(profile_name):
     """
 
     # run tuned-adm with the profile specified
-    result = __salt__["cmd.retcode"]("tuned-adm profile {0}".format(profile_name))
+    result = __salt__["cmd.retcode"]("tuned-adm profile {}".format(profile_name))
     if int(result) != 0:
         return False
-    return "{0}".format(profile_name)
+    return "{}".format(profile_name)

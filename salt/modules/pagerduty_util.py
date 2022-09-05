@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for manageing PagerDuty resource
 
@@ -18,9 +17,9 @@ Module for manageing PagerDuty resource
 For PagerDuty API details, see https://developer.pagerduty.com/documentation/rest
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import requests
+
 import salt.utils.json
 
 
@@ -37,11 +36,17 @@ def get_users(profile="pagerduty", subdomain=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.get_users
     """
 
     return _list_items(
-        "users", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "users",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -51,11 +56,17 @@ def get_services(profile="pagerduty", subdomain=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.get_services
     """
 
     return _list_items(
-        "services", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "services",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -65,11 +76,17 @@ def get_schedules(profile="pagerduty", subdomain=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.get_schedules
     """
 
     return _list_items(
-        "schedules", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "schedules",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -78,6 +95,8 @@ def get_escalation_policies(profile="pagerduty", subdomain=None, api_key=None):
     List escalation_policies belonging to this account
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion pagerduty.get_escalation_policies
     """
@@ -133,7 +152,7 @@ def _query(
         }
 
     if url is None:
-        url = "https://{0}.pagerduty.com/{1}/{2}".format(
+        url = "https://{}.pagerduty.com/{}/{}".format(
             creds["pagerduty.subdomain"], path, action
         )
 
@@ -143,7 +162,7 @@ def _query(
     if data is None:
         data = {}
 
-    headers = {"Authorization": "Token token={0}".format(creds["pagerduty.api_key"])}
+    headers = {"Authorization": "Token token={}".format(creds["pagerduty.api_key"])}
 
     if method != "GET":
         headers["Content-type"] = "application/json"
@@ -241,7 +260,7 @@ def get_resource(
                 # so, now that we found the schedule, we need to get all the data for it.
                 if resource_name == "schedules":
                     full_resource_info = _query(
-                        action="{0}/{1}".format(resource_name, resource["id"]),
+                        action="{}/{}".format(resource_name, resource["id"]),
                         profile=profile,
                         subdomain=subdomain,
                         api_key=api_key,
@@ -326,7 +345,7 @@ def create_or_update_resource(
             resource_id = _get_resource_id(resource)
             return _query(
                 method="PUT",
-                action="{0}/{1}".format(resource_name, resource_id),
+                action="{}/{}".format(resource_name, resource_id),
                 data=data_to_update,
                 profile=profile,
                 subdomain=subdomain,
@@ -364,7 +383,7 @@ def delete_resource(
         resource_id = _get_resource_id(resource)
         return _query(
             method="DELETE",
-            action="{0}/{1}".format(resource_name, resource_id),
+            action="{}/{}".format(resource_name, resource_id),
             profile=profile,
             subdomain=subdomain,
             api_key=api_key,
@@ -448,7 +467,7 @@ def resource_absent(
         )
         if result is None:
             ret["result"] = True
-            ret["comment"] = "{0} deleted".format(v)
+            ret["comment"] = "{} deleted".format(v)
             return ret
         elif result is True:
             continue

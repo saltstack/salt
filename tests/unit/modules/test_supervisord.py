@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.supervisord as supervisord
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -171,7 +165,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         for a given process
         """
 
-        class MockConfig(object):
+        class MockConfig:
             """
             Mock Config class
             """
@@ -204,3 +198,73 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
             MockConfig.flag = 0
             self.assertDictEqual(supervisord.options("salt"), {"salt": True})
+
+    # 'status_bool' function tests: 4
+
+    def test_status_bool_name_correct(self):
+        """
+        Tests if it returns bool results for process status check
+        """
+
+        return_str = (
+            "salt-minion                     RUNNING   pid 25563, uptime 4 days,"
+            " 12:39:42"
+        )
+        with patch.dict(
+            supervisord.__salt__,
+            {"cmd.run_all": self._m_all(return_str), "cmd.which_bin": self._m_bin()},
+        ):
+            self.assertTrue(
+                supervisord.status_bool(name="salt-minion", expected_state=None)
+            )
+
+    def test_status_bool_name_wrong(self):
+        """
+        Tests if it returns bool results for process status check
+        """
+
+        return_str = (
+            "salt-master                     RUNNING   pid 25563, uptime 4 days,"
+            " 12:39:42"
+        )
+        with patch.dict(
+            supervisord.__salt__,
+            {"cmd.run_all": self._m_all(return_str), "cmd.which_bin": self._m_bin()},
+        ):
+            self.assertFalse(
+                supervisord.status_bool(name="salt-minion", expected_state=None)
+            )
+
+    def test_status_bool_expected_state_running_success(self):
+        """
+        Tests if it returns bool results for process status check
+        """
+
+        return_str = (
+            "salt-minion                     RUNNING   pid 25563, uptime 4 days,"
+            " 12:39:42"
+        )
+        with patch.dict(
+            supervisord.__salt__,
+            {"cmd.run_all": self._m_all(return_str), "cmd.which_bin": self._m_bin()},
+        ):
+            self.assertTrue(
+                supervisord.status_bool(name="salt-minion", expected_state="RUNNING")
+            )
+
+    def test_status_bool_expected_state_running_fail(self):
+        """
+        Tests if it returns bool results for process status check
+        """
+
+        return_str = (
+            "salt-minion                     STOPPED   pid 25563, uptime 4 days,"
+            " 12:39:42"
+        )
+        with patch.dict(
+            supervisord.__salt__,
+            {"cmd.run_all": self._m_all(return_str), "cmd.which_bin": self._m_bin()},
+        ):
+            self.assertFalse(
+                supervisord.status_bool(name="salt-minion", expected_state="RUNNING")
+            )

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 CenturyLink Cloud Module
 ========================
 
-.. versionadded:: Oyxgen
+.. versionadded:: 2018.3
 
 The CLC cloud module allows you to manage CLC Via the CLC SDK.
 
@@ -64,25 +63,18 @@ cloud configuration at
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import importlib
 import logging
 import time
 
-# Import salt libs
 import salt.config as config
 import salt.utils.json
 from salt.exceptions import SaltCloudSystemExit
-from salt.ext import six
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 # Attempt to import clc-sdk lib
 try:
-    # when running this in linode's Ubuntu 16.x version the following line is required to get the clc sdk libraries to load
+    # when running this in linode's Ubuntu 16.x version the following line is required
+    # to get the clc sdk libraries to load
     importlib.import_module("clc")
     import clc
 
@@ -91,13 +83,15 @@ except ImportError:
     HAS_CLC = False
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
-    from requests.packages.urllib3 import (
+    from requests.packages.urllib3 import (  # pylint: disable=no-name-in-module
         disable_warnings,
-    )  # pylint: disable=no-name-in-module
+    )
 
     disable_warnings()
 except Exception:  # pylint: disable=broad-except
     pass
+
+log = logging.getLogger(__name__)
 
 
 __virtualname__ = "clc"
@@ -114,11 +108,23 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
-        ("token", "token_pass", "user", "password",),
+        _get_active_provider_name() or __virtualname__,
+        (
+            "token",
+            "token_pass",
+            "user",
+            "password",
+        ),
     )
 
 
@@ -300,7 +306,7 @@ def get_build_status(req_id, nodename):
     get the build status from CLC to make sure we don't return to early
     """
     counter = 0
-    req_id = six.text_type(req_id)
+    req_id = str(req_id)
     while counter < 10:
         queue = clc.v1.Blueprint.GetStatus(request_id=(req_id))
         if queue["PercentComplete"] == 100:
@@ -315,7 +321,7 @@ def get_build_status(req_id, nodename):
             log.info(
                 "Creating Cloud VM %s Time out in %s minutes",
                 nodename,
-                six.text_type(10 - counter),
+                str(10 - counter),
             )
             time.sleep(60)
 
@@ -327,35 +333,71 @@ def create(vm_):
     creds = get_creds()
     clc.v1.SetCredentials(creds["token"], creds["token_pass"])
     cloud_profile = config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("token",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
     group = config.get_cloud_config_value(
-        "group", vm_, __opts__, search_global=False, default=None,
+        "group",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     name = vm_["name"]
     description = config.get_cloud_config_value(
-        "description", vm_, __opts__, search_global=False, default=None,
+        "description",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     ram = config.get_cloud_config_value(
-        "ram", vm_, __opts__, search_global=False, default=None,
+        "ram",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     backup_level = config.get_cloud_config_value(
-        "backup_level", vm_, __opts__, search_global=False, default=None,
+        "backup_level",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     template = config.get_cloud_config_value(
-        "template", vm_, __opts__, search_global=False, default=None,
+        "template",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     password = config.get_cloud_config_value(
-        "password", vm_, __opts__, search_global=False, default=None,
+        "password",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     cpu = config.get_cloud_config_value(
-        "cpu", vm_, __opts__, search_global=False, default=None,
+        "cpu",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     network = config.get_cloud_config_value(
-        "network", vm_, __opts__, search_global=False, default=None,
+        "network",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     location = config.get_cloud_config_value(
-        "location", vm_, __opts__, search_global=False, default=None,
+        "location",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     if len(name) > 6:
         name = name[0:6]
@@ -379,7 +421,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "waiting for ssh",
-        "salt/cloud/{0}/waiting_for_ssh".format(name),
+        "salt/cloud/{}/waiting_for_ssh".format(name),
         sock_dir=__opts__["sock_dir"],
         args={"ip_address": vm_["ssh_host"]},
         transport=__opts__["transport"],

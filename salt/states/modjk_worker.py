@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage modjk workers
 ====================
@@ -18,7 +17,6 @@ Mandatory Settings:
 - The modjk load balancer must be configured as stated in the :strong:`modjk`
   execution module :mod:`documentation <salt.modules.modjk>`
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -46,7 +44,7 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
     }
 
     # Send the command to target
-    func = "modjk.{0}".format(cmd)
+    func = "modjk.{}".format(cmd)
     args = [worker, lbn, profile]
     response = __salt__["publish.publish"](target, func, args, tgt_type)
 
@@ -60,7 +58,7 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
 
     # parse response
     if not response:
-        ret["msg"] = "no servers answered the published command {0}".format(cmd)
+        ret["msg"] = "no servers answered the published command {}".format(cmd)
         return ret
     elif len(errors) > 0:
         ret["msg"] = "the following minions return False"
@@ -125,24 +123,23 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
     status = _worker_status(target, name, action_map[action], profile, tgt_type)
     if not status["result"]:
         ret["result"] = False
-        ret["comment"] = (
-            "no servers answered the published command " "modjk.worker_status"
-        )
+        ret["comment"] = "no servers answered the published command modjk.worker_status"
         return ret
     if status["errors"]:
         ret["result"] = False
-        ret["comment"] = (
-            "the following balancers could not find the "
-            "worker {0}: {1}".format(name, status["errors"])
+        ret[
+            "comment"
+        ] = "the following balancers could not find the worker {}: {}".format(
+            name, status["errors"]
         )
         return ret
     if not status["wrong_state"]:
-        ret["comment"] = (
-            "the worker is in the desired activation state on " "all the balancers"
-        )
+        ret[
+            "comment"
+        ] = "the worker is in the desired activation state on all the balancers"
         return ret
     else:
-        ret["comment"] = "the action {0} will be sent to the balancers " "{1}".format(
+        ret["comment"] = "the action {} will be sent to the balancers {}".format(
             action, status["wrong_state"]
         )
         ret["changes"] = {action: status["wrong_state"]}

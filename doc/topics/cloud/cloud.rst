@@ -145,7 +145,7 @@ library. The following two lines set up the imports:
 
 .. code-block:: python
 
-    from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+    from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
     import salt.utils.functools
 
 And then a series of declarations will make the necessary functions available
@@ -162,7 +162,9 @@ within the cloud module.
     destroy = salt.utils.functools.namespaced_function(destroy, globals())
     list_nodes = salt.utils.functools.namespaced_function(list_nodes, globals())
     list_nodes_full = salt.utils.functools.namespaced_function(list_nodes_full, globals())
-    list_nodes_select = salt.utils.functools.namespaced_function(list_nodes_select, globals())
+    list_nodes_select = salt.utils.functools.namespaced_function(
+        list_nodes_select, globals()
+    )
     show_instance = salt.utils.functools.namespaced_function(show_instance, globals())
 
 If necessary, these functions may be replaced by removing the appropriate
@@ -300,11 +302,11 @@ general, the following code can be used as-is:
 .. code-block:: python
 
     def list_nodes_select(call=None):
-        '''
+        """
         Return a list of the VMs that are on the provider, with select fields
-        '''
+        """
         return salt.utils.cloud.list_nodes_select(
-            list_nodes_full('function'), __opts__['query.selection'], call,
+            list_nodes_full("function"), __opts__["query.selection"], call
         )
 
 However, depending on the cloud provider, additional variables may be required.
@@ -315,16 +317,14 @@ appropriately:
 .. code-block:: python
 
     def list_nodes_select(conn=None, call=None):
-        '''
+        """
         Return a list of the VMs that are on the provider, with select fields
-        '''
+        """
         if not conn:
-            conn = get_conn()   # pylint: disable=E0602
+            conn = get_conn()  # pylint: disable=E0602
 
         return salt.utils.cloud.list_nodes_select(
-            list_nodes_full(conn, 'function'),
-            __opts__['query.selection'],
-            call,
+            list_nodes_full(conn, "function"), __opts__["query.selection"], call
         )
 
 This function is normally called with the ``-S`` option:
@@ -372,15 +372,15 @@ useful information to the user. A basic action looks like:
 .. code-block:: python
 
     def show_instance(name, call=None):
-    '''
-    Show the details from EC2 concerning an AMI
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
-        )
+        """
+        Show the details from EC2 concerning an AMI
+        """
+        if call != "action":
+            raise SaltCloudSystemExit(
+                "The show_instance action must be called with -a or --action."
+            )
 
-    return _get_node(name)
+        return _get_node(name)
 
 Please note that generic kwargs, if used, are passed through to actions as
 ``kwargs`` and not ``**kwargs``. An example of this is seen in the Functions
@@ -406,16 +406,15 @@ useful information to the user. A basic function looks like:
 .. code-block:: python
 
     def show_image(kwargs, call=None):
-        '''
+        """
         Show the details from EC2 concerning an AMI
-        '''
-        if call != 'function':
+        """
+        if call != "function":
             raise SaltCloudSystemExit(
-                'The show_image action must be called with -f or --function.'
+                "The show_image action must be called with -f or --function."
             )
 
-        params = {'ImageId.1': kwargs['image'],
-                  'Action': 'DescribeImages'}
+        params = {"ImageId.1": kwargs["image"], "Action": "DescribeImages"}
         result = query(params)
         log.info(result)
 

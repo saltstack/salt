@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for clustershell roster
 """
-# Import Python libs
-from __future__ import absolute_import
 
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libraries
 from tests.support.unit import TestCase, skipIf
 
-# Import third-party libs
 try:
     from ClusterShell.NodeSet import NodeSet  # pylint: disable=unused-import
 
@@ -46,6 +42,7 @@ class ClusterShellTestCase(TestCase):
                 # Reimports are necessary to re-init the namespace.
                 # pylint: disable=unused-import
                 import socket
+
                 from ClusterShell.NodeSet import NodeSet
 
                 # pylint: enable=unused-import

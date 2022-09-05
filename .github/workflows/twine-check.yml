@@ -1,0 +1,34 @@
+name: Twine Check
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  Twine-Check:
+    name: Run 'twine check' Against Salt
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      env:
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install twine>=3.4.1
+
+    - name: Create Source Tarball
+      run: |
+        python3 setup.py sdist
+
+    - name: Twine check
+      run: |
+        python3 -m twine check dist/*

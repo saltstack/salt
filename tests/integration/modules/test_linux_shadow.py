@@ -1,28 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for shadow linux
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
+
+import pytest
+from saltfactories.utils import random_string
 
 import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    random_string,
-    skip_if_not_root,
-    slowTest,
-)
-from tests.support.unit import skipIf
 
 
-@skip_if_not_root
-@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_linux
 class ShadowModuleTest(ModuleCase):
     """
     Validate the linux shadow system module
@@ -34,14 +26,14 @@ class ShadowModuleTest(ModuleCase):
         """
         self._password = self.run_function("shadow.gen_password", ["Password1234"])
         if "ERROR" in self._password:
-            self.fail("Failed to generate password: {0}".format(self._password))
-        super(ShadowModuleTest, self).setUp()
+            self.fail("Failed to generate password: {}".format(self._password))
+        super().setUp()
         self._no_user = random_string("tu-", uppercase=False)
         self._test_user = random_string("tu-", uppercase=False)
         self._password = salt.modules.linux_shadow.gen_password("Password1234")
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_info(self):
         """
         Test shadow.info
@@ -57,8 +49,8 @@ class ShadowModuleTest(ModuleCase):
         ret = self.run_function("shadow.info", [self._no_user])
         self.assertEqual(ret["name"], "")
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_del_password(self):
         """
         Test shadow.del_password
@@ -75,8 +67,8 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertFalse(self.run_function("shadow.del_password", [self._no_user]))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_password(self):
         """
         Test shadow.set_password
@@ -94,8 +86,8 @@ class ShadowModuleTest(ModuleCase):
             self.run_function("shadow.set_password", [self._no_user, self._password])
         )
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_inactdays(self):
         """
         Test shadow.set_inactdays
@@ -111,8 +103,8 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.set_inactdays", [self._no_user, 12]))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_maxdays(self):
         """
         Test shadow.set_maxdays
@@ -126,8 +118,8 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.set_maxdays", [self._no_user, 12]))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_mindays(self):
         """
         Test shadow.set_mindays
@@ -141,9 +133,9 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.set_mindays", [self._no_user, 12]))
 
-    @flaky
-    @destructiveTest
-    @slowTest
+    @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_lock_password(self):
         """
         Test shadow.lock_password
@@ -158,8 +150,8 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.lock_password", [self._no_user]))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_unlock_password(self):
         """
         Test shadow.lock_password
@@ -174,8 +166,8 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.unlock_password", [self._no_user]))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_warndays(self):
         """
         Test shadow.set_warndays
@@ -189,8 +181,8 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.set_warndays", [self._no_user, 12]))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_date(self):
         """
         Test shadow.set_date
@@ -208,8 +200,8 @@ class ShadowModuleTest(ModuleCase):
             self.run_function("shadow.set_date", [self._no_user, "2016-08-19"])
         )
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_expire(self):
         """
         Test shadow.set_exipre
@@ -227,8 +219,8 @@ class ShadowModuleTest(ModuleCase):
             self.run_function("shadow.set_expire", [self._no_user, "2016-08-25"])
         )
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_del_root_password(self):
         """
         Test set/del password for root

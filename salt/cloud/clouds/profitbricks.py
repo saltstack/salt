@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ProfitBricks Cloud Module
 =========================
@@ -93,17 +92,12 @@ Set ``deploy`` to False if Salt should not be installed on the node.
       deploy: False
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import pprint
 import time
 
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
@@ -114,26 +108,23 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion
 
 try:
     # pylint: disable=no-name-in-module
     import profitbricks
     from profitbricks.client import (
-        ProfitBricksService,
-        Server,
+        LAN,
         NIC,
-        Volume,
+        Datacenter,
         FirewallRule,
         IPBlock,
-        Datacenter,
         LoadBalancer,
-        LAN,
-        PBNotFoundError,
         PBError,
+        PBNotFoundError,
+        ProfitBricksService,
+        Server,
+        Volume,
     )
 
     # pylint: enable=no-name-in-module
@@ -161,13 +152,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("username", "password", "datacenter_id"),
     )
 
@@ -260,13 +258,12 @@ def list_images(call=None, kwargs=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_images function must be called with " "-f or --function."
+            "The list_images function must be called with -f or --function."
         )
 
     if not version_compatible("4.0"):
         raise SaltCloudNotFound(
-            "The 'image_alias' feature requires the profitbricks "
-            "SDK v4.0.0 or greater."
+            "The 'image_alias' feature requires the profitbricks SDK v4.0.0 or greater."
         )
 
     ret = {}
@@ -328,11 +325,11 @@ def get_size(vm_):
         return sizes["Small Instance"]
 
     for size in sizes:
-        combinations = (six.text_type(sizes[size]["id"]), six.text_type(size))
-        if vm_size and six.text_type(vm_size) in combinations:
+        combinations = (str(sizes[size]["id"]), str(size))
+        if vm_size and str(vm_size) in combinations:
             return sizes[size]
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -418,7 +415,7 @@ def get_datacenter(conn):
             return item
 
     raise SaltCloudNotFound(
-        "The specified datacenter '{0}' could not be found.".format(datacenter_id)
+        "The specified datacenter '{}' could not be found.".format(datacenter_id)
     )
 
 
@@ -487,12 +484,12 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key in six.iterkeys(images):
+    for key in images:
         if vm_image and vm_image in (images[key]["id"], images[key]["name"]):
             return images[key]
 
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -508,7 +505,7 @@ def list_datacenters(conn=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_datacenters function must be called with " "-f or --function."
+            "The list_datacenters function must be called with -f or --function."
         )
 
     datacenters = []
@@ -542,7 +539,7 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error("Failed to get nodes list " "from datacenter: %s", datacenter_id)
+        log.error("Failed to get nodes list from datacenter: %s", datacenter_id)
         raise
 
     for item in nodes["items"]:
@@ -560,7 +557,7 @@ def list_nodes_full(conn=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with -f or " "--function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     if not conn:
@@ -589,7 +586,7 @@ def list_nodes_full(conn=None, call=None):
         ret[node["name"]] = node
 
     __utils__["cloud.cache_node_list"](
-        ret, __active_provider_name__.split(":")[0], __opts__
+        ret, _get_active_provider_name().split(":")[0], __opts__
     )
 
     return ret
@@ -601,7 +598,7 @@ def reserve_ipblock(call=None, kwargs=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The reserve_ipblock function must be called with -f or " "--function."
+            "The reserve_ipblock function must be called with -f or --function."
         )
 
     conn = get_conn()
@@ -637,7 +634,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -728,7 +725,7 @@ def get_public_keys(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_public_key '{0}' does not exist".format(key_filename)
+                "The defined ssh_public_key '{}' does not exist".format(key_filename)
             )
         ssh_keys = []
         with salt.utils.files.fopen(key_filename) as rfh:
@@ -749,7 +746,7 @@ def get_key_filename(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_private_key '{0}' does not exist".format(key_filename)
+                "The defined ssh_private_key '{}' does not exist".format(key_filename)
             )
 
         return key_filename
@@ -763,7 +760,7 @@ def signal_event(vm_, event, description):
     __utils__["cloud.fire_event"](
         "event",
         description,
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=args,
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -779,7 +776,9 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, (__active_provider_name__ or "profitbricks"), vm_["profile"]
+                __opts__,
+                (_get_active_provider_name() or "profitbricks"),
+                vm_["profile"],
             )
             is False
         ):
@@ -901,7 +900,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc.message))
+            raise SaltCloudSystemExit(str(exc.message))
 
     log.debug("VM is now running")
     log.info("Created Cloud VM %s", vm_)
@@ -936,13 +935,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -973,7 +972,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -981,7 +980,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return True
@@ -1037,7 +1036,6 @@ def start(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: true if successful
-
 
     CLI Example:
 
@@ -1110,7 +1108,7 @@ def _get_system_volume(vm_):
 
     # Construct the system volume
     volume = Volume(
-        name="{0} Storage".format(vm_["name"]),
+        name="{} Storage".format(vm_["name"]),
         size=disk_size,
         disk_type=get_disk_type(vm_),
     )
@@ -1140,12 +1138,12 @@ def _get_data_volumes(vm_):
     """
     ret = []
     volumes = vm_["volumes"]
-    for key, value in six.iteritems(volumes):
+    for key, value in volumes.items():
         # Verify the required 'disk_size' property is present in the cloud
         # profile config
         if "disk_size" not in volumes[key].keys():
             raise SaltCloudConfigError(
-                "The volume '{0}' is missing 'disk_size'".format(key)
+                "The volume '{}' is missing 'disk_size'".format(key)
             )
         # Use 'HDD' if no 'disk_type' property is present in cloud profile
         if "disk_type" not in volumes[key].keys():
@@ -1184,12 +1182,12 @@ def _get_firewall_rules(firewall_rules):
     Construct a list of optional firewall rules from the cloud profile.
     """
     ret = []
-    for key, value in six.iteritems(firewall_rules):
+    for key, value in firewall_rules.items():
         # Verify the required 'protocol' property is present in the cloud
         # profile config
         if "protocol" not in firewall_rules[key].keys():
             raise SaltCloudConfigError(
-                "The firewall rule '{0}' is missing 'protocol'".format(key)
+                "The firewall rule '{}' is missing 'protocol'".format(key)
             )
         ret.append(
             FirewallRule(
@@ -1225,15 +1223,15 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
             return
         elif operation_result["metadata"]["status"] == "FAILED":
             raise Exception(
-                "Request: {0}, requestId: {1} failed to complete:\n{2}".format(
+                "Request: {}, requestId: {} failed to complete:\n{}".format(
                     msg,
-                    six.text_type(promise["requestId"]),
+                    str(promise["requestId"]),
                     operation_result["metadata"]["message"],
                 )
             )
 
     raise Exception(
-        'Timed out waiting for asynchronous operation {0} "{1}" to complete.'.format(
-            msg, six.text_type(promise["requestId"])
+        'Timed out waiting for asynchronous operation {} "{}" to complete.'.format(
+            msg, str(promise["requestId"])
         )
     )

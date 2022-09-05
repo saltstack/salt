@@ -1,32 +1,28 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import textwrap
 
-# Import Salt Testing libs
+import pytest
+
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import salt libs
+try:
+    import spwd
+except ImportError:
+    pass
+
 try:
     import salt.modules.linux_shadow as shadow
 
     HAS_SHADOW = True
 except ImportError:
     HAS_SHADOW = False
-
 
 _PASSWORD = "lamepassword"
 
@@ -55,7 +51,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         Test shadow.gen_password
         """
         self.assertTrue(HAS_SHADOW)
-        for algorithm, hash_info in six.iteritems(_HASHES):
+        for algorithm, hash_info in _HASHES.items():
             self.assertEqual(
                 shadow.gen_password(
                     _PASSWORD, crypt_salt=hash_info["pw_salt"], algorithm=algorithm
@@ -152,7 +148,58 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         # Make sure we wrote the correct info
         assert filehandles[1].write_calls[0].split(":")[:2] == [user, password]
 
-    @skip_if_not_root
+    def test_info(self):
+        """
+        Test if info shows the correct user information
+        """
+
+        # First test is with a succesful call
+        expected_result = [
+            ("expire", -1),
+            ("inact", -1),
+            ("lstchg", 31337),
+            ("max", 99999),
+            ("min", 0),
+            ("name", "foo"),
+            ("passwd", _HASHES["sha512"]["pw_hash"]),
+            ("warn", 7),
+        ]
+        getspnam_return = spwd.struct_spwd(
+            ["foo", _HASHES["sha512"]["pw_hash"], 31337, 0, 99999, 7, -1, -1, -1]
+        )
+        with patch("spwd.getspnam", return_value=getspnam_return):
+            result = shadow.info("foo")
+            self.assertEqual(
+                expected_result, sorted(result.items(), key=lambda x: x[0])
+            )
+
+        # The next two is for a non-existent user
+        expected_result = [
+            ("expire", ""),
+            ("inact", ""),
+            ("lstchg", ""),
+            ("max", ""),
+            ("min", ""),
+            ("name", ""),
+            ("passwd", ""),
+            ("warn", ""),
+        ]
+        # We get KeyError exception for non-existent users in glibc based systems
+        getspnam_return = KeyError
+        with patch("spwd.getspnam", side_effect=getspnam_return):
+            result = shadow.info("foo")
+            self.assertEqual(
+                expected_result, sorted(result.items(), key=lambda x: x[0])
+            )
+        # And FileNotFoundError in musl based systems
+        getspnam_return = FileNotFoundError
+        with patch("spwd.getspnam", side_effect=getspnam_return):
+            result = shadow.info("foo")
+            self.assertEqual(
+                expected_result, sorted(result.items(), key=lambda x: x[0])
+            )
+
+    @pytest.mark.skip_if_not_root
     def test_list_users(self):
         """
         Test if it returns a list of all users

@@ -168,17 +168,17 @@ module they are using.
 Requisites Types
 ----------------
 
-All requisite types have a corresponding `<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
 
-* `require <requisites-require>`: Requires that a list of target states succeed before execution
-* `onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
-* `watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
-* `listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
-* `prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
-* `onfail <requisites-onfail>`: Execute only if a target state fails
-* `use <requisites-use>`: Copy arguments from another state
+* :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
+* :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
+* :ref:`watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
+* :ref:`listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_watch``
+* :ref:`prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
+* :ref:`onfail <requisites-onfail>`: Execute only if a target state fails
+* :ref:`use <requisites-use>`: Copy arguments from another state
 
-Several requisite types have a corresponding `requisite_any <requisites-any>` form:
+Several requisite types have a corresponding :ref:`requisite_any <requisites-any>` form:
 
 * ``require_any``
 * ``watch_any``
@@ -190,7 +190,7 @@ logic is desired instead of the default `OR` logic of onfail/onfail_any (which
 are equivalent).
 
 All requisites define specific relationships and always work with the dependency
-logic defined `above <requisites-matching>`.
+logic defined :ref:`above <requisites-matching>`.
 
 .. _requisites-require:
 
@@ -290,6 +290,12 @@ the specified state to watch the state with the ``requisite_in``.
 
 .. _requisites-watch:
 
+.. note::
+
+    An ``onchanges`` requisite has no effect on SLS requisites (monitoring for
+    changes in an included SLS). Only the individual state IDs from an included
+    SLS can be monitored.
+
 watch
 ~~~~~
 
@@ -303,6 +309,12 @@ the execution module and will execute any time a watched state changes.
     otherwise do nothing, the ``onchanges`` requisite should be used instead
     of ``watch``. ``watch`` is designed to add *additional* behavior when
     there are changes, but otherwise the state executes normally.
+
+.. note::
+
+    A ``watch`` requisite has no effect on SLS requisites (watching for changes
+    in an included SLS). Only the individual state IDs from an included SLS can
+    be watched.
 
 A good example of using ``watch`` is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
@@ -362,6 +374,8 @@ shown in json for clarity:
             }
         }
     }
+
+.. code-block:: json
 
     {
         "local": {
@@ -453,8 +467,8 @@ listen
 
 .. versionadded:: 2014.7.0
 
-A ``listen`` requisite is used to trigger the ``mod_wait`` function of an
-execution module. Rather than modifying execution order, the ``mod_wait`` state
+A ``listen`` requisite is used to trigger the ``mod_watch`` function of a
+state module. Rather than modifying execution order, the ``mod_watch`` state
 created by ``listen`` will execute at the end of the state run.
 
 .. code-block:: yaml
@@ -750,7 +764,7 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
     {% endfor %}
 
 In this scenario, ``listen_in`` is a better choice than ``require_in`` because the
-``listen`` requisite will trigger ``mod_wait`` behavior which will wait until the
+``listen`` requisite will trigger ``mod_watch`` behavior which will wait until the
 end of state execution and then reload the service.
 
 .. _requisites-any:
@@ -919,6 +933,21 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
               args:
                 - mysql-server-5.7
 
+    .. versionchanged:: sodium
+      For modules which return a deeper data structure, the ``get_return`` key can
+      be used to access results.
+
+    .. code-block:: yaml
+
+      test:
+        test.nop:
+          - name: foo
+          - unless:
+            - fun: consul.get
+              consul_url: http://127.0.0.1:8500
+              key:  not-existing
+              get_return: res
+
 .. _onlyif-requisite:
 
 onlyif
@@ -972,14 +1001,14 @@ if the gluster commands return a 0 ret value.
             - name: httpd
             - onlyif:
               - fun: match.grain
-                tgt: 'os_family: RedHat'
+                tgt: 'os_family:RedHat'
 
         install apache on debian based distros:
           pkg.latest:
             - name: apache2
             - onlyif:
               - fun: match.grain
-                tgt: 'os_family: Debian'
+                tgt: 'os_family:Debian'
 
     .. code-block:: yaml
 
@@ -992,12 +1021,28 @@ if the gluster commands return a 0 ret value.
                 - /etc/crontab
                 - 'entry1'
 
+.. versionchanged:: sodium
+    For modules which return a deeper data structure, the ``get_return`` key can
+    be used to access results.
+
+    .. code-block:: yaml
+
+      test:
+        test.nop:
+          - name: foo
+          - onlyif:
+            - fun: consul.get
+              consul_url: http://127.0.0.1:8500
+              key:  does-exist
+              get_return: res
+
+
 .. _creates-requisite:
 
 Creates
 -------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 The ``creates`` requisite specifies that a state should only run when any of
 the specified files do not already exist. Like ``unless``, ``creates`` requisite
@@ -1024,8 +1069,9 @@ run if **any** of the files do not exist:
               - /path/file
               - /path/file2
 
-listen
-~~~~~~
+runas
+~~~~~
+
 
 .. versionadded:: 2017.7.0
 
@@ -1072,9 +1118,9 @@ Check Command is used for determining that a state did or did not run as
 expected.
 
 **NOTE**: Under the hood ``check_cmd`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
-parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+``python_shell=True``. This means the command will be parsed by a shell, so
+beware of side-effects as this shell will be run with the same privileges as
+the salt-minion.
 
 .. code-block:: yaml
 

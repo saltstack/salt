@@ -35,7 +35,7 @@ on various platforms.
 If you have netcat installed, you can check port connectivity from the minion
 with the ``nc`` command:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ nc -v -z salt.master.ip.addr 4505
     Connection to salt.master.ip.addr 4505 port [tcp/unknown] succeeded!
@@ -44,7 +44,7 @@ with the ``nc`` command:
 
 The `Nmap`_ utility can also be used to check if these ports are open:
 
-.. code-block:: bash
+.. code-block:: console
 
     # nmap -sS -q -p 4505-4506 salt.master.ip.addr
 

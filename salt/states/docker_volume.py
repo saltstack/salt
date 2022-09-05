@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Docker volumes
 
@@ -30,11 +29,9 @@ Management of Docker volumes
 These states were moved from the :mod:`docker <salt.states.docker>` state
 module (formerly called **dockerng**) in the 2017.7.0 release.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.data
 
 # Enable proper logging
@@ -138,14 +135,14 @@ def present(name, driver=None, driver_opts=None, force=False):
     if not volume:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "The volume '{0}' will be created".format(name)
+            ret["comment"] = "The volume '{}' will be created".format(name)
             return ret
         try:
             ret["changes"]["created"] = __salt__["docker.create_volume"](
                 name, driver=driver, driver_opts=driver_opts
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Failed to create volume '{0}': {1}".format(name, exc)
+            ret["comment"] = "Failed to create volume '{}': {}".format(name, exc)
             return ret
         else:
             result = True
@@ -155,8 +152,8 @@ def present(name, driver=None, driver_opts=None, force=False):
     if driver is not None and volume["Driver"] != driver:
         if not force:
             ret["comment"] = (
-                "Driver for existing volume '{0}' ('{1}')"
-                " does not match specified driver ('{2}')"
+                "Driver for existing volume '{}' ('{}')"
+                " does not match specified driver ('{}')"
                 " and force is False".format(name, volume["Driver"], driver)
             )
             ret["result"] = None if __opts__["test"] else False
@@ -164,14 +161,14 @@ def present(name, driver=None, driver_opts=None, force=False):
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "The volume '{0}' will be replaced with a"
-                " new one using the driver '{1}'".format(name, volume)
+                "The volume '{}' will be replaced with a"
+                " new one using the driver '{}'".format(name, volume)
             )
             return ret
         try:
             ret["changes"]["removed"] = __salt__["docker.remove_volume"](name)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Failed to remove volume '{0}': {1}".format(name, exc)
+            ret["comment"] = "Failed to remove volume '{}': {}".format(name, exc)
             return ret
         else:
             try:
@@ -179,7 +176,7 @@ def present(name, driver=None, driver_opts=None, force=False):
                     name, driver=driver, driver_opts=driver_opts
                 )
             except Exception as exc:  # pylint: disable=broad-except
-                ret["comment"] = "Failed to create volume '{0}': {1}".format(name, exc)
+                ret["comment"] = "Failed to create volume '{}': {}".format(name, exc)
                 return ret
             else:
                 result = True
@@ -187,7 +184,7 @@ def present(name, driver=None, driver_opts=None, force=False):
                 return ret
 
     ret["result"] = True
-    ret["comment"] = "Volume '{0}' already exists.".format(name)
+    ret["comment"] = "Volume '{}' already exists.".format(name)
     return ret
 
 
@@ -215,12 +212,12 @@ def absent(name, driver=None):
     volume = _find_volume(name)
     if not volume:
         ret["result"] = True
-        ret["comment"] = "Volume '{0}' already absent".format(name)
+        ret["comment"] = "Volume '{}' already absent".format(name)
         return ret
 
     try:
         ret["changes"]["removed"] = __salt__["docker.remove_volume"](name)
         ret["result"] = True
     except Exception as exc:  # pylint: disable=broad-except
-        ret["comment"] = "Failed to remove volume '{0}': {1}".format(name, exc)
+        ret["comment"] = "Failed to remove volume '{}': {}".format(name, exc)
     return ret

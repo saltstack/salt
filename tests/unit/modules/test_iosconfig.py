@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Test the iosconfig Execution module.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import textwrap
 
 import salt.modules.iosconfig as iosconfig
 
 # Import Salt modules
 from salt.utils.odict import OrderedDict
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 

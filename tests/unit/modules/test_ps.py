@@ -1,26 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 from collections import namedtuple
 
 import salt.modules.ps as ps
-
-# Import Salt libs
 import salt.utils.data
 import salt.utils.psutil_compat as psutil
-
-# Import 3rd-party libs
-# pylint: disable=import-error,unused-import
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from tests.support.mock import MagicMock, Mock, call, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 HAS_PSUTIL_VERSION = False
@@ -72,7 +61,7 @@ def _get_proc_pid(proc):
     return proc.pid
 
 
-class DummyProcess(object):
+class DummyProcess:
     """
     Dummy class to emulate psutil.Process. This ensures that _any_ string
     values used for any of the options passed in are converted to str types on
@@ -167,6 +156,16 @@ class PsTestCase(TestCase):
             self.assertIn(
                 _get_proc_pid(self.mocked_proc),
                 ps.pgrep(_get_proc_name(self.mocked_proc)),
+            )
+
+    def test_pgrep_regex(self):
+        with patch(
+            "salt.utils.psutil_compat.process_iter",
+            MagicMock(return_value=[self.mocked_proc]),
+        ):
+            self.assertIn(
+                _get_proc_pid(self.mocked_proc),
+                ps.pgrep("t.st_[a-z]+_proc", pattern_is_regex=True),
             )
 
     def test_cpu_percent(self):

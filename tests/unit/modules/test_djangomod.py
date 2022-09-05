@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import sys
 
-# Import Salt Libs
+import pytest
+
 import salt.modules.djangomod as djangomod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -23,7 +20,9 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {djangomod: {"_get_django_admin": MagicMock(return_value=True)}}
+        return {
+            djangomod: {"_get_django_admin": MagicMock(return_value="django-admin.py")}
+        }
 
     # 'command' function tests: 1
 
@@ -141,8 +140,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 "settings.py", "runserver", None, None, None, database="something"
             )
             mock.assert_called_once_with(
-                "django-admin.py runserver --settings=settings.py "
-                "--database=something",
+                "django-admin.py runserver --settings=settings.py --database=something",
                 python_shell=False,
                 env=None,
                 runas=None,
@@ -177,7 +175,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
             djangomod.syncdb("settings.py", migrate=True)
             mock.assert_called_once_with(
-                "django-admin.py syncdb --settings=settings.py --migrate " "--noinput",
+                "django-admin.py syncdb --settings=settings.py --migrate --noinput",
                 python_shell=False,
                 env=None,
                 runas=None,
@@ -194,24 +192,20 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @pytest.mark.skipif(
+        sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
+    )
     def test_django_admin_cli_createsuperuser(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
             djangomod.createsuperuser("settings.py", "testuser", "user@example.com")
             self.assertEqual(mock.call_count, 1)
-            args, kwargs = mock.call_args
-            # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
-            self.assertEqual(len(args), 1)
-            self.assertTrue(args[0].startswith("django-admin.py createsuperuser --"))
-            self.assertEqual(
-                set(args[0].split()),
-                set(
-                    "django-admin.py createsuperuser --settings=settings.py --noinput "
-                    "--username=testuser --email=user@example.com".split()
-                ),
-            )
-            self.assertDictEqual(
-                kwargs, {"python_shell": False, "env": None, "runas": None}
+            mock.assert_called_with(
+                "django-admin.py createsuperuser --settings=settings.py --noinput "
+                "--email=user@example.com --username=testuser",
+                env=None,
+                python_shell=False,
+                runas=None,
             )
 
     def no_test_loaddata(self):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor disk usage.
 
@@ -6,16 +5,12 @@ Beacon to monitor disk usage.
 
 :depends: python-psutil
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import re
 
+import salt.utils.beacons
 import salt.utils.platform
 
-# Import Third Party Libs
 try:
     import psutil
 
@@ -30,7 +25,9 @@ __virtualname__ = "diskusage"
 
 def __virtual__():
     if HAS_PSUTIL is False:
-        return False
+        err_msg = "psutil library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     else:
         return __virtualname__
 
@@ -41,7 +38,7 @@ def validate(config):
     """
     # Configuration for diskusage beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for diskusage beacon must be a list.")
+        return False, "Configuration for diskusage beacon must be a list."
     return True, "Valid beacon configuration"
 
 
@@ -86,6 +83,8 @@ def beacon(config):
     it will override the previously defined threshold.
 
     """
+    whitelist = []
+    config = salt.utils.beacons.remove_hidden_options(config, whitelist)
     parts = psutil.disk_partitions(all=True)
     ret = []
     for mounts in config:
@@ -95,7 +94,7 @@ def beacon(config):
         # if our mount doesn't end with a $, insert one.
         mount_re = mount
         if not mount.endswith("$"):
-            mount_re = "{0}$".format(mount)
+            mount_re = "{}$".format(mount)
 
         if salt.utils.platform.is_windows():
             # mount_re comes in formatted with a $ at the end
@@ -118,7 +117,7 @@ def beacon(config):
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                if "%" in monitor_usage:
+                if isinstance(monitor_usage, str) and "%" in monitor_usage:
                     monitor_usage = re.sub("%", "", monitor_usage)
                 monitor_usage = float(monitor_usage)
                 if current_usage >= monitor_usage:

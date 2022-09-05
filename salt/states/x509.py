@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage X509 Certificates
 
@@ -24,7 +23,7 @@ For remote signing, peers must be permitted to remotely call the
 
     peer:
       .*:
-        - sign_remote_certificate
+        - x509.sign_remote_certificate
 
 
 /srv/salt/top.sls
@@ -47,15 +46,16 @@ the mine where it can be easily retrieved by other minions.
 
 .. code-block:: yaml
 
-    salt-minion:
-      service.running:
-        - enable: True
-        - watch:
-          - file: /etc/salt/minion.d/x509.conf
-
     /etc/salt/minion.d/x509.conf:
       file.managed:
         - source: salt://x509.conf
+
+    restart-salt-minion:
+      cmd.run:
+        - name: 'salt-call service.restart salt-minion'
+        - bg: True
+        - onchanges:
+          - file: /etc/salt/minion.d/x509.conf
 
     /etc/pki:
       file.directory
@@ -63,9 +63,8 @@ the mine where it can be easily retrieved by other minions.
     /etc/pki/issued_certs:
       file.directory
 
-    /etc/pki/ca.crt:
+    /etc/pki/ca.key:
       x509.private_key_managed:
-        - name: /etc/pki/ca.key
         - bits: 4096
         - backup: True
 
@@ -171,25 +170,20 @@ be considered valid.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import datetime
+import logging
 import os
 import re
 
-# Import Salt Libs
 import salt.exceptions
-import salt.utils.versions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     from M2Crypto.RSA import RSAError
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -210,10 +204,10 @@ def _revoked_to_list(revs):
     list_ = []
 
     for rev in revs:
-        for rev_name, props in six.iteritems(rev):  # pylint: disable=unused-variable
+        for props in rev.values():
             dict_ = {}
             for prop in props:
-                for propname, val in six.iteritems(prop):
+                for propname, val in prop.items():
                     if isinstance(val, datetime.datetime):
                         val = val.strftime("%Y-%m-%d %H:%M:%S")
                     dict_[propname] = val
@@ -327,7 +321,7 @@ def private_key_managed(
         name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite
     ):
         file_args["contents"] = __salt__["x509.get_pem_entry"](
-            name, pem_type="RSA PRIVATE KEY"
+            name, pem_type="(?:RSA )?PRIVATE KEY"
         )
     else:
         new_key = True
@@ -375,7 +369,7 @@ def csr_managed(name, **kwargs):
     try:
         old = __salt__["x509.read_csr"](name)
     except salt.exceptions.SaltInvocationError:
-        old = "{0} is not a valid csr.".format(name)
+        old = "{} is not a valid csr.".format(name)
 
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args["contents"] = __salt__["x509.create_csr"](text=True, **kwargs)
@@ -405,12 +399,13 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
     ignored_keys = [
         "Not Before",
         "Not After",
-        "MD5 Finger Print",
         "SHA1 Finger Print",
         "SHA-256 Finger Print",
         # The integrity of the issuer is checked elsewhere
         "Issuer Public Key",
     ]
+    if __opts__["fips_mode"] is False:
+        ignored_keys.append("MD5 Finger Print")
     for key in ignored_keys:
         cert_info.pop(key, None)
         required_cert_info.pop(key, None)
@@ -433,10 +428,46 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
             pass
 
     diff = []
-    for k, v in six.iteritems(required_cert_info):
+    for k, v in required_cert_info.items():
+        # cert info comes as byte string
+        if isinstance(v, str):
+            v = salt.utils.stringutils.to_bytes(v)
         try:
             if v != cert_info[k]:
-                diff.append(k)
+                if k == "Subject Hash":
+                    # If we failed the subject hash check but the subject matches, then this is
+                    # likely a certificate generated under Python 2 where sorting differs and thus
+                    # the hash also differs
+                    if required_cert_info["Subject"] != cert_info["Subject"]:
+                        diff.append(k)
+                elif k == "Issuer Hash":
+                    # If we failed the issuer hash check but the issuer matches, then this is
+                    # likely a certificate generated under Python 2 where sorting differs and thus
+                    # the hash also differs
+                    if required_cert_info["Issuer"] != cert_info["Issuer"]:
+                        diff.append(k)
+                elif k == "X509v3 Extensions":
+                    v_ext = v.copy()
+                    cert_info_ext = cert_info[k].copy()
+                    # DirName depends on ordering which was different on certificates created
+                    # under Python 2. Remove that from the comparisson
+                    try:
+                        v_ext["authorityKeyIdentifier"] = re.sub(
+                            r"DirName:([^\n]+)",
+                            "Dirname:--",
+                            v_ext["authorityKeyIdentifier"],
+                        )
+                        cert_info_ext["authorityKeyIdentifier"] = re.sub(
+                            r"DirName:([^\n]+)",
+                            "Dirname:--",
+                            cert_info_ext["authorityKeyIdentifier"],
+                        )
+                    except KeyError:
+                        pass
+                    if v_ext != cert_info_ext:
+                        diff.append(k)
+                else:
+                    diff.append(k)
         except KeyError:
             diff.append(k)
 
@@ -459,12 +490,13 @@ def _certificate_days_remaining(cert_info):
 
 def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
     """
-    Return True if the given certificate file exists, is a certificate, matches the given specification, and has the required days remaining.
+    Return True if the given certificate file exists, is a certificate, matches the given specification,
+    and has the required days remaining.
 
     If False, also provide a message explaining why.
     """
     if not os.path.isfile(name):
-        return False, "{0} does not exist".format(name), {}
+        return False, "{} does not exist".format(name), {}
 
     try:
         cert_info = __salt__["x509.read_certificate"](certificate=name)
@@ -473,7 +505,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         )
         if not isinstance(required_cert_info, dict):
             raise salt.exceptions.SaltInvocationError(
-                "Unable to create new certificate: x509 module error: {0}".format(
+                "Unable to create new certificate: x509 module error: {}".format(
                     required_cert_info
                 )
             )
@@ -501,7 +533,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if not matches:
             return (
                 False,
-                "Certificate properties are different: {0}".format(", ".join(diff)),
+                "Certificate properties are different: {}".format(", ".join(diff)),
                 cert_info,
             )
 
@@ -509,20 +541,36 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if days_remaining != 0 and actual_days_remaining < days_remaining:
             return (
                 False,
-                "Certificate needs renewal: {0} days remaining but it needs to be at least {1}".format(
-                    actual_days_remaining, days_remaining
-                ),
+                "Certificate needs renewal: {} days remaining but it needs to be at"
+                " least {}".format(actual_days_remaining, days_remaining),
                 cert_info,
             )
 
         return True, "", cert_info
     except salt.exceptions.SaltInvocationError as e:
-        return False, "{0} is not a valid certificate: {1}".format(name, str(e)), {}
+        return False, "{} is not a valid certificate: {}".format(name, str(e)), {}
 
 
-def certificate_managed(
-    name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
-):
+def _certificate_file_managed(ret, file_args):
+    """
+    Run file.managed and merge the result with an existing return dict.
+    The overall True/False result will be the result of the file.managed call.
+    """
+    file_ret = __states__["file.managed"](**file_args)
+
+    ret["result"] = file_ret["result"]
+    if ret["result"]:
+        ret["comment"] = "Certificate {} is valid and up to date".format(ret["name"])
+    else:
+        ret["comment"] = file_ret["comment"]
+
+    if file_ret["changes"]:
+        ret["changes"] = {"File": file_ret["changes"]}
+
+    return ret
+
+
+def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
     """
     Manage a Certificate
 
@@ -540,10 +588,6 @@ def certificate_managed(
         A list of certificates to be appended to the managed file.
         They must be valid PEM files, otherwise an error will be thrown.
 
-    managed_private_key:
-        Has no effect since v2016.11 and will be removed in Salt Aluminium.
-        Use a separate x509.private_key_managed call instead.
-
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
         <salt.modules.x509.create_certificate>` or :py:func:`file.managed
@@ -553,12 +597,12 @@ def certificate_managed(
         Initial validity date for the certificate. This date must be specified
         in the format '%Y-%m-%d %H:%M:%S'.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     not_after:
         Final validity date for the certificate. This date must be specified in
         the format '%Y-%m-%d %H:%M:%S'.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     Examples:
 
@@ -601,15 +645,13 @@ def certificate_managed(
             "signing_policy must be specified if ca_server is."
         )
 
-    if "public_key" not in kwargs and "signing_private_key" not in kwargs:
+    if (
+        "public_key" not in kwargs
+        and "signing_private_key" not in kwargs
+        and "csr" not in kwargs
+    ):
         raise salt.exceptions.SaltInvocationError(
-            "public_key or signing_private_key must be specified."
-        )
-
-    if managed_private_key:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "Passing 'managed_private_key' to x509.certificate_managed has no effect and will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
+            "public_key, signing_private_key, or csr must be specified."
         )
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
@@ -619,13 +661,23 @@ def certificate_managed(
     )
 
     if is_valid:
-        ret["result"] = True
-        ret["comment"] = "Certificate {0} is valid and up to date".format(name)
-        return ret
+        file_args, extra_args = _get_file_args(name, **kwargs)
+
+        return _certificate_file_managed(ret, file_args)
 
     if __opts__["test"]:
+        file_args, extra_args = _get_file_args(name, **kwargs)
+        # Use empty contents for file.managed in test mode.
+        # We don't want generate a new certificate, even in memory,
+        # for security reasons.
+        # Using an empty string instead of omitting it will at least
+        # show the old certificate in the diff.
+        file_args["contents"] = ""
+
+        ret = _certificate_file_managed(ret, file_args)
+
         ret["result"] = None
-        ret["comment"] = "Certificate {0} will be created".format(name)
+        ret["comment"] = "Certificate {} will be created".format(name)
         ret["changes"]["Status"] = {
             "Old": invalid_reason,
             "New": "Certificate will be valid and up to date",
@@ -638,10 +690,9 @@ def certificate_managed(
         __salt__["x509.read_certificate"](contents)
     except salt.exceptions.SaltInvocationError as e:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "An error occurred creating the certificate {0}. The result returned from x509.create_certificate is not a valid PEM file:\n{1}".format(
-            name, str(e)
+        ret["comment"] = (
+            "An error occurred creating the certificate {}. The result returned from"
+            " x509.create_certificate is not a valid PEM file:\n{}".format(name, str(e))
         )
         return ret
 
@@ -655,30 +706,28 @@ def certificate_managed(
             contents += append_file_contents
         except salt.exceptions.SaltInvocationError as e:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "{0} is not a valid certificate file, cannot append it to the certificate {1}.\nThe error returned by the x509 module was:\n{2}".format(
-                append_file, name, str(e)
+            ret["comment"] = (
+                "{} is not a valid certificate file, cannot append it to the"
+                " certificate {}.\nThe error returned by the x509 module was:\n{}".format(
+                    append_file, name, str(e)
+                )
             )
             return ret
 
     file_args, extra_args = _get_file_args(name, **kwargs)
     file_args["contents"] = contents
-    file_ret = __states__["file.managed"](**file_args)
 
-    if file_ret["changes"]:
-        ret["changes"] = {"File": file_ret["changes"]}
+    ret = _certificate_file_managed(ret, file_args)
 
-    ret["changes"]["Certificate"] = {
-        "Old": current_cert_info,
-        "New": __salt__["x509.read_certificate"](certificate=name),
-    }
-    ret["changes"]["Status"] = {
-        "Old": invalid_reason,
-        "New": "Certificate is valid and up to date",
-    }
-    ret["comment"] = "Certificate {0} is valid and up to date".format(name)
-    ret["result"] = True
+    if ret["result"]:
+        ret["changes"]["Certificate"] = {
+            "Old": current_cert_info,
+            "New": __salt__["x509.read_certificate"](certificate=name),
+        }
+        ret["changes"]["Status"] = {
+            "Old": invalid_reason,
+            "New": "Certificate is valid and up to date",
+        }
 
     return ret
 
@@ -775,9 +824,9 @@ def crl_managed(
             if days_remaining == 0:
                 days_remaining = current_days_remaining - 1
         except salt.exceptions.SaltInvocationError:
-            current = "{0} is not a valid CRL.".format(name)
+            current = "{} is not a valid CRL.".format(name)
     else:
-        current = "{0} does not exist.".format(name)
+        current = "{} does not exist.".format(name)
 
     new_crl = __salt__["x509.create_crl"](
         text=True,

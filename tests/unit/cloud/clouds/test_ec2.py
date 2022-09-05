@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import tempfile
 
+import salt.crypt
 import salt.utils.files
-
-# Import Salt Libs
 from salt.cloud.clouds import ec2
 from salt.exceptions import SaltCloudSystemExit
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import PropertyMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.unit.test_crypt import PRIVKEY_DATA
@@ -34,14 +26,14 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setUp(self):
-        super(EC2TestCase, self).setUp()
+        super().setUp()
         with tempfile.NamedTemporaryFile(
             dir=RUNTIME_VARS.TMP, suffix=".pem", delete=True
         ) as fp:
             self.key_file = fp.name
 
     def tearDown(self):
-        super(EC2TestCase, self).tearDown()
+        super().tearDown()
         if os.path.exists(self.key_file):
             os.remove(self.key_file)
 
@@ -75,7 +67,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
                 SaltCloudSystemExit, ec2._validate_key_path_and_mode, "key_file"
             )
 
-    @skipIf(not ec2.HAS_M2 and not ec2.HAS_PYCRYPTO, "Needs crypto library")
+    @skipIf(not salt.crypt.HAS_M2 and not salt.crypt.HAS_CRYPTO, "Needs crypto library")
     @patch("salt.cloud.clouds.ec2._get_node")
     @patch("salt.cloud.clouds.ec2.get_location")
     @patch("salt.cloud.clouds.ec2.get_provider")
@@ -190,3 +182,30 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         self.assertRaises(
             salt.exceptions.SaltCloudConfigError, ec2.request_instance, vm
         )
+
+    @patch("salt.cloud.clouds.ec2.config.get_cloud_config_value")
+    @patch("salt.cloud.clouds.ec2.get_location")
+    @patch("salt.cloud.clouds.ec2.get_provider")
+    @patch("salt.cloud.clouds.ec2.aws.query")
+    def test_get_subnetname_id(self, aws_query, get_provider, get_location, config):
+        """
+        test querying subnetid function
+        """
+        vm = {}
+        subnetid = "subnet-5678"
+        subnetname = "valid-subnet-with-name"
+        config.return_value = subnetname
+        get_location.return_value = "us-west-2"
+        get_provider.return_value = "ec2"
+
+        # test for returns that include subnets with missing Name tags, see Issue 44330
+        aws_query.return_value = [
+            {"subnetId": "subnet-1234"},
+            {
+                "subnetId": subnetid,
+                "tagSet": {"item": {"key": "Name", "value": subnetname}},
+            },
+        ]
+
+        # test subnetname lookup
+        self.assertEqual(ec2._get_subnetname_id(subnetname), subnetid)

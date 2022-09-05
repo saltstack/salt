@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AliYun ECS Cloud Module
 =======================
@@ -25,21 +24,17 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
 import hmac
 import logging
 import pprint
 import sys
 import time
+import urllib.parse
 import uuid
 from hashlib import sha1
 
 import salt.config as config
-
-# Import salt cloud libs
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.json
@@ -49,15 +44,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt libs
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.parse import quote as _quote
-
-# pylint: enable=import-error,no-name-in-module
 from salt.utils.stringutils import to_bytes
 
 try:
@@ -107,12 +93,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("id", "key")
+        __opts__, _get_active_provider_name() or __virtualname__, ("id", "key")
     )
 
 
@@ -141,7 +134,7 @@ def avail_locations(call=None):
     for region in items["Regions"]["Region"]:
         ret[region["RegionId"]] = {}
         for item in region:
-            ret[region["RegionId"]][item] = six.text_type(region[item])
+            ret[region["RegionId"]][item] = str(region[item])
 
     return ret
 
@@ -176,7 +169,7 @@ def avail_images(kwargs=None, call=None):
     for image in items["Images"]["Image"]:
         ret[image["ImageId"]] = {}
         for item in image:
-            ret[image["ImageId"]][item] = six.text_type(image[item])
+            ret[image["ImageId"]][item] = str(image[item])
 
     return ret
 
@@ -198,7 +191,7 @@ def avail_sizes(call=None):
     for image in items["InstanceTypes"]["InstanceType"]:
         ret[image["InstanceTypeId"]] = {}
         for item in image:
-            ret[image["InstanceTypeId"]][item] = six.text_type(image[item])
+            ret[image["InstanceTypeId"]][item] = str(image[item])
 
     return ret
 
@@ -234,7 +227,7 @@ def list_availability_zones(call=None):
     for zone in items["Zones"]["Zone"]:
         ret[zone["ZoneId"]] = {}
         for item in zone:
-            ret[zone["ZoneId"]][item] = six.text_type(zone[item])
+            ret[zone["ZoneId"]][item] = str(zone[item])
 
     return ret
 
@@ -289,7 +282,7 @@ def list_nodes(call=None):
             "public_ips": node["public_ips"],
             "private_ips": node["private_ips"],
             "size": node["size"],
-            "state": six.text_type(node["state"]),
+            "state": str(node["state"]),
         }
     return ret
 
@@ -300,7 +293,7 @@ def list_nodes_full(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with -f " "or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     ret = {}
@@ -344,7 +337,7 @@ def list_nodes_full(call=None):
         for item in items:
             value = items[item]
             if value is not None:
-                value = six.text_type(value)
+                value = str(value)
             if item == "PublicIpAddress":
                 ret[name]["public_ips"] = items[item]["IpAddress"]
             if item == "InnerIpAddress" and "private_ips" not in ret[name]:
@@ -355,7 +348,7 @@ def list_nodes_full(call=None):
                     ret[name]["private_ips"] = vpc_ips
             ret[name][item] = value
 
-    provider = __active_provider_name__ or "aliyun"
+    provider = _get_active_provider_name() or "aliyun"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -371,7 +364,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -408,17 +403,17 @@ def get_image(vm_):
     Return the image object to use
     """
     images = avail_images()
-    vm_image = six.text_type(
+    vm_image = str(
         config.get_cloud_config_value("image", vm_, __opts__, search_global=False)
     )
 
     if not vm_image:
         raise SaltCloudNotFound("No image specified for this VM.")
 
-    if vm_image and six.text_type(vm_image) in images:
+    if vm_image and str(vm_image) in images:
         return images[vm_image]["ImageId"]
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -434,10 +429,10 @@ def get_securitygroup(vm_):
     if not securitygroup:
         raise SaltCloudNotFound("No securitygroup ID specified for this VM.")
 
-    if securitygroup and six.text_type(securitygroup) in sgs:
+    if securitygroup and str(securitygroup) in sgs:
         return sgs[securitygroup]["SecurityGroupId"]
     raise SaltCloudNotFound(
-        "The specified security group, '{0}', could not be found.".format(securitygroup)
+        "The specified security group, '{}', could not be found.".format(securitygroup)
     )
 
 
@@ -446,18 +441,18 @@ def get_size(vm_):
     Return the VM's size. Used by create_node().
     """
     sizes = avail_sizes()
-    vm_size = six.text_type(
+    vm_size = str(
         config.get_cloud_config_value("size", vm_, __opts__, search_global=False)
     )
 
     if not vm_size:
         raise SaltCloudNotFound("No size specified for this VM.")
 
-    if vm_size and six.text_type(vm_size) in sizes:
+    if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]["InstanceTypeId"]
 
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -466,17 +461,17 @@ def __get_location(vm_):
     Return the VM's location
     """
     locations = avail_locations()
-    vm_location = six.text_type(
+    vm_location = str(
         config.get_cloud_config_value("location", vm_, __opts__, search_global=False)
     )
 
     if not vm_location:
         raise SaltCloudNotFound("No location specified for this VM.")
 
-    if vm_location and six.text_type(vm_location) in locations:
+    if vm_location and str(vm_location) in locations:
         return locations[vm_location]["RegionId"]
     raise SaltCloudNotFound(
-        "The specified location, '{0}', could not be found.".format(vm_location)
+        "The specified location, '{}', could not be found.".format(vm_location)
     )
 
 
@@ -524,7 +519,7 @@ def stop(name, force=False, call=None):
     params = {
         "Action": "StopInstance",
         "InstanceId": instanceId,
-        "ForceStop": six.text_type(force).lower(),
+        "ForceStop": str(force).lower(),
     }
     result = query(params)
 
@@ -602,7 +597,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "aliyun", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "aliyun",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -613,7 +611,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -634,11 +632,9 @@ def create(vm_):
     if "internet_chargetype" in vm_:
         kwargs["InternetChargeType"] = vm_["internet_chargetype"]
     if "internet_maxbandwidthin" in vm_:
-        kwargs["InternetMaxBandwidthIn"] = six.text_type(vm_["internet_maxbandwidthin"])
+        kwargs["InternetMaxBandwidthIn"] = str(vm_["internet_maxbandwidthin"])
     if "internet_maxbandwidthout" in vm_:
-        kwargs["InternetMaxBandwidthOut"] = six.text_type(
-            vm_["internet_maxbandwidthOut"]
-        )
+        kwargs["InternetMaxBandwidthOut"] = str(vm_["internet_maxbandwidthOut"])
     if "hostname" in vm_:
         kwargs["HostName"] = vm_["hostname"]
     if "password" in vm_:
@@ -651,7 +647,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"]("requesting", kwargs, list(kwargs)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -665,7 +661,7 @@ def create(vm_):
             "The following exception was thrown when trying to "
             "run the initial deployment: %s",
             vm_["name"],
-            six.text_type(exc),
+            str(exc),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
@@ -701,7 +697,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     if data["public_ips"]:
         ssh_ip = data["public_ips"][0]
@@ -723,7 +719,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -740,7 +736,7 @@ def _compute_signature(parameters, access_key_secret):
     """
 
     def percent_encode(line):
-        if not isinstance(line, six.string_types):
+        if not isinstance(line, str):
             return line
 
         s = line
@@ -748,7 +744,7 @@ def _compute_signature(parameters, access_key_secret):
             s = line.decode().encode("utf8")
         else:
             s = line.decode(sys.stdin.encoding).encode("utf8")
-        res = _quote(s, "")
+        res = urllib.parse.quote(s, "")
         res = res.replace("+", "%20")
         res = res.replace("*", "%2A")
         res = res.replace("%7E", "~")
@@ -790,7 +786,7 @@ def query(params=None):
         "AccessKeyId": access_key_id,
         "SignatureVersion": "1.0",
         "SignatureMethod": "HMAC-SHA1",
-        "SignatureNonce": six.text_type(uuid.uuid1()),
+        "SignatureNonce": str(uuid.uuid1()),
         "TimeStamp": timestamp,
     }
 
@@ -805,8 +801,8 @@ def query(params=None):
     request = requests.get(path, params=parameters, verify=True)
     if request.status_code != 200:
         raise SaltCloudSystemExit(
-            "An error occurred while querying aliyun ECS. HTTP Code: {0}  "
-            "Error: '{1}'".format(request.status_code, request.text)
+            "An error occurred while querying aliyun ECS. HTTP Code: {}  "
+            "Error: '{}'".format(request.status_code, request.text)
         )
 
     log.debug(request.url)
@@ -856,7 +852,7 @@ def show_disk(name, call=None):
     for disk in items["Disks"]["Disk"]:
         ret[disk["DiskId"]] = {}
         for item in disk:
-            ret[disk["DiskId"]][item] = six.text_type(disk[item])
+            ret[disk["DiskId"]][item] = str(disk[item])
 
     return ret
 
@@ -893,7 +889,7 @@ def list_monitor_data(kwargs=None, call=None):
     for data in monitorData["InstanceMonitorData"]:
         ret[data["InstanceId"]] = {}
         for item in data:
-            ret[data["InstanceId"]][item] = six.text_type(data[item])
+            ret[data["InstanceId"]][item] = str(data[item])
 
     return ret
 
@@ -918,13 +914,13 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempts,
             )
             # Just a little delay between attempts...
             time.sleep(0.5)
-    raise SaltCloudNotFound("The specified instance {0} not found".format(name))
+    raise SaltCloudNotFound("The specified instance {} not found".format(name))
 
 
 def show_image(kwargs, call=None):
@@ -933,7 +929,7 @@ def show_image(kwargs, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The show_images function must be called with " "-f or --function"
+            "The show_images function must be called with -f or --function"
         )
 
     if not isinstance(kwargs, dict):
@@ -962,7 +958,7 @@ def show_image(kwargs, call=None):
     for image in items["Images"]["Image"]:
         ret[image["ImageId"]] = {}
         for item in image:
-            ret[image["ImageId"]][item] = six.text_type(image[item])
+            ret[image["ImageId"]][item] = str(image[item])
 
     return ret
 
@@ -980,13 +976,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1005,7 +1001,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

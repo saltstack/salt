@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
-# Import Salt Libs
 import salt.modules.random_org as random_org
-
-# Import 3rd-party libs
 from salt.ext.tornado.httpclient import HTTPClient
-
-# Import Salt Testing Libs
-from tests.support.helpers import flaky
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
@@ -88,7 +80,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
         ret4 = {
             "message": (
-                "Minimum argument must be between -1,000,000,000" " and 1,000,000,000"
+                "Minimum argument must be between -1,000,000,000 and 1,000,000,000"
             ),
             "res": False,
         }
@@ -101,7 +93,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
         ret5 = {
             "message": (
-                "Maximum argument must be between -1,000,000,000" " and 1,000,000,000"
+                "Maximum argument must be between -1,000,000,000 and 1,000,000,000"
             ),
             "res": False,
         }
@@ -204,7 +196,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateDecimalFractions' function tests: 1
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_generatedecimalfractions(self):
         """
         Test if it generates true random decimal fractions.
@@ -218,7 +210,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret3 = {
-            "message": ("Number of decimal fractions must be" " between 1 and 10000"),
+            "message": "Number of decimal fractions must be between 1 and 10000",
             "res": False,
         }
         self.assertDictEqual(
@@ -261,7 +253,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateGaussians' function tests: 1
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_generategaussians(self):
         """
         Test if it generates true random numbers from a
@@ -276,7 +268,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret3 = {
-            "message": ("Number of decimal fractions must be" " between 1 and 10000"),
+            "message": "Number of decimal fractions must be between 1 and 10000",
             "res": False,
         }
         self.assertDictEqual(
@@ -292,9 +284,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret4 = {
-            "message": (
-                "The distribution's mean must be between" " -1000000 and 1000000"
-            ),
+            "message": "The distribution's mean must be between -1000000 and 1000000",
             "res": False,
         }
         self.assertDictEqual(
@@ -329,7 +319,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret6 = {
-            "message": ("The number of significant digits must be" " between 2 and 20"),
+            "message": "The number of significant digits must be between 2 and 20",
             "res": False,
         }
         self.assertDictEqual(

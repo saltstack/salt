@@ -1,21 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
-import os
 
 import salt.utils.json
 import salt.utils.virtualbox
-
-# Import Salt Testing libs
 import tests.integration.cloud.helpers
-
-# Import Salt libs
-from salt.ext import six
 from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 # Create the cloud instance name to be used throughout the tests
@@ -60,18 +48,18 @@ class VirtualboxTestCase(TestCase):
     "salt-cloud requires virtualbox to be installed",
 )
 class VirtualboxCloudTestCase(ShellCase):
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=None, config_dir=None):
         """
         Execute salt-cloud with json output and try to interpret it
 
         @return:
         @rtype: dict
         """
-        config_path = os.path.join(RUNTIME_VARS.FILES, "conf")
-        arg_str = "--out=json -c {0} {1}".format(config_path, arg_str)
-        # arg_str = "{0} --log-level=error".format(arg_str)
+        arg_str = "--out=json {}".format(arg_str)
         log.debug("running salt-cloud with %s", arg_str)
-        output = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
+        output = self.run_script(
+            "salt-cloud", arg_str, catch_stderr, timeout=timeout, config_dir=config_dir
+        )
 
         # Sometimes tuples are returned???
         if isinstance(output, tuple) and len(output) == 2:
@@ -106,12 +94,11 @@ class VirtualboxCloudTestCase(ShellCase):
         # Args converted in the form of key1='value1' ... keyN='valueN'
         if kw_function_args:
             args = [
-                "{0}='{1}'".format(key, value)
-                for key, value in six.iteritems(kw_function_args)
+                "{}='{}'".format(key, value) for key, value in kw_function_args.items()
             ]
 
         output = self.run_cloud(
-            "-f {0} {1} {2}".format(function, CONFIG_NAME, " ".join(args)), **kwargs
+            "-f {} {} {}".format(function, CONFIG_NAME, " ".join(args)), **kwargs
         )
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
@@ -128,6 +115,6 @@ class VirtualboxCloudTestCase(ShellCase):
         """
 
         output = self.run_cloud(
-            "-a {0} {1} --assume-yes".format(action, instance_name), **kwargs
+            "-a {} {} --assume-yes".format(action, instance_name), **kwargs
         )
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})

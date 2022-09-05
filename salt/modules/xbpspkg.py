@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Package support for XBPS package manager (used by VoidLinux)
 
 .. versionadded:: 2016.11.0
 """
 
-# TODO: what about the initial acceptance of repo's fingerprint when adding a
-# new repo?
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+# TODO: what about the initial acceptance of repo's fingerprint when adding a new repo?
 
 import glob
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.decorators as decorators
 import salt.utils.files
@@ -121,7 +115,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     """
     Check whether or not an upgrade is available for all packages
 
@@ -241,7 +235,7 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 
@@ -254,7 +248,7 @@ def upgrade_available(name):
     return latest_version(name) != ""
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     """
     Update list of available packages from installed repos
 
@@ -294,7 +288,7 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     """
     Run a full system upgrade
 
@@ -309,7 +303,6 @@ def upgrade(refresh=True):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -323,7 +316,7 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
 
-    cmd = ["xbps-install", "-{0}yu".format("S" if refresh else "")]
+    cmd = ["xbps-install", "-{}yu".format("S" if refresh else "")]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
@@ -408,7 +401,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     if refresh:
         cmd.append("-S")  # update repo db
     if fromrepo:
-        cmd.append("--repository={0}".format(fromrepo))
+        cmd.append("--repository={}".format(fromrepo))
     cmd.append("-y")  # assume yes when asked
     cmd.extend(pkg_params)
 
@@ -473,7 +466,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_repos():
+def list_repos(**kwargs):
     """
     List all repos known by XBPS
 
@@ -493,7 +486,7 @@ def list_repos():
             nb, url, rsa = line.strip().split(" ", 2)
         except ValueError:
             log.error(
-                "Problem parsing xbps-query: " 'Unexpected formatting in line: "%s"',
+                'Problem parsing xbps-query: Unexpected formatting in line: "%s"',
                 line,
             )
         repo["nbpkg"] = int(nb) if nb.isdigit() else 0
@@ -586,15 +579,15 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
         try:
             with salt.utils.files.fopen(conffile, "a+") as conf_file:
                 conf_file.write(
-                    salt.utils.stringutils.to_str("repository={0}\n".format(repo))
+                    salt.utils.stringutils.to_str("repository={}\n".format(repo))
                 )
-        except IOError:
+        except OSError:
             return False
 
     return True
 
 
-def del_repo(repo):
+def del_repo(repo, **kwargs):
     """
     Remove an XBPS repository from the system.
 
@@ -610,7 +603,7 @@ def del_repo(repo):
 
     try:
         _locate_repo_files(repo, rewrite=True)
-    except IOError:
+    except OSError:
         return False
     else:
         return True

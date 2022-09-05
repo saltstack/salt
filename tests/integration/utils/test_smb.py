@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Test utility methods that communicate with SMB shares.
 """
-from __future__ import absolute_import
-
 import getpass
 import logging
 import os
@@ -13,6 +10,7 @@ import tempfile
 import time
 
 import salt.utils.files
+import salt.utils.network
 import salt.utils.path
 import salt.utils.smb
 from tests.support.case import TestCase
@@ -53,6 +51,7 @@ TBE = (
     "{}:0:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:AC8E657F8"
     "3DF82BEEA5D43BDAF7800CC:[U          ]:LCT-507C14C7:"
 )
+IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
 
 
 def which_smbd():
@@ -69,8 +68,8 @@ def which_smbd():
 
 @skipIf(not which_smbd(), reason="smbd binary not found")
 @skipIf(
-    any([salt.utils.smb.HAS_IMPACKET, salt.utils.smb.HAS_SMBPROTOCOL]),
-    'Either "impacket" or "smbprotocol" needs to be installed.',
+    not salt.utils.smb.HAS_SMBPROTOCOL,
+    '"smbprotocol" needs to be installed.',
 )
 class TestSmb(TestCase):
 
@@ -108,9 +107,7 @@ class TestSmb(TestCase):
                     user=cls.username,
                 )
             )
-        cls._smbd = subprocess.Popen(
-            "{0} -FS -P0 -s {1}".format(which_smbd(), samba_conf), shell=True
-        )
+        cls._smbd = subprocess.Popen([which_smbd(), "-FS", "-P0", "-s", samba_conf])
         time.sleep(1)
         pidfile = os.path.join(cls.samba_dir, "smbd.pid")
         with salt.utils.files.fopen(pidfile, "r") as fp:
@@ -123,12 +120,12 @@ class TestSmb(TestCase):
         log.warning("teardown")
         os.kill(cls._pid, signal.SIGTERM)
 
-    def test_write_file(self):
+    def test_write_file_ipv4(self):
         """
         Transfer a file over SMB
         """
-        name = "test_write_file.txt"
-        content = "write test file content"
+        name = "test_write_file_v4.txt"
+        content = "write test file content ipv4"
         share_path = os.path.join(self.public_dir, name)
         assert not os.path.exists(share_path)
 
@@ -144,7 +141,29 @@ class TestSmb(TestCase):
             result = fp.read()
         assert result == content
 
-    def test_write_str(self):
+    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    def test_write_file_ipv6(self):
+        """
+        Transfer a file over SMB
+        """
+        name = "test_write_file_v6.txt"
+        content = "write test file content ipv6"
+        share_path = os.path.join(self.public_dir, name)
+        assert not os.path.exists(share_path)
+
+        local_path = tempfile.mktemp()
+        with salt.utils.files.fopen(local_path, "w") as fp:
+            fp.write(content)
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
+        salt.utils.smb.put_file(local_path, name, "public", conn=conn)
+        conn.close()
+
+        assert os.path.exists(share_path)
+        with salt.utils.files.fopen(share_path, "r") as fp:
+            result = fp.read()
+        assert result == content
+
+    def test_write_str_v4(self):
         """
         Write a string to a file over SMB
         """
@@ -161,7 +180,25 @@ class TestSmb(TestCase):
             result = fp.read()
         assert result == content
 
-    def test_delete_file(self):
+    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    def test_write_str_v6(self):
+        """
+        Write a string to a file over SMB
+        """
+        name = "test_write_str_v6.txt"
+        content = "write test file content"
+        share_path = os.path.join(self.public_dir, name)
+        assert not os.path.exists(share_path)
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
+        salt.utils.smb.put_str(content, name, "public", conn=conn)
+        conn.close()
+
+        assert os.path.exists(share_path)
+        with salt.utils.files.fopen(share_path, "r") as fp:
+            result = fp.read()
+        assert result == content
+
+    def test_delete_file_v4(self):
         """
         Validate deletion of files over SMB
         """
@@ -178,7 +215,25 @@ class TestSmb(TestCase):
 
         assert not os.path.exists(share_path)
 
-    def test_mkdirs(self):
+    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    def test_delete_file_v6(self):
+        """
+        Validate deletion of files over SMB
+        """
+        name = "test_delete_file_v6.txt"
+        content = "read test file content"
+        share_path = os.path.join(self.public_dir, name)
+        with salt.utils.files.fopen(share_path, "w") as fp:
+            fp.write(content)
+        assert os.path.exists(share_path)
+
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
+        salt.utils.smb.delete_file(name, "public", conn=conn)
+        conn.close()
+
+        assert not os.path.exists(share_path)
+
+    def test_mkdirs_v4(self):
         """
         Create directories over SMB
         """
@@ -192,7 +247,22 @@ class TestSmb(TestCase):
 
         assert os.path.exists(share_path)
 
-    def test_delete_dirs(self):
+    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    def test_mkdirs_v6(self):
+        """
+        Create directories over SMB
+        """
+        dir_name = "mkdirs/testv6"
+        share_path = os.path.join(self.public_dir, dir_name)
+        assert not os.path.exists(share_path)
+
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
+        salt.utils.smb.mkdirs(dir_name, "public", conn=conn)
+        conn.close()
+
+        assert os.path.exists(share_path)
+
+    def test_delete_dirs_v4(self):
         """
         Validate deletion of directoreies over SMB
         """
@@ -213,9 +283,39 @@ class TestSmb(TestCase):
         assert not os.path.exists(local_path)
         assert not os.path.exists(os.path.join(self.public_dir, dir_name))
 
+    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    def test_delete_dirs_v6(self):
+        """
+        Validate deletion of directoreies over SMB
+        """
+        dir_name = "deldirsv6"
+        subdir_name = "deldirsv6/test"
+        local_path = os.path.join(self.public_dir, subdir_name)
+        os.makedirs(local_path)
+        assert os.path.exists(local_path)
+
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
+        salt.utils.smb.delete_directory(subdir_name, "public", conn=conn)
+        conn.close()
+
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
+        salt.utils.smb.delete_directory(dir_name, "public", conn=conn)
+        conn.close()
+
+        assert not os.path.exists(local_path)
+        assert not os.path.exists(os.path.join(self.public_dir, dir_name))
+
     def test_connection(self):
         """
         Validate creation of an SMB connection
         """
         conn = salt.utils.smb.get_conn("127.0.0.1", self.username, "foo", port=1445)
+        conn.close()
+
+    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    def test_connection_v6(self):
+        """
+        Validate creation of an SMB connection
+        """
+        conn = salt.utils.smb.get_conn("::1", self.username, "foo", port=1445)
         conn.close()

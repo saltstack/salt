@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 from salt.cli.batch import Batch
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
@@ -74,3 +67,69 @@ class BatchTestCase(TestCase):
         """
         ret = Batch.get_bnum(self.batch)
         self.assertEqual(ret, None)
+
+    def test_return_value_in_run_for_ret(self):
+        """
+        cmd_iter_no_block should have been called with a return no matter if
+        the return value was in ret or return.
+        """
+        self.batch.opts = {
+            "batch": "100%",
+            "timeout": 5,
+            "fun": "test",
+            "arg": "foo",
+            "gather_job_timeout": 5,
+            "ret": "my_return",
+        }
+        self.batch.gather_minions = MagicMock(
+            return_value=[["foo", "bar", "baz"], [], []],
+        )
+        self.batch.local.cmd_iter_no_block = MagicMock(return_value=iter([]))
+        ret = Batch.run(self.batch)
+        # We need to fetch at least one object to trigger the relevant code path.
+        x = next(ret)
+        self.batch.local.cmd_iter_no_block.assert_called_with(
+            ["baz", "bar", "foo"],
+            "test",
+            "foo",
+            5,
+            "list",
+            raw=False,
+            ret="my_return",
+            show_jid=False,
+            verbose=False,
+            gather_job_timeout=5,
+        )
+
+    def test_return_value_in_run_for_return(self):
+        """
+        cmd_iter_no_block should have been called with a return no matter if
+        the return value was in ret or return.
+        """
+        self.batch.opts = {
+            "batch": "100%",
+            "timeout": 5,
+            "fun": "test",
+            "arg": "foo",
+            "gather_job_timeout": 5,
+            "return": "my_return",
+        }
+        self.batch.gather_minions = MagicMock(
+            return_value=[["foo", "bar", "baz"], [], []],
+        )
+        self.batch.local.cmd_iter_no_block = MagicMock(return_value=iter([]))
+        ret = Batch.run(self.batch)
+        # We need to fetch at least one object to trigger the relevant code path.
+        x = next(ret)
+        self.batch.local.cmd_iter_no_block.assert_called_with(
+            ["baz", "bar", "foo"],
+            "test",
+            "foo",
+            5,
+            "list",
+            raw=False,
+            ret="my_return",
+            show_jid=False,
+            verbose=False,
+            gather_job_timeout=5,
+        )

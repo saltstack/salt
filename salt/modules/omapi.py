@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module interacts with an ISC DHCP Server via OMAPI.
 server_ip and server_port params may be set in the minion
@@ -12,13 +11,10 @@ config or pillar:
 :depends: pypureomapi Python module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import struct
 
-# Import salt libs
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -91,9 +87,9 @@ def add_host(mac, name=None, ip=None, ddns=False, group=None, supersede_host=Fal
     if group:
         msg.obj.append((b"group", salt.utils.stringutils.to_bytes(group)))
     if supersede_host:
-        statements += 'option host-name "{0}"; '.format(name)
+        statements += 'option host-name "{}"; '.format(name)
     if ddns and name:
-        statements += 'ddns-hostname "{0}"; '.format(name)
+        statements += 'ddns-hostname "{}"; '.format(name)
     if statements:
         msg.obj.append((b"statements", salt.utils.stringutils.to_bytes(statements)))
     response = o.query_server(msg)

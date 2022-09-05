@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 from tempfile import NamedTemporaryFile
 
 import salt.modules.timezone as timezone
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -71,10 +61,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     def create_tempfile_with_contents(self, contents):
         temp = NamedTemporaryFile(delete=False)
-        if six.PY3:
-            temp.write(salt.utils.stringutils.to_bytes(contents))
-        else:
-            temp.write(contents)
+        temp.write(salt.utils.stringutils.to_bytes(contents))
         temp.close()
         self.tempfiles.append(temp)
         return temp
@@ -82,8 +69,8 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
 class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Timezone test case
-        """
+    Timezone test case
+    """
 
     TEST_TZ = "UTC"
 
@@ -141,12 +128,12 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                     assert timezone.get_zone() == self.TEST_TZ
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
-    def test_get_zone_os_family_allbsd_nilinuxrt(self):
+    def test_get_zone_os_family_allbsd_nilinuxrt_slackware(self):
         """
-        Test *BSD and NILinuxRT are recognized
+        Test *BSD, NILinuxRT and Slackware are recognized
         :return:
         """
-        for osfamily in ["FreeBSD", "OpenBSD", "NetBSD", "NILinuxRT"]:
+        for osfamily in ["FreeBSD", "OpenBSD", "NetBSD", "NILinuxRT", "Slackware"]:
             with patch.dict(timezone.__grains__, {"os_family": osfamily}):
                 with patch(
                     "salt.modules.timezone._get_zone_etc_localtime",
@@ -179,6 +166,35 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 MagicMock(return_value=self.TEST_TZ),
             ):
                 assert timezone.get_zone() == self.TEST_TZ
+
+    @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+    @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @patch("os.path.exists", MagicMock(return_value=True))
+    @patch("os.unlink", MagicMock())
+    @patch("os.symlink", MagicMock())
+    def test_set_zone_os_family_nilinuxrt(self):
+        """
+        Test zone set on NILinuxRT
+        :return:
+        """
+        with patch.dict(timezone.__grains__, {"os_family": ["NILinuxRT"]}), patch.dict(
+            timezone.__grains__, {"lsb_distrib_id": "nilrt"}
+        ):
+            assert timezone.set_zone(self.TEST_TZ)
+
+    @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+    @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @patch("os.path.exists", MagicMock(return_value=True))
+    @patch("os.unlink", MagicMock())
+    @patch("os.symlink", MagicMock())
+    def test_set_zone_os_family_allbsd_slackware(self):
+        """
+        Test zone set on *BSD and Slackware
+        :return:
+        """
+        for osfamily in ["FreeBSD", "OpenBSD", "NetBSD", "Slackware"]:
+            with patch.dict(timezone.__grains__, {"os_family": osfamily}):
+                assert timezone.set_zone(self.TEST_TZ)
 
     @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
     @patch("salt.utils.path.which", MagicMock(return_value=False))
@@ -350,6 +366,38 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert timezone.get_hwclock() == hwclock
 
     @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+    @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @patch("os.path.exists", MagicMock(return_value=True))
+    @patch("os.unlink", MagicMock())
+    @patch("os.symlink", MagicMock())
+    def test_get_hwclock_slackware_with_adjtime(self):
+        """
+        Test get hwclock on Slackware with /etc/adjtime present
+        :return:
+        """
+        with patch.dict(timezone.__grains__, {"os_family": ["Slackware"]}):
+            timezone.get_hwclock()
+            name, args, kwarg = timezone.__salt__["cmd.run"].mock_calls[0]
+            assert args == (["tail", "-n", "1", "/etc/adjtime"],)
+            assert kwarg == {"python_shell": False}
+
+    @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+    @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @patch("os.path.exists", MagicMock(return_value=False))
+    @patch("os.unlink", MagicMock())
+    @patch("os.symlink", MagicMock())
+    def test_get_hwclock_slackware_without_adjtime(self):
+        """
+        Test get hwclock on Slackware without /etc/adjtime present
+        :return:
+        """
+        with patch.dict(timezone.__grains__, {"os_family": ["Slackware"]}):
+            with patch("salt.utils.files.fopen", mock_open(read_data="UTC")):
+                assert timezone.get_hwclock() == "UTC"
+            with patch("salt.utils.files.fopen", mock_open(read_data="localtime")):
+                assert timezone.get_hwclock() == "localtime"
+
+    @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
     @patch("salt.utils.path.which", MagicMock(return_value=True))
     def test_set_hwclock_timedatectl(self):
         """
@@ -496,3 +544,26 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             timezone.set_hwclock("localtime")
             name, args, kwargs = timezone.__salt__["file.sed"].mock_calls[1]
             assert args == ("/etc/conf.d/hwclock", "^clock=.*", 'clock="local"')
+
+    @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+    @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @patch("os.path.exists", MagicMock(return_value=True))
+    @patch("os.unlink", MagicMock())
+    @patch("os.symlink", MagicMock())
+    @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    def test_set_hwclock_slackware(self):
+        """
+        Test set hwclock on Slackware
+        :return:
+        """
+        with patch.dict(timezone.__grains__, {"os_family": ["Slackware"]}):
+            with self.assertRaises(SaltInvocationError):
+                timezone.set_hwclock("forty two")
+
+            timezone.set_hwclock("UTC")
+            name, args, kwargs = timezone.__salt__["file.sed"].mock_calls[0]
+            assert args == ("/etc/hardwareclock", "^(UTC|localtime)", "UTC")
+
+            timezone.set_hwclock("localtime")
+            name, args, kwargs = timezone.__salt__["file.sed"].mock_calls[1]
+            assert args == ("/etc/hardwareclock", "^(UTC|localtime)", "localtime")

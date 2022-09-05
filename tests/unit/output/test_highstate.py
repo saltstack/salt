@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 unittests for highstate outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import salt.output.highstate as highstate
-
-# Import Salt Libs
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -75,7 +65,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                                 },
                             },
                         },
-                        "comment": "States ran successfully. Updating sub_minion, minion.",
+                        "comment": (
+                            "States ran successfully. Updating sub_minion, minion."
+                        ),
                         "duration": 1638.047,
                         "name": "call_sleep_state",
                         "result": True,
@@ -90,7 +82,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                             "out": "highstate",
                             "ret": {"minion": "file1\nfile2\nfile3"},
                         },
-                        "comment": "Function ran successfully. Function cmd.run ran on minion.",
+                        "comment": (
+                            "Function ran successfully. Function cmd.run ran on minion."
+                        ),
                         "duration": 412.397,
                         "name": "cmd.run",
                         "result": True,
@@ -125,10 +119,7 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                 entry = self.data[key]
                 continue
             entry = entry[key]
-        if six.PY2:
-            entry["comment"] = salt.utils.stringutils.to_unicode(entry["comment"])
-        else:
-            entry["comment"] = salt.utils.stringutils.to_bytes(entry["comment"])
+        entry["comment"] = salt.utils.stringutils.to_bytes(entry["comment"])
         ret = highstate.output(self.data)
         self.assertIn("Succeeded: 1 (changed=1)", ret)
         self.assertIn("Failed:    0", ret)
@@ -148,6 +139,7 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
                 "__opts__": {
                     "extension_modules": "",
                     "color": False,
+                    "state_output_profile": True,
                     "optimization_order": [0, 1, 2],
                 }
             }
@@ -183,7 +175,9 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
                                             "__sls__": "orch.test.changes",
                                             "changes": {
                                                 "testing": {
-                                                    "new": "Something pretended to change",
+                                                    "new": (
+                                                        "Something pretended to change"
+                                                    ),
                                                     "old": "Unchanged",
                                                 }
                                             },

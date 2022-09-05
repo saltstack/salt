@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Module for editing power settings on macOS
 
  .. versionadded:: 2016.3.0
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 __virtualname__ = "power"
 
@@ -44,14 +36,14 @@ def _validate_sleep(minutes):
     Returns: The value to be passed to the command
     """
     # Must be a value between 1 and 180 or Never/Off
-    if isinstance(minutes, six.string_types):
+    if isinstance(minutes, str):
         if minutes.lower() in ["never", "off"]:
             return "Never"
         else:
             msg = (
                 "Invalid String Value for Minutes.\n"
                 'String values must be "Never" or "Off".\n'
-                "Passed: {0}".format(minutes)
+                "Passed: {}".format(minutes)
             )
             raise SaltInvocationError(msg)
     elif isinstance(minutes, bool):
@@ -60,7 +52,7 @@ def _validate_sleep(minutes):
                 "Invalid Boolean Value for Minutes.\n"
                 'Boolean value "On" or "True" is not allowed.\n'
                 'Salt CLI converts "On" to boolean True.\n'
-                "Passed: {0}".format(minutes)
+                "Passed: {}".format(minutes)
             )
             raise SaltInvocationError(msg)
         else:
@@ -72,13 +64,11 @@ def _validate_sleep(minutes):
             msg = (
                 "Invalid Integer Value for Minutes.\n"
                 "Integer values must be between 1 and 180.\n"
-                "Passed: {0}".format(minutes)
+                "Passed: {}".format(minutes)
             )
             raise SaltInvocationError(msg)
     else:
-        msg = "Unknown Variable Type Passed for Minutes.\n" "Passed: {0}".format(
-            minutes
-        )
+        msg = "Unknown Variable Type Passed for Minutes.\nPassed: {}".format(minutes)
         raise SaltInvocationError(msg)
 
 
@@ -125,12 +115,17 @@ def set_sleep(minutes):
         salt '*' power.set_sleep never
     """
     value = _validate_sleep(minutes)
-    cmd = "systemsetup -setsleep {0}".format(value)
+    cmd = "systemsetup -setsleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
     state = []
     for check in (get_computer_sleep, get_display_sleep, get_harddisk_sleep):
-        state.append(salt.utils.mac_utils.confirm_updated(value, check,))
+        state.append(
+            salt.utils.mac_utils.confirm_updated(
+                value,
+                check,
+            )
+        )
     return all(state)
 
 
@@ -143,7 +138,7 @@ def get_computer_sleep():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' power.get_computer_sleep
     """
@@ -170,10 +165,13 @@ def set_computer_sleep(minutes):
         salt '*' power.set_computer_sleep off
     """
     value = _validate_sleep(minutes)
-    cmd = "systemsetup -setcomputersleep {0}".format(value)
+    cmd = "systemsetup -setcomputersleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(str(value), get_computer_sleep,)
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_computer_sleep,
+    )
 
 
 def get_display_sleep():
@@ -185,7 +183,7 @@ def get_display_sleep():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' power.get_display_sleep
     """
@@ -212,10 +210,13 @@ def set_display_sleep(minutes):
         salt '*' power.set_display_sleep off
     """
     value = _validate_sleep(minutes)
-    cmd = "systemsetup -setdisplaysleep {0}".format(value)
+    cmd = "systemsetup -setdisplaysleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(str(value), get_display_sleep,)
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_display_sleep,
+    )
 
 
 def get_harddisk_sleep():
@@ -227,7 +228,7 @@ def get_harddisk_sleep():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' power.get_harddisk_sleep
     """
@@ -254,10 +255,13 @@ def set_harddisk_sleep(minutes):
         salt '*' power.set_harddisk_sleep off
     """
     value = _validate_sleep(minutes)
-    cmd = "systemsetup -setharddisksleep {0}".format(value)
+    cmd = "systemsetup -setharddisksleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(str(value), get_harddisk_sleep,)
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_harddisk_sleep,
+    )
 
 
 def get_wake_on_modem():
@@ -299,10 +303,13 @@ def set_wake_on_modem(enabled):
         salt '*' power.set_wake_on_modem True
     """
     state = salt.utils.mac_utils.validate_enabled(enabled)
-    cmd = "systemsetup -setwakeonmodem {0}".format(state)
+    cmd = "systemsetup -setwakeonmodem {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_wake_on_modem,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_wake_on_modem,
+    )
 
 
 def get_wake_on_network():
@@ -346,10 +353,13 @@ def set_wake_on_network(enabled):
         salt '*' power.set_wake_on_network True
     """
     state = salt.utils.mac_utils.validate_enabled(enabled)
-    cmd = "systemsetup -setwakeonnetworkaccess {0}".format(state)
+    cmd = "systemsetup -setwakeonnetworkaccess {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_wake_on_network,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_wake_on_network,
+    )
 
 
 def get_restart_power_failure():
@@ -393,10 +403,13 @@ def set_restart_power_failure(enabled):
         salt '*' power.set_restart_power_failure True
     """
     state = salt.utils.mac_utils.validate_enabled(enabled)
-    cmd = "systemsetup -setrestartpowerfailure {0}".format(state)
+    cmd = "systemsetup -setrestartpowerfailure {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_restart_power_failure,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_restart_power_failure,
+    )
 
 
 def get_restart_freeze():
@@ -440,7 +453,7 @@ def set_restart_freeze(enabled):
         salt '*' power.set_restart_freeze True
     """
     state = salt.utils.mac_utils.validate_enabled(enabled)
-    cmd = "systemsetup -setrestartfreeze {0}".format(state)
+    cmd = "systemsetup -setrestartfreeze {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return salt.utils.mac_utils.confirm_updated(state, get_restart_freeze, True)
@@ -489,7 +502,10 @@ def set_sleep_on_power_button(enabled):
         salt '*' power.set_sleep_on_power_button True
     """
     state = salt.utils.mac_utils.validate_enabled(enabled)
-    cmd = "systemsetup -setallowpowerbuttontosleepcomputer {0}".format(state)
+    cmd = "systemsetup -setallowpowerbuttontosleepcomputer {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_sleep_on_power_button,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_sleep_on_power_button,
+    )

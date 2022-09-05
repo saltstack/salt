@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Elasticache
 
@@ -44,9 +43,7 @@ Connection module for Amazon Elasticache
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import time
 
@@ -54,12 +51,8 @@ import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -89,7 +82,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if a cache cluster exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.exists myelasticache
     """
@@ -107,7 +102,9 @@ def group_exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if a replication group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.group_exists myelasticache
     """
@@ -134,7 +131,9 @@ def create_replication_group(
     """
     Create replication group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.create_replication_group myelasticache myprimarycluster description
     """
@@ -157,7 +156,7 @@ def create_replication_group(
             if config["status"] == "available":
                 return True
     except boto.exception.BotoServerError as e:
-        msg = "Failed to create replication group {0}.".format(name)
+        msg = "Failed to create replication group {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -167,7 +166,9 @@ def delete_replication_group(name, region=None, key=None, keyid=None, profile=No
     """
     Delete an ElastiCache replication group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.delete_replication_group my-replication-group \
                 region=us-east-1
@@ -177,12 +178,12 @@ def delete_replication_group(name, region=None, key=None, keyid=None, profile=No
         return False
     try:
         conn.delete_replication_group(name)
-        msg = "Deleted ElastiCache replication group {0}.".format(name)
+        msg = "Deleted ElastiCache replication group {}.".format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to delete ElastiCache replication group {0}".format(name)
+        msg = "Failed to delete ElastiCache replication group {}".format(name)
         log.error(msg)
         return False
 
@@ -193,7 +194,9 @@ def describe_replication_group(
     """
     Get replication group information.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.describe_replication_group mygroup
     """
@@ -204,7 +207,7 @@ def describe_replication_group(
     try:
         cc = conn.describe_replication_groups(name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -222,7 +225,7 @@ def describe_replication_group(
         "primary_cluster_id",
         "node_groups",
     ]
-    for key, val in six.iteritems(cc):
+    for key, val in cc.items():
         _key = boto.utils.pythonize_name(key)
         if _key == "status":
             if val:
@@ -261,7 +264,9 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     """
     Get the configuration for a cache cluster.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.get_config myelasticache
     """
@@ -272,7 +277,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_cache_clusters(name, show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -298,7 +303,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         "cache_cluster_status",
         "cache_nodes",
     ]
-    for key, val in six.iteritems(cc):
+    for key, val in cc.items():
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
             continue
@@ -338,7 +343,9 @@ def get_node_host(name, region=None, key=None, keyid=None, profile=None):
     """
     Get hostname from cache node
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.get_node_host myelasticache
     """
@@ -349,7 +356,7 @@ def get_node_host(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_cache_clusters(name, show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -363,7 +370,9 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
     """
     Get hostname from replication cache group
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.get_group_host myelasticachegroup
     """
@@ -374,7 +383,7 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_replication_groups(name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -391,7 +400,9 @@ def get_all_cache_subnet_groups(
     """
     Return a list of all cache subnet groups with details
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.get_all_subnet_groups region=us-east-1
     """
@@ -422,7 +433,9 @@ def list_cache_subnet_groups(
     """
     Return a list of all cache subnet group names
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.list_subnet_groups region=us-east-1
     """
@@ -438,7 +451,9 @@ def subnet_group_exists(
     """
     Check to see if an ElastiCache subnet group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.subnet_group_exists my-param-group \
                 region=us-east-1
@@ -449,7 +464,7 @@ def subnet_group_exists(
     try:
         ec = conn.describe_cache_subnet_groups(cache_subnet_group_name=name)
         if not ec:
-            msg = "ElastiCache subnet group does not exist in region {0}".format(region)
+            msg = "ElastiCache subnet group does not exist in region {}".format(region)
             log.debug(msg)
             return False
         return True
@@ -480,7 +495,7 @@ def create_subnet_group(
     """
     if not _exactly_one((subnet_ids, subnet_names)):
         raise SaltInvocationError(
-            "Exactly one of either 'subnet_ids' or " "'subnet_names' must be provided."
+            "Exactly one of either 'subnet_ids' or 'subnet_names' must be provided."
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
@@ -500,14 +515,14 @@ def create_subnet_group(
     try:
         ec = conn.create_cache_subnet_group(name, description, subnet_ids)
         if not ec:
-            msg = "Failed to create ElastiCache subnet group {0}".format(name)
+            msg = "Failed to create ElastiCache subnet group {}".format(name)
             log.error(msg)
             return False
         log.info("Created ElastiCache subnet group %s", name)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to create ElastiCache subnet group {0}".format(name)
+        msg = "Failed to create ElastiCache subnet group {}".format(name)
         log.error(msg)
         return False
 
@@ -516,7 +531,9 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None, profile=None
     """
     Get information about a cache subnet group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.get_cache_subnet_group mycache_subnet_group
     """
@@ -527,16 +544,16 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None, profile=None
         csg = csg["DescribeCacheSubnetGroupsResponse"]
         csg = csg["DescribeCacheSubnetGroupsResult"]["CacheSubnetGroups"][0]
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get cache subnet group {0}.".format(name)
+        msg = "Failed to get cache subnet group {}.".format(name)
         log.error(msg)
         log.debug(e)
         return False
     except (IndexError, TypeError, KeyError):
-        msg = "Failed to get cache subnet group {0} (2).".format(name)
+        msg = "Failed to get cache subnet group {} (2).".format(name)
         log.error(msg)
         return False
     ret = {}
-    for key, val in six.iteritems(csg):
+    for key, val in csg.items():
         if key == "CacheSubnetGroupName":
             ret["cache_subnet_group_name"] = val
         elif key == "CacheSubnetGroupDescription":
@@ -560,7 +577,9 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
     """
     Delete an ElastiCache subnet group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.delete_subnet_group my-subnet-group \
                 region=us-east-1
@@ -570,12 +589,12 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
         return False
     try:
         conn.delete_cache_subnet_group(name)
-        msg = "Deleted ElastiCache subnet group {0}.".format(name)
+        msg = "Deleted ElastiCache subnet group {}.".format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to delete ElastiCache subnet group {0}".format(name)
+        msg = "Failed to delete ElastiCache subnet group {}".format(name)
         log.error(msg)
         return False
 
@@ -606,7 +625,9 @@ def create(
     """
     Create a cache cluster.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.create myelasticache 1 redis cache.t1.micro
         cache_security_group_names='["myelasticachesg"]'
@@ -644,7 +665,7 @@ def create(
                 return True
         log.info("Created cache cluster %s.", name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to create cache cluster {0}.".format(name)
+        msg = "Failed to create cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return False
@@ -654,7 +675,9 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
     """
     Delete a cache cluster.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.delete myelasticache
     """
@@ -675,7 +698,7 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
         log.info("Deleted cache cluster %s.", name)
         return True
     except boto.exception.BotoServerError as e:
-        msg = "Failed to delete cache cluster {0}.".format(name)
+        msg = "Failed to delete cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return False
@@ -687,7 +710,9 @@ def create_cache_security_group(
     """
     Create a cache security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.create_cache_security_group myelasticachesg 'My Cache Security Group'
     """
@@ -698,7 +723,7 @@ def create_cache_security_group(
         log.info("Created cache security group %s.", name)
         return True
     else:
-        msg = "Failed to create cache security group {0}.".format(name)
+        msg = "Failed to create cache security group {}.".format(name)
         log.error(msg)
         return False
 
@@ -707,7 +732,9 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None, profile
     """
     Delete a cache security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.delete_cache_security_group myelasticachesg 'My Cache Security Group'
     """
@@ -718,7 +745,7 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None, profile
         log.info("Deleted cache security group %s.", name)
         return True
     else:
-        msg = "Failed to delete cache security group {0}.".format(name)
+        msg = "Failed to delete cache security group {}.".format(name)
         log.error(msg)
         return False
 
@@ -736,7 +763,9 @@ def authorize_cache_security_group_ingress(
     Authorize network ingress from an ec2 security group to a cache security
     group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.authorize_cache_security_group_ingress myelasticachesg myec2sg 879879
     """
@@ -777,7 +806,9 @@ def revoke_cache_security_group_ingress(
     Revoke network ingress from an ec2 security group to a cache security
     group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elasticache.revoke_cache_security_group_ingress myelasticachesg myec2sg 879879
     """

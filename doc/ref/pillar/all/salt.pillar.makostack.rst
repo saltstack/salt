@@ -1,5 +1,5 @@
-salt.pillar.makostack module
-============================
+salt.pillar.makostack
+=====================
 
 .. automodule:: salt.pillar.makostack
     :members:

@@ -1,28 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Tests for our mock_open helper
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import textwrap
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mock import mock_open, patch
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
 
-class MockOpenMixin(object):
+class MockOpenMixin:
     def _get_values(self, binary=False, multifile=False, split=False):
         if split:
             questions = (
@@ -61,7 +54,7 @@ class MockOpenMixin(object):
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No patterns should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -108,7 +101,7 @@ class MockOpenMixin(object):
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No globs should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -136,7 +129,7 @@ class MockOpenMixin(object):
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No globs should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -149,30 +142,26 @@ class MockOpenMixin(object):
             with salt.utils.files.fopen("foo.txt", mode) as self.fh:
                 index = 0
                 for line in self.fh:
-                    assert line == questions[index], "Line {0}: {1}".format(index, line)
+                    assert line == questions[index], "Line {}: {}".format(index, line)
                     index += 1
 
             if multifile:
                 with salt.utils.files.fopen("bar.txt", mode) as self.fh2:
                     index = 0
                     for line in self.fh2:
-                        assert line == answers[index], "Line {0}: {1}".format(
-                            index, line
-                        )
+                        assert line == answers[index], "Line {}: {}".format(index, line)
                         index += 1
 
                 with salt.utils.files.fopen("baz.txt", mode) as self.fh3:
                     index = 0
                     for line in self.fh3:
-                        assert line == answers[index], "Line {0}: {1}".format(
-                            index, line
-                        )
+                        assert line == answers[index], "Line {}: {}".format(index, line)
                         index += 1
 
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No globs should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -225,7 +214,7 @@ class MockOpenMixin(object):
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No globs should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -263,7 +252,7 @@ class MockOpenMixin(object):
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No globs should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -289,7 +278,7 @@ class MockOpenMixin(object):
                 try:
                     with salt.utils.files.fopen("helloworld.txt"):
                         raise Exception("No globs should have matched")
-                except IOError:
+                except OSError:
                     # An IOError is expected here
                     pass
 
@@ -378,12 +367,12 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                 # exception will only be raised if we aren't at EOF already.
                 for line in fh:
                     raise Exception(
-                        "Instead of EOF, read the following from {0}: {1}".format(
+                        "Instead of EOF, read the following from {}: {}".format(
                             handle_name, line
                         )
                     )
-            except IOError as exc:
-                if six.text_type(exc) != "File not open for reading":
+            except OSError as exc:
+                if str(exc) != "File not open for reading":
                     raise
             del fh
 
@@ -490,7 +479,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     with salt.utils.files.fopen("foo.txt") as self.fh:
                         result = self.fh.read()
                         assert result == value, result
-                except IOError:
+                except OSError:
                     # Only raise the caught exception if it wasn't expected
                     # (i.e. if value is not an exception)
                     if not isinstance(value, IOError):
@@ -508,7 +497,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     with salt.utils.files.fopen("foo.txt", "rb") as self.fh:
                         result = self.fh.read()
                         assert result == value, result
-                except IOError:
+                except OSError:
                     # Only raise the caught exception if it wasn't expected
                     # (i.e. if value is not an exception)
                     if not isinstance(value, IOError):
@@ -614,31 +603,13 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     self.fh.write("foo\n")
                 except TypeError:
                     # This exception is expected on Python 3
-                    if not six.PY3:
-                        raise
+                    pass
                 else:
                     # This write should work fine on Python 2
-                    if six.PY3:
-                        raise Exception(
-                            "Should not have been able to write a str to a "
-                            "binary filehandle"
-                        )
-
-                if six.PY2:
-                    # Try with non-ascii unicode. Note that the write above
-                    # should work because the mocked filehandle should attempt
-                    # a .encode() to convert it to a str type. But when writing
-                    # a string with non-ascii unicode, it should raise a
-                    # UnicodeEncodeError, which is what we are testing here.
-                    try:
-                        self.fh.write(self.questions)
-                    except UnicodeEncodeError:
-                        pass
-                    else:
-                        raise Exception(
-                            "Should not have been able to write non-ascii "
-                            "unicode to a binary filehandle"
-                        )
+                    raise Exception(
+                        "Should not have been able to write a str to a "
+                        "binary filehandle"
+                    )
 
         # Test trying to write bytestrings to a non-binary filehandle
         with patch("salt.utils.files.fopen", mock_open()):
@@ -647,31 +618,13 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     self.fh.write(b"foo\n")
                 except TypeError:
                     # This exception is expected on Python 3
-                    if not six.PY3:
-                        raise
+                    pass
                 else:
                     # This write should work fine on Python 2
-                    if six.PY3:
-                        raise Exception(
-                            "Should not have been able to write a bytestring "
-                            "to a non-binary filehandle"
-                        )
-
-                if six.PY2:
-                    # Try with non-ascii unicode. Note that the write above
-                    # should work because the mocked filehandle should attempt
-                    # a .encode() to convert it to a str type. But when writing
-                    # a string with non-ascii unicode, it should raise a
-                    # UnicodeEncodeError, which is what we are testing here.
-                    try:
-                        self.fh.write(self.questions)
-                    except UnicodeEncodeError:
-                        pass
-                    else:
-                        raise Exception(
-                            "Should not have been able to write non-ascii "
-                            "unicode to a binary filehandle"
-                        )
+                    raise Exception(
+                        "Should not have been able to write a bytestring "
+                        "to a non-binary filehandle"
+                    )
 
     def test_writelines(self):
         """
@@ -716,31 +669,13 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     self.fh.writelines(["foo\n"])
                 except TypeError:
                     # This exception is expected on Python 3
-                    if not six.PY3:
-                        raise
+                    pass
                 else:
                     # This write should work fine on Python 2
-                    if six.PY3:
-                        raise Exception(
-                            "Should not have been able to write a str to a "
-                            "binary filehandle"
-                        )
-
-                if six.PY2:
-                    # Try with non-ascii unicode. Note that the write above
-                    # should work because the mocked filehandle should attempt
-                    # a .encode() to convert it to a str type. But when writing
-                    # a string with non-ascii unicode, it should raise a
-                    # UnicodeEncodeError, which is what we are testing here.
-                    try:
-                        self.fh.writelines(self.questions_lines)
-                    except UnicodeEncodeError:
-                        pass
-                    else:
-                        raise Exception(
-                            "Should not have been able to write non-ascii "
-                            "unicode to a binary filehandle"
-                        )
+                    raise Exception(
+                        "Should not have been able to write a str to a "
+                        "binary filehandle"
+                    )
 
         # Test trying to write bytestrings to a non-binary filehandle
         with patch("salt.utils.files.fopen", mock_open()):
@@ -749,31 +684,13 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                     self.fh.write([b"foo\n"])
                 except TypeError:
                     # This exception is expected on Python 3
-                    if not six.PY3:
-                        raise
+                    pass
                 else:
                     # This write should work fine on Python 2
-                    if six.PY3:
-                        raise Exception(
-                            "Should not have been able to write a bytestring "
-                            "to a non-binary filehandle"
-                        )
-
-                if six.PY2:
-                    # Try with non-ascii unicode. Note that the write above
-                    # should work because the mocked filehandle should attempt
-                    # a .encode() to convert it to a str type. But when writing
-                    # a string with non-ascii unicode, it should raise a
-                    # UnicodeEncodeError, which is what we are testing here.
-                    try:
-                        self.fh.writelines(self.questions_lines)
-                    except UnicodeEncodeError:
-                        pass
-                    else:
-                        raise Exception(
-                            "Should not have been able to write non-ascii "
-                            "unicode to a binary filehandle"
-                        )
+                    raise Exception(
+                        "Should not have been able to write a bytestring "
+                        "to a non-binary filehandle"
+                    )
 
     def test_open(self):
         """
@@ -792,11 +709,10 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                 except TypeError:
                     pass
                 else:
-                    if six.PY3:
-                        raise Exception(
-                            "Should not have been able open for binary read with "
-                            "non-bytestring read_data"
-                        )
+                    raise Exception(
+                        "Should not have been able open for binary read with "
+                        "non-bytestring read_data"
+                    )
 
             with patch("salt.utils.files.fopen", mock_open(read_data=b"")):
                 try:
@@ -805,11 +721,10 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                 except TypeError:
                     pass
                 else:
-                    if six.PY3:
-                        raise Exception(
-                            "Should not have been able open for non-binary read "
-                            "with bytestring read_data"
-                        )
+                    raise Exception(
+                        "Should not have been able open for non-binary read "
+                        "with bytestring read_data"
+                    )
         finally:
             # Make sure we destroy the filehandles before the teardown, as they
             # will also try to read and this will generate another exception

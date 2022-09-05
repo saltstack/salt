@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage groups on FreeBSD
 
@@ -8,22 +7,18 @@ Manage groups on FreeBSD
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
-
-log = logging.getLogger(__name__)
-
 
 try:
     import grp
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "group"
@@ -43,7 +38,15 @@ def __virtual__():
 
 def add(name, gid=None, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
+
+    name
+        Name of the new group
+
+    gid
+        Use GID for the new group
 
     CLI Example:
 
@@ -54,13 +57,15 @@ def add(name, gid=None, **kwargs):
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if salt.utils.data.is_true(kwargs.pop("system", False)):
         log.warning("pw_group module does not support the 'system' argument")
+    if "non_unique" in kwargs:
+        log.warning("The non_unique parameter is not supported on this platform.")
     if kwargs:
         log.warning("Invalid kwargs passed to group.add")
 
     cmd = "pw groupadd "
     if gid:
-        cmd += "-g {0} ".format(gid)
-    cmd = "{0} -n {1}".format(cmd, name)
+        cmd += "-g {} ".format(gid)
+    cmd = "{} -n {}".format(cmd, name)
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     return not ret["retcode"]
@@ -76,7 +81,7 @@ def delete(name):
 
         salt '*' group.delete foo
     """
-    ret = __salt__["cmd.run_all"]("pw groupdel {0}".format(name), python_shell=False)
+    ret = __salt__["cmd.run_all"]("pw groupdel {}".format(name), python_shell=False)
 
     return not ret["retcode"]
 
@@ -137,7 +142,7 @@ def chgid(name, gid):
     pre_gid = __salt__["file.group_to_gid"](name)
     if gid == pre_gid:
         return True
-    cmd = "pw groupmod {0} -g {1}".format(name, gid)
+    cmd = "pw groupmod {} -g {}".format(name, gid)
     __salt__["cmd.run"](cmd, python_shell=False)
     post_gid = __salt__["file.group_to_gid"](name)
     if post_gid != pre_gid:
@@ -160,7 +165,7 @@ def adduser(name, username):
     """
     # Note: pw exits with code 65 if group is unknown
     retcode = __salt__["cmd.retcode"](
-        "pw groupmod {0} -m {1}".format(name, username), python_shell=False
+        "pw groupmod {} -m {}".format(name, username), python_shell=False
     )
 
     return not retcode
@@ -186,7 +191,7 @@ def deluser(name, username):
 
     # Note: pw exits with code 65 if group is unknown
     retcode = __salt__["cmd.retcode"](
-        "pw groupmod {0} -d {1}".format(name, username), python_shell=False
+        "pw groupmod {} -d {}".format(name, username), python_shell=False
     )
 
     return not retcode
@@ -200,6 +205,8 @@ def members(name, members_list):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' group.members foo 'user1,user2,user3,...'
 
     Replaces a membership list for a local group 'foo'.
@@ -207,7 +214,7 @@ def members(name, members_list):
     """
 
     retcode = __salt__["cmd.retcode"](
-        "pw groupmod {0} -M {1}".format(name, members_list), python_shell=False
+        "pw groupmod {} -M {}".format(name, members_list), python_shell=False
     )
 
     return not retcode

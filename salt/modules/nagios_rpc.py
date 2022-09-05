@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Check Host & Service status from Nagios via JSON RPC.
 
@@ -6,18 +5,12 @@ Check Host & Service status from Nagios via JSON RPC.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import http.client
 import logging
 
-# Import Salt libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six.moves.http_client
 import salt.utils.http
 from salt.exceptions import CommandExecutionError
-
-# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -94,18 +87,18 @@ def _status_query(query, hostname, enumerate=None, service=None):
         ret["result"] = False
         return ret
 
-    if result.get("status", None) == salt.ext.six.moves.http_client.OK:
+    if result.get("status", None) == http.client.OK:
         try:
             ret["json_data"] = result["dict"]
             ret["result"] = True
         except ValueError:
             ret["error"] = "Please ensure Nagios is running."
-    elif result.get("status", None) == salt.ext.six.moves.http_client.UNAUTHORIZED:
+    elif result.get("status", None) == http.client.UNAUTHORIZED:
         ret["error"] = "Authentication failed. Please check the configuration."
-    elif result.get("status", None) == salt.ext.six.moves.http_client.NOT_FOUND:
-        ret["error"] = "URL {0} was not found.".format(config["url"])
+    elif result.get("status", None) == http.client.NOT_FOUND:
+        ret["error"] = "URL {} was not found.".format(config["url"])
     else:
-        ret["error"] = "Results: {0}".format(result.text)
+        ret["error"] = "Results: {}".format(result.text)
 
     return ret
 

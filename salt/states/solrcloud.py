@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 States for solrcloud alias and collection configuration
 
@@ -6,14 +5,8 @@ States for solrcloud alias and collection configuration
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.json
-
-# Import 3rd party libs
-from salt.ext import six
 
 
 def alias(name, collections, **kwargs):
@@ -46,11 +39,11 @@ def alias(name, collections, **kwargs):
             return ret
 
         if __opts__["test"]:
-            ret["comment"] = 'The alias "{0}" will be updated.'.format(name)
+            ret["comment"] = 'The alias "{}" will be updated.'.format(name)
             ret["result"] = None
         else:
             __salt__["solrcloud.alias_set_collections"](name, collections, **kwargs)
-            ret["comment"] = 'The alias "{0}" has been updated.'.format(name)
+            ret["comment"] = 'The alias "{}" has been updated.'.format(name)
             ret["result"] = True
 
         ret["changes"] = {
@@ -60,11 +53,11 @@ def alias(name, collections, **kwargs):
 
     else:
         if __opts__["test"]:
-            ret["comment"] = 'The alias "{0}" will be created.'.format(name)
+            ret["comment"] = 'The alias "{}" will be created.'.format(name)
             ret["result"] = None
         else:
             __salt__["solrcloud.alias_set_collections"](name, collections, **kwargs)
-            ret["comment"] = 'The alias "{0}" has been created.'.format(name)
+            ret["comment"] = 'The alias "{}" has been created.'.format(name)
             ret["result"] = True
 
         ret["changes"] = {
@@ -114,7 +107,7 @@ def collection(name, options=None, **kwargs):
             "snitch",
         ]
 
-        options = [k for k in six.iteritems(options) if k in updatable_options]
+        options = [k for k in options.items() if k in updatable_options]
 
         for key, value in options:
             if key not in current_options or current_options[key] != value:
@@ -128,13 +121,11 @@ def collection(name, options=None, **kwargs):
         else:
 
             if __opts__["test"]:
-                ret["comment"] = 'Collection options "{0}" will be changed.'.format(
-                    name
-                )
+                ret["comment"] = 'Collection options "{}" will be changed.'.format(name)
                 ret["result"] = None
             else:
                 __salt__["solrcloud.collection_set_options"](name, diff, **kwargs)
-                ret["comment"] = 'Parameters were updated for collection "{0}".'.format(
+                ret["comment"] = 'Parameters were updated for collection "{}".'.format(
                     name
                 )
                 ret["result"] = True
@@ -155,17 +146,16 @@ def collection(name, options=None, **kwargs):
             options, sort_keys=True, indent=4, separators=(",", ": ")
         )
         if __opts__["test"]:
-            ret["comment"] = 'The collection "{0}" will be created.'.format(name)
+            ret["comment"] = 'The collection "{}" will be created.'.format(name)
             ret["result"] = None
         else:
             __salt__["solrcloud.collection_create"](name, options, **kwargs)
-            ret["comment"] = 'The collection "{0}" has been created.'.format(name)
+            ret["comment"] = 'The collection "{}" has been created.'.format(name)
             ret["result"] = True
 
         ret["changes"] = {
             "old": None,
-            "new": str("options=")
-            + new_changes,  # future lint: disable=blacklisted-function
+            "new": "options=" + new_changes,
         }
 
     return ret

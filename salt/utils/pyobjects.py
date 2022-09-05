@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 :maintainer: Evan Borgstrom <evan@borgstrom.ca>
 
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
 
-from salt.ext import six
 from salt.utils.odict import OrderedDict
-from salt.utils.schema import Prepareable
 
 REQUISITES = (
     "listen",
@@ -44,7 +40,7 @@ class InvalidFunction(StateException):
     pass
 
 
-class Registry(object):
+class Registry:
     """
     The StateRegistry holds all of the states that have been created.
     """
@@ -71,16 +67,14 @@ class Registry(object):
 
     @classmethod
     def salt_data(cls):
-        states = OrderedDict(
-            [(id_, states_) for id_, states_ in six.iteritems(cls.states)]
-        )
+        states = OrderedDict([(id_, states_) for id_, states_ in cls.states.items()])
 
         if cls.includes:
             states["include"] = cls.includes
 
         if cls.extends:
             states["extend"] = OrderedDict(
-                [(id_, states_) for id_, states_ in six.iteritems(cls.extends)]
+                [(id_, states_) for id_, states_ in cls.extends.items()]
             )
 
         cls.empty()
@@ -100,7 +94,7 @@ class Registry(object):
         if id_ in attr:
             if state.full_func in attr[id_]:
                 raise DuplicateState(
-                    "A state with id ''{0}'', type ''{1}'' exists".format(
+                    "A state with id ''{}'', type ''{}'' exists".format(
                         id_, state.full_func
                     )
                 )
@@ -108,7 +102,7 @@ class Registry(object):
             attr[id_] = OrderedDict()
 
         # if we have requisites in our stack then add them to the state
-        if len(cls.requisites) > 0:
+        if cls.requisites:
             for req in cls.requisites:
                 if req.requisite not in state.kwargs:
                     state.kwargs[req.requisite] = []
@@ -139,12 +133,12 @@ class Registry(object):
         del cls.requisites[-1]
 
 
-class StateExtend(object):
+class StateExtend:
     def __init__(self, name):
         self.name = name
 
 
-class StateRequisite(object):
+class StateRequisite:
     def __init__(self, requisite, module, id_):
         self.requisite = requisite
         self.module = module
@@ -160,7 +154,7 @@ class StateRequisite(object):
         Registry.pop_requisite()
 
 
-class StateFactory(object):
+class StateFactory:
     """
     The StateFactory is used to generate new States through a natural syntax
 
@@ -183,10 +177,11 @@ class StateFactory(object):
         self.valid_funcs = valid_funcs
 
     def __getattr__(self, func):
-        if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
+        if self.valid_funcs and func not in self.valid_funcs:
             raise InvalidFunction(
-                "The function '{0}' does not exist in the "
-                "StateFactory for '{1}'".format(func, self.module)
+                "The function '{}' does not exist in the StateFactory for '{}'".format(
+                    func, self.module
+                )
             )
 
         def make_state(id_, **kwargs):
@@ -202,7 +197,7 @@ class StateFactory(object):
         return StateRequisite(requisite, self.module, id_)
 
 
-class State(object):
+class State:
     """
     This represents a single item in the state tree
 
@@ -251,14 +246,14 @@ class State(object):
 
         # build our attrs from kwargs. we sort the kwargs by key so that we
         # have consistent ordering for tests
-        return [{k: kwargs[k]} for k in sorted(six.iterkeys(kwargs))]
+        return [{k: kwargs[k]} for k in sorted(kwargs.keys())]
 
     @property
     def full_func(self):
-        return "{0!s}.{1!s}".format(self.module, self.func)
+        return "{!s}.{!s}".format(self.module, self.func)
 
     def __str__(self):
-        return "{0!s} = {1!s}:{2!s}".format(self.id_, self.full_func, self.attrs)
+        return "{!s} = {!s}:{!s}".format(self.id_, self.full_func, self.attrs)
 
     def __call__(self):
         return {self.full_func: self.attrs}
@@ -270,12 +265,13 @@ class State(object):
         Registry.pop_requisite()
 
 
-class SaltObject(object):
+class SaltObject:
     """
     Object based interface to the functions in __salt__
 
     .. code-block:: python
        :linenos:
+
         Salt = SaltObject(__salt__)
         Salt.cmd.run(bar)
     """
@@ -284,17 +280,17 @@ class SaltObject(object):
         self._salt = salt
 
     def __getattr__(self, mod):
-        class __wrapper__(object):
+        class __wrapper__:
             def __getattr__(wself, func):  # pylint: disable=E0213
                 try:
-                    return self._salt["{0}.{1}".format(mod, func)]
+                    return self._salt["{}.{}".format(mod, func)]
                 except KeyError:
                     raise AttributeError
 
         return __wrapper__()
 
 
-class MapMeta(six.with_metaclass(Prepareable, type)):
+class MapMeta(type):
     """
     This is the metaclass for our Map class, used for building data maps based
     off of grain data.
@@ -311,7 +307,7 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
 
     def __init__(cls, name, bases, nmspc):
         cls.__set_attributes__()  # pylint: disable=no-value-for-parameter
-        super(MapMeta, cls).__init__(name, bases, nmspc)
+        super().__init__(name, bases, nmspc)
 
     def __set_attributes__(cls):
         match_info = []
@@ -395,5 +391,5 @@ def need_salt(*a, **k):
     return {}
 
 
-class Map(six.with_metaclass(MapMeta, object)):  # pylint: disable=W0232
+class Map(metaclass=MapMeta):  # pylint: disable=W0232
     __salt__ = {"grains.filter_by": need_salt, "pillar.get": need_salt}

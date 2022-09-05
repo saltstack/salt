@@ -23,7 +23,7 @@ so:
 
 .. code-block:: python
 
-        __salt__['pkg_resource.add_pkg'](ret, name, version)
+        __salt__["pkg_resource.add_pkg"](ret, name, version)
 
 The last thing that should be done before returning is to execute
 :mod:`pkg_resource.sort_pkglist <salt.modules.pkg_resource.sort_pkglist>`. This
@@ -32,7 +32,7 @@ future versions of Salt.
 
 .. code-block:: python
 
-        __salt__['pkg_resource.sort_pkglist'](ret)
+        __salt__["pkg_resource.sort_pkglist"](ret)
 
 
 ``list_pkgs`` returns a dictionary of installed packages, with the keys being
@@ -41,8 +41,7 @@ data:
 
 .. code-block:: python
 
-        {'foo': '1.2.3-4',
-         'bar': '5.6.7-8'}
+        {"foo": "1.2.3-4", "bar": "5.6.7-8"}
 
 
 latest_version
@@ -83,7 +82,8 @@ Deprecated and destined to be removed. For now, should just do the following:
 
 .. code-block:: python
 
-        return __salt__['pkg.latest_version'](name) != ''
+    def myfunc():
+        return __salt__["pkg.latest_version"](name) != ""
 
 
 install
@@ -106,9 +106,7 @@ system.
 
 .. code-block:: python
 
-        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                      pkgs,
-                                                                      sources)
+        pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](name, pkgs, sources)
 
 Two values will be returned to the :strong:`install` function. The first of
 them will be a dictionary. The keys of this dictionary will be package names,
@@ -141,7 +139,8 @@ return the output of ``salt.utils.data.compare_dicts()``:
 
 .. code-block:: python
 
-    return salt.utils.data.compare_dicts(old, new)
+    def myfunc():
+        return salt.utils.data.compare_dicts(old, new)
 
 
 remove
@@ -164,8 +163,8 @@ changed.
 
 .. code-block:: python
 
-        basedir = '/etc/yum.repos.d'
-        __salt__['pkg.list_repos'](basedir)
+        basedir = "/etc/yum.repos.d"
+        __salt__["pkg.list_repos"](basedir)
 
 list_repos
 ^^^^^^^^^^
@@ -173,11 +172,11 @@ Lists the repositories that are currently configured on this system.
 
 .. code-block:: python
 
-    __salt__['pkg.list_repos']()
+    __salt__["pkg.list_repos"]()
 
 Returns a dictionary, in the following format:
 
-.. code-block:: python
+.. code-block:: pycon
 
     {'reponame': 'config_key_1': 'config value 1',
                  'config_key_2': 'config value 2',
@@ -190,12 +189,12 @@ Displays all local configuration for a specific repository.
 
 .. code-block:: python
 
-    __salt__['pkg.get_repo'](repo='myrepo')
+    __salt__["pkg.get_repo"](repo="myrepo")
 
 The information is formatted in much the same way as list_repos, but is
 specific to only one repo.
 
-.. code-block:: python
+.. code-block:: pycon
 
     {'config_key_1': 'config value 1',
      'config_key_2': 'config value 2',
@@ -211,7 +210,7 @@ success.
 
 .. code-block:: python
 
-    __salt__['pkg.del_repo'](repo='myrepo')
+    __salt__["pkg.del_repo"](repo="myrepo")
 
 mod_repo
 ^^^^^^^^
@@ -224,7 +223,7 @@ refer to the documentation for your specific repo manager for specifics.
 
 .. code-block:: python
 
-    __salt__['pkg.mod_repo'](repo='myrepo', url='http://myurl.com/repo')
+    __salt__["pkg.mod_repo"](repo="myrepo", url="http://myurl.com/repo")
 
 
 Low-Package Functions
@@ -251,14 +250,13 @@ packages will be listed.
 
 .. code-block:: python
 
-    installed = __salt__['lowpkg.list_pkgs']('foo', 'bar')
+    installed = __salt__["lowpkg.list_pkgs"]("foo", "bar")
 
 Example output:
 
 .. code-block:: python
 
-        {'foo': '1.2.3-4',
-         'bar': '5.6.7-8'}
+        {"foo": "1.2.3-4", "bar": "5.6.7-8"}
 
 verify
 ^^^^^^
@@ -269,14 +267,18 @@ included.
 
 .. code-block:: python
 
-    installed = __salt__['lowpkg.verify']('httpd')
+    installed = __salt__["lowpkg.verify"]("httpd")
 
 Example output:
 
 .. code-block:: python
 
-    {'/etc/httpd/conf/httpd.conf': {'mismatch': ['size', 'md5sum', 'mtime'],
-                                    'type': 'config'}}
+    {
+        "/etc/httpd/conf/httpd.conf": {
+            "mismatch": ["size", "md5sum", "mtime"],
+            "type": "config",
+        }
+    }
 
 file_list
 ^^^^^^^^^
@@ -285,7 +287,7 @@ specified, then all files for all known packages are returned.
 
 .. code-block:: python
 
-    installed = __salt__['lowpkg.file_list']('httpd', 'apache')
+    installed = __salt__["lowpkg.file_list"]("httpd", "apache")
 
 This function does not return which files belong to which packages; all files
 are returned as one giant list (hence the `file_list` function name. However,
@@ -294,11 +296,10 @@ any errors to the user in a sane manner.
 
 .. code-block:: python
 
-    {'errors': ['package apache is not installed'],
-      'files': ['/etc/httpd',
-                '/etc/httpd/conf',
-                '/etc/httpd/conf.d',
-                '...SNIP...']}
+    {
+        "errors": ["package apache is not installed"],
+        "files": ["/etc/httpd", "/etc/httpd/conf", "/etc/httpd/conf.d", "...SNIP..."],
+    }
 
 file_dict
 ^^^^^^^^^
@@ -307,17 +308,21 @@ specified, then all files for all known packages are returned.
 
 .. code-block:: python
 
-    installed = __salt__['lowpkg.file_dict']('httpd', 'apache', 'kernel')
+    installed = __salt__["lowpkg.file_dict"]("httpd", "apache", "kernel")
 
 Unlike `file_list`, this function will break down which files belong to which
 packages. It will also return errors in the same manner as `file_list`.
 
 .. code-block:: python
 
-    {'errors': ['package apache is not installed'],
-     'packages': {'httpd': ['/etc/httpd',
-                            '/etc/httpd/conf',
-                            '...SNIP...'],
-                  'kernel': ['/boot/.vmlinuz-2.6.32-279.el6.x86_64.hmac',
-                             '/boot/System.map-2.6.32-279.el6.x86_64',
-                             '...SNIP...']}}
+    {
+        "errors": ["package apache is not installed"],
+        "packages": {
+            "httpd": ["/etc/httpd", "/etc/httpd/conf", "...SNIP..."],
+            "kernel": [
+                "/boot/.vmlinuz-2.6.32-279.el6.x86_64.hmac",
+                "/boot/System.map-2.6.32-279.el6.x86_64",
+                "...SNIP...",
+            ],
+        },
+    }

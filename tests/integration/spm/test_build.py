@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm build utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 from tests.support.case import ModuleCase, SPMCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMBuildTest(SPMCase, ModuleCase):
     """
     Validate the spm build command
@@ -38,7 +36,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         self.assertTrue(os.path.isdir(self.config["formula_path"]))
 
     @skipIf(salt.utils.path.which("fallocate") is None, "fallocate not installed")
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_build_big_file(self):
         """
         test spm build with a big file
@@ -52,7 +50,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         self.run_function(
             "cmd.run",
             [
-                "fallocate -l 1G {0}".format(
+                "fallocate -l 1G {}".format(
                     os.path.join(self.formula_sls_dir, "bigfile.txt")
                 )
             ],
@@ -67,7 +65,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         for sls in files:
             self.assertIn(sls, " ".join(get_files))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_build_exclude(self):
         """
         test spm build while excluding directory

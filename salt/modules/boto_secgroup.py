@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Security Groups
 
@@ -44,19 +43,12 @@ Connection module for Amazon Security Groups
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.utils.odict as odict
 import salt.utils.versions
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +96,9 @@ def exists(
     """
     Check to see if a security group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.exists mysecgroup
     """
@@ -157,7 +151,7 @@ def _split_rules(rules):
                 "to_port": to_port,
                 "from_port": from_port,
             }
-            for key, val in six.iteritems(grant):
+            for key, val in grant.items():
                 _rule[key] = val
             split.append(_rule)
     return split
@@ -181,7 +175,7 @@ def _get_group(
     """
     if vpc_name and vpc_id:
         raise SaltInvocationError(
-            "The params 'vpc_id' and 'vpc_name' " "are mutually exclusive."
+            "The params 'vpc_id' and 'vpc_name' are mutually exclusive."
         )
     if vpc_name:
         try:
@@ -262,7 +256,7 @@ def _parse_rules(sg, rules):
                         "cidr_ip": "cidr_ip",
                     }
                     _grant = odict.OrderedDict()
-                    for g_attr, g_attr_map in six.iteritems(g_attrs):
+                    for g_attr, g_attr_map in g_attrs.items():
                         g_val = getattr(grant, g_attr)
                         if not g_val:
                             continue
@@ -300,15 +294,17 @@ def get_all_security_groups(
     documentation
     <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html>`_.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.get_all_security_groups filters='{group-name: mygroup}'
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(groupnames, six.string_types):
+    if isinstance(groupnames, str):
         groupnames = [groupnames]
-    if isinstance(group_ids, six.string_types):
+    if isinstance(group_ids, str):
         groupnames = [group_ids]
 
     interesting = [
@@ -352,7 +348,9 @@ def get_group_id(
     """
     Get a Group ID given a Group Name or Group Name and VPC ID
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.get_group_id mysecgroup
     """
@@ -380,7 +378,9 @@ def convert_to_group_ids(
     Given a list of security groups and a vpc_id, convert_to_group_ids will
     convert all list items in the given list to security group ids.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.convert_to_group_ids mysecgroup vpc-89yhh7h
     """
@@ -401,7 +401,7 @@ def convert_to_group_ids(
             # But... if we're running in test mode, it may just be that the SG is scheduled
             # to be created, and thus WOULD have been there if running "for real"...
             if __opts__["test"]:
-                log.warn(
+                log.warning(
                     "Security Group `%s` could not be resolved to an ID.  This may "
                     "cause a failure when not running in test mode.",
                     group,
@@ -409,11 +409,12 @@ def convert_to_group_ids(
                 return []
             else:
                 raise CommandExecutionError(
-                    "Could not resolve Security Group name "
-                    "{0} to a Group ID".format(group)
+                    "Could not resolve Security Group name {} to a Group ID".format(
+                        group
+                    )
                 )
         else:
-            group_ids.append(six.text_type(group_id))
+            group_ids.append(str(group_id))
     log.debug("security group contents %s post-conversion", group_ids)
     return group_ids
 
@@ -431,7 +432,9 @@ def get_config(
     """
     Get the configuration for a security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.get_config mysecgroup
     """
@@ -479,7 +482,9 @@ def create(
     """
     Create a security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.create mysecgroup 'My Security Group'
     """
@@ -504,7 +509,7 @@ def create(
         log.info("Created security group %s.", name)
         return True
     else:
-        msg = "Failed to create security group {0}.".format(name)
+        msg = "Failed to create security group {}.".format(name)
         log.error(msg)
         return False
 
@@ -522,7 +527,9 @@ def delete(
     """
     Delete a security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.delete mysecgroup
     """
@@ -545,7 +552,7 @@ def delete(
             log.info("Deleted security group %s with id %s.", group.name, group.id)
             return True
         else:
-            msg = "Failed to delete security group {0}.".format(name)
+            msg = "Failed to delete security group {}.".format(name)
             log.error(msg)
             return False
     else:
@@ -574,7 +581,9 @@ def authorize(
     """
     Add a new rule to an existing security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.authorize mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
     """
@@ -620,7 +629,7 @@ def authorize(
                 )
                 return True
             else:
-                msg = "Failed to add rule to security group {0} with id {1}.".format(
+                msg = "Failed to add rule to security group {} with id {}.".format(
                     group.name, group.id
                 )
                 log.error(msg)
@@ -629,7 +638,7 @@ def authorize(
             # if we are trying to add the same rule then we are already in the desired state, return true
             if e.error_code == "InvalidPermission.Duplicate":
                 return True
-            msg = "Failed to add rule to security group {0} with id {1}.".format(
+            msg = "Failed to add rule to security group {} with id {}.".format(
                 group.name, group.id
             )
             log.error(msg)
@@ -661,7 +670,9 @@ def revoke(
     """
     Remove a rule from an existing security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.revoke mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='10.0.0.0/8'
     """
@@ -710,13 +721,13 @@ def revoke(
                 )
                 return True
             else:
-                msg = "Failed to remove rule from security group {0} with id {1}.".format(
+                msg = "Failed to remove rule from security group {} with id {}.".format(
                     group.name, group.id
                 )
                 log.error(msg)
                 return False
         except boto.exception.EC2ResponseError as e:
-            msg = "Failed to remove rule from security group {0} with id {1}.".format(
+            msg = "Failed to remove rule from security group {} with id {}.".format(
                 group.name, group.id
             )
             log.error(msg)
@@ -742,7 +753,7 @@ def _find_vpcs(
     Borrowed from boto_vpc; these could be refactored into a common library
     """
     if all((vpc_id, vpc_name)):
-        raise SaltInvocationError("Only one of vpc_name or vpc_id may be " "provided.")
+        raise SaltInvocationError("Only one of vpc_name or vpc_id may be provided.")
 
     if not any((vpc_id, vpc_name, tags, cidr)):
         raise SaltInvocationError(
@@ -764,8 +775,8 @@ def _find_vpcs(
         filter_parameters["filters"]["tag:Name"] = vpc_name
 
     if tags:
-        for tag_name, tag_value in six.iteritems(tags):
-            filter_parameters["filters"]["tag:{0}".format(tag_name)] = tag_value
+        for tag_name, tag_value in tags.items():
+            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
 
     vpcs = conn.get_all_vpcs(**filter_parameters)
     log.debug(
@@ -821,7 +832,7 @@ def set_tags(
     profile
         amazon profile
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -895,7 +906,7 @@ def delete_tags(
     profile
         amazon profile
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

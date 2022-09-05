@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Retrieve EC2 instance data for minions for ec2_tags and ec2_tags_list
 
@@ -29,7 +28,7 @@ key is included in ``tag_list_key`` it is removed from ec2_tags. If a tag does
 not exist it is still included as an empty list.
 
 
-..note::
+.. note::
     As with any master configuration change, restart the salt-master daemon for
     changes to take effect.
 
@@ -54,23 +53,16 @@ returns a list of key/value pairs for all of the EC2 tags assigned to the
 instance.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-import salt.ext.six as six
-from salt.ext.six.moves import range
-
-# Import salt libs
 from salt.utils.versions import StrictVersion as _StrictVersion
 
-# Import AWS Boto libs
 try:
     import boto.ec2
-    import boto.utils
     import boto.exception
+    import boto.utils
 
     HAS_BOTO = True
 except ImportError:
@@ -142,7 +134,7 @@ def ext_pillar(
         and re.search(r"^i-([0-9a-z]{17}|[0-9a-z]{8})$", grain_instance_id) is None
     ):
         log.error(
-            "External pillar %s, instance-id '%s' is not valid for " "'%s'",
+            "External pillar %s, instance-id '%s' is not valid for '%s'",
             __name__,
             grain_instance_id,
             minion_id,
@@ -154,13 +146,13 @@ def ext_pillar(
         log.error(
             "External pillar %s, tag_match_key '%s' is not valid ",
             __name__,
-            tag_match_key if isinstance(tag_match_key, six.text_type) else "non-string",
+            tag_match_key if isinstance(tag_match_key, str) else "non-string",
         )
         return {}
 
     if tag_match_key and tag_match_value not in valid_tag_match_value:
         log.error(
-            "External pillar %s, tag_value '%s' is not valid must be one " "of %s",
+            "External pillar %s, tag_value '%s' is not valid must be one of %s",
             __name__,
             tag_match_value,
             " ".join(valid_tag_match_value),
@@ -193,9 +185,9 @@ def ext_pillar(
         find_id = minion_id
     elif tag_match_key:
         if tag_match_value == "uqdn":
-            find_filter = {"tag:{0}".format(tag_match_key): minion_id.split(".", 1)[0]}
+            find_filter = {"tag:{}".format(tag_match_key): minion_id.split(".", 1)[0]}
         else:
-            find_filter = {"tag:{0}".format(tag_match_key): minion_id}
+            find_filter = {"tag:{}".format(tag_match_key): minion_id}
         if grain_instance_id:
             # we have an untrusted grain_instance_id, use it to narrow the search
             # even more. Combination will be unique even if uqdn is set.
@@ -277,9 +269,9 @@ def ext_pillar(
 
     # Find a active instance, i.e. ignore terminated and stopped instances
     active_inst = []
-    for inst in range(0, len(instance_data)):
-        if instance_data[inst].state not in ["terminated", "stopped"]:
-            active_inst.append(inst)
+    for idx, inst_data in enumerate(instance_data):
+        if inst_data.state not in ["terminated", "stopped"]:
+            active_inst.append(idx)
 
     valid_inst = len(active_inst)
     if not valid_inst:

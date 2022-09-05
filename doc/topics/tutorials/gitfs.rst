@@ -82,16 +82,15 @@ advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 
 .. warning::
-    pygit2_ is actively developed and `frequently makes
-    non-backwards-compatible API changes <pygit2-version-policy>`_, even in
-    minor releases. It is not uncommon for pygit2_ upgrades to result in errors
-    in Salt. Please take care when upgrading pygit2_, and pay close attention
-    to the changelog_, keeping an eye out for API changes. Errors can be
-    reported on the `SaltStack issue tracker <saltstack-issue-tracker>`_.
+    pygit2_ is actively developed and `frequently makes non-backwards-compatible
+    API changes`_, even in minor releases.  It is not uncommon for pygit2_
+    upgrades to result in errors in Salt. Please take care when upgrading
+    pygit2_, and pay close attention to the changelog_, keeping an eye out for
+    API changes. Errors can be reported on the `SaltStack issue tracker`_.
 
-.. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
-.. _changelog: https://github.com/libgit2/pygit2#changelog
-.. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
+.. _frequently makes non-backwards-compatible API changes: https://www.pygit2.org/install.html#version-numbers
+.. _changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.rst
+.. _SaltStack issue tracker: https://github.com/saltstack/salt/issues
 .. _pygit2-install-instructions: http://www.pygit2.org/install.html
 .. _libgit2: https://libgit2.org/
 .. _libssh2: https://www.libssh2.org/
@@ -532,7 +531,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: 2018.3.0 for all_saltenvs, sodium for fallback
+.. versionadded:: 2018.3.0 for all_saltenvs, 3001 for fallback
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -1012,7 +1011,7 @@ host key in the ``~/.ssh/known_hosts`` file. If the master is also a minion,
 this can be done using the :mod:`ssh.set_known_host
 <salt.modules.ssh.set_known_host>` function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt mymaster ssh.set_known_host user=root hostname=github.com
     mymaster:
@@ -1056,7 +1055,7 @@ Verifying the Fingerprint
 To verify that the correct fingerprint was added, it is a good idea to look it
 up. One way to do this is to use ``nmap``:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ nmap -p 22 github.com --script ssh-hostkey
 
@@ -1138,7 +1137,7 @@ steps to this process:
    all users to fire the event.  Add the following policy to the sudoers file
    on the git server.
 
-   .. code-block:: bash
+   .. code-block:: console
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty

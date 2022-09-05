@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution of arbitrary commands
 ===============================
@@ -20,7 +19,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    '> /var/log/messages/:
+    '> /var/log/messages/':
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -47,7 +46,7 @@ run if **any** of the files do not exist:
 .. note::
 
     The ``creates`` option was added to the cmd state in version 2014.7.0,
-    and made a global requisite in Sodium.
+    and made a global requisite in 3001.
 
 Sometimes when running a command that starts up a daemon, the init script
 doesn't return properly which causes Salt to wait indefinitely for a response.
@@ -232,19 +231,16 @@ To use it, one may pass it like this. Example:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.json
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -317,11 +313,11 @@ def _failout(state, msg):
 
 
 def _is_true(val):
-    if val and six.text_type(val).lower() in ("true", "yes", "1"):
+    if val and str(val).lower() in ("true", "yes", "1"):
         return True
-    elif six.text_type(val).lower() in ("false", "no", "0"):
+    elif str(val).lower() in ("false", "no", "0"):
         return False
-    raise ValueError("Failed parsing boolean value: {0}".format(val))
+    raise ValueError("Failed parsing boolean value: {}".format(val))
 
 
 def wait(
@@ -337,6 +333,8 @@ def wait(
     hide_output=False,
     use_vt=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -405,6 +403,11 @@ def wait(
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+        .. note::
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
+            systems.
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -441,12 +444,26 @@ def wait(
         interactively to the console and the logs.
         This is experimental.
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -469,6 +486,9 @@ def wait_script(
     use_vt=False,
     output_loglevel="debug",
     hide_output=False,
+    success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -540,6 +560,11 @@ def wait_script(
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+        .. note::
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
+            systems.
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -569,12 +594,26 @@ def wait_script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -596,11 +635,24 @@ def run(
     ignore_timeout=False,
     use_vt=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
+
+    .. note::
+
+       The ``**kwargs`` of ``cmd.run`` are passed down to one of the following
+       exec modules:
+
+       * ``cmdmod.run_all``: If used with default ``runas``
+       * ``cmdmod.run_chroot``: If used with non-``root`` value for ``runas``
+
+       For more information on what args are available for either of these,
+       refer to the :ref:`cmdmod documentation <cmdmod-module>`.
 
     name
         The command to execute, remember that the command will execute with the
@@ -615,7 +667,7 @@ def run(
         will run inside a chroot
 
     runas
-        The user name to run the command as
+        The user name (or uid) to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -659,6 +711,11 @@ def run(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
+            systems.
 
     prepend_path
         $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
@@ -718,12 +775,26 @@ def run(
 
         .. versionadded:: 2016.3.6
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     .. note::
 
@@ -763,7 +834,7 @@ def run(
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See documentation."
         return ret
 
     cmd_kwargs = copy.deepcopy(kwargs)
@@ -780,18 +851,18 @@ def run(
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
             "success_retcodes": success_retcodes,
+            "success_stdout": success_stdout,
+            "success_stderr": success_stderr,
         }
     )
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = 'Command "{0}" would have been executed'.format(name)
+        ret["comment"] = 'Command "{}" would have been executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
-            cwd
-        )
+        ret["comment"] = 'Desired working directory "{}" is not available'.format(cwd)
         return ret
 
     # Wow, we passed the test, run this sucker!
@@ -801,12 +872,12 @@ def run(
             cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
     except Exception as err:  # pylint: disable=broad-except
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
         return ret
 
     ret["changes"] = cmd_all
     ret["result"] = not bool(cmd_all["retcode"])
-    ret["comment"] = 'Command "{0}" run'.format(name)
+    ret["comment"] = 'Command "{}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
@@ -830,6 +901,7 @@ def script(
     template=None,
     cwd=None,
     runas=None,
+    password=None,
     shell=None,
     env=None,
     stateful=False,
@@ -841,6 +913,8 @@ def script(
     defaults=None,
     context=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -865,7 +939,33 @@ def script(
         /root
 
     runas
-        The name of the user to run the command as
+        Specify an alternate user to run the command. The default
+        behavior is to run as the user under which Salt is running. If running
+        on a Windows minion you must also use the ``password`` argument, and
+        the target user account must be in the Administrators group.
+
+        .. note::
+
+            For Windows users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
+    password
+
+    .. versionadded:: 3000
+
+        Windows only. Required when specifying ``runas``. This
+        parameter will be ignored on non-Windows platforms.
 
     shell
         The shell to use for execution. The default is set in grains['shell']
@@ -909,6 +1009,11 @@ def script(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
+            systems.
 
     saltenv : ``base``
         The Salt environment to use
@@ -969,13 +1074,26 @@ def script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
     """
     test_name = None
     if not isinstance(stateful, list):
@@ -990,18 +1108,22 @@ def script(
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See documentation."
         return ret
 
     if context and not isinstance(context, dict):
-        ret["comment"] = (
-            "Invalidly-formatted 'context' parameter. Must " "be formed as a dict."
-        )
+        ret[
+            "comment"
+        ] = "Invalidly-formatted 'context' parameter. Must be formed as a dict."
         return ret
     if defaults and not isinstance(defaults, dict):
-        ret["comment"] = (
-            "Invalidly-formatted 'defaults' parameter. Must " "be formed as a dict."
-        )
+        ret[
+            "comment"
+        ] = "Invalidly-formatted 'defaults' parameter. Must be formed as a dict."
+        return ret
+
+    if runas and salt.utils.platform.is_windows() and not password:
+        ret["comment"] = "Must supply a password if runas argument is used on Windows."
         return ret
 
     tmpctx = defaults if defaults else {}
@@ -1012,6 +1134,7 @@ def script(
     cmd_kwargs.update(
         {
             "runas": runas,
+            "password": password,
             "shell": shell or __grains__["shell"],
             "env": env,
             "cwd": cwd,
@@ -1024,6 +1147,8 @@ def script(
             "context": tmpctx,
             "saltenv": __env__,
             "success_retcodes": success_retcodes,
+            "success_stdout": success_stdout,
+            "success_stderr": success_stderr,
         }
     )
 
@@ -1043,20 +1168,18 @@ def script(
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = "Command '{0}' would have been " "executed".format(name)
+        ret["comment"] = "Command '{}' would have been executed".format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
-            cwd
-        )
+        ret["comment"] = 'Desired working directory "{}" is not available'.format(cwd)
         return ret
 
     # Wow, we passed the test, run this sucker!
     try:
         cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
-    except (CommandExecutionError, SaltRenderError, IOError) as err:
-        ret["comment"] = six.text_type(err)
+    except (CommandExecutionError, SaltRenderError, OSError) as err:
+        ret["comment"] = str(err)
         return ret
 
     ret["changes"] = cmd_all
@@ -1065,11 +1188,11 @@ def script(
     else:
         ret["result"] = not bool(cmd_all["retcode"])
     if ret.get("changes", {}).get("cache_error"):
-        ret["comment"] = "Unable to cache script {0} from saltenv " "'{1}'".format(
+        ret["comment"] = "Unable to cache script {} from saltenv '{}'".format(
             source, __env__
         )
     else:
-        ret["comment"] = "Command '{0}' run".format(name)
+        ret["comment"] = "Command '{}' run".format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__["test"] and cmd_all["retcode"] == 0 and ret["changes"]:
@@ -1109,7 +1232,7 @@ def call(
             'name': name
             'changes': {'retval': result},
             'result': True if result is None else bool(result),
-            'comment': result if isinstance(result, six.string_types) else ''
+            'comment': result if isinstance(result, str) else ''
         }
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
@@ -1135,7 +1258,7 @@ def call(
         # result must be JSON serializable else we get an error
         ret["changes"] = {"retval": result}
         ret["result"] = True if result is None else bool(result)
-        if isinstance(result, six.string_types):
+        if isinstance(result, str):
             ret["comment"] = result
         return ret
 
@@ -1185,16 +1308,16 @@ def mod_watch(name, **kwargs):
             return {
                 "name": name,
                 "changes": {},
-                "comment": ("cmd.{0[sfun]} needs a named parameter func").format(
-                    kwargs
-                ),
+                "comment": "cmd.{0[sfun]} needs a named parameter func".format(kwargs),
                 "result": False,
             }
 
     return {
         "name": name,
         "changes": {},
-        "comment": "cmd.{0[sfun]} does not work with the watch requisite, "
-        "please use cmd.wait or cmd.wait_script".format(kwargs),
+        "comment": (
+            "cmd.{0[sfun]} does not work with the watch requisite, "
+            "please use cmd.wait or cmd.wait_script".format(kwargs)
+        ),
         "result": False,
     }

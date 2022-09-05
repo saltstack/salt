@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Lukas Raska <lukas@raska.me>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Libs
 from salt.modules import elasticsearch
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # Import elasticsearch exceptions
 NO_ELASTIC = False
 try:
-    from elasticsearch import TransportError, NotFoundError
+    from elasticsearch import NotFoundError, TransportError
 except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 
@@ -62,7 +54,7 @@ class ElasticsearchTestCase(TestCase):
         Test if status fetch succeeds
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -83,7 +75,7 @@ class ElasticsearchTestCase(TestCase):
         Test if status fetch fails with CommandExecutionError
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -106,7 +98,7 @@ class ElasticsearchTestCase(TestCase):
         Test if node status fetch succeeds
         """
 
-        class MockElasticNodes(object):
+        class MockElasticNodes:
             """
             Mock of Elasticsearch NodesClient
             """
@@ -117,7 +109,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return [{"test": "key"}]
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -134,7 +126,7 @@ class ElasticsearchTestCase(TestCase):
         Test if node status fetch fails with CommandExecutionError
         """
 
-        class MockElasticNodes(object):
+        class MockElasticNodes:
             """
             Mock of Elasticsearch NodesClient
             """
@@ -145,7 +137,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom error", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -164,7 +156,7 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster status health fetch succeeds
         """
 
-        class MockElasticCluster(object):
+        class MockElasticCluster:
             """
             Mock of Elasticsearch ClusterClient
             """
@@ -175,7 +167,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return [{"test": "key"}]
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -192,7 +184,7 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster status health fetch fails with CommandExecutionError
         """
 
-        class MockElasticCluster(object):
+        class MockElasticCluster:
             """
             Mock of Elasticsearch ClusterClient
             """
@@ -203,7 +195,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom error", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -222,7 +214,7 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster stats fetch succeeds
         """
 
-        class MockElasticCluster(object):
+        class MockElasticCluster:
             """
             Mock of Elasticsearch ClusterClient
             """
@@ -233,7 +225,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return [{"test": "key"}]
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -250,7 +242,7 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster stats fetch fails with CommandExecutionError
         """
 
-        class MockElasticCluster(object):
+        class MockElasticCluster:
             """
             Mock of Elasticsearch ClusterClient
             """
@@ -261,7 +253,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom error", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -280,7 +272,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias is created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -291,7 +283,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -308,7 +300,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias creation is not acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -319,7 +311,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -336,7 +328,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias creation fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -347,7 +339,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -372,7 +364,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias is deleted
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -383,7 +375,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -400,7 +392,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias deletion is not acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -411,7 +403,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -428,7 +420,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias deletion fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -439,7 +431,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -460,7 +452,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias exists
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -471,7 +463,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -488,7 +480,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias doesn't exist
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -499,7 +491,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -516,7 +508,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias status obtain fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -527,7 +519,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -548,7 +540,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias can be obtained
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -559,7 +551,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"test": "key"}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -576,7 +568,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias doesn't exist
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -587,7 +579,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -604,7 +596,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias obtain fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -615,7 +607,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -636,7 +628,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document can be created
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -659,7 +651,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document creation fails with CommandExecutionError
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -684,7 +676,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document can be deleted
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -707,7 +699,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document deletion fails with CommandExecutionError
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -736,7 +728,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document status can be obtained
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -757,7 +749,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document doesn't exist
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -778,7 +770,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document exist state fails with CommandExecutionError
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -803,7 +795,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document exists
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -826,7 +818,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document doesn't exit
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -847,7 +839,7 @@ class ElasticsearchTestCase(TestCase):
         Test if document obtain fails with CommandExecutionError
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -872,7 +864,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -883,7 +875,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True, "shards_acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -900,7 +892,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index is created and no shards info is returned
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -911,7 +903,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -928,7 +920,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index is created and shards didn't acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -939,7 +931,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True, "shards_acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -956,7 +948,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index is created and shards didn't acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -967,7 +959,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False, "shards_acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -984,7 +976,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index creation fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -995,7 +987,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1016,7 +1008,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be deleted
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1027,7 +1019,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1044,7 +1036,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index is deleted and shards didn't acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1055,7 +1047,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1072,7 +1064,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index deletion fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1083,7 +1075,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1104,7 +1096,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index exists
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1115,7 +1107,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return True
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1132,7 +1124,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index doesn't exist
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1143,7 +1135,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1160,7 +1152,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias exist state fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1171,7 +1163,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1246,7 +1238,7 @@ class ElasticsearchTestCase(TestCase):
 
     def test_index_put_settings_not_exists(self):
         """
-        Test if settings put executed agains non-existinf index
+        Test if settings put executed against non-existing index
         """
 
         body = {"settings": {"index": {"number_of_replicas": 2}}}
@@ -1288,7 +1280,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be obtained
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1299,7 +1291,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"test": "key"}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1316,7 +1308,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index doesn't exist
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1327,7 +1319,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1344,7 +1336,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index obtain fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1355,7 +1347,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1376,7 +1368,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be opened
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1393,7 +1385,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1410,7 +1402,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index open isn't acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1427,7 +1419,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1444,7 +1436,7 @@ class ElasticsearchTestCase(TestCase):
         Test if alias opening fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1461,7 +1453,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1482,7 +1474,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be closed
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1499,7 +1491,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1516,7 +1508,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index close isn't acked
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1533,7 +1525,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1550,7 +1542,7 @@ class ElasticsearchTestCase(TestCase):
         Test if index closing fails with CommandExecutionError
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1567,7 +1559,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1588,7 +1580,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1599,7 +1591,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1616,7 +1608,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1627,7 +1619,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1644,7 +1636,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1655,7 +1647,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1676,7 +1668,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1687,7 +1679,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1704,7 +1696,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1715,7 +1707,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1732,7 +1724,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1743,7 +1735,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1764,7 +1756,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1775,7 +1767,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"test": "key"}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1794,7 +1786,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1805,7 +1797,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1822,7 +1814,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1833,7 +1825,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1854,7 +1846,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1865,7 +1857,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1882,7 +1874,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1893,7 +1885,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1910,7 +1902,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1921,7 +1913,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1942,7 +1934,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1953,7 +1945,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1970,7 +1962,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -1981,7 +1973,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -1998,7 +1990,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2009,7 +2001,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2030,7 +2022,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2041,7 +2033,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return True
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2058,7 +2050,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2069,7 +2061,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return False
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2086,7 +2078,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2097,7 +2089,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2118,7 +2110,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2129,7 +2121,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"test": "key"}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2148,7 +2140,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2159,7 +2151,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2176,7 +2168,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIndices(object):
+        class MockElasticIndices:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2187,7 +2179,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2208,7 +2200,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2219,7 +2211,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"test": "key"}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2236,7 +2228,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2247,7 +2239,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise NotFoundError
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2264,7 +2256,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2275,7 +2267,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2292,10 +2284,10 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails with CEE on invalid elasticsearch-py version
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             pass
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2314,7 +2306,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2325,7 +2317,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2342,7 +2334,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2353,7 +2345,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2370,7 +2362,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2381,7 +2373,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2400,10 +2392,10 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails with CEE on invalid elasticsearch-py version
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             pass
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2424,7 +2416,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2435,7 +2427,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": True}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2452,7 +2444,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2463,7 +2455,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"acknowledged": False}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2480,7 +2472,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2491,7 +2483,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2510,10 +2502,10 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails with CEE on invalid elasticsearch-py version
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             pass
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2534,7 +2526,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2545,7 +2537,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 return {"test": "key"}
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2564,7 +2556,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             """
             Mock of Elasticsearch IndicesClient
             """
@@ -2575,7 +2567,7 @@ class ElasticsearchTestCase(TestCase):
                 """
                 raise TransportError("custom message", 123)
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2594,10 +2586,10 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails with CEE on invalid elasticsearch-py version
         """
 
-        class MockElasticIngest(object):
+        class MockElasticIngest:
             pass
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2618,7 +2610,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2641,7 +2633,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2662,7 +2654,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2687,7 +2679,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2708,7 +2700,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2729,7 +2721,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2757,7 +2749,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be deleted
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2778,7 +2770,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be deleted but not acked
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2799,7 +2791,7 @@ class ElasticsearchTestCase(TestCase):
         Test if deleting mapping doesn't exist
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """
@@ -2820,7 +2812,7 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping deletion fails
         """
 
-        class MockElastic(object):
+        class MockElastic:
             """
             Mock of Elasticsearch client
             """

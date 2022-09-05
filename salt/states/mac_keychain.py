@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installing of certificates to the keychain
 ==========================================
@@ -11,16 +10,14 @@ Install certificats to the macOS keychain
       keychain.installed:
         - password: test123
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = "keychain"
 
 
@@ -75,9 +72,10 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
                 keychain_password=kwargs.get("keychain_password"),
             )
             if "unable" not in out:
-                ret[
-                    "comment"
-                ] += "Found a certificate with the same name but different hash, removing it.\n"
+                ret["comment"] += (
+                    "Found a certificate with the same name but different hash,"
+                    " removing it.\n"
+                )
                 ret["changes"]["uninstalled"] = friendly_name
 
                 # Reset the certs found
@@ -86,7 +84,7 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
                 ret["result"] = False
                 ret[
                     "comment"
-                ] += "Found an incorrect cert but was unable to uninstall it: {0}".format(
+                ] += "Found an incorrect cert but was unable to uninstall it: {}".format(
                     friendly_name
                 )
                 return ret
@@ -97,9 +95,9 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
             ret["changes"]["installed"] = friendly_name
         else:
             ret["result"] = False
-            ret["comment"] += "Failed to install {0}".format(friendly_name)
+            ret["comment"] += "Failed to install {}".format(friendly_name)
     else:
-        ret["comment"] += "{0} already installed.".format(friendly_name)
+        ret["comment"] += "{} already installed.".format(friendly_name)
 
     return ret
 
@@ -152,9 +150,9 @@ def uninstalled(
             ret["changes"]["uninstalled"] = friendly_name
         else:
             ret["result"] = False
-            ret["comment"] += "Failed to uninstall {0}".format(friendly_name)
+            ret["comment"] += "Failed to uninstall {}".format(friendly_name)
     else:
-        ret["comment"] += "{0} already uninstalled.".format(friendly_name)
+        ret["comment"] += "{} already uninstalled.".format(friendly_name)
 
     return ret
 
@@ -177,18 +175,18 @@ def default_keychain(name, domain="user", user=None):
 
     if not os.path.exists(name):
         ret["result"] = False
-        ret["comment"] += "Keychain not found at {0}".format(name)
+        ret["comment"] += "Keychain not found at {}".format(name)
     else:
         out = __salt__["keychain.get_default_keychain"](user, domain)
 
         if name in out:
-            ret["comment"] += "{0} was already the default keychain.".format(name)
+            ret["comment"] += "{} was already the default keychain.".format(name)
         else:
             out = __salt__["keychain.set_default_keychain"](name, domain, user)
             if len(out) == 0:
                 ret["changes"]["default"] = name
             else:
                 ret["result"] = False
-                ret["comment"] = "Failed to install keychain. {0}".format(out)
+                ret["comment"] = "Failed to install keychain. {}".format(out)
 
     return ret

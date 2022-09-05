@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 etcd Database Module
 
 :maintainer:    SaltStack
 :maturity:      New
-:depends:       python-etcd
+:depends:       python-etcd or etcd3-py
 :platform:      all
 
 .. versionadded:: 2015.5.0
@@ -26,21 +25,30 @@ requires very little. In the example:
 The ``driver`` refers to the etcd module, ``etcd.host`` refers to the host that
 is hosting the etcd database and ``etcd.port`` refers to the port on that host.
 
+In order to choose whether to use etcd API v2 or v3, you can put the following
+configuration option in the same place as your etcd configuration.  This option
+defaults to true, meaning you will use v2 unless you specify otherwise.
+
+.. code-block:: yaml
+
+    etcd.require_v2: True
+
 .. code-block:: yaml
 
     password: sdb://myetcd/mypassword
 
 """
 
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 try:
     import salt.utils.etcd_util
 
-    HAS_LIBS = True
+    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
+        HAS_LIBS = True
+    else:
+        HAS_LIBS = False
 except ImportError:
     HAS_LIBS = False
 
@@ -74,8 +82,7 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     Get a value from the etcd service
     """
     client = _get_conn(profile)
-    result = client.get(key)
-    return result.value
+    return client.get(key)
 
 
 def delete(key, service=None, profile=None):  # pylint: disable=W0613

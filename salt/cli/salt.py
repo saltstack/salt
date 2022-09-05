@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+# isort:skip_file
 
 import os
 import sys
 
-# Import Salt libs
+sys.modules["pkg_resources"] = None
+
 import salt.defaults.exitcodes
-import salt.log
-import salt.utils.job
 import salt.utils.parsers
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -21,13 +17,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltSystemExit,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.args import yamlify_arg
-from salt.utils.verify import verify_log
-
-sys.modules["pkg_resources"] = None
 
 
 class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
@@ -43,11 +33,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         self.parse_args()
 
-        if self.config["log_level"] not in ("quiet",):
-            # Setup file logging!
-            self.setup_logfile_logger()
-            verify_log(self.config)
-
         try:
             # We don't need to bail on config file permission errors
             # if the CLI process is run with the -a flag
@@ -59,7 +44,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 auto_reconnect=True,
             )
         except SaltClientError as exc:
-            self.exit(2, "{0}\n".format(exc))
+            self.exit(2, "{}\n".format(exc))
             return
 
         if self.options.batch or self.options.static:
@@ -95,7 +80,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     os.path.join(self.config["cachedir"], ".root_key"), "r"
                 ) as fp_:
                     kwargs["key"] = fp_.readline()
-            except IOError:
+            except OSError:
                 kwargs["token"] = self.config["token"]
 
         kwargs["delimiter"] = self.options.delimiter
@@ -113,7 +98,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     "\nNOTICE: Too many minions targeted, switching to batch execution."
                 )
                 self.options.batch = self.options.batch_safe_size
-                self._run_batch()
+                try:
+                    self._run_batch()
+                finally:
+                    self.local_client.destroy()
                 return
 
         if getattr(self.options, "return"):
@@ -159,7 +147,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if self.config["async"]:
             jid = self.local_client.cmd_async(**kwargs)
             salt.utils.stringutils.print_cli(
-                "Executed command with job ID: {0}".format(jid)
+                "Executed command with job ID: {}".format(jid)
             )
             return
 
@@ -173,7 +161,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         try:
             if self.options.subset:
                 cmd_func = self.local_client.cmd_subset
-                kwargs["sub"] = self.options.subset
+                kwargs["subset"] = self.options.subset
                 kwargs["cli"] = True
             else:
                 cmd_func = self.local_client.cmd_cli
@@ -236,8 +224,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             EauthAuthenticationError,
             SaltClientError,
         ) as exc:
-            ret = six.text_type(exc)
+            ret = str(exc)
             self._output_ret(ret, "", retcode=1)
+        finally:
+            self.local_client.destroy()
 
     def _preview_target(self):
         """
@@ -284,7 +274,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
             ret = {}
 
-            for res in batch.run():
+            for res, _ in batch.run():
                 ret.update(res)
 
             self._output_ret(ret, "")
@@ -293,19 +283,17 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config["batch"] = self.options.batch
                 batch = salt.cli.batch.Batch(
-                    self.config, eauth=eauth, parser=self.options
+                    self.config, eauth=eauth, _parser=self.options
                 )
             except SaltClientError:
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
             retcode = 0
-            for res in batch.run():
-                for ret in six.itervalues(res):
-                    job_retcode = salt.utils.job.get_retcode(ret)
-                    if job_retcode > retcode:
-                        # Exit with the highest retcode we find
-                        retcode = job_retcode
+            for res, job_retcode in batch.run():
+                if job_retcode > retcode:
+                    # Exit with the highest retcode we find
+                    retcode = job_retcode
             sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
@@ -331,7 +319,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             minion_ret = ret[each_minion]
             if isinstance(minion_ret, dict) and "ret" in minion_ret:
                 minion_ret = ret[each_minion].get("ret")
-            if isinstance(minion_ret, six.string_types) and minion_ret.startswith(
+            if isinstance(minion_ret, str) and minion_ret.startswith(
                 "Minion did not return"
             ):
                 if "Not connected" in minion_ret:
@@ -349,29 +337,29 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         salt.utils.stringutils.print_cli("Summary")
         salt.utils.stringutils.print_cli("-------------------------------------------")
         salt.utils.stringutils.print_cli(
-            "# of minions targeted: {0}".format(return_counter + not_return_counter)
+            "# of minions targeted: {}".format(return_counter + not_return_counter)
         )
         salt.utils.stringutils.print_cli(
-            "# of minions returned: {0}".format(return_counter)
+            "# of minions returned: {}".format(return_counter)
         )
         salt.utils.stringutils.print_cli(
-            "# of minions that did not return: {0}".format(not_return_counter)
+            "# of minions that did not return: {}".format(not_return_counter)
         )
         salt.utils.stringutils.print_cli(
-            "# of minions with errors: {0}".format(len(failed_minions))
+            "# of minions with errors: {}".format(len(failed_minions))
         )
         if self.options.verbose:
             if not_connected_minions:
                 salt.utils.stringutils.print_cli(
-                    "Minions not connected: {0}".format(" ".join(not_connected_minions))
+                    "Minions not connected: {}".format(" ".join(not_connected_minions))
                 )
             if not_response_minions:
                 salt.utils.stringutils.print_cli(
-                    "Minions not responding: {0}".format(" ".join(not_response_minions))
+                    "Minions not responding: {}".format(" ".join(not_response_minions))
                 )
             if failed_minions:
                 salt.utils.stringutils.print_cli(
-                    "Minions with failures: {0}".format(" ".join(failed_minions))
+                    "Minions with failures: {}".format(" ".join(failed_minions))
                 )
         salt.utils.stringutils.print_cli("-------------------------------------------")
 
@@ -420,7 +408,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         ret = {}
         out = ""
         retcode = 0
-        for key, data in six.iteritems(full_ret):
+        for key, data in full_ret.items():
             ret[key] = data["ret"]
             if "out" in data:
                 out = data["out"]
@@ -437,7 +425,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         # if there is a dict with retcode, use that
         if isinstance(ret, dict) and ret.get("retcode", 0) != 0:
             if isinstance(ret.get("retcode", 0), dict):
-                return max(six.itervalues(ret.get("retcode", {0: 0})))
+                return max(ret.get("retcode", {0: 0}).values())
             return ret["retcode"]
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:
@@ -445,8 +433,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         return retcode
 
     def _format_error(self, minion_error):
-        for minion, error_doc in six.iteritems(minion_error):
-            error = "Minion [{0}] encountered exception '{1}'".format(
+        for minion, error_doc in minion_error.items():
+            error = "Minion [{}] encountered exception '{}'".format(
                 minion, error_doc["message"]
             )
         return error
@@ -460,10 +448,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         docs = {}
         if not ret:
             self.exit(2, "No minions found to gather docs from\n")
-        if isinstance(ret, six.string_types):
-            self.exit(2, "{0}\n".format(ret))
+        if isinstance(ret, str):
+            self.exit(2, "{}\n".format(ret))
         for host in ret:
-            if isinstance(ret[host], six.string_types) and (
+            if isinstance(ret[host], str) and (
                 ret[host].startswith("Minion did not return")
                 or ret[host] == "VALUE_TRIMMED"
             ):
@@ -476,6 +464,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 salt.output.display_output({fun: docs[fun]}, "nested", self.config)
         else:
             for fun in sorted(docs):
-                salt.utils.stringutils.print_cli("{0}:".format(fun))
+                salt.utils.stringutils.print_cli("{}:".format(fun))
                 salt.utils.stringutils.print_cli(docs[fun])
                 salt.utils.stringutils.print_cli("")

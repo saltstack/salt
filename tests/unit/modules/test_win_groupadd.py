@@ -1,27 +1,20 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.win_groupadd as win_groupadd
 import salt.utils.win_functions
-
-# Import Salt Testing Libs
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import Other Libs
 # pylint: disable=unused-import
 try:
-    import win32com
     import pythoncom
     import pywintypes
+    import win32com
 
     PYWINTYPES_ERROR = pywintypes.com_error(
         -1234, "Exception occurred.", (0, None, "C", None, 0, -2147352567), None
@@ -32,12 +25,12 @@ except ImportError:
 # pylint: enable=unused-import
 
 
-class MockMember(object):
+class MockMember:
     def __init__(self, name):
         self.ADSPath = name
 
 
-class MockGroupObj(object):
+class MockGroupObj:
     def __init__(self, ads_name, ads_users):
         self._members = [MockMember(x) for x in ads_users]
         self.Name = ads_name
@@ -58,12 +51,10 @@ class MockGroupObj(object):
         """
 
 
-sam_mock = MagicMock(side_effect=lambda x: "HOST\\" + x)
-
-
 @skipIf(
     not HAS_WIN_LIBS,
-    "win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed",
+    "win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are"
+    " installed",
 )
 class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -71,6 +62,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
+        self.sam_mock = MagicMock(side_effect=lambda x: "HOST\\" + x)
         return {win_groupadd: {"__opts__": {"test": False}}}
 
     def test_add(self):
@@ -105,7 +97,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         Test adding a group and encountering an error
         """
 
-        class CompObj(object):
+        class CompObj:
             def Create(self, type, name):
                 raise PYWINTYPES_ERROR
 
@@ -148,7 +140,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         Test removing a group and encountering an error
         """
 
-        class CompObj(object):
+        class CompObj:
             def Delete(self, type, name):
                 raise PYWINTYPES_ERROR
 
@@ -229,7 +221,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertTrue(win_groupadd.adduser("foo", "spongebob"))
 
     def test_adduser_already_exists(self):
@@ -241,7 +233,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertFalse(win_groupadd.adduser("foo", "steve"))
 
     def test_adduser_error(self):
@@ -262,10 +254,13 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=GroupObj("foo", ["WinNT://HOST/steve"]))
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             with TstSuiteLoggingHandler() as handler:
                 self.assertFalse(win_groupadd.adduser("foo", "username"))
-                expected = "ERROR:Failed to add HOST\\username to group foo. An unknown directory object was requested"
+                expected = (
+                    "ERROR:Failed to add HOST\\username to group foo. An unknown"
+                    " directory object was requested"
+                )
                 self.assertIn(expected, handler.messages)
 
     def test_adduser_group_does_not_exist(self):
@@ -283,7 +278,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertTrue(win_groupadd.deluser("foo", "spongebob"))
 
     def test_deluser_no_user(self):
@@ -296,7 +291,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertFalse(win_groupadd.deluser("foo", "spongebob"))
 
     def test_deluser_error(self):
@@ -313,7 +308,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertFalse(win_groupadd.deluser("foo", "spongebob"))
 
     def test_deluser_group_does_not_exist(self):
@@ -330,7 +325,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertTrue(win_groupadd.members("foo", "spongebob,patrick,squidward"))
             obj_group_mock.assert_called_once_with("foo")
 
@@ -346,7 +341,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj("foo", members_list))
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertTrue(win_groupadd.members("foo", "spongebob,patrick,squidward"))
             obj_group_mock.assert_called_once_with("foo")
 
@@ -356,7 +351,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         """
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(
-            salt.utils.win_functions, "get_sam_name", sam_mock
+            salt.utils.win_functions, "get_sam_name", self.sam_mock
         ), patch.object(win_groupadd, "_get_group_object", obj_group_mock):
             self.assertFalse(win_groupadd.members("foo", "spongebob"))
 
@@ -374,7 +369,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertFalse(win_groupadd.members("foo", "patrick"))
             obj_group_mock.assert_called_once_with("foo")
 
@@ -392,7 +387,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
-        ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
+        ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             self.assertFalse(win_groupadd.members("foo", "patrick"))
             obj_group_mock.assert_called_once_with("foo")
 

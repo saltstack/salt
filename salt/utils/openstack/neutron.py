@@ -1,27 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Neutron class
 """
 
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
 import logging
 
 import salt.utils.versions
-
-# Import salt libs
 from salt import exceptions
-
-# Import third party libs
-from salt.ext import six
 
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:
-    from neutronclient.v2_0 import client
     from neutronclient.shell import NeutronShell
+    from neutronclient.v2_0 import client
 
     HAS_NEUTRON = True
 except ImportError:
@@ -73,7 +64,7 @@ def sanitize_neutronclient(kwargs):
         "auth",
     )
     ret = {}
-    for var in six.iterkeys(kwargs):
+    for var in kwargs.keys():
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -103,11 +94,16 @@ class SaltNeutron(NeutronShell):
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "Aluminium",
-            (
-                "The neutron module has been deprecated and will be removed in {version}.  "
-                "Please update to using the neutronng module"
-            ),
+            "Sulfur",
+            "The neutron module has been deprecated and will be removed in {version}.\n"
+            "This includes\n"
+            "* salt.utils.openstack.neutron\n"
+            "* salt.modules.neutron\n"
+            "* salt.pillar.neutron\n"
+            "Please migrate to neutronng.\n"
+            "salt.modules.neutron -> salt.modules.neutronng\n"
+            "salt.pillar.neutron -> salt.pillar.neutronng\n"
+            "Please update to using the neutronng module",
         )
         if not HAS_NEUTRON:
             return None
@@ -209,7 +205,7 @@ class SaltNeutron(NeutronShell):
                 return resource
             if resource.get("name") == name_or_id:
                 ret.append(resource)
-        if len(ret) == 0:
+        if not ret:
             raise exceptions.MinionError("Resource not found.")
         elif len(ret) >= 2:
             raise exceptions.MinionError("Multiple resource matches found.")

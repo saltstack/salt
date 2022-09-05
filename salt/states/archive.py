@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Extract an archive
 
 .. versionadded:: 2014.1.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -17,8 +13,8 @@ import stat
 import string
 import tarfile
 from contextlib import closing
+from urllib.parse import urlparse
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.hashutils
@@ -26,11 +22,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import shlex_quote as _cmd_quote
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 log = logging.getLogger(__name__)
 
@@ -74,14 +65,17 @@ def _checksum_file_path(path):
         if re.match(r"..[/\\]", relpath):
             # path is a local file
             relpath = salt.utils.path.join(
-                "local", os.path.splitdrive(path)[-1].lstrip("/\\"),
+                "local",
+                os.path.splitdrive(path)[-1].lstrip("/\\"),
             )
     except ValueError as exc:
         # The path is on a different drive (Windows)
-        if six.text_type(exc).startswith("path is on"):
+        if str(exc).startswith("path is on"):
             drive, path = os.path.splitdrive(path)
             relpath = salt.utils.path.join(
-                "local", drive.rstrip(":"), path.lstrip("/\\"),
+                "local",
+                drive.rstrip(":"),
+                path.lstrip("/\\"),
             )
         elif str(exc).startswith("Cannot mix UNC"):
             relpath = salt.utils.path.join("unc", path)
@@ -110,7 +104,7 @@ def _update_checksum(path):
                             lines.append(line.rstrip("\n").split(":", 1))
                         except ValueError:
                             continue
-            except (IOError, OSError) as exc:
+            except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     raise
 
@@ -118,10 +112,10 @@ def _update_checksum(path):
                 for line in lines:
                     if line[0] == hash_type:
                         line[1] = hsum
-                    fp_.write("{0}:{1}\n".format(*line))
+                    fp_.write("{}:{}\n".format(*line))
                 if hash_type not in [x[0] for x in lines]:
-                    fp_.write("{0}:{1}\n".format(hash_type, hsum))
-        except (IOError, OSError) as exc:
+                    fp_.write("{}:{}\n".format(hash_type, hsum))
+        except OSError as exc:
             log.warning(
                 "Failed to update checksum for %s: %s",
                 path,
@@ -144,7 +138,7 @@ def _read_cached_checksum(path, form=None):
                     break
             else:
                 return None
-    except (IOError, OSError, ValueError):
+    except (OSError, ValueError):
         return None
     else:
         return {"hash_type": hash_type, "hsum": hsum}
@@ -195,11 +189,12 @@ def extracted(
     enforce_toplevel=True,
     enforce_ownership_on=None,
     archive_format=None,
+    use_etag=False,
     **kwargs
 ):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2016.11.0
+    .. versionchanged:: 2016.11.0,3005
         This state has been rewritten. Some arguments are new to this release
         and will not be available in the 2016.3 release cycle (and earlier).
         Additionally, the **ZIP Archive Handling** section below applies
@@ -434,7 +429,7 @@ def extracted(
         changed but only checksums of the archive will be checked to determine if
         the extraction is required.
 
-        It will try to find a local cache of the ``source`` and check its hash agains
+        It will try to find a local cache of the ``source`` and check its hash against
         the ``source_hash``. If there is no local cache available, for example if you
         set the ``keep_source`` to ``False``,  it will try to find a cached source hash
         file in the Minion archives cache directory.
@@ -446,7 +441,7 @@ def extracted(
 
         .. warning::
             With this argument set to ``True`` Salt will only check for the ``source_hash``
-            agains the local hash of the ``sourse``. So if you, for example, remove extracted
+            against the local hash of the ``sourse``. So if you, for example, remove extracted
             files without clearing the Salt Minion cache next time you execute the state Salt
             will not notice that extraction is required if the hashes are still match.
 
@@ -667,6 +662,15 @@ def extracted(
     .. _zipfile: https://docs.python.org/2/library/zipfile.html
     .. _xz: http://tukaani.org/xz/
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -712,10 +716,9 @@ def extracted(
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if skip_files_list_verify and skip_verify:
-        ret["comment"] = (
-            'Only one of "skip_files_list_verify" and '
-            '"skip_verify" can be set to True'
-        )
+        ret[
+            "comment"
+        ] = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
         return ret
 
     if "keep_source" in kwargs and "keep" in kwargs:
@@ -734,7 +737,7 @@ def extracted(
         keep_source = True
 
     if not _path_is_abs(name):
-        ret["comment"] = "{0} is not an absolute path".format(name)
+        ret["comment"] = "{} is not an absolute path".format(name)
         return ret
     else:
         if not name:
@@ -752,7 +755,7 @@ def extracted(
         # False
         name = name.rstrip(os.sep)
         if os.path.isfile(name):
-            ret["comment"] = "{0} exists and is not a directory".format(name)
+            ret["comment"] = "{} exists and is not a directory".format(name)
             return ret
         # Add back the slash so that file.makedirs properly creates the
         # destdir if it needs to be created. file.makedirs expects a trailing
@@ -762,7 +765,7 @@ def extracted(
         ret["comment"] = "Value for 'if_missing' is not an absolute path"
         return ret
     if not _path_is_abs(enforce_ownership_on):
-        ret["comment"] = "Value for 'enforce_ownership_on' is not an " "absolute path"
+        ret["comment"] = "Value for 'enforce_ownership_on' is not an absolute path"
         return ret
     else:
         if enforce_ownership_on is not None:
@@ -779,12 +782,12 @@ def extracted(
             if not_rel:
                 ret[
                     "comment"
-                ] = "Value for 'enforce_ownership_on' must be within {0}".format(name)
+                ] = "Value for 'enforce_ownership_on' must be within {}".format(name)
                 return ret
 
     if if_missing is not None and os.path.exists(if_missing):
         ret["result"] = True
-        ret["comment"] = "Path {0} exists".format(if_missing)
+        ret["comment"] = "Path {} exists".format(if_missing)
         return ret
 
     if user or group:
@@ -797,7 +800,7 @@ def extracted(
         if user:
             uid = __salt__["file.user_to_uid"](user)
             if uid == "":
-                ret["comment"] = "User {0} does not exist".format(user)
+                ret["comment"] = "User {} does not exist".format(user)
                 return ret
         else:
             uid = -1
@@ -805,7 +808,7 @@ def extracted(
         if group:
             gid = __salt__["file.group_to_gid"](group)
             if gid == "":
-                ret["comment"] = "Group {0} does not exist".format(group)
+                ret["comment"] = "Group {} does not exist".format(group)
                 return ret
         else:
             gid = -1
@@ -830,10 +833,10 @@ def extracted(
 
     if not source_match:
         ret["result"] = False
-        ret["comment"] = 'Invalid source "{0}"'.format(source)
+        ret["comment"] = 'Invalid source "{}"'.format(source)
         return ret
 
-    urlparsed_source = _urlparse(source_match)
+    urlparsed_source = urlparse(source_match)
     urlparsed_scheme = urlparsed_source.scheme
     urlparsed_path = os.path.join(
         urlparsed_source.netloc, urlparsed_source.path
@@ -852,7 +855,7 @@ def extracted(
         # Get rid of "file://" from start of source_match
         source_match = os.path.realpath(os.path.expanduser(urlparsed_path))
         if not os.path.isfile(source_match):
-            ret["comment"] = "Source file '{0}' does not exist".format(
+            ret["comment"] = "Source file '{}' does not exist".format(
                 salt.utils.url.redact_http_basic_auth(source_match)
             )
             return ret
@@ -864,7 +867,7 @@ def extracted(
             ret["comment"] = (
                 "Could not guess archive_format from the value of the "
                 "'source' argument. Please set this archive_format to one "
-                "of the following: {0}".format(", ".join(valid_archive_formats))
+                "of the following: {}".format(", ".join(valid_archive_formats))
             )
             return ret
     try:
@@ -873,16 +876,17 @@ def extracted(
         pass
     if archive_format not in valid_archive_formats:
         ret["comment"] = (
-            "Invalid archive_format '{0}'. Either set it to a supported "
-            "value ({1}) or remove this argument and the archive format will "
+            "Invalid archive_format '{}'. Either set it to a supported "
+            "value ({}) or remove this argument and the archive format will "
             "be guessed based on file extension.".format(
-                archive_format, ", ".join(valid_archive_formats),
+                archive_format,
+                ", ".join(valid_archive_formats),
             )
         )
         return ret
 
-    if options is not None and not isinstance(options, six.string_types):
-        options = six.text_type(options)
+    if options is not None and not isinstance(options, str):
+        options = str(options)
 
     strip_components = None
     if options and archive_format == "tar":
@@ -954,22 +958,22 @@ def extracted(
     if options and archive_format not in supports_options:
         ret["comment"] = (
             "The 'options' argument is only compatible with the following "
-            "archive formats: {0}".format(", ".join(supports_options))
+            "archive formats: {}".format(", ".join(supports_options))
         )
         return ret
 
     if trim_output:
         if trim_output is True:
             trim_output = 100
-        elif not isinstance(trim_output, (bool, six.integer_types)):
+        elif not isinstance(trim_output, (bool, int)):
             try:
                 # Try to handle cases where trim_output was passed as a
                 # string-ified integer.
                 trim_output = int(trim_output)
             except TypeError:
-                ret["comment"] = (
-                    "Invalid value for trim_output, must be True/False or an " "integer"
-                )
+                ret[
+                    "comment"
+                ] = "Invalid value for trim_output, must be True/False or an integer"
                 return ret
 
     if source_hash:
@@ -1004,7 +1008,7 @@ def extracted(
         # If file was not cached we still could have a pre-existing hash file which would be
         # generated if update_source was set to True.
         else:
-            parsed = _urlparse(source_match)
+            parsed = urlparse(source_match)
             # This path would be generated if this file would be cached by file.cached state
             # We have to mimic it due to questionable logic in the _checksum_file_path function
             expected_cached_path = salt.utils.path.join(
@@ -1016,7 +1020,7 @@ def extracted(
             if existing_cached_source_sum["hsum"] == source_sum["hsum"]:
                 ret["result"] = None if __opts__["test"] else True
                 ret["comment"] = (
-                    "Archive {0} existing source sum is the same as the "
+                    "Archive {} existing source sum is the same as the "
                     "expected one and skip_files_list_verify argument was set "
                     "to True. Extraction is not needed".format(
                         salt.utils.url.redact_http_basic_auth(source_match)
@@ -1032,7 +1036,7 @@ def extracted(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "Archive {0} would be cached (if necessary) and checked to "
+                "Archive {} would be cached (if necessary) and checked to "
                 "discover if extraction is needed".format(
                     salt.utils.url.redact_http_basic_auth(source_match)
                 )
@@ -1046,7 +1050,7 @@ def extracted(
             # file states would be unavailable.
             ret[
                 "comment"
-            ] = "Unable to cache {0}, file.cached state not available".format(
+            ] = "Unable to cache {}, file.cached state not available".format(
                 salt.utils.url.redact_http_basic_auth(source_match)
             )
             return ret
@@ -1058,9 +1062,10 @@ def extracted(
                 source_hash_name=source_hash_name,
                 skip_verify=skip_verify,
                 saltenv=__env__,
+                use_etag=use_etag,
             )
         except Exception as exc:  # pylint: disable=broad-except
-            msg = "Failed to cache {0}: {1}".format(
+            msg = "Failed to cache {}: {}".format(
                 salt.utils.url.redact_http_basic_auth(source_match), exc.__str__()
             )
             log.exception(msg)
@@ -1091,7 +1096,7 @@ def extracted(
         # implicitly enabled by setting the "options" argument.
         try:
             encrypted_zip = __salt__["archive.is_encrypted"](
-                cached, clean=False, saltenv=__env__
+                cached, clean=False, saltenv=__env__, use_etag=use_etag
             )
         except CommandExecutionError:
             # This would happen if archive_format=zip and the source archive is
@@ -1100,7 +1105,7 @@ def extracted(
         else:
             if encrypted_zip:
                 ret["comment"] = (
-                    "Archive {0} is password-protected, but no password was "
+                    "Archive {} is password-protected, but no password was "
                     "specified. Please set the 'password' argument.".format(
                         salt.utils.url.redact_http_basic_auth(source_match)
                     )
@@ -1115,6 +1120,7 @@ def extracted(
             strip_components=strip_components,
             clean=False,
             verbose=True,
+            use_etag=use_etag,
         )
     except CommandExecutionError as exc:
         contents = None
@@ -1123,7 +1129,7 @@ def extracted(
             errors.append("'if_missing' must be set")
         if not enforce_ownership_on and (user or group):
             errors.append(
-                "Ownership cannot be managed without setting " "'enforce_ownership_on'."
+                "Ownership cannot be managed without setting 'enforce_ownership_on'."
             )
         msg = exc.strerror
         if errors:
@@ -1140,15 +1146,14 @@ def extracted(
                 )
             else:
                 msg += (
-                    "The following workarounds must be used for this state to "
-                    "proceed"
+                    "The following workarounds must be used for this state to proceed"
                 )
-            msg += " (assuming the source file is a valid {0} archive):\n".format(
+            msg += " (assuming the source file is a valid {} archive):\n".format(
                 archive_format
             )
 
             for error in errors:
-                msg += "\n- {0}".format(error)
+                msg += "\n- {}".format(error)
         ret["comment"] = msg
         return ret
 
@@ -1163,11 +1168,13 @@ def extracted(
             "Archive does not have a single top-level directory. "
             "To allow this archive to be extracted, set "
             "'enforce_toplevel' to False. To avoid a "
-            "'{0}-bomb' it may also be advisable to set a "
+            "'{}-bomb' it may also be advisable to set a "
             "top-level directory by adding it to the 'name' "
-            "value (for example, setting 'name' to {1} "
-            "instead of {2}).".format(
-                archive_format, os.path.join(name, "some_dir"), name,
+            "value (for example, setting 'name' to {} "
+            "instead of {}).".format(
+                archive_format,
+                os.path.join(name, "some_dir"),
+                name,
             )
         )
         return ret
@@ -1201,7 +1208,7 @@ def extracted(
                 else:
                     ret["comment"] = (
                         "Failed to check for existence of if_missing path "
-                        "({0}): {1}".format(if_missing, exc.__str__())
+                        "({}): {}".format(if_missing, exc.__str__())
                     )
                     return ret
         else:
@@ -1235,10 +1242,10 @@ def extracted(
 
             if incorrect_type:
                 incorrect_paths = "\n\n" + "\n".join(
-                    ["- {0}".format(x) for x in incorrect_type]
+                    ["- {}".format(x) for x in incorrect_type]
                 )
                 ret["comment"] = (
-                    "The below paths (relative to {0}) exist, but are the "
+                    "The below paths (relative to {}) exist, but are the "
                     "incorrect type (file instead of directory, symlink "
                     "instead of file, etc.).".format(name)
                 )
@@ -1247,7 +1254,7 @@ def extracted(
                     ret["comment"] += (
                         " Since the 'clean' option is enabled, the "
                         "destination paths would be cleared and the "
-                        "archive would be extracted.{0}".format(incorrect_paths)
+                        "archive would be extracted.{}".format(incorrect_paths)
                     )
                     return ret
                 if __opts__["test"] and clean_parent and contents is not None:
@@ -1266,7 +1273,7 @@ def extracted(
                         ret["comment"] += (
                             " To proceed with extraction, set 'force' to "
                             "True. Note that this will remove these paths "
-                            "before extracting.{0}".format(incorrect_paths)
+                            "before extracting.{}".format(incorrect_paths)
                         )
                         return ret
                     else:
@@ -1290,7 +1297,7 @@ def extracted(
                                 "following errors were observed:\n"
                             )
                             for error in errors:
-                                msg += "\n- {0}".format(error)
+                                msg += "\n- {}".format(error)
                             ret["comment"] = msg
                             return ret
 
@@ -1313,9 +1320,7 @@ def extracted(
                 source_match, source_sum["hsum"]
             )
             if not ret["result"]:
-                ret[
-                    "comment"
-                ] = "{0} does not match the desired source_hash {1}".format(
+                ret["comment"] = "{} does not match the desired source_hash {}".format(
                     salt.utils.url.redact_http_basic_auth(source_match),
                     source_sum["hsum"],
                 )
@@ -1323,7 +1328,7 @@ def extracted(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Archive {0} would be extracted to {1}".format(
+            ret["comment"] = "Archive {} would be extracted to {}".format(
                 salt.utils.url.redact_http_basic_auth(source_match), name
             )
             if clean and contents is not None:
@@ -1342,14 +1347,14 @@ def extracted(
                 )
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
-                    errors.append(six.text_type(exc))
+                    errors.append(str(exc))
             if errors:
                 msg = (
                     "Unable to remove the directory {}. The following "
                     "errors were observed:\n".format(name)
                 )
                 for error in errors:
-                    msg += "\n- {0}".format(error)
+                    msg += "\n- {}".format(error)
                 ret["comment"] = msg
                 return ret
 
@@ -1372,7 +1377,7 @@ def extracted(
                     "errors were observed:\n"
                 )
                 for error in errors:
-                    msg += "\n- {0}".format(error)
+                    msg += "\n- {}".format(error)
                 ret["comment"] = msg
                 return ret
 
@@ -1445,7 +1450,7 @@ def extracted(
                                 # pipe it to tar for extraction.
                                 cmd = "xz --decompress --stdout {0} | tar xvf -"
                                 results = __salt__["cmd.run_all"](
-                                    cmd.format(_cmd_quote(cached)),
+                                    cmd.format(shlex.quote(cached)),
                                     cwd=name,
                                     python_shell=True,
                                 )
@@ -1571,9 +1576,7 @@ def extracted(
             recurse.append("group")
         recurse_str = ", ".join(recurse)
 
-        owner_changes = dict(
-            [(x, y) for x, y in (("user", user), ("group", group)) if y]
-        )
+        owner_changes = {x: y for x, y in (("user", user), ("group", group)) if y}
         for dirname in enforce_dirs:
             full_path = os.path.join(name, dirname)
             if not os.path.isdir(full_path):
@@ -1640,8 +1643,9 @@ def extracted(
             if created_destdir:
                 ret["changes"]["directories_created"] = [name]
             ret["changes"]["extracted_files"] = files
-            ret["comment"] = "{0} extracted to {1}".format(
-                salt.utils.url.redact_http_basic_auth(source_match), name,
+            ret["comment"] = "{} extracted to {}".format(
+                salt.utils.url.redact_http_basic_auth(source_match),
+                name,
             )
             _add_explanation(ret, source_hash_trigger, contents_missing)
             ret["comment"] += ". Output was trimmed to {} number of lines".format(
@@ -1651,21 +1655,21 @@ def extracted(
 
         else:
             ret["result"] = False
-            ret["comment"] = "No files were extracted from {0}".format(
+            ret["comment"] = "No files were extracted from {}".format(
                 salt.utils.url.redact_http_basic_auth(source_match)
             )
     else:
         ret["result"] = True
         if if_missing_path_exists:
-            ret["comment"] = "{0} exists".format(if_missing)
+            ret["comment"] = "{} exists".format(if_missing)
         else:
             ret["comment"] = "All files in archive are already present"
         if __opts__["test"]:
             if ret["changes"].get("updated ownership"):
                 ret["result"] = None
-                ret["comment"] += (
-                    ". Ownership would be updated on one or more " "files/directories."
-                )
+                ret[
+                    "comment"
+                ] += ". Ownership would be updated on one or more files/directories."
 
     if enforce_missing:
         if not if_missing:
@@ -1682,7 +1686,7 @@ def extracted(
             "paths were missing:\n"
         )
         for item in enforce_missing:
-            ret["comment"] += "\n- {0}".format(item)
+            ret["comment"] += "\n- {}".format(item)
 
     if enforce_failed:
         ret["result"] = False
@@ -1691,7 +1695,7 @@ def extracted(
             "unable to change ownership on the following paths:\n"
         )
         for item in enforce_failed:
-            ret["comment"] += "\n- {0}".format(item)
+            ret["comment"] += "\n- {}".format(item)
 
     if not source_is_local:
         if keep_source:

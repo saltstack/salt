@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 # This software released into the public domain. Anyone is free to copy,
 # modify, publish, use, compile, sell, or distribute this software,
 # either in source code form or as a compiled binary, for any purpose,
 # commercial or non-commercial, and by any means.
 
-from __future__ import absolute_import
-
 import socket
 import ctypes
 import os
 from salt._compat import ipaddress
-import salt.ext.six as six
 
 
 class sockaddr(ctypes.Structure):
@@ -19,6 +15,7 @@ class sockaddr(ctypes.Structure):
                 ("ipv4_addr", ctypes.c_byte * 4),
                 ("ipv6_addr", ctypes.c_byte * 16),
                 ("__pad2", ctypes.c_ulong)]
+
 
 if hasattr(ctypes, 'windll'):
     WSAStringToAddressA = ctypes.windll.ws2_32.WSAStringToAddressA
@@ -37,9 +34,9 @@ def inet_pton(address_family, ip_string):
     # This will catch IP Addresses such as 10.1.2
     if address_family == socket.AF_INET:
         try:
-            ipaddress.ip_address(six.text_type(ip_string))
+            ipaddress.ip_address(str(ip_string))
         except ValueError:
-            raise socket.error('illegal IP address string passed to inet_pton')
+            raise OSError('illegal IP address string passed to inet_pton')
         return socket.inet_aton(ip_string)
 
     # Verify IP Address
@@ -62,14 +59,14 @@ def inet_pton(address_family, ip_string):
             ctypes.byref(addr),
             ctypes.byref(addr_size)
     ) != 0:
-        raise socket.error(ctypes.FormatError())
+        raise OSError(ctypes.FormatError())
 
     if address_family == socket.AF_INET:
         return ctypes.string_at(addr.ipv4_addr, 4)
     if address_family == socket.AF_INET6:
         return ctypes.string_at(addr.ipv6_addr, 16)
 
-    raise socket.error('unknown address family')
+    raise OSError('unknown address family')
 
 
 def inet_ntop(address_family, packed_ip):
@@ -81,14 +78,14 @@ def inet_ntop(address_family, packed_ip):
 
     if address_family == socket.AF_INET:
         if len(packed_ip) != ctypes.sizeof(addr.ipv4_addr):
-            raise socket.error('packed IP wrong length for inet_ntoa')
+            raise OSError('packed IP wrong length for inet_ntoa')
         ctypes.memmove(addr.ipv4_addr, packed_ip, 4)
     elif address_family == socket.AF_INET6:
         if len(packed_ip) != ctypes.sizeof(addr.ipv6_addr):
-            raise socket.error('packed IP wrong length for inet_ntoa')
+            raise OSError('packed IP wrong length for inet_ntoa')
         ctypes.memmove(addr.ipv6_addr, packed_ip, 16)
     else:
-        raise socket.error('unknown address family')
+        raise OSError('unknown address family')
 
     if WSAAddressToStringA(
             ctypes.byref(addr),
@@ -97,9 +94,10 @@ def inet_ntop(address_family, packed_ip):
             ip_string,
             ctypes.byref(ip_string_size)
     ) != 0:
-        raise socket.error(ctypes.FormatError())
+        raise OSError(ctypes.FormatError())
 
     return ip_string[:ip_string_size.value - 1]
+
 
 # Adding our two functions to the socket library
 if os.name == 'nt':

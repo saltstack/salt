@@ -1,42 +1,25 @@
-# -*- coding: utf-8 -*-
-
 # TODO: Update skipped tests to expect dictionary results from the execution
 #       module functions.
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 import random
 import string
-import sys
 
-# pylint: disable=3rd-party-module-not-gated
-import pkg_resources
-from pkg_resources import DistributionNotFound
+import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+from pkg_resources import (  # pylint: disable=3rd-party-module-not-gated
+    DistributionNotFound,
+)
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_vpc as boto_vpc
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-# pylint: enable=3rd-party-module-not-gated
-
 
 # pylint: disable=no-name-in-module,unused-import
 try:
@@ -74,7 +57,7 @@ except ImportError:
         return stub_function
 
 
-# pylint: enable=import-error,no-name-in-module,unused-import
+# pylint: enable=no-name-in-module,unused-import
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0
@@ -130,7 +113,7 @@ def _get_moto_version():
     Returns the moto version
     """
     try:
-        return LooseVersion(six.text_type(moto.__version__))
+        return LooseVersion(str(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution("moto").version)
@@ -155,8 +138,7 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version() if HAS_BOTO else "None"
     ),
 )
@@ -178,7 +160,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        super(BotoVpcTestCaseBase, self).setUp()
+        super().setUp()
         boto_vpc.__init__(self.opts)
         delattr(self, "opts")
         # connections keep getting cached from prior tests, can't find the
@@ -199,7 +181,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn3
 
 
-class BotoVpcTestCaseMixin(object):
+class BotoVpcTestCaseMixin:
     conn = None
 
     def _create_vpc(self, name=None, tags=None):
@@ -218,7 +200,7 @@ class BotoVpcTestCaseMixin(object):
     def _create_subnet(
         self,
         vpc_id,
-        cidr_block="10.0.0.0/25",
+        cidr_block="10.0.0.0/26",
         name=None,
         tags=None,
         availability_zone=None,
@@ -343,10 +325,6 @@ class BotoVpcTestCaseMixin(object):
         return rtbl
 
 
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-)
 class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     """
     TestCase for salt.modules.boto_vpc module
@@ -552,7 +530,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         with self.assertRaisesRegex(
             SaltInvocationError,
-            "At least one of the following must be provided: vpc_id, vpc_name, cidr or tags.",
+            "At least one of the following must be provided: vpc_name, cidr or tags.",
         ):
             boto_vpc.get_id(**conn_parameters)
 
@@ -664,7 +642,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_properties = dict(
             id=vpc.id,
-            cidr_block=six.text_type(cidr_block),
+            cidr_block=str(cidr_block),
             is_default=is_default,
             state="available",
             tags={"Name": "test", "test": "testvalue"},
@@ -704,34 +682,28 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue("error" in describe_result)
 
     @mock_ec2_deprecated
-    def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(
+    def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_returns_the_default_vpc(
         self,
     ):
         """
         Tests describing vpc without vpc id
         """
-        with self.assertRaisesRegex(
-            SaltInvocationError, "A valid vpc id or name needs to be specified."
-        ):
-            boto_vpc.describe(vpc_id=None, **conn_parameters)
+        describe_vpc = boto_vpc.describe(vpc_id=None, **conn_parameters)
+
+        self.assertTrue(describe_vpc["vpc"]["is_default"])
 
 
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -775,7 +747,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_association = boto_vpc.get_subnet_association(
             [subnet_a.id, subnet_b.id], **conn_parameters
         )
-        self.assertEqual(set(subnet_association["vpc_ids"]), set([vpc_a.id, vpc_b.id]))
+        self.assertEqual(set(subnet_association["vpc_ids"]), {vpc_a.id, vpc_b.id})
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(
@@ -986,7 +958,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(
             set(describe_subnet_results["subnet"].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1001,7 +973,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(describe_subnet_results["subnet"], None)
 
-    @skipIf(True, "Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnet_by_name_for_existing_subnet_returns_correct_data(
         self,
@@ -1017,7 +988,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(
             set(describe_subnet_results["subnet"].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1032,7 +1003,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(describe_subnet_results["subnet"], None)
 
-    @skipIf(True, "Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnets_by_id_for_existing_subnet_returns_correct_data(self):
         """
@@ -1040,7 +1010,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
         subnet1 = self._create_subnet(vpc.id)
-        subnet2 = self._create_subnet(vpc.id)
+        subnet2 = self._create_subnet(vpc.id, cidr_block="10.0.0.64/26")
 
         describe_subnet_results = boto_vpc.describe_subnets(
             region=region,
@@ -1051,10 +1021,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
-    @skipIf(True, "Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnets_by_name_for_existing_subnets_returns_correct_data(
         self,
@@ -1064,7 +1033,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, name="subnet1")
-        self._create_subnet(vpc.id, name="subnet2")
+        self._create_subnet(vpc.id, name="subnet2", cidr_block="10.0.0.64/26")
 
         describe_subnet_results = boto_vpc.describe_subnets(
             region=region,
@@ -1075,7 +1044,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1097,14 +1066,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1170,14 +1134,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1236,8 +1195,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1289,18 +1247,13 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1514,14 +1467,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1832,8 +1780,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1849,8 +1799,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, network_acl_name="test", **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, network_acl_name="test", **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1866,8 +1818,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1882,8 +1836,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, "fake", **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, "fake", **conn_parameters
+            )
         )
 
         self.assertFalse(network_acl_creation_and_association_result)
@@ -1959,8 +1915,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -2241,18 +2196,13 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2270,6 +2220,22 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                 peer_vpc_id=other_vpc.id,
                 **conn_parameters
             )
+        )
+
+    @mock_ec2_deprecated
+    def test_request_vpc_peering_peer_region(self):
+        """
+        Run with 2 vpc ids with peer_region set
+        and returns a message
+        """
+        my_vpc = self._create_vpc()
+        other_vpc = self._create_vpc()
+        assert "msg" in boto_vpc.request_vpc_peering_connection(
+            name="my_peering",
+            requester_vpc_id=my_vpc.id,
+            peer_vpc_id=other_vpc.id,
+            peer_region="test_region",
+            **conn_parameters
         )
 
     @mock_ec2_deprecated
@@ -2294,3 +2260,12 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             peer_vpc_id=other_vpc.id,
             **conn_parameters
         )
+
+
+class BotoVpcTestDeprecation(TestCase):
+    def test_deprecation_58636(self):
+        try:
+            boto_vpc.describe_route_table
+        except AttributeError:
+            return
+        raise AttributeError("describe_route_table should be deprecated")

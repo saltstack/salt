@@ -1,5 +1,5 @@
-salt.states.nexus module
-========================
+salt.states.nexus
+=================
 
 .. automodule:: salt.states.nexus
     :members:

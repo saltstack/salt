@@ -1,5 +1,5 @@
-salt.returners.appoptics_return module
-======================================
+salt.returners.appoptics_return
+===============================
 
 .. automodule:: salt.returners.appoptics_return
     :members:

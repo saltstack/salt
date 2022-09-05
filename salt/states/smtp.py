@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Sending Messages via SMTP
 ==========================
@@ -16,8 +15,6 @@ protocol
         - profile: my-smtp-account
         - recipient: admins@example.com
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -66,7 +63,10 @@ def send_msg(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Need to send message to {0}: {1}".format(recipient, name,)
+        ret["comment"] = "Need to send message to {}: {}".format(
+            recipient,
+            name,
+        )
         return ret
     command = __salt__["smtp.send_msg"](
         message=name,
@@ -86,8 +86,8 @@ def send_msg(
                 recipient, name, atts
             )
         else:
-            ret["comment"] = "Sent message to {0}: {1}".format(recipient, name)
+            ret["comment"] = "Sent message to {}: {}".format(recipient, name)
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to send message to {0}: {1}".format(recipient, name)
+        ret["comment"] = "Unable to send message to {}: {}".format(recipient, name)
     return ret

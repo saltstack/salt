@@ -1,5 +1,5 @@
-salt.modules.kubeadm module
-===========================
+salt.modules.kubeadm
+====================
 
 .. automodule:: salt.modules.kubeadm
     :members:

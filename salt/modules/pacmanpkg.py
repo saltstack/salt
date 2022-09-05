@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
@@ -9,16 +8,11 @@ A module to wrap pacman calls, since Arch is the best
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import fnmatch
 import logging
 import os.path
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.functools
@@ -26,9 +20,6 @@ import salt.utils.itertools
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -112,7 +103,7 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 
@@ -189,6 +180,18 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed as a dict::
@@ -208,13 +211,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     cmd = ["pacman", "-Q"]
 
@@ -230,7 +228,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name, version_num = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Q: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Q: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -272,7 +270,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Sgg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Sgg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -290,7 +288,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Qg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Qg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -352,7 +350,7 @@ def group_info(name):
             pkg = line.split()[1]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Sgg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Sgg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -401,7 +399,7 @@ def group_diff(name):
     return ret
 
 
-def refresh_db(root=None):
+def refresh_db(root=None, **kwargs):
     """
     Just run a ``pacman -Sy``, return a dict::
 
@@ -558,7 +556,7 @@ def install(
             cmd.append("-u")
         cmd.extend(["--noprogressbar", "--noconfirm", "--needed"])
         wildcards = []
-        for param, version_num in six.iteritems(pkg_params):
+        for param, version_num in pkg_params.items():
             if version_num is None:
                 targets.append(param)
             else:
@@ -570,12 +568,10 @@ def install(
                         wildcards.append((param, verstr))
                     else:
                         errors.append(
-                            "Invalid wildcard for {0}{1}{2}".format(
-                                param, prefix, verstr
-                            )
+                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
                         )
                     continue
-                targets.append("{0}{1}{2}".format(param, prefix, verstr))
+                targets.append("{}{}{}".format(param, prefix, verstr))
 
         if wildcards:
             # Resolve wildcard matches
@@ -587,8 +583,8 @@ def install(
                     targets.append("=".join((pkgname, match)))
                 else:
                     errors.append(
-                        "No version matching '{0}' found for package '{1}' "
-                        "(available: {2})".format(
+                        "No version matching '{}' found for package '{}' "
+                        "(available: {})".format(
                             verstr,
                             pkgname,
                             ", ".join(candidates) if candidates else "none",
@@ -661,7 +657,6 @@ def upgrade(refresh=False, root=None, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 
@@ -836,7 +831,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action="purge", name=name, pkgs=pkgs)
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     """
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -870,7 +865,7 @@ def file_list(*packages):
     return {"errors": errors, "files": ret}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     """
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
@@ -902,11 +897,11 @@ def file_dict(*packages):
             comps = line.split()
             if not comps[0] in ret:
                 ret[comps[0]] = []
-            ret[comps[0]].append((" ".join(comps[1:])))
+            ret[comps[0]].append(" ".join(comps[1:]))
     return {"errors": errors, "packages": ret}
 
 
-def owner(*paths):
+def owner(*paths, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
@@ -920,6 +915,8 @@ def owner(*paths):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/zsh
     """
@@ -931,7 +928,7 @@ def owner(*paths):
     for path in paths:
         ret[path] = __salt__["cmd.run_stdout"](cmd_prefix + [path], python_shell=False)
     if len(ret) == 1:
-        return next(six.itervalues(ret))
+        return next(iter(ret.values()))
     return ret
 
 
@@ -999,7 +996,7 @@ def list_repo_pkgs(*args, **kwargs):
         try:
             repos = [x.strip() for x in fromrepo.split(",")]
         except AttributeError:
-            repos = [x.strip() for x in six.text_type(fromrepo).split(",")]
+            repos = [x.strip() for x in str(fromrepo).split(",")]
     else:
         repos = []
 
@@ -1039,7 +1036,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [_LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1050,7 +1047,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [_LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret

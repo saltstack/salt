@@ -1,22 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.data
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import builtins
 import logging
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import 3rd party libs
-from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-builtin
-    builtins,
-)
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM, TestCase
@@ -67,9 +57,11 @@ class DataTestCase(TestCase):
     def test_mysql_to_dict(self):
         test_mysql_output = [
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "| Id | User | Host      | db   | Command | Time | State | Info             |",
+            "| Id | User | Host      | db   | Command | Time | State | Info         "
+            "    |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |",
+            "|  7 | root | localhost | NULL | Query   |    0 | init  | show"
+            " processlist |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
         ]
 
@@ -232,7 +224,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "it worked",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+                {"foo": {1234: "it worked"}},
+                "foo:1234",
+                "it didn't work",
             ),
         )
         # Make sure that we properly return the default value when the initial
@@ -241,7 +235,23 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "default",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
+                {"foo": {"baz": "didn't work"}},
+                "foo:bar",
+                "default",
+            ),
+        )
+
+    def test_issue_39709(self):
+        test_two_level_dict_and_list = {
+            "foo": ["bar", "baz", {"lorem": {"ipsum": [{"dolor": "sit"}]}}]
+        }
+
+        self.assertEqual(
+            "sit",
+            salt.utils.data.traverse_dict_and_list(
+                test_two_level_dict_and_list,
+                ["foo", "lorem", "ipsum", "dolor"],
+                {"not_found": "not_found"},
             ),
         )
 
@@ -435,19 +445,18 @@ class DataTestCase(TestCase):
         )
         self.assertEqual(ret, expected)
 
-        if six.PY3:
-            # The binary data in the data structure should fail to decode, even
-            # using the fallback, and raise an exception.
-            self.assertRaises(
-                UnicodeDecodeError,
-                salt.utils.data.decode,
-                self.test_data,
-                keep=False,
-                normalize=True,
-                preserve_dict_class=True,
-                preserve_tuples=True,
-                to_str=True,
-            )
+        # The binary data in the data structure should fail to decode, even
+        # using the fallback, and raise an exception.
+        self.assertRaises(
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            self.test_data,
+            keep=False,
+            normalize=True,
+            preserve_dict_class=True,
+            preserve_tuples=True,
+            to_str=True,
+        )
 
         # Now munge the expected data so that we get what we would expect if we
         # disable preservation of dict class and tuples
@@ -491,14 +500,13 @@ class DataTestCase(TestCase):
 
         # Test binary blob
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True, to_str=True), BYTES)
-        if six.PY3:
-            self.assertRaises(
-                UnicodeDecodeError,
-                salt.utils.data.decode,
-                BYTES,
-                keep=False,
-                to_str=True,
-            )
+        self.assertRaises(
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            BYTES,
+            keep=False,
+            to_str=True,
+        )
 
     def test_decode_fallback(self):
         """
@@ -692,9 +700,7 @@ class DataTestCase(TestCase):
     def test_stringify(self):
         self.assertRaises(TypeError, salt.utils.data.stringify, 9)
         self.assertEqual(
-            salt.utils.data.stringify(
-                ["one", "two", str("three"), 4, 5]
-            ),  # future lint: disable=blacklisted-function
+            salt.utils.data.stringify(["one", "two", "three", 4, 5]),
             ["one", "two", "three", "4", "5"],
         )
 
@@ -747,7 +753,7 @@ class FilterFalseyTestCase(TestCase):
         # Check returned type equality
         self.assertIs(type(old_list), type(new_list))
         # Test with set
-        old_set = set(["foo", "bar"])
+        old_set = {"foo", "bar"}
         new_set = salt.utils.data.filter_falsey(old_set)
         self.assertEqual(old_set, new_set)
         # Check returned type equality
@@ -765,11 +771,11 @@ class FilterFalseyTestCase(TestCase):
         self.assertIs(type(old_dict), type(new_dict))
         # Test excluding int
         old_list = [0]
-        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type(0)])
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[int])
         self.assertEqual(old_list, new_list)
         # Test excluding str (or unicode) (or both)
         old_list = [""]
-        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type("")])
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[str])
         self.assertEqual(old_list, new_list)
         # Test excluding list
         old_list = [[]]
@@ -866,9 +872,9 @@ class FilterFalseyTestCase(TestCase):
         Test filtering a set without recursing.
         Note that a set cannot contain unhashable types, so recursion is not possible.
         """
-        old_set = set(["foo", None, 0, ""])
+        old_set = {"foo", None, 0, ""}
         new_set = salt.utils.data.filter_falsey(old_set)
-        expect_set = set(["foo"])
+        expect_set = {"foo"}
         self.assertEqual(expect_set, new_set)
         self.assertIs(type(expect_set), type(new_set))
 
@@ -981,7 +987,7 @@ class FilterFalseyTestCase(TestCase):
             [{"foo": ""}],
         ]
         new_list = salt.utils.data.filter_falsey(
-            old_list, recurse_depth=3, ignore_types=[type(0), type("")]
+            old_list, recurse_depth=3, ignore_types=[int, str]
         )
         self.assertEqual(
             ["foo", ["foo"], ["foo"], {"foo": 0}, {"foo": "bar"}, [{"foo": ""}]],
@@ -1080,13 +1086,13 @@ class FilterRecursiveDiff(TestCase):
         """
         Test cases where equal sets are compared.
         """
-        test_set = set([0, 1, 2, 3, "foo"])
+        test_set = {0, 1, 2, 3, "foo"}
         self.assertEqual({}, salt.utils.data.recursive_diff(test_set, test_set))
 
         # This is a bit of an oddity, as python seems to sort the sets in memory
         # so both sets end up with the same ordering (0..3).
-        set_one = set([0, 1, 2, 3])
-        set_two = set([3, 2, 1, 0])
+        set_one = {0, 1, 2, 3}
+        set_two = {3, 2, 1, 0}
         self.assertEqual({}, salt.utils.data.recursive_diff(set_one, set_two))
 
     def test_tuple_equality(self):
@@ -1176,13 +1182,13 @@ class FilterRecursiveDiff(TestCase):
         Tricky as the sets are compared zipped, so shuffled sets of equal values
         are considered different.
         """
-        set_one = set([0, 1, 2, 4])
-        set_two = set([0, 1, 3, 4])
-        expected_result = {"old": set([2]), "new": set([3])}
+        set_one = {0, 1, 2, 4}
+        set_two = {0, 1, 3, 4}
+        expected_result = {"old": {2}, "new": {3}}
         self.assertEqual(
             expected_result, salt.utils.data.recursive_diff(set_one, set_two)
         )
-        expected_result = {"new": set([2]), "old": set([3])}
+        expected_result = {"new": {2}, "old": {3}}
         self.assertEqual(
             expected_result, salt.utils.data.recursive_diff(set_two, set_one)
         )
@@ -1191,8 +1197,8 @@ class FilterRecursiveDiff(TestCase):
         # Python 2.7 seems to sort it (i.e. set_one below becomes {0, 1, 'foo', 'bar'}
         # However Python 3.6.8 stores it differently each run.
         # So just test for "not equal" here.
-        set_one = set([0, "foo", 1, "bar"])
-        set_two = set(["foo", 1, "bar", 2])
+        set_one = {0, "foo", 1, "bar"}
+        set_two = {"foo", 1, "bar", 2}
         expected_result = {}
         self.assertNotEqual(
             expected_result, salt.utils.data.recursive_diff(set_one, set_two)
@@ -1230,18 +1236,18 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(list_two, list_one)
         )
 
-        mixed_one = {"foo": set([0, 1, 2]), "bar": [0, 1, 2]}
-        mixed_two = {"foo": set([1, 2, 3]), "bar": [1, 2, 3]}
+        mixed_one = {"foo": {0, 1, 2}, "bar": [0, 1, 2]}
+        mixed_two = {"foo": {1, 2, 3}, "bar": [1, 2, 3]}
         expected_result = {
-            "old": {"foo": set([0]), "bar": [0, 1, 2]},
-            "new": {"foo": set([3]), "bar": [1, 2, 3]},
+            "old": {"foo": {0}, "bar": [0, 1, 2]},
+            "new": {"foo": {3}, "bar": [1, 2, 3]},
         }
         self.assertEqual(
             expected_result, salt.utils.data.recursive_diff(mixed_one, mixed_two)
         )
         expected_result = {
-            "new": {"foo": set([0]), "bar": [0, 1, 2]},
-            "old": {"foo": set([3]), "bar": [1, 2, 3]},
+            "new": {"foo": {0}, "bar": [0, 1, 2]},
+            "old": {"foo": {3}, "bar": [1, 2, 3]},
         }
         self.assertEqual(
             expected_result, salt.utils.data.recursive_diff(mixed_two, mixed_one)
@@ -1263,7 +1269,7 @@ class FilterRecursiveDiff(TestCase):
         Test case comparing a list with a set, will be compared unordered.
         """
         mixed_one = [1, 2, 3]
-        mixed_two = set([3, 2, 1])
+        mixed_two = {3, 2, 1}
         expected_result = {}
         self.assertEqual(
             expected_result, salt.utils.data.recursive_diff(mixed_one, mixed_two)
@@ -1378,9 +1384,9 @@ class FilterRecursiveDiff(TestCase):
         Test case comparing two sets of unequal length.
         This does not do anything special, as it is unordered.
         """
-        set_one = set([1, 2, 3])
-        set_two = set([4, 3, 2, 1])
-        expected_result = {"old": set([]), "new": set([4])}
+        set_one = {1, 2, 3}
+        set_two = {4, 3, 2, 1}
+        expected_result = {"old": set(), "new": {4}}
         self.assertEqual(
             expected_result, salt.utils.data.recursive_diff(set_one, set_two)
         )

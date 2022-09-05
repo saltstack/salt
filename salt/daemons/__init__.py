@@ -1,23 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 The daemons package is used to store implementations of the Salt Master and
 Minion enabling different transports.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Python Libs
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 
-# Import Salt Libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
-
-if sys.version_info[0] == 3:
-    six.string_types = (six.text_type, six.binary_type)
 
 
 def is_non_string_iterable(obj):
@@ -28,7 +18,7 @@ def is_non_string_iterable(obj):
     for non string iterables.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return not isinstance(obj, six.string_types) and isinstance(obj, Iterable)
+    return not isinstance(obj, str) and isinstance(obj, Iterable)
 
 
 def is_non_string_sequence(obj):
@@ -39,7 +29,7 @@ def is_non_string_sequence(obj):
     for non string sequences.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return not isinstance(obj, six.string_types) and isinstance(obj, Sequence)
+    return not isinstance(obj, str) and isinstance(obj, Sequence)
 
 
 def extract_masters(opts, masters="master", port=None, raise_if_empty=True):
@@ -150,7 +140,7 @@ def extract_masters(opts, masters="master", port=None, raise_if_empty=True):
     entries = opts.get(masters, [])
 
     if not entries:
-        emsg = "Invalid or missing opts['{0}'].".format(masters)
+        emsg = "Invalid or missing opts['{}'].".format(masters)
         log.error(emsg)
         if raise_if_empty:
             raise ValueError(emsg)
@@ -164,7 +154,7 @@ def extract_masters(opts, masters="master", port=None, raise_if_empty=True):
                 internal = entry.get("internal", "")
                 hostages.append(dict(external=external, internal=internal))
 
-            elif isinstance(entry, six.string_types):  # string
+            elif isinstance(entry, str):  # string
                 external = entry
                 internal = ""
                 hostages.append(dict(external=external, internal=internal))
@@ -174,7 +164,7 @@ def extract_masters(opts, masters="master", port=None, raise_if_empty=True):
         internal = entries.get("internal", "")
         hostages.append(dict(external=external, internal=internal))
 
-    elif isinstance(entries, six.string_types):  # string
+    elif isinstance(entries, str):  # string
         external = entries
         internal = ""
         hostages.append(dict(external=external, internal=internal))

@@ -50,7 +50,32 @@ Security disclosure policy
     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
-    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
+    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
@@ -73,8 +98,20 @@ Security disclosure policy
     REucE0fSQxzCTeXu2ObvFR9ic02IYGH3Koz8CrGReEI1J05041Y5IhKxdsvGOD2W
     e7ymcblYW4Gz8eYFlLeNJkj/38R7qmNZ028XHzAZDCAWDiTFrnCoglyk+U0JRHfg
     HTsdvoc8mBdT/s24LhnfAbpLizlrZZquuOF6NLQSkbuLtmIwf+h9ynEEJxEkGGWg
-    7JqB1tMjNHLkRpveO/DTYB+iffpba1nCguk=
-    =OgRY
+    7JqB1tMjNHLkRpveO/DTYB+iffpba1nCgumJAjwEGAEIACYCGwwWIQSKvk788PSy
+    S/8qr5DVcPLTTqB5PQUCYjpDOQUJFCf3VgAKCRDVcPLTTqB5PYDiEADaj1aAdXDb
+    +XrlhzlGCT3e16RDiE4BjSD1KHZX8ZDABI79JDG0iMN2PpWuViXq7AvWuwgNYdac
+    WjHsZGgHW82UoPVGKnfEVjjf0lQQIIcgdS5dEV8LamkeIo4vKUX/MZY+Mivk6luP
+    vCec9Euj/XU1nY6gGq6inpwDtZkNoJlCBune/IIGS82dU8RrSGAHNRZoaDJfdfQm
+    j7YAOWCUqyzn747yMyuMUOc15iJIgOz1dKN5YwDmFkzjlw+616Aswcp8UA0OfOQ+
+    e4THli32BgKTSNeOGhGgx1xCDkt+0gP1L0L2Sqhlr6BnqNF65mQ4j2v6UGY1noCo
+    jYxFchoa1zEdEiZRr/sRO91XlJtK7HyIAI0cUHKVU+Cayoh//OBQBJnbeZlfh9Qn
+    4ead1pTz9bcKIeZleAjlzNG249bGY+82WsFghb4/7U9MYJVePz0m1zJKPkdABZ+R
+    lSDvhf4ImesfH5UuofZFv1UXmQL4yV7PDXXdy2xhma7YLznyZTUobDoJiZbuO72O
+    g5HJCpYoNfvGx++Z9naomUWufqi9PWigEMxU8lUtiGaLQrDW3inTOZTTmTnsJiAI
+    Lhku0Jr4SjCqxoEFydXOGvNV5XB4WXvf+A6JhcZI+/S72ai1CeSgMFiJLAEb2MZ+
+    fwPKmQ2cKnCBs5ASj1DkgUcz2c8DTUPVqg==
+    =i1Tf
     -----END PGP PUBLIC KEY BLOCK-----
 
 The SaltStack Security Team is available at security@saltstack.com for
@@ -114,8 +151,20 @@ quickly and safely as is possible.
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 
+.. _saltstack_security_announcements:
+
 Receiving security announcements
 ================================
 
-The fastest place to receive security announcements is via the `salt-announce`_
-mailing list. This list is low-traffic.
+The following mailing lists, per the previous tasks identified in our response
+procedure, will receive security-relevant notifications:
+
+* `salt-packagers`_
+* `salt-users`_
+* `salt-announce`_
+
+In addition to the mailing lists, SaltStack also provides the following resources:
+
+* `SaltStack Security Announcements <https://www.saltstack.com/security-announcements/>`__ landing page
+* `SaltStack Security RSS Feed <http://www.saltstack.com/feed/?post_type=security>`__
+* `SaltStack Community Slack Workspace <http://saltstackcommunity.slack.com/>`__

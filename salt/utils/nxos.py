@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2018 Cisco and/or its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,17 +15,16 @@
 """
 Util functions for the NXOS modules.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python std lib
 import collections
+import http.client
 import json
 import logging
 import os
 import re
 import socket
+from collections.abc import Iterable
 
-# Import salt libs
 import salt.utils.http
 from salt.exceptions import (
     CommandExecutionError,
@@ -34,27 +32,18 @@ from salt.exceptions import (
     NxosError,
     NxosRequestNotSupported,
 )
-from salt.ext.six.moves import zip
 from salt.utils.args import clean_kwargs
-
-# Disable pylint check since httplib is not available in python3
-try:
-    import httplib  # pylint: disable=W1699
-except ImportError:
-    import http.client
-
-    httplib = http.client
 
 log = logging.getLogger(__name__)
 
 
-class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
+class UHTTPConnection(http.client.HTTPConnection):
     """
     Subclass of Python library HTTPConnection that uses a unix-domain socket.
     """
 
     def __init__(self, path):
-        httplib.HTTPConnection.__init__(self, "localhost")
+        http.client.HTTPConnection.__init__(self, "localhost")
         self.path = path
 
     def connect(self):
@@ -63,7 +52,7 @@ class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
         self.sock = sock
 
 
-class NxapiClient(object):
+class NxapiClient:
     """
     Class representing an NX-API client that connects over http(s) or
     unix domain socket (UDS).
@@ -94,17 +83,17 @@ class NxapiClient(object):
         if self.nxargs["connect_over_uds"]:
             if not os.path.exists(self.NXAPI_UDS):
                 raise NxosClientError(
-                    "No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS)
+                    "No host specified and no UDS found at {}\n".format(self.NXAPI_UDS)
                 )
 
             # Create UHTTPConnection object for NX-API communication over UDS.
-            log.info("Nxapi connection arguments: {0}".format(self.nxargs))
+            log.info("Nxapi connection arguments: %s", self.nxargs)
             log.info("Connecting over unix domain socket")
             self.connection = UHTTPConnection(self.NXAPI_UDS)
         else:
             # Remote connection - Proxy Minion, connect over http(s)
-            log.info("Nxapi connection arguments: {0}".format(self.nxargs))
-            log.info("Connecting over {}".format(self.nxargs["transport"]))
+            log.info("Nxapi connection arguments: %s", self.nxargs)
+            log.info("Connecting over %s", self.nxargs["transport"])
             self.connection = salt.utils.http.query
 
     def _use_remote_connection(self, kwargs):
@@ -181,7 +170,7 @@ class NxapiClient(object):
         request["headers"] = headers
         request["payload"] = json.dumps(payload)
         request["opts"] = {"http_request_timeout": self.nxargs["timeout"]}
-        log.info("request: {0}".format(request))
+        log.info("request: %s", request)
         return request
 
     def request(self, type, command_list):
@@ -211,13 +200,13 @@ class NxapiClient(object):
         Parse NX-API JSON response from the NX-OS device.
         """
         # Check for 500 level NX-API Server Errors
-        if isinstance(response, collections.Iterable) and "status" in response:
+        if isinstance(response, Iterable) and "status" in response:
             if int(response["status"]) >= 500:
                 raise NxosError("{}".format(response))
             else:
                 raise NxosError("NX-API Request Not Supported: {}".format(response))
 
-        if isinstance(response, collections.Iterable):
+        if isinstance(response, Iterable):
             body = response["dict"]
         else:
             body = response
@@ -229,7 +218,7 @@ class NxapiClient(object):
         # Don't just return body['ins_api']['outputs']['output'] directly.
         output = body.get("ins_api")
         if output is None:
-            raise NxosClientError("Unexpected JSON output\n{0}".format(body))
+            raise NxosClientError("Unexpected JSON output\n{}".format(body))
         if output.get("outputs"):
             output = output["outputs"]
         if output.get("output"):
@@ -255,8 +244,8 @@ class NxapiClient(object):
         for cmd_result, cmd in zip(output, command_list):
             code = cmd_result.get("code")
             msg = cmd_result.get("msg")
-            log.info("command {}:".format(cmd))
-            log.info("PARSE_RESPONSE: {0} {1}".format(code, msg))
+            log.info("command %s:", cmd)
+            log.info("PARSE_RESPONSE: %s %s", code, msg)
             if code == "400":
                 raise CommandExecutionError(
                     {

@@ -1,27 +1,22 @@
-# coding: utf-8
 """
 A collection of mixins useful for the various *Client interfaces
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
-import copy as pycopy
+import copy
 import fnmatch
 import logging
+import os
 import signal
 import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
-# Import Salt libs
+import salt._logging
+import salt.channel.client
 import salt.exceptions
-
-# Import 3rd-party libs
 import salt.ext.tornado.stack_context
-import salt.log.setup
 import salt.minion
-import salt.transport.client
+import salt.output
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -34,7 +29,6 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -105,12 +99,14 @@ class ClientFuncsDict(MutableMapping):
 
             user = salt.utils.user.get_specific_user()
             return self.client._proc_function(
-                key,
-                low,
-                user,
-                async_pub["tag"],  # TODO: fix
-                async_pub["jid"],  # TODO: fix
-                False,  # Don't daemonize
+                instance=self.client,
+                opts=self.client.opts,
+                fun=key,
+                low=low,
+                user=user,
+                tag=async_pub["tag"],
+                jid=async_pub["jid"],
+                daemonize=False,
             )
 
         return wrapper
@@ -122,7 +118,26 @@ class ClientFuncsDict(MutableMapping):
         return iter(self.client.functions)
 
 
-class SyncClientMixin(object):
+class ClientStateMixin:
+    def __init__(self, opts, context=None):
+        self.opts = opts
+        if context is None:
+            context = {}
+        self.context = context
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "context": self.context or None,
+        }
+
+    def __setstate__(self, state):
+        # If __setstate__ is getting called it means this is running on a new process.
+        self.__init__(state["opts"], context=state["context"])
+
+
+class SyncClientMixin(ClientStateMixin):
     """
     A mixin for *Client interfaces to abstract common function execution
     """
@@ -144,7 +159,7 @@ class SyncClientMixin(object):
         load = kwargs
         load["cmd"] = self.client
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", usage="master_call"
         ) as channel:
             ret = channel.send(load)
@@ -182,7 +197,7 @@ class SyncClientMixin(object):
             )
             if ret is None:
                 raise salt.exceptions.SaltClientTimeout(
-                    "RunnerClient job '{0}' timed out".format(job["jid"]),
+                    "RunnerClient job '{}' timed out".format(job["jid"]),
                     jid=job["jid"],
                 )
 
@@ -199,31 +214,6 @@ class SyncClientMixin(object):
     ):
         """
         Execute a function
-
-        .. code-block:: python
-
-            >>> opts = salt.config.master_config('/etc/salt/master')
-            >>> runner = salt.runner.RunnerClient(opts)
-            >>> runner.cmd('jobs.list_jobs', [])
-            {
-                '20131219215650131543': {
-                    'Arguments': [300],
-                    'Function': 'test.sleep',
-                    'StartTime': '2013, Dec 19 21:56:50.131543',
-                    'Target': '*',
-                    'Target-type': 'glob',
-                    'User': 'saltdev'
-                },
-                '20131219215921857715': {
-                    'Arguments': [300],
-                    'Function': 'test.sleep',
-                    'StartTime': '2013, Dec 19 21:59:21.857715',
-                    'Target': '*',
-                    'Target-type': 'glob',
-                    'User': 'saltdev'
-                },
-            }
-
         """
         if arg is None:
             arg = tuple()
@@ -281,7 +271,7 @@ class SyncClientMixin(object):
             return True
 
         try:
-            return self.opts["{0}_returns".format(class_name)]
+            return self.opts["{}_returns".format(class_name)]
         except KeyError:
             # No such option, assume this isn't one we care about gating and
             # just return True.
@@ -308,7 +298,7 @@ class SyncClientMixin(object):
         tag = low.get("__tag__", salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
         data = {
-            "fun": "{0}.{1}".format(self.client, fun),
+            "fun": "{}.{}".format(self.client, fun),
             "jid": jid,
             "user": low.get("__user__", "UNKNOWN"),
         }
@@ -326,7 +316,6 @@ class SyncClientMixin(object):
             salt.utils.event.get_event(
                 "master",
                 self.opts["sock_dir"],
-                self.opts["transport"],
                 opts=self.opts,
                 listen=False,
             ),
@@ -346,21 +335,21 @@ class SyncClientMixin(object):
             }
 
             try:
-                self_functions = pycopy.copy(self.functions)
+                self_functions = copy.copy(self.functions)
                 salt.utils.lazy.verify_fun(self_functions, fun)
 
                 # Inject some useful globals to *all* the function's global
                 # namespace only once per module-- not per func
                 completed_funcs = []
 
-                for mod_name in six.iterkeys(self_functions):
+                for mod_name in self_functions.keys():
                     if "." not in mod_name:
                         continue
                     mod, _ = mod_name.split(".", 1)
                     if mod in completed_funcs:
                         continue
                     completed_funcs.append(mod)
-                    for global_key, value in six.iteritems(func_globals):
+                    for global_key, value in func_globals.items():
                         self.functions[mod_name].__globals__[global_key] = value
 
                 # There are some discrepancies of what a "low" structure is in the
@@ -398,7 +387,7 @@ class SyncClientMixin(object):
                     except TypeError as exc:
                         data[
                             "return"
-                        ] = "\nPassed invalid arguments: {0}\n\nUsage:\n{1}".format(
+                        ] = "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
                             exc, func.__doc__
                         )
                     try:
@@ -413,10 +402,12 @@ class SyncClientMixin(object):
                         )
             except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
-                    data["return"] = six.text_type(ex)
+                    data["return"] = str(ex)
                 else:
-                    data["return"] = "Exception occurred in {0} {1}: {2}".format(
-                        self.client, fun, traceback.format_exc(),
+                    data["return"] = "Exception occurred in {} {}: {}".format(
+                        self.client,
+                        fun,
+                        traceback.format_exc(),
                     )
                 data["success"] = False
 
@@ -477,7 +468,7 @@ class SyncClientMixin(object):
         return salt.utils.doc.strip_rst(docs)
 
 
-class AsyncClientMixin(object):
+class AsyncClientMixin(ClientStateMixin):
     """
     A mixin for *Client interfaces to enable easy asynchronous function execution
     """
@@ -485,26 +476,66 @@ class AsyncClientMixin(object):
     client = None
     tag_prefix = None
 
-    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
+    @classmethod
+    def _proc_function_remote(
+        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+    ):
         """
-        Run this method in a multiprocess target to execute the function in a
-        multiprocess and fire the return data on the event bus
+        Run this method in a multiprocess target to execute the function on the
+        master and fire the return data on the event bus
         """
-        if daemonize and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
-
+        if daemonize and not salt.utils.platform.spawning_platform():
+            # Shutdown logging before daemonizing
+            salt._logging.shutdown_logging()
             salt.utils.process.daemonize()
-
-            # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
+            # Because we have daemonized, salt._logging.in_mainprocess() will
+            # return False. We'll just force it to return True for this
+            # particular case so that proper logging can be set up.
+            salt._logging.in_mainprocess.__pid__ = os.getpid()
+            # Configure logging once daemonized
+            salt._logging.setup_logging()
 
         # pack a few things into low
         low["__jid__"] = jid
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return self.low(fun, low, full_return=False)
+        if instance is None:
+            instance = cls(opts)
+
+        try:
+            return instance.cmd_sync(low)
+        except salt.exceptions.EauthAuthenticationError as exc:
+            log.error(exc)
+
+    @classmethod
+    def _proc_function(
+        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+    ):
+        """
+        Run this method in a multiprocess target to execute the function
+        locally and fire the return data on the event bus
+        """
+        if daemonize and not salt.utils.platform.spawning_platform():
+            # Shutdown logging before daemonizing
+            salt._logging.shutdown_logging()
+            salt.utils.process.daemonize()
+            # Because we have daemonized, salt._logging.in_mainprocess() will
+            # return False. We'll just force it to return True for this
+            # particular case so that proper logging can be set up.
+            salt._logging.in_mainprocess.__pid__ = os.getpid()
+            # Configure logging once daemonized
+            salt._logging.setup_logging()
+
+        if instance is None:
+            instance = cls(opts)
+
+        # pack a few things into low
+        low["__jid__"] = jid
+        low["__user__"] = user
+        low["__tag__"] = tag
+
+        return instance.low(fun, low)
 
     def cmd_async(self, low):
         """
@@ -532,20 +563,36 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {"tag": tag, "jid": jid}
 
-    def asynchronous(self, fun, low, user="UNKNOWN", pub=None):
+    def asynchronous(self, fun, low, user="UNKNOWN", pub=None, local=True):
         """
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         """
+        if local:
+            proc_func = self._proc_function
+        else:
+            proc_func = self._proc_function_remote
         async_pub = pub if pub is not None else self._gen_async_pub()
-        proc = salt.utils.process.SignalHandlingProcess(
-            target=self._proc_function,
-            name="ProcessFunc",
-            args=(fun, low, user, async_pub["tag"], async_pub["jid"]),
-        )
+        if salt.utils.platform.spawning_platform():
+            instance = None
+        else:
+            instance = self
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            # Reset current signals before starting the process in
-            # order not to inherit the current signal handlers
+            proc = salt.utils.process.SignalHandlingProcess(
+                target=proc_func,
+                name="ProcessFunc({}, fun={} jid={})".format(
+                    proc_func.__qualname__, fun, async_pub["jid"]
+                ),
+                kwargs=dict(
+                    instance=instance,
+                    opts=self.opts,
+                    fun=fun,
+                    low=low,
+                    user=user,
+                    tag=async_pub["tag"],
+                    jid=async_pub["jid"],
+                ),
+            )
             proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return async_pub
@@ -577,9 +624,10 @@ class AsyncClientMixin(object):
         if suffix == "ret":
             # Check if outputter was passed in the return data. If this is the case,
             # then the return data will be a dict two keys: 'data' and 'outputter'
-            if isinstance(event.get("return"), dict) and set(event["return"]) == set(
-                ("data", "outputter")
-            ):
+            if isinstance(event.get("return"), dict) and set(event["return"]) == {
+                "data",
+                "outputter",
+            }:
                 event_data = event["return"]["data"]
                 outputter = event["return"]["outputter"]
             else:

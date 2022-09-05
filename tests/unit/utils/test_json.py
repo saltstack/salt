@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.json
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import textwrap
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.helpers import with_tempfile
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import LOREM_IPSUM, TestCase, skipIf
+from tests.support.unit import LOREM_IPSUM, TestCase
 
 
 class JSONTestCase(TestCase):
@@ -31,7 +23,8 @@ class JSONTestCase(TestCase):
     }
 
     serialized = salt.utils.stringutils.to_str(
-        '{"None": null, "True": false, "dict": {"subdict": {"спам": "яйца"}}, "float": 1.5, "list": [1, 2, "three"], "спам": "яйца"}'
+        '{"None": null, "True": false, "dict": {"subdict": {"спам": "яйца"}}, "float":'
+        ' 1.5, "list": [1, 2, "three"], "спам": "яйца"}'
     )
 
     serialized_indent4 = salt.utils.stringutils.to_str(
@@ -88,7 +81,10 @@ class JSONTestCase(TestCase):
                         "GlossEntry": {
                             "GlossDef": {
                                 "GlossSeeAlso": ["GML", "XML"],
-                                "para": "A meta-markup language, used to create markup languages such as DocBook.",
+                                "para": (
+                                    "A meta-markup language, used to create markup"
+                                    " languages such as DocBook."
+                                ),
                             },
                             "GlossSee": "markup",
                             "Acronym": "SGML",
@@ -109,29 +105,12 @@ class JSONTestCase(TestCase):
         self.assertDictEqual(ret, expected_ret)
 
         # Now pre-pend some garbage and re-test
-        garbage_prepend_json = "{0}{1}".format(LOREM_IPSUM, test_sample_json)
+        garbage_prepend_json = "{}{}".format(LOREM_IPSUM, test_sample_json)
         ret = salt.utils.json.find_json(garbage_prepend_json)
         self.assertDictEqual(ret, expected_ret)
 
         # Test to see if a ValueError is raised if no JSON is passed in
         self.assertRaises(ValueError, salt.utils.json.find_json, LOREM_IPSUM)
-
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "skip until we figure out what to do about decoding unicode on windows",
-    )
-    @skipIf(not six.PY2, "Test only needed on Python 2")
-    def test_find_json_unicode_splitlines(self):
-        """
-        Tests a case in salt-ssh where a unicode string is split into a list of
-        str types by .splitlines().
-        """
-        raw = '{"foo": "öäü"}'
-        mock_split = MagicMock(return_value=[raw.encode("utf8")])
-
-        with patch.object(salt.utils.json, "__split", mock_split):
-            ret = salt.utils.json.find_json(raw)
-            self.assertEqual(ret, {"foo": "öäü"})
 
     def test_dumps_loads(self):
         """
@@ -150,9 +129,7 @@ class JSONTestCase(TestCase):
         # results in trailing whitespace on lines ending in a comma. So, for a
         # proper comparison, we will have to run rstrip on each line of the
         # return and then stitch it back together.
-        ret = str("\n").join(
-            [x.rstrip() for x in ret.splitlines()]
-        )  # future lint: disable=blacklisted-function
+        ret = "\n".join([x.rstrip() for x in ret.splitlines()])
         self.assertEqual(ret, self.serialized_indent4)
         # Loading it should be equal to the original data
         self.assertEqual(salt.utils.json.loads(ret), self.data)

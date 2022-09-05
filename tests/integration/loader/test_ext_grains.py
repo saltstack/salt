@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     integration.loader.ext_grains
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,16 +5,15 @@
     Test Salt's loader regarding external grains
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import time
 
 import pytest
+
 import salt.config
 import salt.loader
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -31,7 +29,7 @@ class LoaderGrainsTest(ModuleCase):
     #    self.opts['disable_modules'] = ['pillar']
     #    self.opts['grains'] = grains(self.opts)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_grains_overwrite(self):
         # Force a grains sync
         self.run_function("saltutil.sync_grains")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Spacewalk Runner
 ================
@@ -7,7 +6,7 @@ Spacewalk Runner
 
 Runner to interact with Spacewalk using Spacewalk API
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>, Joachim Werner <joe@suse.com>, Benedikt Werner <1benediktwerner@gmail.com>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>, Joachim Werner <joe@suse.com>, Benedikt Werner <1benediktwerner@gmail.com>
 :maintainer: Benedikt Werner <1benediktwerner@gmail.com>
 
 To use this runner, set up the Spacewalk URL, username and password in the
@@ -29,14 +28,10 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.c
     not using the defaults. Default is ``protocol: https``.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import atexit
 import logging
-
-# Import third party libs
-from salt.ext import six
+import xmlrpc.client
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +57,7 @@ def _get_spacewalk_configuration(spacewalk_url=""):
 
     if spacewalk_config:
         try:
-            for spacewalk_server, service_config in six.iteritems(spacewalk_config):
+            for spacewalk_server, service_config in spacewalk_config.items():
                 username = service_config.get("username", None)
                 password = service_config.get("password", None)
                 protocol = service_config.get("protocol", "https")
@@ -76,7 +71,7 @@ def _get_spacewalk_configuration(spacewalk_url=""):
                     return False
 
                 ret = {
-                    "api_url": "{0}://{1}/rpc/api".format(protocol, spacewalk_server),
+                    "api_url": "{}://{}/rpc/api".format(protocol, spacewalk_server),
                     "username": username,
                     "password": password,
                 }
@@ -103,9 +98,7 @@ def _get_client_and_key(url, user, password, verbose=0):
     Return the client object and session key for the client
     """
     session = {}
-    session["client"] = six.moves.xmlrpc_client.Server(
-        url, verbose=verbose, use_datetime=True
-    )
+    session["client"] = xmlrpc.client.Server(url, verbose=verbose, use_datetime=True)
     session["key"] = session["client"].auth.login(user, password)
 
     return session
@@ -127,7 +120,7 @@ def _get_session(server):
 
     config = _get_spacewalk_configuration(server)
     if not config:
-        raise Exception("No config for '{0}' found on master".format(server))
+        raise Exception("No config for '{}' found on master".format(server))
 
     session = _get_client_and_key(
         config["api_url"], config["username"], config["password"]
@@ -170,23 +163,29 @@ def api(server, command, *args, **kwargs):
     else:
         arguments = args
 
-    call = "{0} {1}".format(command, arguments)
+    call = "{} {}".format(command, arguments)
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {call: err_msg}
 
-    namespace, method = command.split(".")
+    namespace, _, method = command.rpartition(".")
+    if not namespace:
+        return {
+            call: "Error: command must use the following format: 'namespace.method'"
+        }
     endpoint = getattr(getattr(client, namespace), method)
 
     try:
         output = endpoint(key, *arguments)
     except Exception as e:  # pylint: disable=broad-except
-        output = "API call failed: {0}".format(e)
+        output = "API call failed: {}".format(e)
 
     return {call: output}
 
@@ -205,8 +204,10 @@ def addGroupsToKey(server, activation_key, groups):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -231,8 +232,10 @@ def deleteAllGroups(server):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -268,8 +271,10 @@ def deleteAllSystems(server):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -302,8 +307,10 @@ def deleteAllActivationKeys(server):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -339,8 +346,10 @@ def unregister(name, server_url):
     try:
         client, key = _get_session(server_url)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(
-            server_url, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server_url, exc
+            )
         )
         log.error(err_msg)
         return {name: err_msg}
@@ -351,10 +360,10 @@ def unregister(name, server_url):
         for system in systems_list:
             out = client.system.deleteSystem(key, system["id"])
             if out == 1:
-                return {name: "Successfully unregistered from {0}".format(server_url)}
+                return {name: "Successfully unregistered from {}".format(server_url)}
             else:
-                return {name: "Failed to unregister from {0}".format(server_url)}
+                return {name: "Failed to unregister from {}".format(server_url)}
     else:
         return {
-            name: "System does not exist in spacewalk server ({0})".format(server_url)
+            name: "System does not exist in spacewalk server ({})".format(server_url)
         }

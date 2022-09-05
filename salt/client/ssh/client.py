@@ -1,23 +1,18 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import os
 import random
 
-# Import Salt libs
+import salt.client.ssh
 import salt.config
-import salt.syspaths as syspaths
+import salt.syspaths
 import salt.utils.args
-from salt.exceptions import SaltClientError  # Temporary
+from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
 
-class SSHClient(object):
+class SSHClient:
     """
     Create a client object for executing routines via the salt-ssh backend
 
@@ -26,7 +21,7 @@ class SSHClient(object):
 
     def __init__(
         self,
-        c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+        c_path=os.path.join(salt.syspaths.CONFIG_DIR, "master"),
         mopts=None,
         disable_custom_roster=False,
     ):
@@ -45,12 +40,80 @@ class SSHClient(object):
         # Salt API should never offer a custom roster!
         self.opts["__disable_custom_roster"] = disable_custom_roster
 
+    def sanitize_kwargs(self, kwargs):
+        roster_vals = [
+            ("host", str),
+            ("ssh_user", str),
+            ("ssh_passwd", str),
+            ("ssh_port", int),
+            ("ssh_sudo", bool),
+            ("ssh_sudo_user", str),
+            ("ssh_priv", str),
+            ("ssh_priv_passwd", str),
+            ("ssh_identities_only", bool),
+            ("ssh_remote_port_forwards", str),
+            ("ssh_options", list),
+            ("ssh_max_procs", int),
+            ("ssh_askpass", bool),
+            ("ssh_key_deploy", bool),
+            ("ssh_update_roster", bool),
+            ("ssh_scan_ports", str),
+            ("ssh_scan_timeout", int),
+            ("ssh_timeout", int),
+            ("ssh_log_file", str),
+            ("raw_shell", bool),
+            ("refresh_cache", bool),
+            ("roster", str),
+            ("roster_file", str),
+            ("rosters", list),
+            ("ignore_host_keys", bool),
+            ("raw_shell", bool),
+            ("extra_filerefs", str),
+            ("min_extra_mods", str),
+            ("thin_extra_mods", str),
+            ("verbose", bool),
+            ("static", bool),
+            ("ssh_wipe", bool),
+            ("rand_thin_dir", bool),
+            ("regen_thin", bool),
+            ("ssh_run_pre_flight", bool),
+            ("no_host_keys", bool),
+            ("saltfile", str),
+        ]
+        sane_kwargs = {}
+        for name, kind in roster_vals:
+            if name not in kwargs:
+                continue
+            try:
+                val = kind(kwargs[name])
+            except ValueError:
+                log.warning("Unable to cast kwarg %s", name)
+                continue
+            if kind is bool or kind is int:
+                sane_kwargs[name] = val
+            elif kind is str:
+                if val.find("ProxyCommand") != -1:
+                    log.warning("Filter unsafe value for kwarg %s", name)
+                    continue
+                sane_kwargs[name] = val
+            elif kind is list:
+                sane_val = []
+                for item in val:
+                    # This assumes the values are strings
+                    if item.find("ProxyCommand") != -1:
+                        log.warning("Filter unsafe value for kwarg %s", name)
+                        continue
+                    sane_val.append(item)
+                sane_kwargs[name] = sane_val
+        return sane_kwargs
+
     def _prep_ssh(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs
     ):
         """
         Prepare the arguments
         """
+        kwargs = self.sanitize_kwargs(kwargs)
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
@@ -80,8 +143,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         """
         ssh = self._prep_ssh(tgt, fun, arg, timeout, tgt_type, kwarg, **kwargs)
-        for ret in ssh.run_iter(jid=kwargs.get("jid", None)):
-            yield ret
+        yield from ssh.run_iter(jid=kwargs.get("jid", None))
 
     def cmd(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs
@@ -163,7 +225,7 @@ class SSHClient(object):
         tgt_type="glob",
         ret="",
         kwarg=None,
-        sub=3,
+        subset=3,
         **kwargs
     ):
         """
@@ -172,13 +234,13 @@ class SSHClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :param sub: The number of systems to execute on
+        :param subset: The number of systems to execute on
 
         .. code-block:: python
 
             >>> import salt.client.ssh.client
             >>> sshclient= salt.client.ssh.client.SSHClient()
-            >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
+            >>> sshclient.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
 
         .. versionadded:: 2017.7.0
@@ -190,8 +252,25 @@ class SSHClient(object):
         for minion in minions:
             if fun in minion_ret[minion]["return"]:
                 f_tgt.append(minion)
-            if len(f_tgt) >= sub:
+            if len(f_tgt) >= subset:
                 break
         return self.cmd_iter(
             f_tgt, fun, arg, timeout, tgt_type="list", ret=ret, kwarg=kwarg, **kwargs
         )
+
+    def destroy(self):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+
+    def __enter__(self):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+        return self
+
+    def __exit__(self, *args):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+        self.destroy()

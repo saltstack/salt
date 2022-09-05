@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Functions which implement running reactor jobs
 """
-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import fnmatch
 import glob
 import logging
+import os
 
-# Import salt libs
 import salt.client
 import salt.defaults.exitcodes
 import salt.runner
@@ -25,9 +19,6 @@ import salt.utils.master
 import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -49,32 +40,12 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
     }
 
     def __init__(self, opts, **kwargs):
-        super(Reactor, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
         self.is_leader = True
-
-    # We need __setstate__ and __getstate__ to avoid pickling errors since
-    # 'self.rend' (from salt.state.Compiler) contains a function reference
-    # which is not picklable.
-    # These methods are only used when pickling so will not be used on
-    # non-Windows platforms.
-    def __setstate__(self, state):
-        Reactor.__init__(
-            self,
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def render_reaction(self, glob_ref, tag, data):
         """
@@ -113,11 +84,11 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         log.debug("Gathering reactors for tag %s", tag)
         reactors = []
-        if isinstance(self.opts["reactor"], six.string_types):
+        if isinstance(self.opts["reactor"], str):
             try:
                 with salt.utils.files.fopen(self.opts["reactor"]) as fp_:
                     react_map = salt.utils.yaml.safe_load(fp_)
-            except (OSError, IOError):
+            except OSError:
                 log.error('Failed to read reactor map: "%s"', self.opts["reactor"])
             except Exception:  # pylint: disable=broad-except
                 log.error(
@@ -130,10 +101,10 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = next(six.iterkeys(ropt))
+            key = next(iter(ropt.keys()))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
-                if isinstance(val, six.string_types):
+                if isinstance(val, str):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
@@ -143,12 +114,12 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         Return a list of the reactors
         """
-        if isinstance(self.minion.opts["reactor"], six.string_types):
+        if isinstance(self.minion.opts["reactor"], str):
             log.debug("Reading reactors from yaml %s", self.opts["reactor"])
             try:
                 with salt.utils.files.fopen(self.opts["reactor"]) as fp_:
                     react_map = salt.utils.yaml.safe_load(fp_)
-            except (OSError, IOError):
+            except OSError:
                 log.error('Failed to read reactor map: "%s"', self.opts["reactor"])
             except Exception:  # pylint: disable=broad-except
                 log.error(
@@ -165,7 +136,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         reactors = self.list_all()
         for reactor in reactors:
-            _tag = next(six.iterkeys(reactor))
+            _tag = next(iter(reactor.keys()))
             if _tag == tag:
                 return {"status": False, "comment": "Reactor already exists."}
 
@@ -178,7 +149,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         reactors = self.list_all()
         for reactor in reactors:
-            _tag = next(six.iterkeys(reactor))
+            _tag = next(iter(reactor.keys()))
             if _tag == tag:
                 self.minion.opts["reactor"].remove(reactor)
                 return {"status": True, "comment": "Reactor deleted."}
@@ -234,13 +205,14 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         Enter into the server loop
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
+        if self.opts["reactor_niceness"] and not salt.utils.platform.is_windows():
+            log.info("Reactor setting niceness to %i", self.opts["reactor_niceness"])
+            os.nice(self.opts["reactor_niceness"])
 
         # instantiate some classes inside our new process
         with salt.utils.event.get_event(
             self.opts["__role"],
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=True,
         ) as event:
@@ -257,7 +229,8 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                     master_key = salt.utils.master.get_master_key("root", self.opts)
                     if data["data"].get("key") != master_key:
                         log.error(
-                            "received salt/reactors/manage event without matching master_key. discarding"
+                            "received salt/reactors/manage event without matching"
+                            " master_key. discarding"
                         )
                         continue
                 if data["tag"].endswith("salt/reactors/manage/is_leader"):
@@ -306,7 +279,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                                 log.warning("Exit ignored by reactor")
 
 
-class ReactWrap(object):
+class ReactWrap:
     """
     Wrapper that executes low data for the Reactor System
     """

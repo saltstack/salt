@@ -65,10 +65,14 @@ The information which can be stored in a roster ``target`` is the following:
                         # commands. Will only run the first time when the thin dir
                         # does not exist, unless --pre-flight is passed to salt-ssh
                         # command or ssh_run_pre_flight is set to true in the config
-                        # Added in Sodium Release.
+                        # Added in 3001 Release.
+        ssh_pre_flight_args: # The list of arguments to pass to the script
+                             # running on the minion with ssh_pre_flight.
+                             # Can be specified as single string.
         set_path:    # Set the path environment variable, to ensure the expected python
                      # binary is in the salt-ssh path, when running the command.
-                     # Example: '$PATH:/usr/local/bin/'. Added in Sodium Release.
+                     # Example: '$PATH:/usr/local/bin/'. Added in 3001 Release.
+        ssh_options: # List of options (as 'option=argument') to pass to ssh.
 
 
 .. _ssh_pre_flight:
@@ -76,7 +80,7 @@ The information which can be stored in a roster ``target`` is the following:
 ssh_pre_flight
 --------------
 
-A Salt-SSH roster option `ssh_pre_flight` was added in the Sodium release. This enables
+A Salt-SSH roster option `ssh_pre_flight` was added in the 3001 release. This enables
 you to run a script before Salt-SSH tries to run any commands. You can set this option
 in the roster for a specific minion or use the `roster_defaults` to set it for all minions.
 This script will only run if the thin dir is not currently on the minion. This means it will
@@ -86,6 +90,15 @@ you want to intentionally run the script again you have a couple of options:
 * Wipe out your thin dir by using the -w salt-ssh arg.
 * Set ssh_run_pre_flight to True in the config
 * Run salt-ssh with the --pre-flight arg.
+
+.. _ssh_pre_flight_args:
+
+ssh_pre_flight_args
+-------------------
+
+Additional arguments to the script running on the minion with `ssh_pre_flight` can be passed
+with specifying a list of arguments or a single string. In case of using single string
+distinct arguments will be passed to the script by splitting this string with the spaces.
 
 .. _roster_defaults:
 

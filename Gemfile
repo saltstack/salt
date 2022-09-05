@@ -2,14 +2,13 @@
 
 source 'https://rubygems.org'
 
-# Point this back at the test-kitchen package after >1.2.5 is relased
-gem 'test-kitchen', :git => 'https://github.com/dwoz/test-kitchen.git', :branch => 'keepalive_maxcount'
+gem 'test-kitchen', '>=2.11.1'
 gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
 gem 'kitchen-sync'
 gem 'git'
 
 group :docker do
-  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git'
+  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git', :branch => 'main'
 end
 
 group :windows do
@@ -19,7 +18,7 @@ group :windows do
 end
 
 group :ec2 do
-  gem 'kitchen-ec2'
+  gem 'kitchen-ec2', '>=3.8'
 end
 
 group :vagrant do

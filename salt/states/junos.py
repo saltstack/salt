@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State modules to interact with Junos devices.
 ==============================================
@@ -13,8 +12,6 @@ State modules to interact with Junos devices.
 
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from functools import wraps
@@ -45,10 +42,14 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
               - dest: /home/user/rpc.log
               - interface_name: lo0
 
+        fetch interface information with terse:
+            junos.rpc:
+                - name: get-interface-information
+                - terse: True
 
     Parameters:
       Required
-        * cmd:
+        * name:
           The rpc to be executed. (default = None)
       Optional
         * dest:
@@ -94,7 +95,7 @@ def set_hostname(name, **kwargs):
 
     Parameters:
      Required
-        * hostname: The name to be set. (default = None)
+        * name: The name to be set. (default = None)
      Optional
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
@@ -157,7 +158,7 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id, **kwargs):
+def rollback(name, d_id, **kwargs):
     """
     Rollbacks the committed changes.
 
@@ -170,7 +171,11 @@ def rollback(name, id, **kwargs):
     Parameters:
       Optional
         * id:
+        * d_id:
           The rollback id value [0-49]. (default = 0)
+          (this variable cannot be named `id`, it conflicts
+          with the state compiler's internal id)
+
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
@@ -186,14 +191,14 @@ def rollback(name, id, **kwargs):
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.rollback"](id=id, **kwargs)
+    ret["changes"] = __salt__["junos.rollback"](d_id=d_id, **kwargs)
     return ret
 
 
 @resultdecorator
-def diff(name, d_id, **kwargs):
+def diff(name, d_id=0, **kwargs):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
     Gets the difference between the candidate and the current configuration.
 
@@ -224,9 +229,15 @@ def cli(name, **kwargs):
               junos.cli:
                 - format: xml
 
+            get software version of device:
+              junos.cli:
+                - name: show version
+                - format: text
+                - dest: /home/user/show_version.log
+
     Parameters:
       Required
-        * command:
+        * name:
           The command that need to be executed on Junos CLI. (default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
@@ -280,16 +291,16 @@ def install_config(name, **kwargs):
 
             Install the mentioned config:
               junos.install_config:
-                - path: salt//configs/interface.set
+                - name: salt://configs/interface.set
                 - timeout: 100
-                - diffs_file: 'var/log/diff'
+                - diffs_file: '/var/log/diff'
 
 
     .. code-block:: yaml
 
             Install the mentioned config:
               junos.install_config:
-                - template_path: salt//configs/interface.set
+                - path: salt://configs/interface.set
                 - timeout: 100
                 - template_vars:
                     interface_name: lo0
@@ -312,12 +323,14 @@ def install_config(name, **kwargs):
       execute.
 
     overwrite : False
-      Set to ``True`` if you want this file is to completely replace the
-       configuration file.
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file. Sets action to override
 
-    replace : False
-      Specify whether the configuration file uses "replace:" statements.  Only
-      those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
+
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     comment
       Provide a comment to the commit. (default = None)
@@ -373,7 +386,7 @@ def install_os(name, **kwargs):
 
     Parameters:
       Required
-        * path:
+        * name:
           Path where the image file is present on the pro\
           xy minion.
       Optional
@@ -406,7 +419,7 @@ def file_copy(name, dest=None, **kwargs):
 
     Parameters:
       Required
-        * src:
+        * name:
           The sorce path where the file is kept.
         * dest:
           The destination path where the file will be copied.
@@ -463,13 +476,13 @@ def load(name, **kwargs):
 
         Install the mentioned config:
           junos.load:
-            - path: salt//configs/interface.set
+            - name: salt://configs/interface.set
 
     .. code-block:: yaml
 
         Install the mentioned config:
           junos.load:
-            - template_path: salt//configs/interface.set
+            - name: salt://configs/interface.set
             - template_vars:
                 interface_name: lo0
                 description: Creating interface via SaltStack.
@@ -492,12 +505,11 @@ def load(name, **kwargs):
         Set to ``True`` if you want this file is to completely replace the
         configuration file.
 
-    replace : False
-        Specify whether the configuration file uses "replace:" statements.
-        Only those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
 
-    format:
-      Determines the format of the contents.
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     update : False
         Compare a complete loaded configuration against the candidate
@@ -540,7 +552,7 @@ def commit_check(name):
 @resultdecorator
 def get_table(name, table, table_file, **kwargs):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Retrieve data from a Junos device using Tables/Views
 
@@ -549,7 +561,14 @@ def get_table(name, table, table_file, **kwargs):
         get route details:
           junos.get_table:
             - table: RouteTable
-            - file: routes.yml
+            - table_file: routes.yml
+
+        get interface details:
+          junos.get_table:
+            - table: EthPortTable
+            - table_file: ethport.yml
+            - table_args:
+                interface_name: ge-0/0/0
 
     name (required)
         task definition

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Icinga2 Common Utils
 =================
@@ -7,15 +6,11 @@ This module provides common functionality for icinga2 module and state.
 
 .. versionadded:: 2018.8.3
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
 import salt.modules.cmdmod
-
-# Import Salt libs
 import salt.utils.path
 
 __salt__ = {"cmd.run_all": salt.modules.cmdmod.run_all}

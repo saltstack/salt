@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -12,7 +10,8 @@ import stat
 import tempfile
 import textwrap
 
-import salt.ext.six
+import pytest
+
 import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
@@ -28,7 +27,7 @@ from salt.utils.gitfs import (
     PYGIT2_MINVER,
     PYGIT2_VERSION,
 )
-from tests.support.helpers import patched_environ, slowTest
+from tests.support.helpers import patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -77,7 +76,7 @@ def _clear_instance_map():
         pass
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = {
@@ -226,7 +225,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 LOAD = {"saltenv": "base"}
 
 
-class GitFSTestFuncs(object):
+class GitFSTestFuncs:
     """
     These are where the tests go, so that they can be run using both GitPython
     and pygit2.
@@ -246,7 +245,7 @@ class GitFSTestFuncs(object):
     2. Do *NOT* move the gitfs.update() into the setUp.
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_file_list(self):
         gitfs.update()
         ret = gitfs.file_list(LOAD)
@@ -256,7 +255,7 @@ class GitFSTestFuncs(object):
         # forward slash, hence it being explicitly used to join here.
         self.assertIn("/".join((UNICODE_DIRNAME, "foo.txt")), ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_dir_list(self):
         gitfs.update()
         ret = gitfs.dir_list(LOAD)
@@ -332,7 +331,7 @@ class GitFSTestFuncs(object):
 
             self.assertDictEqual(ret, {"data": data, "dest": "testfile"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_envs(self):
         gitfs.update()
         ret = gitfs.envs(ignore_cache=True)
@@ -340,7 +339,7 @@ class GitFSTestFuncs(object):
         self.assertIn(UNICODE_ENVNAME, ret)
         self.assertIn(TAG_NAME, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ref_types_global(self):
         """
         Test the global gitfs_ref_types config option
@@ -354,7 +353,7 @@ class GitFSTestFuncs(object):
             self.assertIn(UNICODE_ENVNAME, ret)
             self.assertNotIn(TAG_NAME, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ref_types_per_remote(self):
         """
         Test the per_remote ref_types config option, using a different
@@ -370,7 +369,7 @@ class GitFSTestFuncs(object):
             self.assertNotIn(UNICODE_ENVNAME, ret)
             self.assertIn(TAG_NAME, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_disable_saltenv_mapping_global_with_mapping_defined_globally(self):
         """
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -394,7 +393,7 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["base", "foo"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_saltenv_blacklist(self):
         """
         test saltenv_blacklist
@@ -413,7 +412,7 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME in ret
             assert "mytag" in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_saltenv_whitelist(self):
         """
         test saltenv_whitelist
@@ -432,7 +431,7 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME not in ret
             assert "mytag" not in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_env_deprecated_opts(self):
         """
         ensure deprecated options gitfs_env_whitelist
@@ -454,7 +453,7 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME in ret
             assert "mytag" in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         """
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -466,7 +465,7 @@ class GitFSTestFuncs(object):
                 """\
             gitfs_disable_saltenv_mapping: True
             gitfs_remotes:
-              - {0}:
+              - {}:
                 - saltenv:
                   - bar:
                     - ref: somebranch
@@ -482,7 +481,7 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["bar", "base"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(self):
         """
         Test the per-remote disable_saltenv_mapping config option, combined
@@ -493,7 +492,7 @@ class GitFSTestFuncs(object):
             textwrap.dedent(
                 """\
             gitfs_remotes:
-              - {0}:
+              - {}:
                 - disable_saltenv_mapping: True
 
             gitfs_saltenv:
@@ -511,7 +510,7 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["base", "hello"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(self):
         """
         Test the per-remote disable_saltenv_mapping config option, combined
@@ -522,7 +521,7 @@ class GitFSTestFuncs(object):
             textwrap.dedent(
                 """\
             gitfs_remotes:
-              - {0}:
+              - {}:
                 - disable_saltenv_mapping: True
                 - saltenv:
                   - world:
@@ -540,7 +539,7 @@ class GitFSTestFuncs(object):
             self.assertEqual(ret, ["base", "world"])
 
 
-class GitFSTestBase(object):
+class GitFSTestBase:
     @classmethod
     def setUpClass(cls):
         cls.tmp_repo_dir = os.path.join(RUNTIME_VARS.TMP, "gitfs_root")
@@ -558,8 +557,8 @@ class GitFSTestBase(object):
                 raise
 
         shutil.copytree(
-            salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-            salt.ext.six.text_type(cls.tmp_repo_dir + "/"),
+            str(RUNTIME_VARS.BASE_FILES),
+            str(cls.tmp_repo_dir + "/"),
             symlinks=True,
         )
 
@@ -572,7 +571,7 @@ class GitFSTestBase(object):
                 username = pwd.getpwuid(os.geteuid()).pw_name
         except AttributeError:
             log.error("Unable to get effective username, falling back to 'root'.")
-            username = str("root")
+            username = "root"
 
         with patched_environ(USERNAME=username):
             repo.index.add([x for x in os.listdir(cls.tmp_repo_dir) if x != ".git"])
@@ -628,12 +627,12 @@ class GitFSTestBase(object):
                     continue
                 if exc.errno != errno.ENOENT:
                     raise
-        if salt.ext.six.PY3 and salt.utils.platform.is_windows():
+        if salt.utils.platform.is_windows():
             self.setUpClass()
             self.setup_loader_modules()
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = {
@@ -673,11 +672,11 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
 
 @skipIf(
     not HAS_GITPYTHON,
-    "GitPython >= {0} required for temp repo setup".format(GITPYTHON_MINVER),
+    "GitPython >= {} required for temp repo setup".format(GITPYTHON_MINVER),
 )
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(
     salt.utils.platform.is_windows(),

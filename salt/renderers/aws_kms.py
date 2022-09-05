@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 .. _`AWS KMS Envelope Encryption`: https://docs.aws.amazon.com/kms/latest/developerguide/workflow.html
 
@@ -63,21 +62,15 @@ data like so:
     a-secret: gAAAAABaj5uzShPI3PEz6nL5Vhk2eEHxGXSZj8g71B84CZsVjAAtDFY1mfjNRl-1Su9YVvkUzNjI4lHCJJfXqdcTvwczBYtKy0Pa7Ri02s10Wn1tF0tbRwk=
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
 import logging
 
-# Import salt libs
 import salt.utils.stringio
-
-# Import 3rd-party libs
-from salt.ext import six
+from salt.exceptions import SaltConfigurationError
 
 try:
-    import botocore.exceptions
     import boto3
+    import botocore.exceptions
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
 except ImportError:
@@ -122,7 +115,7 @@ def _cfg_data_key():
     data_key = _cfg("data_key", "")
     if data_key:
         return data_key
-    raise salt.exceptions.SaltConfigurationError("aws_kms:data_key is not set")
+    raise SaltConfigurationError("aws_kms:data_key is not set")
 
 
 def _session():
@@ -145,18 +138,16 @@ def _session():
     try:
         return boto3.Session(profile_name=profile_name)
     except botocore.exceptions.ProfileNotFound as orig_exc:
-        err_msg = 'Boto3 could not find the "{}" profile configured in Salt.'.format(
-            profile_name or "default"
-        )
-        config_error = salt.exceptions.SaltConfigurationError(err_msg)
-        six.raise_from(config_error, orig_exc)
+        raise SaltConfigurationError(
+            'Boto3 could not find the "{}" profile configured in Salt.'.format(
+                profile_name or "default"
+            )
+        ) from orig_exc
     except botocore.exceptions.NoRegionError as orig_exc:
-        err_msg = (
+        raise SaltConfigurationError(
             "Boto3 was unable to determine the AWS "
-            "endpoint region using the {} profile."
-        ).format(profile_name or "default")
-        config_error = salt.exceptions.SaltConfigurationError(err_msg)
-        six.raise_from(config_error, orig_exc)
+            "endpoint region using the {} profile.".format(profile_name or "default")
+        ) from orig_exc
 
 
 def _kms():
@@ -179,9 +170,9 @@ def _api_decrypt():
         error_code = orig_exc.response.get("Error", {}).get("Code", "")
         if error_code != "InvalidCiphertextException":
             raise
-        err_msg = "aws_kms:data_key is not a valid KMS data key"
-        config_error = salt.exceptions.SaltConfigurationError(err_msg)
-        six.raise_from(config_error, orig_exc)
+        raise SaltConfigurationError(
+            "aws_kms:data_key is not a valid KMS data key"
+        ) from orig_exc
 
 
 def _plaintext_data_key():
@@ -227,7 +218,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     plain_text = fernet.Fernet(data_key).decrypt(cipher)
     if hasattr(plain_text, "decode"):
         plain_text = plain_text.decode(__salt_system_encoding__)
-    return six.text_type(plain_text)
+    return str(plain_text)
 
 
 def _decrypt_object(obj, translate_newlines=False):
@@ -239,14 +230,14 @@ def _decrypt_object(obj, translate_newlines=False):
     """
     if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
-    if isinstance(obj, six.string_types):
+    if isinstance(obj, (str, bytes)):
         try:
             return _decrypt_ciphertext(obj, translate_newlines=translate_newlines)
         except (fernet.InvalidToken, TypeError):
             return obj
 
     elif isinstance(obj, dict):
-        for key, value in six.iteritems(obj):
+        for key, value in obj.items():
             obj[key] = _decrypt_object(value, translate_newlines=translate_newlines)
         return obj
     elif isinstance(obj, list):
@@ -257,9 +248,7 @@ def _decrypt_object(obj, translate_newlines=False):
         return obj
 
 
-def render(
-    data, saltenv="base", sls="", argline="", **kwargs
-):  # pylint: disable=unused-argument
+def render(data, saltenv="base", sls="", argline="", **kwargs):
     """
     Decrypt the data to be rendered that was encrypted using AWS KMS envelope encryption.
     """

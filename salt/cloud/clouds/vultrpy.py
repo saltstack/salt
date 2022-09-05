@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vultr Cloud Module using python-vultr bindings
 ==============================================
@@ -51,20 +50,39 @@ that startup script in a profile like so:
       size: 13
       startup_script_id: 493234
 
-"""
+Similarly you can also specify a fiewall group ID using the option firewall_group_id. You can list
+firewall groups with
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+.. code-block:: bash
+
+    salt-cloud -f list_firewall_groups <name of vultr provider>
+
+To specify SSH keys to be preinstalled on the server, use the ssh_key_names setting
+
+.. code-block:: yaml
+
+    nyc-2gb-1cpu-ubuntu-17-04:
+      location: 1
+      provider: my-vultr-config
+      image: 223
+      size: 13
+      ssh_key_names: dev1,dev2,salt-master
+
+You can list SSH keys available on your account using
+
+.. code-block:: bash
+
+    salt-cloud -f list_keypairs <name of vultr provider>
+
+"""
 
 import logging
 import pprint
 import time
+import urllib.parse
 
-# Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -84,12 +102,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or "vultr", ("api_key",)
+        __opts__, _get_active_provider_name() or "vultr", ("api_key",)
     )
 
 
@@ -105,15 +130,15 @@ def _cache_provider_details(conn=None):
     images = avail_images(conn)
     sizes = avail_sizes(conn)
 
-    for key, location in six.iteritems(locations):
+    for key, location in locations.items():
         DETAILS["avail_locations"][location["name"]] = location
         DETAILS["avail_locations"][key] = location
 
-    for key, image in six.iteritems(images):
+    for key, image in images.items():
         DETAILS["avail_images"][image["name"]] = image
         DETAILS["avail_images"][key] = image
 
-    for key, vm_size in six.iteritems(sizes):
+    for key, vm_size in sizes.items():
         DETAILS["avail_sizes"][vm_size["name"]] = vm_size
         DETAILS["avail_sizes"][key] = vm_size
 
@@ -132,11 +157,57 @@ def avail_scripts(conn=None):
     return _query("startupscript/list")
 
 
+def avail_firewall_groups(conn=None):
+    """
+    return available firewall groups
+    """
+    return _query("firewall/group_list")
+
+
+def avail_keys(conn=None):
+    """
+    return available SSH keys
+    """
+    return _query("sshkey/list")
+
+
 def list_scripts(conn=None, call=None):
     """
     return list of Startup Scripts
     """
     return avail_scripts()
+
+
+def list_firewall_groups(conn=None, call=None):
+    """
+    return list of firewall groups
+    """
+    return avail_firewall_groups()
+
+
+def list_keypairs(conn=None, call=None):
+    """
+    return list of SSH keys
+    """
+    return avail_keys()
+
+
+def show_keypair(kwargs=None, call=None):
+    """
+    return list of SSH keys
+    """
+    if not kwargs:
+        kwargs = {}
+
+    if "keyname" not in kwargs:
+        log.error("A keyname is required.")
+        return False
+
+    keys = list_keypairs(call="function")
+    keyid = keys[kwargs["keyname"]]["SSHKEYID"]
+    log.debug("Key ID is %s", keyid)
+
+    return keys[kwargs["keyname"]]
 
 
 def avail_sizes(conn=None):
@@ -193,7 +264,9 @@ def list_nodes_select(conn=None, call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -204,7 +277,10 @@ def destroy(name):
     node = show_instance(name, call="action")
     params = {"SUBID": node["SUBID"]}
     result = _query(
-        "server/destroy", method="POST", decode=False, data=_urlencode(params)
+        "server/destroy",
+        method="POST",
+        decode=False,
+        data=urllib.parse.urlencode(params),
     )
 
     # The return of a destroy call is empty in the case of a success.
@@ -242,7 +318,7 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -253,7 +329,7 @@ def _lookup_vultrid(which_key, availkey, keyname):
     if DETAILS == {}:
         _cache_provider_details()
 
-    which_key = six.text_type(which_key)
+    which_key = str(which_key)
     try:
         return DETAILS[availkey][which_key][keyname]
     except KeyError:
@@ -268,11 +344,23 @@ def create(vm_):
         vm_["driver"] = vm_["provider"]
 
     private_networking = config.get_cloud_config_value(
-        "enable_private_network", vm_, __opts__, search_global=False, default=False,
+        "enable_private_network",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=False,
+    )
+
+    ssh_key_ids = config.get_cloud_config_value(
+        "ssh_key_names", vm_, __opts__, search_global=False, default=None
     )
 
     startup_script = config.get_cloud_config_value(
-        "startup_script_id", vm_, __opts__, search_global=False, default=None,
+        "startup_script_id",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if startup_script and str(startup_script) not in avail_scripts():
@@ -281,6 +369,28 @@ def create(vm_):
             str(startup_script),
         )
         return False
+
+    firewall_group_id = config.get_cloud_config_value(
+        "firewall_group_id",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
+    )
+
+    if firewall_group_id and str(firewall_group_id) not in avail_firewall_groups():
+        log.error(
+            "Your Vultr account does not have a firewall group with ID %s",
+            str(firewall_group_id),
+        )
+        return False
+    if ssh_key_ids is not None:
+        key_list = ssh_key_ids.split(",")
+        available_keys = avail_keys()
+        for key in key_list:
+            if key and str(key) not in available_keys:
+                log.error("Your Vultr account does not have a key with ID %s", str(key))
+                return False
 
     if private_networking is not None:
         if not isinstance(private_networking, bool):
@@ -295,7 +405,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -329,12 +439,18 @@ def create(vm_):
     if startup_script:
         kwargs["SCRIPTID"] = startup_script
 
+    if firewall_group_id:
+        kwargs["FIREWALLGROUPID"] = firewall_group_id
+
+    if ssh_key_ids:
+        kwargs["SSHKEYID"] = ssh_key_ids
+
     log.info("Creating Cloud VM %s", vm_["name"])
 
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -345,10 +461,12 @@ def create(vm_):
     )
 
     try:
-        data = _query("server/create", method="POST", data=_urlencode(kwargs))
+        data = _query(
+            "server/create", method="POST", data=urllib.parse.urlencode(kwargs)
+        )
         if int(data.get("status", "200")) >= 300:
             log.error(
-                "Error creating %s on Vultr\n\n" "Vultr API returned %s\n",
+                "Error creating %s on Vultr\n\nVultr API returned %s\n",
                 vm_["name"],
                 data,
             )
@@ -360,7 +478,7 @@ def create(vm_):
             __utils__["cloud.fire_event"](
                 "event",
                 "instance request failed",
-                "salt/cloud/{0}/requesting/failed".format(vm_["name"]),
+                "salt/cloud/{}/requesting/failed".format(vm_["name"]),
                 args={"kwargs": kwargs},
                 sock_dir=__opts__["sock_dir"],
                 transport=__opts__["transport"],
@@ -379,7 +497,7 @@ def create(vm_):
         __utils__["cloud.fire_event"](
             "event",
             "instance request failed",
-            "salt/cloud/{0}/requesting/failed".format(vm_["name"]),
+            "salt/cloud/{}/requesting/failed".format(vm_["name"]),
             args={"kwargs": kwargs},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -391,7 +509,7 @@ def create(vm_):
         Wait for the IP address to become available
         """
         data = show_instance(vm_["name"], call="action")
-        main_ip = six.text_type(data.get("main_ip", "0"))
+        main_ip = str(data.get("main_ip", "0"))
         if main_ip.startswith("0"):
             time.sleep(3)
             return False
@@ -404,7 +522,8 @@ def create(vm_):
         data = show_instance(vm_["name"], call="action")
         # print("Waiting for default password")
         # pprint.pprint(data)
-        if six.text_type(data.get("default_password", "")) == "":
+        default_password = str(data.get("default_password", ""))
+        if default_password == "" or default_password == "not supported":
             time.sleep(1)
             return False
         return data["default_password"]
@@ -416,7 +535,7 @@ def create(vm_):
         data = show_instance(vm_["name"], call="action")
         # print("Waiting for status normal")
         # pprint.pprint(data)
-        if six.text_type(data.get("status", "")) != "active":
+        if str(data.get("status", "")) != "active":
             time.sleep(1)
             return False
         return data["default_password"]
@@ -428,7 +547,7 @@ def create(vm_):
         data = show_instance(vm_["name"], call="action")
         # print("Waiting for server state ok")
         # pprint.pprint(data)
-        if six.text_type(data.get("server_state", "")) != "ok":
+        if str(data.get("server_state", "")) != "ok":
             time.sleep(1)
             return False
         return data["default_password"]
@@ -477,7 +596,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -493,7 +612,10 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
     Perform a query directly against the Vultr REST API
     """
     api_key = config.get_cloud_config_value(
-        "api_key", get_configured_provider(), __opts__, search_global=False,
+        "api_key",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
     )
     management_host = config.get_cloud_config_value(
         "management_host",
@@ -503,7 +625,9 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
         default="api.vultr.com",
     )
     url = "https://{management_host}/v1/{path}?api_key={api_key}".format(
-        management_host=management_host, path=path, api_key=api_key,
+        management_host=management_host,
+        path=path,
+        api_key=api_key,
     )
 
     if header_dict is None:

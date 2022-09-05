@@ -1,5 +1,5 @@
-salt.modules.namecheap_users module
-===================================
+salt.modules.namecheap_users
+============================
 
 .. automodule:: salt.modules.namecheap_users
     :members:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage groups on Linux, OpenBSD and NetBSD
 
@@ -9,16 +8,12 @@ Manage groups on Linux, OpenBSD and NetBSD
     <module-provider-override>`.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import functools
 import logging
 import os
 
 import salt.utils.files
 import salt.utils.stringutils
-from salt.ext import six
 
 try:
     import grp
@@ -45,8 +40,10 @@ def __virtual__():
     )
 
 
-def add(name, gid=None, system=False, root=None):
+def add(name, gid=None, system=False, root=None, non_unique=False):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
 
     name
@@ -61,6 +58,11 @@ def add(name, gid=None, system=False, root=None):
     root
         Directory to chroot into
 
+    non_unique
+        Allow creating groups with duplicate (non-unique) GIDs
+
+        .. versionadded:: 3006.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -69,7 +71,9 @@ def add(name, gid=None, system=False, root=None):
     """
     cmd = ["groupadd"]
     if gid:
-        cmd.append("-g {0}".format(gid))
+        cmd.append("-g {}".format(gid))
+        if non_unique:
+            cmd.append("-o")
     if system and __grains__["kernel"] != "OpenBSD":
         cmd.append("-r")
 
@@ -205,8 +209,10 @@ def _chattrib(name, key, value, param, root=None):
     return info(name, root=root).get(key) == value
 
 
-def chgid(name, gid, root=None):
+def chgid(name, gid, root=None, non_unique=False):
     """
+    .. versionchanged:: 3006.0
+
     Change the gid for a named group
 
     name
@@ -218,13 +224,21 @@ def chgid(name, gid, root=None):
     root
         Directory to chroot into
 
+    non_unique
+        Allow modifying groups with duplicate (non-unique) GIDs
+
+        .. versionadded:: 3006.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.chgid foo 4376
     """
-    return _chattrib(name, "gid", gid, "-g", root=root)
+    param = "-g"
+    if non_unique:
+        param = "-og"
+    return _chattrib(name, "gid", gid, param, root=root)
 
 
 def adduser(name, username, root=None):
@@ -323,13 +337,11 @@ def deluser(name, username, root=None):
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
             elif __grains__["kernel"] == "OpenBSD":
                 out = __salt__["cmd.run_stdout"](
-                    "id -Gn {0}".format(username), python_shell=False
+                    "id -Gn {}".format(username), python_shell=False
                 )
                 cmd = ["usermod", "-S"]
-                cmd.append(
-                    ",".join([g for g in out.split() if g != six.text_type(name)])
-                )
-                cmd.append("{0}".format(username))
+                cmd.append(",".join([g for g in out.split() if g != str(name)]))
+                cmd.append("{}".format(username))
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
             else:
                 log.error("group.deluser is not yet supported on this platform")
@@ -356,6 +368,8 @@ def members(name, members_list, root=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' group.members foo 'user1,user2,user3,...'
 
     Replaces a membership list for a local group 'foo'.
@@ -376,7 +390,7 @@ def members(name, members_list, root=None):
         elif on_suse_11:
             for old_member in __salt__["group.info"](name).get("members"):
                 __salt__["cmd.run"](
-                    "groupmod -R {0} {1}".format(old_member, name), python_shell=False
+                    "groupmod -R {} {}".format(old_member, name), python_shell=False
                 )
             cmd = ["groupmod", "-A", members_list, name]
         else:
@@ -388,9 +402,9 @@ def members(name, members_list, root=None):
         retcode = 1
         grp_info = __salt__["group.info"](name)
         if grp_info and name in grp_info["name"]:
-            __salt__["cmd.run"]("groupdel {0}".format(name), python_shell=False)
+            __salt__["cmd.run"]("groupdel {}".format(name), python_shell=False)
             __salt__["cmd.run"](
-                "groupadd -g {0} {1}".format(grp_info["gid"], name), python_shell=False
+                "groupadd -g {} {}".format(grp_info["gid"], name), python_shell=False
             )
             for user in members_list.split(","):
                 if user:

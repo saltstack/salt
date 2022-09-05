@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An engine that continuously reads messages from SQS and fires them as events.
 
@@ -73,19 +72,12 @@ Additionally you can define cross account sqs:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
 import salt.utils.event
-
-# Import salt libs
 import salt.utils.json
-from salt.ext import six
 
-# Import third party libs
 try:
     import boto.sqs
 
@@ -98,7 +90,8 @@ def __virtual__():
     if not HAS_BOTO:
         return (
             False,
-            "Cannot import engine sqs_events because the required boto module is missing",
+            "Cannot import engine sqs_events because the required boto module is"
+            " missing",
         )
     else:
         return True
@@ -112,7 +105,7 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
     Get a boto connection to SQS.
     """
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, str):
             _profile = __opts__[profile]
         elif isinstance(profile, dict):
             _profile = profile
@@ -150,7 +143,7 @@ def _process_queue(
     if not q:
         log.warning(
             "failure connecting to queue: %s, waiting 10 seconds.",
-            ":".join([_f for _f in (six.text_type(owner_acct_id), q_name) if _f]),
+            ":".join([_f for _f in (str(owner_acct_id), q_name) if _f]),
         )
         time.sleep(10)
     else:

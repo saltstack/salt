@@ -1,33 +1,23 @@
-# -*- coding: utf-8 -*-
 """
 Test the ssh_auth states
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import salt libs
-import salt.utils.files
+import pytest
 
-# Import Salt Testing libs
+import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    skip_if_not_root,
-    slowTest,
-    with_system_user,
-)
+from tests.support.helpers import with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
     @with_system_user("issue_7409", on_existing="delete", delete=True)
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
         userdetails = self.run_function("user.info", [username])
@@ -57,13 +47,13 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 fhr.read(),
                 "ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n"
-                "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n".format(username),
+                "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username),
             )
 
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
     @with_system_user("issue_10198", on_existing="delete", delete=True)
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function("user.info", [username])
         user_ssh_dir = os.path.join(userdetails["home"], ".ssh")
@@ -75,18 +65,18 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, key_fname), "w"
         ) as kfh:
-            kfh.write("ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n".format(username))
+            kfh.write("ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username))
 
         # Create a bogus key file on base environment
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_STATE_TREE, key_fname), "w"
         ) as kfh:
-            kfh.write("ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n".format(username))
+            kfh.write("ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username))
 
         ret = self.run_state(
             "ssh_auth.present",
             name="Setup Keys",
-            source="salt://{0}?saltenv=prod".format(key_fname),
+            source="salt://{}?saltenv=prod".format(key_fname),
             enc="ssh-rsa",
             user=username,
             comment=username,
@@ -94,7 +84,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
-                fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n".format(username)
+                fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username)
             )
 
         os.unlink(authorized_keys_file)
@@ -102,7 +92,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             "ssh_auth.present",
             name="Setup Keys",
-            source="salt://{0}".format(key_fname),
+            source="salt://{}".format(key_fname),
             enc="ssh-rsa",
             user=username,
             comment=username,
@@ -111,5 +101,5 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(
-                fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n".format(username)
+                fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username)
             )

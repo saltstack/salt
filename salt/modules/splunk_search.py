@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for interop with the Splunk API
 
@@ -20,23 +19,16 @@ Module for interop with the Splunk API
             port: 8080
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
-import urllib
+import urllib.parse
 
-# Import salt libs
 import salt.utils.yaml
-
-# Import third party libs
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 HAS_LIBS = False
 try:
-    import splunklib.client
     import requests
+    import splunklib.client
 
     HAS_LIBS = True
 except ImportError:
@@ -69,7 +61,7 @@ def _get_splunk(profile):
     Return the splunk client, cached into __context__ for performance
     """
     config = __salt__["config.option"](profile)
-    key = "splunk_search.{0}:{1}:{2}:{3}".format(
+    key = "splunk_search.{}:{}:{}:{}".format(
         config.get("host"),
         config.get("port"),
         config.get("username"),
@@ -131,14 +123,14 @@ def update(name, profile="splunk", **kwargs):
     for key in sorted(kwargs):
         old_value = props.get(key, None)
         new_value = updates.get(key, None)
-        if isinstance(old_value, six.string_types):
+        if isinstance(old_value, str):
             old_value = old_value.strip()
-        if isinstance(new_value, six.string_types):
+        if isinstance(new_value, str):
             new_value = new_value.strip()
         if old_value != new_value:
             update_set[key] = new_value
             update_needed = True
-            diffs.append("{0}: '{1}' => '{2}'".format(key, old_value, new_value))
+            diffs.append("{}: '{}' => '{}'".format(key, old_value, new_value))
     if update_needed:
         search.update(**update_set).refresh()
         return update_set, diffs
@@ -160,15 +152,15 @@ def create(name, profile="splunk", **kwargs):
     # this is hard-coded for now; all managed searches are app scope and
     # readable by all
     config = __salt__["config.option"](profile)
-    url = "https://{0}:{1}".format(config.get("host"), config.get("port"))
+    url = "https://{}:{}".format(config.get("host"), config.get("port"))
     auth = (config.get("username"), config.get("password"))
     data = {
         "owner": config.get("username"),
         "sharing": "app",
         "perms.read": "*",
     }
-    _req_url = "{0}/servicesNS/{1}/search/saved/searches/{2}/acl".format(
-        url, config.get("username"), urllib.quote(name)
+    _req_url = "{}/servicesNS/{}/search/saved/searches/{}/acl".format(
+        url, config.get("username"), urllib.parse.quote(name)
     )
     requests.post(_req_url, auth=auth, verify=True, data=data)
     return _get_splunk_search_props(search)
@@ -195,6 +187,7 @@ def list_(profile="splunk"):
     List splunk searches (names only)
 
     CLI Example:
+
         splunk_search.list
     """
     client = _get_splunk(profile)
@@ -226,7 +219,7 @@ def list_all(
     with the prefix; alarms that have the prefix will be skipped. This can be
     used to convert existing alarms to be managed by salt, as follows:
 
-    CLI example:
+    CLI Example:
 
             1. Make a "backup" of all existing searches
                 $ salt-call splunk_search.list_all --out=txt | sed "s/local: //" > legacy_searches.sls
@@ -277,7 +270,7 @@ def list_all(
 
     results = OrderedDict()
     # sort the splunk searches by name, so we get consistent output
-    searches = sorted([(s.name, s) for s in client.saved_searches])
+    searches = sorted((s.name, s) for s in client.saved_searches)
     for name, search in searches:
         if app and search.access.app != app:
             continue

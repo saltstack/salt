@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 This is the default nodegroup matcher.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.loader
-import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.minions
 
 log = logging.getLogger(__name__)
 
 
-def match(tgt, nodegroups=None, opts=None):
+def match(tgt, nodegroups=None, opts=None, minion_id=None):
     """
     This is a compatibility matcher and is NOT called when using
     nodegroups for remote execution, but is called when the nodegroups

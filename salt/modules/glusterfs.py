@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Manage a glusterfs pool
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
+import re
 import sys
 import xml.etree.ElementTree as ET
 
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -35,8 +29,9 @@ def _get_version():
     cmd = "gluster --version"
     result = __salt__["cmd.run"](cmd).splitlines()
     for line in result:
-        if line.startswith("glusterfs"):
-            version = line.split()[-1].split(".")
+        m = re.match(r"glusterfs ((?:\d+\.)+\d+)", line)
+        if m:
+            version = m.group(1).split(".")
             version = [int(i) for i in version]
     return tuple(version)
 
@@ -73,13 +68,16 @@ def _gluster_xml(cmd):
     # We will pass the command string as stdin to allow for much longer
     # command strings. This is especially useful for creating large volumes
     # where the list of bricks exceeds 128 characters.
-    if _get_version() < (3, 6,):
+    if _get_version() < (
+        3,
+        6,
+    ):
         result = __salt__["cmd.run"](
-            'script -q -c "gluster --xml --mode=script"', stdin="{0}\n\004".format(cmd)
+            'script -q -c "gluster --xml --mode=script"', stdin="{}\n\004".format(cmd)
         )
     else:
         result = __salt__["cmd.run"](
-            "gluster --xml --mode=script", stdin="{0}\n".format(cmd)
+            "gluster --xml --mode=script", stdin="{}\n".format(cmd)
         )
 
     try:
@@ -208,9 +206,9 @@ def peer(name):
 
     """
     if salt.utils.cloud.check_name(name, "a-zA-Z0-9._-"):
-        raise SaltInvocationError('Invalid characters in peer name "{0}"'.format(name))
+        raise SaltInvocationError('Invalid characters in peer name "{}"'.format(name))
 
-    cmd = "peer probe {0}".format(name)
+    cmd = "peer probe {}".format(name)
     return _gluster(cmd)
 
 
@@ -276,7 +274,7 @@ def create_volume(
         "gluster2:/export/vol2/brick"]' replica=2 start=True
     """
     # If single brick given as a string, accept it
-    if isinstance(bricks, six.string_types):
+    if isinstance(bricks, str):
         bricks = [bricks]
 
     # Error for block devices with multiple bricks
@@ -291,11 +289,11 @@ def create_volume(
             peer_name, path = brick.split(":")
             if not path.startswith("/"):
                 raise SaltInvocationError(
-                    "Brick paths must start with / in {0}".format(brick)
+                    "Brick paths must start with / in {}".format(brick)
                 )
         except ValueError:
             raise SaltInvocationError(
-                "Brick syntax is <peer>:<path> got {0}".format(brick)
+                "Brick syntax is <peer>:<path> got {}".format(brick)
             )
 
     # Validate arbiter config
@@ -305,17 +303,17 @@ def create_volume(
         )
 
     # Format creation call
-    cmd = "volume create {0} ".format(name)
+    cmd = "volume create {} ".format(name)
     if stripe:
-        cmd += "stripe {0} ".format(stripe)
+        cmd += "stripe {} ".format(stripe)
     if replica:
-        cmd += "replica {0} ".format(replica)
+        cmd += "replica {} ".format(replica)
     if arbiter:
         cmd += "arbiter 1 "
     if device_vg:
         cmd += "device vg "
     if transport != "tcp":
-        cmd += "transport {0} ".format(transport)
+        cmd += "transport {} ".format(transport)
     cmd += " ".join(bricks)
     if force:
         cmd += " force"
@@ -360,7 +358,7 @@ def status(name):
         salt '*' glusterfs.status myvolume
     """
     # Get volume status
-    root = _gluster_xml("volume status {0}".format(name))
+    root = _gluster_xml("volume status {}".format(name))
     if not _gluster_ok(root):
         # Most probably non-existing volume, the error output is logged
         # This return value is easy to test and intuitive
@@ -386,7 +384,7 @@ def status(name):
         hostname = node.find("hostname").text
         if hostname not in ("NFS Server", "Self-heal Daemon"):
             path = node.find("path").text
-            ret["bricks"]["{0}:{1}".format(hostname, path)] = etree_legacy_wrap(node)
+            ret["bricks"]["{}:{}".format(hostname, path)] = etree_legacy_wrap(node)
         elif hostname == "NFS Server":
             peerid = node.find("peerid").text
             true_hostname = hostref[peerid]
@@ -429,7 +427,7 @@ def info(name=None):
 
         bricks = {}
         for i, brick in enumerate(_iter(volume, "brick"), start=1):
-            brickkey = "brick{0}".format(i)
+            brickkey = "brick{}".format(i)
             bricks[brickkey] = {"path": brick.text}
             for child in brick:
                 if not child.tag == "name":
@@ -463,9 +461,9 @@ def start_volume(name, force=False):
 
         salt '*' glusterfs.start mycluster
     """
-    cmd = "volume start {0}".format(name)
+    cmd = "volume start {}".format(name)
     if force:
-        cmd = "{0} force".format(cmd)
+        cmd = "{} force".format(cmd)
 
     volinfo = info(name)
     if name not in volinfo:
@@ -505,7 +503,7 @@ def stop_volume(name, force=False):
         log.warning("Attempt to stop already stopped volume %s", name)
         return True
 
-    cmd = "volume stop {0}".format(name)
+    cmd = "volume stop {}".format(name)
     if force:
         cmd += " force"
 
@@ -545,7 +543,7 @@ def delete_volume(target, stop=True):
         if not stop_volume(target, force=True):
             return False
 
-    cmd = "volume delete {0}".format(target)
+    cmd = "volume delete {}".format(target)
     return _gluster(cmd)
 
 
@@ -573,9 +571,9 @@ def add_volume_bricks(name, bricks):
 
     new_bricks = []
 
-    cmd = "volume add-brick {0}".format(name)
+    cmd = "volume add-brick {}".format(name)
 
-    if isinstance(bricks, six.string_types):
+    if isinstance(bricks, str):
         bricks = [bricks]
 
     volume_bricks = [x["path"] for x in volinfo[name]["bricks"].values()]
@@ -590,7 +588,7 @@ def add_volume_bricks(name, bricks):
 
     if new_bricks:
         for brick in new_bricks:
-            cmd += " {0}".format(brick)
+            cmd += " {}".format(brick)
         return _gluster(cmd)
     return True
 
@@ -609,7 +607,7 @@ def enable_quota_volume(name):
         salt '*' glusterfs.enable_quota_volume <volume>
     """
 
-    cmd = "volume quota {0} enable".format(name)
+    cmd = "volume quota {} enable".format(name)
     if not _gluster(cmd):
         return False
     return True
@@ -629,7 +627,7 @@ def disable_quota_volume(name):
         salt '*' glusterfs.disable_quota_volume <volume>
     """
 
-    cmd = "volume quota {0} disable".format(name)
+    cmd = "volume quota {} disable".format(name)
     if not _gluster(cmd):
         return False
     return True
@@ -657,11 +655,11 @@ def set_quota_volume(name, path, size, enable_quota=False):
 
         salt '*' glusterfs.set_quota_volume <volume> <path> <size> enable_quota=True
     """
-    cmd = "volume quota {0}".format(name)
+    cmd = "volume quota {}".format(name)
     if path:
-        cmd += " limit-usage {0}".format(path)
+        cmd += " limit-usage {}".format(path)
     if size:
-        cmd += " {0}".format(size)
+        cmd += " {}".format(size)
 
     if enable_quota:
         if not enable_quota_volume(name):
@@ -687,9 +685,9 @@ def unset_quota_volume(name, path):
 
         salt '*' glusterfs.unset_quota_volume <volume> <path>
     """
-    cmd = "volume quota {0}".format(name)
+    cmd = "volume quota {}".format(name)
     if path:
-        cmd += " remove {0}".format(path)
+        cmd += " remove {}".format(path)
 
     if not _gluster(cmd):
         return False
@@ -709,7 +707,7 @@ def list_quota_volume(name):
 
         salt '*' glusterfs.list_quota_volume <volume>
     """
-    cmd = "volume quota {0}".format(name)
+    cmd = "volume quota {}".format(name)
     cmd += " list"
 
     root = _gluster_xml(cmd)
@@ -740,7 +738,7 @@ def get_op_version(name):
         salt '*' glusterfs.get_op_version <volume>
     """
 
-    cmd = "volume get {0} cluster.op-version".format(name)
+    cmd = "volume get {} cluster.op-version".format(name)
     root = _gluster_xml(cmd)
 
     if not _gluster_ok(root):
@@ -767,14 +765,18 @@ def get_max_op_version():
     Requires Glusterfs version > 3.9
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_max_op_version
     """
-    if _get_version() < (3, 10,):
+    if _get_version() < (
+        3,
+        10,
+    ):
         return (
             False,
-            "Glusterfs version must be 3.10+.  Your version is {0}.".format(
+            "Glusterfs version must be 3.10+.  Your version is {}.".format(
                 str(".".join(str(i) for i in _get_version()))
             ),
         )
@@ -814,7 +816,7 @@ def set_op_version(version):
         salt '*' glusterfs.set_op_version <volume>
     """
 
-    cmd = "volume set all cluster.op-version {0}".format(version)
+    cmd = "volume set all cluster.op-version {}".format(version)
     root = _gluster_xml(cmd)
 
     if not _gluster_ok(root):
@@ -828,7 +830,9 @@ def get_version():
     .. versionadded:: 2019.2.0
 
     Returns the version of glusterfs.
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_version

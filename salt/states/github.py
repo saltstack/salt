@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Github User State Module
 
-.. versionadded:: 2016.3.0.
+.. versionadded:: 2016.3.0
 
 This state is used to ensure presence of users in the Organization.
 
@@ -15,18 +14,11 @@ This state is used to ensure presence of users in the Organization.
             - username: 'gitexample'
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import time
 
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -63,15 +55,15 @@ def present(name, profile="github", **kwargs):
     # If the user has a valid github handle and is not in the org already
     if not target:
         ret["result"] = False
-        ret["comment"] = "Couldnt find user {0}".format(name)
+        ret["comment"] = "Couldnt find user {}".format(name)
     elif isinstance(target, bool) and target:
-        ret["comment"] = "User {0} is already in the org ".format(name)
+        ret["comment"] = "User {} is already in the org ".format(name)
         ret["result"] = True
     elif (
         not target.get("in_org", False) and target.get("membership_state") != "pending"
     ):
         if __opts__["test"]:
-            ret["comment"] = "User {0} will be added to the org".format(name)
+            ret["comment"] = "User {} will be added to the org".format(name)
             return ret
 
         # add the user
@@ -80,14 +72,14 @@ def present(name, profile="github", **kwargs):
         if result:
             ret["changes"].setdefault("old", None)
             ret["changes"].setdefault(
-                "new", "User {0} exists in the org now".format(name)
+                "new", "User {} exists in the org now".format(name)
             )
             ret["result"] = True
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to add user {0} to the org".format(name)
+            ret["comment"] = "Failed to add user {} to the org".format(name)
     else:
-        ret["comment"] = "User {0} has already been invited.".format(name)
+        ret["comment"] = "User {} has already been invited.".format(name)
         ret["result"] = True
 
     return ret
@@ -118,7 +110,7 @@ def absent(name, profile="github", **kwargs):
         "name": name,
         "changes": {},
         "result": None,
-        "comment": "User {0} is absent.".format(name),
+        "comment": "User {} is absent.".format(name),
     }
 
     target = __salt__["github.get_user"](name, profile=profile, **kwargs)
@@ -126,25 +118,25 @@ def absent(name, profile="github", **kwargs):
     if target:
         if isinstance(target, bool) or target.get("in_org", False):
             if __opts__["test"]:
-                ret["comment"] = "User {0} will be deleted".format(name)
+                ret["comment"] = "User {} will be deleted".format(name)
                 ret["result"] = None
                 return ret
 
             result = __salt__["github.remove_user"](name, profile=profile, **kwargs)
 
             if result:
-                ret["comment"] = "Deleted user {0}".format(name)
-                ret["changes"].setdefault("old", "User {0} exists".format(name))
-                ret["changes"].setdefault("new", "User {0} deleted".format(name))
+                ret["comment"] = "Deleted user {}".format(name)
+                ret["changes"].setdefault("old", "User {} exists".format(name))
+                ret["changes"].setdefault("new", "User {} deleted".format(name))
                 ret["result"] = True
             else:
-                ret["comment"] = "Failed to delete {0}".format(name)
+                ret["comment"] = "Failed to delete {}".format(name)
                 ret["result"] = False
         else:
-            ret["comment"] = "User {0} has already been deleted!".format(name)
+            ret["comment"] = "User {} has already been deleted!".format(name)
             ret["result"] = True
     else:
-        ret["comment"] = "User {0} does not exist".format(name)
+        ret["comment"] = "User {} does not exist".format(name)
         ret["result"] = True
         return ret
 
@@ -237,7 +229,7 @@ def team_present(
         if len(parameters) > 0:
             if __opts__["test"]:
                 test_comments.append(
-                    "Team properties are set to be edited: {0}".format(parameters)
+                    "Team properties are set to be edited: {}".format(parameters)
                 )
                 ret["result"] = None
             else:
@@ -246,8 +238,8 @@ def team_present(
                 )
                 if result:
                     ret["changes"]["team"] = {
-                        "old": "Team properties were {0}".format(target),
-                        "new": "Team properties (that changed) are {0}".format(
+                        "old": "Team properties were {}".format(target),
+                        "new": "Team properties (that changed) are {}".format(
                             parameters
                         ),
                     }
@@ -268,8 +260,9 @@ def team_present(
         if repos_to_add:
             if __opts__["test"]:
                 test_comments.append(
-                    "Team {0} will have the following repos "
-                    "added: {1}.".format(name, list(repos_to_add))
+                    "Team {} will have the following repos added: {}.".format(
+                        name, list(repos_to_add)
+                    )
                 )
                 ret["result"] = None
             else:
@@ -279,14 +272,12 @@ def team_present(
                     )
                     if result:
                         ret["changes"][repo_name] = {
-                            "old": "Repo {0} is not in team {1}".format(
-                                repo_name, name
-                            ),
-                            "new": "Repo {0} is in team {1}".format(repo_name, name),
+                            "old": "Repo {} is not in team {}".format(repo_name, name),
+                            "new": "Repo {} is in team {}".format(repo_name, name),
                         }
                     else:
                         ret["result"] = False
-                        ret["comment"] = "Failed to add repo {0} to team {1}.".format(
+                        ret["comment"] = "Failed to add repo {} to team {}.".format(
                             repo_name, name
                         )
                         return ret
@@ -294,8 +285,9 @@ def team_present(
         if repos_to_remove:
             if __opts__["test"]:
                 test_comments.append(
-                    "Team {0} will have the following repos "
-                    "removed: {1}.".format(name, list(repos_to_remove))
+                    "Team {} will have the following repos removed: {}.".format(
+                        name, list(repos_to_remove)
+                    )
                 )
                 ret["result"] = None
             else:
@@ -305,23 +297,21 @@ def team_present(
                     )
                     if result:
                         ret["changes"][repo_name] = {
-                            "old": "Repo {0} is in team {1}".format(repo_name, name),
-                            "new": "Repo {0} is not in team {1}".format(
-                                repo_name, name
-                            ),
+                            "old": "Repo {} is in team {}".format(repo_name, name),
+                            "new": "Repo {} is not in team {}".format(repo_name, name),
                         }
                     else:
                         ret["result"] = False
                         ret[
                             "comment"
-                        ] = "Failed to remove repo {0} from team {1}.".format(
+                        ] = "Failed to remove repo {} from team {}.".format(
                             repo_name, name
                         )
                         return ret
 
     else:  # Team does not exist - it will be created.
         if __opts__["test"]:
-            ret["comment"] = "Team {0} is set to be created.".format(name)
+            ret["comment"] = "Team {} is set to be created.".format(name)
             ret["result"] = None
             return ret
 
@@ -337,10 +327,10 @@ def team_present(
         if result:
             ret["changes"]["team"] = {}
             ret["changes"]["team"]["old"] = None
-            ret["changes"]["team"]["new"] = "Team {0} has been created".format(name)
+            ret["changes"]["team"]["new"] = "Team {} has been created".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create team {0}.".format(name)
+            ret["comment"] = "Failed to create team {}.".format(name)
             return ret
 
     manage_members = members is not None
@@ -351,13 +341,13 @@ def team_present(
     members_no_mfa = __salt__["github.list_members_without_mfa"](profile=profile)
 
     members_lower = {}
-    for member_name, info in six.iteritems(members or {}):
+    for member_name, info in members or {}.items():
         members_lower[member_name.lower()] = info
 
     member_change = False
     current_members = __salt__["github.list_team_members"](name, profile=profile)
 
-    for member, member_info in six.iteritems(members or {}):
+    for member, member_info in members or {}.items():
         log.info("Checking member %s in team %s", member, name)
 
         if member.lower() not in current_members:
@@ -366,7 +356,7 @@ def team_present(
             ):
                 if __opts__["test"]:
                     test_comments.append(
-                        "User {0} will not be added to the "
+                        "User {} will not be added to the "
                         "team because they do not have MFA."
                         "".format(member)
                     )
@@ -374,7 +364,7 @@ def team_present(
                 member_change = True
                 if __opts__["test"]:
                     test_comments.append(
-                        "User {0} set to be added to the " "team.".format(member)
+                        "User {} set to be added to the team.".format(member)
                     )
                     ret["result"] = None
                 else:
@@ -385,15 +375,14 @@ def team_present(
                         ret["changes"][member] = {}
                         ret["changes"][member][
                             "old"
-                        ] = "User {0} is not in team {1}".format(member, name)
-                        ret["changes"][member][
-                            "new"
-                        ] = "User {0} is in team {1}".format(member, name)
+                        ] = "User {} is not in team {}".format(member, name)
+                        ret["changes"][member]["new"] = "User {} is in team {}".format(
+                            member, name
+                        )
                     else:
                         ret["result"] = False
-                        ret["comment"] = (
-                            "Failed to add user {0} to team "
-                            "{1}.".format(member, name)
+                        ret["comment"] = "Failed to add user {} to team {}.".format(
+                            member, name
                         )
                         return ret
 
@@ -413,12 +402,12 @@ def team_present(
             if __opts__["test"]:
                 if mfa_violation:
                     test_comments.append(
-                        "User {0} set to be removed from the "
+                        "User {} set to be removed from the "
                         "team because they do not have MFA.".format(member)
                     )
                 else:
                     test_comments.append(
-                        "User {0} set to be removed from " "the team.".format(member)
+                        "User {} set to be removed from the team.".format(member)
                     )
                 ret["result"] = None
             else:
@@ -428,14 +417,14 @@ def team_present(
                 if result:
                     extra_changes = " due to MFA violation" if mfa_violation else ""
                     ret["changes"][member] = {
-                        "old": "User {0} is in team {1}".format(member, name),
-                        "new": "User {0} is not in team {1}{2}".format(
+                        "old": "User {} is in team {}".format(member, name),
+                        "new": "User {} is not in team {}{}".format(
                             member, name, extra_changes
                         ),
                     }
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Failed to remove user {0} from team {1}.".format(
+                    ret["comment"] = "Failed to remove user {} from team {}.".format(
                         member, name
                     )
                     return ret
@@ -484,24 +473,24 @@ def team_absent(name, profile="github", **kwargs):
     target = __salt__["github.get_team"](name, profile=profile, **kwargs)
 
     if not target:
-        ret["comment"] = "Team {0} does not exist".format(name)
+        ret["comment"] = "Team {} does not exist".format(name)
         ret["result"] = True
         return ret
     else:
         if __opts__["test"]:
-            ret["comment"] = "Team {0} will be deleted".format(name)
+            ret["comment"] = "Team {} will be deleted".format(name)
             ret["result"] = None
             return ret
 
         result = __salt__["github.remove_team"](name, profile=profile, **kwargs)
 
         if result:
-            ret["comment"] = "Deleted team {0}".format(name)
-            ret["changes"].setdefault("old", "Team {0} exists".format(name))
-            ret["changes"].setdefault("new", "Team {0} deleted".format(name))
+            ret["comment"] = "Deleted team {}".format(name)
+            ret["changes"].setdefault("old", "Team {} exists".format(name))
+            ret["changes"].setdefault("new", "Team {} deleted".format(name))
             ret["result"] = True
         else:
-            ret["comment"] = "Failed to delete {0}".format(name)
+            ret["comment"] = "Failed to delete {}".format(name)
             ret["result"] = False
     return ret
 
@@ -604,7 +593,7 @@ def repo_present(
         ignore_params = ["auto_init", "gitignore_template", "license_template"]
         parameters = {}
         old_parameters = {}
-        for param_name, param_value in six.iteritems(given_params):
+        for param_name, param_value in given_params.items():
             if (
                 param_value is not None
                 and param_name not in ignore_params
@@ -616,8 +605,8 @@ def repo_present(
 
         if len(parameters) > 0:
             repo_change = {
-                "old": "Repo properties were {0}".format(old_parameters),
-                "new": "Repo properties (that changed) are {0}".format(parameters),
+                "old": "Repo properties were {}".format(old_parameters),
+                "new": "Repo properties (that changed) are {}".format(parameters),
             }
             if __opts__["test"]:
                 ret["changes"]["repo"] = repo_change
@@ -634,7 +623,7 @@ def repo_present(
                     return ret
 
     else:  # Repo does not exist - it will be created.
-        repo_change = {"old": None, "new": "Repo {0} has been created".format(name)}
+        repo_change = {"old": None, "new": "Repo {} has been created".format(name)}
         if __opts__["test"]:
             ret["changes"]["repo"] = repo_change
             ret["result"] = None
@@ -645,7 +634,7 @@ def repo_present(
 
             if not result:
                 ret["result"] = False
-                ret["comment"] = "Failed to create repo {0}.".format(name)
+                ret["comment"] = "Failed to create repo {}.".format(name)
                 return ret
 
             # Turns out that trying to fetch teams for a new repo can 404 immediately
@@ -663,9 +652,7 @@ def repo_present(
 
             if current_teams is None:
                 ret["result"] = False
-                ret["comment"] = "Failed to verify repo {0} after creation.".format(
-                    name
-                )
+                ret["comment"] = "Failed to verify repo {} after creation.".format(name)
                 return ret
 
             ret["changes"]["repo"] = repo_change
@@ -676,14 +663,14 @@ def repo_present(
             current_teams = []
         elif current_teams is None:
             current_teams = __salt__["github.get_repo_teams"](name, profile=profile)
-        current_team_names = set([t["name"] for t in current_teams])
+        current_team_names = {t["name"] for t in current_teams}
 
         # First remove any teams that aren't present
         for team_name in current_team_names:
             if team_name not in teams:
                 team_change = {
-                    "old": "Repo {0} is in team {1}".format(name, team_name),
-                    "new": "Repo {0} is not in team {1}".format(name, team_name),
+                    "old": "Repo {} is in team {}".format(name, team_name),
+                    "new": "Repo {} is not in team {}".format(name, team_name),
                 }
 
                 if __opts__["test"]:
@@ -699,17 +686,17 @@ def repo_present(
                         ret["result"] = False
                         ret[
                             "comment"
-                        ] = "Failed to remove repo {0} from team {1}.".format(
+                        ] = "Failed to remove repo {} from team {}.".format(
                             name, team_name
                         )
                         return ret
 
         # Next add or modify any necessary teams
-        for team_name, permission in six.iteritems(teams):
+        for team_name, permission in teams.items():
             if team_name not in current_team_names:  # Need to add repo to team
                 team_change = {
-                    "old": "Repo {0} is not in team {1}".format(name, team_name),
-                    "new": "Repo {0} is in team {1}".format(name, team_name),
+                    "old": "Repo {} is not in team {}".format(name, team_name),
+                    "new": "Repo {} is in team {}".format(name, team_name),
                 }
                 if __opts__["test"]:
                     ret["changes"][team_name] = team_change
@@ -724,7 +711,7 @@ def repo_present(
                         ret["result"] = False
                         ret[
                             "comment"
-                        ] = "Failed to remove repo {0} from team {1}.".format(
+                        ] = "Failed to remove repo {} from team {}.".format(
                             name, team_name
                         )
                         return ret
@@ -738,20 +725,16 @@ def repo_present(
                     ret["result"] = False
                     ret["comment"] = (
                         "Failed to determine current permission for team "
-                        "{0} in repo {1}".format(team_name, name)
+                        "{} in repo {}".format(team_name, name)
                     )
                     return ret
                 elif current_permission != permission:
                     team_change = {
-                        "old": (
-                            "Repo {0} in team {1} has permission {2}".format(
-                                name, team_name, current_permission
-                            )
+                        "old": "Repo {} in team {} has permission {}".format(
+                            name, team_name, current_permission
                         ),
-                        "new": (
-                            "Repo {0} in team {1} has permission {2}".format(
-                                name, team_name, permission
-                            )
+                        "new": "Repo {} in team {} has permission {}".format(
+                            name, team_name, permission
                         ),
                     }
                     if __opts__["test"]:
@@ -766,8 +749,8 @@ def repo_present(
                         else:
                             ret["result"] = False
                             ret["comment"] = (
-                                "Failed to set permission on repo {0} from "
-                                "team {1} to {2}.".format(name, team_name, permission)
+                                "Failed to set permission on repo {} from "
+                                "team {} to {}.".format(name, team_name, permission)
                             )
                             return ret
     return ret
@@ -800,25 +783,25 @@ def repo_absent(name, profile="github", **kwargs):
         target = None
 
     if not target:
-        ret["comment"] = "Repo {0} does not exist".format(name)
+        ret["comment"] = "Repo {} does not exist".format(name)
         ret["result"] = True
         return ret
     else:
         if __opts__["test"]:
-            ret["comment"] = "Repo {0} will be deleted".format(name)
+            ret["comment"] = "Repo {} will be deleted".format(name)
             ret["result"] = None
             return ret
 
         result = __salt__["github.remove_repo"](name, profile=profile, **kwargs)
 
         if result:
-            ret["comment"] = "Deleted repo {0}".format(name)
-            ret["changes"].setdefault("old", "Repo {0} exists".format(name))
-            ret["changes"].setdefault("new", "Repo {0} deleted".format(name))
+            ret["comment"] = "Deleted repo {}".format(name)
+            ret["changes"].setdefault("old", "Repo {} exists".format(name))
+            ret["changes"].setdefault("new", "Repo {} deleted".format(name))
             ret["result"] = True
         else:
             ret["comment"] = (
-                "Failed to delete repo {0}. Ensure the delete_repo "
+                "Failed to delete repo {}. Ensure the delete_repo "
                 "scope is enabled if using OAuth.".format(name)
             )
             ret["result"] = False

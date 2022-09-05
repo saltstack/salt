@@ -1,5 +1,5 @@
-salt.modules.boto_efs module
-============================
+salt.modules.boto_efs
+=====================
 
 .. automodule:: salt.modules.boto_efs
     :members:

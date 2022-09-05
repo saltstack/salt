@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Execute salt convenience routines
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
-# Import salt libs
 import salt.exceptions
 import salt.loader
 import salt.minion
@@ -24,7 +19,7 @@ from salt.utils.lazy import verify_fun
 log = logging.getLogger(__name__)
 
 
-class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
+class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     """
     The interface used by the :command:`salt-run` CLI tool on the Salt Master
 
@@ -42,12 +37,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     client = "runner"
     tag_prefix = "run"
-
-    def __init__(self, opts, context=None):
-        self.opts = opts
-        if context is None:
-            context = {}
-        self.context = context
 
     @property
     def functions(self):
@@ -80,21 +69,19 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fun = low.pop("fun")
         verify_fun(self.functions, fun)
 
-        eauth_creds = dict(
-            [
-                (i, low.pop(i))
-                for i in [
-                    "username",
-                    "password",
-                    "eauth",
-                    "token",
-                    "client",
-                    "user",
-                    "key",
-                ]
-                if i in low
+        eauth_creds = {
+            i: low.pop(i)
+            for i in [
+                "username",
+                "password",
+                "eauth",
+                "token",
+                "client",
+                "user",
+                "key",
             ]
-        )
+            if i in low
+        }
 
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
@@ -170,10 +157,33 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     ):  # pylint: disable=useless-super-delegation
         """
         Execute a function
+
+        .. code-block:: python
+
+            >>> opts = salt.config.master_config('/etc/salt/master')
+            >>> runner = salt.runner.RunnerClient(opts)
+            >>> runner.cmd('jobs.list_jobs', [])
+            {
+                '20131219215650131543': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:56:50.131543',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+                '20131219215921857715': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:59:21.857715',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+            }
+
         """
-        return super(RunnerClient, self).cmd(
-            fun, arg, pub_data, kwarg, print_event, full_return
-        )
+        return super().cmd(fun, arg, pub_data, kwarg, print_event, full_return)
 
 
 class Runner(RunnerClient):
@@ -182,7 +192,7 @@ class Runner(RunnerClient):
     """
 
     def __init__(self, opts, context=None):
-        super(Runner, self).__init__(opts, context=context)
+        super().__init__(opts, context=context)
         self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
 
@@ -191,9 +201,9 @@ class Runner(RunnerClient):
         Print out the documentation!
         """
         arg = self.opts.get("fun", None)
-        docs = super(Runner, self).get_docs(arg)
+        docs = super().get_docs(arg)
         for fun in sorted(docs):
-            display_output("{0}:".format(fun), "text", self.opts)
+            display_output("{}:".format(fun), "text", self.opts)
             print(docs[fun])
 
     # TODO: move to mixin whenever we want a salt-wheel cli
@@ -210,7 +220,7 @@ class Runner(RunnerClient):
             low = {"fun": self.opts["fun"]}
             try:
                 # Allocate a jid
-                async_pub = self._gen_async_pub()
+                async_pub = self._gen_async_pub(jid=self.opts.get("jid"))
                 self.jid = async_pub["jid"]
 
                 fun_args = salt.utils.args.parse_input(
@@ -233,7 +243,7 @@ class Runner(RunnerClient):
                                 low["key"] = salt.utils.stringutils.to_unicode(
                                     fp_.readline()
                                 )
-                        except IOError:
+                        except OSError:
                             low["token"] = self.opts["token"]
 
                     # If using eauth and a token hasn't already been loaded into
@@ -271,7 +281,7 @@ class Runner(RunnerClient):
                     log.warning(
                         "Running in asynchronous mode. Results of this execution may "
                         "be collected by attaching to the master event bus or "
-                        "by examing the master job cache, if configured. "
+                        "by examining the master job cache, if configured. "
                         "This execution is running under tag %s",
                         async_pub["tag"],
                     )
@@ -288,11 +298,13 @@ class Runner(RunnerClient):
                     display_output(ret, outputter, self.opts)
                 else:
                     ret = self._proc_function(
-                        self.opts["fun"],
-                        low,
-                        user,
-                        async_pub["tag"],
-                        async_pub["jid"],
+                        instance=self,
+                        opts=self.opts,
+                        fun=self.opts["fun"],
+                        low=low,
+                        user=user,
+                        tag=async_pub["tag"],
+                        jid=async_pub["jid"],
                         daemonize=False,
                     )
             except salt.exceptions.SaltException as exc:
@@ -300,24 +312,24 @@ class Runner(RunnerClient):
                     evt.fire_event(
                         {
                             "success": False,
-                            "return": "{0}".format(exc),
+                            "return": "{}".format(exc),
                             "retcode": 254,
                             "fun": self.opts["fun"],
                             "fun_args": fun_args,
                             "jid": self.jid,
                         },
-                        tag="salt/run/{0}/ret".format(self.jid),
+                        tag="salt/run/{}/ret".format(self.jid),
                     )
                 # Attempt to grab documentation
                 if "fun" in low:
-                    ret = self.get_docs("{0}*".format(low["fun"]))
+                    ret = self.get_docs("{}*".format(low["fun"]))
                 else:
                     ret = None
 
                 # If we didn't get docs returned then
                 # return the `not availble` message.
                 if not ret:
-                    ret = "{0}".format(exc)
+                    ret = "{}".format(exc)
                 if not self.opts.get("quiet", False):
                     display_output(ret, "nested", self.opts)
             else:

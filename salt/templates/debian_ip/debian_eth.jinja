@@ -8,6 +8,7 @@
   'pre_down_cmds': 'pre-down',
   'post_down_cmds': 'post-down',
   'master': 'bond-master',
+  'accept_ra': 'accept_ra',
   } -%}
 {% set concat_opts = ['dns_nameservers'] -%}
 {% set valid_opts = [
@@ -16,14 +17,14 @@
   'vendor', 'client', 'bootfile', 'server', 'mode', 'endpoint', 'dstaddr', 'local', 'ttl', 'mtu',
   'provider', 'unit', 'options', 'master', 'dns_nameservers', 'wireless_mode', 'wpa_ap_scan',
   'wpa_conf', 'wpa_driver', 'wpa_group', 'wpa_key_mgmt', 'wpa_pairwise', 'wpa_proto', 'wpa_psk',
-  'wpa_roam', 'wpa_ssid',
+  'wpa_roam', 'wpa_ssid', 'accept_ra'
   ] -%}
 {% if data.enabled %}auto {{ name }}
 {% endif %}{% if data.hotplug %}allow-hotplug {{ name }}
 {% endif %}{% for inet in ['inet', 'inet6'] -%}
 {% if data.data[inet] and data.data[inet].addrfam == inet %}{% set interface = data.data[inet] -%}
 {% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
-{% for opt in valid_opts %}{% set debopt = optmap.get(opt, opt).replace('_', '-') -%}
+{% for opt in valid_opts %}{% set debopt = optmap.get(opt, opt.replace('_', '-')) -%}
 {% set val = interface.get(opt, False) %}{% if val -%}
 {% if opt in concat_opts and val is iterable %}    {{ debopt }} {{ val|join(' ') }}
 {% elif val is string or val is number       %}    {{ debopt }} {{ val }}
@@ -35,7 +36,7 @@
 {% endif %}{% endfor %}{% endif %}{% if interface.bonding  %}{% for item in interface.bonding_keys  -%}
 {% if interface.bonding[item] is string      %}    bond-{{ item }} {{ interface.bonding[item] }}
 {% elif interface.bonding[item] is iterable  %}    bond-{{ item }} {{ interface.bonding[item]|join(' ') }}
-{% endif %}{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys -%}.
+{% endif %}{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys -%}
 {% if interface.bridging[item] is string     %}    bridge_{{ item }} {{ interface.bridging[item] }}
 {% elif interface.bridging[item] is iterable %}    bridge_{{ item }} {{ interface.bridging[item]|join(' ') }}
 {% endif %}{% endfor %}{% endif %}{% endif %}{% endif %}{% endfor %}

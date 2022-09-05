@@ -1,0 +1,28 @@
+.. _release-3002-2:
+
+=========================
+Salt 3002.2 Release Notes
+=========================
+
+Version 3002.2 is a bugfix release for :ref:`3002 <release-3002>`.
+
+Fixed
+-----
+
+- Change dict check to isinstance instead of type() for key_values in file.keyvalue. (#57758)
+- Fail when func_ret is False when using the new module.run syntax. (#57768)
+- Fix comparison of certificate values (#58296)
+- When using ssh_pre_flight if there is a failure, fail on retcode not stderr. (#58439)
+- Fix use of unauthd cached vmware service instance (#58691)
+- Removing use of undefined varilable in utils/slack.py. (#58753)
+- Restored the ability to specify the amount of extents for a Logical
+  Volume as a percentage. (#58759)
+- Ensuring that the version check function is run a second time in all the user related functions in case the user being managed is the connection user and the password has been updated. (#58773)
+- Allow bytes in gpg renderer (#58794)
+- Fix issue where win_wua module fails to load when BITS is set to Manual (#58848)
+- Ensure that elasticsearch.index_exists is available before loading the elasticsearch returner. (#58851)
+- Log a different object when debugging if we're using disk cache vs memory cache. The disk cache pillar class has the dict object but the cache pillar object which is used with the memory cache does not include a _dict obeject because it is a dict already. (#58861)
+- Do not generate grains for every job run on Windows minions. This makes Windows
+  conform more to the way posix OSes work today. (#58904)
+- Fixes salt-ssh authentication when using tty (#58922)
+- Revert LazyLoader finalizer. Removed the weakref.finalizer code. On some occasions, the finalized would run when trying to load a new module, firing a race condition. (#58947)

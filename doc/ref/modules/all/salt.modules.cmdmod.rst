@@ -1,4 +1,5 @@
-===================
+.. _cmdmod-module:
+
 salt.modules.cmdmod
 ===================
 

@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering and managing network information
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import hashlib
-
-# Import Python libs
 import re
 import socket
 
-# Import 3rd party libraries
-import salt.ext.six as six  # pylint: disable=W0611
-
-# Import Salt libs
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
@@ -32,7 +24,7 @@ from salt.modules.network import (
     subnets6,
     wol,
 )
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 
 try:
     import salt.utils.winapi
@@ -43,9 +35,24 @@ except ImportError:
 
 
 try:
-    import wmi  # pylint: disable=W0611
+    import wmi  # pylint: disable=import-error
 except ImportError:
     HAS_DEPENDENCIES = False
+
+if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
+
+    wol = namespaced_function(wol, globals())
+    get_hostname = namespaced_function(get_hostname, globals())
+    interface = namespaced_function(interface, globals())
+    interface_ip = namespaced_function(interface_ip, globals())
+    subnets6 = namespaced_function(subnets6, globals())
+    ip_in_subnet = namespaced_function(ip_in_subnet, globals())
+    convert_cidr = namespaced_function(convert_cidr, globals())
+    calc_net = namespaced_function(calc_net, globals())
+    get_fqdn = namespaced_function(get_fqdn, globals())
+    ifacestartswith = namespaced_function(ifacestartswith, globals())
+    iphexval = namespaced_function(iphexval, globals())
+
 
 # Define the module's virtual name
 __virtualname__ = "network"
@@ -60,21 +67,6 @@ def __virtual__():
 
     if not HAS_DEPENDENCIES:
         return False, "Module win_network: Missing dependencies"
-
-    global wol, get_hostname, interface, interface_ip, subnets6, ip_in_subnet
-    global convert_cidr, calc_net, get_fqdn, ifacestartswith, iphexval
-
-    wol = _namespaced_function(wol, globals())
-    get_hostname = _namespaced_function(get_hostname, globals())
-    interface = _namespaced_function(interface, globals())
-    interface_ip = _namespaced_function(interface_ip, globals())
-    subnets6 = _namespaced_function(subnets6, globals())
-    ip_in_subnet = _namespaced_function(ip_in_subnet, globals())
-    convert_cidr = _namespaced_function(convert_cidr, globals())
-    calc_net = _namespaced_function(calc_net, globals())
-    get_fqdn = _namespaced_function(get_fqdn, globals())
-    ifacestartswith = _namespaced_function(ifacestartswith, globals())
-    iphexval = _namespaced_function(iphexval, globals())
 
     return __virtualname__
 
@@ -112,7 +104,7 @@ def ping(host, timeout=False, return_boolean=False):
             "-n",
             "4",
             "-w",
-            six.text_type(timeout),
+            str(timeout),
             salt.utils.network.sanitize_host(host),
         ]
     else:
@@ -261,11 +253,13 @@ def get_route(ip):
 
     .. versionadded:: 2016.11.5
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """
-    cmd = "Find-NetRoute -RemoteIPAddress {0}".format(ip)
+    cmd = "Find-NetRoute -RemoteIPAddress {}".format(ip)
     out = __salt__["cmd.run"](cmd, shell="powershell", python_shell=True)
     regexp = re.compile(
         r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
@@ -498,7 +492,10 @@ def connect(host, port=None, **kwargs):
     ):
         address = host
     else:
-        address = "{0}".format(salt.utils.network.sanitize_host(host))
+        address = "{}".format(salt.utils.network.sanitize_host(host))
+
+    # just in case we encounter error on getaddrinfo
+    _address = ("unknown",)
 
     try:
         if proto == "udp":
@@ -538,13 +535,13 @@ def connect(host, port=None, **kwargs):
             skt.shutdown(2)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Unable to connect to {0} ({1}) on {2} port {3}".format(
+        ret["comment"] = "Unable to connect to {} ({}) on {} port {}".format(
             host, _address[0], proto, port
         )
         return ret
 
     ret["result"] = True
-    ret["comment"] = "Successfully connected to {0} ({1}) on {2} port {3}".format(
+    ret["comment"] = "Successfully connected to {} ({}) on {} port {}".format(
         host, _address[0], proto, port
     )
     return ret

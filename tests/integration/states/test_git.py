@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Git state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import inspect
@@ -12,15 +10,15 @@ import shutil
 import socket
 import string
 import tempfile
+import urllib.parse
+
+import pytest
 
 import salt.utils.files
 import salt.utils.path
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-module
-    urlparse,
-)
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import TstSuiteLoggingHandler, slowTest, with_tempdir
+from tests.support.helpers import TstSuiteLoggingHandler, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -85,7 +83,7 @@ def uses_git_opts(caller):
     )
 
 
-class WithGitMirror(object):
+class WithGitMirror:
     def __init__(self, repo_url, **kwargs):
         self.repo_url = repo_url
         if "dir" not in kwargs:
@@ -145,13 +143,13 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        domain = urlparse(TEST_REPO).netloc
+        domain = urllib.parse.urlparse(TEST_REPO).netloc
         try:
             if hasattr(socket, "setdefaulttimeout"):
                 # 10 second dns timeout
                 socket.setdefaulttimeout(10)
             socket.gethostbyname(domain)
-        except socket.error:
+        except OSError:
             msg = "error resolving {0}, possible network issue?"
             self.skipTest(msg.format(domain))
 
@@ -163,7 +161,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         return self.run_function("git.rev_parse", [cwd, "HEAD"])
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest(self, target):
         """
         git.latest
@@ -173,7 +171,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_config_get_regexp_retcode(self, target):
         """
         git.latest
@@ -189,7 +187,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             assert any(ret_code_err in s for s in self.handler.messages) is False, False
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_with_rev_and_submodules(self, target):
         """
         git.latest
@@ -201,7 +199,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_failure(self, target):
         """
         git.latest
@@ -217,7 +215,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.isdir(os.path.join(target, ".git")))
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_empty_dir(self, target):
         """
         git.latest
@@ -229,7 +227,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_unless_no_cwd_issue_6800(self, target):
         """
         cwd=target was being passed to _run_check which blew up if
@@ -240,14 +238,14 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             name=TEST_REPO,
             rev="develop",
             target=target,
-            unless="test -e {0}".format(target),
+            unless="test -e {}".format(target),
             submodules=True,
         )
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_numeric_rev(self, target):
         """
         git.latest with numeric revision
@@ -264,7 +262,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_with_local_changes(self, target):
         """
         Ensure that we fail the state when there are local changes and succeed
@@ -289,10 +287,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertEqual(
             ret[next(iter(ret))]["comment"],
-            (
-                "Repository {0} is up-to-date, but with uncommitted changes. "
-                "Set 'force_reset' to True to purge uncommitted changes.".format(target)
-            ),
+            "Repository {} is up-to-date, but with uncommitted changes. "
+            "Set 'force_reset' to True to purge uncommitted changes.".format(target),
         )
 
         # Now run the state with force_reset=True
@@ -306,7 +302,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_git_mirror(TEST_REPO)
     @uses_git_opts
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_fast_forward(self, mirror_url, admin_dir, clone_dir):
         """
         Test running git.latest state a second time after changes have been
@@ -377,7 +373,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(hint in comment)
 
     @uses_git_opts
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_changed_local_branch_rev_head(self):
         """
         Test for presence of hint in failure message when the local branch has
@@ -393,7 +389,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @uses_git_opts
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_changed_local_branch_rev_develop(self):
         """
         Test for presence of hint in failure message when the local branch has
@@ -408,7 +404,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
     @uses_git_opts
     @with_tempdir(create=False)
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_updated_remote_rev(self, name, target):
         """
         Ensure that we don't exit early when checking for a fast-forward
@@ -427,7 +423,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         # Run the state to clone the repo we just created
-        ret = self.run_state("git.latest", name=name, target=target,)
+        ret = self.run_state(
+            "git.latest",
+            name=name,
+            target=target,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Add another commit
@@ -442,11 +442,15 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Run the state again. It should pass, if it doesn't then there was
         # a problem checking whether or not the change is a fast-forward.
-        ret = self.run_state("git.latest", name=name, target=target,)
+        ret = self.run_state(
+            "git.latest",
+            name=name,
+            target=target,
+        )
         self.assertSaltTrueReturn(ret)
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_depth(self, target):
         """
         Test running git.latest state using the "depth" argument to limit the
@@ -473,7 +477,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_git_mirror(TEST_REPO)
     @uses_git_opts
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_sync_tags(self, mirror_url, admin_dir, clone_dir):
         """
         Test that a removed tag is properly reported as such and removed in the
@@ -492,7 +496,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret["result"]
 
         # Now remove the tag
-        self.run_function("git.push", [admin_dir, "origin", ":{0}".format(tag1)])
+        self.run_function("git.push", [admin_dir, "origin", ":{}".format(tag1)])
         # Add and push another tag
         self.run_function("git.tag", [admin_dir, tag2])
         self.run_function("git.push", [admin_dir, "origin", tag2])
@@ -529,7 +533,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret["changes"] == expected_changes, ret["changes"]
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_cloned(self, target):
         """
         Test git.cloned state
@@ -538,32 +542,32 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target, test=True)
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
-        assert ret["changes"] == {"new": "{0} => {1}".format(TEST_REPO, target)}
-        assert ret["comment"] == "{0} would be cloned to {1}".format(TEST_REPO, target)
+        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
+        assert ret["comment"] == "{} would be cloned to {}".format(TEST_REPO, target)
 
         # Now actually run the state
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target)
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
-        assert ret["changes"] == {"new": "{0} => {1}".format(TEST_REPO, target)}
-        assert ret["comment"] == "{0} cloned to {1}".format(TEST_REPO, target)
+        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
+        assert ret["comment"] == "{} cloned to {}".format(TEST_REPO, target)
 
         # Run the state again to test idempotence
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target)
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == "Repository already exists at {0}".format(target)
+        assert ret["comment"] == "Repository already exists at {}".format(target)
 
         # Run the state again to test idempotence (test mode)
         ret = self.run_state("git.cloned", name=TEST_REPO, target=target, test=True)
         ret = ret[next(iter(ret))]
         assert not ret["changes"]
         assert ret["result"] is True
-        assert ret["comment"] == "Repository already exists at {0}".format(target)
+        assert ret["comment"] == "Repository already exists at {}".format(target)
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_cloned_with_branch(self, target):
         """
         Test git.cloned state with branch provided
@@ -578,11 +582,9 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
-        assert ret["changes"] == {"new": "{0} => {1}".format(TEST_REPO, target)}
-        assert ret["comment"] == (
-            "{0} would be cloned to {1} with branch '{2}'".format(
-                TEST_REPO, target, old_branch
-            )
+        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
+        assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
+            TEST_REPO, target, old_branch
         )
 
         # Now actually run the state
@@ -591,9 +593,9 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
-        assert ret["changes"] == {"new": "{0} => {1}".format(TEST_REPO, target)}
-        assert ret["comment"] == (
-            "{0} cloned to {1} with branch '{2}'".format(TEST_REPO, target, old_branch)
+        assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
+        assert ret["comment"] == "{} cloned to {} with branch '{}'".format(
+            TEST_REPO, target, old_branch
         )
 
         # Run the state again to test idempotence
@@ -603,9 +605,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == (
-            "Repository already exists at {0} "
-            "and is checked out to branch '{1}'".format(target, old_branch)
+        assert ret[
+            "comment"
+        ] == "Repository already exists at {} and is checked out to branch '{}'".format(
+            target, old_branch
         )
 
         # Run the state again to test idempotence (test mode)
@@ -615,9 +618,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == (
-            "Repository already exists at {0} "
-            "and is checked out to branch '{1}'".format(target, old_branch)
+        assert ret[
+            "comment"
+        ] == "Repository already exists at {} and is checked out to branch '{}'".format(
+            target, old_branch
         )
 
         # Change branch (test mode)
@@ -627,7 +631,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"] == {"branch": {"old": old_branch, "new": new_branch}}
-        assert ret["comment"] == "Branch would be changed to '{0}'".format(new_branch)
+        assert ret["comment"] == "Branch would be changed to '{}'".format(new_branch)
 
         # Now really change the branch
         ret = self.run_state(
@@ -636,7 +640,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert ret["changes"] == {"branch": {"old": old_branch, "new": new_branch}}
-        assert ret["comment"] == "Branch changed to '{0}'".format(new_branch)
+        assert ret["comment"] == "Branch changed to '{}'".format(new_branch)
 
         # Change back to original branch. This tests that we don't attempt to
         # checkout a new branch (i.e. git checkout -b) for a branch that exists
@@ -647,7 +651,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert ret["changes"] == {"branch": {"old": new_branch, "new": old_branch}}
-        assert ret["comment"] == "Branch changed to '{0}'".format(old_branch)
+        assert ret["comment"] == "Branch changed to '{}'".format(old_branch)
 
         # Test switching to a nonexistent branch. This should fail.
         ret = self.run_state(
@@ -657,12 +661,12 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret["result"] is False
         assert not ret["changes"]
         assert ret["comment"].startswith(
-            "Failed to change branch to '{0}':".format(bad_branch)
+            "Failed to change branch to '{}':".format(bad_branch)
         )
 
     @with_tempdir(create=False)
     @ensure_min_git(min_version="1.7.10")
-    @slowTest
+    @pytest.mark.slow_test
     def test_cloned_with_nonexistant_branch(self, target):
         """
         Test git.cloned state with a nonexistent branch provided
@@ -676,10 +680,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"]
-        assert ret["comment"] == (
-            "{0} would be cloned to {1} with branch '{2}'".format(
-                TEST_REPO, target, branch
-            )
+        assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
+            TEST_REPO, target, branch
         )
 
         # Now actually run the state
@@ -691,7 +693,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert "not found in upstream origin" in ret["comment"]
 
     @with_tempdir(create=False)
-    @slowTest
+    @pytest.mark.slow_test
     def test_present(self, name):
         """
         git.present
@@ -701,7 +703,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(name, "HEAD")))
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_failure(self, name):
         """
         git.present
@@ -716,7 +718,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.isfile(os.path.join(name, "HEAD")))
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_empty_dir(self, name):
         """
         git.present
@@ -726,7 +728,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(name, "HEAD")))
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_config_set_value_with_space_character(self, name):
         """
         git.config
@@ -790,7 +792,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(os.path.join(self.target, "foo"), "a") as fp_:
             fp_.write("Local changes!\n")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_force_reset_remote_changes(self):
         """
         This tests that an otherwise fast-forward change with local chanegs
@@ -842,7 +844,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(ret["changes"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_force_reset_true_fast_forward(self):
         """
         This tests that an otherwise fast-forward change with local chanegs
@@ -883,7 +885,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         assert "Repository was hard-reset" in ret["comment"]
         assert "forced update" in ret["changes"]
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_force_reset_true_non_fast_forward(self):
         """
         This tests that a non fast-forward change with divergent commits fails
@@ -931,7 +933,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("forced update", ret["changes"])
         self.assertIn("revision", ret["changes"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_renamed_default_branch(self):
         """
         Test the case where the remote branch has been removed
@@ -946,7 +948,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
-            "git.latest", name=self.repo, target=self.target, rev="develop",
+            "git.latest",
+            name=self.repo,
+            target=self.target,
+            rev="develop",
         )
         self.assertSaltFalseReturn(ret)
         self.assertEqual(
@@ -958,17 +963,20 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             "work around this by setting the 'branch' argument "
             "(which will ensure that the named branch is created "
             "if it does not already exist).\n\n"
-            "Changes already made: {0} cloned to {1}".format(self.repo, self.target),
+            "Changes already made: {} cloned to {}".format(self.repo, self.target),
         )
         self.assertEqual(
             ret[next(iter(ret))]["changes"],
-            {"new": "{0} => {1}".format(self.repo, self.target)},
+            {"new": "{} => {}".format(self.repo, self.target)},
         )
 
         # Run git.latest state again. This should fail again, with a different
         # error in the comment field, and should not change anything.
         ret = self.run_state(
-            "git.latest", name=self.repo, target=self.target, rev="develop",
+            "git.latest",
+            name=self.repo,
+            target=self.target,
+            rev="develop",
         )
         self.assertSaltFalseReturn(ret)
         self.assertEqual(

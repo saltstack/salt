@@ -1,30 +1,64 @@
-# encoding: utf-8
 """
 Make api awesomeness
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
+
+import copy
 import inspect
+import logging
 import os
 
+import salt.auth
 import salt.client
 import salt.client.ssh.client
 import salt.config
+import salt.daemons.masterapi
 import salt.exceptions
-
-# Import Salt libs
-import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args
+import salt.utils.minions
 import salt.wheel
+from salt.defaults import DEFAULT_TARGET_DELIM
 
-# Import third party libs
-from salt.ext import six
+log = logging.getLogger(__name__)
 
 
-class NetapiClient(object):
+def sorted_permissions(perms):
+    """
+    Return a sorted list of the passed in permissions, de-duplicating in the process
+    """
+    _str_perms = []
+    _non_str_perms = []
+    for entry in perms:
+        if isinstance(entry, str):
+            if entry in _str_perms:
+                continue
+            _str_perms.append(entry)
+            continue
+        if entry in _non_str_perms:
+            continue
+        _non_str_perms.append(entry)
+    return sorted(_str_perms) + sorted(_non_str_perms, key=repr)
+
+
+def sum_permissions(token, eauth):
+    """
+    Returns the sum of '*', user-specific and group specific permissions
+    """
+    perms = eauth.get(token["name"], [])
+    perms.extend(eauth.get("*", []))
+
+    if "groups" in token and token["groups"]:
+        user_groups = set(token["groups"])
+        eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
+
+        for group in user_groups & eauth_groups:
+            perms.extend(eauth["{}%".format(group)])
+    return perms
+
+
+class NetapiClient:
     """
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
@@ -36,6 +70,15 @@ class NetapiClient(object):
 
     def __init__(self, opts):
         self.opts = opts
+        apiopts = copy.deepcopy(self.opts)
+        apiopts["enable_ssh_minions"] = True
+        apiopts["cachedir"] = os.path.join(opts["cachedir"], "saltapi")
+        if not os.path.exists(apiopts["cachedir"]):
+            os.makedirs(apiopts["cachedir"])
+        self.resolver = salt.auth.Resolver(apiopts)
+        self.loadauth = salt.auth.LoadAuth(apiopts)
+        self.key = salt.daemons.masterapi.access_keys(apiopts)
+        self.ckminions = salt.utils.minions.CkMinions(apiopts)
 
     def _is_master_running(self):
         """
@@ -55,6 +98,49 @@ class NetapiClient(object):
             ipc_file = "workers.ipc"
         return os.path.exists(os.path.join(self.opts["sock_dir"], ipc_file))
 
+    def _prep_auth_info(self, clear_load):
+        sensitive_load_keys = []
+        key = None
+        if "token" in clear_load:
+            auth_type = "token"
+            err_name = "TokenAuthenticationError"
+            sensitive_load_keys = ["token"]
+            return auth_type, err_name, key, sensitive_load_keys
+        elif "eauth" in clear_load:
+            auth_type = "eauth"
+            err_name = "EauthAuthenticationError"
+            sensitive_load_keys = ["username", "password"]
+            return auth_type, err_name, key, sensitive_load_keys
+        raise salt.exceptions.EauthAuthenticationError(
+            "No authentication credentials given"
+        )
+
+    def _authorize_ssh(self, low):
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(low)
+        auth_check = self.loadauth.check_authentication(low, auth_type, key=key)
+        auth_list = auth_check.get("auth_list", [])
+        error = auth_check.get("error")
+        if error:
+            raise salt.exceptions.EauthAuthenticationError(error)
+        delimiter = low.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
+        _res = self.ckminions.check_minions(
+            low["tgt"], low.get("tgt_type", "glob"), delimiter
+        )
+        minions = _res.get("minions", list())
+        missing = _res.get("missing", list())
+        authorized = self.ckminions.auth_check(
+            auth_list,
+            low["fun"],
+            low.get("arg", []),
+            low["tgt"],
+            low.get("tgt_type", "glob"),
+            minions=minions,
+        )
+        if not authorized:
+            raise salt.exceptions.EauthAuthenticationError(
+                "Authorization error occurred."
+            )
+
     def run(self, low):
         """
         Execute the specified function in the specified client by passing the
@@ -68,7 +154,7 @@ class NetapiClient(object):
 
         if low.get("client") not in CLIENTS:
             raise salt.exceptions.SaltInvocationError(
-                "Invalid client specified: '{0}'".format(low.get("client"))
+                "Invalid client specified: '{}'".format(low.get("client"))
             )
 
         if not ("token" in low or "eauth" in low):
@@ -80,6 +166,9 @@ class NetapiClient(object):
             raise salt.exceptions.EauthAuthenticationError(
                 "Raw shell option not allowed."
             )
+
+        if low["client"] == "ssh":
+            self._authorize_ssh(low)
 
         l_fun = getattr(self, low["client"])
         f_call = salt.utils.args.format_call(l_fun, low)
@@ -93,8 +182,8 @@ class NetapiClient(object):
 
         :return: job ID
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.run_job(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.run_job(*args, **kwargs)
 
     def local(self, *args, **kwargs):
         """
@@ -110,8 +199,8 @@ class NetapiClient(object):
 
         :return: Returns the result from the execution module
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.cmd(*args, **kwargs)
 
     def local_subset(self, *args, **kwargs):
         """
@@ -121,8 +210,8 @@ class NetapiClient(object):
 
         Wraps :py:meth:`salt.client.LocalClient.cmd_subset`
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd_subset(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.cmd_subset(*args, **kwargs)
 
     def local_batch(self, *args, **kwargs):
         """
@@ -135,8 +224,8 @@ class NetapiClient(object):
         :return: Returns the result from the exeuction module for each batch of
             returns
         """
-        local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd_batch(*args, **kwargs)
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            return client.cmd_batch(*args, **kwargs)
 
     def ssh(self, *args, **kwargs):
         """
@@ -146,10 +235,10 @@ class NetapiClient(object):
 
         :return: Returns the result from the salt-ssh command
         """
-        ssh_client = salt.client.ssh.client.SSHClient(
+        with salt.client.ssh.client.SSHClient(
             mopts=self.opts, disable_custom_roster=True
-        )
-        return ssh_client.cmd_sync(kwargs)
+        ) as client:
+            return client.cmd_sync(kwargs)
 
     def runner(self, fun, timeout=None, full_return=False, **kwargs):
         """
@@ -214,8 +303,6 @@ class NetapiClient(object):
 
 CLIENTS = [
     name
-    for name, _ in inspect.getmembers(
-        NetapiClient, predicate=inspect.ismethod if six.PY2 else None
-    )
+    for name, _ in inspect.getmembers(NetapiClient, predicate=None)
     if not (name == "run" or name.startswith("_"))
 ]

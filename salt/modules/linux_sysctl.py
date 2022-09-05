@@ -1,24 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Module for viewing and modifying sysctl parameters
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 import re
-import string
 
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
-
-# Import salt libs
-from salt.ext import six
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -36,9 +29,20 @@ def __virtual__():
     if __grains__["kernel"] != "Linux":
         return (
             False,
-            "The linux_sysctl execution module cannot be loaded: only available on Linux systems.",
+            "The linux_sysctl execution module cannot be loaded: only available on"
+            " Linux systems.",
         )
     return __virtualname__
+
+
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+    return _cmd
 
 
 def default_config():
@@ -66,8 +70,8 @@ def show(config_file=False):
     """
     Return a list of sysctl parameters for this minion
 
-    :param config_file: Pull data from the system configuration file
-                        instead of the live kernel.
+    config: Pull the data from the system configuration file
+        instead of the live data.
 
     CLI Example:
 
@@ -94,11 +98,11 @@ def show(config_file=False):
                         key = key.strip()
                         value = value.lstrip()
                         ret[key] = value
-        except (OSError, IOError):
+        except OSError:
             log.error("Could not open sysctl file")
             return None
     else:
-        cmd = "sysctl -a"
+        cmd = "{} -a".format(_which("sysctl"))
         out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace")
         for line in out.splitlines():
             if not line or " = " not in line:
@@ -108,12 +112,9 @@ def show(config_file=False):
     return ret
 
 
-def get(name, ignore=False):
+def get(name):
     """
     Return a single sysctl parameter for this minion
-
-    :param name: Name of sysctl setting
-    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -121,20 +122,14 @@ def get(name, ignore=False):
 
         salt '*' sysctl.get net.ipv4.ip_forward
     """
-    cmd = "sysctl -n {0}".format(name)
-    if ignore:
-        cmd += " --ignore"
+    cmd = "{} -n {}".format(_which("sysctl"), name)
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
 
-def assign(name, value, ignore=False):
+def assign(name, value):
     """
     Assign a single sysctl parameter for this minion
-
-    :param name: Name of sysctl setting
-    :param value: Desired value of sysctl setting
-    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -142,27 +137,16 @@ def assign(name, value, ignore=False):
 
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     """
-    value = six.text_type(value)
+    value = str(value)
 
-    if six.PY3:
-        tran_tab = name.translate("".maketrans("./", "/."))
-    else:
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if isinstance(name, unicode):  # pylint: disable=E0602
-            trans_args = {ord("/"): ".", ord("."): "/"}
-        else:
-            trans_args = string.maketrans("./", "/.")
-        # pylint: enable=incompatible-py3-code,undefined-variable
-        tran_tab = name.translate(trans_args)
+    tran_tab = name.translate("".maketrans("./", "/."))
 
-    sysctl_file = "/proc/sys/{0}".format(tran_tab)
-    if not ignore and not os.path.exists(sysctl_file):
-        raise CommandExecutionError("sysctl {0} does not exist".format(name))
+    sysctl_file = "/proc/sys/{}".format(tran_tab)
+    if not os.path.exists(sysctl_file):
+        raise CommandExecutionError("sysctl {} does not exist".format(name))
 
     ret = {}
-    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
-    if ignore:
-        cmd += " --ignore"
+    cmd = '{} -w {}="{}"'.format(_which("sysctl"), name, value)
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
@@ -170,32 +154,24 @@ def assign(name, value, ignore=False):
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
-    regex = re.compile(r"^{0}\s+=\s+{1}$".format(re.escape(name), re.escape(value)))
+    regex = re.compile(r"^{}\s+=\s+{}$".format(re.escape(name), re.escape(value)))
 
-    if not regex.match(out) or "Invalid argument" in six.text_type(err):
+    if not regex.match(out) or "Invalid argument" in str(err):
         if data["retcode"] != 0 and err:
             error = err
-        elif ignore:
-            ret[name] = "ignored"
-            return ret
         else:
             error = out
-        raise CommandExecutionError("sysctl -w failed: {0}".format(error))
+        raise CommandExecutionError("sysctl -w failed: {}".format(error))
     new_name, new_value = out.split(" = ", 1)
     ret[new_name] = new_value
     return ret
 
 
-def persist(name, value, config=None, ignore=False):
+def persist(name, value, config=None):
     """
     Assign and persist a simple sysctl parameter for this minion. If ``config``
     is not specified, a sensible default will be chosen using
     :mod:`sysctl.default_config <salt.modules.linux_sysctl.default_config>`.
-
-    :param name: Name of sysctl setting
-    :param value: Desired value of sysctl setting
-    :param config: Optional path to sysctl.conf
-    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -214,7 +190,7 @@ def persist(name, value, config=None, ignore=False):
         try:
             with salt.utils.files.fopen(config, "w+") as _fh:
                 _fh.write("#\n# Kernel sysctl configuration\n#\n")
-        except (IOError, OSError):
+        except OSError:
             msg = "Could not write to file: {0}"
             raise CommandExecutionError(msg.format(config))
 
@@ -226,7 +202,7 @@ def persist(name, value, config=None, ignore=False):
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
             config_data = salt.utils.data.decode(_fh.readlines())
-    except (IOError, OSError):
+    except OSError:
         msg = "Could not read from file: {0}"
         raise CommandExecutionError(msg.format(config))
 
@@ -245,11 +221,11 @@ def persist(name, value, config=None, ignore=False):
         # other sysctl with whitespace in it consistently uses 1 tab.  Lets
         # allow our users to put a space or tab between multi-value sysctls
         # and have salt not try to set it every single time.
-        if isinstance(comps[1], string_types) and " " in comps[1]:
+        if isinstance(comps[1], str) and " " in comps[1]:
             comps[1] = re.sub(r"\s+", "\t", comps[1])
 
         # Do the same thing for the value 'just in case'
-        if isinstance(value, string_types) and " " in value:
+        if isinstance(value, str) and " " in value:
             value = re.sub(r"\s+", "\t", value)
 
         if len(comps) < 2:
@@ -257,30 +233,27 @@ def persist(name, value, config=None, ignore=False):
             continue
         if name == comps[0]:
             # This is the line to edit
-            if six.text_type(comps[1]) == six.text_type(value):
+            if str(comps[1]) == str(value):
                 # It is correct in the config, check if it is correct in /proc
-                current_setting = get(name, ignore)
-                if not current_setting:
-                    return "Ignored"
-                if six.text_type(current_setting) != six.text_type(value):
-                    assign(name, value, ignore)
+                if str(get(name)) != str(value):
+                    assign(name, value)
                     return "Updated"
                 else:
                     return "Already set"
 
-            nlines.append("{0} = {1}\n".format(name, value))
+            nlines.append("{} = {}\n".format(name, value))
             edited = True
             continue
         else:
             nlines.append(line)
     if not edited:
-        nlines.append("{0} = {1}\n".format(name, value))
+        nlines.append("{} = {}\n".format(name, value))
     try:
         with salt.utils.files.fopen(config, "wb") as _fh:
             _fh.writelines(salt.utils.data.encode(nlines))
-    except (IOError, OSError):
+    except OSError:
         msg = "Could not write to file: {0}"
         raise CommandExecutionError(msg.format(config))
 
-    assign(name, value, ignore)
+    assign(name, value)
     return "Updated"

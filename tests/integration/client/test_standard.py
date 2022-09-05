@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -20,17 +16,26 @@ class StdTest(ModuleCase):
     def setUp(self):
         self.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cli(self):
         """
         Test cli function
         """
-        cmd_iter = self.client.cmd_cli("minion", "test.ping", timeout=20,)
+        cmd_iter = self.client.cmd_cli(
+            "minion",
+            "test.ping",
+            timeout=20,
+        )
         for ret in cmd_iter:
             self.assertTrue(ret["minion"])
 
         # make sure that the iter waits for long running jobs too
-        cmd_iter = self.client.cmd_cli("minion", "test.sleep", [6], timeout=20,)
+        cmd_iter = self.client.cmd_cli(
+            "minion",
+            "test.sleep",
+            [6],
+            timeout=20,
+        )
         num_ret = 0
         for ret in cmd_iter:
             num_ret += 1
@@ -45,7 +50,11 @@ class StdTest(ModuleCase):
             pass
         # ping that minion and ensure it times out
         try:
-            cmd_iter = self.client.cmd_cli("footest", "test.ping", timeout=20,)
+            cmd_iter = self.client.cmd_cli(
+                "footest",
+                "test.ping",
+                timeout=20,
+            )
             num_ret = 0
             for ret in cmd_iter:
                 num_ret += 1
@@ -54,54 +63,71 @@ class StdTest(ModuleCase):
         finally:
             os.unlink(key_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_iter(self):
         """
         test cmd_iter
         """
-        cmd_iter = self.client.cmd_iter("minion", "test.ping",)
+        cmd_iter = self.client.cmd_iter(
+            "minion",
+            "test.ping",
+        )
         for ret in cmd_iter:
             self.assertTrue(ret["minion"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_iter_no_block(self):
         """
         test cmd_iter_no_block
         """
-        cmd_iter = self.client.cmd_iter_no_block("minion", "test.ping",)
+        cmd_iter = self.client.cmd_iter_no_block(
+            "minion",
+            "test.ping",
+        )
         for ret in cmd_iter:
             if ret is None:
                 continue
             self.assertTrue(ret["minion"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_batch(self):
         """
         test cmd_batch
         """
-        cmd_batch = self.client.cmd_batch("minion", "test.ping",)
+        cmd_batch = self.client.cmd_batch(
+            "minion",
+            "test.ping",
+        )
         for ret in cmd_batch:
             self.assertTrue(ret["minion"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_batch_raw(self):
         """
         test cmd_batch with raw option
         """
-        cmd_batch = self.client.cmd_batch("minion", "test.ping", raw=True,)
+        cmd_batch = self.client.cmd_batch(
+            "minion",
+            "test.ping",
+            raw=True,
+        )
         for ret in cmd_batch:
             self.assertTrue(ret["data"]["success"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_full_returns(self):
         """
         test cmd_iter
         """
-        ret = self.client.cmd_full_return("minion", "test.ping", timeout=20,)
+        ret = self.client.cmd_full_return(
+            "minion",
+            "test.ping",
+            timeout=20,
+        )
         self.assertIn("minion", ret)
         self.assertEqual({"ret": True, "success": True}, ret["minion"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_disconnected_return(self):
         """
         Test return/messaging on a disconnected minion
@@ -136,7 +162,7 @@ class StdTest(ModuleCase):
         finally:
             os.unlink(key_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_missing_minion_list(self):
         """
         test cmd with missing minion in nodegroup
@@ -149,7 +175,7 @@ class StdTest(ModuleCase):
             "Minion did not return. [No response]"
         ), ret["ghostminion"]
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_missing_minion_nodegroup(self):
         """
         test cmd with missing minion in nodegroup

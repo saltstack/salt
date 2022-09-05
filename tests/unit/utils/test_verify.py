@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Test the verification routines
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import getpass
@@ -15,13 +11,10 @@ import stat
 import sys
 import tempfile
 
-# Import salt libs
+import pytest
+
 import salt.utils.files
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.verify import (
     check_max_open_files,
     check_user,
@@ -35,22 +28,11 @@ from salt.utils.verify import (
     verify_socket,
     zmq_version,
 )
-from tests.support.helpers import TstSuiteLoggingHandler, requires_network
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# Import third party libs
-if sys.platform.startswith("win"):
-    import win32file
-else:
-    import resource
-
-
-# Import third party libs
 if sys.platform.startswith("win"):
     import win32file
 else:
@@ -95,23 +77,30 @@ class TestVerify(TestCase):
     def test_no_user(self):
         # Catch sys.stderr here since no logging is configured and
         # check_user WILL write to sys.stderr
-        class FakeWriter(object):
+        class FakeWriter:
             def __init__(self):
                 self.output = ""
+                self.errors = "strict"
 
             def write(self, data):
                 self.output += data
 
+            def flush(self):
+                pass
+
         stderr = sys.stderr
         writer = FakeWriter()
         sys.stderr = writer
-        # Now run the test
-        if sys.platform.startswith("win"):
-            self.assertTrue(check_user("nouser"))
-        else:
-            self.assertFalse(check_user("nouser"))
-        # Restore sys.stderr
-        sys.stderr = stderr
+        try:
+            # Now run the test
+            if sys.platform.startswith("win"):
+                self.assertTrue(check_user("nouser"))
+            else:
+                with self.assertRaises(SystemExit):
+                    self.assertFalse(check_user("nouser"))
+        finally:
+            # Restore sys.stderr
+            sys.stderr = stderr
         if writer.output != 'CRITICAL: User not found: "nouser"\n':
             # If there's a different error catch, write it to sys.stderr
             sys.stderr.write(writer.output)
@@ -129,7 +118,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
-    @requires_network(only_local_network=True)
+    @pytest.mark.requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket("", 18000, 18001))
         if socket.has_ipv6:
@@ -137,7 +126,7 @@ class TestVerify(TestCase):
             # this will just fail.
             try:
                 self.assertTrue(verify_socket("::", 18000, 18001))
-            except socket.error as serr:
+            except OSError:
                 # Python has IPv6 enabled, but the system cannot create
                 # IPv6 sockets (otherwise the test would return a bool)
                 # - skip the test
@@ -200,11 +189,9 @@ class TestVerify(TestCase):
                 ):
 
                     for n in range(prev, newmax):
-                        kpath = os.path.join(keys_dir, six.text_type(n))
+                        kpath = os.path.join(keys_dir, str(n))
                         with salt.utils.files.fopen(kpath, "w") as fp_:
-                            fp_.write(
-                                str(n)
-                            )  # future lint: disable=blacklisted-function
+                            fp_.write(str(n))
 
                     opts = {"max_open_files": newmax, "pki_dir": tempdir}
 
@@ -232,9 +219,9 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    kpath = os.path.join(keys_dir, six.text_type(n))
+                    kpath = os.path.join(keys_dir, str(n))
                     with salt.utils.files.fopen(kpath, "w") as fp_:
-                        fp_.write(str(n))  # future lint: disable=blacklisted-function
+                        fp_.write(str(n))
 
                 opts = {"max_open_files": newmax, "pki_dir": tempdir}
 
@@ -252,7 +239,7 @@ class TestVerify(TestCase):
                     handler.messages,
                 )
                 handler.clear()
-            except IOError as err:
+            except OSError as err:
                 if err.errno == 24:
                     # Too many open files
                     self.skipTest("We've hit the max open files setting")
@@ -372,7 +359,6 @@ def symlink(source, link_name):
         raise ctypes.WinError()
 
 
-@skipIf(six.PY2 and salt.utils.platform.is_windows(), "Skipped on windows py2")
 class TestCleanPathLink(TestCase):
     """
     Ensure salt.utils.clean_path works with symlinked directories and files
@@ -382,7 +368,7 @@ class TestCleanPathLink(TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.to_path = os.path.join(self.tmpdir, "linkto")
         self.from_path = os.path.join(self.tmpdir, "linkfrom")
-        if six.PY2 or salt.utils.platform.is_windows():
+        if salt.utils.platform.is_windows():
             kwargs = {}
         else:
             kwargs = {"target_is_directory": True}

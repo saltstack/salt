@@ -1,20 +1,17 @@
-# -*- encoding: utf-8 -*-
 """
     :codeauthor: :email: `Justin Anderson <janderson@saltstack.com>`
 
     tests.integration.states.network
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt testing libs
+import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate network state module
@@ -22,12 +19,14 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         os_family = self.run_function("grains.get", ["os_family"])
-        if os_family not in ("RedHat", "Debian"):
+        os = self.run_function("grains.get", ["os"])
+        if os_family not in ("RedHat", "Debian") or os == "VMware Photon OS":
             self.skipTest(
-                "Network state only supported on RedHat and Debian based systems"
+                "Network state only supported on RedHat and Debian based systems."
+                "The network state does not currently work on VMware Photon OS."
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_managed(self):
         """
         network.managed
@@ -39,7 +38,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             "Interface dummy0 is set to be added.", ret[state_key]["comment"]
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_routes(self):
         """
         network.routes
@@ -53,7 +52,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             ret[state_key]["comment"], "Interface dummy0 routes are set to be added."
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_system(self):
         """
         network.system
@@ -63,7 +62,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
         global_settings = self.run_function("ip.get_network_settings")
         ret = self.run_function("state.sls", mods="network.system", test=True)
         self.assertIn(
-            "Global network settings are set to be {0}".format(
+            "Global network settings are set to be {}".format(
                 "added" if not global_settings else "updated"
             ),
             ret[state_key]["comment"],

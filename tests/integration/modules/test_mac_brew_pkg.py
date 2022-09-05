@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import runs_on
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
@@ -22,16 +14,16 @@ ADD_PKG = "algol68g"
 DEL_PKG = "acme"
 
 
-@destructiveTest
-@skip_if_not_root
-@skip_if_binaries_missing("brew")
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_binaries_missing("brew")
 class BrewModuleTest(ModuleCase):
     """
     Integration tests for the brew module
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_brew_install(self):
         """
         Tests the installation of packages
@@ -48,7 +40,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_remove(self):
         """
         Tests the removal of packages
@@ -69,7 +61,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [DEL_PKG])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_version(self):
         """
         Test pkg.version for mac. Installs a package and then checks we can get
@@ -82,32 +74,23 @@ class BrewModuleTest(ModuleCase):
             try:
                 self.assertTrue(
                     version,
-                    msg=(
-                        "version: {0} is empty,\
-                                or other issue is present".format(
-                            version
-                        )
+                    msg="version: {} is empty, or other issue is present".format(
+                        version
                     ),
                 )
                 self.assertIn(
                     ADD_PKG,
                     pkg_list,
-                    msg=(
-                        "package: {0} is not in\
-                              the list of installed packages: {1}".format(
-                            ADD_PKG, pkg_list
-                        )
+                    msg="package: {} is not in the list of installed packages: {}".format(
+                        ADD_PKG, pkg_list
                     ),
                 )
                 # make sure the version is accurate and is listed in the pkg_list
                 self.assertIn(
                     version,
-                    six.text_type(pkg_list[ADD_PKG]),
-                    msg=(
-                        "The {0} version: {1} is \
-                              not listed in the pkg_list: {2}".format(
-                            ADD_PKG, version, pkg_list[ADD_PKG]
-                        )
+                    str(pkg_list[ADD_PKG]),
+                    msg="The {} version: {} is not listed in the pkg_list: {}".format(
+                        ADD_PKG, version, pkg_list[ADD_PKG]
                     ),
                 )
             except AssertionError:
@@ -117,7 +100,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_version(self):
         """
         Test pkg.latest_version:
@@ -134,7 +117,7 @@ class BrewModuleTest(ModuleCase):
             installed_latest = self.run_function("pkg.latest_version", [ADD_PKG])
             version = self.run_function("pkg.version", [ADD_PKG])
             try:
-                self.assertTrue(isinstance(uninstalled_latest, six.string_types))
+                self.assertTrue(isinstance(uninstalled_latest, str))
                 self.assertEqual(installed_latest, version)
             except AssertionError:
                 self.run_function("pkg.remove", [ADD_PKG])
@@ -143,7 +126,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_refresh_db(self):
         """
         Integration test to ensure pkg.refresh_db works with brew
@@ -151,7 +134,7 @@ class BrewModuleTest(ModuleCase):
         refresh_brew = self.run_function("pkg.refresh_db")
         self.assertTrue(refresh_brew)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_upgrades(self):
         """
         Test pkg.list_upgrades: data is in the form {'name1': 'version1',
@@ -163,8 +146,8 @@ class BrewModuleTest(ModuleCase):
                 self.assertTrue(isinstance(upgrades, dict))
                 if upgrades:
                     for name in upgrades:
-                        self.assertTrue(isinstance(name, six.string_types))
-                        self.assertTrue(isinstance(upgrades[name], six.string_types))
+                        self.assertTrue(isinstance(name, str))
+                        self.assertTrue(isinstance(upgrades[name], str))
             except AssertionError:
                 self.run_function("pkg.remove", [ADD_PKG])
                 raise
@@ -172,7 +155,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_info_installed(self):
         """
         Test pkg.info_installed: info returned has certain fields used by

@@ -1,32 +1,26 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic DNS Runner
 ==================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Runner to interact with DNS server and create/delete/update DNS records
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.json
 
-# Import third party libs
 HAS_LIBS = False
 try:
     import dns.query
-    import dns.update
-    import dns.tsigkeyring
+    import dns.tsigkeyring  # pylint: disable=no-name-in-module
+    import dns.update  # pylint: disable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:
@@ -81,7 +75,7 @@ def create(
     """
     if zone in name:
         name = name.replace(zone, "").rstrip(".")
-    fqdn = "{0}.{1}".format(name, zone)
+    fqdn = "{}.{}".format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver, timeout, port)
 
@@ -91,7 +85,7 @@ def create(
     for rrset in answer.answer:
         if rdata in rrset.items:
             return {
-                fqdn: "Record of type '{0}' already exists with ttl of {1}".format(
+                fqdn: "Record of type '{}' already exists with ttl of {}".format(
                     rdtype, rrset.ttl
                 )
             }
@@ -105,9 +99,9 @@ def create(
 
     answer = dns.query.udp(dns_update, nameserver, timeout, port)
     if answer.rcode() > 0:
-        return {fqdn: "Failed to create record of type '{0}'".format(rdtype)}
+        return {fqdn: "Failed to create record of type '{}'".format(rdtype)}
 
-    return {fqdn: "Created record of type '{0}': {1} -> {2}".format(rdtype, fqdn, data)}
+    return {fqdn: "Created record of type '{}': {} -> {}".format(rdtype, fqdn, data)}
 
 
 def update(
@@ -141,7 +135,7 @@ def update(
     """
     if zone in name:
         name = name.replace(zone, "").rstrip(".")
-    fqdn = "{0}.{1}".format(name, zone)
+    fqdn = "{}.{}".format(name, zone)
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver, timeout, port)
     if not answer.answer:
@@ -157,7 +151,7 @@ def update(
                 if replace and (len(answer.answer) > 1 or len(rrset.items) > 1):
                     break
                 return {
-                    fqdn: "Record of type '{0}' already present with ttl of {1}".format(
+                    fqdn: "Record of type '{}' already present with ttl of {}".format(
                         rdtype, ttl
                     )
                 }
@@ -172,9 +166,9 @@ def update(
 
     answer = dns.query.udp(dns_update, nameserver, timeout, port)
     if answer.rcode() > 0:
-        return {fqdn: "Failed to update record of type '{0}'".format(rdtype)}
+        return {fqdn: "Failed to update record of type '{}'".format(rdtype)}
 
-    return {fqdn: "Updated record of type '{0}'".format(rdtype)}
+    return {fqdn: "Updated record of type '{}'".format(rdtype)}
 
 
 def delete(
@@ -200,7 +194,7 @@ def delete(
     """
     if zone in name:
         name = name.replace(zone, "").rstrip(".")
-    fqdn = "{0}.{1}".format(name, zone)
+    fqdn = "{}.{}".format(name, zone)
     request = dns.message.make_query(fqdn, (rdtype or "ANY"))
 
     answer = dns.query.udp(request, nameserver, timeout, port)
@@ -254,7 +248,7 @@ def add_host(
     res = []
     if zone in name:
         name = name.replace(zone, "").rstrip(".")
-    fqdn = "{0}.{1}".format(name, zone)
+    fqdn = "{}.{}".format(name, zone)
 
     ret = create(
         zone,
@@ -281,15 +275,15 @@ def add_host(
         i -= 1
         popped.append(p)
 
-        zone = "{0}.{1}".format(".".join(parts), "in-addr.arpa.")
+        zone = "{}.{}".format(".".join(parts), "in-addr.arpa.")
         name = ".".join(popped)
-        rev_fqdn = "{0}.{1}".format(name, zone)
+        rev_fqdn = "{}.{}".format(name, zone)
         ret = create(
             zone,
             name,
             ttl,
             "PTR",
-            "{0}.".format(fqdn),
+            "{}.".format(fqdn),
             keyname,
             keyfile,
             nameserver,
@@ -323,7 +317,7 @@ def delete_host(
     res = []
     if zone in name:
         name = name.replace(zone, "").rstrip(".")
-    fqdn = "{0}.{1}".format(name, zone)
+    fqdn = "{}.{}".format(name, zone)
     request = dns.message.make_query(fqdn, "A")
     answer = dns.query.udp(request, nameserver, timeout, port)
 
@@ -342,7 +336,7 @@ def delete_host(
         port=port,
         keyalgorithm=keyalgorithm,
     )
-    res.append("{0} of type 'A'".format(ret[fqdn]))
+    res.append("{} of type 'A'".format(ret[fqdn]))
 
     for ip in ips:
         parts = ip.split(".")[::-1]
@@ -354,9 +348,9 @@ def delete_host(
             p = parts.pop(0)
             i -= 1
             popped.append(p)
-            zone = "{0}.{1}".format(".".join(parts), "in-addr.arpa.")
+            zone = "{}.{}".format(".".join(parts), "in-addr.arpa.")
             name = ".".join(popped)
-            rev_fqdn = "{0}.{1}".format(name, zone)
+            rev_fqdn = "{}.{}".format(name, zone)
             ret = delete(
                 zone,
                 name,
@@ -365,13 +359,13 @@ def delete_host(
                 nameserver,
                 timeout,
                 "PTR",
-                "{0}.".format(fqdn),
+                "{}.".format(fqdn),
                 port,
                 keyalgorithm,
             )
 
             if "Deleted" in ret[rev_fqdn]:
-                res.append("{0} of type 'PTR'".format(ret[rev_fqdn]))
+                res.append("{} of type 'PTR'".format(ret[rev_fqdn]))
                 return {fqdn: res}
 
         res.append(ret[rev_fqdn])

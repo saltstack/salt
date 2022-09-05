@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
@@ -7,20 +6,14 @@ See http://code.google.com/p/psutil.
             - python-utmp package (optional)
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import re
 import time
 
-# Import salt libs
 import salt.utils.data
-
-# Import third party libs
 import salt.utils.decorators.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -51,9 +44,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The ps execution module cannot be loaded: the psutil python module version {0} is less than 0.3.0".format(
-            psutil.version_info
-        ),
+        "The ps execution module cannot be loaded: the psutil python module version {}"
+        " is less than 0.3.0".format(psutil.version_info),
     )
 
 
@@ -157,7 +149,7 @@ def top(num_processes=5, interval=3):
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in six.iteritems(start_usage):
+    for process, start in start_usage.items():
         try:
             user, system = process.cpu_times()[:2]
         except psutil.NoSuchProcess:
@@ -177,9 +169,9 @@ def top(num_processes=5, interval=3):
             "mem": {},
         }
         try:
-            for key, value in six.iteritems(process.cpu_times()._asdict()):
+            for key, value in process.cpu_times()._asdict().items():
                 info["cpu"][key] = value
-            for key, value in six.iteritems(process.memory_info()._asdict()):
+            for key, value in process.memory_info()._asdict().items():
                 info["mem"][key] = value
         except psutil.NoSuchProcess:
             # Process ended since psutil.pids() was run earlier in this
@@ -323,7 +315,7 @@ def pkill(pattern, user=None, signal=15, full=False):
         return {"killed": killed}
 
 
-def pgrep(pattern, user=None, full=False):
+def pgrep(pattern, user=None, full=False, pattern_is_regex=False):
     """
     Return the pids for processes matching a pattern.
 
@@ -344,6 +336,12 @@ def pgrep(pattern, user=None, full=False):
         A boolean value indicating whether only the name of the command or
         the full command line should be matched against the pattern.
 
+    pattern_is_regex
+        This flag enables ps.pgrep to mirror the regex search functionality
+        found in the pgrep command line utility.
+
+        .. versionadded:: 3001
+
     **Examples:**
 
     Find all httpd processes on all 'www' minions:
@@ -360,15 +358,26 @@ def pgrep(pattern, user=None, full=False):
     """
 
     procs = []
+
+    if pattern_is_regex:
+        pattern = re.compile(str(pattern))
+
     for proc in psutil.process_iter():
-        name_match = (
-            pattern in " ".join(_get_proc_cmdline(proc))
-            if full
-            else pattern in _get_proc_name(proc)
-        )
+        if full:
+            process_line = " ".join(_get_proc_cmdline(proc))
+        else:
+            process_line = _get_proc_name(proc)
+
+        if pattern_is_regex:
+            name_match = re.search(pattern, process_line)
+        else:
+            name_match = pattern in process_line
+
         user_match = True if user is None else user == _get_proc_username(proc)
+
         if name_match and user_match:
             procs.append(_get_proc_pid(proc))
+
     return procs or None
 
 
@@ -581,7 +590,7 @@ def boot_time(time_format=None):
         try:
             return b_time.strftime(time_format)
         except TypeError as exc:
-            raise SaltInvocationError("Invalid format string: {0}".format(exc))
+            raise SaltInvocationError("Invalid format string: {}".format(exc))
     return b_time
 
 
@@ -679,7 +688,7 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     lsof_infos = __salt__["cmd.run"]("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
@@ -697,7 +706,7 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     netstat_infos = __salt__["cmd.run"]("netstat -nap")
     found_infos = []
     ret = []
@@ -722,7 +731,7 @@ def ss(name):
     .. versionadded:: 2016.11.6
 
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     ss_infos = __salt__["cmd.run"]("ss -neap")
     found_infos = []
     ret = []
@@ -745,7 +754,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     """
-    sanitize_name = six.text_type(name)
+    sanitize_name = str(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__["cmd.run"]("ps aux")
@@ -759,7 +768,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = six.text_type(nb_lines) + " occurence(s)."
+    pid_count = str(nb_lines) + " occurence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

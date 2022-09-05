@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM helpers
 ==============
@@ -7,18 +6,11 @@ Helpers for the NAPALM modules.
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
-import inspect
 import logging
 
-# import NAPALM utils
 import salt.utils.napalm
 from salt.exceptions import CommandExecutionError
-
-# Import Salt modules
-from salt.ext import six
 from salt.utils.decorators import depends
 from salt.utils.napalm import proxy_napalm_wrap
 
@@ -103,11 +95,13 @@ def _get_netmiko_args(optional_args):
     # Older version don't have the netmiko_helpers module, the following code is
     # simply a port from the NAPALM code base, for backwards compatibility:
     # https://github.com/napalm-automation/napalm/blob/develop/napalm/base/netmiko_helpers.py
-    netmiko_args, _, _, netmiko_defaults = inspect.getargspec(BaseConnection.__init__)
+    netmiko_args, _, _, netmiko_defaults = __utils__["args.get_function_argspec"](
+        BaseConnection.__init__
+    )
     check_self = netmiko_args.pop(0)
     if check_self != "self":
         raise ValueError("Error processing Netmiko arguments")
-    netmiko_argument_map = dict(six.moves.zip(netmiko_args, netmiko_defaults))
+    netmiko_argument_map = dict(zip(netmiko_args, netmiko_defaults))
     # Netmiko arguments that are integrated into NAPALM already
     netmiko_filter = ["ip", "host", "username", "password", "device_type", "timeout"]
     # Filter out all of the arguments that are integrated into NAPALM
@@ -115,7 +109,7 @@ def _get_netmiko_args(optional_args):
         netmiko_argument_map.pop(k)
     # Check if any of these arguments were passed in as NAPALM optional_args
     netmiko_optional_args = {}
-    for k, v in six.iteritems(netmiko_argument_map):
+    for k, v in netmiko_argument_map.items():
         try:
             netmiko_optional_args[k] = optional_args[k]
         except KeyError:
@@ -158,10 +152,64 @@ def _junos_prep_fun(napalm_device):
         return {
             "out": None,
             "result": False,
-            "comment": "Please install jxmlease (``pip install jxmlease``) to be able to use this function.",
+            "comment": (
+                "Please install jxmlease (``pip install jxmlease``) to be able to use"
+                " this function."
+            ),
         }
     _inject_junos_proxy(napalm_device)
     return {"result": True}
+
+
+@proxy_napalm_wrap
+def _netmiko_conn(**kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Return the connection object with the network device, over Netmiko, passing
+    the authentication details from the existing NAPALM connection.
+
+    .. warning::
+
+        This function is not suitable for CLI usage, more rather to be used
+        in various Salt modules.
+
+    USAGE Example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.netmiko_conn']()
+        res = conn.send_command('show interfaces')
+        conn.disconnect()
+    """
+    netmiko_kwargs = netmiko_args()
+    kwargs.update(netmiko_kwargs)
+    return __salt__["netmiko.get_connection"](**kwargs)
+
+
+@proxy_napalm_wrap
+def _pyeapi_conn(**kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Return the connection object with the Arista switch, over ``pyeapi``,
+    passing the authentication details from the existing NAPALM connection.
+
+    .. warning::
+        This function is not suitable for CLI usage, more rather to be used in
+        various Salt modules, to reusing the established connection, as in
+        opposite to opening a new connection for each task.
+
+    Usage example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.pyeapi_conn']()
+        res1 = conn.run_commands('show version')
+        res2 = conn.get_config(as_string=True)
+    """
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__["pyeapi.get_connection"](**pyeapi_kwargs)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -266,7 +314,7 @@ def call(method, *args, **kwargs):
         salt '*' napalm.call get_bgp_config group='my-group'
     """
     clean_kwargs = {}
-    for karg, warg in six.iteritems(kwargs):
+    for karg, warg in kwargs.items():
         # remove the __pub args
         if not karg.startswith("__pub_"):
             clean_kwargs[karg] = warg
@@ -563,7 +611,6 @@ def netmiko_multi_call(*methods, **kwargs):
         - ``args``: list of arguments to send to the ``name`` method.
         - ``kwargs``: key-value arguments to send to the ``name`` method.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -618,7 +665,7 @@ def netmiko_commands(*commands, **kwargs):
 
         salt '*' napalm.netmiko_commands 'show version' 'show interfaces'
     """
-    conn = netmiko_conn(**kwargs)
+    conn = _netmiko_conn(**kwargs)
     ret = []
     for cmd in commands:
         ret.append(conn.send_command(cmd))
@@ -716,9 +763,13 @@ def netmiko_conn(**kwargs):
         res = conn.send_command('show interfaces')
         conn.disconnect()
     """
-    netmiko_kwargs = netmiko_args()
-    kwargs.update(netmiko_kwargs)
-    return __salt__["netmiko.get_connection"](**kwargs)
+    salt.utils.versions.warn_until(
+        "Chlorine",
+        "This 'napalm_mod.netmiko_conn' function as been deprecated and "
+        "will be removed in the {version} release, as such, it has been "
+        "made an internal function since it is not suitable for CLI usage",
+    )
+    return _netmiko_conn(**kwargs)
 
 
 @proxy_napalm_wrap
@@ -1019,8 +1070,17 @@ def pyeapi_nxos_api_args(**prev_kwargs):
     kwargs["username"] = napalm_opts["USERNAME"]
     kwargs["password"] = napalm_opts["PASSWORD"]
     kwargs["timeout"] = napalm_opts["TIMEOUT"]
-    kwargs["transport"] = optional_args.get("transport")
-    kwargs["port"] = optional_args.get("port")
+
+    if "transport" in optional_args and optional_args["transport"]:
+        kwargs["transport"] = optional_args["transport"]
+    else:
+        kwargs["transport"] = "https"
+
+    if "port" in optional_args and optional_args["port"]:
+        kwargs["port"] = optional_args["port"]
+    else:
+        kwargs["port"] = 80 if kwargs["transport"] == "http" else 443
+
     kwargs["verify"] = optional_args.get("verify")
     prev_kwargs.update(kwargs)
     return prev_kwargs
@@ -1074,7 +1134,7 @@ def pyeapi_call(method, *args, **kwargs):
 
         salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
         salt '*' napalm.pyeapi_call get_config as_string=True
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.call"](method, *args, **pyeapi_kwargs)
 
@@ -1100,8 +1160,13 @@ def pyeapi_conn(**kwargs):
         res1 = conn.run_commands('show version')
         res2 = conn.get_config(as_string=True)
     """
-    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
-    return __salt__["pyeapi.get_connection"](**pyeapi_kwargs)
+    salt.utils.versions.warn_until(
+        "Chlorine",
+        "This 'napalm_mod.pyeapi_conn' function as been deprecated and "
+        "will be removed in the {version} release, as such, it has been "
+        "made an internal function since it is not suitable for CLI usage",
+    )
+    return _pyeapi_conn(**kwargs)
 
 
 @proxy_napalm_wrap
@@ -1161,7 +1226,7 @@ def pyeapi_config(
     .. code-block:: bash
 
         salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.config"](
         commands=commands,

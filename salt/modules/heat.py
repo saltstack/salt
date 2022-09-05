@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling OpenStack Heat calls
 
@@ -40,9 +39,6 @@ Module for handling OpenStack Heat calls
         salt '*' heat.flavor_list profile=openstack1
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
@@ -51,10 +47,7 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.yaml
-
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 # pylint: disable=import-error
 HAS_HEAT = False
@@ -98,9 +91,6 @@ def __virtual__():
         # 'the heatclient and keystoneclient and oslo_serialization'
         " python library is not available.",
     )
-
-
-__opts__ = {}
 
 
 def _auth(profile=None, api_version=1, **connection_args):
@@ -193,7 +183,7 @@ def _parse_template(tmpl_str):
         try:
             tpl = salt.utils.yaml.safe_load(tmpl_str)
         except salt.utils.yaml.YAMLError as exc:
-            raise ValueError(six.text_type(exc))
+            raise ValueError(str(exc))
         else:
             if tpl is None:
                 tpl = {}
@@ -202,7 +192,7 @@ def _parse_template(tmpl_str):
         or "heat_template_version" in tpl
         or "AWSTemplateFormatVersion" in tpl
     ):
-        raise ValueError(("Template format version not found."))
+        raise ValueError("Template format version not found.")
     return tpl
 
 
@@ -213,7 +203,7 @@ def _parse_environment(env_str):
     try:
         env = salt.utils.yaml.safe_load(env_str)
     except salt.utils.yaml.YAMLError as exc:
-        raise ValueError(six.text_type(exc))
+        raise ValueError(str(exc))
     else:
         if env is None:
             env = {}
@@ -222,7 +212,7 @@ def _parse_environment(env_str):
 
     for param in env:
         if param not in SECTIONS:
-            raise ValueError('environment has wrong section "{0}"'.format(param))
+            raise ValueError('environment has wrong section "{}"'.format(param))
 
     return env
 
@@ -236,7 +226,7 @@ def _get_stack_events(h_client, stack_id, event_args):
     try:
         events = h_client.events.list(**event_args)
     except heatclient.exc.HTTPNotFound as exc:
-        raise heatclient.exc.CommandError(six.text_type(exc))
+        raise heatclient.exc.CommandError(str(exc))
     else:
         for event in events:
             event.stack_name = stack_id.split("/")[0]
@@ -250,7 +240,7 @@ def _poll_for_events(
     Polling stack events
     """
     if action:
-        stop_status = ("{0}_FAILED".format(action), "{0}_COMPLETE".format(action))
+        stop_status = ("{}_FAILED".format(action), "{}_COMPLETE".format(action))
         stop_check = lambda a: a in stop_status
     else:
         stop_check = lambda a: a.endswith("_COMPLETE") or a.endswith("_FAILED")
@@ -291,7 +281,7 @@ def _poll_for_events(
         time.sleep(poll_period)
         timeout_sec -= poll_period
         if timeout_sec <= 0:
-            stack_status = "{0}_FAILED".format(action)
+            stack_status = "{}_FAILED".format(action)
             msg = "Timeout expired"
             return stack_status, msg
 
@@ -364,7 +354,7 @@ def show_stack(name=None, profile=None):
         }
         ret["result"] = True
     except heatclient.exc.HTTPNotFound:
-        return {"result": False, "comment": "No stack {0}".format(name)}
+        return {"result": False, "comment": "No stack {}".format(name)}
     return ret
 
 
@@ -384,7 +374,6 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
     profile
         Profile to use
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -402,11 +391,11 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
         h_client.stacks.delete(name)
     except heatclient.exc.HTTPNotFound:
         ret["result"] = False
-        ret["comment"] = "No stack {0}".format(name)
+        ret["comment"] = "No stack {}".format(name)
     except heatclient.exc.HTTPForbidden as forbidden:
         log.exception(forbidden)
         ret["result"] = False
-        ret["comment"] = six.text_type(forbidden)
+        ret["comment"] = str(forbidden)
     if ret["result"] is False:
         return ret
 
@@ -416,19 +405,19 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
                 h_client, name, action="DELETE", poll_period=poll, timeout=timeout
             )
         except heatclient.exc.CommandError:
-            ret["comment"] = "Deleted stack {0}.".format(name)
+            ret["comment"] = "Deleted stack {}.".format(name)
             return ret
         except Exception as ex:  # pylint: disable=W0703
             log.exception("Delete failed %s", ex)
             ret["result"] = False
-            ret["comment"] = "{0}".format(ex)
+            ret["comment"] = "{}".format(ex)
             return ret
 
         if stack_status == "DELETE_FAILED":
             ret["result"] = False
-            ret["comment"] = "Deleted stack FAILED'{0}'{1}.".format(name, msg)
+            ret["comment"] = "Deleted stack FAILED'{}'{}.".format(name, msg)
         else:
-            ret["comment"] = "Deleted stack {0}.".format(name)
+            ret["comment"] = "Deleted stack {}.".format(name)
     return ret
 
 
@@ -534,10 +523,10 @@ def create_stack(
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret["result"] = False
-                    ret["comment"] = "Error parsing template {0}".format(ex)
+                    ret["comment"] = "Error parsing template {}".format(ex)
         else:
             ret["result"] = False
-            ret["comment"] = "Can not open template: {0} {1}".format(
+            ret["comment"] = "Can not open template: {} {}".format(
                 template_file, comment_
             )
     else:
@@ -553,7 +542,7 @@ def create_stack(
     except Exception as ex:  # pylint: disable=W0703
         log.exception("Template not valid %s", ex)
         ret["result"] = False
-        ret["comment"] = "Template not valid {0}".format(ex)
+        ret["comment"] = "Template not valid {}".format(ex)
         return ret
     env = {}
     if environment:
@@ -601,10 +590,10 @@ def create_stack(
                     env = _parse_environment(env_str)
                 except ValueError as ex:
                     ret["result"] = False
-                    ret["comment"] = "Error parsing template {0}".format(ex)
+                    ret["comment"] = "Error parsing template {}".format(ex)
         else:
             ret["result"] = False
-            ret["comment"] = "Can not open environment: {0}, {1}".format(
+            ret["comment"] = "Can not open environment: {}, {}".format(
                 environment, comment_
             )
     if ret["result"] is False:
@@ -625,7 +614,7 @@ def create_stack(
     except Exception as ex:  # pylint: disable=W0703
         log.exception("Create failed %s", ex)
         ret["result"] = False
-        ret["comment"] = "{0}".format(ex)
+        ret["comment"] = "{}".format(ex)
         return ret
     if poll > 0:
         stack_status, msg = _poll_for_events(
@@ -633,9 +622,9 @@ def create_stack(
         )
         if stack_status == "CREATE_FAILED":
             ret["result"] = False
-            ret["comment"] = "Created stack FAILED'{0}'{1}.".format(name, msg)
+            ret["comment"] = "Created stack FAILED'{}'{}.".format(name, msg)
     if ret["result"] is True:
-        ret["comment"] = "Created stack '{0}'.".format(name)
+        ret["comment"] = "Created stack '{}'.".format(name)
     return ret
 
 
@@ -745,10 +734,10 @@ def update_stack(
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret["result"] = False
-                    ret["comment"] = "Error parsing template {0}".format(ex)
+                    ret["comment"] = "Error parsing template {}".format(ex)
         else:
             ret["result"] = False
-            ret["comment"] = "Can not open template: {0} {1}".format(
+            ret["comment"] = "Can not open template: {} {}".format(
                 template_file, comment_
             )
     else:
@@ -764,7 +753,7 @@ def update_stack(
     except Exception as ex:  # pylint: disable=W0703
         log.exception("Template not valid %s", ex)
         ret["result"] = False
-        ret["comment"] = "Template not valid {0}".format(ex)
+        ret["comment"] = "Template not valid {}".format(ex)
         return ret
     env = {}
     if environment:
@@ -812,10 +801,10 @@ def update_stack(
                     env = _parse_environment(env_str)
                 except ValueError as ex:
                     ret["result"] = False
-                    ret["comment"] = "Error parsing template {0}".format(ex)
+                    ret["comment"] = "Error parsing template {}".format(ex)
         else:
             ret["result"] = False
-            ret["comment"] = "Can not open environment: {0}, {1}".format(
+            ret["comment"] = "Can not open environment: {}, {}".format(
                 environment, comment_
             )
     if ret["result"] is False:
@@ -834,7 +823,7 @@ def update_stack(
     except Exception as ex:  # pylint: disable=W0703
         log.exception("Update failed %s", ex)
         ret["result"] = False
-        ret["comment"] = "Update failed {0}".format(ex)
+        ret["comment"] = "Update failed {}".format(ex)
         return ret
 
     if poll > 0:
@@ -843,9 +832,9 @@ def update_stack(
         )
         if stack_status == "UPDATE_FAILED":
             ret["result"] = False
-            ret["comment"] = "Updated stack FAILED'{0}'{1}.".format(name, msg)
+            ret["comment"] = "Updated stack FAILED'{}'{}.".format(name, msg)
     if ret["result"] is True:
-        ret["comment"] = ("Updated stack '{0}'.".format(name),)
+        ret["comment"] = ("Updated stack '{}'.".format(name),)
     return ret
 
 
@@ -872,9 +861,9 @@ def template_stack(name=None, profile=None):
     try:
         get_template = h_client.stacks.template(name)
     except heatclient.exc.HTTPNotFound:
-        return {"result": False, "comment": "No stack with {0}".format(name)}
+        return {"result": False, "comment": "No stack with {}".format(name)}
     except heatclient.exc.BadRequest:
-        return {"result": False, "comment": "Bad request fot stack {0}".format(name)}
+        return {"result": False, "comment": "Bad request fot stack {}".format(name)}
     if "heat_template_version" in get_template:
         template = salt.utils.yaml.safe_dump(get_template)
     else:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Watch NAPALM functions and fire events on specific triggers
 ===========================================================
@@ -167,17 +166,12 @@ The event examplified above has been fired when the device
 identified by the Minion id ``edge01.bjm01`` has been synchronized
 with a NTP server at a stratum level greater than 5.
 """
-from __future__ import absolute_import, unicode_literals
 
 import logging
-
-# Import Python std lib
 import re
 
+import salt.utils.beacons
 import salt.utils.napalm
-
-# Import Salt modules
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 _numeric_regex = re.compile(r"^(<|>|<=|>=|==|!=)\s*(\d+(\.\d+){0,1})$")
@@ -199,7 +193,12 @@ def __virtual__():
     """
     This beacon can only work when running under a regular or a proxy minion, managed through napalm.
     """
-    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+    if salt.utils.napalm.virtual(__opts__, __virtualname__, __file__):
+        return __virtualname__
+    else:
+        err_msg = "NAPALM is not installed."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def _compare(cur_cmp, cur_struct):
@@ -209,12 +208,12 @@ def _compare(cur_cmp, cur_struct):
     """
     if isinstance(cur_cmp, dict) and isinstance(cur_struct, dict):
         log.debug("Comparing dict to dict")
-        for cmp_key, cmp_value in six.iteritems(cur_cmp):
+        for cmp_key, cmp_value in cur_cmp.items():
             if cmp_key == "*":
                 # matches any key from the source dictionary
                 if isinstance(cmp_value, dict):
                     found = False
-                    for _, cur_struct_val in six.iteritems(cur_struct):
+                    for _, cur_struct_val in cur_struct.items():
                         found |= _compare(cmp_value, cur_struct_val)
                     return found
                 else:
@@ -223,7 +222,7 @@ def _compare(cur_cmp, cur_struct):
                         for cur_ele in cur_struct:
                             found |= _compare(cmp_value, cur_ele)
                     elif isinstance(cur_struct, dict):
-                        for _, cur_ele in six.iteritems(cur_struct):
+                        for _, cur_ele in cur_struct.items():
                             found |= _compare(cmp_value, cur_ele)
                     return found
             else:
@@ -233,7 +232,7 @@ def _compare(cur_cmp, cur_struct):
                     return _compare(cmp_value, cur_struct[cmp_key])
                 if isinstance(cmp_value, list):
                     found = False
-                    for _, cur_struct_val in six.iteritems(cur_struct):
+                    for _, cur_struct_val in cur_struct.items():
                         found |= _compare(cmp_value, cur_struct_val)
                     return found
                 else:
@@ -254,25 +253,21 @@ def _compare(cur_cmp, cur_struct):
     elif isinstance(cur_cmp, bool) and isinstance(cur_struct, bool):
         log.debug("Comparing booleans: %s ? %s", cur_cmp, cur_struct)
         return cur_cmp == cur_struct
-    elif isinstance(cur_cmp, (six.string_types, six.text_type)) and isinstance(
-        cur_struct, (six.string_types, six.text_type)
-    ):
+    elif isinstance(cur_cmp, ((str,), str)) and isinstance(cur_struct, ((str,), str)):
         log.debug("Comparing strings (and regex?): %s ? %s", cur_cmp, cur_struct)
         # Trying literal match
         matched = re.match(cur_cmp, cur_struct, re.I)
         if matched:
             return True
         return False
-    elif isinstance(cur_cmp, (six.integer_types, float)) and isinstance(
-        cur_struct, (six.integer_types, float)
+    elif isinstance(cur_cmp, ((int,), float)) and isinstance(
+        cur_struct, ((int,), float)
     ):
         log.debug("Comparing numeric values: %d ? %d", cur_cmp, cur_struct)
         # numeric compare
         return cur_cmp == cur_struct
-    elif isinstance(cur_struct, (six.integer_types, float)) and isinstance(
-        cur_cmp, (six.string_types, six.text_type)
-    ):
-        # Comapring the numerical value against a presumably mathematical value
+    elif isinstance(cur_struct, ((int,), float)) and isinstance(cur_cmp, ((str,), str)):
+        # Comparing the numerical value against a presumably mathematical value
         log.debug(
             "Comparing a numeric value (%d) with a string (%s)", cur_struct, cur_cmp
         )
@@ -295,14 +290,12 @@ def validate(config):
     if not isinstance(config, list):
         return False, "Configuration for napalm beacon must be a list."
     for mod in config:
-        fun = mod.keys()[0]
-        fun_cfg = mod.values()[0]
+        fun, fun_cfg = next(iter(mod.items()))
         if not isinstance(fun_cfg, dict):
             return (
                 False,
-                "The match structure for the {} execution function output must be a dictionary".format(
-                    fun
-                ),
+                "The match structure for the {} execution function output must be a"
+                " dictionary".format(fun),
             )
         if fun not in __salt__:
             return False, "Execution function {} is not availabe!".format(fun)
@@ -313,6 +306,9 @@ def beacon(config):
     """
     Watch napalm function and fire events.
     """
+    whitelist = []
+    config = salt.utils.beacons.remove_hidden_options(config, whitelist)
+
     log.debug("Executing napalm beacon with config:")
     log.debug(config)
     ret = []
@@ -320,20 +316,15 @@ def beacon(config):
         if not mod:
             continue
         event = {}
-        fun = mod.keys()[0]
-        fun_cfg = mod.values()[0]
+        fun, fun_cfg = next(iter(mod.items()))
         args = fun_cfg.pop("_args", [])
         kwargs = fun_cfg.pop("_kwargs", {})
-        log.debug(
-            "Executing {fun} with {args} and {kwargs}".format(
-                fun=fun, args=args, kwargs=kwargs
-            )
-        )
+        log.debug("Executing %s with %s and %s", fun, args, kwargs)
         fun_ret = __salt__[fun](*args, **kwargs)
         log.debug("Got the reply from the minion:")
         log.debug(fun_ret)
         if not fun_ret.get("result", False):
-            log.error("Error whilst executing {}".format(fun))
+            log.error("Error whilst executing %s", fun)
             log.error(fun_ret)
             continue
         fun_ret_out = fun_ret["out"]
@@ -346,9 +337,9 @@ def beacon(config):
             # catch any exception and continue
             # to not jeopardise the execution of the next function in the list
             continue
-        log.debug("Result of comparison: {res}".format(res=fun_cmp_result))
+        log.debug("Result of comparison: %s", fun_cmp_result)
         if fun_cmp_result:
-            log.info("Matched {fun} with {cfg}".format(fun=fun, cfg=fun_cfg))
+            log.info("Matched %s with %s", fun, fun_cfg)
             event["tag"] = "{os}/{fun}".format(os=__grains__["os"], fun=fun)
             event["fun"] = fun
             event["args"] = args

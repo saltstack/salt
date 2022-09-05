@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Support for DEB packages
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
-
-# Import python libs
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -52,7 +47,7 @@ def bin_pkg_info(path, saltenv="base"):
         minion so that it can be examined.
 
     saltenv : base
-        Salt fileserver envrionment from which to retrieve the package. Ignored
+        Salt fileserver environment from which to retrieve the package. Ignored
         if ``path`` is a local file path on the minion.
 
     CLI Example:
@@ -67,14 +62,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {0} from saltenv '{1}'".format(path, saltenv)
+                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{0} does not exist on minion".format(path))
+            raise CommandExecutionError("{} does not exist on minion".format(path))
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{0} does not exist on minion".format(path))
+            raise SaltInvocationError("{} does not exist on minion".format(path))
 
     cmd = ["dpkg", "-I", path]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
@@ -87,24 +82,24 @@ def bin_pkg_info(path, saltenv="base"):
     ret = {}
     for line in result["stdout"].splitlines():
         line = line.strip()
-        if line.startswith("Package:"):
+        if re.match(r"^Package[ ]*:", line):
             ret["name"] = line.split()[-1]
-        elif line.startswith("Version:"):
+        elif re.match(r"^Version[ ]*:", line):
             ret["version"] = line.split()[-1]
-        elif line.startswith("Architecture:"):
+        elif re.match(r"^Architecture[ ]*:", line):
             ret["arch"] = line.split()[-1]
 
     missing = [x for x in ("name", "version", "arch") if x not in ret]
     if missing:
         raise CommandExecutionError(
-            "Unable to get {0} for {1}".format(", ".join(missing), path)
+            "Unable to get {} for {}".format(", ".join(missing), path)
         )
 
     if __grains__.get("cpuarch", "") == "x86_64":
         osarch = __grains__.get("osarch", "")
         arch = ret["arch"]
         if arch != "all" and osarch == "amd64" and osarch != arch:
-            ret["name"] += ":{0}".format(arch)
+            ret["name"] += ":{}".format(arch)
 
     return ret
 
@@ -125,7 +120,7 @@ def unpurge(*packages):
     ret = {}
     __salt__["cmd.run"](
         ["dpkg", "--set-selections"],
-        stdin=r"\n".join(["{0} install".format(x) for x in packages]),
+        stdin=r"\n".join(["{} install".format(x) for x in packages]),
         python_shell=False,
         output_loglevel="trace",
     )
@@ -134,7 +129,7 @@ def unpurge(*packages):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_pkgs(*packages):
+def list_pkgs(*packages, **kwargs):
     """
     List the packages currently installed in a dict::
 
@@ -170,7 +165,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     """
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -185,7 +180,7 @@ def file_list(*packages):
         salt '*' lowpkg.file_list
     """
     errors = []
-    ret = set([])
+    ret = set()
     cmd = ["dpkg-query", "-f=${db:Status-Status}\t${binary:Package}\n", "-W"] + list(
         packages
     )
@@ -205,7 +200,7 @@ def file_list(*packages):
     return {"errors": errors, "files": sorted(ret)}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     """
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
@@ -280,14 +275,14 @@ def _get_pkg_info(*packages, **kwargs):
         "description:${Description}\\n"
         "------\\n'"
     )
-    cmd += " {0}".format(" ".join(packages))
+    cmd += " {}".format(" ".join(packages))
     cmd = cmd.strip()
 
-    call = __salt__["cmd.run_all"](cmd, python_chell=False)
+    call = __salt__["cmd.run_all"](cmd, python_shell=False)
     if call["retcode"]:
         if failhard:
             raise CommandExecutionError(
-                "Error getting packages information: {0}".format(call["stderr"])
+                "Error getting packages information: {}".format(call["stderr"])
             )
         else:
             return ret
@@ -319,7 +314,7 @@ def _get_pkg_license(pkg):
     :return:
     """
     licenses = set()
-    cpr = "/usr/share/doc/{0}/copyright".format(pkg)
+    cpr = "/usr/share/doc/{}/copyright".format(pkg)
     if os.path.exists(cpr):
         with salt.utils.files.fopen(cpr) as fp_:
             for line in salt.utils.stringutils.to_unicode(fp_.read()).split(os.linesep):
@@ -337,7 +332,7 @@ def _get_pkg_install_time(pkg):
     """
     iso_time = None
     if pkg is not None:
-        location = "/var/lib/dpkg/info/{0}.list".format(pkg)
+        location = "/var/lib/dpkg/info/{}.list".format(pkg)
         if os.path.exists(location):
             iso_time = (
                 datetime.datetime.utcfromtimestamp(
@@ -396,7 +391,7 @@ def info(*packages, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

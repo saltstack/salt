@@ -1,30 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import copy
+import datetime
 import fnmatch
 import functools
+import hashlib
 import logging
+import random
 import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
-# Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
 
@@ -32,6 +26,8 @@ try:
     import jmespath
 except ImportError:
     jmespath = None
+
+ALGORITHMS_ATTR_NAME = "algorithms_guaranteed"
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +60,7 @@ class CaseInsensitiveDict(MutableMapping):
         return self._data[to_lowercase(key)][1]
 
     def __iter__(self):
-        return (item[0] for item in six.itervalues(self._data))
+        return (item[0] for item in self._data.values())
 
     def __eq__(self, rval):
         if not isinstance(rval, Mapping):
@@ -73,20 +69,20 @@ class CaseInsensitiveDict(MutableMapping):
         return dict(self.items_lower()) == dict(CaseInsensitiveDict(rval).items_lower())
 
     def __repr__(self):
-        return repr(dict(six.iteritems(self)))
+        return repr(dict(self.items()))
 
     def items_lower(self):
         """
         Returns a generator iterating over keys and values, with the keys all
         being lowercase.
         """
-        return ((key, val[1]) for key, val in six.iteritems(self._data))
+        return ((key, val[1]) for key, val in self._data.items())
 
     def copy(self):
         """
         Returns a copy of the object
         """
-        return CaseInsensitiveDict(six.iteritems(self._data))
+        return CaseInsensitiveDict(self._data.items())
 
 
 def __change_case(data, attr, preserve_dict_class=False):
@@ -108,7 +104,7 @@ def __change_case(data, attr, preserve_dict_class=False):
                 __change_case(key, attr, preserve_dict_class),
                 __change_case(val, attr, preserve_dict_class),
             )
-            for key, val in six.iteritems(data)
+            for key, val in data.items()
         )
     if isinstance(data, Sequence):
         return data_type(
@@ -138,7 +134,7 @@ def compare_dicts(old=None, new=None):
     dict describing the changes that were made.
     """
     ret = {}
-    for key in set((new or {})).union((old or {})):
+    for key in set(new or {}).union(old or {}):
         if key not in old:
             # New key
             ret[key] = {"old": "", "new": new[key]}
@@ -292,6 +288,8 @@ def decode(
                 to_str,
             )
         )
+    if isinstance(data, datetime.datetime):
+        return data.isoformat()
     try:
         data = _decode_func(data, encoding, errors, normalize)
     except TypeError:
@@ -322,14 +320,9 @@ def decode_dict(
     # Clean data object before decoding to avoid circular references
     data = _remove_circular_refs(data)
 
-    _decode_func = (
-        salt.utils.stringutils.to_unicode
-        if not to_str
-        else salt.utils.stringutils.to_str
-    )
     # Make sure we preserve OrderedDicts
     ret = data.__class__() if preserve_dict_class else {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if isinstance(key, tuple):
             key = (
                 decode_tuple(
@@ -349,7 +342,17 @@ def decode_dict(
             )
         else:
             try:
-                key = _decode_func(key, encoding, errors, normalize)
+                key = decode(
+                    key,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -406,8 +409,17 @@ def decode_dict(
             )
         else:
             try:
-                value = _decode_func(value, encoding, errors, normalize)
-            except TypeError:
+                value = decode(
+                    value,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+            except TypeError as e:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
                 # means we are going to leave the value as-is.
@@ -437,11 +449,6 @@ def decode_list(
     # Clean data object before decoding to avoid circular references
     data = _remove_circular_refs(data)
 
-    _decode_func = (
-        salt.utils.stringutils.to_unicode
-        if not to_str
-        else salt.utils.stringutils.to_str
-    )
     ret = []
     for item in data:
         if isinstance(item, list):
@@ -485,7 +492,17 @@ def decode_list(
             )
         else:
             try:
-                item = _decode_func(item, encoding, errors, normalize)
+                item = decode(
+                    item,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -585,7 +602,7 @@ def encode_dict(
     # Clean data object before encoding to avoid circular references
     data = _remove_circular_refs(data)
     ret = data.__class__() if preserve_dict_class else {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if isinstance(key, tuple):
             key = (
                 encode_tuple(key, encoding, errors, keep, preserve_dict_class)
@@ -727,10 +744,8 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in lookup_dict:
-            test_key = key if isinstance(key, six.string_types) else six.text_type(key)
-            test_each = (
-                each if isinstance(each, six.string_types) else six.text_type(each)
-            )
+            test_key = key if isinstance(key, str) else str(key)
+            test_each = each if isinstance(each, str) else str(each)
             if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
@@ -748,7 +763,7 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
         elif isinstance(base_values, Mapping):
             if not isinstance(ret, Mapping):
                 raise SaltException(
-                    "filter_by default and look-up values must both be " "dictionaries."
+                    "filter_by default and look-up values must both be dictionaries."
                 )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
@@ -794,7 +809,13 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     then return data['foo']['bar']['0']
     """
     ptr = data
-    for each in key.split(delimiter):
+    if isinstance(key, str):
+        key = key.split(delimiter)
+
+    if isinstance(key, int):
+        key = [key]
+
+    for each in key:
         if isinstance(ptr, list):
             try:
                 idx = int(each)
@@ -812,10 +833,21 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     # No embedded dicts matched, return the default
                     return default
             else:
-                try:
-                    ptr = ptr[idx]
-                except IndexError:
-                    return default
+                embed_match = False
+                # Index was numeric, lets look at any embedded dicts
+                # using the converted version of each.
+                for embedded in (x for x in ptr if isinstance(x, dict)):
+                    try:
+                        ptr = embedded[idx]
+                        embed_match = True
+                        break
+                    except KeyError:
+                        pass
+                if not embed_match:
+                    try:
+                        ptr = ptr[idx]
+                    except IndexError:
+                        return default
         else:
             try:
                 ptr = ptr[each]
@@ -859,21 +891,15 @@ def subdict_match(
     """
 
     def _match(target, pattern, regex_match=False, exact_match=False):
-        # The reason for using six.text_type first and _then_ using
-        # to_unicode as a fallback is because we want to eventually have
-        # unicode types for comparison below. If either value is numeric then
-        # six.text_type will turn it into a unicode string. However, if the
-        # value is a PY2 str type with non-ascii chars, then the result will be
-        # a UnicodeDecodeError. In those cases, we simply use to_unicode to
-        # decode it to unicode. The reason we can't simply use to_unicode to
-        # begin with is that (by design) to_unicode will raise a TypeError if a
-        # non-string/bytestring/bytearray value is passed.
+        # XXX: A lot of this logic is here because of supporting PY2 and PY3,
+        # now that we only support PY3 we should probably re-visit what's going
+        # on here.
         try:
-            target = six.text_type(target).lower()
+            target = str(target).lower()
         except UnicodeDecodeError:
             target = salt.utils.stringutils.to_unicode(target).lower()
         try:
-            pattern = six.text_type(pattern).lower()
+            pattern = str(pattern).lower()
         except UnicodeDecodeError:
             pattern = salt.utils.stringutils.to_unicode(pattern).lower()
 
@@ -1015,7 +1041,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
     Takes a list of one-element dicts (as found in many SLS schemas) and
     repacks into a single dictionary.
     """
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         try:
             data = salt.utils.yaml.safe_load(data)
         except salt.utils.yaml.parser.ParserError as err:
@@ -1027,7 +1053,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, six.integer_types, float)
+    valid_non_dict = ((str,), (int,), float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):
@@ -1049,7 +1075,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
                 return {}
     else:
         log.error(
-            "Invalid input for repack_dictlist, data passed is not a list " "(%s)", data
+            "Invalid input for repack_dictlist, data passed is not a list (%s)", data
         )
         return {}
 
@@ -1085,7 +1111,7 @@ def is_list(value):
 
 
 @jinja_filter("is_iter")
-def is_iter(thing, ignore=six.string_types):
+def is_iter(thing, ignore=(str,)):
     """
     Test if an object is iterable, but not a string type.
 
@@ -1142,10 +1168,10 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (six.integer_types, float)):
+    if isinstance(value, ((int,), float)):
         return value > 0
-    if isinstance(value, six.string_types):
-        return six.text_type(value).lower() == "true"
+    if isinstance(value, str):
+        return str(value).lower() == "true"
     return bool(value)
 
 
@@ -1162,8 +1188,8 @@ def mysql_to_dict(data, key):
         if line.startswith("+"):
             continue
         comps = line.split("|")
-        for comp in range(len(comps)):
-            comps[comp] = comps[comp].strip()
+        for idx, comp in enumerate(comps):
+            comps[idx] = comp.strip()
         if len(headers) > 1:
             index = len(headers) - 1
             row = {}
@@ -1185,7 +1211,7 @@ def simple_types_filter(data):
     if data is None:
         return data
 
-    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
+    simpletypes_keys = ((str,), str, (int,), float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, (list, tuple)):
@@ -1201,7 +1227,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in six.iteritems(data):
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list, tuple)):
@@ -1221,10 +1247,8 @@ def stringify(data):
     """
     ret = []
     for item in data:
-        if six.PY2 and isinstance(item, str):
-            item = salt.utils.stringutils.to_unicode(item)
-        elif not isinstance(item, six.string_types):
-            item = six.text_type(item)
+        if not isinstance(item, str):
+            item = str(item)
         ret.append(item)
     return ret
 
@@ -1300,7 +1324,7 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
 
     if isinstance(data, dict):
         processed_elements = [
-            (key, filter_element(value)) for key, value in six.iteritems(data)
+            (key, filter_element(value)) for key, value in data.items()
         ]
         return type(data)(
             [
@@ -1458,3 +1482,211 @@ def recursive_diff(
     else:
         ret = {} if old == new else {"old": ret_old, "new": ret_new}
     return ret
+
+
+def get_value(obj, path, default=None):
+    """
+    Get the values for a given path.
+
+    :param path:
+        keys of the properties in the tree separated by colons.
+        One segment in the path can be replaced by an id surrounded by curly braces.
+        This will match all items in a list of dictionary.
+
+    :param default:
+        default value to return when no value is found
+
+    :return:
+        a list of dictionaries, with at least the "value" key providing the actual value.
+        If a placeholder was used, the placeholder id will be a key providing the replacement for it.
+        Note that a value that wasn't found in the tree will be an empty list.
+        This ensures we can make the difference with a None value set by the user.
+    """
+    res = [{"value": obj}]
+    if path:
+        key = path[: path.find(":")] if ":" in path else path
+        next_path = path[path.find(":") + 1 :] if ":" in path else None
+
+        if key.startswith("{") and key.endswith("}"):
+            placeholder_name = key[1:-1]
+            # There will be multiple values to get here
+            items = []
+            if obj is None:
+                return res
+            if isinstance(obj, dict):
+                items = obj.items()
+            elif isinstance(obj, list):
+                items = enumerate(obj)
+
+            def _append_placeholder(value_dict, key):
+                value_dict[placeholder_name] = key
+                return value_dict
+
+            values = [
+                [
+                    _append_placeholder(item, key)
+                    for item in get_value(val, next_path, default)
+                ]
+                for key, val in items
+            ]
+
+            # flatten the list
+            values = [y for x in values for y in x]
+            return values
+        elif isinstance(obj, dict):
+            if key not in obj.keys():
+                return [{"value": default}]
+
+            value = obj.get(key)
+            if res is not None:
+                res = get_value(value, next_path, default)
+            else:
+                res = [{"value": value}]
+        else:
+            return [{"value": default if obj is not None else obj}]
+    return res
+
+
+@jinja_filter("flatten")
+def flatten(data, levels=None, preserve_nulls=False, _ids=None):
+    """
+    .. versionadded:: 3005
+
+    Flatten a list.
+
+    :param data: A list to flatten
+
+    :param levels: The number of levels in sub-lists to descend
+
+    :param preserve_nulls: Preserve nulls in a list, by default flatten removes
+                           them
+
+    :param _ids: Parameter used internally within the function to detect
+                 reference cycles.
+
+    :returns: A flat(ter) list of values
+
+    .. code-block:: jinja
+
+        {{ [3, [4, 2] ] | flatten }}
+        # => [3, 4, 2]
+
+    Flatten only the first level of a list:
+
+    .. code-block:: jinja
+
+        {{ [3, [4, [2]] ] | flatten(levels=1) }}
+        # => [3, 4, [2]]
+
+    Preserve nulls in a list, by default flatten removes them.
+
+    .. code-block:: jinja
+
+        {{ [3, None, [4, [2]] ] | flatten(levels=1, preserve_nulls=True) }}
+        # => [3, None, 4, [2]]
+    """
+    if _ids is None:
+        _ids = set()
+    if id(data) in _ids:
+        raise RecursionError("Reference cycle detected. Check input list.")
+    _ids.add(id(data))
+
+    ret = []
+
+    for element in data:
+        if not preserve_nulls and element in (None, "None", "null"):
+            # ignore null items
+            continue
+        elif is_iter(element):
+            if levels is None:
+                ret.extend(flatten(element, preserve_nulls=preserve_nulls, _ids=_ids))
+            elif levels >= 1:
+                # decrement as we go down the stack
+                ret.extend(
+                    flatten(
+                        element,
+                        levels=(int(levels) - 1),
+                        preserve_nulls=preserve_nulls,
+                        _ids=_ids,
+                    )
+                )
+            else:
+                ret.append(element)
+        else:
+            ret.append(element)
+
+    return ret
+
+
+def hash(value, algorithm="sha512"):
+    """
+    .. versionadded:: 2014.7.0
+
+    Encodes a value with the specified encoder.
+
+    value
+        The value to be hashed.
+
+    algorithm : sha512
+        The algorithm to use. May be any valid algorithm supported by
+        hashlib.
+    """
+    if isinstance(value, str):
+        # Under Python 3 we must work with bytes
+        value = value.encode(__salt_system_encoding__)
+
+    if hasattr(hashlib, ALGORITHMS_ATTR_NAME) and algorithm in getattr(
+        hashlib, ALGORITHMS_ATTR_NAME
+    ):
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    elif hasattr(hashlib, algorithm):
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    else:
+        raise SaltException("You must specify a valid algorithm.")
+
+    return out
+
+
+@jinja_filter("random_sample")
+def sample(value, size, seed=None):
+    """
+    Return a given sample size from a list. By default, the random number
+    generator uses the current system time unless given a seed value.
+
+    .. versionadded:: 3005
+
+    value
+        A list to e used as input.
+
+    size
+        The sample size to return.
+
+    seed
+        Any value which will be hashed as a seed for random.
+    """
+    if seed is None:
+        ret = random.sample(value, size)
+    else:
+        ret = random.Random(hash(seed)).sample(value, size)
+    return ret
+
+
+@jinja_filter("random_shuffle")
+def shuffle(value, seed=None):
+    """
+    Return a shuffled copy of an input list. By default, the random number
+    generator uses the current system time unless given a seed value.
+
+    .. versionadded:: 3005
+
+    value
+        A list to be used as input.
+
+    seed
+        Any value which will be hashed as a seed for random.
+    """
+    return sample(value, len(value), seed=seed)

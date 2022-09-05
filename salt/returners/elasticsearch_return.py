@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to an elasticsearch server for indexing.
 
@@ -94,21 +93,15 @@ Minion configuration:
           - saltutil.find_job
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import uuid
 from datetime import timedelta, tzinfo
 
-# Import Salt libs
 import salt.returners
 import salt.utils.jid
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext import six
 
 __virtualname__ = "elasticsearch"
 
@@ -122,6 +115,12 @@ STATE_FUNCTIONS = {
 
 
 def __virtual__():
+    if "elasticsearch.index_exists" not in __salt__:
+        return (
+            False,
+            "Elasticsearch module not availble.  Check that the elasticsearch library"
+            " is installed.",
+        )
     return __virtualname__
 
 
@@ -184,8 +183,8 @@ def _ensure_index(index):
                 "number_of_replicas": options["number_of_replicas"],
             }
         }
-        __salt__["elasticsearch.index_create"]("{0}-v1".format(index), index_definition)
-        __salt__["elasticsearch.alias_create"]("{0}-v1".format(index), index)
+        __salt__["elasticsearch.index_create"]("{}-v1".format(index), index_definition)
+        __salt__["elasticsearch.alias_create"]("{}-v1".format(index), index)
 
 
 def _convert_keys(data):
@@ -230,20 +229,19 @@ def returner(ret):
         return
     if ret.get("data", None) is None and ret.get("return") is None:
         log.info(
-            "Won't push new data to Elasticsearch, job with jid=%s was "
-            "not successful",
+            "Won't push new data to Elasticsearch, job with jid=%s was not successful",
             job_id,
         )
         return
 
     # Build the index name
     if options["states_single_index"] and job_fun in STATE_FUNCTIONS:
-        index = "salt-{0}".format(STATE_FUNCTIONS[job_fun])
+        index = "salt-{}".format(STATE_FUNCTIONS[job_fun])
     else:
-        index = "salt-{0}".format(job_fun_escaped)
+        index = "salt-{}".format(job_fun_escaped)
 
     if options["index_date"]:
-        index = "{0}-{1}".format(index, datetime.date.today().strftime("%Y.%m.%d"))
+        index = "{}-{}".format(index, datetime.date.today().strftime("%Y.%m.%d"))
 
     counts = {}
 
@@ -262,23 +260,24 @@ def returner(ret):
         # index to be '<index>-ordered' so as not to clash with the unsorted
         # index data format
         if options["states_order_output"] and isinstance(ret["return"], dict):
-            index = "{0}-ordered".format(index)
-            max_chars = len(six.text_type(len(ret["return"])))
+            index = "{}-ordered".format(index)
+            max_chars = len(str(len(ret["return"])))
 
-            for uid, data in six.iteritems(ret["return"]):
+            for uid, data in ret["return"].items():
                 # Skip keys we've already prefixed
                 if uid.startswith(tuple("0123456789")):
                     continue
 
                 # Store the function being called as it's a useful key to search
                 decoded_uid = uid.split("_|-")
-                ret["return"][uid]["_func"] = "{0}.{1}".format(
+                ret["return"][uid]["_func"] = "{}.{}".format(
                     decoded_uid[0], decoded_uid[-1]
                 )
 
                 # Prefix the key with the run order so it can be sorted
-                new_uid = "{0}_|-{1}".format(
-                    six.text_type(data["__run_num__"]).zfill(max_chars), uid,
+                new_uid = "{}_|-{}".format(
+                    str(data["__run_num__"]).zfill(max_chars),
+                    uid,
                 )
 
                 ret["return"][new_uid] = ret["return"].pop(uid)
@@ -344,7 +343,7 @@ def event_return(events):
     doc_type = options["master_event_doc_type"]
 
     if options["index_date"]:
-        index = "{0}-{1}".format(index, datetime.date.today().strftime("%Y.%m.%d"))
+        index = "{}-{}".format(index, datetime.date.today().strftime("%Y.%m.%d"))
 
     _ensure_index(index)
 

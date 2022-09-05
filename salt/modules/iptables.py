@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for iptables
 
@@ -25,23 +24,18 @@ master config. The configuration is read using :py:func:`config.get
         - "-A CATTLE_POSTROUTING"
         - "-A FORWARD"
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import re
 import string
 import sys
 import uuid
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.path
 from salt.exceptions import SaltException
-from salt.ext import six
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
@@ -79,8 +73,8 @@ def _has_option(option, family="ipv4"):
         _has_option('--wait')
         _has_option('--check', family='ipv6')
     """
-    cmd = "{0} --help".format(_iptables_cmd(family))
-    if option in __salt__["cmd.run"](cmd, output_loglevel="quiet"):
+    cmd = "{} --help".format(_iptables_cmd(family))
+    if option in __salt__["cmd.run_stdout"](cmd, output_loglevel="quiet"):
         return True
     return False
 
@@ -100,6 +94,7 @@ def _conf(family="ipv4"):
         else:
             return "/etc/iptables/iptables.rules"
     elif __grains__["os_family"] == "Debian":
+        # This assumes the iptables-persistent package is installed
         if family == "ipv6":
             return "/etc/iptables/rules.v6"
         else:
@@ -122,10 +117,15 @@ def _conf(family="ipv4"):
             return "/etc/iptables/rules6-save"
         else:
             return "/etc/iptables/rules-save"
+    elif __grains__["os_family"] == "NILinuxRT":
+        if family == "ipv6":
+            return "/etc/natinst/share/ip6tables.conf"
+        else:
+            return "/etc/natinst/share/iptables.conf"
     else:
         raise SaltException(
             "Saving iptables to file is not"
-            + " supported on {0}.".format(__grains__["os"])
+            + " supported on {}.".format(__grains__["os"])
             + " Please file an issue with SaltStack"
         )
 
@@ -192,8 +192,8 @@ def version(family="ipv4"):
         IPv6:
         salt '*' iptables.version family=ipv6
     """
-    cmd = "{0} --version".format(_iptables_cmd(family))
-    out = __salt__["cmd.run"](cmd).split()
+    cmd = "{} --version".format(_iptables_cmd(family))
+    out = __salt__["cmd.run_stdout"](cmd).split()
     return out[1]
 
 
@@ -292,11 +292,11 @@ def build_rule(
         return ""
 
     if "if" in kwargs:
-        rule.append("{0}-i {1}".format(maybe_add_negation("if"), kwargs["if"]))
+        rule.append("{}-i {}".format(maybe_add_negation("if"), kwargs["if"]))
         del kwargs["if"]
 
     if "of" in kwargs:
-        rule.append("{0}-o {1}".format(maybe_add_negation("of"), kwargs["of"]))
+        rule.append("{}-o {}".format(maybe_add_negation("of"), kwargs["of"]))
         del kwargs["of"]
 
     if "proto" in kwargs and kwargs.get("match") != "policy":
@@ -306,7 +306,7 @@ def build_rule(
     if "protocol" in kwargs:
         if not protocol:
             rule.append(
-                "{0}-p {1}".format(maybe_add_negation("protocol"), kwargs["protocol"])
+                "{}-p {}".format(maybe_add_negation("protocol"), kwargs["protocol"])
             )
             protocol = True
         del kwargs["protocol"]
@@ -316,28 +316,26 @@ def build_rule(
         if not isinstance(match_value, list):
             match_value = match_value.split(",")
         for match in match_value:
-            rule.append("-m {0}".format(match))
+            rule.append("-m {}".format(match))
             if "name_" in kwargs and match.strip() in ("pknock", "quota2", "recent"):
-                rule.append("--name {0}".format(kwargs["name_"]))
+                rule.append("--name {}".format(kwargs["name_"]))
                 del kwargs["name_"]
         if "proto" in kwargs and kwargs.get("match") == "policy":
             rule.append(
-                "{0}--proto {1}".format(maybe_add_negation("proto"), kwargs["proto"])
+                "{}--proto {}".format(maybe_add_negation("proto"), kwargs["proto"])
             )
             del kwargs["proto"]
         del kwargs["match"]
 
     if "match-set" in kwargs:
-        if isinstance(kwargs["match-set"], six.string_types):
+        if isinstance(kwargs["match-set"], str):
             kwargs["match-set"] = [kwargs["match-set"]]
         for match_set in kwargs["match-set"]:
             negative_match_set = ""
             if match_set.startswith("!") or match_set.startswith("not"):
                 negative_match_set = "! "
                 match_set = re.sub(bang_not_pat, "", match_set)
-            rule.append(
-                "-m set {0}--match-set {1}".format(negative_match_set, match_set)
-            )
+            rule.append("-m set {}--match-set {}".format(negative_match_set, match_set))
         del kwargs["match-set"]
 
     if "connstate" in kwargs:
@@ -345,23 +343,17 @@ def build_rule(
             rule.append("-m state")
 
         rule.append(
-            "{0}--state {1}".format(
-                maybe_add_negation("connstate"), kwargs["connstate"]
-            )
+            "{}--state {}".format(maybe_add_negation("connstate"), kwargs["connstate"])
         )
 
         del kwargs["connstate"]
 
     if "dport" in kwargs:
-        rule.append(
-            "{0}--dport {1}".format(maybe_add_negation("dport"), kwargs["dport"])
-        )
+        rule.append("{}--dport {}".format(maybe_add_negation("dport"), kwargs["dport"]))
         del kwargs["dport"]
 
     if "sport" in kwargs:
-        rule.append(
-            "{0}--sport {1}".format(maybe_add_negation("sport"), kwargs["sport"])
-        )
+        rule.append("{}--sport {}".format(maybe_add_negation("sport"), kwargs["sport"]))
         del kwargs["sport"]
 
     for multiport_arg in ("dports", "sports"):
@@ -390,22 +382,20 @@ def build_rule(
                 else:
                     dports = mp_value
 
-            rule.append("--{0} {1}".format(multiport_arg, dports))
+            rule.append("--{} {}".format(multiport_arg, dports))
             del kwargs[multiport_arg]
 
     if "comment" in kwargs:
         if "-m comment" not in rule:
             rule.append("-m comment")
 
-        rule.append('--comment "{0}"'.format(kwargs["comment"]))
+        rule.append('--comment "{}"'.format(kwargs["comment"]))
         del kwargs["comment"]
 
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if "set" in kwargs and kwargs["set"]:
-        rule.append(
-            "{0}--match-set {1}".format(maybe_add_negation("set"), kwargs["set"])
-        )
+        rule.append("{}--match-set {}".format(maybe_add_negation("set"), kwargs["set"]))
         del kwargs["set"]
 
     # Jumps should appear last, except for any arguments that are passed to
@@ -536,11 +526,11 @@ def build_rule(
         if after_jump_argument in kwargs:
             value = kwargs[after_jump_argument]
             if value in (None, ""):  # options without arguments
-                after_jump.append("--{0}".format(after_jump_argument))
+                after_jump.append("--{}".format(after_jump_argument))
             elif any(ws_char in str(value) for ws_char in string.whitespace):
-                after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
+                after_jump.append('--{} "{}"'.format(after_jump_argument, value))
             else:
-                after_jump.append("--{0} {1}".format(after_jump_argument, value))
+                after_jump.append("--{} {}".format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
     for key in kwargs:
@@ -549,8 +539,8 @@ def build_rule(
         # the value in the kwargs, thus we need to fetch it after that has run
         value = kwargs[key]
         flag = "-" if len(key) == 1 else "--"
-        value = "" if value in (None, "") else " {0}".format(value)
-        rule.append("{0}{1}{2}{3}".format(negation, flag, key, value))
+        value = "" if value in (None, "") else " {}".format(value)
+        rule.append("{}{}{}{}".format(negation, flag, key, value))
 
     rule += after_jump
 
@@ -569,7 +559,7 @@ def build_rule(
 
         wait = "--wait" if _has_option("--wait", family) else ""
 
-        return "{0} {1} -t {2} {3}{4} {5} {6} {7}".format(
+        return "{} {} -t {} {}{} {} {} {}".format(
             _iptables_cmd(family),
             wait,
             table,
@@ -686,10 +676,10 @@ def set_policy(table="filter", chain=None, policy=None, family="ipv4"):
         return "Error: Policy needs to be specified"
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{0} {1} -t {2} -P {3} {4}".format(
+    cmd = "{} {} -t {} -P {} {}".format(
         _iptables_cmd(family), wait, table, chain, policy
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -714,8 +704,8 @@ def save(filename=None, family="ipv4"):
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
-    cmd = "{0}-save".format(_iptables_cmd(family))
-    ipt = __salt__["cmd.run"](cmd)
+    cmd = "{}-save".format(_iptables_cmd(family))
+    ipt = __salt__["cmd.run_stdout"](cmd)
 
     # regex out the output if configured with filters
     if _conf_save_filters():
@@ -753,25 +743,25 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
     ipt_cmd = _iptables_cmd(family)
 
     if _has_option("--check", family):
-        cmd = "{0} -t {1} -C {2} {3}".format(ipt_cmd, table, chain, rule)
-        out = __salt__["cmd.run"](cmd, output_loglevel="quiet")
+        cmd = "{} -t {} -C {} {}".format(ipt_cmd, table, chain, rule)
+        out = __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
     else:
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
-        __salt__["cmd.run"]("{0} -t {1} -N {2}".format(ipt_cmd, table, _chain_name))
+        __salt__["cmd.run"]("{} -t {} -N {}".format(ipt_cmd, table, _chain_name))
         __salt__["cmd.run"](
-            "{0} -t {1} -A {2} {3}".format(ipt_cmd, table, _chain_name, rule)
+            "{} -t {} -A {} {}".format(ipt_cmd, table, _chain_name, rule)
         )
 
-        out = __salt__["cmd.run"]("{0}-save".format(ipt_cmd))
+        out = __salt__["cmd.run_stdout"]("{}-save".format(ipt_cmd))
 
         # Clean up temporary table
-        __salt__["cmd.run"]("{0} -t {1} -F {2}".format(ipt_cmd, table, _chain_name))
-        __salt__["cmd.run"]("{0} -t {1} -X {2}".format(ipt_cmd, table, _chain_name))
+        __salt__["cmd.run"]("{} -t {} -F {}".format(ipt_cmd, table, _chain_name))
+        __salt__["cmd.run"]("{} -t {} -X {}".format(ipt_cmd, table, _chain_name))
 
         for i in out.splitlines():
-            if i.startswith("-A {0}".format(_chain_name)):
+            if i.startswith("-A {}".format(_chain_name)):
                 if i.replace(_chain_name, chain) in out.splitlines():
                     return True
 
@@ -801,8 +791,8 @@ def check_chain(table="filter", chain=None, family="ipv4"):
     if not chain:
         return "Error: Chain needs to be specified"
 
-    cmd = "{0}-save -t {1}".format(_iptables_cmd(family), table)
-    out = __salt__["cmd.run"](cmd).find(":{0} ".format(chain))
+    cmd = "{}-save -t {}".format(_iptables_cmd(family), table)
+    out = __salt__["cmd.run_stdout"](cmd).find(":{} ".format(chain))
 
     if out != -1:
         out = True
@@ -832,8 +822,8 @@ def new_chain(table="filter", chain=None, family="ipv4"):
         return "Error: Chain needs to be specified"
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{0} {1} -t {2} -N {3}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    cmd = "{} {} -t {} -N {}".format(_iptables_cmd(family), wait, table, chain)
+    out = __salt__["cmd.run_stderr"](cmd)
 
     if not out:
         out = True
@@ -860,8 +850,8 @@ def delete_chain(table="filter", chain=None, family="ipv4"):
         return "Error: Chain needs to be specified"
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{0} {1} -t {2} -X {3}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    cmd = "{} {} -t {} -X {}".format(_iptables_cmd(family), wait, table, chain)
+    out = __salt__["cmd.run_stderr"](cmd)
 
     if not out:
         out = True
@@ -898,10 +888,8 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
     returnCheck = check(table, chain, rule, family)
     if isinstance(returnCheck, bool) and returnCheck:
         return False
-    cmd = "{0} {1} -t {2} -A {3} {4}".format(
-        _iptables_cmd(family), wait, table, chain, rule
-    )
-    out = __salt__["cmd.run"](cmd)
+    cmd = "{} {} -t {} -A {} {}".format(_iptables_cmd(family), wait, table, chain, rule)
+    out = __salt__["cmd.run_stderr"](cmd)
     return not out
 
 
@@ -949,10 +937,10 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
     returnCheck = check(table, chain, rule, family)
     if isinstance(returnCheck, bool) and returnCheck:
         return False
-    cmd = "{0} {1} -t {2} -I {3} {4} {5}".format(
+    cmd = "{} {} -t {} -I {} {} {}".format(
         _iptables_cmd(family), wait, table, chain, position, rule
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -988,10 +976,8 @@ def delete(table, chain=None, position=None, rule=None, family="ipv4"):
         rule = position
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{0} {1} -t {2} -D {3} {4}".format(
-        _iptables_cmd(family), wait, table, chain, rule
-    )
-    out = __salt__["cmd.run"](cmd)
+    cmd = "{} {} -t {} -D {} {}".format(_iptables_cmd(family), wait, table, chain, rule)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -1011,8 +997,8 @@ def flush(table="filter", chain="", family="ipv4"):
     """
 
     wait = "--wait" if _has_option("--wait", family) else ""
-    cmd = "{0} {1} -t {2} -F {3}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    cmd = "{} {} -t {} -F {}".format(_iptables_cmd(family), wait, table, chain)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -1029,8 +1015,8 @@ def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
         with salt.utils.files.fopen(conf_file, "r") as ifile:
             rules = ifile.read()
     elif in_mem:
-        cmd = "{0}-save".format(_iptables_cmd(family))
-        rules = __salt__["cmd.run"](cmd)
+        cmd = "{}-save".format(_iptables_cmd(family))
+        rules = __salt__["cmd.run_stdout"](cmd)
     else:
         raise SaltException("A file was not found to parse")
 
@@ -1070,7 +1056,7 @@ def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
                             and args[index + 1] != "!"
                             and not args[index + 1].startswith("-")
                         ):
-                            args[index] += " {0}".format(args.pop(index + 1))
+                            args[index] += " {}".format(args.pop(index + 1))
                 index += 1
             if args[-1].startswith("-"):
                 args.append("")

@@ -77,6 +77,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     cryptdev
     csf
@@ -109,7 +110,6 @@ state modules
     gem
     git
     github
-    glance
     glance_image
     glassfish
     glusterfs
@@ -131,6 +131,7 @@ state modules
     host
     http
     icinga2
+    idem
     ifttt
     incron
     influxdb08_database
@@ -276,6 +277,7 @@ state modules
     rdp
     redismod
     reg
+    restconf
     rsync
     rvm
     salt_proxy
@@ -333,6 +335,7 @@ state modules
     win_pki
     win_powercfg
     win_servermanager
+    win_shortcut
     win_smtp_server
     win_snmp
     win_system

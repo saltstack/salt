@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The ``cache`` roster provides a flexible interface to the Salt Masters' minion cache
 to access regular minions over ``salt-ssh``.
@@ -94,20 +93,14 @@ This should be especially useful for the other roster keys:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import re
 
 import salt.cache
-
-# Import Salt libs
 import salt.utils.data
 import salt.utils.minions
 from salt._compat import ipaddress
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -180,17 +173,17 @@ def _load_minion(minion_id, cache):
         pillar = {}
 
     addrs = {
-        4: sorted([ipaddress.IPv4Address(addr) for addr in grains.get("ipv4", [])]),
-        6: sorted([ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])]),
+        4: sorted(ipaddress.IPv4Address(addr) for addr in grains.get("ipv4", [])),
+        6: sorted(ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])),
     }
 
-    mine = cache.fetch("minions/{0}".format(minion_id), "mine")
+    mine = cache.fetch("minions/{}".format(minion_id), "mine")
 
     return grains, pillar, addrs, mine
 
 
 def _data_lookup(ref, lookup):
-    if isinstance(lookup, six.string_types):
+    if isinstance(lookup, str):
         lookup = [lookup]
 
     res = []
@@ -232,7 +225,7 @@ def _minion_lookup(minion_id, key, minion):
 
         for addr in addrs[net.version]:
             if addr in net:
-                return six.text_type(addr)
+                return str(addr)
     else:
         # Take the addresses from the grains and filter them
         filters = {
@@ -255,8 +248,8 @@ def _minion_lookup(minion_id, key, minion):
             try:
                 for addr in addrs[ip_ver]:
                     if filters[key](addr):
-                        return six.text_type(addr)
+                        return str(addr)
             except KeyError:
                 raise KeyError(
-                    "Invalid filter {0} specified in roster_order".format(key)
+                    "Invalid filter {} specified in roster_order".format(key)
                 )
