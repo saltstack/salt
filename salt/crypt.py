@@ -1680,8 +1680,12 @@ class Crypticle:
             raise AuthenticationError("message authentication failed")
         result = 0
 
-        for zipped_x, zipped_y in zip(mac_bytes, sig):
-            result |= zipped_x ^ zipped_y
+        try:
+            for zipped_x, zipped_y in zip(mac_bytes, sig):
+                result |= zipped_x ^ zipped_y
+        except TypeError:
+            log.debug("Failed to authenticate message")
+            raise AuthenticationError("message authentication failed")
         if result != 0:
             log.debug("Failed to authenticate message")
             raise AuthenticationError("message authentication failed")
