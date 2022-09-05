@@ -216,6 +216,31 @@ pillar applying to all environments. For example:
 
 .. versionadded:: 2017.7.5,2018.3.1
 
+Taking it one step further, ``__env__`` can also be used in the ``pillar_root``
+filesystem path. It will be replaced with the actual ``pillarenv`` and searched
+for Pillar data to provide to the minion. Note this substitution ONLY occurs for
+the ``__env__`` environment. For instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/__env__/pillar
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      dev:
+        - /srv/dev/pillar
+      test:
+        - /srv/test/pillar
+      prod:
+        - /srv/prod/pillar
+
+.. versionadded:: 3005
+
 
 Pillar Namespace Flattening
 ===========================
@@ -385,6 +410,22 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 :py:func:`pillar.get <salt.modules.pillar.get>`, and :py:func:`pillar.raw
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
+
+If you are using the Pillar Cache and have set :conf_master:`pillar_cache` to `True`,
+the pillar cache can be updated either when you run :py:func:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>`, or using the pillar runner function
+:py:func:`pillar.clear_pillar_cache <salt.runners.pillar.clear_pillar_cache>`:
+
+.. code-block:: bash
+
+    salt-run pillar.clear_pillar_cache 'minion'
+
+The pillar will not be updated when running :py:func:`pillar.items
+<salt.modules.pillar.items>` or a state for example. If you are
+using a Salt version before 3003, you would need to manually delete the cache
+file, located in Salt's master cache. For example, on linux the file would be
+in this directory: /var/cache/salt/master/pillar_cache/
+
 
 .. _pillar-environments:
 

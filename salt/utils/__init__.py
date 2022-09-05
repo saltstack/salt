@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Some of the utils used by salt
 

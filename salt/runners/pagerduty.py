@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Runner Module for Firing Events via PagerDuty
 
@@ -15,14 +14,11 @@ Runner Module for Firing Events via PagerDuty
             pagerduty.api_key: F3Rbyjbve43rfFWf2214
             pagerduty.subdomain: mysubdomain
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.functools
 import salt.utils.json
 import salt.utils.pagerduty
 import salt.utils.yaml
-from salt.ext import six
 
 
 def __virtual__():
@@ -162,9 +158,9 @@ def create_event(
     """
     trigger_url = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
-    if isinstance(details, six.string_types):
+    if isinstance(details, str):
         details = salt.utils.yaml.safe_load(details)
-        if isinstance(details, six.string_types):
+        if isinstance(details, str):
             details = {"details": details}
 
     ret = salt.utils.json.loads(

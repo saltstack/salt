@@ -8,10 +8,8 @@ systems that cannot or should not host a minion agent.
 import logging
 import os
 
-# Import salt libs
 import salt.loader
 import salt.syspaths
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -105,5 +103,4 @@ class Roster:
             except OSError as exc:
                 log.error("Can't access roster for backend %s: %s", back, exc)
 
-        log.debug("Matched minions: %s", targets)
         return targets

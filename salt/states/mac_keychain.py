@@ -72,9 +72,10 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
                 keychain_password=kwargs.get("keychain_password"),
             )
             if "unable" not in out:
-                ret[
-                    "comment"
-                ] += "Found a certificate with the same name but different hash, removing it.\n"
+                ret["comment"] += (
+                    "Found a certificate with the same name but different hash,"
+                    " removing it.\n"
+                )
                 ret["changes"]["uninstalled"] = friendly_name
 
                 # Reset the certs found

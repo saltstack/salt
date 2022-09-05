@@ -2,14 +2,15 @@
 Module for gathering and managing network information
 """
 
+import concurrent.futures
 import datetime
 import hashlib
 import logging
 import os
+import random
 import re
 import socket
 import time
-from multiprocessing.pool import ThreadPool
 
 import salt.utils.decorators.path
 import salt.utils.functools
@@ -30,7 +31,8 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead.",
+            "The network execution module cannot be loaded on Windows: use win_network"
+            " instead.",
         )
     return True
 
@@ -570,7 +572,17 @@ def _ip_route_linux():
 
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unreachable":
+        if comps[0] in (
+            "unicast",
+            "broadcast",
+            "throw",
+            "unreachable",
+            "prohibit",
+            "blackhole",
+            "nat",
+            "anycast",
+            "multicast",
+        ):
             continue
 
         if comps[0] == "default":
@@ -1396,7 +1408,7 @@ def mod_hostname(hostname):
                 if "Static hostname" in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug("{} was unable to get hostname".format(hostname_cmd))
+            log.debug("%s was unable to get hostname", hostname_cmd)
             o_hostname = __salt__["network.get_hostname"]()
     elif not __utils__["platform.is_sunos"]():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1407,13 +1419,16 @@ def mod_hostname(hostname):
 
     if hostname_cmd.endswith("hostnamectl"):
         result = __salt__["cmd.run_all"](
-            "{} set-hostname {}".format(hostname_cmd, hostname,)
+            "{} set-hostname {}".format(
+                hostname_cmd,
+                hostname,
+            )
         )
         if result["retcode"] != 0:
             log.debug(
-                "{} was unable to set hostname. Error: {}".format(
-                    hostname_cmd, result["stderr"],
-                )
+                "%s was unable to set hostname. Error: %s",
+                hostname_cmd,
+                result["stderr"],
             )
             return False
     elif not __utils__["platform.is_sunos"]():
@@ -1453,7 +1468,6 @@ def mod_hostname(hostname):
                 if net.startswith("HOSTNAME"):
                     old_hostname = net.split("=", 1)[1].rstrip()
                     quote_type = __utils__["stringutils.is_quoted"](old_hostname)
-                    # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
                             "HOSTNAME={1}{0}{1}\n".format(
@@ -1461,7 +1475,6 @@ def mod_hostname(hostname):
                             )
                         )
                     )
-                    # fmt: on
                 else:
                     fh_.write(__utils__["stringutils.to_str"](net))
     elif __grains__["os_family"] in ("Debian", "NILinuxRT"):
@@ -1470,8 +1483,10 @@ def mod_hostname(hostname):
         if __grains__["lsb_distrib_id"] == "nilrt":
             str_hostname = __utils__["stringutils.to_str"](hostname)
             nirtcfg_cmd = "/usr/local/natinst/bin/nirtcfg"
-            nirtcfg_cmd += " --set section=SystemSettings,token='Host_Name',value='{}'".format(
-                str_hostname
+            nirtcfg_cmd += (
+                " --set section=SystemSettings,token='Host_Name',value='{}'".format(
+                    str_hostname
+                )
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
@@ -1798,11 +1813,11 @@ def default_route(family=None):
 
         salt '*' network.default_route
     """
-
     if family != "inet" and family != "inet6" and family is not None:
         raise CommandExecutionError("Invalid address family {}".format(family))
 
-    _routes = routes()
+    _routes = routes(family)
+
     default_route = {}
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
@@ -2019,10 +2034,10 @@ def ip_networks(interface=None, include_loopback=False, verbose=False):
 
     .. code-block:: bash
 
-        salt '*' network.list_networks
-        salt '*' network.list_networks interface=docker0
-        salt '*' network.list_networks interface=docker0,enp*
-        salt '*' network.list_networks interface=eth*
+        salt '*' network.ip_networks
+        salt '*' network.ip_networks interface=docker0
+        salt '*' network.ip_networks interface=docker0,enp*
+        salt '*' network.ip_networks interface=eth*
     """
     return __utils__["network.ip_networks"](
         interface=interface, include_loopback=include_loopback, verbose=verbose
@@ -2044,10 +2059,10 @@ def ip_networks6(interface=None, include_loopback=False, verbose=False):
 
     .. code-block:: bash
 
-        salt '*' network.list_networks6
-        salt '*' network.list_networks6 interface=docker0
-        salt '*' network.list_networks6 interface=docker0,enp*
-        salt '*' network.list_networks6 interface=eth*
+        salt '*' network.ip_networks6
+        salt '*' network.ip_networks6 interface=docker0
+        salt '*' network.ip_networks6 interface=docker0,enp*
+        salt '*' network.ip_networks6 interface=eth*
     """
     return __utils__["network.ip_networks6"](
         interface=interface, include_loopback=include_loopback, verbose=verbose
@@ -2058,6 +2073,12 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.fqdns
     """
     # Provides:
     # fqdns
@@ -2066,10 +2087,14 @@ def fqdns():
     HOST_NOT_FOUND = 1
     NO_DATA = 4
 
-    grains = {}
     fqdns = set()
 
     def _lookup_fqdn(ip):
+        # Random sleep between 0.005 and 0.025 to avoid hitting
+        # the GLIBC race condition.
+        # For more info, see:
+        #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
+        time.sleep(random.randint(5, 25) / 1000)
         try:
             return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
@@ -2077,9 +2102,9 @@ def fqdns():
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
-                log.error(err_message, err)
-        except (OSError, socket.gaierror, socket.timeout) as err:
-            log.error(err_message, err)
+                log.error("Failed to resolve address %s: %s", ip, err)
+        except Exception as err:  # pylint: disable=broad-except
+            log.error("Failed to resolve address %s: %s", ip, err)
 
     start = time.time()
 
@@ -2091,26 +2116,31 @@ def fqdns():
             include_loopback=False, interface_data=salt.utils.network._get_interfaces()
         )
     )
-    err_message = "Exception during resolving address: %s"
 
-    # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
-    # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
-    # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
-
-    results = []
+    # Create a ThreadPool to process the underlying calls to
+    # 'socket.gethostbyaddr' in parallel.  This avoid blocking the execution
+    # when the "fqdn" is not defined for certains IP addresses, which was
+    # causing that "socket.timeout" was reached multiple times sequentially,
+    # blocking execution for several seconds.
     try:
-        pool = ThreadPool(8)
-        results = pool.map(_lookup_fqdn, addresses)
-        pool.close()
-        pool.join()
+        with concurrent.futures.ThreadPoolExecutor(8) as pool:
+            future_lookups = {
+                pool.submit(_lookup_fqdn, address): address for address in addresses
+            }
+            for future in concurrent.futures.as_completed(future_lookups):
+                try:
+                    resolved_fqdn = future.result()
+                    if resolved_fqdn:
+                        fqdns.update(resolved_fqdn)
+                except Exception as exc:  # pylint: disable=broad-except
+                    address = future_lookups[future]
+                    log.error("Failed to resolve address %s: %s", address, exc)
     except Exception as exc:  # pylint: disable=broad-except
-        log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
-
-    for item in results:
-        if item:
-            fqdns.update(item)
+        log.error(
+            "Exception while creating a ThreadPoolExecutor for resolving FQDNs: %s", exc
+        )
 
     elapsed = time.time() - start
-    log.debug("Elapsed time getting FQDNs: {} seconds".format(elapsed))
+    log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
 
-    return {"fqdns": sorted(list(fqdns))}
+    return {"fqdns": sorted(fqdns)}

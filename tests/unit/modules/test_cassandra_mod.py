@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.cassandra_mod as cassandra
-
-# Import Salt Libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -78,7 +70,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_keyspaces = ["A", "B", "C", "D"]
 
-        class MockSystemManager(object):
+        class MockSystemManager:
             def list_keyspaces(self):
                 return mock_keyspaces
 
@@ -93,7 +85,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_keyspaces = ["A", "B"]
 
-        class MockSystemManager(object):
+        class MockSystemManager:
             def list_keyspaces(self):
                 return mock_keyspaces
 
@@ -107,17 +99,10 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(cassandra, "_sys_mgr", mock_sys_mgr):
             self.assertEqual(cassandra.column_families("Z"), None)
-            if six.PY3:
-                self.assertCountEqual(cassandra.column_families("A"), ["a", "b"])
-                self.assertCountEqual(
-                    cassandra.column_families(), {"A": ["a", "b"], "B": ["c", "d"]}
-                )
-            else:
-                self.assertEqual(sorted(cassandra.column_families("A")), ["a", "b"])
-                column_families = cassandra.column_families()
-                for key in ("A", "B"):
-                    column_families[key] = sorted(column_families[key])
-                self.assertEqual(column_families, {"A": ["a", "b"], "B": ["c", "d"]})
+            self.assertCountEqual(cassandra.column_families("A"), ["a", "b"])
+            self.assertCountEqual(
+                cassandra.column_families(), {"A": ["a", "b"], "B": ["c", "d"]}
+            )
 
     def test_column_family_definition(self):
         """
@@ -125,7 +110,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         keyspace/column_family
         """
 
-        class MockSystemManager(object):
+        class MockSystemManager:
             def get_keyspace_column_families(self, keyspace):
                 if keyspace == "A":
                     return {"a": object, "b": object}

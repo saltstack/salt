@@ -175,7 +175,7 @@ def _get_group(
     """
     if vpc_name and vpc_id:
         raise SaltInvocationError(
-            "The params 'vpc_id' and 'vpc_name' " "are mutually exclusive."
+            "The params 'vpc_id' and 'vpc_name' are mutually exclusive."
         )
     if vpc_name:
         try:
@@ -401,7 +401,7 @@ def convert_to_group_ids(
             # But... if we're running in test mode, it may just be that the SG is scheduled
             # to be created, and thus WOULD have been there if running "for real"...
             if __opts__["test"]:
-                log.warn(
+                log.warning(
                     "Security Group `%s` could not be resolved to an ID.  This may "
                     "cause a failure when not running in test mode.",
                     group,
@@ -409,8 +409,9 @@ def convert_to_group_ids(
                 return []
             else:
                 raise CommandExecutionError(
-                    "Could not resolve Security Group name "
-                    "{} to a Group ID".format(group)
+                    "Could not resolve Security Group name {} to a Group ID".format(
+                        group
+                    )
                 )
         else:
             group_ids.append(str(group_id))
@@ -752,7 +753,7 @@ def _find_vpcs(
     Borrowed from boto_vpc; these could be refactored into a common library
     """
     if all((vpc_id, vpc_name)):
-        raise SaltInvocationError("Only one of vpc_name or vpc_id may be " "provided.")
+        raise SaltInvocationError("Only one of vpc_name or vpc_id may be provided.")
 
     if not any((vpc_id, vpc_name, tags, cidr)):
         raise SaltInvocationError(

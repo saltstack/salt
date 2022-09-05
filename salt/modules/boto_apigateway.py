@@ -93,10 +93,10 @@ try:
     # pylint: disable=unused-import
     import boto
     import boto3
+    from botocore import __version__ as found_botocore_version
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
-    from botocore import __version__ as found_botocore_version
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -1084,7 +1084,7 @@ def create_api_method(
                 resourceId=resource["id"],
                 httpMethod=httpMethod,
                 authorizationType=str(authorizationType),
-                apiKeyRequired=apiKeyRequired,  # future lint: disable=blacklisted-function
+                apiKeyRequired=apiKeyRequired,
                 requestParameters=requestParameters,
                 requestModels=requestModels,
             )
@@ -1204,7 +1204,7 @@ def create_api_method_response(
                 restApiId=restApiId,
                 resourceId=resource["id"],
                 httpMethod=httpMethod,
-                statusCode=str(statusCode),  # future lint: disable=blacklisted-function
+                statusCode=str(statusCode),
                 responseParameters=responseParameters,
                 responseModels=responseModels,
             )
@@ -1250,7 +1250,7 @@ def delete_api_method_response(
                 resourceId=resource["id"],
                 httpMethod=httpMethod,
                 statusCode=str(statusCode),
-            )  # future lint: disable=blacklisted-function
+            )
             return {"deleted": True}
         return {"deleted": False, "error": "no such resource"}
     except ClientError as e:
@@ -1293,7 +1293,7 @@ def describe_api_method_response(
                 resourceId=resource["id"],
                 httpMethod=httpMethod,
                 statusCode=str(statusCode),
-            )  # future lint: disable=blacklisted-function
+            )
             return {"response": _convert_datetime_str(response)}
         return {"error": "no such resource"}
     except ClientError as e:
@@ -1947,7 +1947,7 @@ def update_usage_plan(
                         "path": "/throttle/rateLimit",
                         "value": str(throttle["rateLimit"]),
                     }
-                )  # future lint: disable=blacklisted-function
+                )
             if "burstLimit" in throttle:
                 patchOperations.append(
                     {
@@ -1955,7 +1955,7 @@ def update_usage_plan(
                         "path": "/throttle/burstLimit",
                         "value": str(throttle["burstLimit"]),
                     }
-                )  # future lint: disable=blacklisted-function
+                )
 
         if quota is None:
             patchOperations.append({"op": "remove", "path": "/quota"})
@@ -1966,10 +1966,10 @@ def update_usage_plan(
                     "path": "/quota/period",
                     "value": str(quota["period"]),
                 }
-            )  # future lint: disable=blacklisted-function
+            )
             patchOperations.append(
                 {"op": "replace", "path": "/quota/limit", "value": str(quota["limit"])}
-            )  # future lint: disable=blacklisted-function
+            )
             if "offset" in quota:
                 patchOperations.append(
                     {
@@ -1977,7 +1977,7 @@ def update_usage_plan(
                         "path": "/quota/offset",
                         "value": str(quota["offset"]),
                     }
-                )  # future lint: disable=blacklisted-function
+                )
 
         if patchOperations:
             res = conn.update_usage_plan(

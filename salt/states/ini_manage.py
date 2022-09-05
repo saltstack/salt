@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage ini files
 ================
@@ -10,11 +9,7 @@ Manage ini files
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 __virtualname__ = "ini"
@@ -75,15 +70,13 @@ def options_present(name, sections=None, separator="=", strict=False):
             if __opts__["test"]:
                 for option in options:
                     if option in original_top_level_opts:
-                        if six.text_type(
-                            original_top_level_opts[option]
-                        ) == six.text_type(options[option]):
-                            ret["comment"] += "Unchanged key {0}.\n".format(option)
+                        if str(original_top_level_opts[option]) == str(options[option]):
+                            ret["comment"] += "Unchanged key {}.\n".format(option)
                         else:
-                            ret["comment"] += "Changed key {0}.\n".format(option)
+                            ret["comment"] += "Changed key {}.\n".format(option)
                             ret["result"] = None
                     else:
-                        ret["comment"] += "Changed key {0}.\n".format(option)
+                        ret["comment"] += "Changed key {}.\n".format(option)
                         ret["result"] = None
             else:
                 options_updated = __salt__["ini.set_option"](name, options, separator)
@@ -91,7 +84,7 @@ def options_present(name, sections=None, separator="=", strict=False):
             if strict:
                 for opt_to_remove in set(original_top_level_opts).difference(options):
                     if __opts__["test"]:
-                        ret["comment"] += "Removed key {0}.\n".format(opt_to_remove)
+                        ret["comment"] += "Removed key {}.\n".format(opt_to_remove)
                         ret["result"] = None
                     else:
                         __salt__["ini.remove_option"](
@@ -121,7 +114,7 @@ def options_present(name, sections=None, separator="=", strict=False):
                             key_to_remove, "#-#-"
                         )
                         if __opts__["test"]:
-                            ret["comment"] += "Deleted key {0}{1}.\n".format(
+                            ret["comment"] += "Deleted key {}{}.\n".format(
                                 key_to_remove, section_descr
                             )
                             ret["result"] = None
@@ -135,14 +128,14 @@ def options_present(name, sections=None, separator="=", strict=False):
                             )
                 if __opts__["test"]:
                     for option in section_body:
-                        if six.text_type(section_body[option]) == six.text_type(
+                        if str(section_body[option]) == str(
                             original_sections.get(section_name, {}).get(option, "#-#-")
                         ):
-                            ret["comment"] += "Unchanged key {0}{1}.\n".format(
+                            ret["comment"] += "Unchanged key {}{}.\n".format(
                                 option, section_descr
                             )
                         else:
-                            ret["comment"] += "Changed key {0}{1}.\n".format(
+                            ret["comment"] += "Changed key {}{}.\n".format(
                                 option, section_descr
                             )
                             ret["result"] = None
@@ -157,13 +150,13 @@ def options_present(name, sections=None, separator="=", strict=False):
         else:
             if not __opts__["test"]:
                 changes = __salt__["ini.set_option"](name, sections, separator)
-    except (IOError, KeyError) as err:
-        ret["comment"] = "{0}".format(err)
+    except (OSError, KeyError) as err:
+        ret["comment"] = "{}".format(err)
         ret["result"] = False
         return ret
     if "error" in changes:
         ret["result"] = False
-        ret["comment"] = "Errors encountered. {0}".format(changes["error"])
+        ret["comment"] = "Errors encountered. {}".format(changes["error"])
         ret["changes"] = {}
     else:
         for ciname, body in changes.items():
@@ -205,8 +198,8 @@ def options_absent(name, sections=None, separator="="):
             section_name = " in section " + section if section else ""
             try:
                 cur_section = __salt__["ini.get_section"](name, section, separator)
-            except IOError as err:
-                ret["comment"] = "{0}".format(err)
+            except OSError as err:
+                ret["comment"] = "{}".format(err)
                 ret["result"] = False
                 return ret
             except AttributeError:
@@ -215,32 +208,32 @@ def options_absent(name, sections=None, separator="="):
                 for key in sections[section]:
                     cur_value = cur_section.get(key)
                     if not cur_value:
-                        ret["comment"] += "Key {0}{1} does not exist.\n".format(
+                        ret["comment"] += "Key {}{} does not exist.\n".format(
                             key, section_name
                         )
                         continue
-                    ret["comment"] += "Deleted key {0}{1}.\n".format(key, section_name)
+                    ret["comment"] += "Deleted key {}{}.\n".format(key, section_name)
                     ret["result"] = None
             else:
                 option = section
                 if not __salt__["ini.get_option"](name, None, option, separator):
-                    ret["comment"] += "Key {0} does not exist.\n".format(option)
+                    ret["comment"] += "Key {} does not exist.\n".format(option)
                     continue
-                ret["comment"] += "Deleted key {0}.\n".format(option)
+                ret["comment"] += "Deleted key {}.\n".format(option)
                 ret["result"] = None
 
         if ret["comment"] == "":
             ret["comment"] = "No changes detected."
         return ret
     sections = sections or {}
-    for section, keys in six.iteritems(sections):
+    for section, keys in sections.items():
         for key in keys:
             try:
                 current_value = __salt__["ini.remove_option"](
                     name, section, key, separator
                 )
-            except IOError as err:
-                ret["comment"] = "{0}".format(err)
+            except OSError as err:
+                ret["comment"] = "{}".format(err)
                 ret["result"] = False
                 return ret
             if not current_value:
@@ -283,16 +276,16 @@ def sections_present(name, sections=None, separator="="):
         ret["comment"] = ""
         try:
             cur_ini = __salt__["ini.get_ini"](name, separator)
-        except IOError as err:
+        except OSError as err:
             ret["result"] = False
-            ret["comment"] = "{0}".format(err)
+            ret["comment"] = "{}".format(err)
             return ret
         for section in sections or {}:
             if section in cur_ini:
-                ret["comment"] += "Section unchanged {0}.\n".format(section)
+                ret["comment"] += "Section unchanged {}.\n".format(section)
                 continue
             else:
-                ret["comment"] += "Created new section {0}.\n".format(section)
+                ret["comment"] += "Created new section {}.\n".format(section)
             ret["result"] = None
         if ret["comment"] == "":
             ret["comment"] = "No changes detected."
@@ -302,13 +295,13 @@ def sections_present(name, sections=None, separator="="):
         section_to_update.update({section_name: {}})
     try:
         changes = __salt__["ini.set_option"](name, section_to_update, separator)
-    except IOError as err:
+    except OSError as err:
         ret["result"] = False
-        ret["comment"] = "{0}".format(err)
+        ret["comment"] = "{}".format(err)
         return ret
     if "error" in changes:
         ret["result"] = False
-        ret["changes"] = "Errors encountered {0}".format(changes["error"])
+        ret["changes"] = "Errors encountered {}".format(changes["error"])
         return ret
     ret["changes"] = changes
     ret["comment"] = "Changes take effect"
@@ -340,15 +333,15 @@ def sections_absent(name, sections=None, separator="="):
         ret["comment"] = ""
         try:
             cur_ini = __salt__["ini.get_ini"](name, separator)
-        except IOError as err:
+        except OSError as err:
             ret["result"] = False
-            ret["comment"] = "{0}".format(err)
+            ret["comment"] = "{}".format(err)
             return ret
         for section in sections or []:
             if section not in cur_ini:
-                ret["comment"] += "Section {0} does not exist.\n".format(section)
+                ret["comment"] += "Section {} does not exist.\n".format(section)
                 continue
-            ret["comment"] += "Deleted section {0}.\n".format(section)
+            ret["comment"] += "Deleted section {}.\n".format(section)
             ret["result"] = None
         if ret["comment"] == "":
             ret["comment"] = "No changes detected."
@@ -356,9 +349,9 @@ def sections_absent(name, sections=None, separator="="):
     for section in sections or []:
         try:
             cur_section = __salt__["ini.remove_section"](name, section, separator)
-        except IOError as err:
+        except OSError as err:
             ret["result"] = False
-            ret["comment"] = "{0}".format(err)
+            ret["comment"] = "{}".format(err)
             return ret
         if not cur_section:
             continue

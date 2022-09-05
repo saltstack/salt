@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Varnish
 
@@ -9,16 +8,11 @@ Support for Varnish
     These functions are designed to work with all implementations of Varnish
     from 3.x onwards
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
 import salt.utils.path
-
-# Import salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +28,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The varnish execution module failed to load: either varnishd or varnishadm is not in the path.",
+        "The varnish execution module failed to load: either varnishd or varnishadm is"
+        " not in the path.",
     )
 
 
@@ -127,7 +122,7 @@ def param_set(param, value):
 
         salt '*' varnish.param_set param value
     """
-    return _run_varnishadm("param.set", [param, six.text_type(value)])["retcode"] == 0
+    return _run_varnishadm("param.set", [param, str(value)])["retcode"] == 0
 
 
 def param_show(param=None):

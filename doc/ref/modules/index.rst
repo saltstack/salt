@@ -92,7 +92,7 @@ included libraries.
 
 
     def is_ok(person):
-        """ Checks whether a person is really a lumberjack """
+        """Checks whether a person is really a lumberjack"""
         return sleep.all_night(person) and work.all_day(person)
 
 Then, create the zip:

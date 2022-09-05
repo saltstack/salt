@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.modules.rvm as rvm
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -52,8 +44,9 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
         with patch.dict(rvm.__salt__, {"cmd.run_all": mock}):
             rvm.install()
             curl_cmd = (
-                "curl -Ls https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer "
-                "| bash -s stable"
+                "curl -Ls"
+                " https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer"
+                " | bash -s stable"
             )
             mock.assert_called_once_with(curl_cmd, runas=None, python_shell=True)
 

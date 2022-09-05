@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The thin runner is used to manage the salt thin systems.
 
@@ -7,10 +6,7 @@ in a standalone way. This runner has tools which generate the standalone salt
 system for easy consumption.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.thin
 
 
@@ -18,8 +14,6 @@ def generate(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
     absonly=True,
     compress="gzip",
 ):
@@ -46,8 +40,6 @@ def generate(
         extra_mods,
         overwrite,
         so_mods,
-        python2_bin,
-        python3_bin,
         absonly,
         compress,
     )
@@ -57,8 +49,6 @@ def generate_min(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
 ):
     """
     Generate the salt-thin tarball and print the location of the tarball
@@ -76,5 +66,8 @@ def generate_min(
         extra_mods = ",".join([conf_mods, extra_mods])
 
     return salt.utils.thin.gen_min(
-        __opts__["cachedir"], extra_mods, overwrite, so_mods, python2_bin, python3_bin
+        __opts__["cachedir"],
+        extra_mods,
+        overwrite,
+        so_mods,
     )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Redis SDB module
 ================
@@ -24,7 +23,6 @@ The ``driver`` refers to the Redis module, all other options are optional.
 For option details see: https://redis-py.readthedocs.io/en/latest/.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import redis

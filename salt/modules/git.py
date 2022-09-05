@@ -46,7 +46,7 @@ def _check_worktree_support(failhard=True):
         if failhard:
             raise CommandExecutionError(
                 "Worktrees are only supported in git 2.5.0 and newer "
-                "(detected git version: " + git_version + ")"
+                "(detected git version: {})".format(git_version)
             )
         return False
     return True
@@ -1972,7 +1972,7 @@ def diff(
     if no_index:
         if _LooseVersion(version(versioninfo=False)) < _LooseVersion("1.5.1"):
             raise CommandExecutionError(
-                "The 'no_index' option is only supported in Git 1.5.1 and " "newer"
+                "The 'no_index' option is only supported in Git 1.5.1 and newer"
             )
         ignore_retcode = True
         failhard = False
@@ -2746,7 +2746,7 @@ def list_worktrees(
 
                 if worktree_data[type_]:
                     log.error(
-                        "git.worktree: Unexpected duplicate %s entry " "'%s', skipping",
+                        "git.worktree: Unexpected duplicate %s entry '%s', skipping",
                         type_,
                         line,
                     )
@@ -3350,7 +3350,7 @@ def merge_base(
     elif fork_point:
         if len(refs) > 1:
             raise SaltInvocationError(
-                "At most one ref/commit can be passed if 'fork_point' is " "specified"
+                "At most one ref/commit can be passed if 'fork_point' is specified"
             )
         elif not refs:
             refs = ["HEAD"]
@@ -4308,7 +4308,7 @@ def remotes(
         action = action.lstrip("(").rstrip(")").lower()
         if action not in ("fetch", "push"):
             log.warning(
-                "Unknown action '%s' for remote '%s' in git checkout " "located in %s",
+                "Unknown action '%s' for remote '%s' in git checkout located in %s",
                 action,
                 remote,
                 cwd,
@@ -5092,7 +5092,7 @@ def symbolic_ref(
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ("-d", "--delete")):
         raise SaltInvocationError(
-            "Value cannot be set for symbolic ref if -d/--delete is included " "in opts"
+            "Value cannot be set for symbolic ref if -d/--delete is included in opts"
         )
     command.extend(opts)
     command.append(ref)
@@ -5247,7 +5247,11 @@ def version(versioninfo=False):
             log.error("Failed to obtain the git version (error follows):\n%s", exc)
             version_ = "unknown"
         try:
-            __context__[contextkey] = version_.split()[-1]
+            # On macOS, the git version is displayed in a different format
+            #  git version 2.21.1 (Apple Git-122.3)
+            # As opposed to:
+            #  git version 2.21.1
+            __context__[contextkey] = version_.split("(")[0].strip().split()[-1]
         except IndexError:
             # Somehow git --version returned no stdout while not raising an
             # error. Should never happen but we should still account for this
@@ -5394,7 +5398,7 @@ def worktree_add(
     if detach:
         if force:
             log.warning(
-                "'force' argument to git.worktree_add is ignored when " "detach=True"
+                "'force' argument to git.worktree_add is ignored when detach=True"
             )
         command.append("--detach")
     else:
@@ -5527,14 +5531,18 @@ def worktree_prune(
     if expire:
         command.extend(["--expire", expire])
     command.extend(_format_opts(opts))
-    return _git_run(
+    result = _git_run(
         command,
         cwd=cwd,
         user=user,
         password=password,
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
-    )["stdout"]
+    )
+    git_version = version(versioninfo=False)
+    if _LooseVersion(git_version) > _LooseVersion("2.35.0"):
+        return result["stderr"]
+    return result["stdout"]
 
 
 def worktree_rm(cwd, user=None, output_encoding=None):

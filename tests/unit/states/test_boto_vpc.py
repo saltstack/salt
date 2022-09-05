@@ -4,6 +4,7 @@ import string
 import sys
 
 import pytest
+
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
@@ -30,7 +31,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -145,8 +146,9 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     """
@@ -363,8 +365,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "subnet"
@@ -377,8 +380,9 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcInternetGatewayTestCase(
     BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin
@@ -398,8 +402,9 @@ class BotoVpcInternetGatewayTestCase(
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "route_table"

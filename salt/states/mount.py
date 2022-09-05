@@ -667,7 +667,6 @@ def mounted(
                 ret["comment"] = "{} not present and not mounted".format(name)
         else:
             if __opts__["test"]:
-                ret["result"] = None
                 ret["comment"] = "{} would not be mounted".format(name)
             else:
                 ret["comment"] = "{} not mounted".format(name)
@@ -717,23 +716,21 @@ def mounted(
                         comment = (
                             "{} is mounted, but needs to be "
                             "written to the fstab in order to be "
-                            "made persistent."
-                        ).format(name)
+                            "made persistent.".format(name)
+                        )
                     else:
                         comment = (
                             "{} needs to be "
                             "written to the fstab in order to be "
-                            "made persistent."
-                        ).format(name)
+                            "made persistent.".format(name)
+                        )
                 elif out == "change":
                     if mount:
-                        comment = (
-                            "{} is mounted, but its fstab entry " "must be updated."
-                        ).format(name)
-                    else:
-                        comment = ("The {} fstab entry " "must be updated.").format(
+                        comment = "{} is mounted, but its fstab entry must be updated.".format(
                             name
                         )
+                    else:
+                        comment = "The {} fstab entry must be updated.".format(name)
                 else:
                     ret["result"] = False
                     comment = (
@@ -741,8 +738,8 @@ def mounted(
                         "mount point {} due to unexpected "
                         "output '{}' from call to "
                         "mount.set_fstab. This is most likely "
-                        "a bug."
-                    ).format(name, out)
+                        "a bug.".format(name, out)
+                    )
                 if "comment" in ret:
                     ret["comment"] = "{}. {}".format(ret["comment"], comment)
                 else:
@@ -849,9 +846,11 @@ def swap(name, persist=True, config="/etc/fstab"):
             ]:
                 ret["result"] = None
                 if name in on_:
-                    ret["comment"] = (
-                        "Swap {} is set to be added to the " "fstab and to be activated"
-                    ).format(name)
+                    ret[
+                        "comment"
+                    ] = "Swap {} is set to be added to the fstab and to be activated".format(
+                        name
+                    )
             return ret
 
         if "none" in fstab_data:
@@ -934,9 +933,7 @@ def unmounted(
         # The mount is present! Unmount it
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = ("Mount point {} is mounted but should not " "be").format(
-                name
-            )
+            ret["comment"] = "Mount point {} is mounted but should not be".format(name)
             return ret
         if device:
             out = __salt__["mount.umount"](name, device, user=user)
@@ -987,8 +984,8 @@ def unmounted(
                 ret["comment"] = (
                     "Mount point {} is unmounted but needs to "
                     "be purged from {} to be made "
-                    "persistent"
-                ).format(name, config)
+                    "persistent".format(name, config)
+                )
                 return ret
             else:
                 if __grains__["os"] in ["MacOS", "Darwin"]:

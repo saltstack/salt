@@ -7,19 +7,33 @@
 
 
 import copy
+import importlib
 import logging
 import os
+import pathlib
 import textwrap
 
 import pytest
+
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltInvocationError,
 )
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
+
+try:
+    from aptsources.sourceslist import (  # pylint: disable=unused-import
+        SourceEntry,
+        SourcesList,
+    )
+
+    HAS_APT = True
+except ImportError:
+    HAS_APT = False
 
 try:
     from aptsources import sourceslist  # pylint: disable=unused-import
@@ -201,6 +215,7 @@ class MockSourceEntry:
         self.dist = dist
         self.comps = []
         self.architectures = []
+        self.signedby = ""
 
     def mysplit(self, line):
         return line.split()
@@ -251,7 +266,11 @@ def test_add_repo_key(repo_keys_var):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
         with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
             assert (
-                aptpkg.add_repo_key(keyserver="keyserver.ubuntu.com", keyid="FBB75451")
+                aptpkg.add_repo_key(
+                    keyserver="keyserver.ubuntu.com",
+                    keyid="FBB75451",
+                    keyfile="test-key.gpg",
+                )
                 is True
             )
 
@@ -281,8 +300,14 @@ def test_get_repo_keys(repo_keys_var):
     """
 
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
+
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        assert aptpkg.get_repo_keys() == repo_keys_var
+        if not HAS_APT:
+            with patch("os.listdir", return_value="/tmp/keys"):
+                with patch("pathlib.Path.is_dir", return_value=True):
+                    assert aptpkg.get_repo_keys() == repo_keys_var
+        else:
+            assert aptpkg.get_repo_keys() == repo_keys_var
 
 
 def test_file_dict(lowpkg_files_var):
@@ -491,6 +516,41 @@ def test_upgrade_downloadonly(uninstall_var, upgrade_var):
                 assert any(args_matching) is True
 
 
+def test_upgrade_allow_downgrades(uninstall_var, upgrade_var):
+    """
+    Tests the allow_downgrades option for upgrade.
+    """
+    with patch("salt.utils.pkg.clear_rtag", MagicMock()):
+        with patch(
+            "salt.modules.aptpkg.list_pkgs", MagicMock(return_value=uninstall_var)
+        ):
+            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": upgrade_var})
+            patch_kwargs = {
+                "__salt__": {
+                    "config.get": MagicMock(return_value=True),
+                    "cmd.run_all": mock_cmd,
+                },
+            }
+            with patch.multiple(aptpkg, **patch_kwargs):
+                aptpkg.upgrade()
+                args_matching = [
+                    True
+                    for args in patch_kwargs["__salt__"]["cmd.run_all"].call_args[0]
+                    if "--allow-downgrades" in args
+                ]
+                # Here we shouldn't see the parameter and args_matching should be empty.
+                assert any(args_matching) is False
+
+                aptpkg.upgrade(allow_downgrades=True)
+                args_matching = [
+                    True
+                    for args in patch_kwargs["__salt__"]["cmd.run_all"].call_args[0]
+                    if "--allow-downgrades" in args
+                ]
+                # --allow-downgrades should be in the args list and we should have at least on True in the list.
+                assert any(args_matching) is True
+
+
 def test_show():
     """
     Test that the pkg.show function properly parses apt-cache show output.
@@ -568,11 +628,15 @@ def test_show():
         "foo-doc": {
             "1.0.5-3ubuntu4": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
             "1.0.4-2ubuntu1": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
         },
     }
@@ -621,6 +685,10 @@ def test_show():
         refresh_mock.reset_mock()
 
 
+@pytest.mark.skipif(
+    not (pathlib.Path("/etc") / "apt" / "sources.list").is_file(),
+    reason="Requires sources.list file",
+)
 def test_mod_repo_enabled():
     """
     Checks if a repo is enabled or disabled depending on the passed kwargs.
@@ -629,28 +697,29 @@ def test_mod_repo_enabled():
         aptpkg.__salt__,
         {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
     ):
-        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-            with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
-                with patch(
-                    "salt.utils.data.is_true", MagicMock(return_value=True)
-                ) as data_is_true:
+        with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
+            with patch(
+                "salt.utils.data.is_true", MagicMock(return_value=True)
+            ) as data_is_true:
+                with patch("salt.modules.aptpkg.SourcesList", MagicMock(), create=True):
                     with patch(
-                        "salt.modules.aptpkg.sourceslist", MagicMock(), create=True
+                        "salt.modules.aptpkg.SourceEntry", MagicMock(), create=True
                     ):
-                        repo = aptpkg.mod_repo("foo", enabled=False)
-                        data_is_true.assert_called_with(False)
-                        # with disabled=True; should call salt.utils.data.is_true True
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo("foo", disabled=True)
-                        data_is_true.assert_called_with(True)
-                        # with enabled=True; should call salt.utils.data.is_true with False
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo("foo", enabled=True)
-                        data_is_true.assert_called_with(True)
-                        # with disabled=True; should call salt.utils.data.is_true False
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo("foo", disabled=False)
-                        data_is_true.assert_called_with(False)
+                        with patch("pathlib.Path", MagicMock()):
+                            repo = aptpkg.mod_repo("foo", enabled=False)
+                            data_is_true.assert_called_with(False)
+                            # with disabled=True; should call salt.utils.data.is_true True
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo("foo", disabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with enabled=True; should call salt.utils.data.is_true with False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo("foo", enabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with disabled=True; should call salt.utils.data.is_true False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo("foo", disabled=False)
+                            data_is_true.assert_called_with(False)
 
 
 def test_mod_repo_match():
@@ -671,39 +740,45 @@ def test_mod_repo_match():
         aptpkg.__salt__,
         {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
     ):
-        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-            with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
-                with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
+        with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
+            with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
+                with patch("salt.modules.aptpkg.SourceEntry", MagicMock(), create=True):
                     with patch(
-                        "salt.modules.aptpkg._check_apt", MagicMock(return_value=True),
+                        "salt.modules.aptpkg.SourcesList",
+                        MagicMock(return_value=mock_source_list),
+                        create=True,
                     ):
                         with patch(
-                            "salt.modules.aptpkg.sourceslist", MagicMock(), create=True,
+                            "salt.modules.aptpkg._split_repo_str",
+                            MagicMock(
+                                return_value=(
+                                    "deb",
+                                    [],
+                                    "http://cdn-aws.deb.debian.org/debian/",
+                                    "stretch",
+                                    ["main"],
+                                    "",
+                                )
+                            ),
                         ):
-                            with patch(
-                                "salt.modules.aptpkg.sourceslist.SourcesList",
-                                MagicMock(return_value=mock_source_list),
-                                create=True,
-                            ):
-                                with patch(
-                                    "salt.modules.aptpkg._split_repo_str",
-                                    MagicMock(
-                                        return_value=(
-                                            "deb",
-                                            [],
-                                            "http://cdn-aws.deb.debian.org/debian/",
-                                            "stretch",
-                                            ["main"],
-                                        )
-                                    ),
-                                ):
-                                    source_line_no_slash = "deb http://cdn-aws.deb.debian.org/debian stretch main"
+                            source_line_no_slash = (
+                                "deb http://cdn-aws.deb.debian.org/debian"
+                                " stretch main"
+                            )
+                            if salt.utils.path.which("apt-key"):
+                                repo = aptpkg.mod_repo(
+                                    source_line_no_slash, enabled=False
+                                )
+                                assert repo[source_line_no_slash]["uri"] == source_uri
+                            else:
+                                with pytest.raises(Exception) as err:
                                     repo = aptpkg.mod_repo(
                                         source_line_no_slash, enabled=False
                                     )
-                                    assert (
-                                        repo[source_line_no_slash]["uri"] == source_uri
-                                    )
+                                assert (
+                                    "missing 'signedby' option when apt-key is missing"
+                                    in str(err.value)
+                                )
 
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
@@ -778,6 +853,49 @@ def test__skip_source():
     assert ret is False
 
 
+def test__parse_source():
+    cases = (
+        {"ok": False, "line": "", "invalid": True, "disabled": False},
+        {"ok": False, "line": "#", "invalid": True, "disabled": True},
+        {"ok": False, "line": "##", "invalid": True, "disabled": True},
+        {"ok": False, "line": "# comment", "invalid": True, "disabled": True},
+        {"ok": False, "line": "## comment", "invalid": True, "disabled": True},
+        {"ok": False, "line": "deb #", "invalid": True, "disabled": False},
+        {"ok": False, "line": "# deb #", "invalid": True, "disabled": True},
+        {"ok": False, "line": "deb [ invalid line", "invalid": True, "disabled": False},
+        {
+            "ok": True,
+            "line": "# deb http://debian.org/debian/ stretch main\n",
+            "invalid": False,
+            "disabled": True,
+        },
+        {
+            "ok": True,
+            "line": "deb http://debian.org/debian/ stretch main # comment\n",
+            "invalid": False,
+            "disabled": False,
+        },
+        {
+            "ok": True,
+            "line": "deb [trusted=yes] http://debian.org/debian/ stretch main\n",
+            "invalid": False,
+            "disabled": False,
+        },
+    )
+    with patch.dict("sys.modules", {"aptsources.sourceslist": None}):
+        importlib.reload(aptpkg)
+        NoAptSourceEntry = aptpkg.SourceEntry
+    importlib.reload(aptpkg)
+
+    for case in cases:
+        source = NoAptSourceEntry(case["line"])
+        ok = source._parse_sources(case["line"])
+
+        assert ok is case["ok"]
+        assert source.invalid is case["invalid"]
+        assert source.disabled is case["disabled"]
+
+
 def test_normalize_name():
     """
     Test that package is normalized only when it should be
@@ -808,10 +926,10 @@ def test_list_repos():
     mock_source_list = MockSourceList()
     mock_source_list.list = [mock_source]
 
-    with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-        with patch("salt.modules.aptpkg.sourceslist", MagicMock(), create=True):
+    with patch("salt.modules.aptpkg.SourcesList", MagicMock(), create=True):
+        with patch("salt.modules.aptpkg.SourceEntry", MagicMock(), create=True):
             with patch(
-                "salt.modules.aptpkg.sourceslist.SourcesList",
+                "salt.modules.aptpkg.SourcesList",
                 MagicMock(return_value=mock_source_list),
                 create=True,
             ):
@@ -844,31 +962,30 @@ def test_expand_repo_def():
     source_file = "/etc/apt/sources.list"
 
     # Valid source
-    with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-        repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
-        sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
+    repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+    sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
 
-        assert isinstance(sanitized, dict)
-        assert "uri" in sanitized
+    assert isinstance(sanitized, dict)
+    assert "uri" in sanitized
 
-        # Make sure last character in of the URI is still a /
-        assert sanitized["uri"][-1] == "/"
+    # Make sure last character in of the URI is still a /
+    assert sanitized["uri"][-1] == "/"
 
-        # Pass the architecture and make sure it is added the the line attribute
-        repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
-        sanitized = aptpkg.expand_repo_def(
-            repo=repo, file=source_file, architectures="amd64"
-        )
+    # Pass the architecture and make sure it is added the the line attribute
+    repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+    sanitized = aptpkg.expand_repo_def(
+        repo=repo, file=source_file, architectures="amd64"
+    )
 
-        # Make sure line is in the dict
-        assert isinstance(sanitized, dict)
-        assert "line" in sanitized
+    # Make sure line is in the dict
+    assert isinstance(sanitized, dict)
+    assert "line" in sanitized
 
-        # Make sure the architecture is in line
-        assert (
-            sanitized["line"]
-            == "deb [arch=amd64] http://cdn-aws.deb.debian.org/debian/ stretch main"
-        )
+    # Make sure the architecture is in line
+    assert (
+        sanitized["line"]
+        == "deb [arch=amd64] http://cdn-aws.deb.debian.org/debian/ stretch main"
+    )
 
 
 def test_list_pkgs():
@@ -898,7 +1015,8 @@ def test_list_pkgs():
         aptpkg.__salt__,
         {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
     ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        aptpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        aptpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
     ):
@@ -946,7 +1064,8 @@ def test_list_pkgs_no_context():
         aptpkg.__salt__,
         {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
     ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        aptpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        aptpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
     ), patch.object(
@@ -1105,3 +1224,55 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
             "cups-daemon",
             "rsyslog",
         ]
+
+
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
+)
+def test_sourceslist_multiple_comps():
+    """
+    Test SourcesList when repo has multiple comps
+    """
+    repo_line = "deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted"
+    with patch.object(aptpkg, "HAS_APT", return_value=True):
+        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+            with patch("pathlib.Path.is_file", side_effect=[True, False]):
+                sources = aptpkg.SourcesList()
+                for source in sources:
+                    assert source.type == "deb"
+                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                    assert source.comps == ["main", "restricted"]
+                    assert source.dist == "focal-updates"
+
+
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
+)
+@pytest.mark.parametrize(
+    "repo_line",
+    [
+        "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64 test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [ arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [ arch=amd64,armel test=one] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+    ],
+)
+def test_sourceslist_architectures(repo_line):
+    """
+    Test SourcesList when architectures is in repo
+    """
+    with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+        with patch("pathlib.Path.is_file", side_effect=[True, False]):
+            sources = aptpkg.SourcesList()
+            for source in sources:
+                assert source.type == "deb"
+                assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                assert source.comps == ["main", "restricted"]
+                assert source.dist == "focal-updates"
+                if "," in repo_line:
+                    assert source.architectures == ["amd64", "armel"]
+                else:
+                    assert source.architectures == ["amd64"]

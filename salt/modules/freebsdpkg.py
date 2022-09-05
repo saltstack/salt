@@ -104,12 +104,14 @@ def __virtual__():
             )
             return (
                 False,
-                "The freebsdpkg execution module cannot be loaded: the configuration option 'providers:pkg' is set to 'pkgng'",
+                "The freebsdpkg execution module cannot be loaded: the configuration"
+                " option 'providers:pkg' is set to 'pkgng'",
             )
         return __virtualname__
     return (
         False,
-        "The freebsdpkg execution module cannot be loaded: either the os is not FreeBSD or the version of FreeBSD is >= 10.",
+        "The freebsdpkg execution module cannot be loaded: either the os is not FreeBSD"
+        " or the version of FreeBSD is >= 10.",
     )
 
 

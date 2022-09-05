@@ -25,8 +25,8 @@ import salt.utils.yaml
 from salt.template import compile_template
 
 try:
-    import pwd
     import grp
+    import pwd
 except ImportError:
     pass
 
@@ -818,7 +818,11 @@ class SPMClient:
         metadata_filename = "{}/SPM-METADATA".format(repo_path)
         with salt.utils.files.fopen(metadata_filename, "w") as mfh:
             salt.utils.yaml.safe_dump(
-                repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False,
+                repo_metadata,
+                mfh,
+                indent=4,
+                canonical=False,
+                default_flow_style=False,
             )
 
         log.debug("Wrote %s", metadata_filename)
@@ -991,8 +995,8 @@ class SPMClient:
             "OS Family Dependencies: {os_family_dependencies}\n"
             "Summary: {summary}\n"
             "Description:\n"
-            "{description}"
-        ).format(**formula_def)
+            "{description}".format(**formula_def)
+        )
 
     def _local_list_files(self, args):
         """

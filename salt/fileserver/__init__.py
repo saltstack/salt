@@ -17,7 +17,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
-from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
 
@@ -105,7 +104,6 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
     """
     refresh_cache = False
     save_cache = True
-    serial = salt.payload.Serial(opts)
     wait_lock(w_lock, list_cache, 5 * 60)
     if not os.path.isfile(list_cache) and _lock_cache(w_lock):
         refresh_cache = True
@@ -151,7 +149,9 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                             list_cache,
                         )
                         return (
-                            salt.utils.data.decode(serial.load(fp_).get(form, [])),
+                            salt.utils.data.decode(
+                                salt.payload.load(fp_).get(form, [])
+                            ),
                             False,
                             False,
                         )
@@ -175,9 +175,8 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     returns the match (if found, along with booleans used by the fileserver
     backend to determine if the cache needs to be refreshed/written).
     """
-    serial = salt.payload.Serial(opts)
     with salt.utils.files.fopen(list_cache, "w+b") as fp_:
-        fp_.write(serial.dumps(data))
+        fp_.write(salt.payload.dumps(data))
         _unlock_cache(w_lock)
         log.trace("Lockfile %s removed", w_lock)
 
@@ -191,8 +190,7 @@ def check_env_cache(opts, env_cache):
     try:
         with salt.utils.files.fopen(env_cache, "rb") as fp_:
             log.trace("Returning env cache data from %s", env_cache)
-            serial = salt.payload.Serial(opts)
-            return salt.utils.data.decode(serial.load(fp_))
+            return salt.utils.data.decode(salt.payload.load(fp_))
     except OSError:
         pass
     return None

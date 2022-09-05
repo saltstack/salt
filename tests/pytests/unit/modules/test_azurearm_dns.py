@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.azurearm_dns as azurearm_dns
@@ -18,9 +19,11 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.skipif(
-    HAS_LIBS is False, reason="The azure.mgmt.dns module must be installed."
-)
+pytestmark = [
+    pytest.mark.skipif(
+        HAS_LIBS is False, reason="The azure.mgmt.dns module must be installed."
+    ),
+]
 
 
 class AzureObjMock:

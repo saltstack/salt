@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.path
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ntpath
 import os
@@ -13,17 +10,11 @@ import posixpath
 import sys
 import tempfile
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
-
-# Import 3rd-party libs
-from salt.ext import six
 from tests.support.mock import patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -55,9 +46,7 @@ class PathJoinTestCase(TestCase):
             )
         for idx, (parts, expected) in enumerate(self.NIX_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual(
-                "{0}: {1}".format(idx, path), "{0}: {1}".format(idx, expected)
-            )
+            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
     @skipIf(True, "Skipped until properly mocked")
     def test_windows_paths(self):
@@ -69,9 +58,7 @@ class PathJoinTestCase(TestCase):
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual(
-                "{0}: {1}".format(idx, path), "{0}: {1}".format(idx, expected)
-            )
+            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
     @skipIf(True, "Skipped until properly mocked")
     def test_windows_paths_patched_path_module(self):
@@ -85,9 +72,7 @@ class PathJoinTestCase(TestCase):
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual(
-                "{0}: {1}".format(idx, path), "{0}: {1}".format(idx, expected)
-            )
+            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
         self.__unpatch_path()
 
@@ -117,7 +102,7 @@ class PathJoinTestCase(TestCase):
 
         code = """'''Salt unittest loaded NT module'''"""
         module = imp.new_module("nt")
-        six.exec_(code, module.__dict__)
+        exec(code, module.__dict__)
         sys.modules["nt"] = module
 
         sys.builtin_module_names = modules
@@ -303,8 +288,10 @@ class TestWhich(TestCase):
                             os.environ,
                             {
                                 "PATH": os.sep + "bin",
-                                "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;"
-                                ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY",
+                                "PATHEXT": (
+                                    ".COM;.EXE;.BAT;.CMD;.VBS;"
+                                    ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY"
+                                ),
                             },
                         ):
 

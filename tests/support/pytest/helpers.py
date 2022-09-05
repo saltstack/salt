@@ -7,153 +7,31 @@
 import logging
 import os
 import pathlib
-import pprint
-import re
 import shutil
+import subprocess
 import tempfile
 import textwrap
+import time
 import types
 import warnings
 from contextlib import contextmanager
 
+import _pytest._version
 import attr
 import pytest
+from saltfactories.utils import random_string
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.utils.platform
 import salt.utils.pycrypto
-from saltfactories.utils import random_string
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
+PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
+
+
 log = logging.getLogger(__name__)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_directory(name=None):
-    """
-    This helper creates a temporary directory. It should be used as a context manager
-    which returns the temporary directory path, and, once out of context, deletes it.
-
-    Can be directly imported and used, or, it can be used as a pytest helper function if
-    ``pytest-helpers-namespace`` is installed.
-
-    .. code-block:: python
-
-        import os
-        import pytest
-
-        def test_blah():
-            with pytest.helpers.temp_directory() as tpath:
-                print(tpath)
-                assert os.path.exists(tpath)
-
-            assert not os.path.exists(tpath)
-    """
-    try:
-        if name is not None:
-            directory_path = os.path.join(RUNTIME_VARS.TMP, name)
-        else:
-            directory_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-
-        if not os.path.isdir(directory_path):
-            os.makedirs(directory_path)
-
-        yield directory_path
-    finally:
-        shutil.rmtree(directory_path, ignore_errors=True)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_file(name=None, contents=None, directory=None, strip_first_newline=True):
-    """
-    This helper creates a temporary file. It should be used as a context manager
-    which returns the temporary file path, and, once out of context, deletes it.
-
-    Can be directly imported and used, or, it can be used as a pytest helper function if
-    ``pytest-helpers-namespace`` is installed.
-
-    .. code-block:: python
-
-        import os
-        import pytest
-
-        def test_blah():
-            with pytest.helpers.temp_file("blah.txt") as tpath:
-                print(tpath)
-                assert os.path.exists(tpath)
-
-            assert not os.path.exists(tpath)
-
-    Args:
-        name(str):
-            The temporary file name
-        contents(str):
-            The contents of the temporary file
-        directory(str):
-            The directory where to create the temporary file. If ``None``, then ``RUNTIME_VARS.TMP``
-            will be used.
-        strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
-    """
-    try:
-        if directory is None:
-            directory = RUNTIME_VARS.TMP
-
-        if not isinstance(directory, pathlib.Path):
-            directory = pathlib.Path(str(directory))
-
-        if name is not None:
-            file_path = directory / name
-        else:
-            handle, file_path = tempfile.mkstemp(dir=str(directory))
-            os.close(handle)
-            file_path = pathlib.Path(file_path)
-
-        file_directory = file_path.parent
-        if not file_directory.is_dir():
-            file_directory.mkdir(parents=True)
-
-        if contents is not None:
-            if contents:
-                if contents.startswith("\n") and strip_first_newline:
-                    contents = contents[1:]
-                file_contents = textwrap.dedent(contents)
-            else:
-                file_contents = contents
-
-            file_path.write_text(file_contents)
-            log_contents = "{0} Contents of {1}\n{2}\n{3} Contents of {1}".format(
-                ">" * 6, file_path, file_contents, "<" * 6
-            )
-            log.debug("Created temp file: %s\n%s", file_path, log_contents)
-        else:
-            log.debug("Touched temp file: %s", file_path)
-
-        yield file_path
-
-    finally:
-        if file_path.exists():
-            file_path.unlink()
-            log.debug("Deleted temp file: %s", file_path)
-
-        try:
-            file_path.relative_to(directory)
-
-            created_directory = file_path.parent
-            while True:
-                if created_directory == directory:
-                    break
-                if created_directory.parent == directory:
-                    break
-                created_directory = created_directory.parent
-            if created_directory != directory:
-                shutil.rmtree(str(created_directory), ignore_errors=True)
-                log.debug("Deleted temp directory: %s", created_directory)
-        except ValueError:
-            # The 'file_path' is not located within 'directory'
-            pass
 
 
 @pytest.helpers.register
@@ -257,7 +135,8 @@ def loader_mock(*args, **kwargs):
     if len(args) > 1:
         loader_modules = args[1]
         warnings.warn(
-            "'request' is not longer an accepted argument to 'loader_mock()'. Please stop passing it.",
+            "'request' is not longer an accepted argument to 'loader_mock()'. Please"
+            " stop passing it.",
             category=DeprecationWarning,
         )
     else:
@@ -299,220 +178,220 @@ def remove_stale_minion_key(master, minion_id):
         log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
 
 
-@attr.s(kw_only=True, slots=True)
-class TestAccount:
-    sminion = attr.ib(default=None, repr=False)
-    username = attr.ib(default=None)
-    password = attr.ib(default=None)
-    hashed_password = attr.ib(default=None, repr=False)
-    groups = attr.ib(default=None)
+@pytest.helpers.register
+def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
+    cachefile = os.path.join(
+        proxy_minion.config["cachedir"],
+        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+    )
+    if os.path.exists(cachefile):
+        os.unlink(cachefile)
 
-    def __attrs_post_init__(self):
-        if self.sminion is None:
-            self.sminion = create_sminion()
-        if self.username is None:
-            self.username = random_string("account-", uppercase=False)
-        if self.password is None:
-            self.password = self.username
-        if self.hashed_password is None:
-            self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
+
+@attr.s(kw_only=True, slots=True)
+class TestGroup:
+    sminion = attr.ib(repr=False)
+    name = attr.ib()
+    gid = attr.ib(default=None)
+    members = attr.ib(default=None)
+    _delete_group = attr.ib(init=False, repr=False, default=False)
+
+    @sminion.default
+    def _default_sminion(self):
+        return create_sminion()
+
+    @name.default
+    def _default_name(self):
+        return random_string("group-", uppercase=False)
+
+    @property
+    def info(self):
+        return types.SimpleNamespace(**self.sminion.functions.group.info(self.name))
 
     def __enter__(self):
-        log.debug("Creating system account: %s", self)
-        ret = self.sminion.functions.user.add(self.username)
-        assert ret
-        ret = self.sminion.functions.shadow.set_password(
-            self.username,
-            self.password if salt.utils.platform.is_darwin() else self.hashed_password,
-        )
-        assert ret
-        assert self.username in self.sminion.functions.user.list_users()
-        log.debug("Created system account: %s", self)
+        group = self.sminion.functions.group.info(self.name)
+        if not group:
+            ret = self.sminion.functions.group.add(
+                self.name, gid=self.gid, non_unique=True
+            )
+            assert ret
+            self._delete_group = True
+            log.debug("Created system group: %s", self)
+        else:
+            log.debug("Reusing exising system group: %s", self)
+        if self.members:
+            ret = self.sminion.functions.group.members(
+                self.name, members_list=self.members
+            )
+            assert ret
         # Run tests
         return self
 
-    def __exit__(self, *args):
-        self.sminion.functions.user.delete(self.username, remove=True, force=True)
-        log.debug("Deleted system account: %s", self.username)
+    def __exit__(self, *_):
+        if self._delete_group:
+            try:
+                self.sminion.functions.group.delete(self.name)
+                log.debug("Deleted system group: %s", self.name)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to delete system group: %s", self.name, exc_info=True
+                )
 
 
 @pytest.helpers.register
 @contextmanager
-def create_account(username=None, password=None, hashed_password=None, sminion=None):
+def create_group(name=attr.NOTHING, sminion=attr.NOTHING, gid=None, members=None):
+    with TestGroup(sminion=sminion, name=name, gid=gid, members=members) as group:
+        yield group
+
+
+@attr.s(kw_only=True, slots=True)
+class TestAccount:
+    sminion = attr.ib(repr=False)
+    username = attr.ib()
+    password = attr.ib()
+    hashed_password = attr.ib(repr=False)
+    create_group = attr.ib(repr=False, default=False)
+    group_name = attr.ib()
+    _group = attr.ib(init=False, repr=False)
+    _delete_account = attr.ib(init=False, repr=False, default=False)
+
+    @sminion.default
+    def _default_sminion(self):
+        return create_sminion()
+
+    @username.default
+    def _default_username(self):
+        return random_string("account-", uppercase=False)
+
+    @password.default
+    def _default_password(self):
+        return random_string("pwd-", size=8)
+
+    @hashed_password.default
+    def _default_hashed_password(self):
+        if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
+            return salt.utils.pycrypto.gen_hash(password=self.password)
+        return self.password
+
+    @group_name.default
+    def _default_group_name(self):
+        if self.create_group:
+            return "group-{}".format(self.username)
+        return None
+
+    @_group.default
+    def _default__group(self):
+        if self.group_name:
+            return TestGroup(sminion=self.sminion, name=self.group_name)
+        return None
+
+    @property
+    def info(self):
+        return types.SimpleNamespace(**self.sminion.functions.user.info(self.username))
+
+    @property
+    def group(self):
+        if self._group is None:
+            raise RuntimeError(
+                "Neither `create_group` nor `group_name` was passed when creating the "
+                "account. There's no group attribute in this account instance."
+            )
+        return self._group
+
+    def __enter__(self):
+        if not self.sminion.functions.user.info(self.username):
+            log.debug("Creating system account: %s", self)
+            ret = self.sminion.functions.user.add(self.username)
+            assert ret
+            self._delete_account = True
+        if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
+            password = self.password
+        else:
+            password = self.hashed_password
+        ret = self.sminion.functions.shadow.set_password(self.username, password)
+        assert ret
+        assert self.username in self.sminion.functions.user.list_users()
+        if self._group:
+            self.group.__enter__()
+            self.sminion.functions.group.adduser(self.group.name, self.username)
+            if not salt.utils.platform.is_windows():
+                # Make this group the primary_group for the user
+                self.sminion.functions.user.chgid(self.username, self.group.info.gid)
+                assert self.info.gid == self.group.info.gid
+        if self._delete_account:
+            log.debug("Created system account: %s", self)
+        else:
+            log.debug("Reusing exisintg system account: %s", self)
+        # Run tests
+        return self
+
+    def __exit__(self, *args):
+        if self._group:
+            try:
+                self.sminion.functions.group.deluser(self.group.name, self.username)
+                log.debug(
+                    "Removed user %r from group %r", self.username, self.group.name
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to remove user %r from group %r",
+                    self.username,
+                    self.group.name,
+                    exc_info=True,
+                )
+
+            self.group.__exit__(*args)
+
+        if self._delete_account:
+            try:
+                delete_kwargs = {"force": True}
+                if salt.utils.platform.is_windows():
+                    delete_kwargs["purge"] = True
+                else:
+                    delete_kwargs["remove"] = True
+                self.sminion.functions.user.delete(self.username, **delete_kwargs)
+                log.debug("Deleted system account: %s", self.username)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to delete system account: %s", self.username, exc_info=True
+                )
+
+            if self.sminion.functions.group.info(self.username):
+                # A group with the same name as the user name still exists.
+                # Let's delete it
+                try:
+                    self.sminion.functions.group.delete(self.username)
+                    log.debug(
+                        "Deleted system group matching username: %s", self.username
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to delete system group matching username: %s",
+                        self.username,
+                        exc_info=True,
+                    )
+
+
+@pytest.helpers.register
+@contextmanager
+def create_account(
+    username=attr.NOTHING,
+    password=attr.NOTHING,
+    hashed_password=attr.NOTHING,
+    group_name=attr.NOTHING,
+    create_group=False,
+    sminion=attr.NOTHING,
+):
     with TestAccount(
         sminion=sminion,
         username=username,
         password=password,
         hashed_password=hashed_password,
+        group_name=group_name,
+        create_group=create_group,
     ) as account:
         yield account
-
-
-@attr.s(frozen=True, slots=True)
-class StateReturnAsserts:
-    """
-    Temporarily migrate SaltReturnAssertsMixin to a class we can use in PyTest.
-
-    TEMPORARY!
-    """
-
-    ret = attr.ib()
-
-    def assert_return_state_type(self):
-        try:
-            assert isinstance(self.ret, dict)
-        except AssertionError:
-            raise AssertionError(
-                "{} is not dict. Salt returned: {}".format(
-                    type(self.ret).__name__, self.ret
-                )
-            )
-
-    def assert_return_non_empty_state_type(self):
-        self.assert_return_state_type()
-        try:
-            assert self.ret != {}
-        except AssertionError:
-            raise AssertionError(
-                "{} is equal to {}. Salt returned an empty dictionary."
-            )
-
-    def __return_valid_keys(self, keys):
-        if isinstance(keys, tuple):
-            # If it's a tuple, turn it into a list
-            keys = list(keys)
-        elif isinstance(keys, str):
-            # If it's a string, make it a one item list
-            keys = [keys]
-        elif not isinstance(keys, list):
-            # If we've reached here, it's a bad type passed to keys
-            raise RuntimeError("The passed keys need to be a list")
-        return keys
-
-    def get_within_state_return(self, keys):
-        self.assert_return_state_type()
-        ret_data = []
-        for part in self.ret.values():
-            keys = self.__return_valid_keys(keys)
-            okeys = keys[:]
-            try:
-                ret_item = part[okeys.pop(0)]
-            except (KeyError, TypeError):
-                raise AssertionError(
-                    "Could not get ret{} from salt's return: {}".format(
-                        "".join(["['{}']".format(k) for k in keys]), part
-                    )
-                )
-            while okeys:
-                try:
-                    ret_item = ret_item[okeys.pop(0)]
-                except (KeyError, TypeError):
-                    raise AssertionError(
-                        "Could not get ret{} from salt's return: {}".format(
-                            "".join(["['{}']".format(k) for k in keys]), part
-                        )
-                    )
-            ret_data.append(ret_item)
-        return ret_data
-
-    def assert_state_true_return(self):
-        try:
-            for saltret in self.get_within_state_return("result"):
-                assert saltret is True
-        except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
-            try:
-                raise AssertionError(
-                    "{result} is not True. Salt Comment:\n{comment}".format(
-                        **(next(iter(self.ret.values())))
-                    )
-                )
-            except (AttributeError, IndexError):
-                raise AssertionError(
-                    "Failed to get result. Salt Returned:\n{}".format(
-                        pprint.pformat(self.ret)
-                    )
-                )
-
-    def assert_state_false_return(self):
-        try:
-            for saltret in self.get_within_state_return("result"):
-                assert saltret is False
-        except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
-            try:
-                raise AssertionError(
-                    "{result} is not False. Salt Comment:\n{comment}".format(
-                        **(next(iter(self.ret.values())))
-                    )
-                )
-            except (AttributeError, IndexError):
-                raise AssertionError(
-                    "Failed to get result. Salt Returned: {}".format(self.ret)
-                )
-
-    def assert_state_none_return(self):
-        try:
-            for saltret in self.get_within_state_return("result"):
-                assert saltret is None
-        except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
-            try:
-                raise AssertionError(
-                    "{result} is not None. Salt Comment:\n{comment}".format(
-                        **(next(iter(self.ret.values())))
-                    )
-                )
-            except (AttributeError, IndexError):
-                raise AssertionError(
-                    "Failed to get result. Salt Returned: {}".format(self.ret)
-                )
-
-    def assert_in_state_comment(self, comment):
-        for saltret in self.get_within_state_return("comment"):
-            assert comment in saltret
-
-    def assert_not_in_state_comment(self, comment):
-        for saltret in self.get_within_state_return("comment"):
-            assert comment not in saltret
-
-    def assert_state_comment_regexp_matches(self, pattern):
-        return self.assert_in_state_return_regexp_patches(pattern, "comment")
-
-    def assert_in_state_warning(self, comment):
-        for saltret in self.get_within_state_return("warnings"):
-            assert comment in saltret
-
-    def assert_not_in_state_warning(self, comment):
-        for saltret in self.get_within_state_return("warnings"):
-            assert comment not in saltret
-
-    def assert_in_state_return(self, item_to_check, keys):
-        for saltret in self.get_within_state_return(keys):
-            assert item_to_check in saltret
-
-    def assert_not_in_state_return(self, item_to_check, keys):
-        for saltret in self.get_within_state_return(keys):
-            assert item_to_check not in saltret
-
-    def assert_in_state_return_regexp_patches(self, pattern, keys=()):
-        for saltret in self.get_within_state_return(keys):
-            assert re.match(pattern, saltret) is not None
-
-    def assert_state_changes_equal(self, comparison, keys=()):
-        keys = ["changes"] + self.__return_valid_keys(keys)
-        for saltret in self.get_within_state_return(keys):
-            assert comparison == saltret
-
-    def assert_state_changes_not_equal(self, comparison, keys=()):
-        keys = ["changes"] + self.__return_valid_keys(keys)
-        for saltret in self.get_within_state_return(keys):
-            assert comparison != saltret
-
-
-@pytest.helpers.register
-def state_return(ret):
-    return StateReturnAsserts(ret)
 
 
 @pytest.helpers.register
@@ -582,7 +461,7 @@ class FakeSaltExtension:
             author = Pedro
             author_email = pedro@algarvio.me
             keywords = salt-extension
-            url = http://saltstack.com
+            url = http://saltproject.io
             license = Apache Software License 2.0
             classifiers =
                 Programming Language :: Python
@@ -607,6 +486,7 @@ class FakeSaltExtension:
             salt.loader=
               module_dirs = {1}
               runner_dirs = {1}.loader:get_runner_dirs
+              states_dirs = {1}.loader:get_state_dirs
               wheel_dirs = {1}.loader:get_new_style_entry_points
             """.format(
                         self.name, self.pkgname
@@ -630,6 +510,9 @@ class FakeSaltExtension:
 
             def get_runner_dirs():
                 return [str(PKG_ROOT / "runners1"), str(PKG_ROOT / "runners2")]
+
+            def get_state_dirs():
+                yield str(PKG_ROOT / "states1")
 
             def get_new_style_entry_points():
                 return {"wheel": [str(PKG_ROOT / "the_wheel_modules")]}
@@ -731,12 +614,163 @@ class FakeSaltExtension:
                 )
             )
 
+            states_dir = extension_package_dir / "states1"
+            states_dir.mkdir()
+            states_dir.joinpath("__init__.py").write_text("")
+            states_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echoed(string):
+                ret = {"name": name, "changes": {}, "result": True, "comment": string}
+                return ret
+            """
+                )
+            )
+
+            utils_dir = extension_package_dir / "utils"
+            utils_dir.mkdir()
+            utils_dir.joinpath("__init__.py").write_text("")
+            utils_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo(string):
+                return string
+            """
+                )
+            )
+
     def __enter__(self):
         self._laydown_files()
         return self
 
     def __exit__(self, *_):
         shutil.rmtree(str(self.srcdir), ignore_errors=True)
+
+
+class EntropyGenerator:
+    max_minutes = 5
+    minimum_entropy = 800
+
+    def __init__(self, max_minutes=None, minimum_entropy=None, skip=None):
+        if max_minutes is not None:
+            self.max_minutes = max_minutes
+        if minimum_entropy is not None:
+            self.minimum_entropy = minimum_entropy
+        if skip is None:
+            skip = True
+        self.skip = skip
+        self.current_entropy = 0
+
+    def generate_entropy(self):
+        max_time = self.max_minutes * 60
+        kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
+        kernel_poolsize_file = pathlib.Path("/proc/sys/kernel/random/poolsize")
+        if not kernel_entropy_file.exists():
+            log.info("The '%s' file is not avilable", kernel_entropy_file)
+            return
+
+        self.current_entropy = int(kernel_entropy_file.read_text().strip())
+        log.info("Available Entropy: %s", self.current_entropy)
+
+        if not kernel_poolsize_file.exists():
+            log.info("The '%s' file is not avilable", kernel_poolsize_file)
+        else:
+            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            log.info("Entropy Poolsize: %s", self.current_poolsize)
+            # Account for smaller poolsizes using BLAKE2s
+            if self.current_poolsize == 256:
+                self.minimum_entropy = 192
+
+        if self.current_entropy >= self.minimum_entropy:
+            return
+
+        exc_kwargs = {}
+        if PYTEST_GE_7:
+            exc_kwargs["_use_item_location"] = True
+
+        rngd = shutil.which("rngd")
+        openssl = shutil.which("openssl")
+        timeout = time.time() + max_time
+        if rngd:
+            log.info("Using rngd to generate entropy")
+            while True:
+                if time.time() >= timeout:
+                    message = (
+                        "Skipping test as generating entropy took more than {} minutes. "
+                        "Current entropy value {}".format(
+                            self.max_minutes, self.current_entropy
+                        )
+                    )
+                    if self.skip:
+                        raise pytest.skip.Exception(message, **exc_kwargs)
+                    raise pytest.fail(message)
+                subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
+                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                log.info("Available Entropy: %s", self.current_entropy)
+                if self.current_entropy >= self.minimum_entropy:
+                    break
+        elif openssl:
+            log.info("Using openssl to generate entropy")
+            while True:
+                if time.time() >= timeout:
+                    message = (
+                        "Skipping test as generating entropy took more than {} minutes. "
+                        "Current entropy value {}".format(
+                            self.max_minutes, self.current_entropy
+                        )
+                    )
+                    if self.skip:
+                        raise pytest.skip.Exception(message, **exc_kwargs)
+                    raise pytest.fail(message)
+
+                target_file = tempfile.NamedTemporaryFile(
+                    delete=False, suffix="sample.txt"
+                )
+                target_file.close()
+                subprocess.run(
+                    [
+                        openssl,
+                        "rand",
+                        "-out",
+                        target_file.name,
+                        "-base64",
+                        str(int(2**30 * 3 / 4)),  # 1GB
+                    ],
+                    shell=False,
+                    check=True,
+                )
+                os.unlink(target_file.name)
+                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                log.info("Available Entropy: %s", self.current_entropy)
+                if self.current_entropy >= self.minimum_entropy:
+                    break
+        else:
+            message = (
+                "Skipping test as there's not enough entropy({}) to continue and "
+                "neither 'rgn-tools' nor 'openssl' is available on the system.".format(
+                    self.current_entropy
+                )
+            )
+            if self.skip:
+                raise pytest.skip.Exception(message, **exc_kwargs)
+            raise pytest.fail(message)
+
+    def __enter__(self):
+        self.generate_entropy()
+        return self
+
+    def __exit__(self, *_):
+        pass
 
 
 # Only allow star importing the functions defined in this module

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of debconf selections
 ================================
@@ -27,6 +26,7 @@ set_file
         - data:
             'shared/mailname': {'type': 'string', 'value': 'server.domain.tld'}
             'nullmailer/relayhost': {'type': 'string', 'value': 'mail.domain.tld'}
+
     ferm-debconf:
       debconf.set:
         - name: ferm
@@ -46,7 +46,7 @@ the ``onchanges`` requisite to reconfigure your package:
       debconf.set:
         - name: dash
         - data:
-              'dash/sh': {'type': 'boolean', 'value': false}
+            'dash/sh': {'type': 'boolean', 'value': false}
 
     reconfigure-dash:
       cmd.run:
@@ -61,9 +61,6 @@ state will also run.
     For boolean types, the value should be ``true`` or ``false``, not
     ``'true'`` or ``'false'``.
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = "debconf"
@@ -167,13 +164,6 @@ def set(name, data, **kwargs):
                 <question>: {'type': <type>, 'value': <value>}
                 <question>: {'type': <type>, 'value': <value>}
 
-        <state_id>:
-          debconf.set:
-            - name: <name>
-            - data:
-                <question>: {'type': <type>, 'value': <value>}
-                <question>: {'type': <type>, 'value': <value>}
-
     name:
         The package name to set answers for.
 
@@ -194,7 +184,7 @@ def set(name, data, **kwargs):
 
     current = __salt__["debconf.show"](name)
 
-    for (key, args) in six.iteritems(data):
+    for (key, args) in data.items():
         # For debconf data, valid booleans are 'true' and 'false';
         # But str()'ing the args['value'] will result in 'True' and 'False'
         # which will be ignored and overridden by a dpkg-reconfigure.
@@ -205,23 +195,20 @@ def set(name, data, **kwargs):
         if args["type"] == "boolean":
             args["value"] = "true" if args["value"] else "false"
 
-        if (
-            current is not None
-            and [key, args["type"], six.text_type(args["value"])] in current
-        ):
+        if current is not None and [key, args["type"], str(args["value"])] in current:
             if ret["comment"] == "":
                 ret["comment"] = "Unchanged answers: "
-            ret["comment"] += ("{0} ").format(key)
+            ret["comment"] += "{} ".format(key)
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["changes"][key] = ("New value: {0}").format(args["value"])
+                ret["changes"][key] = "New value: {}".format(args["value"])
             else:
                 if __salt__["debconf.set"](name, key, args["type"], args["value"]):
                     if args["type"] == "password":
                         ret["changes"][key] = "(password hidden)"
                     else:
-                        ret["changes"][key] = ("{0}").format(args["value"])
+                        ret["changes"][key] = "{}".format(args["value"])
                 else:
                     ret["result"] = False
                     ret["comment"] = "Some settings failed to be applied."

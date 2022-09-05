@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Management of LVS (Linux Virtual Server) Real Server
 ====================================================
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -74,17 +70,16 @@ def present(
             weight=weight,
         )
         if server_rule_check is True:
-            ret["comment"] = "LVS Server {0} in service {1}({2}) is present".format(
+            ret["comment"] = "LVS Server {} in service {}({}) is present".format(
                 name, service_address, protocol
             )
             return ret
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "LVS Server {0} in service {1}({2}) is present but some options should update".format(
-                    name, service_address, protocol
+                ret["comment"] = (
+                    "LVS Server {} in service {}({}) is present but some options should"
+                    " update".format(name, service_address, protocol)
                 )
                 return ret
             else:
@@ -98,7 +93,7 @@ def present(
                 if server_edit is True:
                     ret[
                         "comment"
-                    ] = "LVS Server {0} in service {1}({2}) has been updated".format(
+                    ] = "LVS Server {} in service {}({}) has been updated".format(
                         name, service_address, protocol
                     )
                     ret["changes"][name] = "Update"
@@ -107,7 +102,7 @@ def present(
                     ret["result"] = False
                     ret[
                         "comment"
-                    ] = "LVS Server {0} in service {1}({2}) update failed({3})".format(
+                    ] = "LVS Server {} in service {}({}) update failed({})".format(
                         name, service_address, protocol, server_edit
                     )
                     return ret
@@ -115,7 +110,7 @@ def present(
         if __opts__["test"]:
             ret[
                 "comment"
-            ] = "LVS Server {0} in service {1}({2}) is not present and needs to be created".format(
+            ] = "LVS Server {} in service {}({}) is not present and needs to be created".format(
                 name, service_address, protocol
             )
             ret["result"] = None
@@ -131,7 +126,7 @@ def present(
             if server_add is True:
                 ret[
                     "comment"
-                ] = "LVS Server {0} in service {1}({2}) has been created".format(
+                ] = "LVS Server {} in service {}({}) has been created".format(
                     name, service_address, protocol
                 )
                 ret["changes"][name] = "Present"
@@ -139,7 +134,7 @@ def present(
             else:
                 ret[
                     "comment"
-                ] = "LVS Service {0} in service {1}({2}) create failed({3})".format(
+                ] = "LVS Service {} in service {}({}) create failed({})".format(
                     name, service_address, protocol, server_add
                 )
                 ret["result"] = False
@@ -175,7 +170,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
             ret["result"] = None
             ret[
                 "comment"
-            ] = "LVS Server {0} in service {1}({2}) is present and needs to be removed".format(
+            ] = "LVS Server {} in service {}({}) is present and needs to be removed".format(
                 name, service_address, protocol
             )
             return ret
@@ -185,9 +180,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
             server_address=server_address,
         )
         if server_delete is True:
-            ret[
-                "comment"
-            ] = "LVS Server {0} in service {1}({2}) has been removed".format(
+            ret["comment"] = "LVS Server {} in service {}({}) has been removed".format(
                 name, service_address, protocol
             )
             ret["changes"][name] = "Absent"
@@ -195,7 +188,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
         else:
             ret[
                 "comment"
-            ] = "LVS Server {0} in service {1}({2}) removed failed({3})".format(
+            ] = "LVS Server {} in service {}({}) removed failed({})".format(
                 name, service_address, protocol, server_delete
             )
             ret["result"] = False
@@ -203,7 +196,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
     else:
         ret[
             "comment"
-        ] = "LVS Server {0} in service {1}({2}) is not present, so it cannot be removed".format(
+        ] = "LVS Server {} in service {}({}) is not present, so it cannot be removed".format(
             name, service_address, protocol
         )
 

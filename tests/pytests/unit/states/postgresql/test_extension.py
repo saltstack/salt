@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.postgres as postgresmod
 import salt.states.postgres_extension as postgres_extension
 from tests.support.mock import Mock, patch
@@ -157,7 +158,7 @@ def test_absent():
         }
         ret = postgres_extension.absent("foo")
         assert ret == {
-            "comment": ("Extension foo is not present, so it cannot be removed"),
+            "comment": "Extension foo is not present, so it cannot be removed",
             "changes": {},
             "name": "foo",
             "result": True,

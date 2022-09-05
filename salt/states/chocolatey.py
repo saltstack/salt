@@ -143,8 +143,10 @@ def installed(
             else:
                 if allow_multiple:
                     ret["changes"] = {
-                        name: "Version {} will be installed side by side with "
-                        "Version {} if supported".format(version, installed_version)
+                        name: (
+                            "Version {} will be installed side by side with "
+                            "Version {} if supported".format(version, installed_version)
+                        )
                     }
                     ret["comment"] = "Install {0} {1} side-by-side with {0} {2}".format(
                         full_name, version, installed_version

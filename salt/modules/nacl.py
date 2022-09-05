@@ -81,7 +81,7 @@ without extra parameters:
 .. code-block:: bash
 
     salt-run nacl.enc 'asecretpass'
-    salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
+    salt-run nacl.dec data='tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
 .. code-block:: yaml
 

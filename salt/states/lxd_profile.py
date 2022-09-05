@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage LXD profiles.
 
@@ -28,12 +27,7 @@ Manage LXD profiles.
 :platform: Linux
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.ext.six as six
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -128,18 +122,18 @@ def present(
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Profile not found
         pass
 
     if description is None:
-        description = six.text_type()
+        description = ""
 
     if profile is None:
         if __opts__["test"]:
             # Test is on, just return that we would create the profile
-            msg = 'Would create the profile "{0}"'.format(name)
+            msg = 'Would create the profile "{}"'.format(name)
             ret["changes"] = {"created": msg}
             return _unchanged(ret, msg)
 
@@ -150,9 +144,9 @@ def present(
             )
 
         except CommandExecutionError as e:
-            return _error(ret, six.text_type(e))
+            return _error(ret, str(e))
 
-        msg = 'Profile "{0}" has been created'.format(name)
+        msg = 'Profile "{}" has been created'.format(name)
         ret["changes"] = {"created": msg}
         return _success(ret, msg)
 
@@ -161,10 +155,12 @@ def present(
     #
     # Description change
     #
-    if six.text_type(profile.description) != six.text_type(description):
-        ret["changes"]["description"] = (
-            'Description changed, from "{0}" to "{1}".'
-        ).format(profile.description, description)
+    if str(profile.description) != str(description):
+        ret["changes"][
+            "description"
+        ] = 'Description changed, from "{}" to "{}".'.format(
+            profile.description, description
+        )
 
         profile.description = description
 
@@ -177,14 +173,14 @@ def present(
         return _success(ret, "No changes")
 
     if __opts__["test"]:
-        return _unchanged(ret, 'Profile "{0}" would get changed.'.format(name))
+        return _unchanged(ret, 'Profile "{}" would get changed.'.format(name))
 
     try:
         __salt__["lxd.pylxd_save_object"](profile)
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
-    return _success(ret, "{0} changes".format(len(ret["changes"].keys())))
+    return _success(ret, "{} changes".format(len(ret["changes"].keys())))
 
 
 def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
@@ -235,23 +231,23 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
         try:
             __salt__["lxd.profile_get"](name, remote_addr, cert, key, verify_cert)
         except CommandExecutionError as e:
-            return _error(ret, six.text_type(e))
+            return _error(ret, str(e))
         except SaltInvocationError as e:
             # Profile not found
-            return _success(ret, 'Profile "{0}" not found.'.format(name))
+            return _success(ret, 'Profile "{}" not found.'.format(name))
 
-        ret["changes"] = {"removed": 'Profile "{0}" would get deleted.'.format(name)}
+        ret["changes"] = {"removed": 'Profile "{}" would get deleted.'.format(name)}
         return _success(ret, ret["changes"]["removed"])
 
     try:
         __salt__["lxd.profile_delete"](name, remote_addr, cert, key, verify_cert)
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Profile not found
-        return _success(ret, 'Profile "{0}" not found.'.format(name))
+        return _success(ret, 'Profile "{}" not found.'.format(name))
 
-    ret["changes"] = {"removed": 'Profile "{0}" has been deleted.'.format(name)}
+    ret["changes"] = {"removed": 'Profile "{}" has been deleted.'.format(name)}
     return _success(ret, ret["changes"]["removed"])
 
 

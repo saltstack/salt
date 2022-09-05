@@ -21,7 +21,8 @@ def __virtual__():
     else:
         return (
             False,
-            "The poudriere execution module failed to load: only available on FreeBSD with the poudriere binary in the path.",
+            "The poudriere execution module failed to load: only available on FreeBSD"
+            " with the poudriere binary in the path.",
         )
 
 
@@ -238,10 +239,7 @@ def delete_jail(name):
 
         # Make sure jail is gone
         if is_jail(name):
-            return "Looks like there was an issue deleteing jail \
-            {}".format(
-                name
-            )
+            return "Looks like there was an issue deleting jail {}".format(name)
     else:
         # Could not find jail.
         return "Looks like jail {} has not been created".format(name)
@@ -252,9 +250,9 @@ def delete_jail(name):
         try:
             os.remove(make_file)
         except OSError:
-            return (
-                'Deleted jail "{}" but was unable to remove jail make ' "file"
-            ).format(name)
+            return 'Deleted jail "{}" but was unable to remove jail make file'.format(
+                name
+            )
         __salt__["file.remove"](make_file)
 
     return "Deleted jail {}".format(name)
@@ -338,6 +336,6 @@ def bulk_build(jail, pkg_file, keep=False):
     for line in lines:
         if "packages built" in line:
             return line
-    return (
-        "There may have been an issue building packages dumping output: " "{}"
-    ).format(res)
+    return "There may have been an issue building packages dumping output: {}".format(
+        res
+    )

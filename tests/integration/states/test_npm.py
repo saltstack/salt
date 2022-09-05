@@ -7,6 +7,7 @@
 import os
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
@@ -20,21 +21,7 @@ MAX_NPM_VERSION = "5.0.0"
 
 @skipIf(salt.utils.path.which("npm") is None, "npm not installed")
 class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
-    @pytest.mark.requires_network
-    @pytest.mark.destructive_test
-    @pytest.mark.slow_test
-    def test_npm_installed_removed(self):
-        """
-        Basic test to determine if NPM module was successfully installed and
-        removed.
-        """
-        ret = self.run_state(
-            "npm.installed", name="pm2@2.10.4", registry="http://registry.npmjs.org/"
-        )
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state("npm.removed", name="pm2")
-        self.assertSaltTrueReturn(ret)
-
+    @skipIf(salt.utils.path.which("git") is None, "git is not installed")
     @skipIf(salt.utils.platform.is_darwin(), "TODO this test hangs on mac.")
     @pytest.mark.requires_network
     @pytest.mark.destructive_test

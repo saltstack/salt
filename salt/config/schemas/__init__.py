@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 

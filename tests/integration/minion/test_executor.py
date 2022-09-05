@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 from tests.support.case import ModuleCase, ShellCase
 
 log = logging.getLogger(__name__)

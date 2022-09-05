@@ -34,14 +34,17 @@ import logging
 
 HAS_LIBS = False
 try:
+    import html.parser
+
     import requests
-    from salt.ext.six.moves.html_parser import HTMLParser  # pylint: disable=E0611
 
     HAS_LIBS = True
 
-    class ASAMHTMLParser(HTMLParser):  # fix issue #30477
+    # pylint: disable=abstract-method
+
+    class ASAMHTMLParser(html.parser.HTMLParser):  # fix issue #30477
         def __init__(self):
-            HTMLParser.__init__(self)
+            html.parser.HTMLParser.__init__(self)
             self.data = []
 
         def handle_starttag(self, tag, attrs):
@@ -51,6 +54,8 @@ try:
                 if attr[0] != "href":
                     return
                 self.data.append(attr[1])
+
+    # pylint: enable=abstract-method
 
 
 except ImportError:
@@ -103,14 +108,20 @@ def _get_asam_configuration(driver_url=""):
                     "platform_edit_url": "{}://{}:{}/config/PlatformEdit.html".format(
                         protocol, asam_server, port
                     ),
-                    "platform_config_url": "{}://{}:{}/config/PlatformConfig.html".format(
-                        protocol, asam_server, port
+                    "platform_config_url": (
+                        "{}://{}:{}/config/PlatformConfig.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
-                    "platformset_edit_url": "{}://{}:{}/config/PlatformSetEdit.html".format(
-                        protocol, asam_server, port
+                    "platformset_edit_url": (
+                        "{}://{}:{}/config/PlatformSetEdit.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
-                    "platformset_config_url": "{}://{}:{}/config/PlatformSetConfig.html".format(
-                        protocol, asam_server, port
+                    "platformset_config_url": (
+                        "{}://{}:{}/config/PlatformSetConfig.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
                     "username": username,
                     "password": password,

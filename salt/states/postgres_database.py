@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL databases
 ==================================
@@ -11,7 +10,6 @@ Databases can be set as either absent or present
     frank:
       postgres_database.present
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -91,7 +89,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Database {0} is already present".format(name),
+        "comment": "Database {} is already present".format(name),
     }
 
     db_args = {
@@ -128,9 +126,10 @@ def present(
             db_params.get("Ctype") != lc_ctype if lc_ctype else False,
         )
     ):
-        ret["comment"] = (
-            "Database {0} has wrong parameters "
-            "which couldn't be changed on fly.".format(name)
+        ret[
+            "comment"
+        ] = "Database {} has wrong parameters which couldn't be changed on fly.".format(
+            name
         )
         ret["result"] = False
         return ret
@@ -139,11 +138,11 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         if name not in dbs:
-            ret["comment"] = "Database {0} is set to be created".format(name)
+            ret["comment"] = "Database {} is set to be created".format(name)
         else:
             ret[
                 "comment"
-            ] = "Database {0} exists, but parameters " "need to be changed".format(name)
+            ] = "Database {} exists, but parameters need to be changed".format(name)
         return ret
     if name not in dbs and __salt__["postgres.db_create"](
         name,
@@ -155,18 +154,18 @@ def present(
         template=template,
         **db_args
     ):
-        ret["comment"] = "The database {0} has been created".format(name)
+        ret["comment"] = "The database {} has been created".format(name)
         ret["changes"][name] = "Present"
     elif name in dbs and __salt__["postgres.db_alter"](
         name, tablespace=tablespace, owner=owner, owner_recurse=owner_recurse, **db_args
     ):
-        ret["comment"] = ("Parameters for database {0} have been changed").format(name)
+        ret["comment"] = "Parameters for database {} have been changed".format(name)
         ret["changes"][name] = "Parameters changed"
     elif name in dbs:
-        ret["comment"] = ("Failed to change parameters for database {0}").format(name)
+        ret["comment"] = "Failed to change parameters for database {}".format(name)
         ret["result"] = False
     else:
-        ret["comment"] = "Failed to create database {0}".format(name)
+        ret["comment"] = "Failed to create database {}".format(name)
         ret["result"] = False
 
     return ret
@@ -218,15 +217,13 @@ def absent(
     if __salt__["postgres.db_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Database {0} is set to be removed".format(name)
+            ret["comment"] = "Database {} is set to be removed".format(name)
             return ret
         if __salt__["postgres.db_remove"](name, **db_args):
-            ret["comment"] = "Database {0} has been removed".format(name)
+            ret["comment"] = "Database {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
 
     # fallback
-    ret["comment"] = "Database {0} is not present, so it cannot " "be removed".format(
-        name
-    )
+    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
     return ret

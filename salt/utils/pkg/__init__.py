@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Common functions for managing package refreshes during states
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.versions

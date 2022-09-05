@@ -8,6 +8,7 @@ import re
 
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
@@ -28,9 +29,20 @@ def __virtual__():
     if __grains__["kernel"] != "Linux":
         return (
             False,
-            "The linux_sysctl execution module cannot be loaded: only available on Linux systems.",
+            "The linux_sysctl execution module cannot be loaded: only available on"
+            " Linux systems.",
         )
     return __virtualname__
+
+
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+    return _cmd
 
 
 def default_config():
@@ -90,7 +102,7 @@ def show(config_file=False):
             log.error("Could not open sysctl file")
             return None
     else:
-        cmd = "sysctl -a"
+        cmd = "{} -a".format(_which("sysctl"))
         out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace")
         for line in out.splitlines():
             if not line or " = " not in line:
@@ -110,7 +122,7 @@ def get(name):
 
         salt '*' sysctl.get net.ipv4.ip_forward
     """
-    cmd = "sysctl -n {}".format(name)
+    cmd = "{} -n {}".format(_which("sysctl"), name)
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -134,7 +146,7 @@ def assign(name, value):
         raise CommandExecutionError("sysctl {} does not exist".format(name))
 
     ret = {}
-    cmd = 'sysctl -w {}="{}"'.format(name, value)
+    cmd = '{} -w {}="{}"'.format(_which("sysctl"), name, value)
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]

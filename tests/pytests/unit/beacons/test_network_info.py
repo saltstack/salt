@@ -7,6 +7,7 @@
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.network_info as network_info
 from tests.support.mock import MagicMock, patch
 
@@ -21,7 +22,8 @@ def stub_net_io_counters():
     return {
         "eth0": namedtuple(
             "snetio",
-            "bytes_sent bytes_recv packets_sent packets_recv errin errout dropin dropout",
+            "bytes_sent bytes_recv packets_sent packets_recv errin errout dropin"
+            " dropout",
         )(93662618, 914626664, 465694, 903802, 0, 0, 0, 0)
     }
 

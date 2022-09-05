@@ -2,13 +2,14 @@ import time
 import uuid
 
 import attr
-from saltfactories.factories.daemons.container import SaltMinionContainerFactory
-from saltfactories.utils import ports
+from pytestshellutils.utils import ports
+from saltfactories.daemons.container import SaltMinion
+
 from tests.support.runtests import RUNTIME_VARS
 
 
 @attr.s(kw_only=True, slots=True)
-class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
+class SaltVirtMinionContainerFactory(SaltMinion):
 
     host_uuid = attr.ib(default=attr.Factory(uuid.uuid4))
     ssh_port = attr.ib(
@@ -31,13 +32,8 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
         self.uri = "localhost:{}".format(self.sshd_port)
         self.ssh_uri = "qemu+ssh://{}/system".format(self.uri)
         self.tcp_uri = "qemu+tcp://localhost:{}/system".format(self.libvirt_tcp_port)
-        self.tls_uri = "qemu+tls://localhost:{}/system".format(self.libvirt_tls_port)
+        self.tls_uri = "qemu+tls://127.0.0.1:{}/system".format(self.libvirt_tls_port)
 
-        if self.check_ports is None:
-            self.check_ports = []
-        self.check_ports.extend(
-            [self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port]
-        )
         if "environment" not in self.container_run_kwargs:
             self.container_run_kwargs["environment"] = {}
         self.container_run_kwargs["environment"].update(
@@ -51,16 +47,7 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
                 "PYTHONDONTWRITEBYTECODE": "1",
             }
         )
-        if "ports" not in self.container_run_kwargs:
-            self.container_run_kwargs["ports"] = {}
-        self.container_run_kwargs["ports"].update(
-            {
-                "{}/tcp".format(self.ssh_port): self.ssh_port,
-                "{}/tcp".format(self.sshd_port): self.sshd_port,
-                "{}/tcp".format(self.libvirt_tcp_port): self.libvirt_tcp_port,
-                "{}/tcp".format(self.libvirt_tls_port): self.libvirt_tls_port,
-            }
-        )
+        super().__attrs_post_init__()
         if "volumes" not in self.container_run_kwargs:
             self.container_run_kwargs["volumes"] = {}
         self.container_run_kwargs["volumes"].update(
@@ -73,14 +60,19 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
         self.container_run_kwargs["network_mode"] = "host"
         self.container_run_kwargs["cap_add"] = ["ALL"]
         self.container_run_kwargs["privileged"] = True
-        super().__attrs_post_init__()
         self.python_executable = "python3"
+        self.container_start_check(self._check_script_path_exists)
+        for port in (self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port):
+            self.check_ports[port] = port
 
-    def _container_start_checks(self):
-        # Once we're able to ls the salt-minion script it means the container
-        # has salt installed
-        ret = self.run("ls", "-lah", self.get_script_path())
-        if ret.exitcode == 0:
-            return True
-        time.sleep(1)
-        return False
+    def _check_script_path_exists(self, timeout_at):
+        while time.time() <= timeout_at:
+            # Once we're able to ls the salt-minion script it means the container
+            # has salt installed
+            ret = self.run("ls", "-lah", self.get_script_path())
+            if ret.returncode == 0:
+                break
+            time.sleep(1)
+        else:
+            return False
+        return True

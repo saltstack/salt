@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Utilities
 
@@ -20,32 +19,24 @@ Azure (ARM) Utilities
 :platform: linux
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import importlib
 import logging
 import sys
 from operator import itemgetter
 
-# Import Salt libs
 import salt.config
-import salt.ext.six as six
 import salt.loader
+import salt.utils.args
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.version
 from salt.exceptions import SaltInvocationError, SaltSystemExit
 
 try:
-    from salt.ext.six.moves import range as six_range
-except ImportError:
-    six_range = range
-
-# Import third party libs
-try:
     from azure.common.credentials import (
-        UserPassCredentials,
         ServicePrincipalCredentials,
+        UserPassCredentials,
     )
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
@@ -92,7 +83,7 @@ def _determine_auth(**kwargs):
             )
     except (AttributeError, ImportError, MetadataEndpointError):
         raise sys.exit(
-            "The Azure cloud environment {0} is not available.".format(
+            "The Azure cloud environment {} is not available.".format(
                 kwargs["cloud_environment"]
             )
         )
@@ -127,7 +118,10 @@ def _determine_auth(**kwargs):
             credentials = MSIAuthentication(cloud_environment=cloud_env)
         except ImportError:
             raise SaltSystemExit(
-                msg="MSI authentication support not availabe (requires msrestazure >= 0.4.14)"
+                msg=(
+                    "MSI authentication support not availabe (requires msrestazure >="
+                    " 0.4.14)"
+                )
             )
 
     else:
@@ -166,7 +160,7 @@ def get_client(client_type, **kwargs):
 
     if client_type not in client_map:
         raise SaltSystemExit(
-            msg="The Azure ARM client_type {0} specified can not be found.".format(
+            msg="The Azure ARM client_type {} specified can not be found.".format(
                 client_type
             )
         )
@@ -183,15 +177,16 @@ def get_client(client_type, **kwargs):
     try:
         client_module = importlib.import_module("azure.mgmt." + module_name)
         # pylint: disable=invalid-name
-        Client = getattr(client_module, "{0}Client".format(map_value))
+        Client = getattr(client_module, "{}Client".format(map_value))
     except ImportError:
-        raise sys.exit("The azure {0} client is not available.".format(client_type))
+        raise sys.exit("The azure {} client is not available.".format(client_type))
 
     credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
 
     if client_type == "subscription":
         client = Client(
-            credentials=credentials, base_url=cloud_env.endpoints.resource_manager,
+            credentials=credentials,
+            base_url=cloud_env.endpoints.resource_manager,
         )
     else:
         client = Client(
@@ -200,7 +195,7 @@ def get_client(client_type, **kwargs):
             base_url=cloud_env.endpoints.resource_manager,
         )
 
-    client.config.add_user_agent("Salt/{0}".format(salt.version.__version__))
+    client.config.add_user_agent("Salt/{}".format(salt.version.__version__))
 
     return client
 
@@ -244,13 +239,13 @@ def create_object_model(module_name, object_name, **kwargs):
 
     try:
         model_module = importlib.import_module(
-            "azure.mgmt.{0}.models".format(module_name)
+            "azure.mgmt.{}.models".format(module_name)
         )
         # pylint: disable=invalid-name
         Model = getattr(model_module, object_name)
     except ImportError:
         raise sys.exit(
-            "The {0} model in the {1} Azure module is not available.".format(
+            "The {} model in the {} Azure module is not available.".format(
                 object_name, module_name
             )
         )
@@ -313,9 +308,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         return ret
 
     try:
-        local_configs, remote_configs = [
+        local_configs, remote_configs = (
             sorted(config, key=itemgetter("name")) for config in (new, old)
-        ]
+        )
     except TypeError:
         ret["comment"] = "configurations must be provided as a list of dictionaries!"
         return ret
@@ -323,18 +318,18 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         ret["comment"] = 'configuration dictionaries must contain the "name" key!'
         return ret
 
-    for idx in six_range(0, len(local_configs)):
-        for key in local_configs[idx]:
-            local_val = local_configs[idx][key]
+    for idx, val in enumerate(local_configs):
+        for key in val:
+            local_val = val[key]
             if key in convert_id_to_name:
                 remote_val = (
                     remote_configs[idx].get(key, {}).get("id", "").split("/")[-1]
                 )
             else:
                 remote_val = remote_configs[idx].get(key)
-                if isinstance(local_val, six.string_types):
+                if isinstance(local_val, str):
                     local_val = local_val.lower()
-                if isinstance(remote_val, six.string_types):
+                if isinstance(remote_val, str):
                     remote_val = remote_val.lower()
             if local_val != remote_val:
                 ret["changes"] = {"old": remote_configs, "new": local_configs}

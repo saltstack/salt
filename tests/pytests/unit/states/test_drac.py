@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.drac as drac
 from tests.support.mock import MagicMock, patch
 
@@ -76,7 +77,8 @@ def test_network():
     mock_info = MagicMock(return_value=net_info)
     mock_bool = MagicMock(side_effect=[True, False])
     with patch.dict(
-        drac.__salt__, {"drac.network_info": mock_info, "drac.set_network": mock_bool},
+        drac.__salt__,
+        {"drac.network_info": mock_info, "drac.set_network": mock_bool},
     ):
         with patch.dict(drac.__opts__, {"test": True}):
             assert drac.network(ip_, netmask, gateway) == ret

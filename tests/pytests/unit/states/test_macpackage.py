@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.macpackage as macpackage
 from tests.support.mock import MagicMock, patch
 
@@ -118,7 +119,10 @@ def test_installed_pkg_version_fails():
     """
     expected = {
         "changes": {"installed": ["some.other.id"]},
-        "comment": "Version Version of this: 1.8.9 doesn't match .*5\\.1\\.[0-9]. /path/to/file.pkg installed",
+        "comment": (
+            "Version Version of this: 1.8.9 doesn't match .*5\\.1\\.[0-9]."
+            " /path/to/file.pkg installed"
+        ),
         "name": "/path/to/file.pkg",
         "result": True,
     }

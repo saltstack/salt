@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 from salt.modules import tuned
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -127,12 +124,13 @@ No SMBIOS nor DMI entry point found, sorry.
             )
 
     def test_none(self):
-        """
-        """
+        """ """
         ret = {
             "pid": 12345,
             "retcode": 1,
-            "stderr": "stderr: Cannot talk to Tuned daemon via DBus. Is Tuned daemon running?",
+            "stderr": (
+                "stderr: Cannot talk to Tuned daemon via DBus. Is Tuned daemon running?"
+            ),
             "stdout": "No current active profile.",
         }
         mock_cmd = MagicMock(return_value=ret)

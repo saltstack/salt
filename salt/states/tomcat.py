@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Apache Tomcat web applications
 =====================================
@@ -54,10 +53,6 @@ Notes
     OS Version:
       3.10.0-327.22.2.el7.x86_64
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-from salt.ext import six
 
 
 # Private
@@ -147,7 +142,7 @@ def war_deployed(
     status = True
 
     # Gathered/specified new WAR version string
-    specified_ver = "version {0}".format(version) if version else "no version"
+    specified_ver = "version {}".format(version) if version else "no version"
 
     # Determine what to do
     try:
@@ -165,25 +160,25 @@ def war_deployed(
         ):
             deploy = True
             undeploy = True
-            ret["changes"]["undeploy"] = "undeployed {0} with {1}".format(
+            ret["changes"]["undeploy"] = "undeployed {} with {}".format(
                 name, current_ver
             )
-            ret["changes"]["deploy"] = "will deploy {0} with {1}".format(
+            ret["changes"]["deploy"] = "will deploy {} with {}".format(
                 name, specified_ver
             )
         else:
             deploy = False
-            ret["comment"] = "{0} with {1} is already deployed".format(
+            ret["comment"] = "{} with {} is already deployed".format(
                 name, specified_ver
             )
             if webapps[name]["mode"] != "running":
-                ret["changes"]["start"] = "starting {0}".format(name)
+                ret["changes"]["start"] = "starting {}".format(name)
                 status = False
             else:
                 return ret
     except Exception:  # pylint: disable=broad-except
         deploy = True
-        ret["changes"]["deploy"] = "deployed {0} with {1}".format(name, specified_ver)
+        ret["changes"]["deploy"] = "deployed {} with {}".format(name, specified_ver)
 
     # Test
     if __opts__["test"]:
@@ -220,8 +215,8 @@ def war_deployed(
     # Return
     if deploy_res.startswith("OK"):
         ret["result"] = True
-        ret["comment"] = six.text_type(__salt__["tomcat.ls"](url, timeout)[name])
-        ret["changes"]["deploy"] = "deployed {0} with {1}".format(name, specified_ver)
+        ret["comment"] = str(__salt__["tomcat.ls"](url, timeout)[name])
+        ret["changes"]["deploy"] = "deployed {} with {}".format(name, specified_ver)
     else:
         ret["result"] = False
         ret["comment"] = deploy_res

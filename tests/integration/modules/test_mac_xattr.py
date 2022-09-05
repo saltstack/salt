@@ -5,6 +5,7 @@ integration tests for mac_xattr
 import os
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
 from tests.support.runtests import RUNTIME_VARS

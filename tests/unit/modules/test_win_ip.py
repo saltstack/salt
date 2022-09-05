@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.win_ip as win_ip
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
@@ -23,10 +24,7 @@ ETHERNET_CONFIG = (
 )
 
 ETHERNET_ENABLE = (
-    "Ethernet\n"
-    "Type: Dedicated\n"
-    "Administrative state: Enabled\n"
-    "Connect state: Connected"
+    "Ethernet\nType: Dedicated\nAdministrative state: Enabled\nConnect state: Connected"
 )
 
 

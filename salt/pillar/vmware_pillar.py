@@ -149,8 +149,8 @@ import salt.utils.vmware
 
 try:
     # pylint: disable=no-name-in-module
-    from pyVmomi import vim
     from pyVim.connect import Disconnect
+    from pyVmomi import vim
 
     HAS_LIBS = True
     # pylint: enable=no-name-in-module
@@ -288,7 +288,8 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
 
     if "host" not in kwargs:
         log.error(
-            "VMWare external pillar configured but host is not specified in ext_pillar configuration."
+            "VMWare external pillar configured but host is not specified in ext_pillar"
+            " configuration."
         )
         return vmware_pillar
     else:
@@ -297,7 +298,8 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
 
     if "username" not in kwargs:
         log.error(
-            "VMWare external pillar requested but username is not specified in ext_pillar configuration."
+            "VMWare external pillar requested but username is not specified in"
+            " ext_pillar configuration."
         )
         return vmware_pillar
     else:
@@ -306,7 +308,8 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
 
     if "password" not in kwargs:
         log.error(
-            "VMWare external pillar requested but password is not specified in ext_pillar configuration."
+            "VMWare external pillar requested but password is not specified in"
+            " ext_pillar configuration."
         )
         return vmware_pillar
     else:
@@ -330,7 +333,8 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
                     )
                 else:
                     log.warning(
-                        "A property_type dict was specified, but its value is not a list"
+                        "A property_type dict was specified, but its value is not a"
+                        " list"
                     )
             else:
                 property_types.append(getattr(vim, prop_type))
@@ -388,9 +392,9 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
                                         ] = customValue.value
                         type_specific_pillar_attribute = []
                         if type_name in type_specific_pillar_attributes:
-                            type_specific_pillar_attribute = type_specific_pillar_attributes[
-                                type_name
-                            ]
+                            type_specific_pillar_attribute = (
+                                type_specific_pillar_attributes[type_name]
+                            )
                         vmware_pillar[pillar_key] = dictupdate.update(
                             vmware_pillar[pillar_key],
                             _crawl_attribute(

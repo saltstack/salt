@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 XML Manager
 ===========
 
 State management of XML files
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 log = logging.getLogger(__name__)
@@ -54,20 +51,20 @@ def value_present(name, xpath, value, **kwargs):
     current_value = __salt__["xml.get_value"](name, xpath)
     if not current_value:
         ret["result"] = False
-        ret["comment"] = "xpath query {0} not found in {1}".format(xpath, name)
+        ret["comment"] = "xpath query {} not found in {}".format(xpath, name)
         return ret
 
     if current_value != value:
         if kwargs["test"]:
             ret["result"] = None
-            ret["comment"] = "{0} will be updated".format(name)
+            ret["comment"] = "{} will be updated".format(name)
             ret["changes"] = {name: {"old": current_value, "new": value}}
         else:
             results = __salt__["xml.set_value"](name, xpath, value)
             ret["result"] = results
-            ret["comment"] = "{0} updated".format(name)
+            ret["comment"] = "{} updated".format(name)
             ret["changes"] = {name: {"old": current_value, "new": value}}
     else:
-        ret["comment"] = "{0} is already present".format(value)
+        ret["comment"] = "{} is already present".format(value)
 
     return ret

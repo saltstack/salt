@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 unittests for table outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.output.table_out as table_out
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -40,13 +34,11 @@ class TableTestCase(TestCase, LoaderModuleMockMixin):
         ret = table_out.output(self.data)
         self.assertEqual(
             ret,
-            (
-                "    -----------------------------------------\n"
-                "    |              Food             | Price |\n"
-                "    -----------------------------------------\n"
-                "    |  яйца, бекон, колбаса и спам  |  5.99 |\n"
-                "    -----------------------------------------\n"
-                "    | спам, спам, спам, яйца и спам |  3.99 |\n"
-                "    -----------------------------------------"
-            ),
+            "    -----------------------------------------\n"
+            "    |              Food             | Price |\n"
+            "    -----------------------------------------\n"
+            "    |  яйца, бекон, колбаса и спам  |  5.99 |\n"
+            "    -----------------------------------------\n"
+            "    | спам, спам, спам, яйца и спам |  3.99 |\n"
+            "    -----------------------------------------",
         )

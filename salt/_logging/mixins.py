@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt._logging.mixins
     ~~~~~~~~~~~~~~~~~~~~
@@ -6,23 +5,16 @@
     Logging related mix-ins
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import sys
+import weakref
+
+import salt._logging
+
+log = logging.getLogger(__name__)
 
 
-class NewStyleClassMixin(object):
-    """
-    Simple new style class to make pylint shut up!
-    This is required because SaltLoggingClass can't subclass object directly:
-
-        'Cannot create a consistent method resolution order (MRO) for bases'
-    """
-
-
-class LoggingProfileMixin(object):
+class LoggingProfileMixin:
     """
     Simple mix-in class to add a trace method to python's logging.
     """
@@ -31,7 +23,7 @@ class LoggingProfileMixin(object):
         self.log(getattr(logging, "PROFILE", 15), msg, *args, **kwargs)
 
 
-class LoggingTraceMixin(object):
+class LoggingTraceMixin:
     """
     Simple mix-in class to add a trace method to python's logging.
     """
@@ -40,7 +32,7 @@ class LoggingTraceMixin(object):
         self.log(getattr(logging, "TRACE", 5), msg, *args, **kwargs)
 
 
-class LoggingGarbageMixin(object):
+class LoggingGarbageMixin:
     """
     Simple mix-in class to add a garbage method to python's logging.
     """
@@ -64,6 +56,8 @@ class LoggingMixinMeta(type):
         bases = list(bases)
         if name == "SaltLoggingClass":
             for base in bases:
+                if hasattr(base, "profile"):
+                    include_profile = False
                 if hasattr(base, "trace"):
                     include_trace = False
                 if hasattr(base, "garbage"):
@@ -74,10 +68,10 @@ class LoggingMixinMeta(type):
             bases.append(LoggingTraceMixin)
         if include_garbage:
             bases.append(LoggingGarbageMixin)
-        return super(LoggingMixinMeta, mcs).__new__(mcs, name, tuple(bases), attrs)
+        return super().__new__(mcs, name, tuple(bases), attrs)
 
 
-class ExcInfoOnLogLevelFormatMixin(object):
+class ExcInfoOnLogLevelFormatMixin:
     """
     Logging handler class mixin to properly handle including exc_info on a per logging handler basis
     """
@@ -86,7 +80,7 @@ class ExcInfoOnLogLevelFormatMixin(object):
         """
         Format the log record to include exc_info if the handler is enabled for a specific log level
         """
-        formatted_record = super(ExcInfoOnLogLevelFormatMixin, self).format(record)
+        formatted_record = super().format(record)
         exc_info_on_loglevel = getattr(record, "exc_info_on_loglevel", None)
         exc_info_on_loglevel_formatted = getattr(
             record, "exc_info_on_loglevel_formatted", None
@@ -142,3 +136,30 @@ class ExcInfoOnLogLevelFormatMixin(object):
         # data which is not pickle'able
         record.exc_info_on_loglevel_instance = None
         return formatted_record
+
+
+class MultiprocessingStateMixin:
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        logging_config = state["logging_config"]
+        if not salt._logging.get_logging_options_dict():
+            salt._logging.set_logging_options_dict(logging_config)
+
+        # Setup logging on the new process
+        try:
+            salt._logging.setup_logging()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to configure logging on %s: %s",
+                self,
+                exc,
+            )
+        # Be sure to shutdown logging when terminating the process
+        weakref.finalize(self, salt._logging.shutdown_logging)
+
+    def __getstate__(self):
+        # Grab the current logging settings
+        return {
+            "logging_config": salt._logging.get_logging_options_dict(),
+        }

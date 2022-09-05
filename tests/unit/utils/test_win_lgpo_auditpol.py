@@ -1,6 +1,7 @@
 import random
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
@@ -55,7 +56,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
                     value = random.choice(settings)
                     win_lgpo_auditpol.set_setting(name=name, value=value)
                     switches = win_lgpo_auditpol.settings[value]
-                    cmd = 'auditpol /set /subcategory:"{}" {}' "".format(name, switches)
+                    cmd = 'auditpol /set /subcategory:"{}" {}'.format(name, switches)
                     mock_set.assert_called_once_with(cmd=cmd, python_shell=True)
                     mock_set.reset_mock()
 

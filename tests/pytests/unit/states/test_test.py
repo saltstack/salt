@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.test as test
 from salt.exceptions import SaltInvocationError
 from salt.utils.odict import OrderedDict
@@ -90,7 +91,9 @@ def test_succeed_with_changes():
                         "old": "Unchanged",
                     }
                 },
-                "comment": "If we weren't testing, this would be successful with changes",
+                "comment": (
+                    "If we weren't testing, this would be successful with changes"
+                ),
                 "result": None,
             }
         )

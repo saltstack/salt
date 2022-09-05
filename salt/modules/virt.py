@@ -136,6 +136,7 @@ from xml.etree import ElementTree
 from xml.sax import saxutils
 
 import jinja2.exceptions
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -516,41 +517,51 @@ def _get_disks(conn, dom):
             def _get_disk_volume_data(pool_name, volume_name):
                 qemu_target = "{}/{}".format(pool_name, volume_name)
                 pool = conn.storagePoolLookupByName(pool_name)
-                vol = pool.storageVolLookupByName(volume_name)
-                vol_info = vol.info()
-                extra_properties = {
-                    "virtual size": vol_info[1],
-                    "disk size": vol_info[2],
-                }
-
-                backing_files = [
-                    {
-                        "file": node.find("source").get("file"),
-                        "file format": node.find("format").get("type"),
+                extra_properties = {}
+                try:
+                    vol = pool.storageVolLookupByName(volume_name)
+                    vol_info = vol.info()
+                    extra_properties = {
+                        "virtual size": vol_info[1],
+                        "disk size": vol_info[2],
                     }
-                    for node in elem.findall(".//backingStore[source]")
-                ]
 
-                if backing_files:
-                    # We had the backing files in a flat list, nest them again.
-                    extra_properties["backing file"] = backing_files[0]
-                    parent = extra_properties["backing file"]
-                    for sub_backing_file in backing_files[1:]:
-                        parent["backing file"] = sub_backing_file
-                        parent = sub_backing_file
+                    backing_files = [
+                        {
+                            "file": node.find("source").get("file"),
+                            "file format": node.find("format").get("type"),
+                        }
+                        for node in elem.findall(".//backingStore[source]")
+                    ]
 
-                else:
-                    # In some cases the backing chain is not displayed by the domain definition
-                    # Try to see if we have some of it in the volume definition.
-                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
-                    backing_path = vol_desc.find("./backingStore/path")
-                    backing_format = vol_desc.find("./backingStore/format")
-                    if backing_path is not None:
-                        extra_properties["backing file"] = {"file": backing_path.text}
-                        if backing_format is not None:
-                            extra_properties["backing file"][
-                                "file format"
-                            ] = backing_format.get("type")
+                    if backing_files:
+                        # We had the backing files in a flat list, nest them again.
+                        extra_properties["backing file"] = backing_files[0]
+                        parent = extra_properties["backing file"]
+                        for sub_backing_file in backing_files[1:]:
+                            parent["backing file"] = sub_backing_file
+                            parent = sub_backing_file
+
+                    else:
+                        # In some cases the backing chain is not displayed by the domain definition
+                        # Try to see if we have some of it in the volume definition.
+                        vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                        backing_path = vol_desc.find("./backingStore/path")
+                        backing_format = vol_desc.find("./backingStore/format")
+                        if backing_path is not None:
+                            extra_properties["backing file"] = {
+                                "file": backing_path.text
+                            }
+                            if backing_format is not None:
+                                extra_properties["backing file"][
+                                    "file format"
+                                ] = backing_format.get("type")
+                except libvirt.libvirtError:
+                    # The volume won't be found if the pool is not started, just output less infos
+                    log.info(
+                        "Couldn't extract all volume informations: pool is likely not"
+                        " running or refreshed"
+                    )
                 return (qemu_target, extra_properties)
 
             if disk_type == "file":
@@ -568,7 +579,7 @@ def _get_disks(conn, dom):
                 elif elem.get("device", "disk") != "cdrom":
                     # Extract disk sizes, snapshots, backing files
                     try:
-                        stdout = subprocess.Popen(
+                        process = subprocess.Popen(
                             [
                                 "qemu-img",
                                 "info",
@@ -580,12 +591,17 @@ def _get_disks(conn, dom):
                             ],
                             shell=False,
                             stdout=subprocess.PIPE,
-                        ).communicate()[0]
-                        qemu_output = salt.utils.stringutils.to_str(stdout)
-                        output = _parse_qemu_img_info(qemu_output)
-                        extra_properties = output
-                    except TypeError:
-                        disk.update({"file": "Does not exist"})
+                            stderr=subprocess.PIPE,
+                        )
+                        stdout, stderr = process.communicate()
+                        if process.returncode == 0:
+                            qemu_output = salt.utils.stringutils.to_str(stdout)
+                            output = _parse_qemu_img_info(qemu_output)
+                            extra_properties = output
+                        else:
+                            extra_properties = {"error": stderr}
+                    except FileNotFoundError:
+                        extra_properties = {"error": "qemu-img not found"}
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume
@@ -896,26 +912,12 @@ def _handle_unit(s, def_unit="m"):
     """
     Handle the unit conversion, return the value in bytes
     """
-    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(s).strip())
-    value = m.group("value")
-    # default unit
-    unit = m.group("unit").lower() or def_unit
-    try:
-        value = int(value)
-    except ValueError:
-        try:
-            value = float(value)
-        except ValueError:
-            raise SaltInvocationError("invalid number")
-    # flag for base ten
-    dec = False
-    if re.match(r"[kmgtpezy]b$", unit):
-        dec = True
-    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
-        raise SaltInvocationError("invalid units")
-    p = "bkmgtpezy".index(unit[0])
-    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
-    return int(value)
+    ret = salt.utils.stringutils.human_to_bytes(
+        s, default_unit=def_unit, handle_metric=True
+    )
+    if ret == 0:
+        raise SaltInvocationError("invalid number or unit")
+    return ret
 
 
 def nesthash(value=None):
@@ -1044,41 +1046,6 @@ def _gen_xml(
                     chardev_context["port"] = chardev.get("port", default_port)
                     chardev_context["protocol"] = chardev.get("protocol", "telnet")
                 context[chardev_type + "s"].append(chardev_context)
-
-    # processing of deprecated parameters
-    old_port = kwargs.get("telnet_port")
-    if old_port:
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_port),
-        )
-
-    old_serial_type = kwargs.get("serial_type")
-    if old_serial_type:
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_serial_type),
-        )
-        serial_context = {"type": old_serial_type}
-        if serial_context["type"] == "tcp":
-            serial_context["port"] = old_port or default_port
-            serial_context["protocol"] = "telnet"
-        context["serials"].append(serial_context)
-
-        old_console = kwargs.get("console")
-        if old_console:
-            salt.utils.versions.warn_until(
-                "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-                "It will be removed in {version}.",
-            )
-            if old_console is True:
-                context["consoles"].append(serial_context)
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
@@ -1386,7 +1353,7 @@ def _get_images_dir():
     find legacy virt.images, then tries virt:images.
     """
     img_dir = __salt__["config.get"]("virt:images")
-    log.debug("Image directory from config option `virt:images`" " is %s", img_dir)
+    log.debug("Image directory from config option `virt:images` is %s", img_dir)
     return img_dir
 
 
@@ -1419,8 +1386,9 @@ def _zfs_image_create(
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {}, please specify"
-            " the disk pool name".format(disk_name)
+            "Unable to create new disk {}, please specify the disk pool name".format(
+                disk_name
+            )
         )
 
     destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
@@ -1434,9 +1402,7 @@ def _zfs_image_create(
             )
         )
     elif destination_fs in existing_disk:
-        log.info(
-            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
-        )
+        log.info("ZFS filesystem %s already exists. Skipping creation", destination_fs)
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
 
@@ -1762,11 +1728,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                         int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
                     ] or [0]
                     index = min(
-                        [
-                            idx
-                            for idx in range(1, max(indexes) + 2)
-                            if idx not in indexes
-                        ]
+                        idx for idx in range(1, max(indexes) + 2) if idx not in indexes
                     )
                     disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
@@ -1981,7 +1943,8 @@ def _handle_remote_boot_params(orig_boot):
         return new_boot
     else:
         raise SaltInvocationError(
-            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+            "Invalid boot parameters,It has to follow this combination: [(kernel,"
+            " initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
         )
 
 
@@ -2236,9 +2199,6 @@ def init(
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
-    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'`` (Default: ``None``)
-    :param telnet_port: Telnet port to use for serial device of type ``tcp``.
-    :param console: ``True`` to add a console device along with serial one (Default: ``True``)
     :param connection: libvirt connection URI, overriding defaults
 
                        .. versionadded:: 2019.2.0
@@ -2429,7 +2389,7 @@ def init(
         NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
 
     features
-        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        A dictionary contains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
         feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
         ``optional``, ``disable`` or ``forbid``.
 
@@ -3275,10 +3235,10 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").attrib["service"]
+            "port": item.find("source").get("service")
             if item.find("source") is not None
             else None,
-            "protocol": item.find("protocol").attrib["type"]
+            "protocol": item.find("protocol").get("type")
             if item.find("protocol") is not None
             else None,
         }
@@ -4213,7 +4173,7 @@ def update(
                     if (
                         item in changes["disk"]["new"]
                         and source_file
-                        and not os.path.isfile(source_file)
+                        and not os.path.exists(source_file)
                     ):
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
@@ -5458,147 +5418,12 @@ def define_vol_xml_path(path, pool=None, **kwargs):
         return False
 
 
-def migrate_non_shared(vm_, target, ssh=False, **kwargs):
-    """
-    Attempt to execute non-shared storage "all" migration
-
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
-
-        .. deprecated:: 3002
-
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
-
-        .. versionadded:: 3002
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
-
-    A tunnel data migration can be performed by setting this in the
-    configuration:
-
-    .. code-block:: yaml
-
-        virt:
-            tunnel: True
-
-    For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
-    """
-    salt.utils.versions.warn_until(
-        "Silicon",
-        "The 'migrate_non_shared' feature has been deprecated. "
-        "Use 'migrate' with copy_storage='all' instead.",
-    )
-    return migrate(vm_, target, ssh, copy_storage="all", **kwargs)
-
-
-def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
-    """
-    Attempt to execute non-shared storage "inc" migration
-
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
-
-        .. deprecated:: 3002
-
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
-
-        .. versionadded:: 3002
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
-
-    A tunnel data migration can be performed by setting this in the
-    configuration:
-
-    .. code-block:: yaml
-
-        virt:
-            tunnel: True
-
-    For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
-    """
-    salt.utils.versions.warn_until(
-        "Silicon",
-        "The 'migrate_non_shared_inc' feature has been deprecated. "
-        "Use 'migrate' with copy_storage='inc' instead.",
-    )
-    return migrate(vm_, target, ssh, copy_storage="inc", **kwargs)
-
-
-def migrate(vm_, target, ssh=False, **kwargs):
+def migrate(vm_, target, **kwargs):
     """
     Shared storage migration
 
     :param vm_: domain name
     :param target: target libvirt URI or host name
-    :param ssh: True to connect over ssh
-
-       .. deprecated:: 3002
 
     :param kwargs:
         - live:            Use live migration. Default value is True.
@@ -5654,21 +5479,11 @@ def migrate(vm_, target, ssh=False, **kwargs):
     https://libvirt.org/migration.html#transporttunnel
     """
 
-    if ssh:
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "The 'ssh' argument has been deprecated and "
-            "will be removed in a future release. "
-            "Use libvirt URI string 'target' instead.",
-        )
-
     conn = __get_conn()
     dom = _get_domain(conn, vm_)
 
     if not urllib.parse.urlparse(target).scheme:
         proto = "qemu"
-        if ssh:
-            proto += "+ssh"
         dst_uri = "{}://{}/system".format(proto, target)
     else:
         dst_uri = target
@@ -5858,7 +5673,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {}".format(fs_name))
+            log.info("Destroying VM ZFS volume %s", fs_name)
             __salt__["zfs.destroy"](name=fs_name, force=True)
         elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
@@ -5908,12 +5723,7 @@ def _is_kvm_hyper():
     """
     Returns a bool whether or not this node is a KVM hypervisor
     """
-    try:
-        with salt.utils.files.fopen("/proc/modules") as fp_:
-            if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
-                return False
-    except OSError:
-        # No /proc/modules? Are we on Windows? Or Solaris?
+    if not os.path.exists("/dev/kvm"):
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
@@ -5969,7 +5779,6 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
-    sysctl_cmd = "sysctl hw.vmm.create"
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(
@@ -6936,7 +6745,11 @@ def all_capabilities(**kwargs):
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
             [
-                (guest.get("arch", {}).get("name", None), key)
+                (
+                    guest.get("arch", {}).get("name", None),
+                    key,
+                    guest.get("arch", {}).get("emulator", None),
+                )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
             for guest in [
@@ -6954,10 +6767,10 @@ def all_capabilities(**kwargs):
             "domains": [
                 _parse_domain_caps(
                     ElementTree.fromstring(
-                        conn.getDomainCapabilities(None, arch, None, domain)
+                        conn.getDomainCapabilities(emulator, arch, None, domain)
                     )
                 )
-                for (arch, domain) in flattened
+                for (arch, domain, emulator) in flattened
             ],
         }
         return result
@@ -7184,7 +6997,7 @@ def network_define(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -7463,7 +7276,7 @@ def network_update(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -7694,7 +7507,7 @@ def network_info(name=None, **kwargs):
             for net in nets
         }
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8531,7 +8344,7 @@ def pool_info(name=None, **kwargs):
         ]
         result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8948,7 +8761,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
         }
         return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result

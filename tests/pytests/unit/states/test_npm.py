@@ -3,14 +3,34 @@
 """
 
 import pytest
+
+import salt.modules.npm as npmmod
 import salt.states.npm as npm
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
     return {npm: {"__opts__": {"test": False}}}
+
+
+@pytest.fixture(params=["", {}, []])
+def fake_install(request):
+    fake_install = create_autospec(npmmod.install, return_value=request.param)
+    with patch.dict(
+        npm.__salt__,
+        {
+            "npm.list": create_autospec(npmmod.list_, return_value={}),
+            "npm.install": fake_install,
+        },
+    ):
+        yield fake_install
+
+
+def test_when_install_does_not_error_installed_should_be_true(fake_install):
+    ret = npm.installed("fnord")
+    assert ret["result"] is True
 
 
 def test_installed():
