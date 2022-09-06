@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.portage_config as portage_config
 from tests.support.mock import MagicMock, patch
 

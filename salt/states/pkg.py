@@ -67,8 +67,6 @@ state module
     Make sure the package name has the correct case for package managers which are
     case-sensitive (such as :mod:`pkgng <salt.modules.pkgng>`).
 """
-
-
 import fnmatch
 import logging
 import os
@@ -80,53 +78,35 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.modules.pkg_resource import _repack_pkgs
 from salt.output import nested
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
 
-# pylint: disable=invalid-name
-_repack_pkgs = _namespaced_function(_repack_pkgs, globals())
+_repack_pkgs = namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.platform.is_windows():
-    # pylint: disable=import-error,no-name-in-module,unused-import
-    from urllib.parse import urlparse as _urlparse
-    from salt.exceptions import SaltRenderError
-    import collections
-    import datetime
-    import errno
-    import time
-    from functools import cmp_to_key
+    from salt.modules.win_pkg import (
+        _get_latest_pkg_version,
+        _get_package_info,
+        _get_repo_details,
+        _refresh_db_conditional,
+        _repo_process_pkg_sls,
+        _reverse_cmp_pkg_versions,
+        genrepo,
+        get_repo_data,
+        refresh_db,
+    )
 
-    # pylint: disable=import-error
-    # pylint: enable=unused-import
-    from salt.modules.win_pkg import _get_package_info
-    from salt.modules.win_pkg import get_repo_data
-    from salt.modules.win_pkg import _get_repo_details
-    from salt.modules.win_pkg import _refresh_db_conditional
-    from salt.modules.win_pkg import refresh_db
-    from salt.modules.win_pkg import genrepo
-    from salt.modules.win_pkg import _repo_process_pkg_sls
-    from salt.modules.win_pkg import _get_latest_pkg_version
-    from salt.modules.win_pkg import _reverse_cmp_pkg_versions
-
-    _get_package_info = _namespaced_function(_get_package_info, globals())
-    get_repo_data = _namespaced_function(get_repo_data, globals())
-    _get_repo_details = _namespaced_function(_get_repo_details, globals())
-    _refresh_db_conditional = _namespaced_function(_refresh_db_conditional, globals())
-    refresh_db = _namespaced_function(refresh_db, globals())
-    genrepo = _namespaced_function(genrepo, globals())
-    _repo_process_pkg_sls = _namespaced_function(_repo_process_pkg_sls, globals())
-    _get_latest_pkg_version = _namespaced_function(_get_latest_pkg_version, globals())
-    _reverse_cmp_pkg_versions = _namespaced_function(
+    _get_package_info = namespaced_function(_get_package_info, globals())
+    get_repo_data = namespaced_function(get_repo_data, globals())
+    _get_repo_details = namespaced_function(_get_repo_details, globals())
+    _refresh_db_conditional = namespaced_function(_refresh_db_conditional, globals())
+    refresh_db = namespaced_function(refresh_db, globals())
+    genrepo = namespaced_function(genrepo, globals())
+    _repo_process_pkg_sls = namespaced_function(_repo_process_pkg_sls, globals())
+    _get_latest_pkg_version = namespaced_function(_get_latest_pkg_version, globals())
+    _reverse_cmp_pkg_versions = namespaced_function(
         _reverse_cmp_pkg_versions, globals()
     )
-    # The following imports are used by the namespaced win_pkg funcs
-    # and need to be included in their globals.
-    # pylint: disable=import-error,unused-import
-    import salt.utils.msgpack as msgpack
-    from salt.utils.versions import LooseVersion
-
-    # pylint: enable=import-error,unused-import
-# pylint: enable=invalid-name
 
 log = logging.getLogger(__name__)
 
@@ -1820,7 +1800,7 @@ def installed(
         )
 
     comment = []
-    changes = {"installed": {}}
+    changes = {}
     if __opts__["test"]:
         if targets:
             if sources:
@@ -1828,9 +1808,7 @@ def installed(
             else:
                 _targets = [_get_desired_pkg(x, targets) for x in targets]
             summary = ", ".join(targets)
-            changes["installed"].update(
-                {x: {"new": "installed", "old": ""} for x in targets}
-            )
+            changes.update({x: {"new": "installed", "old": ""} for x in targets})
             comment.append(
                 "The following packages would be installed/updated: {}".format(summary)
             )
@@ -1839,9 +1817,7 @@ def installed(
                 "The following packages would have their selection status "
                 "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
             )
-            changes["installed"].update(
-                {x: {"new": "installed", "old": ""} for x in to_unpurge}
-            )
+            changes.update({x: {"new": "installed", "old": ""} for x in to_unpurge})
         if to_reinstall:
             # Add a comment for each package in to_reinstall with its
             # pkg.verify output
@@ -1854,7 +1830,7 @@ def installed(
                         reinstall_targets.append(
                             _get_desired_pkg(reinstall_pkg, to_reinstall)
                         )
-                    changes["installed"].update(
+                    changes.update(
                         {x: {"new": "installed", "old": ""} for x in reinstall_targets}
                     )
                 msg = "The following packages would be reinstalled: "
@@ -1870,7 +1846,7 @@ def installed(
                         "Package '{}' would be reinstalled because the "
                         "following files have been altered:".format(pkgstr)
                     )
-                    changes["installed"].update({reinstall_pkg: {}})
+                    changes.update({reinstall_pkg: {}})
                     comment.append(_nested_output(altered_files[reinstall_pkg]))
         ret = {
             "name": name,
@@ -1922,7 +1898,7 @@ def installed(
             refresh = False
 
         if isinstance(pkg_ret, dict):
-            changes["installed"].update(pkg_ret)
+            changes.update(pkg_ret)
         elif isinstance(pkg_ret, str):
             comment.append(pkg_ret)
             # Code below will be looking for a dictionary. If this is a string
@@ -1979,7 +1955,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes["installed"] if x in targets]
+        modified = [x for x in changes if x in targets]
         not_modified = [
             x for x in desired if x not in targets and x not in to_reinstall
         ]
@@ -2001,11 +1977,6 @@ def installed(
         modified = [x for x in _ok if x in targets]
         not_modified = [x for x in _ok if x not in targets and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
-
-    # If there was nothing unpurged, just set the changes dict to the contents
-    # of changes['installed'].
-    if not changes.get("purge_desired"):
-        changes = changes["installed"]
 
     if modified:
         if sources:

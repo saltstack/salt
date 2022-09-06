@@ -3,9 +3,10 @@ import os
 import zipfile
 
 import pytest
+from saltfactories.utils.functional import MultiStateResult
+
 import salt.utils.files
 import salt.utils.stringutils
-from saltfactories.utils.functional import MultiStateResult
 from tests.support.runtests import RUNTIME_VARS
 
 

@@ -1,0 +1,1 @@
+Added "dig.PTR" function to resolve PTR records for IPs, as well as tests and documentation

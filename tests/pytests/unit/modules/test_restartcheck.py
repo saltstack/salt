@@ -1,6 +1,7 @@
 import io
 
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.restartcheck as restartcheck
 import salt.modules.system as system

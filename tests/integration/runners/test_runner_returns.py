@@ -8,6 +8,7 @@ import socket
 import tempfile
 
 import pytest
+
 import salt.payload
 import salt.utils.args
 import salt.utils.files

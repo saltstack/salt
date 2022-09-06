@@ -16,13 +16,13 @@ HAS_NOVA = False
 # pylint: disable=import-error
 try:
     import novaclient
-    from novaclient import client
-    from novaclient.shell import OpenStackComputeShell
-    import novaclient.utils
     import novaclient.auth_plugin
+    import novaclient.base
     import novaclient.exceptions
     import novaclient.extension
-    import novaclient.base
+    import novaclient.utils
+    from novaclient import client
+    from novaclient.shell import OpenStackComputeShell
 
     HAS_NOVA = True
 except ImportError:

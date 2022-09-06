@@ -6,6 +6,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml

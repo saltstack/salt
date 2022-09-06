@@ -4,6 +4,7 @@ integration tests for mac_pkgutil
 import shutil
 
 import pytest
+
 from salt.exceptions import SaltInvocationError
 
 pytestmark = [

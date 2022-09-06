@@ -1,6 +1,7 @@
 import pathlib
 
 import pytest
+
 import salt.defaults.exitcodes
 
 pytestmark = [
