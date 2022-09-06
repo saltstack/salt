@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 import pytest
-
+import salt.grains.extra
 import salt.modules.cmdmod as cmdmod
 import salt.utils.files
 import salt.utils.platform
@@ -971,9 +971,7 @@ def test_runas_env_sudo_group():
     when group is passed and use_sudo=True
     """
     bundled = [False, True]
-
     for _bundled in bundled:
-
         with patch("pwd.getpwnam") as getpwnam_mock:
             with patch("subprocess.Popen") as popen_mock:
                 popen_mock.return_value = Mock(
@@ -1006,6 +1004,9 @@ def test_runas_env_sudo_group():
                                             shell = "/bin/bash"
                                         _user = "foobar"
                                         _group = "foobar"
+                                        same_shell = False
+                                        if salt.grains.extra.shell()["shell"] == shell:
+                                            same_shell = True
 
                                         cmdmod._run(
                                             "ls",
@@ -1015,9 +1016,7 @@ def test_runas_env_sudo_group():
                                             group=_group,
                                         )
                                         if not _bundled:
-                                            assert popen_mock.call_args_list[0][0][
-                                                0
-                                            ] == [
+                                            exp_ret = [
                                                 "sudo",
                                                 "-u",
                                                 _user,
@@ -1029,10 +1028,23 @@ def test_runas_env_sudo_group():
                                                 "-c",
                                                 sys.executable,
                                             ]
+                                            if same_shell:
+                                                exp_ret = [
+                                                    "sudo",
+                                                    "-u",
+                                                    _user,
+                                                    "-g",
+                                                    _group,
+                                                    "-i",
+                                                    "--",
+                                                    sys.executable,
+                                                ]
+                                            assert (
+                                                popen_mock.call_args_list[0][0][0]
+                                                == exp_ret
+                                            )
                                         else:
-                                            assert popen_mock.call_args_list[0][0][
-                                                0
-                                            ] == [
+                                            exp_ret = [
                                                 "sudo",
                                                 "-u",
                                                 _user,
@@ -1046,3 +1058,20 @@ def test_runas_env_sudo_group():
                                                     sys.executable, file_name
                                                 ),
                                             ]
+                                            if same_shell:
+                                                exp_ret = [
+                                                    "sudo",
+                                                    "-u",
+                                                    _user,
+                                                    "-g",
+                                                    _group,
+                                                    "-i",
+                                                    "--",
+                                                    "{} python {}".format(
+                                                        sys.executable, file_name
+                                                    ),
+                                                ]
+                                            assert (
+                                                popen_mock.call_args_list[0][0][0]
+                                                == exp_ret
+                                            )
