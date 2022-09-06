@@ -440,7 +440,7 @@ def __get_metadata(vm_):
     Get configured metadata and add 'salt-cloud-profile'.
     """
     md = config.get_cloud_config_value(
-        "ex_metadata", vm_, __opts__, default="{}", search_global=False
+        "metadata", vm_, __opts__, default="{}", search_global=False
     )
     # Consider warning the user that the metadata in the cloud profile
     # could not be interpreted, bad formatting?
