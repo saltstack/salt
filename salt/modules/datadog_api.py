@@ -15,6 +15,7 @@ https://docs.datadoghq.com/api/
 
 
 import requests
+
 from salt.exceptions import SaltInvocationError
 
 HAS_DATADOG = True

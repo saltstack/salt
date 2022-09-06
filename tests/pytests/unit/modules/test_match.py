@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.loader
 import salt.matchers.compound_match as compound_match
 import salt.matchers.glob_match as glob_match

@@ -33,8 +33,8 @@ try:
         from twilio.rest import TwilioException as TwilioRestException
     else:
         TWILIO_5 = True
-        from twilio.rest import TwilioRestClient
         from twilio import TwilioRestException  # pylint: disable=no-name-in-module
+        from twilio.rest import TwilioRestClient
     HAS_LIBS = True
 except ImportError:
     pass

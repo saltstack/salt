@@ -7,6 +7,7 @@ import logging
 import time
 
 import pytest
+
 import salt.defaults.events
 
 log = logging.getLogger(__name__)

@@ -1,9 +1,10 @@
 import pytest
-import salt.serializers.toml
+
+import salt.serializers.tomlmod
 
 
 @pytest.mark.skipif(
-    salt.serializers.toml.HAS_TOML is False, reason="The 'toml' library is missing"
+    salt.serializers.tomlmod.HAS_TOML is False, reason="The 'toml' library is missing"
 )
 def test_toml_renderer(salt_call_cli, tmp_path, base_env_state_tree_root_dir):
     config_file_path = tmp_path / "config.toml"

@@ -6,6 +6,7 @@ Test case for the consul state module
 import logging
 
 import pytest
+
 import salt.states.consul as consul
 from tests.support.mock import MagicMock, patch
 

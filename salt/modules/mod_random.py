@@ -7,14 +7,11 @@ Provides access to randomness generators.
 """
 
 import base64
-import hashlib
 import random
 
+import salt.utils.data
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
-from salt.utils.decorators.jinja import jinja_filter
-
-ALGORITHMS_ATTR_NAME = "algorithms_guaranteed"
 
 # Define the module's virtual name
 __virtualname__ = "random"
@@ -43,24 +40,7 @@ def hash(value, algorithm="sha512"):
 
         salt '*' random.hash 'I am a string' md5
     """
-    if isinstance(value, str):
-        # Under Python 3 we must work with bytes
-        value = value.encode(__salt_system_encoding__)
-
-    if hasattr(hashlib, ALGORITHMS_ATTR_NAME) and algorithm in getattr(
-        hashlib, ALGORITHMS_ATTR_NAME
-    ):
-        hasher = hashlib.new(algorithm)
-        hasher.update(value)
-        out = hasher.hexdigest()
-    elif hasattr(hashlib, algorithm):
-        hasher = hashlib.new(algorithm)
-        hasher.update(value)
-        out = hasher.hexdigest()
-    else:
-        raise SaltInvocationError("You must specify a valid algorithm.")
-
-    return out
+    return salt.utils.data.hash(value, algorithm=algorithm)
 
 
 def str_encode(value, encoder="base64"):
@@ -280,7 +260,6 @@ def seed(range=10, hash=None):
     return random.randrange(range)
 
 
-@jinja_filter("random_sample")
 def sample(value, size, seed=None):
     """
     Return a given sample size from a list. By default, the random number
@@ -303,14 +282,9 @@ def sample(value, size, seed=None):
 
         salt '*' random.sample '["one", "two"]' 1 seed="something"
     """
-    if seed is None:
-        ret = random.sample(value, size)
-    else:
-        ret = random.Random(hash(seed)).sample(value, size)
-    return ret
+    return salt.utils.data.sample(value, size, seed=seed)
 
 
-@jinja_filter("random_shuffle")
 def shuffle(value, seed=None):
     """
     Return a shuffled copy of an input list. By default, the random number
@@ -330,4 +304,4 @@ def shuffle(value, seed=None):
 
         salt '*' random.shuffle '["one", "two"]' seed="something"
     """
-    return sample(value, len(value), seed=seed)
+    return salt.utils.data.shuffle(value, seed=seed)

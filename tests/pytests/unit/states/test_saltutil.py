@@ -5,6 +5,7 @@
 import inspect
 
 import pytest
+
 import salt.modules.saltutil as saltutil_module
 import salt.states.saltutil as saltutil_state
 from tests.support.mock import MagicMock, patch

@@ -77,6 +77,7 @@ from salt.exceptions import (
 
 try:
     import xmlrpc.client
+
     from lxml import etree
 
     HAS_XML_LIBS = True
