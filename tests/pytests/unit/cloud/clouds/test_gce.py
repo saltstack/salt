@@ -51,8 +51,8 @@ def configure_loader_modules():
 
 @pytest.fixture(
     params=[
-        {"expected": "debian-7", "image": ""},
-        {"expected": "debian-7", "image": None},
+        {"expected": "", "image": ""},
+        {"expected": None, "image": None},
         {"expected": "debian-10", "image": "debian-10"},
     ]
 )

@@ -369,12 +369,9 @@ def __get_image(conn, vm_):
     The get_image for GCE allows partial name matching and returns a
     libcloud object.
     """
-    default_img = "debian-7"
     img = config.get_cloud_config_value(
-        "image", vm_, __opts__, default=default_img, search_global=False
+        "image", vm_, __opts__, default="debian-7", search_global=False
     )
-    if not img or not isinstance(img, str):
-        img = default_img
     return conn.ex_get_image(img)
 
 
