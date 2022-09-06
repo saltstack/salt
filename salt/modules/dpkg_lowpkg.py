@@ -278,7 +278,7 @@ def _get_pkg_info(*packages, **kwargs):
     cmd += " {}".format(" ".join(packages))
     cmd = cmd.strip()
 
-    call = __salt__["cmd.run_all"](cmd, python_chell=False)
+    call = __salt__["cmd.run_all"](cmd, python_shell=False)
     if call["retcode"]:
         if failhard:
             raise CommandExecutionError(
