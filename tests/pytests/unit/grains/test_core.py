@@ -2740,6 +2740,26 @@ def test_kernelparams_return_linux(cmdline, expectation):
         assert core.kernelparams() == expectation
 
 
+def test_kernelparams_return_linux_non_utf8():
+    def _open_mock(file_name, *args, **kwargs):
+        return open(
+            pathlib.Path(__file__).parent.joinpath("proc-files").joinpath("cmdline"),
+            *args,
+            **kwargs
+        )
+
+    expected = {
+        "kernelparams": [
+            ("TEST_KEY1", "VAL1"),
+            ("TEST_KEY2", "VAL2"),
+            ("TEST_KEY_NOVAL", None),
+            ("TEST_KEY3", "3"),
+        ]
+    }
+    with patch("salt.utils.files.fopen", _open_mock):
+        assert core.kernelparams() == expected
+
+
 def test_linux_gpus():
     """
     Test GPU detection on Linux systems
@@ -2993,3 +3013,69 @@ def test_linux_devicetree_data(test_input, expected):
     with patch("os.path.isfile", return_value=True):
         with patch("salt.utils.files.fopen", new=_mock_open):
             assert expected == core._linux_devicetree_platform_data()
+
+
+@pytest.mark.skip_on_windows
+def test_linux_proc_files_with_non_utf8_chars():
+    def _mock_open(filename, *args, **kwargs):
+        return open(
+            pathlib.Path(__file__).parent.joinpath("proc-files").joinpath("cmdline-1"),
+            *args,
+            **kwargs
+        )
+
+    empty_mock = MagicMock(return_value={})
+
+    with patch("os.path.isfile", return_value=False), patch(
+        "salt.utils.files.fopen", _mock_open
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+        },
+    ), patch.object(
+        core, "_linux_bin_exists", return_value=False
+    ), patch.object(
+        core, "_parse_lsb_release", return_value=empty_mock
+    ), patch.object(
+        core, "_parse_os_release", return_value=empty_mock
+    ), patch.object(
+        core, "_hw_data", return_value=empty_mock
+    ), patch.object(
+        core, "_virtual", return_value=empty_mock
+    ), patch.object(
+        os, "stat", side_effect=OSError()
+    ):
+        os_grains = core.os_data()
+        assert os_grains != {}
+
+
+@pytest.mark.skip_on_windows
+def test_virtual_linux_proc_files_with_non_utf8_chars():
+    def _is_file_mock(filename):
+        if filename == "/proc/1/environ":
+            return True
+        return False
+
+    def _mock_open(filename, *args, **kwargs):
+        return open(
+            pathlib.Path(__file__).parent.joinpath("proc-files").joinpath("environ"),
+            *args,
+            **kwargs
+        )
+
+    with patch("os.path.isfile", _is_file_mock), patch(
+        "salt.utils.files.fopen", _mock_open
+    ), patch.object(
+        salt.utils.path, "which", MagicMock(return_value=None)
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"retcode": 1, "stderr": "", "stdout": ""}
+            ),
+            "cmd.run": MagicMock(return_value=""),
+        },
+    ):
+        virt_grains = core._virtual({"kernel": "Linux"})
+        assert virt_grains == {"virtual": "physical"}
