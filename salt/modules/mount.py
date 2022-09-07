@@ -882,9 +882,6 @@ def set_fstab(
                 line = salt.utils.stringutils.to_unicode(line)
                 try:
                     if criteria.match(line):
-                        log.debug(
-                            "Checking ( %s ) against current line ( %s )", entry, line
-                        )
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = "present"
