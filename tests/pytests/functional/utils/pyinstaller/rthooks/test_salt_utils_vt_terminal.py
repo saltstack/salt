@@ -94,6 +94,7 @@ def test_vt_terminal_environ_cleanup(envvar, meipass):
                 "-c",
                 "import os, json; print(json.dumps(dict(os.environ)))",
             ],
+            env={},
             stream_stdout=False,
             stream_stderr=False,
         )
