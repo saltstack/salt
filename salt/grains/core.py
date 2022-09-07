@@ -1109,7 +1109,9 @@ def _virtual(osdata):
         if ("virtual_subtype" not in grains) or (grains["virtual_subtype"] != "LXC"):
             if os.path.isfile("/proc/1/environ"):
                 try:
-                    with salt.utils.files.fopen("/proc/1/environ", "r", errors="ignore") as fhr:
+                    with salt.utils.files.fopen(
+                        "/proc/1/environ", "r", errors="ignore"
+                    ) as fhr:
                         fhr_contents = fhr.read()
                     if "container=lxc" in fhr_contents:
                         grains["virtual"] = "container"
@@ -1960,7 +1962,9 @@ def os_data():
             grains["init"] = "systemd"
         except OSError:
             try:
-                with salt.utils.files.fopen("/proc/1/cmdline", "r", errors="ignore") as fhr:
+                with salt.utils.files.fopen(
+                    "/proc/1/cmdline", "r", errors="ignore"
+                ) as fhr:
                     init_cmdline = fhr.read().replace("\x00", " ").split()
             except OSError:
                 pass

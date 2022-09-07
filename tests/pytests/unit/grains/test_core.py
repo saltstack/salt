@@ -3066,9 +3066,7 @@ def test_virtual_linux_proc_files_with_non_utf8_chars():
 
     with patch("os.path.isfile", _is_file_mock), patch(
         "salt.utils.files.fopen", _mock_open
-    ), patch.object(
-        salt.utils.path, "which", MagicMock(return_value=None)
-    ), patch.dict(
+    ), patch.object(salt.utils.path, "which", MagicMock(return_value=None)), patch.dict(
         core.__salt__,
         {
             "cmd.run_all": MagicMock(
