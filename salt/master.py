@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 
+import tornado
 import tornado.gen
 
 import salt.acl
@@ -2338,7 +2339,7 @@ class ClearFuncs(TransportMethods):
             functools.partial(self._prep_jid, clear_load, {}),
             batch_load,
         )
-        ioloop = salt.ext.tornado.ioloop.IOLoop.current()
+        ioloop = tornado.ioloop.IOLoop.current()
         ioloop.add_callback(batch.start)
 
         return {

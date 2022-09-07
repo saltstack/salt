@@ -96,7 +96,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         if payload.get("load", {}).get("raise_exception", False):
             raise Exception(payload["load"]["raise_exception"])
         if payload.get("load", {}).get("server_side_exception", False):
-            raise salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
+            raise tornado.gen.Return(({}, {"fun": "madeup-fun"}))
         if self.req_channel_crypt == "clear":
             raise tornado.gen.Return((payload, {"fun": "send_clear"}))
         raise tornado.gen.Return((payload, {"fun": "send"}))

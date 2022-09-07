@@ -1,6 +1,6 @@
 import pytest
+import tornado
 
-import salt.ext.tornado
 from salt.cli.batch_async import BatchAsync
 from tests.support.mock import MagicMock, patch
 
@@ -57,10 +57,10 @@ def test_batch_size(batch):
 def test_batch_start_on_batch_presence_ping_timeout(batch):
     # batch_async = BatchAsyncMock();
     batch.event = MagicMock()
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({"minions": ["foo", "bar"]})
     batch.local.run_job_async.return_value = future
-    with patch("salt.ext.tornado.gen.sleep", return_value=future):
+    with patch("tornado.gen.sleep", return_value=future):
         # ret = batch_async.start(batch)
         ret = batch.start()
         # assert start_batch is called later with batch_presence_ping_timeout as param
@@ -74,11 +74,11 @@ def test_batch_start_on_batch_presence_ping_timeout(batch):
 def test_batch_start_on_gather_job_timeout(batch):
     # batch_async = BatchAsyncMock();
     batch.event = MagicMock()
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({"minions": ["foo", "bar"]})
     batch.local.run_job_async.return_value = future
     batch.batch_presence_ping_timeout = None
-    with patch("salt.ext.tornado.gen.sleep", return_value=future):
+    with patch("tornado.gen.sleep", return_value=future):
         # ret = batch_async.start(batch)
         ret = batch.start()
         # assert start_batch is called later with gather_job_timeout as param
@@ -162,10 +162,10 @@ def test_batch_next(batch):
     batch.opts["arg"] = []
     batch._get_next = MagicMock(return_value={"foo", "bar"})
     batch.batch_size = 2
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({"minions": ["foo", "bar"]})
     batch.local.run_job_async.return_value = future
-    with patch("salt.ext.tornado.gen.sleep", return_value=future):
+    with patch("tornado.gen.sleep", return_value=future):
         batch.run_next()
         assert batch.local.run_job_async.call_args[0] == (
             {"foo", "bar"},
@@ -305,12 +305,12 @@ def test_batch_run_next_end_batch_when_no_next(batch):
 
 def test_batch_find_job(batch):
     batch.event = MagicMock()
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     batch.local.run_job_async.return_value = future
     batch.minions = {"foo", "bar"}
     batch.jid_gen = MagicMock(return_value="1234")
-    with patch("salt.ext.tornado.gen.sleep", return_value=future):
+    with patch("tornado.gen.sleep", return_value=future):
         batch.find_job({"foo", "bar"})
         assert batch.event.io_loop.spawn_callback.call_args[0] == (
             batch.check_find_job,
@@ -322,12 +322,12 @@ def test_batch_find_job(batch):
 def test_batch_find_job_with_done_minions(batch):
     batch.done_minions = {"bar"}
     batch.event = MagicMock()
-    future = salt.ext.tornado.gen.Future()
+    future = tornado.gen.Future()
     future.set_result({})
     batch.local.run_job_async.return_value = future
     batch.minions = {"foo", "bar"}
     batch.jid_gen = MagicMock(return_value="1234")
-    with patch("salt.ext.tornado.gen.sleep", return_value=future):
+    with patch("tornado.gen.sleep", return_value=future):
         batch.find_job({"foo", "bar"})
         assert batch.event.io_loop.spawn_callback.call_args[0] == (
             batch.check_find_job,
