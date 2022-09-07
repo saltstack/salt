@@ -97,9 +97,9 @@ def _gather_buffer_space():
 
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
-_DFLT_IPC_WBUFFER = _gather_buffer_space() * 0.5
+_DFLT_IPC_WBUFFER = int(_gather_buffer_space() * 0.5)
 # TODO: Reserved for future use
-_DFLT_IPC_RBUFFER = _gather_buffer_space() * 0.5
+_DFLT_IPC_RBUFFER = int(_gather_buffer_space() * 0.5)
 
 VALID_OPTS = immutabletypes.freeze(
     {
