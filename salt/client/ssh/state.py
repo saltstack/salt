@@ -47,7 +47,7 @@ class SSHState(salt.state.State):
         self.states = salt.loader.states(
             self.opts, locals_, self.utils, self.serializers
         )
-        self.rend = salt.loader.render(self.opts, self.wrapper)
+        self.rend = salt.loader.render(self.opts, locals_)
 
     def check_refresh(self, data, ret):
         """
