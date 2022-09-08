@@ -1,0 +1,1 @@
+Fix a hang on salt-ssh when using sudo.
