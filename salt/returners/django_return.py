@@ -1,4 +1,10 @@
 """
+.. deprecated:: 3006
+
+.. warning::
+
+    This module has been deprecated and will be removed after January 2024.
+
 A returner that will inform a Django system that
 returns are available using Django's signal system.
 
@@ -51,7 +57,7 @@ __virtualname__ = "django"
 
 def __virtual__():
     warn_until_date(
-        "20250101",
+        "20240101",
         "The django returner is broken and deprecated, and will be removed"
         " after {date}.",
     )
