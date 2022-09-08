@@ -629,7 +629,7 @@ will be automatically accepted and have :py:func:`state.apply
 <salt.modules.state.apply_>` executed. On top of this, we're going to add that
 a host coming up that was replaced (meaning a new key) will also be accepted.
 
-Our master configuration will be rather simple. All minions that attempte to
+Our master configuration will be rather simple. All minions that attempt to
 authenticate will match the :strong:`tag` of :strong:`salt/auth`. When it comes
 to the minion key being accepted, we get a more refined :strong:`tag` that
 includes the minion id, which we can use for matching.
