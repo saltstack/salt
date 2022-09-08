@@ -1,0 +1,1 @@
+Fix the Pyinstaller hooks to preserve the environment if None is passed.
