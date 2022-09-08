@@ -2740,9 +2740,12 @@ def test_kernelparams_return_linux(cmdline, expectation):
         assert core.kernelparams() == expectation
 
 
+@pytest.mark.skip_unless_on_linux
 def test_kernelparams_return_linux_non_utf8():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
     def _open_mock(file_name, *args, **kwargs):
-        return open(
+        return _salt_utils_files_fopen(
             pathlib.Path(__file__).parent.joinpath("proc-files").joinpath("cmdline"),
             *args,
             **kwargs
@@ -3017,8 +3020,10 @@ def test_linux_devicetree_data(test_input, expected):
 
 @pytest.mark.skip_on_windows
 def test_linux_proc_files_with_non_utf8_chars():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
     def _mock_open(filename, *args, **kwargs):
-        return open(
+        return _salt_utils_files_fopen(
             pathlib.Path(__file__).parent.joinpath("proc-files").joinpath("cmdline-1"),
             *args,
             **kwargs
@@ -3032,6 +3037,7 @@ def test_linux_proc_files_with_non_utf8_chars():
         core.__salt__,
         {
             "cmd.retcode": salt.modules.cmdmod.retcode,
+            "cmd.run": MagicMock(return_value=""),
         },
     ), patch.object(
         core, "_linux_bin_exists", return_value=False
@@ -3044,6 +3050,8 @@ def test_linux_proc_files_with_non_utf8_chars():
     ), patch.object(
         core, "_virtual", return_value=empty_mock
     ), patch.object(
+        core, "_bsd_cpudata", return_value=empty_mock
+    ), patch.object(
         os, "stat", side_effect=OSError()
     ):
         os_grains = core.os_data()
@@ -3052,17 +3060,19 @@ def test_linux_proc_files_with_non_utf8_chars():
 
 @pytest.mark.skip_on_windows
 def test_virtual_linux_proc_files_with_non_utf8_chars():
-    def _is_file_mock(filename):
-        if filename == "/proc/1/environ":
-            return True
-        return False
+    _salt_utils_files_fopen = salt.utils.files.fopen
 
     def _mock_open(filename, *args, **kwargs):
-        return open(
+        return _salt_utils_files_fopen(
             pathlib.Path(__file__).parent.joinpath("proc-files").joinpath("environ"),
             *args,
             **kwargs
         )
+
+    def _is_file_mock(filename):
+        if filename == "/proc/1/environ":
+            return True
+        return False
 
     with patch("os.path.isfile", _is_file_mock), patch(
         "salt.utils.files.fopen", _mock_open
