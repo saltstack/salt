@@ -6,25 +6,6 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
-def state_tree(base_env_state_tree_root_dir, salt_ssh_cli):
-    name = "echo"
-    state_file = """
-    ssh_test_echo:
-      test.show_notification:
-        - text: {{{{ salt['test.echo']('hello') }}}}
-        - template: jinja
-    """.format(
-        user=salt_ssh_cli.ssh_user
-    )
-    state_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(name), state_file, base_env_state_tree_root_dir
-    )
-
-    with state_tempfile:
-        yield name
-
-
 @pytest.mark.slow_test
 def test_echo(salt_ssh_cli, base_env_state_tree_root_dir):
     """
@@ -36,7 +17,6 @@ def test_echo(salt_ssh_cli, base_env_state_tree_root_dir):
     ssh_test_echo:
       test.show_notification:
         - text: {{{{ salt['test.echo']('{echo}') }}}}
-        - template: jinja
     """.format(
         echo=echo
     )
