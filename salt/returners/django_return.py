@@ -32,6 +32,7 @@ import logging
 # Import Salt libraries
 import salt.returners
 import salt.utils.jid
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +50,11 @@ __virtualname__ = "django"
 
 
 def __virtual__():
+    warn_until_date(
+        "20250101",
+        "The django returner is broken and deprecated, and will be removed"
+        " after {date}.",
+    )
     if not HAS_DJANGO:
         return False, "Could not import django returner; django is not installed."
     return True
