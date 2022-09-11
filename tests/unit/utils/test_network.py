@@ -111,6 +111,12 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 """
 
+OPENBSD_NETSTAT = """\
+Active Internet connections
+Proto   Recv-Q Send-Q  Local Address          Foreign Address        (state)
+tcp          0      0  127.0.0.1.61115        127.0.0.1.4506         ESTABLISHED
+"""
+
 LINUX_NETLINK_SS_OUTPUT = """\
 State       Recv-Q Send-Q                                                            Local Address:Port                                                                           Peer Address:Port
 TIME-WAIT   0      0                                                                         [::1]:8009                                                                                  [::1]:40368
@@ -637,6 +643,20 @@ class NetworkTestCase(TestCase):
         with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
             remotes = network._netlink_tool_remote_on("4505", "remote_port")
             self.assertEqual(remotes, {"127.0.0.1", "::ffff:1.2.3.4"})
+
+    def test_openbsd_remotes_on(self):
+        with patch("subprocess.check_output", return_value=OPENBSD_NETSTAT):
+            remotes = network._openbsd_remotes_on("4506", "remote")
+            self.assertEqual(remotes, {"127.0.0.1"})
+
+    def test_openbsd_remotes_on_issue_61966(self):
+        """
+        Test that the command output is correctly converted to string before
+        treating it as such
+        """
+        with patch("subprocess.check_output", return_value=OPENBSD_NETSTAT.encode()):
+            remotes = network._openbsd_remotes_on("4506", "remote")
+            self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_generate_minion_id_distinct(self):
         """

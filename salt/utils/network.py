@@ -1918,11 +1918,11 @@ def _openbsd_remotes_on(port, which_end):
         data = subprocess.check_output(
             ["netstat", "-nf", "inet"]
         )  # pylint: disable=minimum-python-version
-    except subprocess.CalledProcessError:
-        log.error("Failed netstat")
+    except subprocess.CalledProcessError as exc:
+        log.error('Failed "netstat" with returncode = %s', exc.returncode)
         raise
 
-    lines = data.split("\n")
+    lines = salt.utils.stringutils.to_str(data).split("\n")
     for line in lines:
         if "ESTABLISHED" not in line:
             continue
