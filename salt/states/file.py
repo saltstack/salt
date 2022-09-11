@@ -7300,6 +7300,7 @@ def copy_(
     user=None,
     group=None,
     mode=None,
+    dir_mode=None,
     subdir=False,
     **kwargs
 ):
@@ -7356,6 +7357,17 @@ def copy_(
 
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
+
+    dir_mode
+        .. versionadded:: 3006
+
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
+
+        The default mode for new files and directories corresponds to the umask
+        of the salt process. Not enforced for existing files and directories.
 
     subdir
         .. versionadded:: 2015.5.0
@@ -7482,8 +7494,18 @@ def copy_(
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
+            if dir_mode is None and mode is not None:
+                # Add execute bit to each nonzero digit in the mode, if
+                # dir_mode was not specified. Otherwise, any
+                # directories created with makedirs_() below can't be
+                # listed via a shell.
+                mode_list = [x for x in str(mode)][-3:]
+                for idx, part in enumerate(mode_list):
+                    if part != "0":
+                        mode_list[idx] = str(int(part) | 1)
+                dir_mode = "".join(mode_list)
             try:
-                _makedirs(name=name, user=user, group=group, dir_mode=mode)
+                _makedirs(name=name, user=user, group=group, dir_mode=dir_mode)
             except CommandExecutionError as exc:
                 return _error(ret, "Drive {} is not mapped".format(exc.message))
         else:
