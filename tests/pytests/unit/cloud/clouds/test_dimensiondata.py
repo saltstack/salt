@@ -21,9 +21,6 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
-
-VM_NAME = "winterfell"
-
 # Use certifi if installed
 try:
     if HAS_LIBCLOUD:
@@ -38,6 +35,11 @@ try:
             libcloud.security.CA_CERTS_PATH.append(certifi.where())
 except (ImportError, NameError):
     pass
+
+
+@pytest.fixture
+def vm_name():
+    return "winterfell"
 
 
 def _preferred_ip(ip_set, preferred=None):
@@ -114,13 +116,13 @@ def test_list_nodes_call():
         dimensiondata.list_nodes(call="action")
 
 
-def test_destroy_call():
+def test_destroy_call(vm_name):
     """
     Tests that a SaltCloudSystemExit is raised when trying to call destroy
     with --function or -f.
     """
     with pytest.raises(SaltCloudSystemExit):
-        dimensiondata.destroy(name=VM_NAME, call="function")
+        dimensiondata.destroy(name=vm_name, call="function")
 
 
 @pytest.mark.skipif(
