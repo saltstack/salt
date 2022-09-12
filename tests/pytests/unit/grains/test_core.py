@@ -2755,6 +2755,7 @@ def test_kernelparams_return_linux_non_utf8():
         "kernelparams": [
             ("TEST_KEY1", "VAL1"),
             ("TEST_KEY2", "VAL2"),
+            ("BOOTABLE_FLAG", "\udc80"),
             ("TEST_KEY_NOVAL", None),
             ("TEST_KEY3", "3"),
         ]
