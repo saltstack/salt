@@ -53,7 +53,7 @@ def test_adding_repo_file(pkgrepo, tmp_path):
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed")
-def test_adding_repo_file_arch(pkgrepo, tmp_path):
+def test_adding_repo_file_arch(pkgrepo, tmp_path, subtests):
     """
     test adding a repo file using pkgrepo.managed
     and setting architecture
@@ -67,6 +67,17 @@ def test_adding_repo_file_arch(pkgrepo, tmp_path):
             file_content.strip()
             == "deb [arch=amd64] http://www.deb-multimedia.org stable main"
         )
+    with subtests.test("With multiple archs"):
+        repo_content = (
+            "deb [arch=amd64,i386  ] http://www.deb-multimedia.org stable main"
+        )
+        pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+        with salt.utils.files.fopen(repo_file, "r") as fp:
+            file_content = fp.read()
+            assert (
+                file_content.strip()
+                == "deb [arch=amd64,i386] http://www.deb-multimedia.org stable main"
+            )
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed")
