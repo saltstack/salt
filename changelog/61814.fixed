@@ -1,0 +1,1 @@
+Fixed malformed state return when merge-serializing to an improperly formatted file
