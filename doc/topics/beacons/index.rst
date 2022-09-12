@@ -139,7 +139,7 @@ original contents if a change was made.
 
 .. note::
     The inotify beacon requires Pyinotify on the minion, install it using
-    ``salt myminion pkg.install python-inotify``.
+    ``salt myminion pkg.install python3-pyinotify``.
 
 Create Watched File
 -------------------
