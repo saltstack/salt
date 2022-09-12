@@ -1,4 +1,5 @@
 import pytest
+
 import salt.tops.mongo
 from tests.support.mock import patch
 

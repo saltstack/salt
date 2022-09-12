@@ -2,10 +2,11 @@ import logging
 import time
 
 import pytest
-import salt.modules.mongodb as mongo_mod
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
+
+import salt.modules.mongodb as mongo_mod
 
 docker = pytest.importorskip("docker")
 

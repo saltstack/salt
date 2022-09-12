@@ -5,6 +5,7 @@
 import pytest
 
 import salt.modules.mongodb as mongodb
+import salt.modules.mongodb
 from tests.support.mock import MagicMock, patch
 
 try:
