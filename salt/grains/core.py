@@ -3171,7 +3171,9 @@ def kernelparams():
         return {}
     else:
         try:
-            with salt.utils.files.fopen("/proc/cmdline", "r", errors="ignore") as fhr:
+            with salt.utils.files.fopen(
+                "/proc/cmdline", "r", errors="surrogateescape"
+            ) as fhr:
                 cmdline = fhr.read()
                 grains = {"kernelparams": []}
                 for data in [
