@@ -166,7 +166,7 @@ salt/proxy/*:
   - pytests.integration.proxy.test_simple
 
 salt/state.py:
-  - integration.modules.test_state_jinja_filters
+  - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_compiler
   - integration.states.test_handle_error
   - integration.states.test_handle_iorder
@@ -177,7 +177,7 @@ salt/utils/decorators/*:
   - integration.modules.test_decorators
 
 salt/(utils|renderers)/jinja\.py:
-  - integration.modules.test_state_jinja_filters
+  - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
 
 salt/utils/minions.py:
@@ -194,13 +194,13 @@ salt/cli/daemons.py:
 
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
-  - integration.ssh.test_deploy
+  - pytests.integration.ssh.test_deploy
   - pytests.integration.ssh.test_grains
-  - integration.ssh.test_jinja_filters
-  - integration.ssh.test_master
-  - integration.ssh.test_mine
+  - pytests.integration.ssh.test_mine
+  - pytests.integration.ssh.test_master
+  - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
-  - integration.ssh.test_raw
+  - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
 
@@ -303,10 +303,10 @@ salt/utils/schedule.py:
 salt/utils/vt.py:
   - integration.cli.test_custom_module
   - pytests.integration.ssh.test_grains
-  - integration.ssh.test_jinja_filters
-  - integration.ssh.test_mine
+  - pytests.integration.ssh.test_mine
+  - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
-  - integration.ssh.test_raw
+  - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
 
 salt/wheel/*:
