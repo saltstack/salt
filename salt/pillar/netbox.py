@@ -82,6 +82,11 @@ api_query_result_limit: ``Use NetBox default``
     An integer specifying how many results should be returned for each query
     to the NetBox API. Leaving this unset will use NetBox's default value.
 
+connected_devices: ``False``
+    .. versionadded:: 3006.0
+    Whether connected_devices key should be populated with device objects.
+    If set to True it will force `interfaces` to also be true as a dependency
+
 Note that each option you enable can have a detrimental impact on pillar
 performance, so use them with caution.
 
@@ -777,6 +782,37 @@ def _get_site_details(api_url, minion_id, site_name, site_id, headers):
         return site_details_ret["dict"]
 
 
+def _get_connected_devices(api_url, minion_id, interfaces, headers):
+    log.debug('Retrieving connected devices for "%s"', minion_id)
+    connected_devices_result = {}
+    connected_devices_ids = []
+    for int_short in interfaces:
+        if "connected_endpoints" in int_short.keys():
+            if int_short["connected_endpoints"]:
+                for device_short in int_short["connected_endpoints"]:
+                    if not device_short["device"]["id"] in connected_devices_ids:
+                        connected_devices_ids.append(device_short["device"]["id"])
+    log.debug("connected_devices_ids: %s", connected_devices_ids)
+
+    for dev_id in connected_devices_ids:
+        device_url = "{api_url}/{app}/{endpoint}/{dev_id}".format(
+            api_url=api_url, app="dcim", endpoint="devices", dev_id=dev_id
+        )
+        device_results = []
+        device_ret = salt.utils.http.query(device_url, header_dict=headers, decode=True)
+        if "error" in device_ret:
+            log.error(
+                'API query failed for "%s", status code: %d, error %s',
+                minion_id,
+                device_ret["status"],
+                device_ret["error"],
+            )
+        else:
+            connected_devices_result[dev_id] = dict(device_ret["dict"])
+
+    return connected_devices_result
+
+
 def _get_site_prefixes(
     api_url, minion_id, site_name, site_id, headers, api_query_result_limit
 ):
@@ -876,6 +912,13 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     site_prefixes = kwargs.get("site_prefixes", True)
     proxy_username = kwargs.get("proxy_username", None)
     proxy_return = kwargs.get("proxy_return", True)
+    connected_devices = kwargs.get("connected_devices", False)
+    if connected_devices and not interfaces:
+        # connected_devices logic requires interfaces to be populated
+        interfaces = True
+        log.debug(
+            "netbox pillar interfaces set to 'True' as connected_devices is 'True'"
+        )
     api_query_result_limit = kwargs.get("api_query_result_limit")
 
     ret = {}
@@ -950,6 +993,10 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     if site_prefixes:
         ret["netbox"]["site"]["prefixes"] = _get_site_prefixes(
             api_url, minion_id, site_name, site_id, headers, api_query_result_limit
+        )
+    if connected_devices:
+        ret["netbox"]["connected_devices"] = _get_connected_devices(
+            api_url, minion_id, ret["netbox"]["interfaces"], headers
         )
     if proxy_return:
         if ret["netbox"]["platform"]:
