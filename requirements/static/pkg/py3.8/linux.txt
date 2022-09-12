@@ -39,6 +39,8 @@ jaraco.text==3.5.1
     # via jaraco.collections
 jinja2==3.1.0
     # via -r requirements/base.txt
+jmespath==1.0.1
+    # via -r requirements/base.txt
 markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
