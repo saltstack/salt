@@ -23,13 +23,17 @@ def test_add():
     """
     Tests if specified group was added
     """
-    mock = MagicMock(return_value={"retcode": 0})
-    with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
-        assert groupadd.add("test", 100) is True
-
-    with patch.dict(groupadd.__grains__, {"kernel": "Linux"}):
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(side_effect=["/bin/groupadd", "/bin/groupadd"]),
+    ):
+        mock = MagicMock(return_value={"retcode": 0})
         with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
-            assert groupadd.add("test", 100, True) is True
+            assert groupadd.add("test", 100) is True
+
+        with patch.dict(groupadd.__grains__, {"kernel": "Linux"}):
+            with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
+                assert groupadd.add("test", 100, True) is True
 
 
 def test_info():
@@ -76,20 +80,28 @@ def test_chgid():
     """
     Tests the gid for a named group was changed
     """
-    mock = MagicMock(return_value=None)
-    with patch.dict(groupadd.__salt__, {"cmd.run": mock}):
-        mock = MagicMock(side_effect=[{"gid": 10}, {"gid": 500}])
-        with patch.object(groupadd, "info", mock):
-            assert groupadd.chgid("test", 500) is True
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="/bin/groupmod"),
+    ):
+        mock = MagicMock(return_value=None)
+        with patch.dict(groupadd.__salt__, {"cmd.run": mock}):
+            mock = MagicMock(side_effect=[{"gid": 10}, {"gid": 500}])
+            with patch.object(groupadd, "info", mock):
+                assert groupadd.chgid("test", 500) is True
 
 
 def test_delete():
     """
     Tests if the specified group was deleted
     """
-    mock_ret = MagicMock(return_value={"retcode": 0})
-    with patch.dict(groupadd.__salt__, {"cmd.run_all": mock_ret}):
-        assert groupadd.delete("test") is True
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="/bin/groupdel"),
+    ):
+        mock_ret = MagicMock(return_value={"retcode": 0})
+        with patch.dict(groupadd.__salt__, {"cmd.run_all": mock_ret}):
+            assert groupadd.delete("test") is True
 
 
 def test_adduser():
