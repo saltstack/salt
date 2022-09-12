@@ -1,4 +1,5 @@
 import pytest
+
 import salt.returners.mongo_return as mongo_return
 from tests.support.mock import patch
 
