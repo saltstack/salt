@@ -13,7 +13,9 @@ import logging
 import os
 
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
+from salt.exceptions import CommandExecutionError
 
 try:
     import grp
@@ -38,6 +40,16 @@ def __virtual__():
         "The groupadd execution module cannot be loaded: "
         " only available on Linux, OpenBSD and NetBSD",
     )
+
+
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+    return _cmd
 
 
 def add(name, gid=None, system=False, root=None, non_unique=False):
@@ -69,7 +81,7 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
 
         salt '*' group.add foo 3456
     """
-    cmd = ["groupadd"]
+    cmd = [_which("groupadd")]
     if gid:
         cmd.append("-g {}".format(gid))
         if non_unique:
@@ -103,7 +115,7 @@ def delete(name, root=None):
 
         salt '*' group.delete foo
     """
-    cmd = ["groupdel"]
+    cmd = [_which("groupdel")]
 
     if root is not None:
         cmd.extend(("-R", root))
@@ -198,7 +210,7 @@ def _chattrib(name, key, value, param, root=None):
     if value == pre_info[key]:
         return True
 
-    cmd = ["groupmod"]
+    cmd = [_which("groupmod")]
 
     if root is not None:
         cmd.extend(("-R", root))
@@ -274,15 +286,15 @@ def adduser(name, username, root=None):
 
     if __grains__["kernel"] == "Linux":
         if on_redhat_5:
-            cmd = ["gpasswd", "-a", username, name]
+            cmd = [_which("gpasswd"), "-a", username, name]
         elif on_suse_11:
-            cmd = ["usermod", "-A", name, username]
+            cmd = [_which("usermod"), "-A", name, username]
         else:
-            cmd = ["gpasswd", "--add", username, name]
+            cmd = [_which("gpasswd"), "--add", username, name]
         if root is not None:
             cmd.extend(("--root", root))
     else:
-        cmd = ["usermod", "-G", name, username]
+        cmd = [_which("usermod"), "-G", name, username]
         if root is not None:
             cmd.extend(("-R", root))
 
@@ -327,11 +339,11 @@ def deluser(name, username, root=None):
         if username in grp_info["members"]:
             if __grains__["kernel"] == "Linux":
                 if on_redhat_5:
-                    cmd = ["gpasswd", "-d", username, name]
+                    cmd = [_which("gpasswd"), "-d", username, name]
                 elif on_suse_11:
-                    cmd = ["usermod", "-R", name, username]
+                    cmd = [_which("usermod"), "-R", name, username]
                 else:
-                    cmd = ["gpasswd", "--del", username, name]
+                    cmd = [_which("gpasswd"), "--del", username, name]
                 if root is not None:
                     cmd.extend(("--root", root))
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
@@ -339,7 +351,7 @@ def deluser(name, username, root=None):
                 out = __salt__["cmd.run_stdout"](
                     "id -Gn {}".format(username), python_shell=False
                 )
-                cmd = ["usermod", "-S"]
+                cmd = [_which("usermod"), "-S"]
                 cmd.append(",".join([g for g in out.split() if g != str(name)]))
                 cmd.append("{}".format(username))
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
@@ -386,15 +398,16 @@ def members(name, members_list, root=None):
 
     if __grains__["kernel"] == "Linux":
         if on_redhat_5:
-            cmd = ["gpasswd", "-M", members_list, name]
+            cmd = [_which("gpasswd"), "-M", members_list, name]
         elif on_suse_11:
             for old_member in __salt__["group.info"](name).get("members"):
                 __salt__["cmd.run"](
-                    "groupmod -R {} {}".format(old_member, name), python_shell=False
+                    "{} -R {} {}".format(_which("groupmod"), old_member, name),
+                    python_shell=False,
                 )
-            cmd = ["groupmod", "-A", members_list, name]
+            cmd = [_which("groupmod"), "-A", members_list, name]
         else:
-            cmd = ["gpasswd", "--members", members_list, name]
+            cmd = [_which("gpasswd"), "--members", members_list, name]
         if root is not None:
             cmd.extend(("--root", root))
         retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
@@ -402,14 +415,17 @@ def members(name, members_list, root=None):
         retcode = 1
         grp_info = __salt__["group.info"](name)
         if grp_info and name in grp_info["name"]:
-            __salt__["cmd.run"]("groupdel {}".format(name), python_shell=False)
             __salt__["cmd.run"](
-                "groupadd -g {} {}".format(grp_info["gid"], name), python_shell=False
+                "{} {}".format(_which("groupdel"), name), python_shell=False
+            )
+            __salt__["cmd.run"](
+                "{} -g {} {}".format(_which("groupadd"), grp_info["gid"], name),
+                python_shell=False,
             )
             for user in members_list.split(","):
                 if user:
                     retcode = __salt__["cmd.retcode"](
-                        ["usermod", "-G", name, user], python_shell=False
+                        [_which("usermod"), "-G", name, user], python_shell=False
                     )
                     if not retcode == 0:
                         break
