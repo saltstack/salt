@@ -33,91 +33,46 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.grains
 
-    def test_pattern_list_expander(self):
-        """
-        Ensure _expand_pattern_lists works as intended:
-        - Expand list-valued patterns
-        - Do not change non-list-valued tokens
-        """
-        cases = {
-            "no-tokens-to-replace": ["no-tokens-to-replace"],
-            "single-dict:{minion}": ["single-dict:{minion}"],
-            "single-list:{grains[roles]}": ["single-list:web", "single-list:database"],
-            "multiple-lists:{grains[roles]}+{grains[aux]}": [
-                "multiple-lists:web+foo",
-                "multiple-lists:web+bar",
-                "multiple-lists:database+foo",
-                "multiple-lists:database+bar",
-            ],
-            "single-list-with-dicts:{grains[id]}+{grains[roles]}+{grains[id]}": [
-                "single-list-with-dicts:{grains[id]}+web+{grains[id]}",
-                "single-list-with-dicts:{grains[id]}+database+{grains[id]}",
-            ],
-            "deeply-nested-list:{grains[deep][foo][bar][baz]}": [
-                "deeply-nested-list:hello",
-                "deeply-nested-list:world",
-            ],
-        }
-
-        # The mappings dict is assembled in _get_policies, so emulate here
-        mappings = {"minion": self.grains["id"], "grains": self.grains}
-        for case, correct_output in cases.items():
-            output = vault._expand_pattern_lists(
-                case, **mappings
-            )  # pylint: disable=protected-access
-            diff = set(output).symmetric_difference(set(correct_output))
-            if diff:
-                log.debug("Test %s failed", case)
-                log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
-                log.debug("Difference:\n\t%s", diff)
-            self.assertEqual(output, correct_output)
-
     def test_get_policies_for_nonexisting_minions(self):
         minion_id = "salt_master"
         # For non-existing minions, or the master-minion, grains will be None
         cases = {
             "no-tokens-to-replace": ["no-tokens-to-replace"],
             "single-dict:{minion}": ["single-dict:{}".format(minion_id)],
-            "single-list:{grains[roles]}": [],
+            "single-grain:{grains[id]}": [],
         }
         with patch(
             "salt.utils.minions.get_minion_data",
             MagicMock(return_value=(None, None, None)),
         ):
             for case, correct_output in cases.items():
-                test_config = {"policies": [case]}
-                output = vault._get_policies(
-                    minion_id, test_config
-                )  # pylint: disable=protected-access
-                diff = set(output).symmetric_difference(set(correct_output))
-                if diff:
-                    log.debug("Test %s failed", case)
-                    log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
-                    log.debug("Difference:\n\t%s", diff)
-                self.assertEqual(output, correct_output)
+                with patch.dict(
+                    vault.__utils__,
+                    {
+                        "vault.expand_pattern_lists": Mock(
+                            side_effect=lambda x, *args, **kwargs: [x]
+                        )
+                    },
+                ):
+                    test_config = {"policies": [case]}
+                    output = vault._get_policies(
+                        minion_id, test_config
+                    )  # pylint: disable=protected-access
+                    diff = set(output).symmetric_difference(set(correct_output))
+                    if diff:
+                        log.debug("Test %s failed", case)
+                        log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
+                        log.debug("Difference:\n\t%s", diff)
+                    self.assertEqual(output, correct_output)
 
     def test_get_policies(self):
         """
-        Ensure _get_policies works as intended, including expansion of lists
+        Ensure _get_policies works as intended.
+        The expansion of lists is tested in the vault utility module unit tests.
         """
         cases = {
             "no-tokens-to-replace": ["no-tokens-to-replace"],
             "single-dict:{minion}": ["single-dict:test-minion"],
-            "single-list:{grains[roles]}": ["single-list:web", "single-list:database"],
-            "multiple-lists:{grains[roles]}+{grains[aux]}": [
-                "multiple-lists:web+foo",
-                "multiple-lists:web+bar",
-                "multiple-lists:database+foo",
-                "multiple-lists:database+bar",
-            ],
-            "single-list-with-dicts:{grains[id]}+{grains[roles]}+{grains[id]}": [
-                "single-list-with-dicts:test-minion+web+test-minion",
-                "single-list-with-dicts:test-minion+database+test-minion",
-            ],
-            "deeply-nested-list:{grains[deep][foo][bar][baz]}": [
-                "deeply-nested-list:hello",
-                "deeply-nested-list:world",
-            ],
             "should-not-cause-an-exception,but-result-empty:{foo}": [],
             "Case-Should-Be-Lowered:{grains[mixedcase]}": [
                 "case-should-be-lowered:up-low-up"
@@ -129,16 +84,24 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
             MagicMock(return_value=(None, self.grains, None)),
         ):
             for case, correct_output in cases.items():
-                test_config = {"policies": [case]}
-                output = vault._get_policies(
-                    "test-minion", test_config
-                )  # pylint: disable=protected-access
-                diff = set(output).symmetric_difference(set(correct_output))
-                if diff:
-                    log.debug("Test %s failed", case)
-                    log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
-                    log.debug("Difference:\n\t%s", diff)
-                self.assertEqual(output, correct_output)
+                with patch.dict(
+                    vault.__utils__,
+                    {
+                        "vault.expand_pattern_lists": Mock(
+                            side_effect=lambda x, *args, **kwargs: [x]
+                        )
+                    },
+                ):
+                    test_config = {"policies": [case]}
+                    output = vault._get_policies(
+                        "test-minion", test_config
+                    )  # pylint: disable=protected-access
+                    diff = set(output).symmetric_difference(set(correct_output))
+                    if diff:
+                        log.debug("Test %s failed", case)
+                        log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
+                        log.debug("Difference:\n\t%s", diff)
+                    self.assertEqual(output, correct_output)
 
     def test_get_token_create_url(self):
         """
