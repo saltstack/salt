@@ -1,0 +1,1 @@
+Fix user.present to allow removing groups using optional_groups parameter and enforcing idempotent group membership.
