@@ -290,7 +290,6 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                         "origin:",
                         "homepage:http://tiswww.case.edu/php/chet/bash/bashtop.html",
                         "status:ii ",
-                        "======",
                         "description:GNU Bourne Again SHell",
                         " Bash is an sh-compatible command language interpreter that"
                         " executes",
@@ -307,7 +306,8 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                         " The Programmable Completion Code, by Ian Macdonald, is now"
                         " found in",
                         " the bash-completion package.",
-                        "------",
+                        "",
+                        "*/~^\\*",  # pylint: disable=W1401
                     ]
                 ),
             }
