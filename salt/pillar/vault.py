@@ -52,6 +52,7 @@ Multiple Vault sources may also be used:
       - vault: path=secret/salt
       - vault: path=secret/root
       - vault: path=secret/minions/{minion}/pass
+      - vault: path=secret/roles/{pillar[roles]}/pass
 
 You can also use nesting here as well.  Identical nesting keys will get merged.
 
@@ -118,12 +119,39 @@ minion-passwd   minionbadpasswd1
                 minion-passwd:
                     minionbadpasswd1
 
+.. versionadded:: 3006
+
+    Pillar values from previously rendered pillars can be used to template
+    vault ext_pillar paths.
+
+Using pillar values to template vault pillar paths requires them to be defined
+before the vault ext_pillar is called. Especially consider the significancy
+of :conf_master:`ext_pillar_first <ext_pillar_first>` master config setting.
+
+If a pillar pattern matches multiple paths, the results are merged according to
+the master configuration values :conf_master:`pillar_source_merging_strategy <pillar_source_merging_strategy>`
+and :conf_master:`pillar_merge_lists <pillar_merge_lists>` by default.
+
+If the optional nesting_key was defined, the merged result will be nested below.
+There is currently no way to nest multiple results under different keys.
+
+You can override the merging behavior per defined ext_pillar:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - vault:
+           conf: path=secret/roles/{pillar[roles]}
+           merge_strategy: smart
+           merge_lists: false
 """
 
 
 import logging
 
 from requests.exceptions import HTTPError
+
+import salt.utils.dictupdate
 
 log = logging.getLogger(__name__)
 
@@ -140,6 +168,8 @@ def ext_pillar(
     pillar,  # pylint: disable=W0613
     conf,
     nesting_key=None,
+    merge_strategy=None,
+    merge_lists=None,
 ):
     """
     Get pillar data from Vault for the configuration ``conf``.
@@ -151,25 +181,55 @@ def ext_pillar(
         log.error('"%s" is not a valid Vault ext_pillar config', conf)
         return {}
 
+    merge_strategy = merge_strategy or __opts__.get(
+        "pillar_source_merging_strategy", "smart"
+    )
+    merge_lists = merge_lists or __opts__.get("pillar_merge_lists", False)
     vault_pillar = {}
 
-    try:
-        path = paths[0].replace("path=", "")
-        path = path.format(**{"minion": minion_id})
-        version2 = __utils__["vault.is_v2"](path)
-        if version2["v2"]:
-            path = version2["data"]
+    path_pattern = paths[0].replace("path=", "")
+    for path in _get_paths(path_pattern, minion_id, pillar):
+        try:
+            version2 = __utils__["vault.is_v2"](path)
+            if version2["v2"]:
+                path = version2["data"]
 
-        url = "v1/{}".format(path)
-        response = __utils__["vault.make_request"]("GET", url)
-        response.raise_for_status()
-        vault_pillar = response.json().get("data", {})
+            url = "v1/{}".format(path)
+            response = __utils__["vault.make_request"]("GET", url)
+            response.raise_for_status()
+            vault_pillar_single = response.json().get("data", {})
 
-        if vault_pillar and version2["v2"]:
-            vault_pillar = vault_pillar["data"]
-    except HTTPError:
-        log.info("Vault secret not found for: %s", path)
+            if vault_pillar_single and version2["v2"]:
+                vault_pillar_single = vault_pillar_single["data"]
+
+            vault_pillar = salt.utils.dictupdate.merge(
+                vault_pillar,
+                vault_pillar_single,
+                strategy=merge_strategy,
+                merge_lists=merge_lists,
+            )
+        except HTTPError:
+            log.info("Vault secret not found for: %s", path)
 
     if nesting_key:
         vault_pillar = {nesting_key: vault_pillar}
     return vault_pillar
+
+
+def _get_paths(path_pattern, minion_id, pillar):
+    """
+    Get the paths that should be merged into the pillar dict
+    """
+    mappings = {"minion": minion_id, "pillar": pillar}
+
+    paths = []
+    try:
+        for expanded_pattern in __utils__["vault.expand_pattern_lists"](
+            path_pattern, **mappings
+        ):
+            paths.append(expanded_pattern.format(**mappings))
+    except KeyError:
+        log.warning("Could not resolve pillar path pattern %s", path_pattern)
+
+    log.debug(f"{minion_id} vault pillar paths: {paths}")
+    return paths

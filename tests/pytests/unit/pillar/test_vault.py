@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import pytest
@@ -9,7 +10,15 @@ from tests.support.mock import Mock, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    return {vault: {}}
+    return {
+        vault: {
+            "__utils__": {
+                "vault.expand_pattern_lists": Mock(
+                    side_effect=lambda x, *args, **kwargs: [x]
+                )
+            }
+        }
+    }
 
 
 @pytest.fixture
@@ -100,3 +109,76 @@ def test_ext_pillar_nesting_key(is_v2_false, vault_kvv1):
         assert "baz" in ext_pillar
         assert "foo" in ext_pillar["baz"]
         assert ext_pillar["baz"]["foo"] == "bar"
+
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+        ("no/template/in/use", ["no/template/in/use"]),
+        ("salt/minions/{minion}", ["salt/minions/test-minion"]),
+        ("salt/roles/{pillar[role]}", ["salt/roles/foo"]),
+    ],
+)
+def test_get_paths(pattern, expected):
+    """
+    Test that templated paths are resolved as expected.
+    Expansion of lists is tested in the utility module unit test.
+    """
+    previous_pillar = {
+        "role": "foo",
+    }
+    result = vault._get_paths(pattern, "test-minion", previous_pillar)
+    assert result == expected
+
+
+def test_ext_pillar_merging(is_v2_false):
+    """
+    Test that patterns that result in multiple paths are merged as expected.
+    """
+
+    def make_request(method, resource, *args, **kwargs):
+        vault_data = {
+            "v1/salt/roles/db": {
+                "from_db": True,
+                "pass": "hunter2",
+                "list": ["a", "b"],
+            },
+            "v1/salt/roles/web": {
+                "from_web": True,
+                "pass": "hunter1",
+                "list": ["c", "d"],
+            },
+        }
+        res = Mock(status_code=200, ok=True)
+        res.json.return_value = {"data": copy.deepcopy(vault_data[resource])}
+        return res
+
+    cases = [
+        (
+            ["salt/roles/db", "salt/roles/web"],
+            {"from_db": True, "from_web": True, "list": ["c", "d"], "pass": "hunter1"},
+        ),
+        (
+            ["salt/roles/web", "salt/roles/db"],
+            {"from_db": True, "from_web": True, "list": ["a", "b"], "pass": "hunter2"},
+        ),
+    ]
+    vaultkv = Mock(side_effect=make_request)
+
+    for expanded_patterns, expected in cases:
+        with patch.dict(
+            vault.__utils__,
+            {
+                "vault.make_request": vaultkv,
+                "vault.expand_pattern_lists": Mock(return_value=expanded_patterns),
+                "vault.is_v2": Mock(return_value=is_v2_false),
+            },
+        ):
+            ext_pillar = vault.ext_pillar(
+                "test-minion",
+                {"roles": ["db", "web"]},
+                conf="path=salt/roles/{pillar[roles]}",
+                merge_strategy="smart",
+                merge_lists=False,
+            )
+            assert ext_pillar == expected
