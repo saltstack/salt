@@ -40,16 +40,14 @@ class SSHState(salt.state.State):
         """
         Load up the modules for remote compilation via ssh
         """
-        self.functions = salt.loader.ssh_wrapper(self.opts, None, context=self.context)
-        if self.wrapper is not None:
-            self.wrapper.wfuncs = self.functions
+        self.functions = self.wrapper
         self.utils = salt.loader.utils(self.opts)
         self.serializers = salt.loader.serializers(self.opts)
         locals_ = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.states = salt.loader.states(
             self.opts, locals_, self.utils, self.serializers
         )
-        self.rend = salt.loader.render(self.opts, self.wrapper)
+        self.rend = salt.loader.render(self.opts, self.functions)
 
     def check_refresh(self, data, ret):
         """
