@@ -10,6 +10,7 @@ import textwrap
 import pytest
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 from pytestshellutils.utils import ports
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
