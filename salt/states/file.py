@@ -2092,21 +2092,6 @@ def tidied(
                 return True
         return False
 
-    def _compare_age_size(mysize, myage):
-        """
-        Helper to perform age and size evaluation based on defined parameters
-        """
-        if age_size_only and age_size_only.lower() in ["age", "size"]:
-            if age_size_only.lower() == "age":
-                ret = myage.days >= age
-            else:
-                ret = mysize >= size
-        elif age_size_logical_operator.upper() == "AND":
-            ret = mysize >= size and myage.days >= age
-        else:
-            ret = mysize >= size or myage.days >= age
-        return ret
-
     # Iterate over given directory tree, depth-first
     for root, dirs, files in os.walk(top=name, topdown=False, followlinks=followlinks):
         # Check criteria for the found files and directories
@@ -2146,11 +2131,17 @@ def tidied(
                 filename = path
 
             # Verify against given criteria, collect all elements that should be removed
-            if (
-                _compare_age_size(mysize, myage)
-                and _matches(name=filename)
-                and deleteme
-            ):
+            if age_size_only and age_size_only.lower() in ["age", "size"]:
+                if age_size_only.lower() == "age":
+                    compare_age_size = myage.days >= age
+                else:
+                    compare_age_size = mysize >= size
+            elif age_size_logical_operator.upper() == "AND":
+                compare_age_size = mysize >= size and myage.days >= age
+            else:
+                compare_age_size = mysize >= size or myage.days >= age
+
+            if compare_age_size and _matches(name=filename) and deleteme:
                 todelete.append(path)
 
     # Now delete the stuff

@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -327,3 +327,226 @@ def test_tidied_with_full_path_exclude():
     }
     assert exp == ret
     assert remove.call_count == 6
+
+
+def test_tidied_age_size_args_AND_operator_age_not_size():
+    name = os.sep + "test"
+    if salt.utils.platform.is_windows():
+        name = "c:" + name
+    walker = [
+        (os.path.join("test", "test1"), [], ["file1"]),
+        (os.path.join("test", "test2", "test3"), [], []),
+        (os.path.join("test", "test2"), ["test3"], ["file2"]),
+        ("test", ["test1", "test2"], ["file3"]),
+    ]
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+    remove = MagicMock(name="file.remove")
+    with patch("os.walk", return_value=walker), patch(
+        "os.path.islink", return_value=False
+    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
+        "os.path.getsize", return_value=10
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.dict(
+        filestate.__salt__, {"file.remove": remove}
+    ), patch(
+        "os.path.isdir", return_value=True
+    ):
+        ret = filestate.tidied(
+            name=name,
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
+            age=1,
+            size=11,
+            age_size_logical_operator="AND",
+            age_size_only=None,
+        )
+    exp = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Nothing to remove from directory {}".format(name),
+    }
+    assert ret == exp
+    assert remove.call_count == 0
+
+
+def test_tidied_age_size_args_AND_operator_age_not_size_age_only():
+    name = os.sep + "test"
+    if salt.utils.platform.is_windows():
+        name = "c:" + name
+    walker = [
+        (os.path.join("test", "test1"), [], ["file1"]),
+        (os.path.join("test", "test2", "test3"), [], []),
+        (os.path.join("test", "test2"), ["test3"], ["file2"]),
+        ("test", ["test1", "test2"], ["file3"]),
+    ]
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+    remove = MagicMock(name="file.remove")
+    with patch("os.walk", return_value=walker), patch(
+        "os.path.islink", return_value=False
+    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
+        "os.path.getsize", return_value=10
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.dict(
+        filestate.__salt__, {"file.remove": remove}
+    ), patch(
+        "os.path.isdir", return_value=True
+    ):
+        ret = filestate.tidied(
+            name=name,
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
+            age=1,
+            size=11,
+            age_size_logical_operator="AND",
+            age_size_only="age",
+        )
+    exp = {
+        "name": name,
+        "changes": {
+            "removed": [
+                os.path.join("test", "test1", "file1"),
+                os.path.join("test", "test2", "file2"),
+                os.path.join("test", "file3"),
+            ]
+        },
+        "result": True,
+        "comment": "Removed 3 files or directories from directory {}".format(name),
+    }
+    assert ret == exp
+    assert remove.call_count == 3
+
+
+def test_tidied_age_size_args_AND_operator_size_not_age():
+    name = os.sep + "test"
+    if salt.utils.platform.is_windows():
+        name = "c:" + name
+    walker = [
+        (os.path.join("test", "test1"), [], ["file1"]),
+        (os.path.join("test", "test2", "test3"), [], []),
+        (os.path.join("test", "test2"), ["test3"], ["file2"]),
+        ("test", ["test1", "test2"], ["file3"]),
+    ]
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+    remove = MagicMock(name="file.remove")
+    with patch("os.walk", return_value=walker), patch(
+        "os.path.islink", return_value=False
+    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
+        "os.path.getsize", return_value=10
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.dict(
+        filestate.__salt__, {"file.remove": remove}
+    ), patch(
+        "os.path.isdir", return_value=True
+    ):
+        ret = filestate.tidied(
+            name=name,
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
+            age=(today_delta.days + 1),
+            size=9,
+            age_size_logical_operator="AND",
+            age_size_only=None,
+        )
+    exp = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Nothing to remove from directory {}".format(name),
+    }
+    assert ret == exp
+    assert remove.call_count == 0
+
+
+def test_tidied_age_size_args_AND_operator_size_not_age_size_only():
+    name = os.sep + "test"
+    if salt.utils.platform.is_windows():
+        name = "c:" + name
+    walker = [
+        (os.path.join("test", "test1"), [], ["file1"]),
+        (os.path.join("test", "test2", "test3"), [], []),
+        (os.path.join("test", "test2"), ["test3"], ["file2"]),
+        ("test", ["test1", "test2"], ["file3"]),
+    ]
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+    remove = MagicMock(name="file.remove")
+    with patch("os.walk", return_value=walker), patch(
+        "os.path.islink", return_value=False
+    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
+        "os.path.getsize", return_value=10
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.dict(
+        filestate.__salt__, {"file.remove": remove}
+    ), patch(
+        "os.path.isdir", return_value=True
+    ):
+        ret = filestate.tidied(
+            name=name,
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
+            age=(today_delta.days + 1),
+            size=9,
+            age_size_logical_operator="AND",
+            age_size_only="size",
+        )
+    exp = {
+        "name": name,
+        "changes": {
+            "removed": [
+                os.path.join("test", "test1", "file1"),
+                os.path.join("test", "test2", "file2"),
+                os.path.join("test", "file3"),
+            ]
+        },
+        "result": True,
+        "comment": "Removed 3 files or directories from directory {}".format(name),
+    }
+    assert ret == exp
+    assert remove.call_count == 3
+
+
+def test_tidied_age_size_args_AND_operator_size_and_age():
+    name = os.sep + "test"
+    if salt.utils.platform.is_windows():
+        name = "c:" + name
+    walker = [
+        (os.path.join("test", "test1"), [], ["file1"]),
+        (os.path.join("test", "test2", "test3"), [], []),
+        (os.path.join("test", "test2"), ["test3"], ["file2"]),
+        ("test", ["test1", "test2"], ["file3"]),
+    ]
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+    remove = MagicMock(name="file.remove")
+    with patch("os.walk", return_value=walker), patch(
+        "os.path.islink", return_value=False
+    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
+        "os.path.getsize", return_value=10
+    ), patch.dict(
+        filestate.__opts__, {"test": False}
+    ), patch.dict(
+        filestate.__salt__, {"file.remove": remove}
+    ), patch(
+        "os.path.isdir", return_value=True
+    ):
+        ret = filestate.tidied(
+            name=name,
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
+            age=1,
+            size=9,
+            age_size_logical_operator="AND",
+            age_size_only=None,
+        )
+    exp = {
+        "name": name,
+        "changes": {
+            "removed": [
+                os.path.join("test", "test1", "file1"),
+                os.path.join("test", "test2", "file2"),
+                os.path.join("test", "file3"),
+            ]
+        },
+        "result": True,
+        "comment": "Removed 3 files or directories from directory {}".format(name),
+    }
+    assert ret == exp
+    assert remove.call_count == 3
