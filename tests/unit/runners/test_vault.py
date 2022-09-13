@@ -113,9 +113,6 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         """
         The pillar data should only be refreshed in case items are accessed.
         """
-        get_pillar = Mock(name="g")
-        get_pillar.return_value.compile_pillar.return_value = self.pillar
-
         cases = [
             ("salt_minion_{minion}", 0),
             ("salt_grain_{grains[id]}", 0),
@@ -124,23 +121,25 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         ]
 
         with patch(
-            "salt.utils.minions.get_minion_data",
-            Mock(return_value=(None, self.grains, None)),
-        ), patch("salt.pillar.get_pillar", get_pillar):
-            with patch.dict(
-                vault.__utils__,
-                {
-                    "vault.expand_pattern_lists": Mock(
-                        side_effect=lambda x, *args, **kwargs: [x]
-                    )
-                },
-            ):
-                for case, expected in cases:
-                    test_config = {"policies": [case]}
-                    vault._get_policies(
-                        "test-minion", test_config, refresh_pillar=True
-                    )  # pylint: disable=protected-access
-                    assert get_pillar.call_count == expected
+            "salt.utils.minions.get_minion_data", autospec=True
+        ) as get_minion_data:
+            get_minion_data.return_value = (None, self.grains, None)
+            with patch("salt.pillar.get_pillar", autospec=True) as get_pillar:
+                get_pillar.return_value.compile_pillar.return_value = self.pillar
+                with patch.dict(
+                    vault.__utils__,
+                    {
+                        "vault.expand_pattern_lists": Mock(
+                            side_effect=lambda x, *args, **kwargs: [x]
+                        )
+                    },
+                ):
+                    for case, expected in cases:
+                        test_config = {"policies": [case]}
+                        vault._get_policies(
+                            "test-minion", test_config, refresh_pillar=True
+                        )  # pylint: disable=protected-access
+                        assert get_pillar.call_count == expected
 
     def test_get_token_create_url(self):
         """
