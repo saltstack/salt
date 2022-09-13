@@ -1945,17 +1945,19 @@ def tidied(
     full_path_match=False,
     followlinks=False,
     time_comparison="atime",
+    age_size_logical_operator="OR",
+    age_size_only=None,
     **kwargs
 ):
     """
-    .. versionchanged:: 3005
+    .. versionchanged:: 3006,3005
 
-    Remove unwanted files based on specific criteria. Multiple criteria
-    are OR’d together, so a file that is too large but is not old enough
-    will still get tidied.
+    Remove unwanted files based on specific criteria.
 
-    If neither age nor size is given all files which match a pattern in
-    matches will be removed.
+    The default operation uses an OR operation to evaluate age and size, so a
+    file that is too large but is not old enough will still get tidied. If
+    neither age nor size is given all files which match a pattern in matches
+    will be removed.
 
     NOTE: The regex patterns in this function are used in ``re.match()``, so
     there is an implicit "beginning of string" anchor (``^``) in the regex and
@@ -2006,6 +2008,25 @@ def tidied(
 
         .. versionadded:: 3005
 
+    age_size_logical_operator
+        This parameter can change the default operation (OR) to an AND operation
+        to evaluate age and size. In that scenario, a file that is too large but
+        is not old enough will NOT get tidied. A file will need to fulfill BOTH
+        conditions in order to be tidied. Accepts ``OR`` or ``AND``.
+
+        .. versionadded:: 3006
+
+    age_size_only
+        This parameter can trigger the reduction of age and size conditions
+        which need to be satisfied down to ONLY age or ONLY size. By default,
+        this parameter is ``None`` and both conditions will be evaluated using
+        the logical operator defined in ``age_size_logical_operator``. The
+        parameter can be set to ``age`` or ``size`` in order to restrict
+        evaluation down to that specific condition. Path matching and
+        exclusions still apply.
+
+        .. versionadded:: 3006
+
     .. code-block:: yaml
 
         cleanup:
@@ -2019,6 +2040,16 @@ def tidied(
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if age_size_logical_operator.upper() not in ["AND", "OR"]:
+        age_size_logical_operator = "OR"
+        log.warning("Logical operator must be 'AND' or 'OR'. Defaulting to 'OR'...")
+
+    if age_size_only and age_size_only.lower() not in ["age", "size"]:
+        age_size_only = None
+        log.warning(
+            "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
+        )
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -2034,8 +2065,7 @@ def tidied(
 
     # Convert size with human units to bytes
     if isinstance(size, str):
-        # add handle_metric=True when #61833 is merged
-        size = salt.utils.stringutils.human_to_bytes(size)
+        size = salt.utils.stringutils.human_to_bytes(size, handle_metric=True)
 
     # Define some variables
     todelete = []
@@ -2061,6 +2091,21 @@ def tidied(
                         return False
                 return True
         return False
+
+    def _compare_age_size(mysize, myage):
+        """
+        Helper to perform age and size evaluation based on defined parameters
+        """
+        if age_size_only and age_size_only.lower() in ["age", "size"]:
+            if age_size_only.lower() == "age":
+                ret = myage.days >= age
+            else:
+                ret = mysize >= size
+        elif age_size_logical_operator.upper() == "AND":
+            ret = mysize >= size and myage.days >= age
+        else:
+            ret = mysize >= size or myage.days >= age
+        return ret
 
     # Iterate over given directory tree, depth-first
     for root, dirs, files in os.walk(top=name, topdown=False, followlinks=followlinks):
@@ -2102,7 +2147,7 @@ def tidied(
 
             # Verify against given criteria, collect all elements that should be removed
             if (
-                (mysize >= size or myage.days >= age)
+                _compare_age_size(mysize, myage)
                 and _matches(name=filename)
                 and deleteme
             ):
