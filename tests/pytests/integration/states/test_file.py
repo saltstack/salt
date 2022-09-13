@@ -1313,6 +1313,8 @@ def test_issue_62611(
     jinja_contents = '{% set myvar = "MOOP" -%}'
 
     jinja_file = salt_master.state_tree.base.paths[0] / "{}.jinja".format(name)
+    if salt.utils.platform.is_windows():
+        jinja_file = str(jinja_file).replace("\\", "\\\\")
 
     sls_contents = """
     {%- from "REPLACEME" import myvar with context %}
