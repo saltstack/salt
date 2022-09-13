@@ -1638,7 +1638,7 @@ def _get_flags(flags):
         flags = [flags]
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
-        _flags_acc = [0]  # An initial 0 avoids resucing on empty list, an error
+        _flags_acc = []
         for flag in flags:
             _flag = int(getattr(re, str(flag).upper()))
 
