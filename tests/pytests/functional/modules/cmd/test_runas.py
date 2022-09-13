@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 
 
