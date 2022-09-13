@@ -83,7 +83,7 @@ api_query_result_limit: ``Use NetBox default``
     to the NetBox API. Leaving this unset will use NetBox's default value.
 
 connected_devices: ``False``
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Whether connected_devices key should be populated with device objects.
     If set to True it will force `interfaces` to also be true as a dependency
