@@ -485,6 +485,7 @@ jinja2==3.0.3
     #   napalm
 jmespath==0.10.0
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore

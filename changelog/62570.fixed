@@ -1,0 +1,1 @@
+pkgrepo.managed creates zero byte gpg files when dearmoring contents to the same filename
