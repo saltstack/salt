@@ -24,14 +24,11 @@ while [ "$DONE" = false ]; do
           fi
         done
         ORIG_RPATH=$(readelf -a "$shlib" | grep "PATH"| sed -e 's/^.*\[\(.*\)]$/\1/g')
-        echo "********************"
-        echo "$shlib"
-        echo "$ORIG_RPATH"
-        echo "********************"
         RELLIBSDIR=$(realpath --relative-to=$(dirname $shlib) $LIBSDIR)
         if [ -z "$ORIG_RPATH" ]; then
           RPATH="\$ORIGIN:\$ORIGIN/$RELLIBSDIR"
         else
+          echo "Preserving existing rpath.."
           RPATH="$ORIG_RPATH:\$ORIGIN:\$ORIGIN/$RELLIBSDIR"
         fi
         patchelf --set-rpath $RPATH $shlib
