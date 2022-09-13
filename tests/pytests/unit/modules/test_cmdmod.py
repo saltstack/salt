@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 import pytest
+
 import salt.grains.extra
 import salt.modules.cmdmod as cmdmod
 import salt.utils.files
