@@ -542,7 +542,6 @@ def _run(
                     else:
                         env_cmd.extend(["{} python {}".format(sys.executable, fp.name)])
                     fp.write(py_code)
-                    fp.seek(0)
                     shutil.chown(fp.name, runas)
 
             msg = "env command: {}".format(env_cmd)
