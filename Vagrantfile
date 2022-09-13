@@ -6,6 +6,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.provider "virtualbox" do |provider|
     provider.gui = false
+    provider.linked_clone = true if Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.8.0')
     if ENV["CI"]
       provider.memory = 8192
       provider.cpus = 2
