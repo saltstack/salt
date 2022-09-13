@@ -1924,7 +1924,7 @@ class Login(LowDataAdapter):
                     "start": token["start"],
                     "user": token["name"],
                     "eauth": token["eauth"],
-                    "perms": perms or [],
+                    "perms": perms or {},
                 }
             ]
         }
