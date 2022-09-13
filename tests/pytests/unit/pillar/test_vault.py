@@ -182,3 +182,18 @@ def test_ext_pillar_merging(is_v2_false):
                 merge_lists=False,
             )
             assert ext_pillar == expected
+
+
+def text_ext_pillar_disabled_during_policy_pillar_rendering():
+    mock_version = Mock()
+    mock_vault = Mock()
+    extra = {"_vault_runner_is_compiling_pillar_templates": True}
+
+    with patch.dict(
+        vault.__utils__, {"vault.make_request": mock_vault, "vault.is_v2": mock_version}
+    ):
+        assert {} == vault.ext_pillar(
+            "test-minion", {}, conf="path=secret/path", extra_minion_data=extra
+        )
+        assert mock_version.call_count == 0
+        assert mock_vault.call_count == 0

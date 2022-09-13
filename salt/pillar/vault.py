@@ -170,10 +170,16 @@ def ext_pillar(
     nesting_key=None,
     merge_strategy=None,
     merge_lists=None,
+    extra_minion_data=None,
 ):
     """
     Get pillar data from Vault for the configuration ``conf``.
     """
+    extra_minion_data = extra_minion_data or {}
+    if extra_minion_data.get("_vault_runner_is_compiling_pillar_templates"):
+        # Disable vault ext_pillar while compiling pillar for vault policy templates
+        return {}
+
     comps = conf.split()
 
     paths = [comp for comp in comps if comp.startswith("path=")]

@@ -80,6 +80,8 @@ def get(key, profile=None):
     """
     Get a value from the vault service
     """
+    if __opts__.get("_vault_runner_is_compiling_pillar_templates"):
+        return None
     if "?" in key:
         path, key = key.split("?")
     else:
