@@ -26,7 +26,8 @@ jobs:
 
   dependencies:
     name: Setup Python Dependencies
-    runs-on: macos-12
+    runs-on:
+      - self-hosted
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -59,11 +60,6 @@ jobs:
         with:
           files: "nox.${{ inputs.vagrant-box-name }}.tar.xz"
 
-      - name: Install macOS Dependencies
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          brew install gnu-sed
-
       - name: Set up Python 3.9
         if: steps.check-nox-tarball.outputs.files_exists != 'true'
         uses: actions/setup-python@v4
@@ -92,7 +88,7 @@ jobs:
       - name: PyPi Proxy
         if: steps.check-nox-tarball.outputs.files_exists != 'true'
         run: |
-          gsed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
 
       - name: Spin up VM
         if: steps.check-nox-tarball.outputs.files_exists != 'true'
@@ -142,7 +138,8 @@ jobs:
 
   test:
     name: Test
-    runs-on: macos-12
+    runs-on:
+      - self-hosted
     timeout-minutes: 600  # 10 Hours
     needs:
       - dependencies
@@ -158,10 +155,6 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
-
-      - name: Install macOS Dependencies
-        run: |
-          brew install tree
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v4

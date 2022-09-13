@@ -18,7 +18,9 @@ jobs:
         fetch-depth: 1000
 
     - name: Build onedir
-      run: CONTAINER_IMAGE=dwoz1/cicd:onedir-centos7-x86_64 ./pkg/onedir.sh
+      env:
+        CONTAINER_IMAGE: "dwoz1/cicd:onedir-centos7-x86_64"
+      run: ./pkg/onedir.sh
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
@@ -40,20 +42,11 @@ jobs:
         path: exitstatus
 
 
-  download-debian-11:
-    name: Debian 11
-    uses: ./.github/workflows/download-vagrant-box.yml
-    with:
-      vagrant-box-name: debian-11
-    secrets:
-      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-
   debian-11:
     name: Debian 11
     uses: ./.github/workflows/test.yml
     needs:
       - build
-      - download-debian-11
     with:
       artifact-name: Salt Onedir X86_64
       vagrant-box-name: debian-11
@@ -61,20 +54,11 @@ jobs:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
 
-  download-centos-stream-8:
-    name: CentOS Stream 8
-    uses: ./.github/workflows/download-vagrant-box.yml
-    with:
-      vagrant-box-name: centos-stream-8
-    secrets:
-      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-
   centos-stream-8:
     name: CentOS Stream 8
     uses: ./.github/workflows/test.yml
     needs:
       - build
-      - download-centos-stream-8
     with:
       artifact-name: Salt Onedir X86_64
       vagrant-box-name: centos-stream-8
