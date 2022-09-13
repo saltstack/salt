@@ -1,9 +1,16 @@
+import hashlib
 from textwrap import dedent
 
 import pytest
 
 import salt.modules.pdbedit as pdbedit
 from tests.support.mock import MagicMock, patch
+
+try:
+    hashlib.new("md4", "".encode("utf-16le"))
+    MD4_SUPPORTED = True
+except ValueError:
+    MD4_SUPPORTED = False
 
 
 @pytest.fixture
@@ -134,3 +141,17 @@ def test_when_verbose_and_multiple_records_present_data_should_be_correctly_pars
     ):
         actual_data = pdbedit.list_users(verbose=True)
         assert actual_data == expected_data
+
+
+@pytest.mark.skipif(not MD4_SUPPORTED, reason="Requires md4")
+def test_create_with_existing_user_updates_password():
+    with patch(
+        "salt.modules.pdbedit.list_users", MagicMock(return_value=["Foo"])
+    ), patch(
+        "salt.modules.pdbedit.get_user",
+        MagicMock(return_value={"nt hash": "old value"}),
+    ), patch.dict(
+        pdbedit.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+    ):
+        ret = pdbedit.create("Foo", "secret")
+        assert {"Foo": "updated"} == ret
