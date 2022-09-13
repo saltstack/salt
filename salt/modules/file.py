@@ -1640,10 +1640,7 @@ def _get_flags(flags):
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
         _flags_acc = [0]  # An initial 0 avoids resucing on empty list, an error
         for flag in flags:
-            _flag = getattr(re, str(flag).upper())
-
-            if not isinstance(_flag, int):
-                raise SaltInvocationError("Invalid re flag given: {}".format(flag))
+            _flag = int(getattr(re, str(flag).upper()))
 
             _flags_acc.append(_flag)
 
