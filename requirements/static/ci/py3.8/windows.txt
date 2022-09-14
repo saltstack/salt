@@ -347,7 +347,7 @@ sed==0.3.1
     # via -r requirements/static/ci/windows.in
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/windows.txt
 six==1.15.0
     # via

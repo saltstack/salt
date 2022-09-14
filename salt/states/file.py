@@ -3134,11 +3134,14 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if exc.strerror.startswith("Path not found"):
+                        if not isinstance(
+                            ret["changes"], tuple
+                        ) and exc.strerror.startswith("Path not found"):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
                 ret["result"], ret["comment"] = ret["changes"]
+                ret["changes"] = {}
             elif ret["changes"]:
                 ret["result"] = None
                 ret["comment"] = "The file {} is set to be changed".format(name)
@@ -8004,7 +8007,7 @@ def serialize(
                     ret["comment"] = "Failed to deserialize existing data: {}".format(
                         exc
                     )
-                    return False
+                    return ret
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(

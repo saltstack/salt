@@ -71,7 +71,7 @@ def get_test_versions():
             )
         )
     name = "mariadb"
-    for version in ("10.1", "10.2", "10.3", "10.4", "10.5"):
+    for version in ("10.3", "10.4", "10.5", "10.6"):
         test_versions.append(
             MySQLImage(
                 name=name,
