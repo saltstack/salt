@@ -222,8 +222,6 @@ def mounted(
     # string
     if isinstance(opts, str):
         opts = opts.split(",")
-    if opts:
-        opts.sort()
 
     if isinstance(hidden_opts, str):
         hidden_opts = hidden_opts.split(",")
@@ -345,8 +343,6 @@ def mounted(
             if label_device and label_device not in device_list:
                 device_list.append(label_device)
             if opts:
-                opts.sort()
-
                 mount_invisible_options = [
                     "_netdev",
                     "actimeo",
@@ -667,7 +663,6 @@ def mounted(
                 ret["comment"] = "{} not present and not mounted".format(name)
         else:
             if __opts__["test"]:
-                ret["result"] = None
                 ret["comment"] = "{} would not be mounted".format(name)
             else:
                 ret["comment"] = "{} not mounted".format(name)
