@@ -1,0 +1,1 @@
+Fixed malformed state return when testing file.managed with unavailable source file
