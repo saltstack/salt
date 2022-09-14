@@ -3114,7 +3114,10 @@ def expand_repo_def(**kwargs):
                     opts_order[idx] = repo_opts[opt]["full"]
 
             opts = "[" + " ".join(opts_order) + "]"
-            line.insert(1, opts)
+            if line[1].startswith("["):
+                line[1] = opts
+            else:
+                line.insert(1, opts)
             sanitized["line"] = " ".join(line)
 
     return sanitized
