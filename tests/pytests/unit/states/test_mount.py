@@ -238,12 +238,12 @@ def test_mounted():
                         )
                         == ret
                     )
-                    # Test to check the options order #57520
+                    # Test to check the options order #57520, reverted in #62557
                     set_fstab_mock.assert_called_with(
                         name2,
                         "//SERVER/SHARE/",
                         "cifs",
-                        ["gid=group1", "uid=user1"],
+                        ["uid=user1", "gid=group1"],
                         0,
                         0,
                         "/etc/fstab",

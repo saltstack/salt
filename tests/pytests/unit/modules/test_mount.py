@@ -137,6 +137,18 @@ def test_active():
             assert mount.active() == {}
 
 
+def test_fstab_entry_ignores_opt_ordering():
+    entry = mount._fstab_entry(
+        name="/tmp",
+        device="tmpfs",
+        fstype="tmpfs",
+        opts="defaults,nodev,noexec",
+        dump=0,
+        pass_num=0,
+    )
+    assert entry.match("tmpfs\t\t/tmp\ttmpfs\tnodev,defaults,noexec\t0 0\n")
+
+
 def test_fstab():
     """
     List the content of the fstab
