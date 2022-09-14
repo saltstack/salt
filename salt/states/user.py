@@ -98,9 +98,9 @@ def _changes(
         return False
 
     change = {}
-    if groups is None:
-        groups = lusr["groups"]
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
+    if not remove_groups:
+        wanted_groups = sorted(set(wanted_groups + lusr["groups"]))
     if uid and lusr["uid"] != uid:
         change["uid"] = uid
     if gid is not None and lusr["gid"] not in (gid, __salt__["file.group_to_gid"](gid)):

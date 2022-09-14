@@ -12,6 +12,7 @@ import time
 import pytest
 from pytestshellutils.utils.processes import ProcessResult, terminate_process
 from saltfactories.utils import random_string
+
 from tests.support.helpers import Keys
 
 pytest.importorskip("docker")
