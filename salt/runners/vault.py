@@ -1,6 +1,6 @@
 """
 Runner functions supporting the Vault modules. Configuration instructions are
-documented in the execution module docs.
+documented in the :ref:`execution module docs <vault-setup>`.
 
 :maintainer:    SaltStack
 :maturity:      new
@@ -9,19 +9,19 @@ documented in the execution module docs.
 
 import base64
 import copy
-import json
 import logging
-import time
+import os
 from collections.abc import Mapping
-
-import requests
 
 import salt.cache
 import salt.crypt
 import salt.exceptions
 import salt.pillar
+import salt.utils.data
+import salt.utils.vault as vault
+import salt.utils.versions
 from salt.defaults import NOT_SET
-from salt.exceptions import SaltRunnerError
+from salt.exceptions import SaltInvocationError, SaltRunnerError
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,8 @@ def generate_token(
     minion_id, signature, impersonated_by_master=False, ttl=None, uses=None
 ):
     """
+    .. deprecated:: TBD
+
     Generate a Vault token for minion minion_id
 
     minion_id
@@ -56,89 +58,300 @@ def generate_token(
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
-        config = __opts__.get("vault", {})
-        verify = config.get("verify", None)
-        # Vault Enterprise requires a namespace
-        namespace = config.get("namespace")
-        # Allow disabling of minion provided values via the master
-        allow_minion_override = config["auth"].get("allow_minion_override", False)
-        # This preserves the previous behavior of default TTL and 1 use
-        if not allow_minion_override or uses is None:
-            uses = config["auth"].get("uses", 1)
-        if not allow_minion_override or ttl is None:
-            ttl = config["auth"].get("ttl", None)
-        storage_type = config["auth"].get("token_backend", "session")
-        policies_refresh_pillar = config.get("policies_refresh_pillar", None)
-        policies_cache_time = config.get("policies_cache_time", 60)
+        salt.utils.versions.warn_until(
+            "Argon",
+            "vault.generate_token endpoint is deprecated. Please update your minions.",
+        )
 
-        if config["auth"]["method"] == "approle":
-            if _selftoken_expired():
-                log.debug("Vault token expired. Recreating one")
-                # Requesting a short ttl token
-                url = "{}/v1/auth/approle/login".format(config["url"])
-                payload = {"role_id": config["auth"]["role_id"]}
-                if "secret_id" in config["auth"]:
-                    payload["secret_id"] = config["auth"]["secret_id"]
-                # Vault Enterprise call requires headers
-                headers = None
-                if namespace is not None:
-                    headers = {"X-Vault-Namespace": namespace}
-                response = requests.post(
-                    url, headers=headers, json=payload, verify=verify
-                )
-                if response.status_code != 200:
-                    return {"error": response.reason}
-                config["auth"]["token"] = response.json()["auth"]["client_token"]
+        if _config("issue:type") != "token":
+            log.warning(
+                "Master is not configured to issue tokens. Since the minion uses "
+                "this deprecated endpoint, issuing token anyways."
+            )
 
-        url = _get_token_create_url(config)
-        headers = {"X-Vault-Token": config["auth"]["token"]}
-        if namespace is not None:
-            headers["X-Vault-Namespace"] = namespace
-        audit_data = {
-            "saltstack-jid": globals().get("__jid__", "<no jid set>"),
-            "saltstack-minion": minion_id,
-            "saltstack-user": globals().get("__user__", "<no user set>"),
-        }
-        payload = {
-            "policies": _get_policies_cached(
-                minion_id,
-                config,
-                refresh_pillar=policies_refresh_pillar,
-                expire=policies_cache_time,
-            ),
-            "num_uses": uses,
-            "meta": audit_data,
-        }
-
+        issue_params = {}
         if ttl is not None:
-            payload["explicit_max_ttl"] = str(ttl)
+            issue_params["ttl"] = ttl
+        if uses is not None:
+            issue_params["uses"] = uses
 
-        if payload["policies"] == []:
-            return {"error": "No policies matched minion"}
-
-        log.trace("Sending token creation request to Vault")
-        response = requests.post(url, headers=headers, json=payload, verify=verify)
-
-        if response.status_code != 200:
-            return {"error": response.reason}
-
-        auth_data = response.json()["auth"]
+        token = _generate_token(
+            minion_id, issue_params=issue_params or None, wrap=False
+        )
         ret = {
-            "token": auth_data["client_token"],
-            "lease_duration": auth_data["lease_duration"],
-            "renewable": auth_data["renewable"],
-            "issued": int(round(time.time())),
-            "url": config["url"],
-            "verify": verify,
-            "token_backend": storage_type,
-            "namespace": namespace,
+            "token": token["client_token"],
+            "lease_duration": token["lease_duration"],
+            "renewable": token["renewable"],
+            "issued": token["creation_time"],
+            "url": _config("server:url"),
+            "verify": _config("server:verify"),
+            "token_backend": _config("cache:backend"),
+            "namespace": _config("server:namespace"),
         }
-        if uses >= 0:
-            ret["uses"] = uses
+        if token["num_uses"] >= 0:
+            ret["uses"] = token["num_uses"]
 
         return ret
-    except Exception as e:  # pylint: disable=broad-except
-        return {"error": str(e)}
+    except Exception as err:  # pylint: disable=broad-except
+        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+
+
+def generate_new_token(
+    minion_id, signature, impersonated_by_master=False, issue_params=None
+):
+    """
+    .. versionadded:: TBD
+
+    Generate a Vault token for minion minion_id.
+
+    minion_id
+        The id of the minion that requests a token
+
+    signature
+        Cryptographic signature which validates that the request is indeed sent
+        by the minion (or the master, see impersonated_by_master).
+
+    impersonated_by_master
+        If the master needs to create a token on behalf of the minion, this is
+        True. This happens when the master generates minion pillars.
+
+    issue_params
+        Dictionary of parameters for the generated tokens.
+        See master configuration vault:issue:token:params for possible values.
+        Requires "allow_minion_override_params" master configuration setting to be effective.
+    """
+    log.debug(
+        f"Token generation request for {minion_id} (impersonated by master: {impersonated_by_master})",
+    )
+    _validate_signature(minion_id, signature, impersonated_by_master)
+    try:
+        if _config("issue:type") != "token":
+            raise SaltInvocationError("Master does not issue tokens.")
+
+        ret = {
+            "server": _config("server"),
+            "auth": {},
+        }
+
+        token = _generate_token(minion_id, issue_params=issue_params)
+        ret.update(token)
+
+        return ret
+    except Exception as err:  # pylint: disable=broad-except
+        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+
+
+def _generate_token(minion_id, issue_params=None, wrap=None):
+    if wrap is None:
+        wrap = _config("issue:wrap")
+    endpoint = "auth/token/create"
+    if _config("issue:token:role_name") is not None:
+        endpoint += "/" + _config("issue:token:role_name")
+
+    payload = _parse_issue_params(issue_params, issue_type="token")
+    payload["policies"] = _get_policies_cached(
+        minion_id,
+        refresh_pillar=_config("policies:refresh_pillar"),
+        expire=_config("policies:cache_time"),
+    )
+
+    if not payload["policies"]:
+        raise SaltRunnerError("No policies matched minion.")
+
+    payload["meta"] = _get_metadata(minion_id, _config("metadata:token"))
+    client = _get_master_client()
+    log.trace("Sending token creation request to Vault.")
+    res = client.post(endpoint, payload, wrap=wrap)
+
+    if wrap:
+        return _filter_wrapped(res)
+    token = vault.VaultToken(**res["auth"])
+    return token.serialize_for_minion()
+
+
+def get_config(minion_id, signature, impersonated_by_master=False, issue_params=None):
+    """
+    .. versionadded:: TBD
+
+    Return Vault configuration for minion <minion_id>.
+
+    minion_id
+        The id of the minion that requests the configuration.
+
+    signature
+        Cryptographic signature which validates that the request is indeed sent
+        by the minion (or the master, see impersonated_by_master).
+
+    impersonated_by_master
+        If the master needs to contact the Vault server on behalf of the minion, this is
+        True. This happens when the master generates minion pillars.
+
+    issue_params
+        Parameters for credential issuance. Needs allow_minion_override_params in master
+        config set in order to apply.
+    """
+    log.debug(
+        f"Config request for {minion_id} (impersonated by master: {impersonated_by_master})",
+    )
+    _validate_signature(minion_id, signature, impersonated_by_master)
+    try:
+        minion_config = {
+            "auth": {
+                "method": _config("issue:type"),
+            },
+            "cache": _config("cache"),
+            "server": _config("server"),
+            "wrap_info_nested": [],
+        }
+
+        if _config("issue:type") == "token":
+            minion_config["auth"]["token"] = _generate_token(
+                minion_id, issue_params=issue_params
+            )
+            if _config("issue:wrap"):
+                minion_config["wrap_info_nested"].append("auth:token")
+        if _config("issue:type") == "approle":
+            minion_config["auth"]["approle_mount"] = _config("issue:approle:mount")
+            minion_config["auth"]["approle_name"] = minion_id
+            minion_config["auth"]["secret_id"] = _config(
+                "issue:approle:params:bind_secret_id"
+            )
+            minion_config["auth"]["role_id"] = _get_role_id(
+                minion_id, issue_params=issue_params
+            )
+            if _config("issue:wrap"):
+                minion_config["wrap_info_nested"].append("auth:role_id")
+
+        return minion_config
+    except Exception as err:  # pylint: disable=broad-except
+        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+
+
+def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params=None):
+    """
+    .. versionadded:: TBD
+
+    Return the Vault role-id for minion <minion_id>. Requires the master to be configured
+    to generate AppRoles for minions (configuration: ``vault:issue:type``).
+
+    minion_id
+        The id of the minion that requests a token
+
+    signature
+        Cryptographic signature which validates that the request is indeed sent
+        by the minion (or the master, see impersonated_by_master).
+
+    impersonated_by_master
+        If the master needs to create a token on behalf of the minion, this is
+        True. This happens when the master generates minion pillars.
+
+    issue_params
+        Dictionary of configuration values for the generated AppRole.
+        See master configuration vault:issue:approle:params for possible values.
+        Requires "allow_minion_override_params" master configuration setting to be effective.
+    """
+    log.debug(
+        f"role-id request for {minion_id} (impersonated by master: {impersonated_by_master})",
+    )
+    _validate_signature(minion_id, signature, impersonated_by_master)
+
+    try:
+        if _config("issue:type") != "approle":
+            raise SaltInvocationError("Master does not issue AppRoles.")
+
+        ret = {
+            "server": _config("server"),
+            "data": {},
+        }
+
+        role_id = _get_role_id(minion_id, issue_params=issue_params)
+        if _config("issue:wrap"):
+            ret.update(role_id)
+        else:
+            ret["data"]["role_id"] = role_id
+        return ret
+    except Exception as err:  # pylint: disable=broad-except
+        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+
+
+def _get_role_id(minion_id, issue_params=None):
+    wrap = _config("issue:wrap")
+    role_id = _lookup_role_id(minion_id, wrap=wrap)
+
+    if role_id is False:
+        # This means the role has to be created first
+        log.debug(f"Creating new AppRole for {minion_id}.")
+        # create AppRole with role name <minion_id>
+        # token_policies are set on the AppRole
+        _manage_approle(minion_id, issue_params)
+        # create/update entity with name salt_minion_<minion_id>
+        # metadata is set on the entity (to allow policy path templating)
+        _manage_entity(minion_id)
+        # ensure the new AppRole is mapped to the entity
+        _manage_entity_alias(minion_id)
+
+        role_id = _lookup_role_id(minion_id, wrap=wrap)
+        if role_id is False:
+            raise SaltRunnerError(f"Failed to create AppRole for minion {minion_id}.")
+
+    if wrap:
+        return _filter_wrapped(role_id)
+
+    return role_id
+
+
+def generate_secret_id(minion_id, signature, impersonated_by_master=False):
+    """
+    .. versionadded:: TBD
+
+    Generate a Vault secret-id for minion <minion_id>. Requires the master to be configured
+    to generate AppRoles for minions (configuration: ``vault:issue:type``).
+
+    minion_id
+        The id of the minion that requests a token
+
+    signature
+        Cryptographic signature which validates that the request is indeed sent
+        by the minion (or the master, see impersonated_by_master).
+
+    impersonated_by_master
+        If the master needs to create a token on behalf of the minion, this is
+        True. This happens when the master generates minion pillars.
+    """
+    log.debug(
+        f"secret-id generation request for {minion_id} (impersonated by master: {impersonated_by_master})",
+    )
+    _validate_signature(minion_id, signature, impersonated_by_master)
+    try:
+        if _config("issue:type") != "approle":
+            raise SaltInvocationError("Master does not issue AppRoles nor secret-ids.")
+
+        ret = {
+            "server": _config("server"),
+            "data": {},
+        }
+
+        wrap = _config("issue:wrap")
+        secret_id, meta_info = _get_secret_id(minion_id, wrap=wrap, meta_info=True)
+
+        if wrap:
+            ret.update(secret_id)
+        else:
+            ret["data"] = secret_id.serialize_for_minion()
+
+        ret["misc_data"] = {
+            "secret_id_num_uses": meta_info["secret_id_num_uses"],
+        }
+        return ret
+    except vault.VaultNotFoundError as err:
+        # when the role does not exist, make sure the minion requests
+        # new configuration details to generate one
+        return {
+            "expire_cache": True,
+            "error": "{}: {}".format(type(err).__name__, str(err)),
+        }
+    except Exception as err:  # pylint: disable=broad-except
+        return {"error": "{}: {}".format(type(err).__name__, str(err))}
 
 
 def unseal():
@@ -165,9 +378,9 @@ def unseal():
         salt-run vault.unseal
     """
     for key in __opts__["vault"]["keys"]:
-        ret = __utils__["vault.make_request"](
-            "PUT", "v1/sys/unseal", data=json.dumps({"key": key})
-        ).json()
+        ret = vault.query(
+            "POST", "sys/unseal", __opts__, __context__, payload={"key": key}
+        )
         if ret["sealed"] is False:
             return True
     return False
@@ -198,13 +411,187 @@ def show_policies(minion_id, refresh_pillar=NOT_SET, expire=None):
 
         salt-run vault.show_policies myminion
     """
-    config = __opts__.get("vault", {})
     if refresh_pillar == NOT_SET:
-        refresh_pillar = config.get("policies_refresh_pillar")
-    expire = expire if expire is not None else config.get("policies_cache_time", 60)
-    return _get_policies_cached(
-        minion_id, config, refresh_pillar=refresh_pillar, expire=expire
-    )
+        refresh_pillar = _config("policies:refresh_pillar")
+    expire = expire if expire is not None else _config("policies:cache_time")
+    return _get_policies_cached(minion_id, refresh_pillar=refresh_pillar, expire=expire)
+
+
+def sync_approles(minions=None, up=False, down=False, issue_params=None):
+    """
+    Sync minion AppRole parameters with current settings, including associated
+    token policies.
+
+    .. note::
+        Only updates existing AppRoles. They are issued during the first request
+        for one by the minion.
+
+    If no parameter is specified, will try to sync AppRoles for all known minions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.sync_approles
+        salt-run vault.sync_approles ecorp issue_params="{ttl: 0, num_uses: 1337}"
+
+    minions
+        (List of) ID(s) of the minion(s) to update the AppRole for.
+        Defaults to None.
+
+    up
+        Find all minions that are up and update their AppRoles.
+        Defaults to False.
+
+    down
+        Find all minions that are down and update their AppRoles.
+        Defaults to False.
+
+    issue_params
+        Overrides for AppRole parameters. See ``issue:approle:params`` and
+        ``issue:allow_minion_override_params`` (the latter for the description
+        only since the runner works on the master-side).
+    """
+    if "approle" != _config("issue:type"):
+        raise SaltRunnerError("Master does not issue AppRoles to minions.")
+    if minions is not None:
+        if not isinstance(minions, list):
+            minions = [minions]
+    elif up or down:
+        minions = []
+        if up:
+            minions.extend(__salt__["manage.list_state"]())
+        if down:
+            minions.extend(__salt__["manage.list_not_state"]())
+    else:
+        minions = _list_all_known_minions()
+
+    for minion in set(minions) & set(list_approles()):
+        _manage_approle(minion, issue_params, params_from_master=True)
+    return True
+
+
+def list_approles():
+    """
+    List all AppRoles that have been created by the Salt master.
+    They are named after the minions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.list_approles
+    """
+    if "approle" != _config("issue:type"):
+        raise SaltRunnerError("Master does not issue AppRoles to minions.")
+    endpoint = "auth/{}/role".format(_config("issue:approle:mount"))
+    client = _get_master_client()
+    return client.list(endpoint)["data"]["keys"]
+
+
+def sync_entities(minions=None, up=False, down=False):
+    """
+    Sync minion entities with current settings. Only updates entities for minions
+    with existing AppRoles.
+
+    .. note::
+        This updates associated metadata only. Entities are created only
+        when issuing AppRoles to minions (``issue:type`` == ``approle``).
+
+    If no parameter is specified, will try to sync entities for all known minions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.sync_entities
+
+    minions
+        (List of) ID(s) of the minion(s) to update the entity for.
+        Defaults to None.
+
+    up
+        Find all minions that are up and update their associated entities.
+        Defaults to False.
+
+    down
+        Find all minions that are down and update their associated entities.
+        Defaults to False.
+    """
+    if "approle" != _config("issue:type"):
+        raise SaltRunnerError(
+            "Master is not configured to issue AppRoles to minions, which is a "
+            "requirement to use managed entities with Salt."
+        )
+    if minions is not None:
+        if not isinstance(minions, list):
+            minions = [minions]
+    elif up or down:
+        minions = []
+        if up:
+            minions.extend(__salt__["manage.list_state"]())
+        if down:
+            minions.extend(__salt__["manage.list_not_state"]())
+    else:
+        minions = _list_all_known_minions()
+
+    for minion in set(minions) & set(list_approles()):
+        _manage_entity(minion)
+        entity = _lookup_entity_by_alias(minion)
+        if not entity or not entity["name"] == f"salt_minion_{minion}":
+            log.info(
+                f"Fixing association of minion AppRole to minion entity for {minion}."
+            )
+            _manage_entity_alias(minion)
+    return True
+
+
+def cleanup_auth():
+    """
+    Removes AppRoles and entities associated with unknown minion IDs.
+    Can only clean up entities if the AppRole still exists.
+
+    .. warning::
+        Make absolutely sure that the configured minion approle issue mount is
+        exclusively dedicated to the Salt master, otherwise you might lose data
+        by using this function! (config: ``issue:approle:mount``)
+
+        This detects unknown existing AppRoles by listing all roles on the
+        configured minion approle mount and deducting known minions from the
+        returned list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.cleanup_auth
+    """
+    ret = {"approles": [], "entities": []}
+
+    for minion in set(list_approles()) - set(_list_all_known_minions()):
+        if _fetch_entity_by_name(minion):
+            _delete_entity(minion)
+            ret["entities"].append(minion)
+        _delete_approle(minion)
+        ret["approles"].append(minion)
+    return {"deleted": ret}
+
+
+def _config(key=None):
+    ckey = "vault_master_config"
+    if ckey not in __context__:
+        __context__[ckey] = vault.parse_config(__opts__.get("vault", {}))
+
+    if key is None:
+        return __context__[ckey]
+    val = salt.utils.data.traverse_dict(__context__[ckey], key, vault.VaultException)
+    if val == vault.VaultException:
+        raise vault.VaultException("Requested configuration value does not exist.")
+    return val
+
+
+def _list_all_known_minions():
+    return os.listdir(__opts__["pki_dir"] + "/minions")
 
 
 def _validate_signature(minion_id, signature, impersonated_by_master):
@@ -214,38 +601,33 @@ def _validate_signature(minion_id, signature, impersonated_by_master):
     """
     pki_dir = __opts__["pki_dir"]
     if impersonated_by_master:
-        public_key = "{}/master.pub".format(pki_dir)
+        public_key = f"{pki_dir}/master.pub"
     else:
-        public_key = "{}/minions/{}".format(pki_dir, minion_id)
+        public_key = f"{pki_dir}/minions/{minion_id}"
 
     log.trace("Validating signature for %s", minion_id)
     signature = base64.b64decode(signature)
     if not salt.crypt.verify_signature(public_key, minion_id, signature):
         raise salt.exceptions.AuthenticationError(
-            "Could not validate token request from {}".format(minion_id)
+            f"Could not validate token request from {minion_id}"
         )
     log.trace("Signature ok")
 
 
 # **kwargs because salt.cache.Cache does not pop "expire" from kwargs
 def _get_policies(
-    minion_id, config, refresh_pillar=None, **kwargs
+    minion_id, refresh_pillar=None, **kwargs
 ):  # pylint: disable=unused-argument
     """
     Get the policies that should be applied to a token for minion_id
     """
     grains, pillar = _get_minion_data(minion_id, refresh_pillar)
-    policy_patterns = config.get(
-        "policies", ["saltstack/minion/{minion}", "saltstack/minions"]
-    )
     mappings = {"minion": minion_id, "grains": grains, "pillar": pillar}
 
     policies = []
-    for pattern in policy_patterns:
+    for pattern in _config("policies:assign"):
         try:
-            for expanded_pattern in __utils__["vault.expand_pattern_lists"](
-                pattern, **mappings
-            ):
+            for expanded_pattern in vault.expand_pattern_lists(pattern, **mappings):
                 policies.append(
                     expanded_pattern.format(**mappings).lower()  # Vault requirement
                 )
@@ -258,10 +640,10 @@ def _get_policies(
     return policies
 
 
-def _get_policies_cached(minion_id, config, refresh_pillar=None, expire=60):
+def _get_policies_cached(minion_id, refresh_pillar=None, expire=60):
     # expiration of 0 disables cache
     if not expire:
-        return _get_policies(minion_id, config, refresh_pillar=refresh_pillar)
+        return _get_policies(minion_id, refresh_pillar=refresh_pillar)
     cbank = f"minions/{minion_id}/vault"
     ckey = "policies"
     cache = salt.cache.factory(__opts__)
@@ -271,7 +653,6 @@ def _get_policies_cached(minion_id, config, refresh_pillar=None, expire=60):
         _get_policies,
         expire=expire,
         minion_id=minion_id,
-        config=config,
         refresh_pillar=refresh_pillar,
     )
     if not isinstance(policies, list):
@@ -283,7 +664,6 @@ def _get_policies_cached(minion_id, config, refresh_pillar=None, expire=60):
             _get_policies,
             expire=expire,
             minion_id=minion_id,
-            config=config,
             refresh_pillar=refresh_pillar,
         )
     return policies
@@ -331,39 +711,248 @@ def _get_minion_data(minion_id, refresh_pillar=None):
     return grains, pillar
 
 
-def _selftoken_expired():
-    """
-    Validate the current token exists and is still valid
-    """
-    try:
-        verify = __opts__["vault"].get("verify", None)
-        # Vault Enterprise requires a namespace
-        namespace = __opts__["vault"].get("namespace")
-        url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
-        if "token" not in __opts__["vault"]["auth"]:
-            return True
-        headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
-        # Add Vault namespace to headers if Vault Enterprise enabled
-        if namespace is not None:
-            headers["X-Vault-Namespace"] = namespace
-        response = requests.get(url, headers=headers, verify=verify)
-        if response.status_code != 200:
-            return True
-        return False
-    except Exception as e:  # pylint: disable=broad-except
-        raise salt.exceptions.CommandExecutionError(
-            "Error while looking up self token : {}".format(str(e))
+def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
+    _, pillar = _get_minion_data(minion_id, refresh_pillar)
+    mappings = {
+        "minion": minion_id,
+        "pillar": pillar,
+        "jid": globals().get("__jid__", "<no jid set>"),
+        "user": globals().get("__user__", "<no user set>"),
+    }
+    metadata = {}
+    for key, pattern in metadata_patterns.items():
+        metadata[key] = []
+        try:
+            for expanded_pattern in vault.expand_pattern_lists(pattern, **mappings):
+                metadata[key].append(expanded_pattern.format(**mappings))
+        except KeyError:
+            log.warning(
+                "Could not resolve metadata pattern %s for minion %s",
+                pattern,
+                minion_id,
+            )
+
+    log.debug(f"{minion_id} metadata: {metadata}")
+    return {k: ",".join(v) for k, v in metadata.items()}
+
+
+def _parse_issue_params(params, issue_type=None, params_from_master=False):
+    if not _config("issue:allow_minion_override_params") and not params_from_master:
+        params = {}
+
+    no_override_params = [
+        "bind_secret_id",
+        "secret_id_bound_cidrs",
+        "token_policies",
+        "token_bound_cidrs",
+    ]
+
+    # issue_type is used to override the configured type for minions using the old endpoint
+    # TODO: remove this once the endpoint has been removed
+    issue_type = issue_type or _config("issue:type")
+    if "token" == issue_type:
+        valid_params = {
+            "ttl": "explicit_max_ttl",
+            "uses": "num_uses",
+        }
+    elif "approle" == issue_type:
+        valid_params = {
+            "bind_secret_id": "bind_secret_id",
+            "secret_id_num_uses": "secret_id_num_uses",
+            "secret_id_ttl": "secret_id_ttl",
+            "ttl": "token_explicit_max_ttl",
+            "uses": " token_num_uses",
+        }
+    else:
+        raise SaltRunnerError(
+            "Invalid configuration for minion Vault authentication issuance."
         )
 
+    configured_params = _config(f"issue:{issue_type}:params")
+    ret = {}
 
-def _get_token_create_url(config):
+    for valid_param, vault_param in valid_params.items():
+        if valid_param in configured_params:
+            ret[vault_param] = configured_params[valid_param]
+        if valid_param in params and vault_param not in no_override_params:
+            ret[vault_param] = params[valid_param]
+
+    return ret
+
+
+def _filter_wrapped(wrapped):
+    return {
+        "wrap_info": {
+            "token": wrapped.id,
+            "ttl": wrapped.ttl,
+            "creation_time": wrapped.creation_time,
+            "creation_path": wrapped.creation_path,
+        },
+    }
+
+
+def _manage_approle(minion_id, issue_params, params_from_master=False):
+    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
+    payload = _parse_issue_params(issue_params, params_from_master=params_from_master)
+    payload["token_policies"] = _get_policies_cached(minion_id, refresh_pillar=True)
+    client = _get_master_client()
+    log.debug(f"Creating/updating AppRole for minion {minion_id}.")
+    client.post(endpoint, payload)
+
+
+def _delete_approle(minion_id):
+    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
+    client = _get_master_client()
+    log.debug(f"Deleting approle for minion {minion_id}.")
+    client.delete(endpoint)
+
+
+def _lookup_role_id(minion_id, wrap=None):
+    if wrap is None:
+        wrap = _config("issue:wrap")
+    client = _get_master_client()
+    endpoint = "auth/{}/role/{}/role-id".format(
+        _config("issue:approle:mount"), minion_id
+    )
+    try:
+        role_id = client.get(endpoint, wrap=wrap)
+    except vault.VaultNotFoundError:
+        return False
+    if wrap:
+        return role_id
+    return role_id["data"]["role_id"]
+
+
+def _get_secret_id(minion_id, wrap=None, meta_info=False):
+    if wrap is None:
+        wrap = _config("issue:wrap")
+    client = _get_master_client()
+    endpoint = "auth/{}/role/{}/secret-id".format(
+        _config("issue:approle:mount"), minion_id
+    )
+    response = client.post(endpoint, wrap=wrap)
+    if wrap:
+        # wrapped responses are always VaultWrappedResponse objects
+        secret_id = _filter_wrapped(response)
+        accessor = response.wrapped_accessor
+    else:
+        secret_id = vault.VaultAppRoleSecretId(**response["data"])
+        accessor = response["data"]["secret_id_accessor"]
+    if not meta_info:
+        return secret_id
+    # sadly, secret_id_num_uses is not part of the information returned
+    meta_info = client.post(
+        endpoint + "-accessor/lookup", payload={"secret_id_accessor": accessor}
+    )["data"]
+
+    return secret_id, meta_info
+
+
+def _lookup_mount_accessor(mount):
+    log.debug(f"Looking up mount accessor ID for mount {mount}.")
+    endpoint = f"sys/auth/{mount}"
+    client = _get_master_client()
+    return client.get(endpoint)["accessor"]
+
+
+def _lookup_entity_by_alias(minion_id):
     """
-    Create Vault url for token creation
+    This issues a lookup for the entity using the role-id and mount accessor,
+    thus verifies that an entity and associated entity alias exists.
     """
-    role_name = config.get("role_name", None)
-    auth_path = "/v1/auth/token/create"
-    base_url = config["url"]
-    return "/".join(x.strip("/") for x in (base_url, auth_path, role_name) if x)
+    minion_mount_accessor = _lookup_mount_accessor(_config("issue:approle:mount"))
+    role_id = _lookup_role_id(minion_id, wrap=False)
+    client = _get_master_client()
+    endpoint = "identity/lookup/entity"
+    payload = {
+        "alias_name": role_id,
+        "alias_mount_accessor": minion_mount_accessor,
+    }
+    entity = client.post(endpoint, payload)
+    if isinstance(entity, dict):
+        return entity["data"]
+    return False
+
+
+def _fetch_entity_by_name(minion_id):
+    client = _get_master_client()
+    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
+    try:
+        return client.get(endpoint)["data"]
+    except vault.VaultNotFoundError:
+        return False
+
+
+def _manage_entity(minion_id):
+    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
+    payload = {
+        "metadata": _get_metadata(minion_id, _config("metadata:entity"), True),
+    }
+    client = _get_master_client()
+    client.post(endpoint, payload=payload)
+
+
+def _delete_entity(minion_id):
+    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
+    client = _get_master_client()
+    client.delete(endpoint)
+
+
+def _manage_entity_alias(minion_id):
+    log.debug(f"Creating entity alias for minion {minion_id}.")
+    minion_mount_accessor = _lookup_mount_accessor(_config("issue:approle:mount"))
+    role_id = _lookup_role_id(minion_id, wrap=False)
+    entity = _fetch_entity_by_name(minion_id)
+    if not entity:
+        raise SaltRunnerError(
+            f"There is no entity to create an alias for for minion {minion_id}."
+        )
+    payload = {
+        "canonical_id": entity["id"],
+        "mount_accessor": minion_mount_accessor,
+        "name": str(role_id),
+    }
+    for alias in entity["aliases"]:
+        if alias["mount_accessor"] == minion_mount_accessor:
+            payload["id"] = alias["id"]
+    client = _get_master_client()
+    client.post("identity/entity-alias", payload=payload)
+
+
+def _get_master_client():
+    # force_local is necessary when issuing credentials while impersonating
+    # minions since the opts dict cannot be used to distinguish master from
+    # minion in that case
+    client = vault.get_authd_client(__opts__, __context__, force_local=True)
+    return client
+
+
+def _revoke_token(token=None, accessor=None):
+    if not token and not accessor:
+        raise SaltInvocationError("Need either token or accessor to revoke token.")
+    endpoint = "auth/token/revoke"
+    if token:
+        payload = {"token": token}
+    else:
+        endpoint += "-accessor"
+        payload = {"accessor": accessor}
+    client = _get_master_client()
+    return client.post(endpoint, payload=payload)
+
+
+def _destroy_secret_id(minion_id, mount, secret_id=None, accessor=None):
+    if not secret_id and not accessor:
+        raise SaltInvocationError(
+            "Need either secret_id or accessor to destroy secret-id."
+        )
+    if secret_id:
+        endpoint = f"auth/{mount}/role/{minion_id}/secret-id/destroy"
+        payload = {"secret_id": str(secret_id)}
+    else:
+        endpoint = f"auth/{mount}/role/{minion_id}/secret-id-accessor/destroy"
+        payload = {"secret_id_accessor": accessor}
+    client = _get_master_client()
+    return client.post(endpoint, payload=payload)
 
 
 class LazyPillar(Mapping):

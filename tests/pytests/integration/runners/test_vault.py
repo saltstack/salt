@@ -25,7 +25,7 @@ def pillar_state_tree(tmp_path_factory):
 
 
 @pytest.fixture(scope="class")
-def pillar_salt_master(salt_factories, pillar_state_tree):
+def pillar_salt_master(salt_factories, pillar_state_tree, vault_port):
     config_defaults = {
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
@@ -42,7 +42,7 @@ def pillar_salt_master(salt_factories, pillar_state_tree):
                 "salt_unsafe_{grains[foo]}",
             ],
             "policies_cache_time": 0,
-            "url": "http://127.0.0.1:8200",
+            "url": f"http://127.0.0.1:{vault_port}",
         },
         "minion_data_cache": False,
     }
@@ -54,7 +54,7 @@ def pillar_salt_master(salt_factories, pillar_state_tree):
 
 
 @pytest.fixture(scope="class")
-def pillar_caching_salt_master(salt_factories, pillar_state_tree):
+def pillar_caching_salt_master(salt_factories, pillar_state_tree, vault_port):
     config_defaults = {
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
@@ -67,7 +67,7 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree):
                 "salt_unsafe_{grains[foo]}",
             ],
             "policies_cache_time": 0,
-            "url": "http://127.0.0.1:8200",
+            "url": f"http://127.0.0.1:{vault_port}",
         },
         "minion_data_cache": True,
     }
