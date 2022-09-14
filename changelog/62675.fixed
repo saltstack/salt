@@ -1,0 +1,1 @@
+Ensure the status of the service is captured when the beacon function is called, even when the event is not being emitted.
