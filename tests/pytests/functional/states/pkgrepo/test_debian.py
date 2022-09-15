@@ -604,7 +604,7 @@ class Repo:
     fullname = attr.ib()
     alt_repo = attr.ib(init=False)
     key_file = attr.ib()
-    tmp_path = attr.ib()
+    sources_list_file = attr.ib()
     repo_file = attr.ib()
     repo_content = attr.ib()
     key_url = attr.ib()
@@ -637,7 +637,7 @@ class Repo:
 
     @repo_file.default
     def _default_repo_file(self):
-        return self.tmp_path / "stable-binary.list"
+        return self.sources_list_file
 
     @repo_content.default
     def _default_repo_content(self):
@@ -677,35 +677,43 @@ class Repo:
 
 
 @pytest.fixture
-def repo(request, grains, tmp_path):
+def repo(request, grains, sources_list_file):
     signedby = False
     if "signedby" in request.node.name:
         signedby = True
-    repo = Repo(grains=grains, tmp_path=tmp_path, signedby=signedby)
+    repo = Repo(grains=grains, sources_list_file=sources_list_file, signedby=signedby)
     yield repo
     for key in [repo.key_file, repo.key_file.parent / "salt-alt-key.gpg"]:
         if key.is_file():
             key.unlink()
 
 
-def test_adding_repo_file_signedby(pkgrepo, states, repo):
+def test_adding_repo_file_signedby(pkgrepo, states, repo, subtests):
     """
     Test adding a repo file using pkgrepo.managed
     and setting signedby
     """
-    ret = states.pkgrepo.managed(
-        name=repo.repo_content,
-        file=str(repo.repo_file),
-        clean_file=True,
-        signedby=str(repo.key_file),
-        key_url=repo.key_url,
-        aptkey=False,
-    )
+
+    def _run(test=False):
+        return states.pkgrepo.managed(
+            name=repo.repo_content,
+            file=str(repo.repo_file),
+            clean_file=True,
+            signedby=str(repo.key_file),
+            key_url=repo.key_url,
+            aptkey=False,
+            test=test,
+        )
+
+    ret = _run()
     with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
     assert repo.key_file.is_file()
     assert repo.repo_content in ret.comment
+    with subtests.test("test=True"):
+        ret = _run(test=True)
+        assert ret.changes == {}
 
 
 def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):

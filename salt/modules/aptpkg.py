@@ -3103,14 +3103,21 @@ def expand_repo_def(**kwargs):
         if signedby not in sanitized["line"]:
             line = sanitized["line"].split()
             repo_opts = _get_opts(repo)
-            opts_order = [x for x in repo_opts.keys()]
+            opts_order = [
+                opt_type
+                for opt_type, opt_def in repo_opts.items()
+                if opt_def["full"] != ""
+            ]
             for opt in repo_opts:
                 if "index" in repo_opts[opt]:
                     idx = repo_opts[opt]["index"]
                     opts_order[idx] = repo_opts[opt]["full"]
 
             opts = "[" + " ".join(opts_order) + "]"
-            line[1] = opts
+            if line[1].startswith("["):
+                line[1] = opts
+            else:
+                line.insert(1, opts)
             sanitized["line"] = " ".join(line)
 
     return sanitized

@@ -10,6 +10,7 @@ import textwrap
 import pytest
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 from pytestshellutils.utils import ports
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
@@ -331,6 +332,7 @@ def test_issue_50221(
         assert target_path.read_text().replace("\r\n", "\n") == expected_content
 
 
+@pytest.mark.skip_if_not_root
 def test_issue_60426(
     salt_master,
     salt_call_cli,
@@ -1297,4 +1299,46 @@ def test_issue_62117(
         assert ret.returncode == 0
         assert ret.data
         state_run = next(iter(ret.data.values()))
+        assert state_run["result"] is True
+
+
+def test_issue_62611(
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
+):
+    name = "test_jinja/issue-62611"
+
+    jinja_contents = '{% set myvar = "MOOP" -%}'
+
+    jinja_file = salt_master.state_tree.base.paths[0] / "{}.jinja".format(name)
+    if salt.utils.platform.is_windows():
+        jinja_file = str(jinja_file).replace("\\", "\\\\")
+
+    sls_contents = """
+    {%- from "REPLACEME" import myvar with context %}
+
+    test_jinja/issue-62611/cmd.run:
+      cmd.run:
+        - name: echo MEEP {{ myvar }}
+    """.replace(
+        "REPLACEME", str(jinja_file)
+    )
+
+    jinja_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.jinja".format(name), jinja_contents
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(name), sls_contents
+    )
+
+    with jinja_tempfile, sls_tempfile:
+        ret = salt_call_cli.run("--local", "state.apply", name.replace("/", "."))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
+        assert state_run["name"] == "echo MEEP MOOP"
         assert state_run["result"] is True
