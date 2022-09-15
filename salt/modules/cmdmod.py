@@ -25,6 +25,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
+import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.stringutils
@@ -443,12 +444,13 @@ def _run(
         # Ensure environment is correct for a newly logged-in user by running
         # the command under bash as a login shell
         try:
-            user_shell = __salt__["user.info"](runas)["shell"]
+            # Do not rely on populated __salt__ dict (ie avoid __salt__['user.info'])
+            user_shell = [x for x in pwd.getpwall() if x.pw_name == runas][0].pw_shell
             if re.search("bash$", user_shell):
                 cmd = "{shell} -l -c {cmd}".format(
                     shell=user_shell, cmd=_cmd_quote(cmd)
                 )
-        except KeyError:
+        except (AttributeError, IndexError):
             pass
 
         # Ensure the login is simulated correctly (note: su runs sh, not bash,
@@ -508,30 +510,50 @@ def _run(
                     env_cmd.extend(["-s", "--", shell, "-c"])
                 else:
                     env_cmd.extend(["-i", "--"])
-                env_cmd.extend([sys.executable])
             elif __grains__["os"] in ["FreeBSD"]:
-                env_cmd = (
+                env_cmd = [
                     "su",
                     "-",
                     runas,
                     "-c",
-                    "{} -c {}".format(shell, sys.executable),
-                )
+                ]
             elif __grains__["os_family"] in ["Solaris"]:
-                env_cmd = ("su", "-", runas, "-c", sys.executable)
+                env_cmd = ["su", "-", runas, "-c"]
             elif __grains__["os_family"] in ["AIX"]:
-                env_cmd = ("su", "-", runas, "-c", sys.executable)
+                env_cmd = ["su", "-", runas, "-c"]
             else:
-                env_cmd = ("su", "-s", shell, "-", runas, "-c", sys.executable)
+                env_cmd = ["su", "-s", shell, "-", runas, "-c"]
+
+            if not salt.utils.pkg.check_bundled():
+                if __grains__["os"] in ["FreeBSD"]:
+                    env_cmd.extend(["{} -c {}".format(shell, sys.executable)])
+                else:
+                    env_cmd.extend([sys.executable])
+            else:
+                with tempfile.NamedTemporaryFile("w", delete=False) as fp:
+                    if __grains__["os"] in ["FreeBSD"]:
+                        env_cmd.extend(
+                            [
+                                "{} -c {} python {}".format(
+                                    shell, sys.executable, fp.name
+                                )
+                            ]
+                        )
+                    else:
+                        env_cmd.extend(["{} python {}".format(sys.executable, fp.name)])
+                    fp.write(py_code)
+                    shutil.chown(fp.name, runas)
+
             msg = "env command: {}".format(env_cmd)
             log.debug(log_callback(msg))
-
             env_bytes, env_encoded_err = subprocess.Popen(
                 env_cmd,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
             ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            if salt.utils.pkg.check_bundled():
+                os.remove(fp.name)
             marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
