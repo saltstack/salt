@@ -21,7 +21,7 @@ Please be as specific as possible and give set-up details.
 - [ ] container (Kubernetes, Docker, containerd, etc. please specify)
 - [ ] or a combination, please be explicit
 - [ ] jails if it is FreeBSD
-- [ ] classic packaging (rpm, deb as per OS)
+- [ ] classic packaging
 - [ ] onedir packaging
 - [ ] used bootstrap to install
 
