@@ -2825,3 +2825,171 @@ def test_get_server_id():
 
     with patch.dict(core.__opts__, {"id": "otherid"}):
         assert core.get_server_id() != expected
+
+
+def test_linux_cpudata_ppc64le():
+    cpuinfo = """processor	: 0
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 1
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 2
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 3
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 4
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 5
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 6
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 7
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              timebase	: 512000000
+              platform	: pSeries
+              model		: IBM,9009-42A
+              machine		: CHRP IBM,9009-42A
+              MMU		: Hash
+              """
+
+    expected = {
+        "num_cpus": 8,
+        "cpu_model": "POWER9 (architected), altivec supported",
+        "cpu_flags": [],
+    }
+
+    with patch("os.path.isfile", return_value=True):
+        with patch("salt.utils.files.fopen", mock_open(read_data=cpuinfo)):
+            assert expected == core._linux_cpudata()
+
+
+@pytest.mark.parametrize(
+    "virt,expected",
+    [
+        ("ibm_power-kvm", {"virtual": "kvm"}),
+        ("ibm_power-lpar_shared", {"virtual": "LPAR", "virtual_subtype": "shared"}),
+        (
+            "ibm_power-lpar_dedicated",
+            {"virtual": "LPAR", "virtual_subtype": "dedicated"},
+        ),
+        ("ibm_power-some_other", {"virtual": "physical"}),
+    ],
+)
+def test_ibm_power_virtual(virt, expected):
+    """
+    Test if virtual grains are parsed correctly on various IBM power virt types
+    """
+    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False)):
+        with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+            with patch.dict(
+                core.__salt__,
+                {
+                    "cmd.run_all": MagicMock(
+                        return_value={
+                            "pid": 78,
+                            "retcode": 0,
+                            "stderr": "",
+                            "stdout": virt,
+                        }
+                    )
+                },
+            ):
+                osdata = {
+                    "kernel": "test",
+                }
+                ret = core._virtual(osdata)
+                assert expected == ret
+
+
+@pytest.mark.parametrize(
+    "test_input,expected",
+    [
+        (
+            {
+                "/proc/device-tree/model": "fsl,MPC8349EMITX",
+                "/proc/device-tree/system-id": "fsl,ABCDEF",
+            },
+            {
+                "manufacturer": "fsl",
+                "productname": "MPC8349EMITX",
+                "serialnumber": "fsl,ABCDEF",
+            },
+        ),
+        (
+            {
+                "/proc/device-tree/model": "MPC8349EMITX",
+                "/proc/device-tree/system-id": "fsl,ABCDEF",
+            },
+            {"productname": "MPC8349EMITX", "serialnumber": "fsl,ABCDEF"},
+        ),
+        (
+            {"/proc/device-tree/model": "IBM,123456,789"},
+            {"manufacturer": "IBM", "productname": "123456,789"},
+        ),
+        (
+            {"/proc/device-tree/system-id": "IBM,123456,789"},
+            {"serialnumber": "IBM,123456,789"},
+        ),
+        (
+            {
+                "/proc/device-tree/model": "Raspberry Pi 4 Model B Rev 1.1",
+                "/proc/device-tree/serial-number": "100000000123456789",
+            },
+            {
+                "serialnumber": "100000000123456789",
+                "productname": "Raspberry Pi 4 Model B Rev 1.1",
+            },
+        ),
+        (
+            {
+                "/proc/device-tree/serial-number": "100000000123456789",
+                "/proc/device-tree/system-id": "fsl,ABCDEF",
+            },
+            {"serialnumber": "100000000123456789"},
+        ),
+    ],
+)
+def test_linux_devicetree_data(test_input, expected):
+    def _mock_open(filename, *args, **kwargs):
+        """
+        Helper mock because we want to return arbitrary value based on the filename, rather than expecting we get the proper calls in order
+        """
+
+        def _raise_fnfe():
+            raise FileNotFoundError()
+
+        m = MagicMock()
+        m.__enter__.return_value.read = (
+            lambda: test_input.get(filename)  # pylint: disable=W0640
+            if filename in test_input  # pylint: disable=W0640
+            else _raise_fnfe()
+        )
+
+        return m
+
+    with patch("os.path.isfile", return_value=True):
+        with patch("salt.utils.files.fopen", new=_mock_open):
+            assert expected == core._linux_devicetree_platform_data()
