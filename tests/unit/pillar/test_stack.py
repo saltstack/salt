@@ -40,7 +40,7 @@ class StackPillarTestCase(TestCase, LoaderModuleMockMixin):
         mock_output = [
             "/path/to/filename.yml\n",  # mocked contents of /path/to/stack.cfg
             """
-                foo: foo1
+                foo: foo1 # jinja test
                 bar: bar1
             """,                        # mocked contents of filename.yml
         ]
@@ -74,18 +74,6 @@ class StackPillarTestCase(TestCase, LoaderModuleMockMixin):
              bar: bar1      # yaml indentation error
             """,                        # mocked contents of filename.yml
         ]
-
         self.assertRaises(Exception, self.mockStackPillar,
                           mock_output, "/path/to/stack.cfg")
 
-        # jinja template error
-        mock_output = [
-            "/path/to/filename.yml\n",  # mocked contents of /path/to/stack.cfg
-            """
-                foo: {{ foo1 }} # unknown jinja variable
-                bar: bar1
-            """,                        # mocked contents of filename.yml
-        ]
-
-        self.assertRaises(Exception, self.mockStackPillar,
-                          mock_output, "/path/to/stack.cfg")
