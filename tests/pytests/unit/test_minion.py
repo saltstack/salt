@@ -21,16 +21,6 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def minion_opts(temp_salt_minion, tmp_path):
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["root_dir"] = str(tmp_path)
-    for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
-        opts[name] = str(tmp_path / name)
-    opts["log_file"] = "logs/minion.log"
-    return opts
-
-
 def test_minion_load_grains_false():
     """
     Minion does not generate grains when load_grains is False
