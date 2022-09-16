@@ -104,7 +104,7 @@ quickly and safely as is possible.
 
 1.  A security report sent to saltproject-security.pdl@broadcom.com is assigned to a team
     member. This person is the primary contact for questions and will
-    coordinate the fix, release, and announcement. 
+    coordinate the fix, release, and announcement.
 
 2.  The reported issue is reproduced and confirmed. A list of affected projects
     and releases is made.
