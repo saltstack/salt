@@ -7,7 +7,6 @@ from tests.support.unit import TestCase
 
 
 class StackPillarTestCase(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         loader_globals = {
             "__grains__": {"os": "Debian", "os_family": "Debian"},
