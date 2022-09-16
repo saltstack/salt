@@ -24,11 +24,83 @@ env:
 
 jobs:
 
+  dependencies:
+    name: Setup Python Dependencies
+    runs-on:
+      - self-hosted
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Cache nox.${{ inputs.vagrant-box-name }}.tar.xz
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.vagrant-box-name }}.tar.xz
+          key: deps||${{ inputs.vagrant-box-name }}||${{ hashFiles('requirements/**/*.txt') }}
+
+      # Check the existance of nox.tar.xz.
+      # If it exists, it means the cache was hit and we don't have to regenerate the nox.tar.xz again
+      - name: Check nox.${{ inputs.vagrant-box-name }}.tar.xz Exists
+        id: check-nox-tarball
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "nox.${{ inputs.vagrant-box-name }}.tar.xz"
+
+      - name: Download One Dir Artifact
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact-name }}
+
+      - name: Extract Artifact
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          mkdir salt-artifacts
+          cp salt*tar.xz salt-artifacts/
+          cd salt-artifacts
+          tar -xpf salt*tar.xz
+
+      - name: PyPi Proxy
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+
+      - name: Install Dependencies
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          nox --force-color -e ci-install-dependencies
+
+      - name: Compress And Download .nox Directory
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          nox --force-color -e ci-compress-dependencies -- ${{ inputs.vagrant-box-name }}
+
+      - name: Upload Dependencies
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.vagrant-box-name }}
+          path: nox.${{ inputs.vagrant-box-name }}.tar.xz
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant-box-name }}-deps
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+
   test:
     name: Test
     runs-on:
       - self-hosted
     timeout-minutes: 600  # 10 Hours
+    needs:
+      - dependencies
     strategy:
       fail-fast: false
       matrix:
@@ -54,31 +126,31 @@ jobs:
           cd salt-artifacts
           tar -xpf salt*tar.xz
 
+      - name: Download Installed Dependencies
+        uses: actions/download-artifact@v3
+        with:
+          name: nox-${{ inputs.vagrant-box-name }}
+
+      - name: Decompress .nox/
+        run: |
+          nox --force-color -e ci-decompress-dependencies -- ${{ inputs.vagrant-box-name }}
+
       - name: Run Tests
         env:
           RERUN_FAILURES: "1"
         run: |
-          nox --force-color -e 'test-onedir(coverage=True)' -- \
-            --color=yes -ra -vv --run-slow --ssh-tests --output-columns=120 \
-            --sys-stats --sysinfo --run-destructive tests/pytests/functional
+          nox --force-color -e ci-test --  ${{ matrix.tests-chunk }}
 
       - name: Combine Coverage Reports
         if: always() && steps.spin-up-vm.conclusion == 'success'
         run: |
-          nox --force-color -e vagrant-combine-coverage -- ${{ inputs.vagrant-box-name }}
+          nox --force-color -e combine-coverage
 
       - name: Download Artifacts from Guest
         id: download-artifacts-from-vm
         if: always() && steps.spin-up-vm.conclusion == 'success'
         run: |
-          nox --force-color -e vagrant-download-artifacts -- ${{ inputs.vagrant-box-name }}
-          tree -a artifacts
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.vagrant-box-name }}.${{ matrix.tests-chunk }}
-
-      - name: Destroy VM
-        if: always() && steps.spin-up-vm.conclusion == 'success'
-        run: |
-          vagrant destroy --force ${{ inputs.vagrant-box-name }}
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.conclusion == 'success'

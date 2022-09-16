@@ -1539,6 +1539,152 @@ def vagrant_report_coverage(session):
     )
 
 
+@nox.session(python="3", name="ci-test")
+def ci_test(session):
+    chunks = {
+        "unit": [
+            "tests/unit",
+            "tests/pytests/unit",
+        ],
+        "functional": [
+            "tests/pytests/functional",
+        ],
+        "scenarios": ["tests/pytests/scenarios"],
+    }
+
+    if not session.posargs:
+        chunk_cmd = []
+        junit_report_filename = "test-results"
+        runtests_log_filename = "runtests"
+    else:
+        chunk = session.posargs.pop(0)
+        if chunk in ["unit", "functional", "integration", "scenarios", "all"]:
+            if chunk == "all":
+                chunk_cmd = []
+                junit_report_filename = "test-results"
+                runtests_log_filename = "runtests"
+            elif chunk == "integration":
+                chunk_cmd = []
+                for values in chunks.values():
+                    for value in values:
+                        chunk_cmd.append(f"--ignore={value}")
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            else:
+                chunk_cmd = chunks[chunk]
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            if session.posargs:
+                if session.posargs[0] != "--":
+                    session.error(
+                        "To pass additional arguments to pytest, use an extra '--'. "
+                        f"For example 'nox -e vagrant -- debian-11 {chunk} -- --maxfail=1'"
+                    )
+                session.posargs.pop(0)
+                chunk_cmd.extend(session.posargs)
+        else:
+            if chunk != "--":
+                session.error(
+                    "To pass additional arguments to pytest, use an extra '--'. "
+                    "For example 'nox -e ci-test -- functional -- --maxfail=1'"
+                )
+            chunk_cmd = session.posargs
+            junit_report_filename = "test-results"
+            runtests_log_filename = "runtests"
+
+    rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
+
+    track_code_coverage = os.environ.get("CI_TRACK_COVERAGE", "1") == "1"
+
+    common_remote_nox_command = [
+        "nox",
+        "--force-color",
+        "-e",
+        f"test-onedir(coverage={track_code_coverage})",
+        "--",
+        "--color=yes",
+        "-ra",
+        "-vv",
+        "--run-slow",
+        "--ssh-tests",
+        "--output-columns=120",
+        "--sys-stats",
+        "--sysinfo",
+        "--run-destructive",
+    ]
+    try:
+        nox_command = (
+            common_remote_nox_command[:]
+            + [
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            ]
+            + chunk_cmd
+        )
+        session_run_always(
+            session, *nox_command, external=True, env={"SKIP_REQUIREMENTS_INSTALL": "1"}
+        )
+    except CommandFailed:
+        if rerun_failures is False:
+            raise
+        nox_command = (
+            common_remote_nox_command[:]
+            + [
+                "--lf",
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}-rerun.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}-rerun.log",
+            ]
+            + chunk_cmd
+        )
+        session.run(*nox_command, external=True, env={"SKIP_REQUIREMENTS_INSTALL": "1"})
+
+
+@nox.session(python=False, name="ci-install-dependencies")
+def ci_install_dependencies(session):
+    track_code_coverage = os.environ.get("CI_TRACK_COVERAGE", "1") == "1"
+
+    nox_command = [
+        "nox",
+        "--force-color",
+        "--install-only",
+        "-e",
+        f"test-onedir(coverage={track_code_coverage})",
+    ]
+    session_run_always(session, *nox_command, external=True)
+
+
+@nox.session(python=False, name="ci-decompress-dependencies")
+def ci_decompress_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+    distro = session.posargs.pop(0)
+    nox_dependencies_tarball = REPO_ROOT / f"nox.{distro}.tar.xz"
+    if not nox_dependencies_tarball.exists():
+        session.log(
+            f"The {nox_dependencies_tarball.relative_to(REPO_ROOT)} file"
+            "does not exist. Not uploading anything."
+        )
+        return
+
+    session_run_always(session, "tar", "xpf", f"nox.{distro}.tar.xz")
+    nox_dependencies_tarball.unlink()
+
+
+@nox.session(python=False, name="ci-compress-dependencies")
+def ci_compress_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check ./Vagrantfile for what's available"
+        )
+    distro = session.posargs.pop(0)
+
+    session_run_always(session, "tar", "-cJf", f"nox.{distro}.tar.xz", ".nox")
+
+
 class Tee:
     """
     Python class to mimic linux tee behaviour

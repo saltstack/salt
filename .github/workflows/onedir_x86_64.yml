@@ -42,26 +42,14 @@ jobs:
         path: exitstatus
 
 
-  debian-11:
-    name: Debian 11
+  amazon-linux-2:
+    name: Amazon Linux 2
     uses: ./.github/workflows/test.yml
     needs:
       - build
     with:
       artifact-name: Salt Onedir X86_64
-      vagrant-box-name: debian-11
-    secrets:
-      VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-
-
-  centos-stream-8:
-    name: CentOS Stream 8
-    uses: ./.github/workflows/test.yml
-    needs:
-      - build
-    with:
-      artifact-name: Salt Onedir X86_64
-      vagrant-box-name: centos-stream-8
+      vagrant-box-name: amazon-linux-2
     secrets:
       VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
 
@@ -71,8 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
-      - debian-11
-      - centos-stream-8
+      - amazon-linux-2
 
     steps:
       - name: Checkout Source Code
