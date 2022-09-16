@@ -8,9 +8,6 @@ Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 <https://github.com/conversis/varstack>`_ but is heavily based on Jinja2 for
 maximum flexibility.
 
-Any issue should be reported to the upstream project at:
-https://github.com/bbinet/pillarstack/issues
-
 It supports the following features:
 
 - multiple config files that are jinja2 templates with support for ``pillar``,
@@ -393,6 +390,14 @@ strategies = ("overwrite", "merge-first", "merge-last", "remove")
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
+    """
+    Builds stacked pillar from yaml files listed in file(s).
+
+    :param str minion_id: Minion ID
+    :param dict pillar: pillar
+    :param list args: (Optional) file(s) that list yaml files
+    :param dict kwargs: (Optional) conditional file(s) that list yaml files
+    """
     stack = {}
     stack_config_files = list(args)
     pillarenv = __opts__["pillarenv"] or __opts__["saltenv"] or "base"
