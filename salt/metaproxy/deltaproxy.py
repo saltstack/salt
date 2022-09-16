@@ -2,6 +2,7 @@
 #   Proxy minion metaproxy modules
 #
 
+import concurrent.futures
 import logging
 import os
 import signal
@@ -319,18 +320,26 @@ def post_master_init(self, master):
     self.proxy_pillar = {}
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
-    responses = yield {
-        _id: self.subproxy_post_master_init(_id, uid)
-        for _id in self.opts["proxy"].get("ids", [])
-    }
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(
+                subproxy_post_master_init, _id, uid, self.opts, self.proxy, self.utils
+            )
+            for _id in self.opts["proxy"].get("ids", [])
+        ]
 
-    log.debug("=== responses %s ===", responses.keys())
-    for _id in responses:
-        self.deltaproxy_objs[_id], self.deltaproxy_opts[_id] = responses[_id]
+    for f in concurrent.futures.as_completed(futures):
+        sub_proxy_data = f.result()
+        minion_id = sub_proxy_data["proxy_opts"].get("id")
+        self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
+        self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
+
+        self.deltaproxy_objs[minion_id].subprocess_list = self.subprocess_list
+
     self.ready = True
 
 
-def subproxy_post_master_init(self, minion_id, uid):
+def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
     minion has finished connecting to a master.
@@ -338,25 +347,26 @@ def subproxy_post_master_init(self, minion_id, uid):
     This is primarily loading modules, pillars, etc. (since they need
     to know which master they connected to) for the sub proxy minions.
     """
+    log.info("=== starting %s ===", minion_id)
     proxy_grains = {}
     proxy_pillar = {}
 
-    control_id = self.opts["id"]
-    proxyopts = self.opts.copy()
+    control_id = opts["id"]
+    proxyopts = opts.copy()
 
     proxyopts = salt.config.proxy_config(
-        self.opts["conf_file"], defaults=proxyopts, minion_id=minion_id
+        opts["conf_file"], defaults=proxyopts, minion_id=minion_id
     )
     proxyopts.update({"id": minion_id, "proxyid": minion_id, "subproxy": True})
 
-    self.proxy_context[minion_id] = {"proxy_id": minion_id}
+    proxy_context = {"proxy_id": minion_id}
 
     # We need grains first to be able to load pillar, which is where we keep the proxy
     # configurations
     proxy_grains[minion_id] = salt.loader.grains(
-        proxyopts, proxy=self.proxy, context=self.proxy_context[minion_id]
+        proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar[minion_id] = yield salt.pillar.get_async_pillar(
+    proxy_pillar[minion_id] = salt.pillar.get_pillar(
         proxyopts,
         proxy_grains[minion_id],
         minion_id,
@@ -369,7 +379,7 @@ def subproxy_post_master_init(self, minion_id, uid):
         log.warning(
             "Pillar data for proxy minion %s could not be loaded, skipping.", minion_id
         )
-        return None, None
+        return {"proxy_minion": None, "proxy_opts": None}
 
     # Remove ids
     proxyopts["proxy"].pop("ids", None)
@@ -378,7 +388,7 @@ def subproxy_post_master_init(self, minion_id, uid):
         {
             "pillar": proxy_pillar[minion_id],
             "grains": proxy_grains[minion_id],
-            "hash_id": self.opts["id"],
+            "hash_id": opts["id"],
         }
     )
 
@@ -386,9 +396,9 @@ def subproxy_post_master_init(self, minion_id, uid):
     _proxy_minion.proc_dir = salt.minion.get_proc_dir(proxyopts["cachedir"], uid=uid)
 
     _proxy_minion.proxy = salt.loader.proxy(
-        proxyopts, utils=self.utils, context=self.proxy_context[minion_id]
+        proxyopts, utils=main_utils, context=proxy_context
     )
-    _proxy_minion.subprocess_list = self.subprocess_list
+    # _proxy_minion.subprocess_list = self.subprocess_list
 
     # And load the modules
     (
@@ -399,13 +409,13 @@ def subproxy_post_master_init(self, minion_id, uid):
     ) = _proxy_minion._load_modules(
         opts=proxyopts,
         grains=proxyopts["grains"],
-        context=self.proxy_context[minion_id],
+        context=proxy_context,
     )
 
     # we can then sync any proxymodules down from the master
     # we do a sync_all here in case proxy code was installed by
     # SPM or was manually placed in /srv/salt/_modules etc.
-    _proxy_minion.functions["saltutil.sync_all"](saltenv=self.opts["saltenv"])
+    _proxy_minion.functions["saltutil.sync_all"](saltenv=opts["saltenv"])
 
     # And re-load the modules so the __proxy__ variable gets injected
     (
@@ -416,7 +426,7 @@ def subproxy_post_master_init(self, minion_id, uid):
     ) = _proxy_minion._load_modules(
         opts=proxyopts,
         grains=proxyopts["grains"],
-        context=self.proxy_context[minion_id],
+        context=proxy_context,
     )
 
     _proxy_minion.functions.pack["__proxy__"] = _proxy_minion.proxy
@@ -427,7 +437,7 @@ def subproxy_post_master_init(self, minion_id, uid):
 
     # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
     _proxy_minion.proxy.utils = salt.loader.utils(
-        proxyopts, proxy=_proxy_minion.proxy, context=self.proxy_context[minion_id]
+        proxyopts, proxy=_proxy_minion.proxy, context=proxy_context
     )
 
     _proxy_minion.proxy.pack["__utils__"] = _proxy_minion.proxy.utils
@@ -449,56 +459,56 @@ def subproxy_post_master_init(self, minion_id, uid):
             exc,
             exc_info=True,
         )
-        yield None, None
+        return {"proxy_minion": None, "proxy_opts": None}
 
     # Reload the grains
-    self.proxy_grains[minion_id] = salt.loader.grains(
-        proxyopts, proxy=_proxy_minion.proxy, context=self.proxy_context[minion_id]
-    )
-    proxyopts["grains"] = self.proxy_grains[minion_id]
+    # self.proxy_grains[minion_id] = salt.loader.grains(
+    #    proxyopts, proxy=_proxy_minion.proxy, context=self.proxy_context[minion_id]
+    # )
+    # proxyopts["grains"] = self.proxy_grains[minion_id]
 
-    if not hasattr(_proxy_minion, "schedule"):
-        _proxy_minion.schedule = salt.utils.schedule.Schedule(
-            proxyopts,
-            _proxy_minion.functions,
-            _proxy_minion.returners,
-            cleanup=[salt.minion.master_event(type="alive")],
-            proxy=_proxy_minion.proxy,
-            new_instance=True,
-            _subprocess_list=_proxy_minion.subprocess_list,
-        )
+    # if not hasattr(_proxy_minion, "schedule"):
+    #    _proxy_minion.schedule = salt.utils.schedule.Schedule(
+    #        proxyopts,
+    #        _proxy_minion.functions,
+    #        _proxy_minion.returners,
+    #        cleanup=[salt.minion.master_event(type="alive")],
+    #        proxy=_proxy_minion.proxy,
+    #        new_instance=True,
+    #        _subprocess_list=_proxy_minion.subprocess_list,
+    #    )
 
     # self.deltaproxy_objs[minion_id] = _proxy_minion
     # self.deltaproxy_opts[minion_id] = copy.deepcopy(proxyopts)
 
     # proxy keepalive
-    _proxy_alive_fn = _fq_proxyname + ".alive"
-    if (
-        _proxy_alive_fn in _proxy_minion.proxy
-        and "status.proxy_reconnect" in self.deltaproxy_objs[minion_id].functions
-        and proxyopts.get("proxy_keep_alive", True)
-    ):
-        # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
-        _proxy_minion.schedule.add_job(
-            {
-                "__proxy_keepalive": {
-                    "function": "status.proxy_reconnect",
-                    "minutes": proxyopts.get(
-                        "proxy_keep_alive_interval", 1
-                    ),  # by default, check once per minute
-                    "jid_include": True,
-                    "maxrunning": 1,
-                    "return_job": False,
-                    "kwargs": {"proxy_name": _fq_proxyname},
-                }
-            },
-            persist=True,
-        )
-        _proxy_minion.schedule.enable_schedule()
-    else:
-        _proxy_minion.schedule.delete_job("__proxy_keepalive", persist=True)
+    # _proxy_alive_fn = _fq_proxyname + ".alive"
+    # if (
+    #    _proxy_alive_fn in _proxy_minion.proxy
+    #    and "status.proxy_reconnect" in self.deltaproxy_objs[minion_id].functions
+    #    and proxyopts.get("proxy_keep_alive", True)
+    # ):
+    #    # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
+    #    _proxy_minion.schedule.add_job(
+    #        {
+    #            "__proxy_keepalive": {
+    #                "function": "status.proxy_reconnect",
+    #                "minutes": proxyopts.get(
+    #                    "proxy_keep_alive_interval", 1
+    #                ),  # by default, check once per minute
+    #                "jid_include": True,
+    #                "maxrunning": 1,
+    #                "return_job": False,
+    #                "kwargs": {"proxy_name": _fq_proxyname},
+    #            }
+    #        },
+    #        persist=True,
+    #    )
+    #    _proxy_minion.schedule.enable_schedule()
+    # else:
+    #    _proxy_minion.schedule.delete_job("__proxy_keepalive", persist=True)
 
-    return (_proxy_minion, proxyopts)
+    return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
 
 
 def target(cls, minion_instance, opts, data, connected):
