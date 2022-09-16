@@ -49,7 +49,7 @@ jinja2==3.1.0
     # via -r requirements/base.txt
 linode-python==1.1.1
     # via -r requirements/darwin.txt
-mako==1.1.4
+mako==1.2.2
     # via -r requirements/darwin.txt
 markupsafe==2.0.1
     # via
