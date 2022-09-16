@@ -2,6 +2,7 @@ import subprocess
 import types
 
 import pytest
+
 import salt.client.ssh.shell as shell
 
 

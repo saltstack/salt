@@ -1,0 +1,1 @@
+Made cmdmod._run[_all]_quiet work during minion startup on MacOS with runas specified (which fixed mac_service)

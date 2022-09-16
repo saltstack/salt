@@ -1,8 +1,9 @@
 import logging
 
 import pytest
-import salt.cache
 from saltfactories.utils import random_string
+
+import salt.cache
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
 pytest.importorskip("redis")

@@ -56,8 +56,8 @@ log = logging.getLogger(__name__)
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
+    import MySQLdb.cursors
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -65,8 +65,8 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
+        import MySQLdb.cursors
     except ImportError:
         MySQLdb = None
 

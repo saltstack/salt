@@ -8,7 +8,9 @@ import os
 HAS_GENTOOLKIT = False
 
 try:
-    from gentoolkit.eclean import search, clean, cli, exclude as excludemod
+    from gentoolkit.eclean import clean, cli
+    from gentoolkit.eclean import exclude as excludemod
+    from gentoolkit.eclean import search
 
     HAS_GENTOOLKIT = True
 except ImportError:

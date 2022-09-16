@@ -1,4 +1,6 @@
 """
+Zookeeper State
+
 :depends:  kazoo
 :configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
 

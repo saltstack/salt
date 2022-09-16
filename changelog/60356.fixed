@@ -1,1 +1,0 @@
-Fix exception in yumpkg.remove for not installed package on calling pkg.remove or pkg.removed

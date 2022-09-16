@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.etcd_mod as etcd_mod
 import salt.states.etcd_mod as etcd_state
 from salt.utils.etcd_util import get_conn

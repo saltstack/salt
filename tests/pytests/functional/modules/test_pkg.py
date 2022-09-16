@@ -6,6 +6,8 @@ import tempfile
 import time
 
 import pytest
+from saltfactories.utils.functional import Loaders
+
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
@@ -319,7 +321,7 @@ def test_hold_unhold(grains, modules, states, test_pkg):
 @pytest.mark.requires_salt_modules("pkg.refresh_db")
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_refresh_db(grains, modules, tmp_path, minion_opts):
+def test_refresh_db(grains, tmp_path, minion_opts):
     """
     test refreshing the package database
     """
@@ -327,7 +329,8 @@ def test_refresh_db(grains, modules, tmp_path, minion_opts):
     salt.utils.pkg.write_rtag(minion_opts)
     assert os.path.isfile(rtag) is True
 
-    ret = modules.pkg.refresh_db()
+    loader = Loaders(minion_opts)
+    ret = loader.modules.pkg.refresh_db()
     if not isinstance(ret, dict):
         pytest.skip("Upstream repo did not return coherent results: {}".format(ret))
 

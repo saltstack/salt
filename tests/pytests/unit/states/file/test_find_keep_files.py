@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.states.file as filestate
 
 log = logging.getLogger(__name__)

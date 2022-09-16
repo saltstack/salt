@@ -10,7 +10,7 @@ from tests.support.unit import TestCase, skipIf
 # Import elasticsearch exceptions
 NO_ELASTIC = False
 try:
-    from elasticsearch import TransportError, NotFoundError
+    from elasticsearch import NotFoundError, TransportError
 except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 

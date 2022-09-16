@@ -7,6 +7,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod

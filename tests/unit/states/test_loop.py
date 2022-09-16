@@ -3,6 +3,7 @@ Tests for loop state(s)
 """
 
 import pytest
+
 import salt.states.loop
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

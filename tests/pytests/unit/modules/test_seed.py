@@ -7,6 +7,7 @@ import shutil
 import uuid
 
 import pytest
+
 import salt.modules.seed as seed
 import salt.utils.files
 import salt.utils.odict

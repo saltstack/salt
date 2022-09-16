@@ -8,7 +8,9 @@ import copy
 import datetime
 import fnmatch
 import functools
+import hashlib
 import logging
+import random
 import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
@@ -24,6 +26,8 @@ try:
     import jmespath
 except ImportError:
     jmespath = None
+
+ALGORITHMS_ATTR_NAME = "algorithms_guaranteed"
 
 log = logging.getLogger(__name__)
 
@@ -1612,3 +1616,77 @@ def flatten(data, levels=None, preserve_nulls=False, _ids=None):
             ret.append(element)
 
     return ret
+
+
+def hash(value, algorithm="sha512"):
+    """
+    .. versionadded:: 2014.7.0
+
+    Encodes a value with the specified encoder.
+
+    value
+        The value to be hashed.
+
+    algorithm : sha512
+        The algorithm to use. May be any valid algorithm supported by
+        hashlib.
+    """
+    if isinstance(value, str):
+        # Under Python 3 we must work with bytes
+        value = value.encode(__salt_system_encoding__)
+
+    if hasattr(hashlib, ALGORITHMS_ATTR_NAME) and algorithm in getattr(
+        hashlib, ALGORITHMS_ATTR_NAME
+    ):
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    elif hasattr(hashlib, algorithm):
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    else:
+        raise SaltException("You must specify a valid algorithm.")
+
+    return out
+
+
+@jinja_filter("random_sample")
+def sample(value, size, seed=None):
+    """
+    Return a given sample size from a list. By default, the random number
+    generator uses the current system time unless given a seed value.
+
+    .. versionadded:: 3005
+
+    value
+        A list to e used as input.
+
+    size
+        The sample size to return.
+
+    seed
+        Any value which will be hashed as a seed for random.
+    """
+    if seed is None:
+        ret = random.sample(value, size)
+    else:
+        ret = random.Random(hash(seed)).sample(value, size)
+    return ret
+
+
+@jinja_filter("random_shuffle")
+def shuffle(value, seed=None):
+    """
+    Return a shuffled copy of an input list. By default, the random number
+    generator uses the current system time unless given a seed value.
+
+    .. versionadded:: 3005
+
+    value
+        A list to be used as input.
+
+    seed
+        Any value which will be hashed as a seed for random.
+    """
+    return sample(value, len(value), seed=seed)

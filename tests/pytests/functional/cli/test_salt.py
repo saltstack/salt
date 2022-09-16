@@ -3,6 +3,7 @@ tests.pytests.functional.cli.test_salt
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 import pytest
+
 import salt.version
 
 

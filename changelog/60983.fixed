@@ -1,1 +1,0 @@
-Do not consider "skipped" targets as failed for "ansible.playbooks" states

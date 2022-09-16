@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.http as http
 from tests.support.mock import MagicMock, patch
 

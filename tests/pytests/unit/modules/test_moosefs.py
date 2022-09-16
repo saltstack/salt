@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.moosefs as moosefs
 from tests.support.mock import MagicMock, patch
 

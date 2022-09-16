@@ -3,7 +3,6 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 """
 
 
-import atexit
 import itertools
 import logging
 import os.path
@@ -19,6 +18,11 @@ from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 import jinja2
+from jinja2 import BaseLoader, TemplateNotFound, nodes
+from jinja2.environment import TemplateModule
+from jinja2.exceptions import TemplateRuntimeError
+from jinja2.ext import Extension
+
 import salt.fileclient
 import salt.utils.data
 import salt.utils.files
@@ -26,10 +30,6 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
-from jinja2 import BaseLoader, TemplateNotFound, nodes
-from jinja2.environment import TemplateModule
-from jinja2.exceptions import TemplateRuntimeError
-from jinja2.ext import Extension
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
@@ -220,9 +220,6 @@ class SaltCacheLoader(BaseLoader):
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
-
-
-atexit.register(SaltCacheLoader.shutdown)
 
 
 class PrintableDict(OrderedDict):
