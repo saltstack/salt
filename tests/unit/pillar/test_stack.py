@@ -27,18 +27,18 @@ class StackPillarTestCase(TestCase, LoaderModuleMockMixin):
             "jinja2.environment.Environment.get_template", mockJinja()
         ), patch("glob.glob", MagicMock(return_value=["/path/to/stack.cfg"])):
             result = stack.ext_pillar(  # (minion_id, pillar, *args, **kwargs)
-                "minion_id", {}, *args, **kwargs 
+                "minion_id", {}, *args, **kwargs
             )
             return result
 
     def test_extpillar_stack1(self):
 
         mock_output = [
-            "/path/to/filename.yml\n", # mocked contents of /path/to/stack.cfg
+            "/path/to/filename.yml\n",  # mocked contents of /path/to/stack.cfg
             """
                 foo: foo1 # jinja test
                 bar: bar1
-            """, # mocked contents of filename.yml
+            """,  # mocked contents of filename.yml
         ]
         fake_dict = {"foo": "foo1", "bar": "bar1"}
 
@@ -72,11 +72,11 @@ class StackPillarTestCase(TestCase, LoaderModuleMockMixin):
 
         # yaml indentation error
         mock_output = [
-            "/path/to/filename.yml\n", # mocked contents of /path/to/stack.cfg
+            "/path/to/filename.yml\n",  # mocked contents of /path/to/stack.cfg
             """
                 foo: foo1
-             bar: bar1      # yaml indentation error
-            """, # mocked contents of filename.yml
+             bar: bar1  # yaml indentation error
+            """,  # mocked contents of filename.yml
         ]
         self.assertRaises(
             Exception, self.mockStackPillar, mock_output, "/path/to/stack.cfg"
