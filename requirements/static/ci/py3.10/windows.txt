@@ -189,7 +189,7 @@ libnacl==1.7.2
     # via -r requirements/static/pkg/py3.10/windows.txt
 lxml==4.9.1
     # via -r requirements/static/pkg/py3.10/windows.txt
-mako==1.1.4
+mako==1.2.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt

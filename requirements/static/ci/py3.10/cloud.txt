@@ -484,7 +484,7 @@ lxml==4.9.1
     # via
     #   junos-eznc
     #   ncclient
-mako==1.1.5
+mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.0.1
     # via
