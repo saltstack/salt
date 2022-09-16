@@ -7,6 +7,7 @@
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.diskusage as diskusage
 from tests.support.mock import MagicMock, Mock, patch
 

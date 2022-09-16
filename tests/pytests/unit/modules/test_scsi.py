@@ -6,6 +6,7 @@ import copy
 import os
 
 import pytest
+
 import salt.modules.scsi as scsi
 import salt.utils.path
 from tests.support.mock import MagicMock, patch

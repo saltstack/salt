@@ -3,18 +3,20 @@ import logging
 import multiprocessing
 
 import pytest
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
+import salt.log.setup
 import salt.master
 import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-from pytestshellutils.utils.processes import terminate_process
 
 log = logging.getLogger(__name__)
 

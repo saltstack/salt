@@ -147,8 +147,8 @@ log = logging.getLogger(__name__)
 try:
     # pylint: disable=unused-import
     import boto
-    import botocore
     import boto.vpc
+    import botocore
 
     # pylint: enable=unused-import
     from boto.exception import BotoServerError

@@ -9,8 +9,8 @@ import salt.utils.event
 import salt.utils.json
 
 try:
-    import docker  # pylint: disable=import-error
-    import docker.utils  # pylint: disable=import-error
+    import docker  # pylint: disable=import-error,no-name-in-module
+    import docker.utils  # pylint: disable=import-error,no-name-in-module
 
     HAS_DOCKER_PY = True
 except ImportError:

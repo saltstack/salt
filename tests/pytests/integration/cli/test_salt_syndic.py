@@ -3,9 +3,10 @@ import os
 import time
 
 import pytest
-import salt.defaults.exitcodes
 from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
+
+import salt.defaults.exitcodes
 from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
 
 pytestmark = [

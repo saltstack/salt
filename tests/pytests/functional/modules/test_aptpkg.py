@@ -1,8 +1,8 @@
-import os
 import pathlib
 import shutil
 
 import pytest
+
 import salt.exceptions
 import salt.modules.aptpkg as aptpkg
 import salt.modules.cmdmod as cmd
@@ -25,6 +25,9 @@ class Key:
         self.keyname = "salt-archive-keyring.gpg"
 
     def add_key(self):
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
+        if not keydir.is_dir():
+            keydir.mkdir()
         aptpkg.add_repo_key("salt://{}".format(self.keyname), aptkey=self.aptkey)
 
     def del_key(self):
@@ -96,18 +99,24 @@ def get_current_repo(multiple_comps=False):
         Search for a repo that contains multiple comps.
         For example: main, restricted
     """
-    with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
-        for line in fp:
-            if line.startswith("#"):
-                continue
-            if "ubuntu.com" in line or "debian.org" in line:
-                test_repo = line.strip()
-                comps = test_repo.split()[3:]
-                if multiple_comps:
-                    if len(comps) > 1:
+    test_repo = None
+    try:
+        with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
+            for line in fp:
+                if line.startswith("#"):
+                    continue
+                if "ubuntu.com" in line or "debian.org" in line:
+                    test_repo = line.strip()
+                    comps = test_repo.split()[3:]
+                    if multiple_comps:
+                        if len(comps) > 1:
+                            break
+                    else:
                         break
-                else:
-                    break
+    except FileNotFoundError as error:
+        pytest.skip("Missing {}".format(error.filename))
+    if not test_repo:
+        pytest.skip("Did not detect an APT repo")
     return test_repo, comps
 
 
@@ -137,16 +146,11 @@ def test_list_repos():
             assert check_repo["comps"] in check_repo["line"]
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos():
     """
     Test aptpkg.get_repos
     """
     test_repo, comps = get_current_repo()
-    if not test_repo:
-        pytest.skip("Did not detect an apt repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -156,17 +160,12 @@ def test_get_repos():
     assert ret["file"] == "/etc/apt/sources.list"
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos_multiple_comps():
     """
     Test aptpkg.get_repos when multiple comps
     exist in repo.
     """
     test_repo, comps = get_current_repo(multiple_comps=True)
-    if not test_repo:
-        pytest.skip("Did not detect an ubuntu repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -203,9 +202,6 @@ def test_del_repo(revert_repo_file):
     assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_expand_repo_def():
     """
     Test aptpkg.expand_repo_def when the repo exists.
@@ -284,6 +280,20 @@ def test_get_repo_keys(add_key):
     )
 
 
+@pytest.mark.parametrize("key", [False, True])
+@pytest.mark.destructive_test
+def test_get_repo_keys_keydir_not_exist(key):
+    """
+    Test aptpkg.get_repo_keys when aptkey is False and True
+    and keydir does not exist
+    """
+    ret = aptpkg.get_repo_keys(aptkey=key, keydir="/doesnotexist/")
+    if not key:
+        assert not ret
+    else:
+        assert ret
+
+
 @pytest.mark.parametrize("aptkey", [False, True])
 def test_add_del_repo_key(get_key_file, aptkey):
     """
@@ -292,7 +302,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
     """
     try:
         assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
-        keyfile = pathlib.Path("/usr", "share", "keyrings", get_key_file)
+        keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)

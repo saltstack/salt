@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.platform
 
 from . import normalize_ret

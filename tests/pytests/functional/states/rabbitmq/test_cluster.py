@@ -5,6 +5,7 @@ Integration tests for the rabbitmq_cluster states
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_cluster as rabbitmq_cluster
 

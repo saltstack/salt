@@ -6,6 +6,7 @@ import ast
 from collections import OrderedDict
 
 import pytest
+
 import salt.states.zabbix_host as zabbix_host
 from tests.support.mock import MagicMock, patch
 
