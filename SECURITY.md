@@ -84,7 +84,7 @@ announcement with upgrade instructions and download locations.
 Provide a descriptive subject line and in the body of the email include the following information:
 
 * Basic identity information, such as your name and your affiliation or company.
-* Detailed steps to reproduce the vulnerability  (POC scripts, screenshots, and logs are all helpful to us).
+* Detailed steps to reproduce the vulnerability (POC scripts, screenshots, and logs are all helpful to us).
 * Description of the effects of the vulnerability on Salt and the related hardware and software configurations, so that the VMware Security Team can reproduce it.
 * How the vulnerability affects Salt usage and an estimation of the attack surface, if there is one.
 * List other projects or dependencies that were used in conjunction with Salt to produce the vulnerability.
