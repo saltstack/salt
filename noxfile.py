@@ -1583,12 +1583,7 @@ def ci_test(session):
                 session.posargs.pop(0)
                 chunk_cmd.extend(session.posargs)
         else:
-            if chunk != "--":
-                session.error(
-                    "To pass additional arguments to pytest, use an extra '--'. "
-                    "For example 'nox -e ci-test -- functional -- --maxfail=1'"
-                )
-            chunk_cmd = session.posargs
+            chunk_cmd = [chunk] + session.posargs
             junit_report_filename = "test-results"
             runtests_log_filename = "runtests"
 
