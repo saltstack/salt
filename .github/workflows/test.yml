@@ -24,125 +24,11 @@ env:
 
 jobs:
 
-  dependencies:
-    name: Setup Python Dependencies
-    runs-on:
-      - self-hosted
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
-      - name: Cache nox.${{ inputs.vagrant-box-name }}.tar.xz
-        uses: actions/cache@v3
-        with:
-          path: nox.${{ inputs.vagrant-box-name }}.tar.xz
-          key: deps||${{ inputs.vagrant-box-name }}||${{ hashFiles('requirements/**/*.txt') }}
-
-      - name: Show Vagrant Information
-        run: |
-          vagrant --version
-          vagrant plugin list
-          echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
-
-      - name: Cache Vagrant boxes and plugins
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.vagrant.d/boxes
-            ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
-          key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant-box-name }}|${{ hashFiles('Vagrantfile', 'Vagrantfile.boxes.json') }}
-
-      # Check the existance of nox.tar.xz.
-      # If it exists, it means the cache was hit and we don't have to regenerate the nox.tar.xz again
-      - name: Check nox.${{ inputs.vagrant-box-name }}.tar.xz Exists
-        id: check-nox-tarball
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "nox.${{ inputs.vagrant-box-name }}.tar.xz"
-
-      - name: Set up Python 3.9
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
-      - name: Install Nox
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
-
-      - name: Download One Dir Artifact
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.artifact-name }}
-
-      - name: Extract Artifact
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          mkdir salt-artifacts
-          cp salt*tar.xz salt-artifacts/
-          cd salt-artifacts
-          tar -xpf salt*tar.xz
-
-      - name: PyPi Proxy
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
-
-      - name: Spin up VM
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-        run: |
-          vagrant up ${{ inputs.vagrant-box-name }}
-
-      - name: Decompress .nox/
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          nox --force-color -e vagrant-upload-dependencies -- ${{ inputs.vagrant-box-name }}
-
-      - name: Install Dependencies
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          nox --force-color -e vagrant-install-dependencies -- ${{ inputs.vagrant-box-name }}
-
-      - name: Compress And Download .nox Directory
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
-        run: |
-          nox --force-color -e vagrant-download-dependencies -- ${{ inputs.vagrant-box-name }}
-
-      - name: Destroy VM
-        if: steps.check-nox-tarball.outputs.files_exists != 'true' && always()
-        run: |
-          vagrant destroy --force ${{ inputs.vagrant-box-name }}
-
-      - name: Upload Dependencies
-        uses: actions/upload-artifact@v3
-        with:
-          name: nox-${{ inputs.vagrant-box-name }}
-          path: nox.${{ inputs.vagrant-box-name }}.tar.xz
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.vagrant-box-name }}-deps
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-
   test:
     name: Test
     runs-on:
       - self-hosted
     timeout-minutes: 600  # 10 Hours
-    needs:
-      - dependencies
     strategy:
       fail-fast: false
       matrix:
@@ -156,15 +42,6 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
-      - name: Install Nox
-        run: |
-          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
-
       - name: Download One Dir Artifact
         uses: actions/download-artifact@v3
         with:
@@ -177,41 +54,13 @@ jobs:
           cd salt-artifacts
           tar -xpf salt*tar.xz
 
-      - name: Show Vagrant Information
-        run: |
-          vagrant --version
-          vagrant plugin list
-          echo "VAGRANT_VERSION=$(vagrant --version | cut -d' ' -f2)"  >> $GITHUB_ENV
-
-      - name: Cache Vagrant boxes and plugins
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.vagrant.d/boxes
-            ~/.vagrant.d/gems/${{ env.VAGRANT_VERSION }}/gems/
-          key: vagrant|${{ runner.os }}|${{ env.VAGRANT_VERSION }}|${{ inputs.vagrant-box-name }}|${{ hashFiles('Vagrantfile', 'Vagrantfile.boxes.json') }}
-
-      - name: Download Installed Dependencies
-        uses: actions/download-artifact@v3
-        with:
-          name: nox-${{ inputs.vagrant-box-name }}
-
-      - name: Spin up VM
-        id: spin-up-vm
-        env:
-          VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
-        run: |
-          vagrant up ${{ inputs.vagrant-box-name }}
-
-      - name: Decompress .nox/
-        run: |
-          nox --force-color -e vagrant-upload-dependencies -- ${{ inputs.vagrant-box-name }}
-
       - name: Run Tests
         env:
           RERUN_FAILURES: "1"
         run: |
-          nox --force-color -e vagrant -- ${{ inputs.vagrant-box-name }} ${{ matrix.tests-chunk }}
+          nox --force-color -e 'test-onedir(coverage=True)' -- \
+            --color=yes -ra -vv --run-slow --ssh-tests --output-columns=120 \
+            --sys-stats --sysinfo --run-destructive tests/pytests/functional
 
       - name: Combine Coverage Reports
         if: always() && steps.spin-up-vm.conclusion == 'success'
