@@ -501,7 +501,7 @@ lxml==4.9.1
     #   junos-eznc
     #   napalm
     #   ncclient
-mako==1.1.4
+mako==1.2.2
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
