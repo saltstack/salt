@@ -139,7 +139,7 @@ jobs:
         env:
           RERUN_FAILURES: "1"
         run: |
-          nox --force-color -e ci-test --  ${{ matrix.tests-chunk }}
+          sudo -HE nox --force-color -e ci-test --  ${{ matrix.tests-chunk }}
 
       - name: Combine Coverage Reports
         if: always() && steps.spin-up-vm.conclusion == 'success'
