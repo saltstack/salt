@@ -1,0 +1,1 @@
+The sub proxies controlled by Deltaproxy need to have their own req_channel otherwise there are timeout exceptions when the __master_req_channel_payload is fired and reacted on.
