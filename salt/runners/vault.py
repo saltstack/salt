@@ -30,7 +30,7 @@ def generate_token(
     minion_id, signature, impersonated_by_master=False, ttl=None, uses=None
 ):
     """
-    .. deprecated:: TBD
+    .. deprecated:: 3006
 
     Generate a Vault token for minion minion_id
 
@@ -100,7 +100,7 @@ def generate_new_token(
     minion_id, signature, impersonated_by_master=False, issue_params=None
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Generate a Vault token for minion minion_id.
 
@@ -171,7 +171,7 @@ def _generate_token(minion_id, issue_params=None, wrap=None):
 
 def get_config(minion_id, signature, impersonated_by_master=False, issue_params=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Return Vault configuration for minion <minion_id>.
 
@@ -229,7 +229,7 @@ def get_config(minion_id, signature, impersonated_by_master=False, issue_params=
 
 def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Return the Vault role-id for minion <minion_id>. Requires the master to be configured
     to generate AppRoles for minions (configuration: ``vault:issue:type``).
@@ -302,7 +302,7 @@ def _get_role_id(minion_id, issue_params=None):
 
 def generate_secret_id(minion_id, signature, impersonated_by_master=False):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Generate a Vault secret-id for minion <minion_id>. Requires the master to be configured
     to generate AppRoles for minions (configuration: ``vault:issue:type``).

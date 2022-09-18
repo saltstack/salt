@@ -1,5 +1,6 @@
 """
 Functions to interact with Hashicorp Vault.
+===========================================
 
 :maintainer:    SaltStack
 :maturity:      new
@@ -13,512 +14,515 @@ Functions to interact with Hashicorp Vault.
     <timestamp> [salt.pillar][CRITICAL][14337] Pillar render error: Failed to load ext_pillar vault: {'error': "request() got an unexpected keyword argument 'json'"}
 
 
-:configuration: The salt-master must be configured to allow peer-runner
-    configuration, as well as configuration for the module.
+Configuration
+-------------
 
-    .. versionchanged:: TBD
+The salt-master must be configured to allow peer-runner
+configuration, as well as configuration for the module.
 
-        The configuration structure has changed significantly to account for many
-        new features. If found, the old configuration structure will be translated
-        to the new one automatically.
+.. versionchanged:: 3006
 
-    To allow minions to pull configuration and credentials from the Salt master,
-    add this segment to the master configuration file:
+    The configuration structure has changed significantly to account for many
+    new features. If found, the old configuration structure will be translated
+    to the new one automatically.
 
-    .. code-block:: yaml
+To allow minions to pull configuration and credentials from the Salt master,
+add this segment to the master configuration file:
 
-        peer_run:
-            .*:
-                - vault.get_config
-                - vault.generate_new_token  # relevant when ``issue:type`` == ``token``
-                - vault.generate_secret_id  # relevant when ``issue:type`` == ``approle``
+.. code-block:: yaml
 
-    Minimally required configuration:
+    peer_run:
+        .*:
+            - vault.get_config
+            - vault.generate_new_token  # relevant when ``issue:type`` == ``token``
+            - vault.generate_secret_id  # relevant when ``issue:type`` == ``approle``
+
+Minimally required configuration:
+
+.. code-block:: yaml
+
+    vault:
+      auth:
+        token: abcdefg-hijklmnop-qrstuvw
+      server:
+        url: https://vault.example.com:8200
+
+A sensible example configuration, e.g. in /etc/salt/master.d/vault.conf:
+
+.. code-block:: yaml
+
+    vault:
+      auth:
+        method: approle
+        role_id: e5a7b66e-5d08-da9c-7075-71984634b882
+        secret_id: 841771dc-11c9-bbc7-bcac-6a3945a69cd9
+      cache:
+        backend: file
+      issue:
+        token:
+          role_name: salt_minion
+          params:
+            ttl: 30
+            uses: 10
+      policies:
+        assign:
+          - salt_minion
+          - salt_role_{pillar[roles]}
+      server:
+        url: https://vault.example.com:8200
+        verify: /etc/ssl/cert.pem
+
+The above configuration requires the following policies for the master:
+
+.. code-block:: terraform
+
+    # Issue tokens
+    path "auth/token/create" {
+      capabilities = ["create", "read", "update"]
+    }
+
+    # Issue tokens with token roles
+    path "auth/token/create/*" {
+      capabilities = ["create", "read", "update"]
+    }
+
+A sensible example configuration that issues AppRoles to minions
+from a separate authentication endpoint (notice differing mounts):
+
+.. code-block:: yaml
+
+    vault:
+      auth:
+        method: approle
+        mount: approle         # <-- mount the salt master authenticates at
+        role_id: e5a7b66e-5d08-da9c-7075-71984634b882
+        secret_id: 841771dc-11c9-bbc7-bcac-6a3945a69cd9
+      cache:
+        backend: file
+      issue:
+        type: approle
+        approle:
+          mount: salt-minions  # <-- mount the salt master manages
+      metadata:
+        entity:
+          minion-id: '{minion}'
+          role: '{pillar[role]}'
+      server:
+        url: https://vault.example.com:8200
+        verify: /etc/ssl/cert.pem
+    ext_pillar:
+      - vault: path=salt/minions/{minion}
+      - vault: path=salt/roles/{pillar[role]}
+
+The above configuration requires the following policies for the master:
+
+.. code-block:: terraform
+
+    # List existing AppRoles
+    path "auth/salt-minions/role" {
+      capabilities = ["list"]
+    }
+
+    # Manage AppRoles
+    path "auth/salt-minions/role/*" {
+      capabilities = ["read", "create", "update", "delete"]
+    }
+
+    # Lookup mount accessor
+    path "sys/auth/salt-minions" {
+      capabilities = ["read", "sudo"]
+    }
+
+    # Lookup entities by alias name (role-id) and alias mount accessor
+    path "identity/lookup/entity" {
+      capabilities = ["create", "update"]
+      allowed_parameters = {
+        "alias_name" = []
+        "alias_mount_accessor" = ["auth_approle_0a1b2c3d"]
+      }
+    }
+
+    # Manage entities with name prefix salt_minion_
+    path "identity/entity/name/salt_minion_*" {
+      capabilities = ["read", "create", "update", "delete"]
+    }
+
+    # Create entity aliases – you can restrict the mount_accessor
+    # This might allow privilege escalation in case the salt master
+    # is compromised and the attacker knows the entity ID of an
+    # entity with relevant policies attached - although you might
+    # have other problems at that point.
+    path "identity/entity-alias" {
+      capabilities = ["create", "update"]
+      allowed_parameters = {
+        "id" = []
+        "canonical_id" = []
+        "mount_accessor" = ["auth_approle_0a1b2c3d"]
+        "name" = []
+      }
+    }
+
+This enables you to write templated ACL policies like:
+
+.. code-block:: terraform
+
+    path "salt/data/minions/{{identity.entity.metadata.minion-id}}" {
+        capabilities = ["read"]
+    }
+
+    path "salt/data/roles/{{identity.entity.metadata.role}}" {
+        capabilities = ["read"]
+    }
+
+
+All possible master configuration options with defaults:
+
+.. code-block:: yaml
+
+    vault:
+      auth:
+        approle_mount: approle
+        approle_name: salt-master
+        method: token
+        role_id: <required if auth:method == approle>
+        secret_id: null
+        token: <required if auth:method == token>
+      cache:
+        backend: session
+        config: 3600
+        secret: ttl
+      issue:
+        allow_minion_override_params: false
+        type: token
+        approle:
+          mount: salt-minions
+          params:
+            bind_secret_id: true
+            secret_id_num_uses: 1
+            secret_id_ttl: 60
+            token_explicit_max_ttl: 60
+            token_num_uses: 10
+        token:
+          role_name: null
+          params:
+            ttl: null
+            uses: 1
+        wrap: 30s
+      keys: []
+      metadata:
+        entity:
+          minion-id: '{minion}'
+        token:
+          saltstack-jid: '{jid}'
+          saltstack-minion: '{minion}'
+          saltstack-user: '{user}'
+      policies:
+        assign:
+          - saltstack/minions
+          - saltstack/{minion}
+        cache_time: 60
+        refresh_pillar: null
+      server:
+        url: <required, e. g. https://vault.example.com:8200>
+        namespace: null
+        verify: null
+
+``auth``
+~~~~~~~~
+Contains authentication information for the local machine.
+
+approle_mount
+    .. versionadded:: 3006
+
+    The name of the AppRole authentication mount point. Defaults to ``approle``.
+
+approle_name
+    .. versionadded:: 3006
+
+    The name of the AppRole. Defaults to ``salt-master``.
+
+method
+    Currently only ``token`` and ``approle`` auth types are supported.
+    Defaults to ``token``.
+
+    Approle is the preferred way to authenticate with Vault as it provide
+    some advanced options to control authentication process.
+    Please visit Vault documentation for more info:
+    https://www.vaultproject.io/docs/auth/approle.html
+
+role_id
+    The role ID of the AppRole. Required if auth:method == ``approle``.
+
+secret_id
+    The secret ID of the AppRole.
+    Only required if the configured role ID requires it.
+
+token
+    Token to authenticate to Vault with. Required if auth:method == ``token``.
+
+    The token must be able to create tokens with the policies that should be
+    assigned to minions.
+    You can still use the token auth via a OS environment variable via this
+    config example:
 
     .. code-block:: yaml
 
         vault:
           auth:
-            token: abcdefg-hijklmnop-qrstuvw
-          server:
-            urL: https://vault.example.com:8200
-
-    A sensible example configuration, e.g. in /etc/salt/master.d/vault.conf:
-
-    .. code-block:: yaml
-
-        vault:
-          auth:
-            method: approle
-            role_id: e5a7b66e-5d08-da9c-7075-71984634b882
-            secret_id: 841771dc-11c9-bbc7-bcac-6a3945a69cd9
-          cache:
-            backend: file
-          issue:
-            token:
-              role_name: salt_minion
-              params:
-                ttl: 30
-                uses: 10
-          policies:
-            assign:
-              - salt_minion
-              - salt_role_{pillar[roles]}
-          server:
-            url: https://vault.example.com:8200
-            verify: /etc/ssl/cert.pem
-
-    The above configuration requires the following policies for the master:
-
-    .. code-block:: terraform
-
-        # Issue tokens
-        path "auth/token/create" {
-          capabilities = ["create", "read", "update"]
-        }
-
-        # Issue tokens with token roles
-        path "auth/token/create/*" {
-          capabilities = ["create", "read", "update"]
-        }
-
-    A sensible example configuration that issues AppRoles to minions
-    from a separate authentication endpoint (notice differing mounts):
-
-    .. code-block:: yaml
-
-        vault:
-          auth:
-            method: approle
-            mount: approle         # <-- mount the salt master authenticates at
-            role_id: e5a7b66e-5d08-da9c-7075-71984634b882
-            secret_id: 841771dc-11c9-bbc7-bcac-6a3945a69cd9
-          cache:
-            backend: file
-          issue:
-            type: approle
-            approle:
-              mount: salt-minions  # <-- mount the salt master manages
-          metadata:
-            entity:
-              minion-id: '{minion}'
-              role: '{pillar[role]}'
-          server:
-            url: https://vault.example.com:8200
-            verify: /etc/ssl/cert.pem
-        ext_pillar:
-          - vault: path=salt/minions/{minion}
-          - vault: path=salt/roles/{pillar[role]}
-
-    The above configuration requires the following policies for the master:
-
-    .. code-block:: terraform
-
-        # List existing AppRoles
-        path "auth/salt-minions/role" {
-          capabilities = ["list"]
-        }
-
-        # Manage AppRoles
-        path "auth/salt-minions/role/*" {
-          capabilities = ["read", "create", "update", "delete"]
-        }
-
-        # Lookup mount accessor
-        path "sys/auth/salt-minions" {
-          capabilities = ["read", "sudo"]
-        }
-
-        # Lookup entities by alias name (role-id) and alias mount accessor
-        path "identity/lookup/entity" {
-          capabilities = ["create", "update"]
-          allowed_parameters = {
-            "alias_name" = []
-            "alias_mount_accessor" = ["auth_approle_0a1b2c3d"]
-          }
-        }
-
-        # Manage entities with name prefix salt_minion_
-        path "identity/entity/name/salt_minion_*" {
-          capabilities = ["read", "create", "update", "delete"]
-        }
-
-        # Create entity aliases – you can restrict the mount_accessor
-        # This might allow privilege escalation in case the salt master
-        # is compromised and the attacker knows the entity ID of an
-        # entity with relevant policies attached - although you might
-        # have other problems at that point.
-        path "identity/entity-alias" {
-          capabilities = ["create", "update"]
-          allowed_parameters = {
-            "id" = []
-            "canonical_id" = []
-            "mount_accessor" = ["auth_approle_0a1b2c3d"]
-            "name" = []
-          }
-        }
-
-    This enables you to write templated ACL policies like:
-
-    .. code-block:: terraform
-
-        path "salt/data/minions/{{identity.entity.metadata.minion-id}}" {
-            capabilities = ["read"]
-        }
-
-        path "salt/data/roles/{{identity.entity.metadata.role}}" {
-            capabilities = ["read"]
-        }
-
-
-    All possible master configuration options with defaults:
-
-    .. code-block:: yaml
-
-        vault:
-          auth:
-            approle_mount: approle
-            approle_name: salt-master
             method: token
-            role_id: <required if auth:method == approle>
-            secret_id: null
-            token: <required if auth:method == token>
-          cache:
-            backend: session
-            config: 3600
-            secret: ttl
-          issue:
-            allow_minion_override_params: false
-            type: token
-            approle:
-              mount: salt-minions
-              params:
-                bind_secret_id: true
-                secret_id_num_uses: 1
-                secret_id_ttl: 60
-                token_explicit_max_ttl: 60
-                token_num_uses: 10
-            token:
-              role_name: null
-              params:
-                ttl: null
-                uses: 1
-            wrap: 30s
-          keys: []
-          metadata:
-            entity:
-              minion-id: '{minion}'
-            token:
-              saltstack-jid: '{jid}'
-              saltstack-minion: '{minion}'
-              saltstack-user: '{user}'
-          policies:
-            assign:
-              - saltstack/minions
-              - saltstack/{minion}
-            cache_time: 60
-            refresh_pillar: null
+            token: sdb://osenv/VAULT_TOKEN
           server:
-            url: <required, e. g. https://vault.example.com:8200>
-            namespace: null
-            verify: null
+            url: https://vault.service.domain:8200
 
-    auth
-    ~~~~
-    Contains authentication information for the local machine.
+        osenv:
+          driver: env
 
-    approle_mount
-        .. versionadded:: TBD
+    And then export the VAULT_TOKEN variable in your OS:
 
-        The name of the AppRole authentication mount point. Defaults to ``approle``.
+    .. code-block:: bash
 
-    approle_name
-        .. versionadded:: TBD
+       export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
-        The name of the AppRole. Defaults to ``salt-master``.
+``cache``
+~~~~~~~~~
+Configures configuration cache on minions and secret cache on all hosts as well
+as metadata cache for KV secrets.
 
-    method
-        Currently only ``token`` and ``approle`` auth types are supported.
-        Defaults to ``token``.
+backend
+    .. versionchanged:: 3006
 
-        Approle is the preferred way to authenticate with Vault as it provide
-        some advanced options to control authentication process.
-        Please visit Vault documentation for more info:
-        https://www.vaultproject.io/docs/auth/approle.html
+        This used to be found in ``auth:token_backend``.
 
-    role_id
-        The role ID of the AppRole. Required if auth:method == ``approle``.
+    The cache backend in use. Defaults to ``session``, which will store the
+    vault information in memory only for that session. Setting this to anything
+    else will use the configured cache for minion data (:conf_master:`cache <cache>`),
+    by default the local filesystem.
 
-    secret_id
-        The secret ID of the AppRole.
-        Only required if the configured role ID requires it.
+config
+    .. versionadded:: 3006
 
-    token
-        Token to authenticate to Vault with. Required if auth:method == ``token``.
+    The time in seconds to cache queried configuration from the master.
+    Defaults to 3600 (1h).
 
-        The token must be able to create tokens with the policies that should be
-        assigned to minions.
-        You can still use the token auth via a OS environment variable via this
-        config example:
+secret
+    .. versionadded:: 3006
 
-        .. code-block:: yaml
+    The time in seconds to cache tokens/secret-ids for. Defaults to ``ttl``,
+    which caches the secret for as long as it is valid.
 
-            vault:
-              auth:
-                method: token
-                token: sdb://osenv/VAULT_TOKEN
-              server:
-                url: https://vault.service.domain:8200
+``issue``
+~~~~~~~~~
+Configures authentication data issued by the master to minions.
 
-            osenv:
-              driver: env
+type
+    .. versionadded:: 3006
 
-        And then export the VAULT_TOKEN variable in your OS:
+    The type of authentication to issue to minions. Can be ``token`` or ``approle``.
+    Defaults to ``token``.
 
-        .. code-block:: bash
+    To be able to issue AppRoles to minions, the master needs to be able to
+    create new AppRoles on the configured auth mount (see policy example above).
+    It is strongly encouraged to create a separate mount dedicated to minions.
 
-           export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
+approle
+    .. versionadded:: 3006
 
-    cache
-    ~~~~~
-    Configures configuration cache on minions and secret cache on all hosts as well
-    as metadata cache for KV secrets.
+    Configuration regarding issued AppRoles.
 
-    backend
-        .. versionchanged:: TBD
+    ``mount`` specifies the name of the auth mount the master manages.
+    Defaults to ``salt-minions``. This mount should be exclusively dedicated
+    to the Salt master.
 
-            This used to be found in ``auth:token_backend``.
+    ``params`` configures the AppRole the master creates for minions. See the
+    `Vault API docs <https://www.vaultproject.io/api-docs/auth/approle#create-update-approle>`_
+    for details. The configuration is only relevant for the first time the
+    AppRole is created. If you update these params, you will need to update
+    the minion AppRoles manually using the vault runner:
+    ``salt-run vault.sync_approles`` .
 
-        The cache backend in use. Defaults to ``session``, which will store the
-        vault information in memory only for that session. Setting this to anything
-        else will use the configured cache for minion data (:conf_master:`cache <cache>`),
-        by default the local filesystem.
+token
+    .. versionadded:: 3006
 
-    config
-        .. versionadded:: TBD
+    Configuration regarding issued tokens.
 
-        The time in seconds to cache queried configuration from the master.
-        Defaults to 3600 (1h).
+    ``role_name`` specifies the role name for minion tokens created. Optional.
 
-    secret
-        .. versionadded:: TBD
+    .. versionchanged:: 3006
 
-        The time in seconds to cache tokens/secret-ids for. Defaults to ``ttl``,
-        which caches the secret for as long as it is valid.
+        This used to be found in ``role_name``.
 
-    issue
-    ~~~~~
-    Configures authentication data issued by the master to minions.
+    If omitted, minion tokens will be created without any role, thus being able
+    to inherit any master token policy (including token creation capabilities).
 
-    type
-        .. versionadded:: TBD
+    For details please see:
+    https://www.vaultproject.io/api/auth/token/index.html#create-token
 
-        The type of authentication to issue to minions. Can be ``token`` or ``approle``.
-        Defaults to ``token``.
+    Example configuration:
+    https://www.nomadproject.io/docs/vault-integration/index.html#vault-token-role-configuration
 
-        To be able to issue AppRoles to minions, the master needs to be able to
-        create new AppRoles on the configured auth mount (see policy example above).
-        It is strongly encouraged to create a separate mount dedicated to minions.
+    ``params`` configures the tokens the master issues to minions.
 
-    approle
-        .. versionadded:: TBD
+    .. versionchanged:: 3006
 
-        Configuration regarding issued AppRoles.
+        This used to be found in ``auth:ttl`` and ``auth:uses``.
 
-        ``mount`` specifies the name of the auth mount the master manages.
-        Defaults to ``salt-minions``. This mount should be exclusively dedicated
-        to the Salt master.
-
-        ``params`` configures the AppRole the master creates for minions. See the
-        `Vault API docs <https://www.vaultproject.io/api-docs/auth/approle#create-update-approle>`_
-        for details. The configuration is only relevant for the first time the
-        AppRole is created. If you update these params, you will need to update
-        the minion AppRoles manually using the vault runner:
-        ``salt-run vault.sync_approles`` .
-
-    token
-        .. versionadded:: TBD
-
-        Configuration regarding issued tokens.
-
-        ``role_name`` specifies the role name for minion tokens created. Optional.
-
-        .. versionchanged:: TBD
-
-            This used to be found in ``role_name``.
-
-        If omitted, minion tokens will be created without any role, thus being able
-        to inherit any master token policy (including token creation capabilities).
-
-        For details please see:
-        https://www.vaultproject.io/api/auth/token/index.html#create-token
-
-        Example configuration:
-        https://www.nomadproject.io/docs/vault-integration/index.html#vault-token-role-configuration
-
-        ``params`` configures the tokens the master issues to minions.
-
-        .. versionchanged:: TBD
-
-            This used to be found in ``auth:ttl`` and ``auth:uses``.
-
-        This setting currently concerns token reuse only. If unset, the master
-        issues single-use tokens to minions, which can be quite expensive. You
-        can set ``ttl`` (configuring the explicit_max_ttl for tokens) and ``uses``
-        (configuring num_uses, the number of requests a single token is allowed to issue).
-        To make full use of multi-use tokens, you should configure a cache that
-        survives a single session.
+    This setting currently concerns token reuse only. If unset, the master
+    issues single-use tokens to minions, which can be quite expensive. You
+    can set ``ttl`` (configuring the explicit_max_ttl for tokens) and ``uses``
+    (configuring num_uses, the number of requests a single token is allowed to issue).
+    To make full use of multi-use tokens, you should configure a cache that
+    survives a single session.
 
 
-    allow_minion_override_params
-        .. versionchanged:: TBD
+allow_minion_override_params
+    .. versionchanged:: 3006
 
-            This used to be found in ``auth:allow_minion_override``.
+        This used to be found in ``auth:allow_minion_override``.
 
-        Whether to allow minions to request to override parameters for issuing credentials,
-        especially ``ttl`` and ``num_uses``. Defaults to false.
-
-        .. note::
-
-            Minion override parameters should be specified in the minion configuration
-            under ``vault:issue_params``. ``ttl`` and ``uses`` always refer to
-            issued token lifecycle settings. For AppRoles specifically, there
-            are more parameters, such as ``secret_id_num_uses`` and ``secret_id_ttl``.
-            ``bind_secret_id`` can not be overridden.
-
-    wrap
-        .. versionadded:: TBD
-
-        The time a minion has to unwrap a wrapped secret issued by the master.
-        Set this to false to disable wrapping, otherwise a time string like ``30s``
-        can be used. Defaults to 30s.
-
-    keys
-    ~~~~
-        List of keys to use to unseal vault server with the ``vault.unseal`` runner.
-
-    metadata
-    ~~~~~~~~
-    .. versionadded:: TBD
-
-    Configures metadata for the issued secrets. Values have to be strings and can
-    be templated with the following variables:
-
-    - ``{jid}`` Salt job ID that issued the secret.
-    - ``{minion}`` The minion ID the secret was issued for.
-    - ``{user}`` The user the Salt daemon issuing the secret was running as.
-    - ``{pillar[<var>]}`` A minion pillar value that does not depend on Vault.
-    - ``{grains[<var>]}`` A minion grain value.
+    Whether to allow minions to request to override parameters for issuing credentials,
+    especially ``ttl`` and ``num_uses``. Defaults to false.
 
     .. note::
 
-        Values have to be strings, hence templated variables that resolve to lists
-        will be concatenated to an alphabetically sorted comma-separated list.
+        Minion override parameters should be specified in the minion configuration
+        under ``vault:issue_params``. ``ttl`` and ``uses`` always refer to
+        issued token lifecycle settings. For AppRoles specifically, there
+        are more parameters, such as ``secret_id_num_uses`` and ``secret_id_ttl``.
+        ``bind_secret_id`` can not be overridden.
 
-    entity
-        Configures the metadata associated with the minion entity inside Vault.
-        Entities are only created when issuing AppRoles to minions.
+wrap
+    .. versionadded:: 3006
 
-    token
-        Configures the metadata associated with issued tokens.
+    The time a minion has to unwrap a wrapped secret issued by the master.
+    Set this to false to disable wrapping, otherwise a time string like ``30s``
+    can be used. Defaults to 30s.
 
-    policies
-    ~~~~~~~~
-    .. versionchanged:: TBD
+``keys``
+~~~~~~~~
+    List of keys to use to unseal vault server with the ``vault.unseal`` runner.
 
-        This used to specify the list of policies associated with a minion token only.
-        The equivalent is found in ``assign``.
+``metadata``
+~~~~~~~~~~~~
+.. versionadded:: 3006
 
-    assign
-        List of policies that are assigned to issued minion authentication data,
-        either token or AppRole.
+Configures metadata for the issued secrets. Values have to be strings and can
+be templated with the following variables:
 
-        They can be static strings or string templates with
+- ``{jid}`` Salt job ID that issued the secret.
+- ``{minion}`` The minion ID the secret was issued for.
+- ``{user}`` The user the Salt daemon issuing the secret was running as.
+- ``{pillar[<var>]}`` A minion pillar value that does not depend on Vault.
+- ``{grains[<var>]}`` A minion grain value.
 
-        - ``{minion}`` The minion ID.
-        - ``{pillar[<var>]}`` A minion pillar value.
-        - ``{grains[<var>]}`` A minion grain value.
+.. note::
 
-        For pillar and grain values, lists are expanded, so ``salt_role_{pillar[roles]}``
-        with ``[a, b]`` results in ``salt_role_a`` and ``salt_role_b`` to be issued.
+    Values have to be strings, hence templated variables that resolve to lists
+    will be concatenated to an alphabetically sorted comma-separated list.
 
-        Defaults to ``[saltstack/minions, saltstack/{minion}]``.
+entity
+    Configures the metadata associated with the minion entity inside Vault.
+    Entities are only created when issuing AppRoles to minions.
 
-        .. versionadded:: 3006
+token
+    Configures the metadata associated with issued tokens.
 
-            Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``
-            Make sure to only reference pillars that are not sourced from Vault since the latter
-            ones might be unavailable during policy rendering.
+``policies``
+~~~~~~~~~~~~
+.. versionchanged:: 3006
 
-        .. important::
+    This used to specify the list of policies associated with a minion token only.
+    The equivalent is found in ``assign``.
 
-            See :ref:`Is Targeting using Grain Data Secure?
-            <faq-grain-security>` for important security information. In short,
-            everything except ``grains[id]`` is minion-controlled.
+assign
+    List of policies that are assigned to issued minion authentication data,
+    either token or AppRole.
 
-        .. note::
+    They can be static strings or string templates with
 
-            List members which do not have simple string representations,
-            such as dictionaries or objects, do not work and will
-            throw an exception. Strings and numbers are examples of
-            types which work well.
+    - ``{minion}`` The minion ID.
+    - ``{pillar[<var>]}`` A minion pillar value.
+    - ``{grains[<var>]}`` A minion grain value.
 
-    cache_time
-        .. versionadded:: TBD
+    For pillar and grain values, lists are expanded, so ``salt_role_{pillar[roles]}``
+    with ``[a, b]`` results in ``salt_role_a`` and ``salt_role_b`` to be issued.
 
-        Number of seconds compiled templated policies are cached on the master.
-        This is important when using pillar values in templates, since compiling
-        the pillar is an expensive operation.
+    Defaults to ``[saltstack/minions, saltstack/{minion}]``.
 
-    refresh_pillar
-        .. versionadded:: TBD
+    .. versionadded:: 3006
 
-        Whether to refresh the minion pillar when compiling templated policies
-        that contain pillar variables.
+        Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``
+        Make sure to only reference pillars that are not sourced from Vault since the latter
+        ones might be unavailable during policy rendering.
 
-        - ``null`` (default) only compiles the pillar when no cached pillar is found.
-        - ``false`` never compiles the pillar. This means templated policies that
-          contain pillar values are skipped if no cached pillar is found.
-        - ``true`` always compiles the pillar. This can cause additional strain
-          on the master since the compilation is costly.
+    .. important::
 
-        .. note::
+        See :ref:`Is Targeting using Grain Data Secure?
+        <faq-grain-security>` for important security information. In short,
+        everything except ``grains[id]`` is minion-controlled.
 
-            Using cached pillar data only (refresh_pillar=False) might cause the policies
-            to be out of sync. If there is no cached pillar data available for the minion,
-            pillar templates will fail to render at all.
+    .. note::
 
-            If you use pillar values for templating policies and do not disable
-            refreshing pillar data, make sure the relevant values are not sourced
-            from Vault (ext_pillar, sdb) or from a pillar sls file that uses the vault
-            execution module. Although this will often work when cached pillar data is
-            available, if the master needs to compile the pillar data during policy rendering,
-            all Vault modules will be broken to prevent an infinite loop.
+        List members which do not have simple string representations,
+        such as dictionaries or objects, do not work and will
+        throw an exception. Strings and numbers are examples of
+        types which work well.
 
-    server
-    ~~~~~~
-        .. versionchanged:: TBD
+cache_time
+    .. versionadded:: 3006
 
-            The values found in here were found in the ``vault`` root namespace previously.
+    Number of seconds compiled templated policies are cached on the master.
+    This is important when using pillar values in templates, since compiling
+    the pillar is an expensive operation.
 
-        Configures Vault server details.
+refresh_pillar
+    .. versionadded:: 3006
 
-        url
-            Url to your Vault installation. Required.
+    Whether to refresh the minion pillar when compiling templated policies
+    that contain pillar variables.
 
-        verify
-            For details please see
-            https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
+    - ``null`` (default) only compiles the pillar when no cached pillar is found.
+    - ``false`` never compiles the pillar. This means templated policies that
+      contain pillar values are skipped if no cached pillar is found.
+    - ``true`` always compiles the pillar. This can cause additional strain
+      on the master since the compilation is costly.
 
-            .. versionadded:: 2018.3.0
+    .. note::
 
-        namespaces
-            Optional Vault Namespace. Used with Vault enterprice
+        Using cached pillar data only (refresh_pillar=False) might cause the policies
+        to be out of sync. If there is no cached pillar data available for the minion,
+        pillar templates will fail to render at all.
 
-            For detail please see:
-            https://www.vaultproject.io/docs/enterprise/namespaces
+        If you use pillar values for templating policies and do not disable
+        refreshing pillar data, make sure the relevant values are not sourced
+        from Vault (ext_pillar, sdb) or from a pillar sls file that uses the vault
+        execution module. Although this will often work when cached pillar data is
+        available, if the master needs to compile the pillar data during policy rendering,
+        all Vault modules will be broken to prevent an infinite loop.
 
-            .. versionadded:: 3004
+``server``
+~~~~~~~~~~
+.. versionchanged:: 3006
+
+    The values found in here were found in the ``vault`` root namespace previously.
+
+Configures Vault server details.
+
+url
+    Url to your Vault installation. Required.
+
+verify
+    For details please see
+    https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
+
+    .. versionadded:: 2018.3.0
+
+namespace
+    Optional Vault namespace. Used with Vault Enterprise.
+
+    For detail please see:
+    https://www.vaultproject.io/docs/enterprise/namespaces
+
+    .. versionadded:: 3004
 
 .. _vault-setup:
 """
@@ -732,7 +736,7 @@ def delete_secret(path, *args):
     path
         The path to the secret, including mount.
 
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
         For KV v2, you can specify versions to soft-delete as supplemental arguments.
     """
@@ -819,7 +823,7 @@ def list_secrets(path, default=NOT_SET, keys_only=False):
         is provided here.
 
     keys_only
-        .. versionadded:: TBD
+        .. versionadded:: 3006
 
         This function used to return a dictionary like ``{"keys": ["some/", "some/key"]}``.
         Setting this to True will only return the list of keys.
@@ -855,7 +859,7 @@ def clear_token_cache(connection_only=True):
         salt '*' vault.clear_token_cache
 
     connection_only
-        .. versionadded:: TBD
+        .. versionadded:: 3006
 
         Only delete cache data scoped to a connection configuration. This is currently
         true for all Vault cache data, but might change in the future.
@@ -867,7 +871,7 @@ def clear_token_cache(connection_only=True):
 
 def policy_fetch(policy):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Fetch the rules associated with an ACL policy. Returns None if the policy
     does not exist.
@@ -904,7 +908,7 @@ def policy_fetch(policy):
 
 def policy_write(policy, rules):
     r"""
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Create or update an ACL policy.
 
@@ -938,7 +942,7 @@ def policy_write(policy, rules):
 
 def policy_delete(policy):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Delete an ACL policy. Returns False if the policy did not exist.
 
@@ -971,7 +975,7 @@ def policy_delete(policy):
 
 def policies_list():
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     List all ACL policies.
 
@@ -997,7 +1001,7 @@ def policies_list():
 
 def query(method, endpoint, payload=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3006
 
     Issue arbitrary queries against the Vault API.
 

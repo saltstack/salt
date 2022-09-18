@@ -744,7 +744,6 @@ MISSING_EXAMPLES = {
         "match_metric",
     ],
     "salt/modules/vagrant.py": ["get_machine_id", "get_vm_info"],
-    "salt/modules/vault.py": ["read_secret"],
     "salt/modules/virt.py": [
         "nesthash",
         "pool_update",
