@@ -9,6 +9,7 @@ import textwrap
 
 import attr
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform

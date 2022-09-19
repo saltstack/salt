@@ -295,7 +295,7 @@ class AsyncReqChannel:
                     ret = yield self._crypted_transfer(load, timeout=timeout, raw=raw)
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Failed to send msg %r", exc)
+                log.trace("Failed to send msg %r", exc)
                 if _try >= tries:
                     raise
                 else:
@@ -383,7 +383,6 @@ class AsyncPubChannel:
         """
         try:
             if not self.auth.authenticated:
-                log.error("WTF %r %r", self.auth.authenticated, self.auth.authenticate)
                 yield self.auth.authenticate()
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4506)) != 4506:

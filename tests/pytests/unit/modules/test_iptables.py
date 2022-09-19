@@ -6,6 +6,7 @@ import textwrap
 import uuid
 
 import pytest
+
 import salt.modules.iptables as iptables
 from tests.support.mock import MagicMock, mock_open, patch
 

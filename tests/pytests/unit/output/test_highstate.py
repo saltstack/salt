@@ -3,6 +3,7 @@ import logging
 import sys
 
 import pytest
+
 import salt.config
 import salt.output.highstate as highstate
 from tests.support.mock import patch

@@ -14,6 +14,7 @@ import tempfile
 import time
 
 import requests
+
 import salt.crypt
 import salt.exceptions
 import salt.utils.json

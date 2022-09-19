@@ -1,10 +1,11 @@
 import pathlib
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.modules.useradd as useradd
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from saltfactories.utils import random_string
 from tests.support.unit import skipIf
 
 pytestmark = [

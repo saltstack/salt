@@ -14,8 +14,8 @@ except ImportError:
 
 if HAS_MAKO:
     import os
-
     import urllib.parse
+
     import salt.fileclient
     import salt.utils.url
 

@@ -136,6 +136,7 @@ from xml.etree import ElementTree
 from xml.sax import saxutils
 
 import jinja2.exceptions
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json

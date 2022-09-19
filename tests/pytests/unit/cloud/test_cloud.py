@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+
 import salt.config
 from salt.cloud import Cloud
 from tests.support.mock import MagicMock, patch

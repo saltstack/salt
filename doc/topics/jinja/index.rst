@@ -1263,6 +1263,54 @@ Returns:
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
 
 
+.. jinja_ref:: random_sample
+
+``random_sample``
+-----------------
+
+.. versionadded:: 3005
+
+Returns a given sample size from a list. The ``seed`` parameter can be used to
+return a predictable outcome.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set my_list = ["one", "two", "three", "four"] %}
+  {{ my_list | random_sample(2) }}
+
+Returns:
+
+.. code-block:: text
+
+  ["four", "one"]
+
+
+.. jinja_ref:: random_shuffle
+
+``random_shuffle``
+------------------
+
+.. versionadded:: 3005
+
+Returns a shuffled copy of an input list. The ``seed`` parameter can be used to
+return a predictable outcome.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set my_list = ["one", "two", "three", "four"] %}
+  {{ my_list | random_shuffle }}
+
+Returns:
+
+.. code-block:: text
+
+  ["four", "three", "one", "two"]
+
+
 .. jinja_ref:: set_dict_key_value
 
 ``set_dict_key_value``
