@@ -816,7 +816,7 @@ scp==0.13.2
     #   netmiko
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/freebsd.in
 six==1.16.0
     # via

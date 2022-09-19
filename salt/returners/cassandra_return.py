@@ -1,4 +1,9 @@
 """
+.. warning::
+
+    The `cassandra` returner is deprecated in favor of the `cassandra_cql`
+    returner.
+
 Return data to a Cassandra ColumnFamily
 
 Here's an example Keyspace / ColumnFamily setup that works with this
@@ -22,6 +27,7 @@ Required python modules: pycassa
 import logging
 
 import salt.utils.jid
+from salt.utils.versions import warn_until_date
 
 try:
     import pycassa  # pylint: disable=import-error
@@ -46,6 +52,11 @@ __virtualname__ = "cassandra"
 def __virtual__():
     if not HAS_PYCASSA:
         return False, "Could not import cassandra returner; pycassa is not installed."
+    warn_until_date(
+        "20240101",
+        "The cassandra returner is broken and deprecated, and will be removed"
+        " after {date}. Use the cassandra_cql returner instead",
+    )
     return __virtualname__
 
 
