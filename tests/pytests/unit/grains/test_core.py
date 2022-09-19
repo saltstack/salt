@@ -934,6 +934,28 @@ def test_rocky_8_os_grains(os_release_dir):
 
 
 @pytest.mark.skip_unless_on_linux
+def test_osmc_os_grains(os_release_dir):
+    """
+    Test if OS grains are parsed correctly in OSMC
+    """
+    _os_release_map = {
+        "_linux_distribution": ("OSMC", "2022.03-1", "Open Source Media Center"),
+    }
+
+    expectation = {
+        "os": "OSMC",
+        "os_family": "Debian",
+        "oscodename": "Open Source Media Center",
+        "osfullname": "OSMC",
+        "osrelease": "2022.03-1",
+        "osrelease_info": (2022, "03-1"),
+        "osmajorrelease": 2022,
+        "osfinger": "OSMC-2022",
+    }
+    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_mendel_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Mendel Linux
