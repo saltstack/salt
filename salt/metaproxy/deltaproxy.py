@@ -335,6 +335,11 @@ def post_master_init(self, master):
         self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
         self.deltaproxy_objs[minion_id].subprocess_list = self.subprocess_list
+        self.deltaproxy_objs[
+            minion_id
+        ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+        )
 
     self.ready = True
 
@@ -467,19 +472,16 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     # )
     # proxyopts["grains"] = self.proxy_grains[minion_id]
 
-    # if not hasattr(_proxy_minion, "schedule"):
-    #    _proxy_minion.schedule = salt.utils.schedule.Schedule(
-    #        proxyopts,
-    #        _proxy_minion.functions,
-    #        _proxy_minion.returners,
-    #        cleanup=[salt.minion.master_event(type="alive")],
-    #        proxy=_proxy_minion.proxy,
-    #        new_instance=True,
-    #        _subprocess_list=_proxy_minion.subprocess_list,
-    #    )
-
-    # self.deltaproxy_objs[minion_id] = _proxy_minion
-    # self.deltaproxy_opts[minion_id] = copy.deepcopy(proxyopts)
+    if not hasattr(_proxy_minion, "schedule"):
+        _proxy_minion.schedule = salt.utils.schedule.Schedule(
+            proxyopts,
+            _proxy_minion.functions,
+            _proxy_minion.returners,
+            cleanup=[salt.minion.master_event(type="alive")],
+            proxy=_proxy_minion.proxy,
+            new_instance=True,
+            _subprocess_list=_proxy_minion.subprocess_list,
+        )
 
     # proxy keepalive
     # _proxy_alive_fn = _fq_proxyname + ".alive"

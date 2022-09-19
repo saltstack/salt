@@ -2693,10 +2693,10 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("__master_req_channel_payload"):
-            yield self.req_channel.send(
+            yield _minion.req_channel.send(
                 data,
-                timeout=self._return_retry_timer(),
-                tries=self.opts["return_retry_tries"],
+                timeout=_minion._return_retry_timer(),
+                tries=_minion.opts["return_retry_tries"],
             )
         elif tag.startswith("pillar_refresh"):
             yield _minion.pillar_refresh(
