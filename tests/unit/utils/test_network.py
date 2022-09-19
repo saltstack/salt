@@ -4,6 +4,7 @@ import textwrap
 import time
 
 import pytest
+
 import salt.exceptions
 import salt.utils.network as network
 from salt._compat import ipaddress
@@ -1269,3 +1270,15 @@ class NetworkTestCase(TestCase):
             ),
         ):
             self.assertEqual(network.get_fqhostname(), host)
+
+    def test_ip_bracket(self):
+        test_ipv4 = "127.0.0.1"
+        test_ipv6 = "::1"
+        test_ipv6_uri = "[::1]"
+        self.assertEqual(test_ipv4, network.ip_bracket(test_ipv4))
+        self.assertEqual(test_ipv6, network.ip_bracket(test_ipv6_uri, strip=True))
+        self.assertEqual("[{}]".format(test_ipv6), network.ip_bracket(test_ipv6))
+        self.assertEqual("[{}]".format(test_ipv6), network.ip_bracket(test_ipv6_uri))
+
+        ip_addr_obj = ipaddress.ip_address(test_ipv4)
+        self.assertEqual(test_ipv4, network.ip_bracket(ip_addr_obj))

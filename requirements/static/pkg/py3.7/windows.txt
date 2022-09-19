@@ -53,7 +53,7 @@ jinja2==3.1.0
     # via -r requirements/base.txt
 libnacl==1.8.0
     # via -r requirements/windows.txt
-lxml==4.7.1
+lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.1.4
     # via -r requirements/windows.txt
@@ -76,7 +76,7 @@ psutil==5.8.0
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
@@ -112,7 +112,7 @@ requests==2.25.1
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/windows.txt
 six==1.16.0
     # via
@@ -130,7 +130,9 @@ typing-extensions==3.10.0.0
     #   gitpython
     #   importlib-metadata
 urllib3==1.26.6
-    # via requests
+    # via
+    #   -r requirements/windows.txt
+    #   requests
 wheel==0.36.2
     # via -r requirements/windows.txt
 wmi==1.5.1

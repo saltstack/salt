@@ -1,2 +1,0 @@
-Factor out sum and sorting of permissions into separate functions.
-Additionally, the same logic was applied to the rest_cherrypy netapi

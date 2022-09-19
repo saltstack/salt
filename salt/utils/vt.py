@@ -38,17 +38,18 @@ mswindows = sys.platform == "win32"
 
 try:
     # pylint: disable=F0401,W0611
-    from win32file import ReadFile, WriteFile
-    from win32pipe import PeekNamedPipe
     import msvcrt
+
     import win32api
     import win32con
     import win32process
+    from win32file import ReadFile, WriteFile
+    from win32pipe import PeekNamedPipe
 
     # pylint: enable=F0401,W0611
 except ImportError:
-    import pty
     import fcntl
+    import pty
     import struct
     import termios
 

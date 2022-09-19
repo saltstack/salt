@@ -1,4 +1,5 @@
 import pytest
+
 import salt.cloud.clouds.openstack as openstack
 from tests.support.mock import call, patch
 

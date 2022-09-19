@@ -6,6 +6,7 @@ import re
 import sys
 
 import pytest
+
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json

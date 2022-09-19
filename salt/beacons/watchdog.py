@@ -13,8 +13,11 @@ import logging
 import salt.utils.beacons
 
 try:
-    from watchdog.observers import Observer
+    # pylint: disable=no-name-in-module
     from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
+
+    # pylint: enable=no-name-in-module
 
     HAS_WATCHDOG = True
 except ImportError:

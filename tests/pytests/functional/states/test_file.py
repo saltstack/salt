@@ -10,6 +10,7 @@ import sys
 from contextlib import closing
 
 import pytest
+
 import salt.utils.files
 
 

@@ -1,6 +1,7 @@
 import sqlite3
 
 import pytest
+
 import salt.modules.mac_assistive as assistive
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import patch

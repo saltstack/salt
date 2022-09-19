@@ -780,7 +780,7 @@ executed:
 
 .. code-block:: bash
 
-    nox -e 'pytest-3(coverage=False)' -- -v tests/pytests/unit/modules/test_fib.py
+    nox -e 'test-3(coverage=False)' -- -v tests/pytests/unit/modules/test_fib.py
 
 This will report the status of the test: success, failure, or error.  The
 ``-v`` flag increases output verbosity.

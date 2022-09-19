@@ -1,0 +1,1 @@
+Fix SoftLayer configuration not raising an exception when a domain is missing
