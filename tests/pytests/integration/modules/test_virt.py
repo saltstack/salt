@@ -6,39 +6,17 @@ from numbers import Number
 from xml.etree import ElementTree
 
 import pytest
-from saltfactories.utils import cli_scripts
+
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
-
-@pytest.fixture(scope="module")
-def docker_client():
-    urllib3_connectionpool_handler = logging.getLogger("urllib3.connectionpool")
-    urllib3_connectionpool_handler_level = urllib3_connectionpool_handler.level
-    urllib3_connectionpool_handler.setLevel(logging.INFO)
-    try:
-        client = docker.from_env()
-        connectable = SaltVirtMinionContainerFactory.client_connectable(client)
-        if connectable is not True:  # pragma: no cover
-            pytest.skip(connectable)
-        client.images.pull("quay.io/rst0git/virt-minion")
-        yield client
-    finally:
-        urllib3_connectionpool_handler.setLevel(urllib3_connectionpool_handler_level)
-
-
-@pytest.fixture(scope="module")
-def salt_minion_script_path(salt_factories):
-    return cli_scripts.generate_script(
-        salt_factories.scripts_dir,
-        "salt-minion",
-        code_dir=salt_factories.code_dir,
-        inject_coverage=salt_factories.inject_coverage,
-        inject_sitecustomize=salt_factories.inject_sitecustomize,
-    )
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -53,46 +31,32 @@ def virt_minion_1_id():
 
 @pytest.fixture(scope="module")
 def virt_minion_0(
-    salt_factories,
     salt_master,
-    docker_client,
-    salt_minion_script_path,
     virt_minion_0_id,
     virt_minion_1_id,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon(virt_minion_0_id)
     config_defaults = {
-        "root_dir": str(root_dir),
         "id": virt_minion_0_id,
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
     config_overrides = {"user": "root"}
-    config = SaltVirtMinionContainerFactory.configure(
-        factories_manager=salt_factories,
-        daemon_id=virt_minion_0_id,
-        root_dir=root_dir,
+    factory = salt_master.salt_minion_daemon(
+        virt_minion_0_id,
+        name=virt_minion_0_id,
+        image="ghcr.io/saltstack/salt-ci-containers/virt-minion",
+        factory_class=SaltVirtMinionContainerFactory,
         defaults=config_defaults,
         overrides=config_overrides,
-        master=salt_master,
-    )
-    salt_factories.final_minion_config_tweaks(config)
-    loaded_config = SaltVirtMinionContainerFactory.write_config(config)
-    factory = SaltVirtMinionContainerFactory(
-        name=virt_minion_0_id,
-        image="quay.io/rst0git/virt-minion",
-        docker_client=docker_client,
-        config=loaded_config,
-        script_name=salt_minion_script_path,
-        start_timeout=60,
-        factories_manager=salt_factories,
-        event_listener=salt_factories.event_listener,
         container_run_kwargs={
             "extra_hosts": {
                 virt_minion_0_id: "127.0.0.1",
                 virt_minion_1_id: "127.0.0.1",
             }
         },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
@@ -103,46 +67,32 @@ def virt_minion_0(
 
 @pytest.fixture(scope="module")
 def virt_minion_1(
-    salt_factories,
     salt_master,
-    docker_client,
-    salt_minion_script_path,
     virt_minion_0_id,
     virt_minion_1_id,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon(virt_minion_1_id)
     config_defaults = {
-        "root_dir": str(root_dir),
         "id": virt_minion_1_id,
         "open_mode": True,
         "transport": salt_master.config["transport"],
     }
     config_overrides = {"user": "root"}
-    config = SaltVirtMinionContainerFactory.configure(
-        factories_manager=salt_factories,
-        daemon_id=virt_minion_1_id,
-        root_dir=root_dir,
+    factory = salt_master.salt_minion_daemon(
+        virt_minion_1_id,
+        name=virt_minion_1_id,
+        image="ghcr.io/saltstack/salt-ci-containers/virt-minion",
+        factory_class=SaltVirtMinionContainerFactory,
         defaults=config_defaults,
         overrides=config_overrides,
-        master=salt_master,
-    )
-    salt_factories.final_minion_config_tweaks(config)
-    loaded_config = SaltVirtMinionContainerFactory.write_config(config)
-    factory = SaltVirtMinionContainerFactory(
-        name=virt_minion_1_id,
-        image="quay.io/rst0git/virt-minion",
-        docker_client=docker_client,
-        config=loaded_config,
-        script_name=salt_minion_script_path,
-        start_timeout=60,
-        factories_manager=salt_factories,
-        event_listener=salt_factories.event_listener,
         container_run_kwargs={
             "extra_hosts": {
                 virt_minion_0_id: "127.0.0.1",
                 virt_minion_1_id: "127.0.0.1",
             }
         },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
@@ -156,8 +106,6 @@ def salt_cli(salt_master, virt_minion_0, virt_minion_1):
     return salt_master.salt_cli()
 
 
-@pytest.mark.slow_test
-@pytest.mark.skip_if_binaries_missing("docker")
 class TestVirtTest:
     """
     Test virt routines
@@ -183,8 +131,8 @@ class TestVirtTest:
         Test virt.get_profiles with the KVM profile
         """
         ret = salt_cli.run("virt.get_profiles", "kvm", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        profiles = ret.json
+        assert ret.returncode == 0, ret
+        profiles = ret.data
         assert isinstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -203,8 +151,8 @@ class TestVirtTest:
         Test virt.get_profiles with the VMware profile
         """
         ret = salt_cli.run("virt.get_profiles", "vmware", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        profiles = ret.json
+        assert ret.returncode == 0, ret
+        profiles = ret.data
         assert isinstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -224,8 +172,8 @@ class TestVirtTest:
         Test virt.get_profiles with the XEN profile
         """
         ret = salt_cli.run("virt.get_profiles", "xen", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        profiles = ret.json
+        assert ret.returncode == 0, ret
+        profiles = ret.data
         assert isinstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -244,8 +192,8 @@ class TestVirtTest:
         Test virt.get_profiles with the Bhyve profile
         """
         ret = salt_cli.run("virt.get_profiles", "bhyve", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        profiles = ret.json
+        assert ret.returncode == 0, ret
+        profiles = ret.data
         assert isinstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -266,8 +214,8 @@ class TestVirtTest:
         Test virt.all_capabilities
         """
         ret = salt_cli.run("virt.all_capabilities", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        caps = ret.json
+        assert ret.returncode == 0, ret
+        caps = ret.data
         assert isinstance(caps, dict)
         assert isinstance(caps["host"]["host"]["uuid"], str)
         assert len(caps["host"]["host"]["uuid"]) == 36
@@ -278,8 +226,8 @@ class TestVirtTest:
         Test virt.capabilities
         """
         ret = salt_cli.run("virt.capabilities", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        caps = ret.json
+        assert ret.returncode == 0, ret
+        caps = ret.data
         assert isinstance(caps, dict)
         assert isinstance(caps["host"]["uuid"], str)
         assert len(caps["host"]["uuid"]) == 36
@@ -294,15 +242,15 @@ class TestVirtTest:
         ret = salt_cli.run(
             "virt.cpu_baseline", out="libvirt", minion_tgt=virt_minion_0.id
         )
-        assert ret.exitcode == 0, ret
-        cpu_baseline = ret.json
+        assert ret.returncode == 0, ret
+        cpu_baseline = ret.data
         assert isinstance(cpu_baseline, str)
         cpu_baseline = ElementTree.fromstring(cpu_baseline)
         assert cpu_baseline.find("vendor").text in vendors
 
         ret = salt_cli.run("virt.cpu_baseline", out="salt", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        cpu_baseline = ret.json
+        assert ret.returncode == 0, ret
+        cpu_baseline = ret.data
         assert isinstance(cpu_baseline, dict)
         assert cpu_baseline["vendor"] in vendors
 
@@ -311,8 +259,8 @@ class TestVirtTest:
         Test virt.freemem
         """
         ret = salt_cli.run("virt.freemem", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        available_memory = ret.json
+        assert ret.returncode == 0, ret
+        available_memory = ret.data
         assert isinstance(available_memory, Number)
         assert available_memory > 0
 
@@ -321,8 +269,8 @@ class TestVirtTest:
         Test virt.freecpu
         """
         ret = salt_cli.run("virt.freecpu", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        available_cpus = ret.json
+        assert ret.returncode == 0, ret
+        available_cpus = ret.data
         assert isinstance(available_cpus, Number)
         assert available_cpus > 0
 
@@ -331,8 +279,8 @@ class TestVirtTest:
         Test virt.full_info
         """
         ret = salt_cli.run("virt.full_info", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        info = ret.json
+        assert ret.returncode == 0, ret
+        info = ret.data
         assert isinstance(info, dict)
         assert isinstance(info["vm_info"], dict)
 
@@ -355,8 +303,8 @@ class TestVirtTest:
         Test virt.node_info
         """
         ret = salt_cli.run("virt.node_info", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        info = ret.json
+        assert ret.returncode == 0, ret
+        info = ret.data
         assert isinstance(info, dict)
         assert isinstance(info["cpucores"], Number)
         assert isinstance(info["cpumhz"], Number)
@@ -377,14 +325,14 @@ def virt_domain():
 def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
     try:
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         for domain in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_0.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_0.id)
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         for domain in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_1.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
@@ -393,21 +341,21 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
             "/{}.xml".format(virt_domain),
             minion_tgt=virt_minion_0.id,
         )
-        assert ret.exitcode == 0, ret
+        assert ret.returncode == 0, ret
         ret = salt_cli.run("virt.start", virt_domain, minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
+        assert ret.returncode == 0, ret
         # Run tests
         yield
     finally:
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         for domain in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_0.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_0.id)
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         for domain in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_1.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
@@ -428,26 +376,26 @@ class TestVirtMigrateTest:
             "/{}.xml".format(virt_domain),
             minion_tgt=virt_minion_0.id,
         )
-        assert ret.exitcode == 0, ret
-        result = ret.json
+        assert ret.returncode == 0, ret
+        result = ret.data
         assert isinstance(result, bool), result
         assert result is True, result
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain]
 
         ret = salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        result = ret.json
+        assert ret.returncode == 0, ret
+        result = ret.data
         assert isinstance(result, bool)
         assert result is True
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == []
 
@@ -458,23 +406,23 @@ class TestVirtMigrateTest:
         Test domain migration over SSH, TCP and TLS transport protocol
         """
         ret = salt_cli.run("virt.list_active_vms", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
+        assert ret.returncode == 0, ret
 
         ret = salt_cli.run("virt.list_active_vms", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
+        assert ret.returncode == 0, ret
         ret = salt_cli.run("virt.vm_info", virt_domain, minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
+        assert ret.returncode == 0, ret
 
         # Verify that the VM has been created
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain]
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == []
 
@@ -484,21 +432,21 @@ class TestVirtMigrateTest:
             "qemu+ssh://{}/system".format(virt_minion_1.uri),
             minion_tgt=virt_minion_0.id,
         )
-        assert ret.exitcode == 0, ret
-        result = ret.json
+        assert ret.returncode == 0, ret
+        result = ret.data
         assert isinstance(result, bool)
         assert result is True
 
         # Verify that the VM has been migrated
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [], "Failed to migrate VM"
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
@@ -510,14 +458,14 @@ class TestVirtMigrateTest:
         """
         # Verify that the VM has been created
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain]
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == []
 
@@ -527,21 +475,21 @@ class TestVirtMigrateTest:
             virt_minion_1.tcp_uri,
             minion_tgt=virt_minion_0.id,
         )
-        assert ret.exitcode == 0, ret
-        result = ret.json
+        assert ret.returncode == 0, ret
+        result = ret.data
         assert isinstance(result, bool)
         assert result is True
 
         # Verify that the VM has been migrated
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [], "Failed to migrate VM"
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
@@ -553,14 +501,14 @@ class TestVirtMigrateTest:
         """
         # Verify that the VM has been created
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain]
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == []
 
@@ -570,20 +518,20 @@ class TestVirtMigrateTest:
             virt_minion_1.tls_uri,
             minion_tgt=virt_minion_0.id,
         )
-        assert ret.exitcode == 0, ret
-        result = ret.json
+        assert ret.returncode == 0, ret
+        result = ret.data
         assert isinstance(result, bool)
         assert result is True
 
         # Verify that the VM has been migrated
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [], "Failed to migrate VM"
 
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
-        assert ret.exitcode == 0, ret
-        domains = ret.json
+        assert ret.returncode == 0, ret
+        domains = ret.data
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"

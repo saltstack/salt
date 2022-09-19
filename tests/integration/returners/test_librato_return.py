@@ -5,6 +5,7 @@ Tests for the librato returner
 import logging
 
 import pytest
+
 from salt.returners import librato_return
 from tests.support.case import ShellCase
 

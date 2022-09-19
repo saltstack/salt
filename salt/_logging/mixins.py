@@ -7,6 +7,11 @@
 
 import logging
 import sys
+import weakref
+
+import salt._logging
+
+log = logging.getLogger(__name__)
 
 
 class LoggingProfileMixin:
@@ -131,3 +136,30 @@ class ExcInfoOnLogLevelFormatMixin:
         # data which is not pickle'able
         record.exc_info_on_loglevel_instance = None
         return formatted_record
+
+
+class MultiprocessingStateMixin:
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        logging_config = state["logging_config"]
+        if not salt._logging.get_logging_options_dict():
+            salt._logging.set_logging_options_dict(logging_config)
+
+        # Setup logging on the new process
+        try:
+            salt._logging.setup_logging()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to configure logging on %s: %s",
+                self,
+                exc,
+            )
+        # Be sure to shutdown logging when terminating the process
+        weakref.finalize(self, salt._logging.shutdown_logging)
+
+    def __getstate__(self):
+        # Grab the current logging settings
+        return {
+            "logging_config": salt._logging.get_logging_options_dict(),
+        }

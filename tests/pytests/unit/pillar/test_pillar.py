@@ -1,4 +1,5 @@
 import pytest
+
 import salt.loader
 import salt.pillar
 from salt.utils.odict import OrderedDict
@@ -43,3 +44,82 @@ def test_pillar_get_tops_should_not_error_when_merging_strategy_is_none_and_no_p
     )
     tops, errors = pillar.get_tops()
     assert not errors
+
+
+def test_dynamic_pillarenv():
+    opts = {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {
+            "__env__": ["/srv/pillar/__env__"],
+            "base": ["/srv/pillar/base"],
+            "test": ["/srv/pillar/__env__"],
+        },
+        "file_roots": {"base": ["/srv/salt/base"], "__env__": ["/srv/salt/__env__"]},
+        "extension_modules": "",
+    }
+    pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="dev")
+    assert pillar.opts["pillar_roots"] == {
+        "base": ["/srv/pillar/base"],
+        "dev": ["/srv/pillar/dev"],
+        "test": ["/srv/pillar/__env__"],
+    }
+
+
+def test_ignored_dynamic_pillarenv():
+    opts = {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {
+            "__env__": ["/srv/pillar/__env__"],
+            "base": ["/srv/pillar/base"],
+        },
+        "file_roots": {"base": ["/srv/salt/base"], "dev": ["/svr/salt/dev"]},
+        "extension_modules": "",
+    }
+    pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="base")
+    assert pillar.opts["pillar_roots"] == {"base": ["/srv/pillar/base"]}
+
+
+@pytest.mark.parametrize(
+    "env",
+    ("base", "something-else", "cool_path_123", "__env__"),
+)
+def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
+    """
+    Test pillar access to a dynamic path using __env__
+    """
+    opts = temp_salt_minion.config.copy()
+
+    if env == "__env__":
+        # __env__ saltenv will pass "dynamic" as saltenv and
+        # expect to be routed to the "dynamic" directory
+        actual_env = "dynamic"
+        leaf_dir = actual_env
+    else:
+        # any other saltenv will pass saltenv normally and
+        # expect to be routed to a static "__env__" directory
+        actual_env = env
+        leaf_dir = "__env__"
+
+    expected = {actual_env: [str(tmp_path / leaf_dir)]}
+
+    # Stop using OrderedDict once we drop Py3.5 support
+    opts["pillar_roots"] = OrderedDict()
+    opts["pillar_roots"][env] = [str(tmp_path / leaf_dir)]
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(
+        opts,
+        grains,
+        temp_salt_minion.id,
+        actual_env,
+    )
+
+    # The __env__ string in the path has been substituted for the actual env
+    assert pillar.opts["pillar_roots"] == expected

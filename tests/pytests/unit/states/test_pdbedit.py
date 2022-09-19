@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.pdbedit as pdbedit_mod
 import salt.states.pdbedit as pdbedit
 from tests.support.mock import MagicMock, patch

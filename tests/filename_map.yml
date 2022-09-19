@@ -8,11 +8,18 @@ setup.py:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 
+salt/_logging/(impl|handlers).py:
+  - pytests.integration._logging.test_jid_logging
+  - pytests.integration._logging.test_multiple_processes_logging
+  - pytests.unit._logging.handlers.test_deferred_stream_handler
+
+
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
   - pytests.functional.modules.test_pkg
   - pytests.functional.states.test_pkg
-  - integration.states.test_pkgrepo
+  - pytests.functional.states.pkgrepo.test_centos
+  - pytests.functional.states.pkgrepo.test_debian
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
   - pytests.unit.states.test_user
@@ -62,7 +69,7 @@ salt/modules/dockermod.py:
   - pytests.unit.states.test_docker_volume
   - unit.utils.test_dockermod
   - pytests.functional.states.test_docker_container
-  - integration.states.test_docker_network
+  - pytests.functional.states.test_docker_network
 
 salt/modules/file.py:
   - pytests.integration.states.test_cron
@@ -106,7 +113,14 @@ salt/auth/*:
   - pytests.integration.cli.test_salt_auth
 
 salt/cache/*:
-  - unit.cache.test_cache
+  - pytests.unit.cache.test_cache
+  - pytests.unit.cache.test_memcache
+  - pytests.functional.cache.test_consul
+  - pytests.functional.cache.test_etcd
+  - pytests.functional.cache.test_localfs
+  - pytests.functional.cache.test_memcache
+  - pytests.functional.cache.test_mysql
+  - pytests.functional.cache.test_redis
 
 salt/cli/*:
   - integration.shell.test_arguments
@@ -127,8 +141,8 @@ salt/cli/salt.py:
 
 salt/client/*:
   - integration.client.test_kwarg
-  - integration.client.test_runner
   - integration.client.test_standard
+  - pytests.integration.client.test_runner
 
 salt/cloud/*:
   - pytests.functional.cli.test_salt_cloud
@@ -153,7 +167,7 @@ salt/proxy/*:
   - pytests.integration.proxy.test_simple
 
 salt/state.py:
-  - integration.modules.test_state_jinja_filters
+  - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_compiler
   - integration.states.test_handle_error
   - integration.states.test_handle_iorder
@@ -164,7 +178,7 @@ salt/utils/decorators/*:
   - integration.modules.test_decorators
 
 salt/(utils|renderers)/jinja\.py:
-  - integration.modules.test_state_jinja_filters
+  - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
 
 salt/utils/minions.py:
@@ -181,23 +195,25 @@ salt/cli/daemons.py:
 
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
-  - integration.ssh.test_deploy
+  - pytests.integration.ssh.test_deploy
   - pytests.integration.ssh.test_grains
-  - integration.ssh.test_jinja_filters
-  - integration.ssh.test_master
-  - integration.ssh.test_mine
+  - pytests.integration.ssh.test_mine
+  - pytests.integration.ssh.test_master
+  - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
-  - integration.ssh.test_raw
+  - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
 
 salt/config/*:
   - unit.test_config
+  - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
   - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
-  - pytests.functional.test_loader
+  - pytests.functional.loader.test_loader
+  - pytests.functional.loader.test_loaded_base_name
 
 salt/minion.py:
   - integration.client.test_syndic
@@ -212,14 +228,36 @@ salt/modules/*_sysctl.py:
   - integration.modules.test_sysctl
 
 salt/netapi/rest_cherrypy/*:
-  - unit.netapi.test_rest_cherrypy
-  - integration.netapi.rest_cherrypy.test_app_pam
-  - integration.netapi.test_client
+  - pytests.functional.netapi.rest_cherrypy.test_auth
+  - pytests.functional.netapi.rest_cherrypy.test_auth_pam
+  - pytests.functional.netapi.rest_cherrypy.test_cors
+  - pytests.functional.netapi.rest_cherrypy.test_external_auth_syntax
+  - pytests.functional.netapi.rest_cherrypy.test_in_formats
+  - pytests.functional.netapi.rest_cherrypy.test_out_formats
+  - pytests.integration.netapi.rest_cherrypy.test_arg_kwarg
+  - pytests.integration.netapi.rest_cherrypy.test_auth
+  - pytests.integration.netapi.rest_cherrypy.test_jobs
+  - pytests.integration.netapi.rest_cherrypy.test_run
+  - pytests.integration.netapi.rest_cherrypy.test_webhook_disable_auth
+  - pytests.integration.netapi.test_client
+  - pytests.integration.netapi.test_ssh_client
 
 salt/netapi/rest_tornado/*:
-  - unit.netapi.test_rest_tornado
   - integration.netapi.rest_tornado.test_app
-  - integration.netapi.test_client
+  - pytests.functional.netapi.rest_tornado.test_auth_handler
+  - pytests.functional.netapi.rest_tornado.test_base_api_handler
+  - pytests.functional.netapi.rest_tornado.test_event_listener
+  - pytests.functional.netapi.rest_tornado.test_external_auth_syntax
+  - pytests.functional.netapi.rest_tornado.test_utils
+  - pytests.functional.netapi.rest_tornado.test_webhooks_handler
+  - pytests.functional.netapi.rest_tornado.test_websockets_handler
+  - pytests.integration.netapi.rest_tornado.test_events_api_handler
+  - pytests.integration.netapi.rest_tornado.test_jobs_api_handler
+  - pytests.integration.netapi.rest_tornado.test_minions_api_handler
+  - pytests.integration.netapi.rest_tornado.test_root_handler
+  - pytests.integration.netapi.rest_tornado.test_run_api_handler
+  - pytests.integration.netapi.test_client
+  - pytests.integration.netapi.test_ssh_client
 
 salt/output/*:
   - integration.output.test_output
@@ -266,14 +304,14 @@ salt/utils/schedule.py:
 salt/utils/vt.py:
   - integration.cli.test_custom_module
   - pytests.integration.ssh.test_grains
-  - integration.ssh.test_jinja_filters
-  - integration.ssh.test_mine
+  - pytests.integration.ssh.test_mine
+  - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
-  - integration.ssh.test_raw
+  - pytests.integration.ssh.test_raw
   - integration.ssh.test_state
 
 salt/wheel/*:
-  - integration.wheel.test_client
+  - pytests.integration.wheel.test_client
 
 salt/(minion\.py|channel/.+|transport/.+):
   - pytests.scenarios.multimaster.test_multimaster
@@ -284,6 +322,10 @@ salt/(minion\.py|channel/.+|transport/.+):
 
 tests/support/mock.py:
   - unit.test_mock
+
+tests/support/pytest/mysql.py:
+  - pytests.functional.states.test_mysql
+  - pytests.functional.modules.test_mysql
 
 tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.test_multimaster

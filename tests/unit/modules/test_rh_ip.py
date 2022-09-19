@@ -6,9 +6,11 @@ import copy
 import os
 
 import jinja2.exceptions
+
 import salt.modules.rh_ip as rh_ip
+import salt.modules.systemd_service as service_mod
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase
 
 
@@ -269,10 +271,24 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test to apply global network configuration.
         """
-        with patch.dict(
-            rh_ip.__salt__, {"service.restart": MagicMock(return_value=True)}
+        # This should be pytest.mark.parametrize, when this gets ported to
+        # pytest approach. This is just following previous patterns here.
+        # Edge cases are 7 & 8
+        mock_service = create_autospec(service_mod.restart, return_value=True)
+        for majorrelease, expected_service_name in (
+            (3, "network"),
+            (7, "network"),
+            (8, "NetworkManager"),
+            (42, "NetworkManager"),
         ):
-            self.assertTrue(rh_ip.apply_network_settings())
+            with patch.dict(
+                rh_ip.__salt__, {"service.restart": mock_service}
+            ), patch.dict(
+                rh_ip.__grains__,
+                {"osmajorrelease": majorrelease},
+            ):
+                self.assertTrue(rh_ip.apply_network_settings())
+                mock_service.assert_called_with(expected_service_name)
 
     def test_build_network_settings(self):
         """
@@ -641,7 +657,93 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                     assert bonding_opts == expected, bonding_opts
 
-    def test_build_interface_bond_mode_4(self):
+    def test_build_interface_bond_mode_4_xmit(self):
+        """
+        Test that mode 4 bond interfaces are properly built
+        """
+        kwargs = {
+            "test": True,
+            "duplex": "full",
+            "slaves": "eth1 eth2",
+            "miimon": 100,
+            "downdelay": 200,
+        }
+        valid_lacp_rate = ("fast", "slow", "1", "0")
+        valid_ad_select = ("0",)
+
+        for version in range(7, 8):
+            with patch.dict(
+                rh_ip.__grains__,
+                {
+                    "osmajorrelease": version,
+                    "osrelease": str(version),
+                    "os_family": "RedHat",
+                },
+            ):
+                for mode in ("802.3ad", 4, "4"):
+                    kwargs["mode"] = mode
+                    self._validate_miimon_conf(kwargs)
+
+                    for version in range(7, 8):
+                        with patch.dict(rh_ip.__grains__, {"osmajorrelease": version}):
+                            # Using an invalid hashing algorithm should cause an error
+                            # to be raised.
+                            kwargs["hashing-algorithm"] = "layer42"
+                            try:
+                                bonding_opts = self._get_bonding_opts(kwargs)
+                            except AttributeError as exc:
+                                assert "hashing-algorithm" in str(exc)
+                            else:
+                                raise Exception("AttributeError was not raised")
+
+                        hash_alg = "vlan+srcmac"
+                        if version == 7:
+                            # Using an invalid hashing algorithm should cause an error
+                            # to be raised.
+                            kwargs["hashing-algorithm"] = hash_alg
+                            try:
+                                bonding_opts = self._get_bonding_opts(kwargs)
+                            except AttributeError as exc:
+                                assert "hashing-algorithm" in str(exc)
+                            else:
+                                raise Exception("AttributeError was not raised")
+                        else:
+                            # Correct the hashing algorithm and re-run
+                            kwargs["hashing-algorithm"] = hash_alg
+                            bonding_opts = self._get_bonding_opts(kwargs)
+                            expected = [
+                                "ad_select=0",
+                                "downdelay=200",
+                                "lacp_rate=0",
+                                "miimon=100",
+                                "mode=4",
+                                "use_carrier=0",
+                                "xmit_hash_policy={}".format(hash_alg),
+                            ]
+                            assert bonding_opts == expected, bonding_opts
+
+                        for hash_alg in [
+                            "layer2",
+                            "layer2+3",
+                            "layer3+4",
+                            "encap2+3",
+                            "encap3+4",
+                        ]:
+                            # Correct the hashing algorithm and re-run
+                            kwargs["hashing-algorithm"] = hash_alg
+                            bonding_opts = self._get_bonding_opts(kwargs)
+                            expected = [
+                                "ad_select=0",
+                                "downdelay=200",
+                                "lacp_rate=0",
+                                "miimon=100",
+                                "mode=4",
+                                "use_carrier=0",
+                                "xmit_hash_policy={}".format(hash_alg),
+                            ]
+                            assert bonding_opts == expected, bonding_opts
+
+    def test_build_interface_bond_mode_4_lacp(self):
         """
         Test that mode 4 bond interfaces are properly built
         """

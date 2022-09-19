@@ -6,6 +6,8 @@ import logging
 import threading
 
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
@@ -16,7 +18,6 @@ import salt.ext.tornado.ioloop
 import salt.utils.platform
 import salt.utils.process
 from salt.ext.tornado.testing import AsyncTestCase
-from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
 from tests.unit.transport.mixins import run_loop_in_thread
@@ -37,12 +38,12 @@ class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
 
     @classmethod
     def setUpClass(cls):
-        ret_port = get_unused_localhost_port()
-        publish_port = get_unused_localhost_port()
-        tcp_master_pub_port = get_unused_localhost_port()
-        tcp_master_pull_port = get_unused_localhost_port()
-        tcp_master_publish_pull = get_unused_localhost_port()
-        tcp_master_workers = get_unused_localhost_port()
+        ret_port = ports.get_unused_localhost_port()
+        publish_port = ports.get_unused_localhost_port()
+        tcp_master_pub_port = ports.get_unused_localhost_port()
+        tcp_master_pull_port = ports.get_unused_localhost_port()
+        tcp_master_publish_pull = ports.get_unused_localhost_port()
+        tcp_master_workers = ports.get_unused_localhost_port()
         cls.master_config = cls.get_temp_config(
             "master",
             **{

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.munin as munin
 from tests.support.mock import MagicMock, patch
 

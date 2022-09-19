@@ -1,6 +1,7 @@
 import types
 
 import pytest
+
 from salt.cloud.clouds import azurearm as azure
 from tests.support.mock import MagicMock, create_autospec, patch
 

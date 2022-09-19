@@ -5,6 +5,7 @@ import pprint
 
 import msgpack
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -17,7 +18,7 @@ import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, mock_open, patch
 
 log = logging.getLogger(__name__)
 
@@ -534,6 +535,26 @@ def test_serialize_into_managed_file():
             comt = "Dataset will be serialized and stored into {}".format(name)
             ret.update({"comment": comt, "result": None})
             assert filestate.serialize(name, dataset=True, formatter="python") == ret
+
+    # merge_if_exists deserialization error
+    mock_exception = MagicMock(side_effect=TypeError("test"))
+    with patch.object(os.path, "isfile", mock_t):
+        with patch.dict(
+            filestate.__serializers__,
+            {
+                "exception.serialize": mock_exception,
+                "exception.deserialize": mock_exception,
+            },
+        ):
+            with patch.object(salt.utils.files, "fopen", mock_open(read_data="foo")):
+                comt = "Failed to deserialize existing data: test"
+                ret.update({"comment": comt, "result": False, "changes": {}})
+                assert (
+                    filestate.serialize(
+                        name, dataset=True, merge_if_exists=True, serializer="exception"
+                    )
+                    == ret
+                )
 
 
 # 'mknod' function tests: 1

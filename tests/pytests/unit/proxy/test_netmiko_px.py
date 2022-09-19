@@ -6,8 +6,9 @@ import copy
 import logging
 
 import pytest
-import salt.proxy.netmiko_px as netmiko_proxy
 from saltfactories.utils import random_string
+
+import salt.proxy.netmiko_px as netmiko_proxy
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)

@@ -5,11 +5,12 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from tests.support.case import ModuleCase
-from tests.support.helpers import dedent
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, dedent
 from tests.support.runtests import RUNTIME_VARS
 
 AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin(
@@ -490,7 +491,8 @@ class CMDModuleTest(ModuleCase):
         self.assertNotIn("You have failed the test", cmd_result["stderr"])
         self.assertNotEqual(0, cmd_result["retcode"])
 
-    @pytest.mark.skip_on_windows(reason="Minion is Windows")
+    @SKIP_INITIAL_PHOTONOS_FAILURES
+    @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
     @pytest.mark.slow_test

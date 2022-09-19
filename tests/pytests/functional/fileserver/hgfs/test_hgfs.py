@@ -2,7 +2,10 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.config
 import salt.fileserver.hgfs as hgfs
 from tests.support.mock import patch
@@ -30,6 +33,7 @@ def hgfs_setup_and_teardown():
     """
     build up and tear down hg repos to test with.
     """
+    initial_child_processes = psutil.Process().children()
     source_dir = Path(__file__).resolve().parent.joinpath("files")
     tempdir = tempfile.TemporaryDirectory()
     tempsubdir = tempdir.name / Path("subdir/")
@@ -41,16 +45,22 @@ def hgfs_setup_and_teardown():
         shutil.copy(file.as_posix(), to_file.as_posix())
         shutil.copy(file.as_posix(), to_file2.as_posix())
 
-    hglib.init(bytes(tempdirPath.as_posix(), encoding="utf8"))
-    repo = hglib.open(bytes(tempdirPath.as_posix(), encoding="utf8"))
-    repo.add(bytes(tempdirPath.as_posix(), encoding="utf8"))
-    repo.commit(b"init commit", user="test")
-    repo.tag(b"test", user="test")
-    repo.branch(b"test")
-    repo.commit(b"create test branch", user="test")
-    repo.bookmark(b"bookmark_test")
-    yield tempdirPath.as_uri()
-    tempdir.cleanup()
+    client = hglib.init(bytes(tempdirPath.as_posix(), encoding="utf8"))
+    client.close()
+    with hglib.open(bytes(tempdirPath.as_posix(), encoding="utf8")) as repo:
+        repo.add(bytes(tempdirPath.as_posix(), encoding="utf8"))
+        repo.commit(b"init commit", user="test")
+        repo.tag(b"test", user="test")
+        repo.branch(b"test")
+        repo.commit(b"create test branch", user="test")
+        repo.bookmark(b"bookmark_test")
+    try:
+        yield tempdirPath.as_uri()
+    finally:
+        tempdir.cleanup()
+        for child in psutil.Process().children():
+            if child not in initial_child_processes:
+                terminate_process(process=child, kill_children=True)
 
 
 @pytest.mark.slow_test

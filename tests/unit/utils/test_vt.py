@@ -293,6 +293,8 @@ class VTTestCase(TestCase):
             (
                 "import sys",
                 "import os",
+                "import warnings",
+                "warnings.simplefilter('ignore')",
                 "import tests.unit.utils.test_vt as test_vt",
                 (
                     "os.write(sys.stdout.fileno(), "
@@ -308,10 +310,13 @@ class VTTestCase(TestCase):
                 ),
             )
         )
+        env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         term = salt.utils.vt.Terminal(
             args=[sys.executable, "-c", '"' + python_command + '"'],
             shell=True,
             cwd=CODE_DIR,
+            env=env,
             stream_stdout=False,
             stream_stderr=False,
             force_receive_encoding=encoding,
@@ -359,6 +364,8 @@ class VTTestCase(TestCase):
             (
                 "import sys",
                 "import os",
+                "import warnings",
+                "warnings.simplefilter('ignore')",
                 "import tests.unit.utils.test_vt as test_vt",
                 (
                     "os.write(sys.stdout.fileno(), "
@@ -374,10 +381,13 @@ class VTTestCase(TestCase):
                 ),
             )
         )
+        env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         term = salt.utils.vt.Terminal(
             args=[sys.executable, "-c", '"' + python_command + '"'],
             shell=True,
             cwd=CODE_DIR,
+            env=env,
             stream_stdout=False,
             stream_stderr=False,
             force_receive_encoding=encoding,

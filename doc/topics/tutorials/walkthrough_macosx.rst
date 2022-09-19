@@ -81,8 +81,8 @@ distribution.
 Step 1 - Configuring The Salt Master On Your Mac
 ================================================
 
-`Official Documentation
-<https://docs.saltproject.io/topics/installation/osx.html>`_
+See the `Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_
+for macOS installation instructions.
 
 Because Salt has a lot of dependencies that are not built in macOS, we will use
 Homebrew to install Salt. Homebrew is a package manager for Mac, it's great, use
@@ -163,7 +163,7 @@ Create The Master Configuration
 
 If the default /etc/salt/master configuration file was not created,
 copy-paste it from here:
-https://docs.saltproject.io/ref/configuration/examples.html#configuration-examples-master
+https://docs.saltproject.io/en/latest/ref/configuration/examples.html#configuration-examples-master
 
 .. note::
 

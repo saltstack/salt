@@ -651,7 +651,7 @@ def _get_top_states(saltenv="base"):
     Equivalent to a salt cli: salt web state.show_top
     """
     top_states = []
-    top_states = __salt__["state.show_top"]()[saltenv]
+    top_states = __salt__["state.show_top"](saltenv=saltenv)[saltenv]
     log.debug("saltcheck for saltenv: %s found top states: %s", saltenv, top_states)
     return top_states
 

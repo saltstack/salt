@@ -98,9 +98,9 @@ def _changes(
         return False
 
     change = {}
-    if groups is None:
-        groups = lusr["groups"]
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
+    if not remove_groups:
+        wanted_groups = sorted(set(wanted_groups + lusr["groups"]))
     if uid and lusr["uid"] != uid:
         change["uid"] = uid
     if gid is not None and lusr["gid"] not in (gid, __salt__["file.group_to_gid"](gid)):
@@ -496,15 +496,15 @@ def present(
             password = __salt__["shadow.gen_password"](password)
 
     if fullname is not None:
-        fullname = salt.utils.data.decode(fullname)
+        fullname = salt.utils.data.decode(str(fullname))
     if roomnumber is not None:
-        roomnumber = salt.utils.data.decode(roomnumber)
+        roomnumber = salt.utils.data.decode(str(roomnumber))
     if workphone is not None:
-        workphone = salt.utils.data.decode(workphone)
+        workphone = salt.utils.data.decode(str(workphone))
     if homephone is not None:
-        homephone = salt.utils.data.decode(homephone)
+        homephone = salt.utils.data.decode(str(homephone))
     if other is not None:
-        other = salt.utils.data.decode(other)
+        other = salt.utils.data.decode(str(other))
 
     # createhome not supported on Windows
     if __grains__["kernel"] == "Windows":

@@ -10,19 +10,19 @@ import sys
 import threading
 from random import randint
 
+import zmq.error
+import zmq.eventloop.zmqstream
+
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
-import salt.log.setup
 import salt.payload
 import salt.transport.base
 import salt.utils.files
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-import zmq.error
-import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
 from salt.exceptions import SaltException, SaltReqTimeoutError
 from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
@@ -46,7 +46,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     rc = zmq_connect(socket, "tcp://192.168.1.17:5555;192.168.1.1:5555"); assert (rc == 0);
     Source: http://api.zeromq.org/4-1:zmq-tcp
     """
-    from salt.utils.zeromq import ip_bracket
+    from salt.utils.network import ip_bracket
 
     master_uri = "tcp://{master_ip}:{master_port}".format(
         master_ip=ip_bracket(master_ip), master_port=master_port
@@ -706,7 +706,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        **kwargs
     ):
         """
         This method represents the Publish Daemon process. It is intended to be
@@ -725,7 +724,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get("pub_hwm", 1000))
         # in zmq >= 3.0, there are separate send and receive HWM settings
-        except AttributeError:
+        except (AttributeError, zmq.error.ZMQError):
             # Set the High Water Marks. For more information on HWM, see:
             # http://api.zeromq.org/4-1:zmq-setsockopt
             pub_sock.setsockopt(zmq.SNDHWM, self.opts.get("pub_hwm", 1000))
@@ -810,7 +809,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             yield self.dpub_sock.send(payload)
             log.trace("Unfiltered data has been sent")
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -819,7 +818,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         process_manager.add_process(
-            self.publish_daemon, args=(self.publish_payload,), kwargs=kwargs
+            self.publish_daemon,
+            args=(self.publish_payload,),
         )
 
     @property

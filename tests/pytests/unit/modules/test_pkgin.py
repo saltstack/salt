@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.modules.pkgin as pkgin
 from tests.support.mock import MagicMock, patch
 

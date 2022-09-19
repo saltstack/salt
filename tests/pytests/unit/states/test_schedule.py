@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.schedule as schedule
 from tests.support.mock import MagicMock, patch
 

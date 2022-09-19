@@ -173,7 +173,7 @@ class DaemonizedPublishServer(PublishServer):
     PublishServer that has a daemon associated with it.
     """
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         raise NotImplementedError
 
     def publish_daemon(
@@ -181,7 +181,6 @@ class DaemonizedPublishServer(PublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        **kwargs
     ):
         """
         If a daemon is needed to act as a broker implement it here.
@@ -208,7 +207,7 @@ class PublishClient:
 
     def on_recv(self, callback):
         """
-        Add a message handler when we recieve a message from the PublishServer
+        Add a message handler when we receive a message from the PublishServer
         """
         raise NotImplementedError
 

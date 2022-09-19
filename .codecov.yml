@@ -1,6 +1,6 @@
 codecov:
   ci:
-    - jenkinsci.saltstack.com
+    - jenkins.saltproject.io
     - github.com
 
   max_report_age: 24           # The age you want coverage reports to expire at, or if you

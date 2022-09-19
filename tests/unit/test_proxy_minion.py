@@ -10,13 +10,14 @@ import tempfile
 import textwrap
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.config
 import salt.ext.tornado
 import salt.ext.tornado.testing
 import salt.metaproxy.proxy
 import salt.minion
 import salt.syspaths
-from saltfactories.utils import random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase

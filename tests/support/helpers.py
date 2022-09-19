@@ -14,6 +14,7 @@ import errno
 import fnmatch
 import functools
 import inspect
+import io
 import json
 import logging
 import os
@@ -33,6 +34,10 @@ from contextlib import contextmanager
 
 import attr
 import pytest
+from pytestshellutils.exceptions import ProcessFailed
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import ProcessResult
+
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.utils.files
@@ -40,53 +45,49 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from saltfactories.exceptions import FactoryFailure as ProcessFailed
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
 from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
-
-HAS_SYMLINKS = None
-
 
 PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
 )
-PRE_PYTEST_SKIP = pytest.mark.skipif(
-    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
 ON_PY35 = sys.version_info < (3, 6)
 
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
+
+@functools.lru_cache(maxsize=1, typed=False)
 def no_symlinks():
     """
     Check if git is installed and has symlinks enabled in the configuration.
     """
-    global HAS_SYMLINKS
-    if HAS_SYMLINKS is not None:
-        return not HAS_SYMLINKS
-    output = ""
     try:
-        output = subprocess.Popen(
+        ret = subprocess.run(
             ["git", "config", "--get", "core.symlinks"],
-            cwd=RUNTIME_VARS.TMP,
+            shell=False,
+            universal_newlines=True,
+            cwd=RUNTIME_VARS.CODE_DIR,
             stdout=subprocess.PIPE,
-        ).communicate()[0]
+            check=False,
+        )
+        if ret.returncode == 0 and ret.stdout.strip() == "true":
+            return False
+        return True
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-    except subprocess.CalledProcessError:
-        # git returned non-zero status
-        pass
-    HAS_SYMLINKS = False
-    if output.strip() == "true":
-        HAS_SYMLINKS = True
-    return not HAS_SYMLINKS
+    return True
 
 
 def destructiveTest(caller):
@@ -263,7 +264,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
                     teardown()
-                backoff_time = attempt ** 2
+                backoff_time = attempt**2
                 log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
         return cls
@@ -1532,7 +1533,7 @@ class Webserver:
         Starts the webserver
         """
         if self.port is None:
-            self.port = get_unused_localhost_port()
+            self.port = ports.get_unused_localhost_port()
 
         self.web_root = "http{}://127.0.0.1:{}".format(
             "s" if self.ssl_opts else "", self.port
@@ -1559,6 +1560,13 @@ class Webserver:
         """
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stop()
 
 
 class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
@@ -1713,14 +1721,18 @@ class VirtualEnv:
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
-        kwargs.setdefault("cwd", str(self.venv_dir))
+        kwargs.setdefault("cwd", tempfile.gettempdir())
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        kwargs.setdefault("env", self.environ)
-        proc = subprocess.run(args, check=False, **kwargs)
+        env = kwargs.pop("env", None)
+        if env:
+            env = self.environ.copy().update(env)
+        else:
+            env = self.environ
+        proc = subprocess.run(args, check=False, env=env, **kwargs)
         ret = ProcessResult(
-            exitcode=proc.returncode,
+            returncode=proc.returncode,
             stdout=proc.stdout,
             stderr=proc.stderr,
             cmdline=proc.args,
@@ -1731,11 +1743,7 @@ class VirtualEnv:
                 proc.check_returncode()
             except subprocess.CalledProcessError:
                 raise ProcessFailed(
-                    "Command failed return code check",
-                    cmdline=proc.args,
-                    stdout=proc.stdout,
-                    stderr=proc.stderr,
-                    exitcode=proc.returncode,
+                    "Command failed return code check", process_result=proc
                 )
         return ret
 
@@ -1773,14 +1781,16 @@ class VirtualEnv:
         except AttributeError:
             return sys.executable
 
-    def run_code(self, code_string, **kwargs):
+    def run_code(self, code_string, python=None, **kwargs):
         if code_string.startswith("\n"):
             code_string = code_string[1:]
         code_string = textwrap.dedent(code_string).rstrip()
         log.debug(
             "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
         )
-        return self.run(str(self.venv_python), "-c", code_string, **kwargs)
+        if python is None:
+            python = str(self.venv_python)
+        return self.run(python, "-c", code_string, **kwargs)
 
     def get_installed_packages(self):
         data = {}
@@ -1790,12 +1800,17 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        sminion = create_sminion()
-        sminion.functions.virtualenv.create(
-            str(self.venv_dir),
-            python=self.get_real_python(),
-            system_site_packages=self.system_site_packages,
-        )
+        virtualenv = shutil.which("virtualenv")
+        if not virtualenv:
+            pytest.fail("'virtualenv' binary not found")
+        cmd = [
+            virtualenv,
+            "--python={}".format(self.get_real_python()),
+        ]
+        if self.system_site_packages:
+            cmd.append("--system-site-packages")
+        cmd.append(str(self.venv_dir))
+        self.run(*cmd, cwd=str(self.venv_dir.parent))
         self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
@@ -1868,3 +1883,85 @@ def get_virtualenv_binary_path():
         # We're not running inside a virtualenv
         virtualenv_binary = None
     return virtualenv_binary
+
+
+class CaptureOutput:
+    def __init__(self, capture_stdout=True, capture_stderr=True):
+        if capture_stdout:
+            self._stdout = io.StringIO()
+        else:
+            self._stdout = None
+        if capture_stderr:
+            self._stderr = io.StringIO()
+        else:
+            self._stderr = None
+        self._original_stdout = None
+        self._original_stderr = None
+
+    def __enter__(self):
+        if self._stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = self._stdout
+        if self._stderr:
+            self._original_stderr = sys.stderr
+            sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        if self._stdout:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+        if self._stderr:
+            sys.stderr = self._original_stderr
+            self._original_stderr = None
+
+    @property
+    def stdout(self):
+        if self._stdout is None:
+            return
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        if self._stderr is None:
+            return
+        self._stderr.seek(0)
+        return self._stderr.read()
+
+
+class Keys:
+    """
+    Temporary ssh key pair
+    """
+
+    def __init__(self, tmp_path_factory):
+        """
+        tmp_path_factory is the session scoped pytest fixture of the same name
+        """
+        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
+        self.priv_path = priv_path
+
+    def generate(self):
+        subprocess.run(
+            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
+        )
+
+    @property
+    def pub_path(self):
+        return self.priv_path.with_name("{}.pub".format(self.priv_path.name))
+
+    @property
+    def pub(self):
+        return self.pub_path.read_text()
+
+    @property
+    def priv(self):
+        return self.priv_path.read_text()
+
+    def __enter__(self):
+        self.generate()
+        return self
+
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
