@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling OpenStack Swift calls
 Author: Anthony Stanton <anthony.stanton@gmail.com>
@@ -45,12 +44,9 @@ Inspired by the S3 and Nova modules
 
     NOTE: For Rackspace cloud files setting keystone.auth_version = 1 is recommended.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.openstack.swift as suos
 
 # Get logging started
@@ -63,9 +59,6 @@ def __virtual__():
     is installed on this minion.
     """
     return suos.check_swift()
-
-
-__opts__ = {}
 
 
 def _auth(profile=None):

@@ -43,11 +43,11 @@ from functools import cmp_to_key
 __version__ = "0.1"
 
 try:
+    import pywintypes
     import win32api
     import win32con
     import win32process
     import win32security
-    import pywintypes
     import winerror
 
 except ImportError:
@@ -156,38 +156,42 @@ class RegSoftwareInfo:
             self.__reg_32bit_access = (
                 0  # HKEY_USERS does not have a 32bit and 64bit view
             )
-            self.__reg_uninstall_path = (
-                "{}\\Software\\Microsoft\\Windows\\" "CurrentVersion\\Uninstall\\{}"
-            ).format(sid, key_guid)
+            self.__reg_uninstall_path = "{}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(
+                sid, key_guid
+            )
             if self.__squid:
-                self.__reg_products_path = "{}\\Software\\Classes\\Installer\\Products\\{}".format(
-                    sid, self.__squid
+                self.__reg_products_path = (
+                    "{}\\Software\\Classes\\Installer\\Products\\{}".format(
+                        sid, self.__squid
+                    )
                 )
-                self.__reg_upgradecode_path = "{}\\Software\\Microsoft\\Installer\\UpgradeCodes".format(
-                    sid
+                self.__reg_upgradecode_path = (
+                    "{}\\Software\\Microsoft\\Installer\\UpgradeCodes".format(sid)
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
-                    "{}\\Products\\{}\\Patches"
-                ).format(sid, self.__squid)
+                    "{}\\Products\\{}\\Patches".format(sid, self.__squid)
+                )
         else:
             self.__reg_hive = "HKEY_LOCAL_MACHINE"
             self.__reg_32bit = use_32bit
             self.__reg_32bit_access = self.__use_32bit_lookup[use_32bit]
-            self.__reg_uninstall_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(
-                key_guid
+            self.__reg_uninstall_path = (
+                "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(
+                    key_guid
+                )
             )
             if self.__squid:
-                self.__reg_products_path = "Software\\Classes\\Installer\\Products\\{}".format(
-                    self.__squid
+                self.__reg_products_path = (
+                    "Software\\Classes\\Installer\\Products\\{}".format(self.__squid)
                 )
                 self.__reg_upgradecode_path = (
                     "Software\\Classes\\Installer\\UpgradeCodes"
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
-                    "S-1-5-18\\Products\\{}\\Patches"
-                ).format(self.__squid)
+                    "S-1-5-18\\Products\\{}\\Patches".format(self.__squid)
+                )
 
         # OpenKey is expensive, open in advance and keep it open.
         # This must exist
@@ -490,11 +494,13 @@ class RegSoftwareInfo:
 
             # Check if we have already scanned these upgrade codes before, and also
             # check if they have been updated in the registry since last time we scanned.
-            if have_scan_key in self.__upgrade_code_have_scan and self.__upgrade_code_have_scan[
-                have_scan_key
-            ] == (
-                squid_upgrade_code_all,
-                suc_pytime,
+            if (
+                have_scan_key in self.__upgrade_code_have_scan
+                and self.__upgrade_code_have_scan[have_scan_key]
+                == (
+                    squid_upgrade_code_all,
+                    suc_pytime,
+                )
             ):
                 log.debug(
                     "Scan skipped for upgrade codes, no changes (%s)", have_scan_key
@@ -577,11 +583,13 @@ class RegSoftwareInfo:
             # Scan the patches for the DisplayName of active patches.
             for patch_squid in squid_patch_all:
                 try:
-                    patch_squid_handle = win32api.RegOpenKeyEx(  # pylint: disable=no-member
-                        pat_all_handle,
-                        patch_squid,
-                        0,
-                        win32con.KEY_READ | self.__reg_32bit_access,
+                    patch_squid_handle = (
+                        win32api.RegOpenKeyEx(  # pylint: disable=no-member
+                            pat_all_handle,
+                            patch_squid,
+                            0,
+                            win32con.KEY_READ | self.__reg_32bit_access,
+                        )
                     )
                     (
                         patch_display_name,
@@ -1057,7 +1065,11 @@ class WinSoftware:
                     "version capture within object '{}' failed "
                     "for pkg id: '{}' it returned '{}' '{}' "
                     "'{}'".format(
-                        str(self.__pkg_obj), pkg_id, version_str, src, version_user_str,
+                        str(self.__pkg_obj),
+                        pkg_id,
+                        version_str,
+                        src,
+                        version_user_str,
                     )
                 )
 
@@ -1447,9 +1459,9 @@ class WinSoftware:
 
 def __main():
     """This module can also be run directly for testing
-        Args:
-            detail|list : Provide ``detail`` or version ``list``.
-            system|system+user: System installed and System and User installs.
+    Args:
+        detail|list : Provide ``detail`` or version ``list``.
+        system|system+user: System installed and System and User installs.
     """
     if len(sys.argv) < 3:
         sys.stderr.write(
@@ -1462,8 +1474,9 @@ def __main():
         version_only = True
     if str(sys.argv[2]) == "system+user":
         user_pkgs = True
-    import salt.utils.json
     import timeit
+
+    import salt.utils.json
 
     def run():
         """

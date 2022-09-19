@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.states.user as user
 from tests.support.mock import MagicMock, Mock, patch
 
@@ -50,8 +51,10 @@ def test_present():
                 with patch.dict(user.__opts__, {"test": True}):
                     ret.update(
                         {
-                            "comment": "The following user attributes are set to be changed:\n"
-                            "key: value\n",
+                            "comment": (
+                                "The following user attributes are set to be changed:\n"
+                                "key: value\n"
+                            ),
                             "result": None,
                         }
                     )
@@ -175,8 +178,10 @@ def test_present_uid_gid_change():
     # get the before/after for the changes dict, and one last time to
     # confirm that no changes still need to be made.
     mock_info = MagicMock(side_effect=[before, before, after, after])
-    mock_group_to_gid = MagicMock(side_effect=["foo", "othergroup"])
-    mock_gid_to_group = MagicMock(side_effect=[5000, 5000, 5001, 5001])
+    mock_group_to_gid = MagicMock(side_effect=[5000, 5001])
+    mock_gid_to_group = MagicMock(
+        side_effect=["othergroup", "foo", "othergroup", "othergroup"]
+    )
     dunder_salt = {
         "user.info": mock_info,
         "user.chuid": Mock(),
@@ -194,7 +199,7 @@ def test_present_uid_gid_change():
         )
         assert ret == {
             "comment": "Updated user foo",
-            "changes": {"gid": 5001, "uid": 5001, "groups": ["othergroup"]},
+            "changes": {"gid": 5001, "uid": 5001, "groups": []},
             "name": "foo",
             "result": True,
         }
@@ -208,7 +213,8 @@ def test_absent():
     mock = MagicMock(side_effect=[True, True, False])
     mock1 = MagicMock(return_value=False)
     with patch.dict(
-        user.__salt__, {"user.info": mock, "user.delete": mock1, "group.info": mock1},
+        user.__salt__,
+        {"user.info": mock, "user.delete": mock1, "group.info": mock1},
     ):
         with patch.dict(user.__opts__, {"test": True}):
             ret.update({"comment": "User salt set for removal"})
@@ -261,3 +267,49 @@ def test_changes():
             "warndays": 7,
             "inactdays": 0,
         }
+
+
+def test_gecos_field_changes_in_user_present():
+    """
+    Test if the gecos fields change in salt.states.user.present
+    """
+    shadow_info = MagicMock(
+        return_value={"min": 2, "max": 88888, "inact": 77, "warn": 14, "passwd": ""}
+    )
+    shadow_hash = MagicMock(return_value="abcd")
+    mock_info = MagicMock(
+        side_effect=[
+            {
+                "uid": 5000,
+                "gid": 5000,
+                "groups": ["foo"],
+                "home": "/home/foo",
+                "fullname": "Foo Bar",
+                "homephone": "667788",
+            },
+            {
+                "uid": 5000,
+                "gid": 5000,
+                "groups": ["foo"],
+                "home": "/home/foo",
+                "fullname": "Bar Bar",
+                "homephone": "44566",
+            },
+        ]
+    )
+    mock_changes = MagicMock(side_effect=[{"homephone": "667788"}, None])
+    dunder_salt = {
+        "user.info": mock_info,
+        "user.chhomephone": MagicMock(return_value=True),
+        "shadow.info": shadow_info,
+        "shadow.default_hash": shadow_hash,
+        "file.group_to_gid": MagicMock(side_effect=["foo"]),
+        "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch.object(
+        user, "_changes", mock_changes
+    ):
+        res = user.present("Foo", homephone=44566, fullname="Bar Bar")
+        assert res["changes"] == {"homephone": "44566", "fullname": "Bar Bar"}

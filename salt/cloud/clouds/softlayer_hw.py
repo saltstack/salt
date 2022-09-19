@@ -232,7 +232,7 @@ def create(vm_):
     hostname = name
     domain = config.get_cloud_config_value("domain", vm_, __opts__, default=None)
     if domain is None:
-        SaltCloudSystemExit("A domain name is required for the SoftLayer driver.")
+        raise SaltCloudSystemExit("A domain name is required for the SoftLayer driver.")
 
     if vm_.get("use_fqdn"):
         name = ".".join([name, domain])
@@ -418,8 +418,7 @@ def create(vm_):
 
 
 def list_nodes_full(
-    mask="mask[id, hostname, primaryIpAddress, \
-        primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]",
+    mask="mask[id, hostname, primaryIpAddress, primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]",
     call=None,
 ):
     """
@@ -477,7 +476,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -507,7 +508,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.solarisipspkg as solarisipspkg
 from tests.support.mock import MagicMock, call, patch
 
@@ -14,18 +15,34 @@ class ListPackages:
     def __call__(self):
         pkg_lists = [
             {
-                "pkg://solaris/compress/bzip2": "1.0.6-11.4.0.0.1.14.0:20180814T153143Z",
+                "pkg://solaris/compress/bzip2": (
+                    "1.0.6-11.4.0.0.1.14.0:20180814T153143Z"
+                ),
                 "pkg://solaris/compress/gzip": "1.8-11.4.0.0.1.14.0:20180814T153144Z",
-                "pkg://solaris/compress/p7zip": "16.2.3-11.4.0.0.1.14.0:20180814T153145Z",
-                "pkg://solaris/compress/pbzip2": "1.1.13-11.4.0.0.1.14.0:20180814T153147Z",
-                "pkg://solaris/compress/unzip": "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z",
+                "pkg://solaris/compress/p7zip": (
+                    "16.2.3-11.4.0.0.1.14.0:20180814T153145Z"
+                ),
+                "pkg://solaris/compress/pbzip2": (
+                    "1.1.13-11.4.0.0.1.14.0:20180814T153147Z"
+                ),
+                "pkg://solaris/compress/unzip": (
+                    "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z"
+                ),
             },
             {
-                "pkg://solaris/compress/bzip2": "1.0.6-11.4.0.0.1.14.0:20180814T153143Z",
+                "pkg://solaris/compress/bzip2": (
+                    "1.0.6-11.4.0.0.1.14.0:20180814T153143Z"
+                ),
                 "pkg://solaris/compress/gzip": "1.8-11.4.0.0.1.14.0:20180814T153144Z",
-                "pkg://solaris/compress/p7zip": "16.2.3-11.4.0.0.1.14.0:20180814T153145Z",
-                "pkg://solaris/compress/pbzip2": "1.1.13-11.4.0.0.1.14.0:20180814T153147Z",
-                "pkg://solaris/compress/unzip": "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z",
+                "pkg://solaris/compress/p7zip": (
+                    "16.2.3-11.4.0.0.1.14.0:20180814T153145Z"
+                ),
+                "pkg://solaris/compress/pbzip2": (
+                    "1.1.13-11.4.0.0.1.14.0:20180814T153147Z"
+                ),
+                "pkg://solaris/compress/unzip": (
+                    "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z"
+                ),
                 "pkg://solaris/compress/zip": "3.0-11.4.0.0.1.14.0:20180814T153154Z",
             },
         ]
@@ -41,18 +58,34 @@ class ListPackagesDict:
     def __call__(self):
         pkg_lists = [
             {
-                "pkg://solaris/compress/bzip2": "1.0.6-11.4.0.0.1.14.0:20180814T153143Z",
+                "pkg://solaris/compress/bzip2": (
+                    "1.0.6-11.4.0.0.1.14.0:20180814T153143Z"
+                ),
                 "pkg://solaris/compress/gzip": "1.8-11.4.0.0.1.14.0:20180814T153144Z",
-                "pkg://solaris/compress/p7zip": "16.2.3-11.4.0.0.1.14.0:20180814T153145Z",
-                "pkg://solaris/compress/pbzip2": "1.1.13-11.4.0.0.1.14.0:20180814T153147Z",
-                "pkg://solaris/compress/unzip": "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z",
+                "pkg://solaris/compress/p7zip": (
+                    "16.2.3-11.4.0.0.1.14.0:20180814T153145Z"
+                ),
+                "pkg://solaris/compress/pbzip2": (
+                    "1.1.13-11.4.0.0.1.14.0:20180814T153147Z"
+                ),
+                "pkg://solaris/compress/unzip": (
+                    "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z"
+                ),
             },
             {
-                "pkg://solaris/compress/bzip2": "1.0.6-11.4.0.0.1.14.0:20180814T153143Z",
+                "pkg://solaris/compress/bzip2": (
+                    "1.0.6-11.4.0.0.1.14.0:20180814T153143Z"
+                ),
                 "pkg://solaris/compress/gzip": "1.8-11.4.0.0.1.14.0:20180814T153144Z",
-                "pkg://solaris/compress/p7zip": "16.2.3-11.4.0.0.1.14.0:20180814T153145Z",
-                "pkg://solaris/compress/pbzip2": "1.1.13-11.4.0.0.1.14.0:20180814T153147Z",
-                "pkg://solaris/compress/unzip": "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z",
+                "pkg://solaris/compress/p7zip": (
+                    "16.2.3-11.4.0.0.1.14.0:20180814T153145Z"
+                ),
+                "pkg://solaris/compress/pbzip2": (
+                    "1.1.13-11.4.0.0.1.14.0:20180814T153147Z"
+                ),
+                "pkg://solaris/compress/unzip": (
+                    "6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z"
+                ),
                 "pkg://solaris/file/tree": "1.7.0-11.4.0.0.1.14.0:20180814T163602Z",
                 "pkg://solaris/x11/xclock": "1.0.7-11.4.0.0.1.14.0:20180814T173537Z",
             },
@@ -86,11 +119,16 @@ def test_list_pkgs():
         data[key] = value
 
     pkg_info_out = [
-        "pkg://solaris/compress/bzip2@1.0.6-11.4.0.0.1.14.0:20180814T153143Z          i--",
-        "pkg://solaris/compress/gzip@1.8-11.4.0.0.1.14.0:20180814T153144Z             i--",
-        "pkg://solaris/compress/p7zip@16.2.3-11.4.0.0.1.14.0:20180814T153145Z         i--",
-        "pkg://solaris/compress/pbzip2@1.1.13-11.4.0.0.1.14.0:20180814T153147Z        i--",
-        "pkg://solaris/compress/unzip@6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z       i--",
+        "pkg://solaris/compress/bzip2@1.0.6-11.4.0.0.1.14.0:20180814T153143Z        "
+        "  i--",
+        "pkg://solaris/compress/gzip@1.8-11.4.0.0.1.14.0:20180814T153144Z           "
+        "  i--",
+        "pkg://solaris/compress/p7zip@16.2.3-11.4.0.0.1.14.0:20180814T153145Z       "
+        "  i--",
+        "pkg://solaris/compress/pbzip2@1.1.13-11.4.0.0.1.14.0:20180814T153147Z      "
+        "  i--",
+        "pkg://solaris/compress/unzip@6.0.3.23-11.4.0.0.1.14.0:20180814T153150Z     "
+        "  i--",
     ]
     run_stdout_mock = MagicMock(return_value="\n".join(pkg_info_out))
     patches = {
@@ -320,7 +358,8 @@ def test_get_fmri_single_named():
 
     install_target = "compress/zip"
     pkg_info_out = [
-        "pkg://solaris/compress/zip@3.0-11.4.0.0.1.14.0:20180814T153154Z              i--",
+        "pkg://solaris/compress/zip@3.0-11.4.0.0.1.14.0:20180814T153154Z            "
+        "  i--",
     ]
 
     run_stdout_mock = MagicMock(return_value="\n".join(pkg_info_out))
@@ -335,7 +374,9 @@ def test_get_fmri_single_named():
             assert added == expected
 
     expected_calls = [
-        call(["/bin/pkg", "list", "-aHv", install_target],),
+        call(
+            ["/bin/pkg", "list", "-aHv", install_target],
+        ),
     ]
     run_stdout_mock.assert_has_calls(expected_calls, any_order=True)
     assert run_stdout_mock.call_count == 1
@@ -383,7 +424,10 @@ def test_remove_single_named_package():
             assert added == expected
 
     expected_calls = [
-        call(["/bin/pkg", "uninstall", "-v", install_target], output_loglevel="trace",),
+        call(
+            ["/bin/pkg", "uninstall", "-v", install_target],
+            output_loglevel="trace",
+        ),
     ]
     run_all_mock.assert_has_calls(expected_calls, any_order=True)
     assert run_all_mock.call_count == 1

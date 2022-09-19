@@ -1,6 +1,7 @@
 import io
 
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.restartcheck as restartcheck
 import salt.modules.system as system
@@ -189,7 +190,8 @@ def test_when_nilinuxrt_and_not_kernel_modules_changed_or_sysapi_files_changed_a
         {
             "cmd.run": create_autospec(cmdmod.run, return_value=current_kernel),
             "system.get_reboot_required_witnessed": create_autospec(
-                system.get_reboot_required_witnessed, return_value=restart_required,
+                system.get_reboot_required_witnessed,
+                return_value=restart_required,
             ),
             "service.get_running": create_autospec(
                 service.get_running, return_value=[]
@@ -207,7 +209,9 @@ def test_when_nilinuxrt_and_not_kernel_modules_changed_or_sysapi_files_changed_a
         return_value=False,
     )
     patch_del_files = patch(
-        "salt.modules.restartcheck._deleted_files", autospec=True, return_value=[],
+        "salt.modules.restartcheck._deleted_files",
+        autospec=True,
+        return_value=[],
     )
 
     with patch_grains, patch_kernel_versions, patch_salt, patch_sysapi_changed, patch_kernel_mod_changed, patch_del_files:
@@ -231,7 +235,8 @@ def test_when_nilinuxrt_and_not_kernel_modules_changed_or_sysapi_files_changed_a
         {
             "cmd.run": create_autospec(cmdmod.run, return_value=current_kernel),
             "system.get_reboot_required_witnessed": create_autospec(
-                system.get_reboot_required_witnessed, return_value=restart_required,
+                system.get_reboot_required_witnessed,
+                return_value=restart_required,
             ),
             "service.get_running": create_autospec(
                 service.get_running, return_value=[]
@@ -249,7 +254,9 @@ def test_when_nilinuxrt_and_not_kernel_modules_changed_or_sysapi_files_changed_a
         return_value=False,
     )
     patch_del_files = patch(
-        "salt.modules.restartcheck._deleted_files", autospec=True, return_value=[],
+        "salt.modules.restartcheck._deleted_files",
+        autospec=True,
+        return_value=[],
     )
 
     with patch_grains, patch_kernel_versions, patch_salt, patch_sysapi_changed, patch_kernel_mod_changed, patch_del_files:

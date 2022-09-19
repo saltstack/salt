@@ -4,6 +4,7 @@
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_sqs as boto_sqs
@@ -29,7 +30,9 @@ def test_present():
     attributes = {"DelaySeconds": 20}
     base_ret = {"name": name, "changes": {}}
 
-    mock = MagicMock(side_effect=[{"result": b} for b in [False, False, True, True]],)
+    mock = MagicMock(
+        side_effect=[{"result": b} for b in [False, False, True, True]],
+    )
     mock_bool = MagicMock(return_value={"error": "create error"})
     mock_attr = MagicMock(return_value={"result": {}})
     with patch.dict(
@@ -41,7 +44,11 @@ def test_present():
         },
     ):
         with patch.dict(boto_sqs.__opts__, {"test": False}):
-            comt = ["Failed to create SQS queue {}: create error".format(name,)]
+            comt = [
+                "Failed to create SQS queue {}: create error".format(
+                    name,
+                )
+            ]
             ret = base_ret.copy()
             ret.update({"result": False, "comment": comt})
             assert boto_sqs.present(name) == ret
@@ -73,7 +80,9 @@ def test_present():
 
             comt = [
                 "SQS queue mysqs present.",
-                "Attribute(s) DelaySeconds set to be updated:\n{}".format(diff,),
+                "Attribute(s) DelaySeconds set to be updated:\n{}".format(
+                    diff,
+                ),
             ]
             ret.update({"comment": comt, "changes": {"attributes": {"diff": diff}}})
             assert boto_sqs.present(name, attributes) == ret

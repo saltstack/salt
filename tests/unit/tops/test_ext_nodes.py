@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Test ext_nodes master_tops module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import subprocess
 import textwrap
 
 import salt.tops.ext_nodes as ext_nodes
-
-# Import Salt libs
 import salt.utils.stringutils
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -49,10 +42,12 @@ class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
               - two"""
             )
         )
-        communicate_mock = MagicMock(return_value=(stdout, None))
-        with patch.object(subprocess.Popen, "communicate", communicate_mock):
+        run_mock = MagicMock()
+        run_mock.return_value.stdout = stdout
+        with patch.object(subprocess, "run", run_mock):
             ret = ext_nodes.top(opts={"id": "foo"})
         self.assertEqual(ret, {"base": ["one", "two"]})
+        run_mock.assert_called_once_with(["echo", "foo"], check=True, stdout=-1)
 
     def test_ext_nodes_with_environment(self):
         """
@@ -68,7 +63,9 @@ class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
             environment: dev"""
             )
         )
-        communicate_mock = MagicMock(return_value=(stdout, None))
-        with patch.object(subprocess.Popen, "communicate", communicate_mock):
+        run_mock = MagicMock()
+        run_mock.return_value.stdout = stdout
+        with patch.object(subprocess, "run", run_mock):
             ret = ext_nodes.top(opts={"id": "foo"})
         self.assertEqual(ret, {"dev": ["one", "two"]})
+        run_mock.assert_called_once_with(["echo", "foo"], check=True, stdout=-1)

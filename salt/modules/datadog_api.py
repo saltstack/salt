@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An execution module that interacts with the Datadog API
 
@@ -14,11 +13,9 @@ Full argument reference is available on the Datadog API reference page
 https://docs.datadoghq.com/api/
 """
 
-# Import salt libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import third party libs
 import requests
+
 from salt.exceptions import SaltInvocationError
 
 HAS_DATADOG = True
@@ -224,9 +221,7 @@ def post_event(
         # Datadog only supports these alert types but the API doesn't return an
         # error for an incorrect alert_type, so we can do it here for now.
         # https://github.com/DataDog/datadogpy/issues/215
-        message = (
-            'alert_type must be one of "error", "warning", "info", or ' '"success"'
-        )
+        message = 'alert_type must be one of "error", "warning", "info", or "success"'
         raise SaltInvocationError(message)
 
     ret = {"result": False, "response": None, "comment": ""}

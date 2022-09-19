@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Simple returner for Couchbase. Optional configuration
 settings are listed below, along with sane defaults.
@@ -48,17 +47,12 @@ JID/MINION_ID
 return: return_data
 full_ret: full load of job return
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.jid
 import salt.utils.json
 import salt.utils.minions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import couchbase
@@ -143,10 +137,16 @@ def _verify_views():
     ddoc = {
         "views": {
             "jids": {
-                "map": "function (doc, meta) { if (meta.id.indexOf('/') === -1 && doc.load){ emit(meta.id, null) } }"
+                "map": (
+                    "function (doc, meta) { if (meta.id.indexOf('/') === -1 &&"
+                    " doc.load){ emit(meta.id, null) } }"
+                )
             },
             "jid_returns": {
-                "map": "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts = meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"
+                "map": (
+                    "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts ="
+                    " meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"
+                )
             },
         }
     }
@@ -187,7 +187,9 @@ def prep_jid(nocache=False, passed_jid=None):
 
     try:
         cb_.add(
-            six.text_type(jid), {"nocache": nocache}, ttl=_get_ttl(),
+            str(jid),
+            {"nocache": nocache},
+            ttl=_get_ttl(),
         )
     except couchbase.exceptions.KeyExistsError:
         # TODO: some sort of sleep or something? Spinning is generally bad practice
@@ -203,12 +205,14 @@ def returner(load):
     """
     cb_ = _get_connection()
 
-    hn_key = "{0}/{1}".format(load["jid"], load["id"])
+    hn_key = "{}/{}".format(load["jid"], load["id"])
     try:
         ret_doc = {"return": load["return"], "full_ret": salt.utils.json.dumps(load)}
 
         cb_.add(
-            hn_key, ret_doc, ttl=_get_ttl(),
+            hn_key,
+            ret_doc,
+            ttl=_get_ttl(),
         )
     except couchbase.exceptions.KeyExistsError:
         log.error(
@@ -226,13 +230,13 @@ def save_load(jid, clear_load, minion=None):
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(six.text_type(jid))
+        jid_doc = cb_.get(str(jid))
     except couchbase.exceptions.NotFoundError:
-        cb_.add(six.text_type(jid), {}, ttl=_get_ttl())
-        jid_doc = cb_.get(six.text_type(jid))
+        cb_.add(str(jid), {}, ttl=_get_ttl())
+        jid_doc = cb_.get(str(jid))
 
     jid_doc.value["load"] = clear_load
-    cb_.replace(six.text_type(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
     # if you have a tgt, save that for the UI etc
     if "tgt" in clear_load and clear_load["tgt"] != "":
@@ -253,7 +257,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(six.text_type(jid))
+        jid_doc = cb_.get(str(jid))
     except couchbase.exceptions.NotFoundError:
         log.warning("Could not write job cache file for jid: %s", jid)
         return False
@@ -263,7 +267,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         jid_doc.value["minions"] = sorted(set(jid_doc.value["minions"] + minions))
     else:
         jid_doc.value["minions"] = minions
-    cb_.replace(six.text_type(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
 
 def get_load(jid):
@@ -273,7 +277,7 @@ def get_load(jid):
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(six.text_type(jid))
+        jid_doc = cb_.get(str(jid))
     except couchbase.exceptions.NotFoundError:
         return {}
 
@@ -297,7 +301,7 @@ def get_jid(jid):
     ret = {}
 
     for result in cb_.query(
-        DESIGN_NAME, "jid_returns", key=six.text_type(jid), include_docs=True
+        DESIGN_NAME, "jid_returns", key=str(jid), include_docs=True
     ):
         ret[result.value] = result.doc.value
 

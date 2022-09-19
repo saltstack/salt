@@ -3,6 +3,9 @@
 """
 
 
+import configparser
+import errno
+import io
 import os
 from xml.dom import minidom
 
@@ -11,10 +14,8 @@ import salt.modules.zypperpkg as zypper
 import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import configparser
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.unit import TestCase
 
 
@@ -94,7 +95,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(
             zypper.__salt__, {"cmd.run_all": MagicMock(return_value=ref_out)}
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             upgrades = zypper.list_upgrades(refresh=False)
             self.assertEqual(len(upgrades), 3)
             for pkg, version in {
@@ -189,9 +190,14 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             )
 
         # Test exceptions
-        stdout_xml_snippet = '<?xml version="1.0"?><stream><message type="error">Booya!</message></stream>'
+        stdout_xml_snippet = (
+            '<?xml version="1.0"?><stream><message'
+            ' type="error">Booya!</message></stream>'
+        )
         sniffer = RunSniffer(stdout=stdout_xml_snippet, retcode=1)
-        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
+        with patch.dict(
+            "salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError, "^Zypper command failure: Booya!$"
             ):
@@ -225,12 +231,11 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             "salt.modules.zypperpkg.__salt__",
             {"cmd.run_all": MagicMock(return_value=ref_out)},
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError,
-                "^Zypper command failure: Some handled zypper internal error{}Another zypper internal error$".format(
-                    os.linesep
-                ),
+                "^Zypper command failure: Some handled zypper internal error{}Another"
+                " zypper internal error$".format(os.linesep),
             ):
                 zypper.list_upgrades(refresh=False)
 
@@ -239,7 +244,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             "salt.modules.zypperpkg.__salt__",
             {"cmd.run_all": MagicMock(return_value=ref_out)},
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"
             ):
@@ -343,7 +348,8 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "Repository 'openSUSE-Leap-42.1-Update' is up to date.",
             "Retrieving repository 'openSUSE-Leap-42.1-Update-Non-Oss' metadata",
             "Forcing building of repository cache",
-            "Building repository 'openSUSE-Leap-42.1-Update-Non-Oss' cache ..........[done]",
+            "Building repository 'openSUSE-Leap-42.1-Update-Non-Oss' cache"
+            " ..........[done]",
             "Building repository 'salt-dev' cache",
             "All repositories have been refreshed.",
         ]
@@ -380,7 +386,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "virgo-dummy": {
                 "build_date": "2015-07-09T10:55:19Z",
                 "vendor": "openSUSE Build Service",
-                "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                "description": (
+                    "This is the Virgo dummy package used for testing SUSE Manager"
+                ),
                 "license": "GPL-2.0",
                 "build_host": "sheep05",
                 "url": "http://www.suse.com",
@@ -391,7 +399,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 "install_date_time_t": 1456241517,
                 "summary": "Virgo dummy package",
                 "version": "1.0",
-                "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                "signature": (
+                    "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                ),
                 "release": "1.1",
                 "group": "Applications/System",
                 "arch": "noarch",
@@ -411,7 +421,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 "install_date_time_t": 1456241495,
                 "summary": "Secure Sockets and Transport Layer Security",
                 "version": "1.0.1i",
-                "signature": "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82",
+                "signature": (
+                    "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82"
+                ),
                 "release": "34.1",
                 "group": "Productivity/Networking/Security",
                 "packager": "https://www.suse.com/",
@@ -462,7 +474,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "build_date": "2015-07-09T10:55:19Z",
                     "vendor": "openSUSE Build Service",
-                    "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                    "description": (
+                        "This is the Virgo dummy package used for testing SUSE Manager"
+                    ),
                     "license": "GPL-2.0",
                     "build_host": "sheep05",
                     "url": "http://www.suse.com",
@@ -473,7 +487,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "install_date_time_t": 1456241517,
                     "summary": "Virgo dummy package",
                     "version": "1.0",
-                    "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                    "signature": (
+                        "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                    ),
                     "release": "1.1",
                     "group": "Applications/System",
                     "arch": "i686",
@@ -482,7 +498,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "build_date": "2015-07-09T10:15:19Z",
                     "vendor": "openSUSE Build Service",
-                    "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                    "description": (
+                        "This is the Virgo dummy package used for testing SUSE Manager"
+                    ),
                     "license": "GPL-2.0",
                     "build_host": "sheep05",
                     "url": "http://www.suse.com",
@@ -493,7 +511,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "install_date_time_t": 14562415127,
                     "summary": "Virgo dummy package",
                     "version": "1.0",
-                    "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                    "signature": (
+                        "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                    ),
                     "release": "1.1",
                     "group": "Applications/System",
                     "arch": "x86_64",
@@ -515,7 +535,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "install_date_time_t": 1456241495,
                     "summary": "Secure Sockets and Transport Layer Security",
                     "version": "1.0.1i",
-                    "signature": "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82",
+                    "signature": (
+                        "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82"
+                    ),
                     "release": "34.1",
                     "group": "Productivity/Networking/Security",
                     "packager": "https://www.suse.com/",
@@ -1516,7 +1538,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         repos_cfg = configparser.ConfigParser()
         for cfg in ["zypper-repo-1.cfg", "zypper-repo-2.cfg"]:
-            repos_cfg.readfp(six.moves.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(io.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)
@@ -2044,3 +2066,37 @@ pattern() = package-c"""
         with patch("salt.modules.zypperpkg.__zypper__", zypper_mock):
             assert zypper.services_need_restart() == expected
             zypper_mock(root=None).nolock.call.assert_called_with("ps", "-sss")
+
+    def test_is_rpm_lock_no_error(self):
+        with patch.object(os.path, "exists", return_value=True):
+            self.assertFalse(zypper.__zypper__._is_rpm_lock())
+
+    def test_rpm_lock_does_not_exist(self):
+        if salt.utils.files.is_fcntl_available():
+            zypper.__zypper__.exit_code = 1
+            with patch.object(
+                os.path, "exists", return_value=False
+            ) as mock_path_exists:
+                self.assertFalse(zypper.__zypper__._is_rpm_lock())
+                mock_path_exists.assert_called_with(zypper.__zypper__.RPM_LOCK)
+            zypper.__zypper__._reset()
+
+    def test_rpm_lock_acquirable(self):
+        if salt.utils.files.is_fcntl_available():
+            zypper.__zypper__.exit_code = 1
+            with patch.object(os.path, "exists", return_value=True), patch(
+                "fcntl.lockf", side_effect=OSError(errno.EAGAIN, "")
+            ) as lockf_mock, patch("salt.utils.files.fopen", mock_open()):
+                self.assertTrue(zypper.__zypper__._is_rpm_lock())
+                lockf_mock.assert_called()
+            zypper.__zypper__._reset()
+
+    def test_rpm_lock_not_acquirable(self):
+        if salt.utils.files.is_fcntl_available():
+            zypper.__zypper__.exit_code = 1
+            with patch.object(os.path, "exists", return_value=True), patch(
+                "fcntl.lockf"
+            ) as lockf_mock, patch("salt.utils.files.fopen", mock_open()):
+                self.assertFalse(zypper.__zypper__._is_rpm_lock())
+                self.assertEqual(lockf_mock.call_count, 2)
+            zypper.__zypper__._reset()

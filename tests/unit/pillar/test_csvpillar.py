@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """test for pillar csvpillar.py"""
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.pillar.csvpillar as csvpillar
 from tests.support.mock import mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

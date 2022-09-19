@@ -1,20 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the nacl execution module
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import sys
+
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
+    import libnacl.secret  # pylint: disable=unused-import
+
     import salt.modules.nacl as nacl
 
     HAS_LIBNACL = True
@@ -22,6 +19,7 @@ except (ImportError, OSError, AttributeError):
     HAS_LIBNACL = False
 
 
+@skipIf(sys.version_info >= (3, 10), "Segfaults with python 3.10")
 @skipIf(not HAS_LIBNACL, "skipping test_nacl, libnacl is unavailable")
 class NaclTest(TestCase, LoaderModuleMockMixin):
     """

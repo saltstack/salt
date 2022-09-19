@@ -73,9 +73,11 @@ ips_pkg_return_values = {
     3: "Multiple operations were requested, but only some of them succeeded.",
     4: "No changes were made - nothing to do.",
     5: "The requested operation cannot be performed on a  live image.",
-    6: "The requested operation cannot be completed because the licenses for "
-    "the packages being installed or updated have not been accepted.",
-    7: "The image is currently in use by another process and cannot be " "modified.",
+    6: (
+        "The requested operation cannot be completed because the licenses for "
+        "the packages being installed or updated have not been accepted."
+    ),
+    7: "The image is currently in use by another process and cannot be modified.",
 }
 
 

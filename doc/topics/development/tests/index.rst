@@ -33,20 +33,20 @@ python3 you would need to specify the zeromq transport and python3.
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)'
+    nox -e 'test-zeromq-3(coverage=False)'
 
-As a contrast, when using the deprecated ``runtests.py`` test runner, the
-command would be:
+And because zeromq is the default transport, the following nox session can also be used:
 
 .. code-block:: bash
 
-    nox -e 'runtests-zeromq-3(coverage=False)'
+    nox -e 'test-zeromq-3(coverage=False)'
+
 
 To run all the tests but on the tcp transport, you would need to specify the tcp session.
 
 .. code-block:: bash
 
-    nox -e 'pytest-tcp-3(coverage=False)'
+    nox -e 'test-tcp-3(coverage=False)'
 
 As a contrast, when using the deprecated ``runtests.py`` test runner, the
 command would be:
@@ -94,7 +94,7 @@ Salt's test suite is located in the ``tests/`` directory in the root of
 Salt's codebase.
 
 With the migration to PyTest, Salt has created a separate directory for tests
-that are written taking advantage of the full pottential of PyTest. These are
+that are written taking advantage of the full potential of PyTest. These are
 located under ``tests/pytests``.
 
 As for the old test suite, it is divided into two main groups:
@@ -174,14 +174,14 @@ all of the tests included in Salt's test suite:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)'
+    nox -e 'test-3(coverage=False)'
 
 For more information about options you can pass the test runner, see the
 ``--help`` option:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- --help
+    nox -e 'test-3(coverage=False)' -- --help
 
 .. _running-test-subsections:
 
@@ -192,23 +192,17 @@ Instead of running the entire test suite all at once, which can take a long time
 there are several ways to run only specific groups of tests or individual tests:
 
 * Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e
-  'pytest-zeromq-3(coverage=False)' -- tests/unit/``, using the deprecated ``runtests.py`` the command would be ``nox -e
-  'runtests-zeromq-3(coverage=False)' -- --unit-tests``
+  'test-3(coverage=False)' -- tests/unit/``.
 * Run unit and integration tests for states: ``nox -e
-  'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``, using the deprecated
-  ``runtests.py`` the command would be ``nox -e 'runtests-zeromq-3(coverage=False)' -- --state-tests``
-* Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' --
-  tests/integration/modules/test_virt.py``, using the deprecated ``runtests.py`` the command would be ``nox -e
-  'runtests-zeromq-3(coverage=False)' -- -n integration.modules.test_virt``
-* Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' --
-  tests/unit/modules/test_virt.py``, using the deprecated ``runtests.py`` the command would be ``nox -e
-  'runtests-zeromq-3(coverage=False)' -- -n unit.modules.test_virt``
+  'test-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``.
+* Run integration tests for an individual module: ``nox -e 'test-3(coverage=False)' --
+  tests/pytests/integration/modules/test_virt.py``.
+* Run unit tests for an individual module: ``nox -e 'test-3(coverage=False)' --
+  tests/unit/modules/test_virt.py``.
 * Run an individual test by using the class and test name (this example is for the
-  ``test_default_kvm_profile`` test in the ``tests/integration/module/test_virt.py``):
-  ``nox -e 'pytest-zeromq-3(coverage=False)' --
-  tests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``, using the deprecated ``runtests.py`` the
-  command would be ``nox -e 'runtests-zeromq-3(coverage=False)' -- -n
-  integration.modules.test_virt.VirtTest.test_default_kvm_profile``
+  ``test_default_kvm_profile`` test in the ``tests/pytests/integration/module/test_virt.py``):
+  ``nox -e 'test-3(coverage=False)' --
+  tests/pytests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``.
 
 
 For more specific examples of how to run various test subsections or individual
@@ -231,14 +225,7 @@ integration test daemons, simply add the unit directory as an argument:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/
-
-As a contrast, when using the deprecated ``runtests.py`` test runner, the
-command would be:
-
-.. code-block:: bash
-
-    nox -e 'runtests-zeromq-3(coverage=False)' -- --unit-tests
+    nox -e 'test-3(coverage=False)' -- tests/unit/
 
 All of the other options to run individual tests, entire classes of tests, or
 entire test modules still apply.
@@ -269,14 +256,7 @@ To run tests marked as destructive, set the ``--run-destructive`` flag:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- --run-destructive
-
-As a contrast, when using the deprecated ``runtests.py`` test runner, the
-command would be:
-
-.. code-block:: bash
-
-    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destructive
+    nox -e 'test-3(coverage=False)' -- --run-destructive
 
 
 Running Cloud Provider Tests
@@ -319,18 +299,12 @@ must be provided:
     do not include the single quotes.
 
 Once all of the valid credentials for the cloud provider have been supplied, the
-cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
+cloud provider tests can be run like:
 
 .. code-block:: bash
 
-    nox -e 'pytest-cloud-3(coverage=False)'
+    nox -e 'test-cloud-3(coverage=False)'
 
-As a contrast, when using the deprecated ``runtests.py`` test runner, the
-command would be:
-
-.. code-block:: bash
-
-    nox -e 'runtests-cloud-3(coverage=False)'
 
 Automated Test Runs
 ===================
@@ -366,7 +340,7 @@ As soon as the pull request is merged, the changes will be added to the
 next branch test run on Jenkins.
 
 For a full list of currently running test environments, go to
-https://jenkinsci.saltstack.com.
+https://jenkins.saltproject.io.
 
 
 Using Salt-Cloud on Jenkins
@@ -535,41 +509,31 @@ Test Helpers
 ------------
 
 Several Salt-specific helpers are available. A full list is available by inspecting
-functions exported in `tests.support.helpers`.
+functions exported under `tests/support/*.py`.
 
-`@expensiveTest` -- Designates a test which typically requires a relatively costly
-external resource, like a cloud virtual machine. This decorator is not normally
-used by developers outside of the Salt core team.
+Test Markers
+------------
 
-`@destructiveTest` -- Marks a test as potentially destructive. It will not be run
-by the test runner unless the ``-run-destructive`` test is expressly passed.
+`@pytest.mark.expensive_test` -- Designates a test which typically requires a
+relatively costly external resource, like a cloud virtual machine. This decorator
+is not normally used by developers outside of the Salt core team.
 
-`@requires_network` -- Requires a network connection for the test to operate
-successfully. If a network connection is not detected, the test will not run.
+`@pytest.mark.destructive_test` -- Marks a test as potentially destructive. It
+will not be run unless the ``--run-destructive`` flag is expressly passed.
 
-`@requires_salt_modules` -- Requires all the modules in a list of modules in
-order for the test to be executed. Otherwise, the test is skipped.
+`@pytest.mark.requires_network` -- Requires a network connection for the test to
+operate successfully. If a network connection is not detected, the test will not run.
 
-`@requires_system_grains` -- Loads and passes the grains on the system as an
-keyword argument to the test function with the name `grains`.
+These are just a small preview of the supported marker. For a full listing, please
+run:
 
-`@skip_if_binaries_missing(['list', 'of', 'binaries'])` -- If called from inside a test,
-the test will be skipped if the binaries are not all present on the system.
+.. code-block:: bash
 
-`@skip_if_not_root` -- If the test is not executed as root, it will be skipped.
-
-`@with_system_user` -- Creates and optionally destroys a system user within a test case.
-See implementation details in `tests.support.helpers` for details.
-
-`@with_system_group` -- Creates and optionally destroys a system group within a test case.
-See implementation details in `tests.support.helpers` for details.
-
-`@with_system_user_and_group` -- Creates and optionally destroys a system user and group
-within a test case.  See implementation details in `tests.support.helpers` for details.
+    nox -e 'test-3(coverage=False)' -- --markers
 
 
-.. _kitchen-salt jenkins setup: https://kitchen.saltstack.com/docs/file/docs/jenkins.md
-.. _getting started: https://kitchen.saltstack.com/docs/file/docs/gettingstarted.md
+.. _kitchen-salt jenkins setup: https://kitchen.saltproject.io/docs/file/docs/jenkins.md
+.. _getting started: https://kitchen.saltproject.io/docs/file/docs/gettingstarted.md
 .. _salt-jenkins: https://github.com/saltstack/salt-jenkins
-.. _Kitchen Salt: https://kitchen.saltstack.com/
+.. _Kitchen Salt: https://kitchen.saltproject.io/
 .. _pytest: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests

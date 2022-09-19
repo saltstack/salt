@@ -3,18 +3,14 @@
 """
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Libs
 from salt.modules import elasticsearch
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # Import elasticsearch exceptions
 NO_ELASTIC = False
 try:
-    from elasticsearch import TransportError, NotFoundError
+    from elasticsearch import NotFoundError, TransportError
 except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 

@@ -1,25 +1,19 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.bluez_bluetooth as bluez
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class MockBluetooth(object):
+class MockBluetooth:
     """
-        Mock class for bluetooth
+    Mock class for bluetooth
     """
 
     def __init__(self):
@@ -28,14 +22,14 @@ class MockBluetooth(object):
     @staticmethod
     def discover_devices(lookup_names):
         """
-            Mock method to return all Discoverable devices
+        Mock method to return all Discoverable devices
         """
         return [["a", "b", "c"], ["d", "e", "f"]]
 
 
 class BluezTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test cases for salt.modules.bluez
+    Test cases for salt.modules.bluez
     """
 
     def setup_loader_modules(self):
@@ -43,7 +37,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_version(self):
         """
-            Test if return bluetooth version
+        Test if return bluetooth version
         """
         mock = MagicMock(return_value="5.7")
         with patch.dict(bluez.__salt__, {"cmd.run": mock}):
@@ -54,7 +48,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_address_(self):
         """
-            Test of getting address of bluetooth adapter
+        Test of getting address of bluetooth adapter
         """
         mock = MagicMock(return_value="hci : hci0")
         with patch.dict(bluez.__salt__, {"cmd.run": mock}):
@@ -65,7 +59,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_power(self):
         """
-            Test of getting address of bluetooth adapter
+        Test of getting address of bluetooth adapter
         """
         mock = MagicMock(return_value={})
         with patch.object(bluez, "address_", mock):
@@ -85,7 +79,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_discoverable(self):
         """
-            Test of enabling bluetooth device
+        Test of enabling bluetooth device
         """
         mock = MagicMock(
             side_effect=[
@@ -107,7 +101,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_noscan(self):
         """
-            Test of turning off of scanning modes
+        Test of turning off of scanning modes
         """
         mock = MagicMock(
             side_effect=[
@@ -129,13 +123,13 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_scan(self):
         """
-            Test of scanning of bluetooth devices
+        Test of scanning of bluetooth devices
         """
         self.assertListEqual(bluez.scan(), [{"a": "b"}, {"d": "e"}])
 
     def test_block(self):
         """
-            Test of blocking specific bluetooth device
+        Test of blocking specific bluetooth device
         """
         mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, "mac", mock):
@@ -147,7 +141,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unblock(self):
         """
-            Test to unblock specific bluetooth device
+        Test to unblock specific bluetooth device
         """
         mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, "mac", mock):
@@ -159,7 +153,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_pair(self):
         """
-            Test to pair bluetooth adapter with a device
+        Test to pair bluetooth adapter with a device
         """
         mock = MagicMock(side_effect=[False, True, True])
         with patch.object(salt.utils.validate.net, "mac", mock):
@@ -181,7 +175,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unpair(self):
         """
-            Test to unpair bluetooth adaptor with a device
+        Test to unpair bluetooth adaptor with a device
         """
         mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, "mac", mock):
@@ -193,7 +187,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_start(self):
         """
-            Test to start bluetooth service
+        Test to start bluetooth service
         """
         mock = MagicMock(return_value="Ok")
         with patch.dict(bluez.__salt__, {"service.start": mock}):
@@ -201,7 +195,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_stop(self):
         """
-            Test to stop bluetooth service
+        Test to stop bluetooth service
         """
         mock = MagicMock(return_value="Ok")
         with patch.dict(bluez.__salt__, {"service.stop": mock}):

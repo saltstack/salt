@@ -1,4 +1,5 @@
 import pytest
+
 import salt.beacons.sensehat as sensehat
 from tests.support.mock import MagicMock
 
@@ -34,6 +35,15 @@ def test_empty_config():
 
 def test_sensehat_humidity_match():
 
+    config = [{"sensors": {"humidity": "70%"}}]
+
+    ret = sensehat.validate(config)
+    assert ret == (True, "Valid beacon configuration")
+
+    ret = sensehat.beacon(config)
+    assert ret == [{"tag": "sensehat/humidity", "humidity": 80}]
+
+    # Test without the percent
     config = [{"sensors": {"humidity": "70%"}}]
 
     ret = sensehat.validate(config)

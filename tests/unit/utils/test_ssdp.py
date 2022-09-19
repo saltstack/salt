@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
 import salt.utils.ssdp as ssdp
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import zip
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -19,7 +15,7 @@ except ImportError:
     pytest = None
 
 
-class Mocks(object):
+class Mocks:
     def get_socket_mock(self, expected_ip, expected_hostname):
         """
         Get a mock of a socket
@@ -90,7 +86,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         Side effect
         :return:
         """
-        raise AttributeError("attribute error: {0}. {1}".format(args, kwargs))
+        raise AttributeError("attribute error: {}. {}".format(args, kwargs))
 
     @patch("salt.utils.ssdp._json", None)
     @patch("salt.utils.ssdp.asyncio", None)
@@ -462,7 +458,7 @@ class SSDPClientTestCase(TestCase, Mocks):
     Client-related test cases
     """
 
-    class Resource(object):
+    class Resource:
         """
         Fake network reader
         """
@@ -564,7 +560,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert (
                 "Discovery master collection failure" in clnt.log.error.call_args[0][0]
             )
-            assert error_msg == six.text_type(clnt.log.error.call_args[0][1])
+            assert error_msg == str(clnt.log.error.call_args[0][1])
             assert not response
 
     def test_discover_no_masters(self):
@@ -619,7 +615,10 @@ class SSDPClientTestCase(TestCase, Mocks):
         """
 
         _socket = MagicMock()
-        error = "We only support a 1200 bps connection. Routing timestamp problems on neural net."
+        error = (
+            "We only support a 1200 bps connection. Routing timestamp problems on"
+            " neural net."
+        )
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         fake_resource = SSDPClientTestCase.Resource()
         fake_resource.pool = [

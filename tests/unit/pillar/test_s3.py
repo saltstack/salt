@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
 import salt.pillar.s3 as s3_pillar
-from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -58,7 +49,7 @@ class S3PillarTestCase(TestCase, LoaderModuleMockMixin):
         first_range_end = 999
         second_range_end = 1200
         for i in range(0, first_range_end):
-            key_name = "{0}/init.sls".format(i)
+            key_name = "{}/init.sls".format(i)
             tmp = {
                 "Key": key_name,
                 "LastModified": "2019-12-18T15:54:39.000Z",
@@ -69,7 +60,7 @@ class S3PillarTestCase(TestCase, LoaderModuleMockMixin):
             mock_return_first.append(tmp)
 
         for i in range(first_range_end, second_range_end):
-            key_name = "{0}/init.sls".format(i)
+            key_name = "{}/init.sls".format(i)
             tmp = {
                 "Key": key_name,
                 "LastModified": "2019-12-18T15:54:39.000Z",
@@ -81,7 +72,7 @@ class S3PillarTestCase(TestCase, LoaderModuleMockMixin):
 
         _expected = {"base": {"dummy_bucket": []}}
         for i in range(0, second_range_end):
-            key_name = "{0}/init.sls".format(i)
+            key_name = "{}/init.sls".format(i)
             tmp = {
                 "Key": key_name,
                 "LastModified": "2019-12-18T15:54:39.000Z",

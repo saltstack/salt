@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation and activation of windows licenses
 ===============================================
@@ -10,12 +9,9 @@ Install and activate windows licenses
     XXXXX-XXXXX-XXXXX-XXXXX-XXXXX:
       license.activate
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)

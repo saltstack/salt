@@ -14,7 +14,7 @@ import salt.utils.dictupdate
 import salt.utils.functools
 import salt.utils.odict
 import salt.utils.yaml
-from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM, NOT_SET
 from salt.exceptions import CommandExecutionError
 
 __proxyenabled__ = ["*"]
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 def get(
     key,
-    default=KeyError,
+    default=NOT_SET,
     merge=False,
     merge_nested_lists=None,
     delimiter=DEFAULT_TARGET_DELIM,
@@ -122,6 +122,8 @@ def get(
         salt '*' pillar.get pkg:apache
         salt '*' pillar.get abc::def|ghi delimiter='|'
     """
+    if default == NOT_SET:
+        default = KeyError
     if not __opts__.get("pillar_raise_on_missing"):
         if default is KeyError:
             default = ""
@@ -503,7 +505,7 @@ def ext(external, pillar=None):
         external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         ext=external,
@@ -575,7 +577,7 @@ def file_exists(path, saltenv=None):
     pillar_roots = __opts__.get("pillar_roots")
     if not pillar_roots:
         raise CommandExecutionError(
-            "No pillar_roots found. Are you running " "this on the master?"
+            "No pillar_roots found. Are you running this on the master?"
         )
 
     if saltenv:

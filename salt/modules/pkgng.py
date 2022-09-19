@@ -2020,7 +2020,7 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {} was unable to be " "unheld.".format(target)
+                    ] = "Package {} was unable to be unheld.".format(target)
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is not being held.".format(target)

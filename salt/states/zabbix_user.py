@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Zabbix users.
 
@@ -7,15 +6,15 @@ Management of Zabbix users.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 from copy import deepcopy
 
-# Import Salt libs
 import salt.utils.json
 from salt.exceptions import SaltException
-from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -56,6 +55,10 @@ def admin_password_present(name, password=None, **kwargs):
             zabbix_user.admin_password_present:
                 - password: SECRET_PASS
     """
+    login_error_messages = [
+        "Login name or password is incorrect",
+        "Incorrect user name or password",
+    ]
     dry_run = __opts__["test"]
     default_zabbix_user = "Admin"
     default_zabbix_password = "zabbix"
@@ -77,9 +80,7 @@ def admin_password_present(name, password=None, **kwargs):
 
     # get unique list in preserved order and reverse it
     seen = set()
-    unique_passwords = [
-        six.text_type(x) for x in passwords if x not in seen and not seen.add(x)
-    ]
+    unique_passwords = [str(x) for x in passwords if x not in seen and not seen.add(x)]
     unique_passwords.reverse()
 
     if not unique_passwords:
@@ -99,10 +100,9 @@ def admin_password_present(name, password=None, **kwargs):
                 default_zabbix_user, **connection_args
             )
         except SaltException as err:
-            if "Login name or password is incorrect" in six.text_type(err):
-                user_get = False
-            else:
+            if all([x not in str(err) for x in login_error_messages]):
                 raise
+            user_get = False
         if user_get:
             if pwd == desired_password:
                 ret["result"] = True
@@ -118,16 +118,14 @@ def admin_password_present(name, password=None, **kwargs):
             )
             if user_update:
                 ret["result"] = True
-                ret["changes"]["passwd"] = (
-                    "changed to '" + six.text_type(desired_password) + "'"
-                )
+                ret["changes"]["passwd"] = "changed to '" + str(desired_password) + "'"
         else:
             ret["result"] = None
             ret["comment"] = (
                 "Password for user "
-                + six.text_type(default_zabbix_user)
+                + str(default_zabbix_user)
                 + " updated to '"
-                + six.text_type(desired_password)
+                + str(desired_password)
                 + "'"
             )
 
@@ -182,6 +180,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     """
     if medias is None:
         medias = []
+    usrgrps = [int(x) for x in usrgrps]
     connection_args = {}
     if "_connection_user" in kwargs:
         connection_args["_connection_user"] = kwargs["_connection_user"]
@@ -193,14 +192,14 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     ret = {"name": alias, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_user_created = "User {0} created.".format(alias)
-    comment_user_updated = "User {0} updated.".format(alias)
-    comment_user_notcreated = "Unable to create user: {0}. ".format(alias)
-    comment_user_exists = "User {0} already exists.".format(alias)
+    comment_user_created = "User {} created.".format(alias)
+    comment_user_updated = "User {} updated.".format(alias)
+    comment_user_notcreated = "Unable to create user: {}. ".format(alias)
+    comment_user_exists = "User {} already exists.".format(alias)
     changes_user_created = {
         alias: {
-            "old": "User {0} does not exist.".format(alias),
-            "new": "User {0} created.".format(alias),
+            "old": "User {} does not exist.".format(alias),
+            "new": "User {} created.".format(alias),
         }
     }
 
@@ -231,24 +230,20 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         medias_list = list()
         for key, value in medias_dict.items():
             # Load media values or default values
-            active = (
-                "0"
-                if six.text_type(value.get("active", "true")).lower() == "true"
-                else "1"
-            )
-            mediatype_sls = six.text_type(value.get("mediatype", "mail")).lower()
-            mediatypeid = six.text_type(media_type.get(mediatype_sls, 1))
+            active = "0" if str(value.get("active", "true")).lower() == "true" else "1"
+            mediatype_sls = str(value.get("mediatype", "mail")).lower()
+            mediatypeid = str(media_type.get(mediatype_sls, 1))
             period = value.get("period", "1-7,00:00-24:00")
             sendto = value.get("sendto", key)
 
             severity_sls = value.get("severity", "HD")
-            severity_bin = six.text_type()
+            severity_bin = ""
             for sev in media_severities:
                 if sev in severity_sls:
                     severity_bin += "1"
                 else:
                     severity_bin += "0"
-            severity = six.text_type(int(severity_bin, 2))
+            severity = str(int(severity_bin, 2))
 
             medias_list.append(
                 {
@@ -262,6 +257,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         return medias_list
 
     user_exists = __salt__["zabbix.user_exists"](alias, **connection_args)
+    zabbix_version = __salt__["zabbix.apiinfo_version"](**connection_args)
 
     if user_exists:
         user = __salt__["zabbix.user_get"](alias, **connection_args)[0]
@@ -270,7 +266,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         update_usrgrps = False
         update_medias = False
 
-        usergroups = __salt__["zabbix.usergroup_get"](userids=userid, **connection_args)
+        usergroups = deepcopy(user.get("usrgrps", []))
         cur_usrgrps = list()
 
         for usergroup in usergroups:
@@ -279,8 +275,10 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         if set(cur_usrgrps) != set(usrgrps):
             update_usrgrps = True
 
-        user_medias = __salt__["zabbix.user_getmedia"](userid, **connection_args)
+        user_medias = user.get("medias", [])
         medias_formated = _media_format(medias)
+        log.debug(user_medias)
+        log.debug(medias_formated)
 
         if user_medias:
             user_medias_copy = deepcopy(user_medias)
@@ -315,57 +313,91 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         if update_usrgrps or password_reset or update_medias:
             ret["comment"] = comment_user_updated
 
-            if update_usrgrps:
-                __salt__["zabbix.user_update"](
-                    userid, usrgrps=usrgrps, **connection_args
-                )
-                updated_groups = __salt__["zabbix.usergroup_get"](
-                    userids=userid, **connection_args
-                )
+            if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
+                updates = deepcopy(connection_args)
+                if update_usrgrps:
+                    updates["usrgrps"] = usrgrps
+                if password_reset:
+                    updates["passwd"] = passwd
+                if update_medias:
+                    updates["medias"] = medias_formated
+                result = __salt__["zabbix.user_update"](userid, **updates)
+
+                new_user = __salt__["zabbix.user_get"](alias, **connection_args)[0]
+
+                if "error" in result:
+                    error.append(result["error"])
+                else:
+                    if update_usrgrps:
+                        ret["changes"]["usrgrps"] = str(new_user["usrgrps"])
+                    if update_medias:
+                        ret["changes"]["medias"] = str(medias_formated)
+                    if password_reset:
+                        ret["changes"]["passwd"] = "updated"
 
                 cur_usrgrps = list()
-                for usergroup in updated_groups:
+                for usergroup in new_user["usrgrps"]:
                     cur_usrgrps.append(int(usergroup["usrgrpid"]))
 
                 usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
-                if usrgrp_diff:
-                    error.append("Unable to update grpup(s): {0}".format(usrgrp_diff))
+                if usrgrp_diff and update_usrgrps:
+                    error.append("Unable to update group(s): {}".format(usrgrp_diff))
 
-                ret["changes"]["usrgrps"] = six.text_type(updated_groups)
-
-            if password_reset:
-                updated_password = __salt__["zabbix.user_update"](
-                    userid, passwd=passwd, **connection_args
-                )
-                if "error" in updated_password:
-                    error.append(updated_groups["error"])
-                else:
-                    ret["changes"]["passwd"] = "updated"
-
-            if update_medias:
-                for user_med in user_medias:
-                    deletedmed = __salt__["zabbix.user_deletemedia"](
-                        user_med["mediaid"], **connection_args
+            else:
+                if update_usrgrps:
+                    __salt__["zabbix.user_update"](
+                        userid, usrgrps=usrgrps, **connection_args
                     )
-                    if "error" in deletedmed:
-                        error.append(deletedmed["error"])
-
-                for media in medias_formated:
-                    updatemed = __salt__["zabbix.user_addmedia"](
-                        userids=userid,
-                        active=media["active"],
-                        mediatypeid=media["mediatypeid"],
-                        period=media["period"],
-                        sendto=media["sendto"],
-                        severity=media["severity"],
-                        **connection_args
+                    updated_groups = __salt__["zabbix.usergroup_get"](
+                        userids=userid, **connection_args
                     )
 
-                    if "error" in updatemed:
-                        error.append(updatemed["error"])
+                    cur_usrgrps = list()
+                    for usergroup in updated_groups:
+                        cur_usrgrps.append(int(usergroup["usrgrpid"]))
 
-                ret["changes"]["medias"] = six.text_type(medias_formated)
+                    usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
+
+                    if usrgrp_diff:
+                        error.append(
+                            "Unable to update group(s): {}".format(usrgrp_diff)
+                        )
+
+                    ret["changes"]["usrgrps"] = str(updated_groups)
+
+                if password_reset:
+                    updated_password = __salt__["zabbix.user_update"](
+                        userid, passwd=passwd, **connection_args
+                    )
+                    if "error" in updated_password:
+                        error.append(updated_groups["error"])
+                    else:
+                        ret["changes"]["passwd"] = "updated"
+
+                if update_medias:
+                    for user_med in user_medias:
+                        deletedmed = __salt__["zabbix.user_deletemedia"](
+                            user_med["mediaid"], **connection_args
+                        )
+                        if "error" in deletedmed:
+                            error.append(deletedmed["error"])
+
+                    for media in medias_formated:
+                        updatemed = __salt__["zabbix.user_addmedia"](
+                            userids=userid,
+                            active=media["active"],
+                            mediatypeid=media["mediatypeid"],
+                            period=media["period"],
+                            sendto=media["sendto"],
+                            severity=media["severity"],
+                            **connection_args
+                        )
+
+                        if "error" in updatemed:
+                            error.append(updatemed["error"])
+
+                    ret["changes"]["medias"] = str(medias_formated)
 
         else:
             ret["comment"] = comment_user_exists
@@ -378,15 +410,13 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
             ret["changes"] = changes_user_created
         else:
             ret["result"] = False
-            ret["comment"] = comment_user_notcreated + six.text_type(
-                user_create["error"]
-            )
+            ret["comment"] = comment_user_notcreated + str(user_create["error"])
 
     # error detected
     if error:
         ret["changes"] = {}
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
 
     return ret
 
@@ -419,13 +449,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_user_deleted = "USer {0} deleted.".format(name)
-    comment_user_notdeleted = "Unable to delete user: {0}. ".format(name)
-    comment_user_notexists = "User {0} does not exist.".format(name)
+    comment_user_deleted = "USer {} deleted.".format(name)
+    comment_user_notdeleted = "Unable to delete user: {}. ".format(name)
+    comment_user_notexists = "User {} does not exist.".format(name)
     changes_user_deleted = {
         name: {
-            "old": "User {0} exists.".format(name),
-            "new": "User {0} deleted.".format(name),
+            "old": "User {} exists.".format(name),
+            "new": "User {} deleted.".format(name),
         }
     }
 
@@ -457,8 +487,6 @@ def absent(name, **kwargs):
             ret["changes"] = changes_user_deleted
         else:
             ret["result"] = False
-            ret["comment"] = comment_user_notdeleted + six.text_type(
-                user_delete["error"]
-            )
+            ret["comment"] = comment_user_notdeleted + str(user_delete["error"])
 
     return ret

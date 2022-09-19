@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.nova as nova
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -201,7 +195,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         Test for To maintain the feel of the nova command line,
          this function simply calls
          the server_list function.
-         """
+        """
         with patch.object(nova, "server_list", return_value=["A"]):
             self.assertEqual(nova.list_(), ["A"])
 
@@ -218,7 +212,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         Test for To maintain the feel of the nova command line,
          this function simply calls
          the server_show function.
-         """
+        """
         with patch.object(nova, "server_show", return_value=["A"]):
             self.assertEqual(nova.show("server_id"), ["A"])
 

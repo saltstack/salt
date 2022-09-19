@@ -521,7 +521,7 @@ def _present(
                 ret["comment"] = "Error: {}".format(err)
                 return ret
         ret["changes"].update(
-            {"masquerade": {"old": "", "new": "Masquerading successfully " "disabled."}}
+            {"masquerade": {"old": "", "new": "Masquerading successfully disabled."}}
         )
 
     if ports or prune_ports:

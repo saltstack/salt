@@ -1,10 +1,5 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import random
 import string
-
-from salt.ext.six.moves import range
 
 
 def random_name(size=6):

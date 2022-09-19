@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Autoscale Groups
 =======================
@@ -192,18 +191,14 @@ Overriding the alarm values on the resource:
                 threshold: 50.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import hashlib
 import logging
 
-# Import Salt libs
 import salt.utils.dictupdate as dictupdate
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -441,7 +436,7 @@ def present(
     """
     if vpc_zone_identifier and subnet_names:
         raise SaltInvocationError(
-            "vpc_zone_identifier and subnet_names are " "mutually exclusive options."
+            "vpc_zone_identifier and subnet_names are mutually exclusive options."
         )
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if subnet_names:
@@ -451,11 +446,11 @@ def present(
                 "subnet", name=i, region=region, key=key, keyid=keyid, profile=profile
             )
             if "error" in r:
-                ret["comment"] = "Error looking up subnet ids: {0}".format(r["error"])
+                ret["comment"] = "Error looking up subnet ids: {}".format(r["error"])
                 ret["result"] = False
                 return ret
             if "id" not in r:
-                ret["comment"] = "Subnet {0} does not exist.".format(i)
+                ret["comment"] = "Subnet {} does not exist.".format(i)
                 ret["result"] = False
                 return ret
             vpc_zone_identifier.append(r["id"])
@@ -472,9 +467,7 @@ def present(
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_bytes = salt.utils.stringutils.to_bytes(
-            str(launch_config)
-        )  # future lint: disable=blacklisted-function
+        launch_config_bytes = salt.utils.stringutils.to_bytes(str(launch_config))
         launch_config_name = (
             launch_config_name + "-" + hashlib.md5(launch_config_bytes).hexdigest()
         )
@@ -604,7 +597,7 @@ def present(
                 if "min_adjustment_step" not in policy:
                     policy["min_adjustment_step"] = None
         if scheduled_actions:
-            for s_name, action in six.iteritems(scheduled_actions):
+            for s_name, action in scheduled_actions.items():
                 if "end_time" not in action:
                     action["end_time"] = None
         config = {
@@ -635,7 +628,7 @@ def present(
         if scheduled_actions is None:
             config["scheduled_actions"] = {}
         # allow defaults on start_time
-        for s_name, action in six.iteritems(scheduled_actions):
+        for s_name, action in scheduled_actions.items():
             if "start_time" not in action:
                 asg_action = asg["scheduled_actions"].get(s_name, {})
                 if "start_time" in asg_action:
@@ -643,7 +636,7 @@ def present(
         proposed = {}
         # note: do not loop using "key, value" - this can modify the value of
         # the aws access key
-        for asg_property, value in six.iteritems(config):
+        for asg_property, value in config.items():
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
@@ -819,7 +812,7 @@ def _alarms_present(
         tmp = dictupdate.update(tmp, alarms)
     # set alarms, using boto_cloudwatch_alarm.present
     merged_return_value = {"name": name, "result": True, "comment": "", "changes": {}}
-    for _, info in six.iteritems(tmp):
+    for _, info in tmp.items():
         # add asg to name and description
         info["name"] = name + " " + info["name"]
         info["attributes"]["description"] = (
@@ -837,7 +830,7 @@ def _alarms_present(
                     if "scaling_policy" not in action:
                         scaling_policy_actions_only = False
                     if ":self:" in action:
-                        action = action.replace(":self:", ":{0}:".format(name))
+                        action = action.replace(":self:", ":{}:".format(name))
                     new_actions.append(action)
                 info["attributes"][action_type] = new_actions
         # skip alarms that only have actions for scaling policy, if min_size == max_size for this ASG
@@ -900,7 +893,7 @@ def absent(
             ret["comment"] = "Autoscale group set to be deleted."
             ret["result"] = None
             if remove_lc:
-                msg = "Launch configuration {0} is set to be deleted.".format(
+                msg = "Launch configuration {} is set to be deleted.".format(
                     asg["launch_config_name"]
                 )
                 ret["comment"] = " ".join([ret["comment"], msg])

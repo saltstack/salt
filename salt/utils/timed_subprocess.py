@@ -108,7 +108,8 @@ class TimedProc:
                 threading.Timer(10, terminate).start()
                 raise salt.exceptions.TimedProcTimeoutError(
                     "{} : Timed out after {} seconds".format(
-                        self.command, str(self.timeout),
+                        self.command,
+                        str(self.timeout),
                     )
                 )
         return self.process.returncode

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
@@ -18,14 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.proxy.nxos as nxos_proxy
 import salt.utils.nxos as nxos_utils
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase
@@ -39,14 +33,14 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_virtual(self):
 
-        """ UT: nxos module:check_virtual method - return value """
+        """UT: nxos module:check_virtual method - return value"""
 
         result = nxos_proxy.__virtual__()
         self.assertIn("nxos", result)
 
     def test_init(self):
 
-        """ UT: nxos module:init method - nxapi proxy """
+        """UT: nxos module:init method - nxapi proxy"""
 
         with patch.object(nxos_proxy, "__opts__", {"proxy": {"connection": "nxapi"}}):
             with patch("salt.proxy.nxos._init_nxapi", autospec=True) as init_nxapi:
@@ -55,7 +49,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_init_opts_none(self):
 
-        """ UT: nxos module:init method - __opts__ connection is None """
+        """UT: nxos module:init method - __opts__ connection is None"""
 
         with patch.object(nxos_proxy, "__opts__", {"proxy": {"connection": None}}):
             with patch("salt.proxy.nxos._init_nxapi", autospec=True) as init_nxapi:
@@ -64,13 +58,13 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_init_bad_connection_type(self):
 
-        """ UT: nxos module:init method - bad CONNECTION type """
+        """UT: nxos module:init method - bad CONNECTION type"""
         with patch.object(nxos_proxy, "__opts__", {"proxy": {"connection": "unknown"}}):
             self.assertFalse(nxos_proxy.init())
 
     def test_initialized(self):
 
-        """ UT: nxos module:initialized method - nxapi proxy """
+        """UT: nxos module:initialized method - nxapi proxy"""
 
         with patch(
             "salt.proxy.nxos._initialized_nxapi", autospec=True
@@ -80,7 +74,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_ping(self):
 
-        """ UT: nxos module:ping method - nxapi proxy """
+        """UT: nxos module:ping method - nxapi proxy"""
 
         with patch("salt.proxy.nxos._ping_nxapi", autospec=True) as ping_nxapi:
             result = nxos_proxy.ping()
@@ -88,7 +82,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains(self):
 
-        """ UT: nxos module:grains method - nxapi grains """
+        """UT: nxos module:grains method - nxapi grains"""
 
         with patch(
             "salt.proxy.nxos.sendline", autospec=True, return_value=n9k_show_ver_list
@@ -98,7 +92,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains_cache_set(self):
 
-        """ UT: nxos module:grains method - nxapi grains cache set """
+        """UT: nxos module:grains method - nxapi grains cache set"""
 
         with patch(
             "salt.proxy.nxos.DEVICE_DETAILS", {"grains_cache": n9k_grains["nxos"]}
@@ -113,7 +107,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains_refresh(self):
 
-        """ UT: nxos module:grains_refresh method - nxapi grains """
+        """UT: nxos module:grains_refresh method - nxapi grains"""
 
         device_details = {"grains_cache": None}
 
@@ -125,7 +119,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sendline(self):
 
-        """ UT: nxos module:sendline method - nxapi """
+        """UT: nxos module:sendline method - nxapi"""
 
         command = "show version"
 
@@ -135,7 +129,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_proxy_config(self):
 
-        """ UT: nxos module:proxy_config method - nxapi success path"""
+        """UT: nxos module:proxy_config method - nxapi success path"""
 
         commands = ["feature bgp", "router bgp 65535"]
 
@@ -148,7 +142,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_proxy_config_save_config(self):
 
-        """ UT: nxos module:proxy_config method - nxapi success path"""
+        """UT: nxos module:proxy_config method - nxapi success path"""
 
         commands = ["feature bgp", "router bgp 65535"]
 
@@ -161,7 +155,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__init_nxapi(self):
 
-        """ UT: nxos module:_init_nxapi method - successful connectinon """
+        """UT: nxos module:_init_nxapi method - successful connectinon"""
 
         opts = {"proxy": {"arg1": None}}
         nxapi_request = create_autospec(nxos_utils.nxapi_request, return_value="data")
@@ -195,7 +189,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__initialized_nxapi(self):
 
-        """ UT: nxos module:_initialized_nxapi method """
+        """UT: nxos module:_initialized_nxapi method"""
 
         result = nxos_proxy._initialized_nxapi()
         self.assertFalse(result)
@@ -206,7 +200,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__ping_nxapi(self):
 
-        """ UT: nxos module:_ping_nxapi method """
+        """UT: nxos module:_ping_nxapi method"""
 
         result = nxos_proxy._ping_nxapi()
         self.assertFalse(result)
@@ -217,7 +211,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__shutdown_nxapi(self):
 
-        """ UT: nxos module:_shutdown_nxapi method """
+        """UT: nxos module:_shutdown_nxapi method"""
 
         opts = {"id": "value"}
 
@@ -227,7 +221,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__nxapi_request_ssh_return(self):
 
-        """ UT: nxos module:_nxapi_request method - CONNECTION == 'ssh' """
+        """UT: nxos module:_nxapi_request method - CONNECTION == 'ssh'"""
 
         commands = "show version"
 
@@ -237,7 +231,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__nxapi_request_connect(self):
 
-        """ UT: nxos module:_nxapi_request method """
+        """UT: nxos module:_nxapi_request method"""
 
         commands = "show version"
         nxapi_request = create_autospec(nxos_utils.nxapi_request, return_value="data")
@@ -268,7 +262,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_init(self):
 
-        """ UT: nxos module:init method - ssh proxy """
+        """UT: nxos module:init method - ssh proxy"""
 
         with patch("salt.proxy.nxos._init_ssh", autospec=True) as init_ssh:
             result = nxos_proxy.init()
@@ -276,7 +270,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_init_opts_none(self):
 
-        """ UT: nxos module:init method - __opts__ connection is None """
+        """UT: nxos module:init method - __opts__ connection is None"""
 
         with patch("salt.proxy.nxos.__opts__", {"proxy": {"connection": None}}):
             with patch("salt.proxy.nxos._init_ssh", autospec=True) as init_ssh:
@@ -285,7 +279,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_initialized(self):
 
-        """ UT: nxos module:initialized method - ssh proxy """
+        """UT: nxos module:initialized method - ssh proxy"""
 
         with patch(
             "salt.proxy.nxos._initialized_ssh", autospec=True
@@ -295,7 +289,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_ping(self):
 
-        """ UT: nxos module:ping method - ssh proxy """
+        """UT: nxos module:ping method - ssh proxy"""
 
         with patch("salt.proxy.nxos._ping_ssh", autospec=True) as ping_ssh:
             result = nxos_proxy.ping()
@@ -303,7 +297,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains(self):
 
-        """ UT: nxos module:grains method - ssh grains """
+        """UT: nxos module:grains method - ssh grains"""
 
         with patch(
             "salt.proxy.nxos.sendline", autospec=True, return_value=n9k_show_ver_list[0]
@@ -313,7 +307,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sendline(self):
 
-        """ UT: nxos module:sendline method - nxapi """
+        """UT: nxos module:sendline method - nxapi"""
 
         command = "show version"
 
@@ -323,7 +317,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_proxy_config(self):
 
-        """ UT: nxos module:proxy_config method - ssh success path """
+        """UT: nxos module:proxy_config method - ssh success path"""
 
         commands = ["feature bgp", "router bgp 65535"]
 
@@ -334,7 +328,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_proxy_config_save_config(self):
 
-        """ UT: nxos module:proxy_config method - ssh success path """
+        """UT: nxos module:proxy_config method - ssh success path"""
 
         commands = ["feature bgp", "router bgp 65535"]
 
@@ -345,7 +339,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_proxy_config_error(self):
 
-        """ UT: nxos module:proxy_config method - CommandExecutionError """
+        """UT: nxos module:proxy_config method - CommandExecutionError"""
 
         with patch(
             "salt.proxy.nxos._sendline_ssh",
@@ -374,7 +368,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__init_ssh_opts(self):
 
-        """ UT: nxos module:_init_ssh method - successful connectinon """
+        """UT: nxos module:_init_ssh method - successful connectinon"""
 
         with patch("salt.proxy.nxos.DEVICE_DETAILS", {}):
             with patch("salt.proxy.nxos.SSHConnection", autospec=True) as SSHConnection:
@@ -393,7 +387,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__init_ssh_prompt(self):
 
-        """ UT: nxos module:_init_ssh method - prompt regex """
+        """UT: nxos module:_init_ssh method - prompt regex"""
 
         with patch("salt.proxy.nxos.DEVICE_DETAILS", {}):
             with patch("salt.proxy.nxos.SSHConnection", autospec=True) as SSHConnection:
@@ -420,7 +414,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__initialized_ssh(self):
 
-        """ UT: nxos module:_initialized_ssh method """
+        """UT: nxos module:_initialized_ssh method"""
 
         with patch("salt.proxy.nxos.DEVICE_DETAILS", {"initialized": True}):
             result = nxos_proxy._initialized_ssh()
@@ -432,7 +426,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__parse_output_for_errors(self):
 
-        """ UT: nxos module:_parse_output_for_errors method """
+        """UT: nxos module:_parse_output_for_errors method"""
 
         data = "% Incomplete command at '^' marker."
         command = "show"
@@ -468,7 +462,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__init_ssh_raise_exception(self):
 
-        """ UT: nxos module:_init_ssh method - raise exception """
+        """UT: nxos module:_init_ssh method - raise exception"""
 
         class SSHException(Exception):
             pass

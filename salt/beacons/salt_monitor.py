@@ -1,6 +1,6 @@
 """
 A beacon to execute salt execution module functions. This beacon will fire only if the return data is "truthy".
-The function return, funtion name and args and/or kwargs, will be passed as data in the event.
+The function return, function name and args and/or kwargs, will be passed as data in the event.
 
 The configuration can accept a list of salt functions to execute every interval.
 Make sure to allot enough time via 'interval' key to allow all salt functions to execute.
@@ -24,6 +24,7 @@ See example config below.
         - test.ping
         - interval: 3600 # seconds
 """
+import salt.utils.beacons
 
 
 def _parse_args(args_kwargs_dict):
@@ -38,15 +39,14 @@ def _parse_args(args_kwargs_dict):
 
 
 def validate(config):
-    _config = {}
-    list(map(_config.update, config))
-    if isinstance(_config["salt_fun"], str):
+    config = salt.utils.beacons.list_to_dict(config)
+    if isinstance(config["salt_fun"], str):
         # a simple str is taking as the single function with no args / kwargs
-        fun = _config["salt_fun"]
+        fun = config["salt_fun"]
         if fun not in __salt__:
             return False, "{} not in __salt__".format(fun)
     else:
-        for entry in _config["salt_fun"]:
+        for entry in config["salt_fun"]:
             if isinstance(entry, dict):
                 # check dict is of correct form
                 fun, args_kwargs_dict = next(iter(entry.items()))
@@ -88,16 +88,15 @@ def validate(config):
 
 def beacon(config):
     events = []
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    if isinstance(_config["salt_fun"], str):
+    if isinstance(config["salt_fun"], str):
         # support for single salt_fun with no args / kwargs supplied as str
-        fun = _config["salt_fun"]
+        fun = config["salt_fun"]
         ret = __salt__[fun]()
         return [{"salt_fun": fun, "ret": ret}]
     # else, we should have an iterable
-    for entry in _config["salt_fun"]:
+    for entry in config["salt_fun"]:
         if isinstance(entry, dict):
             fun, args_kwargs_dict = list(entry.items())[0]
             args, kwargs = _parse_args(args_kwargs_dict)

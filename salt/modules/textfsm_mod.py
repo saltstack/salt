@@ -17,13 +17,10 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 """
 
 import logging
-
-# Import python lib
 import os
 
 from salt.utils.files import fopen
 
-# Import third party modules
 try:
     import textfsm
 
@@ -61,17 +58,13 @@ def _clitable_to_dict(objects, fsm_handler):
     Converts TextFSM cli_table object to list of dictionaries.
     """
     objs = []
-    log.debug("Cli Table:")
-    log.debug(objects)
-    log.debug("FSM handler:")
-    log.debug(fsm_handler)
+    log.debug("Cli Table: %s; FSM handler: %s", objects, fsm_handler)
     for row in objects:
         temp_dict = {}
         for index, element in enumerate(row):
             temp_dict[fsm_handler.header[index].lower()] = element
         objs.append(temp_dict)
-    log.debug("Extraction result:")
-    log.debug(objs)
+    log.debug("Extraction result: %s", objs)
     return objs
 
 
@@ -180,8 +173,9 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         }
     """
     ret = {"result": False, "comment": "", "out": None}
-    log.debug("Using the saltenv: {}".format(saltenv))
-    log.debug("Caching {} using the Salt fileserver".format(template_path))
+    log.debug(
+        "Caching %s(saltenv: %s) using the Salt fileserver", template_path, saltenv
+    )
     tpl_cached_path = __salt__["cp.cache_file"](template_path, saltenv=saltenv)
     if tpl_cached_path is False:
         ret["comment"] = "Unable to read the TextFSM template from {}".format(
@@ -190,9 +184,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         log.error(ret["comment"])
         return ret
     try:
-        log.debug(
-            "Reading TextFSM template from cache path: {}".format(tpl_cached_path)
-        )
+        log.debug("Reading TextFSM template from cache path: %s", tpl_cached_path)
         # Disabling pylint W8470 to nto complain about fopen.
         # Unfortunately textFSM needs the file handle rather than the content...
         # pylint: disable=W8470
@@ -210,7 +202,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         )
         return ret
     if not raw_text and raw_text_file:
-        log.debug("Trying to read the raw input from {}".format(raw_text_file))
+        log.debug("Trying to read the raw input from %s", raw_text_file)
         raw_text = __salt__["cp.get_file_str"](raw_text_file, saltenv=saltenv)
         if raw_text is False:
             ret[
@@ -224,8 +216,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         ret["comment"] = "Please specify a valid input file or text."
         log.error(ret["comment"])
         return ret
-    log.debug("Processing the raw text:")
-    log.debug(raw_text)
+    log.debug("Processing the raw text:\n%s", raw_text)
     objects = fsm_handler.ParseText(raw_text)
     ret["out"] = _clitable_to_dict(objects, fsm_handler)
     ret["result"] = True
@@ -398,9 +389,7 @@ def index(
         )
         if platform_grain_name:
             log.debug(
-                "Using the {} grain to identify the platform name".format(
-                    platform_grain_name
-                )
+                "Using the %s grain to identify the platform name", platform_grain_name
             )
             platform = __grains__.get(platform_grain_name)
             if not platform:
@@ -410,7 +399,7 @@ def index(
                     platform_grain_name
                 )
                 return ret
-            log.info("Using platform: {}".format(platform))
+            log.info("Using platform: %s", platform)
         else:
             ret[
                 "comment"
@@ -419,17 +408,20 @@ def index(
             return ret
     if not textfsm_path:
         log.debug(
-            "No TextFSM templates path specified, trying to look into the opts and pillar"
+            "No TextFSM templates path specified, trying to look into the opts and"
+            " pillar"
         )
         textfsm_path = __opts__.get("textfsm_path") or __pillar__.get("textfsm_path")
         if not textfsm_path:
-            ret[
-                "comment"
-            ] = "No TextFSM templates path specified. Please configure in opts/pillar/function args."
+            ret["comment"] = (
+                "No TextFSM templates path specified. Please configure in"
+                " opts/pillar/function args."
+            )
             log.error(ret["comment"])
             return ret
-    log.debug("Using the saltenv: {}".format(saltenv))
-    log.debug("Caching {} using the Salt fileserver".format(textfsm_path))
+    log.debug(
+        "Caching %s(saltenv: %s) using the Salt fileserver", textfsm_path, saltenv
+    )
     textfsm_cachedir_ret = __salt__["cp.cache_dir"](
         textfsm_path,
         saltenv=saltenv,
@@ -437,8 +429,7 @@ def index(
         include_pat=include_pat,
         exclude_pat=exclude_pat,
     )
-    log.debug("Cache fun return:")
-    log.debug(textfsm_cachedir_ret)
+    log.debug("Cache fun return:\n%s", textfsm_cachedir_ret)
     if not textfsm_cachedir_ret:
         ret[
             "comment"
@@ -452,22 +443,18 @@ def index(
         "textfsm_index_file", "index"
     )
     index_file_path = os.path.join(textfsm_cachedir, index_file)
-    log.debug("Using the cached index file: {}".format(index_file_path))
-    log.debug("TextFSM templates cached under: {}".format(textfsm_cachedir))
+    log.debug("Using the cached index file: %s", index_file_path)
+    log.debug("TextFSM templates cached under: %s", textfsm_cachedir)
     textfsm_obj = clitable.CliTable(index_file_path, textfsm_cachedir)
     attrs = {"Command": command}
     platform_column_name = __opts__.get(
         "textfsm_platform_column_name"
     ) or __pillar__.get("textfsm_platform_column_name", "Platform")
-    log.info(
-        "Using the TextFSM platform idenfiticator: {}".format(platform_column_name)
-    )
+    log.info("Using the TextFSM platform idenfiticator: %s", platform_column_name)
     attrs[platform_column_name] = platform
-    log.debug(
-        "Processing the TextFSM index file using the attributes: {}".format(attrs)
-    )
+    log.debug("Processing the TextFSM index file using the attributes: %s", attrs)
     if not output and output_file:
-        log.debug("Processing the output from {}".format(output_file))
+        log.debug("Processing the output from %s", output_file)
         output = __salt__["cp.get_file_str"](output_file, saltenv=saltenv)
         if output is False:
             ret[
@@ -481,8 +468,7 @@ def index(
         ret["comment"] = "Please specify a valid output text or file"
         log.error(ret["comment"])
         return ret
-    log.debug("Processing the raw text:")
-    log.debug(output)
+    log.debug("Processing the raw text:\n%s", output)
     try:
         # Parse output through template
         textfsm_obj.ParseCmd(output, attrs)

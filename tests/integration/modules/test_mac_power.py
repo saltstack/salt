@@ -3,6 +3,7 @@ integration tests for mac_power
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 
 

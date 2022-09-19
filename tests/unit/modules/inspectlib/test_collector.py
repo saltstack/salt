@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 SUSE LLC
 #
@@ -16,17 +15,12 @@
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import salt libs
 from salt.modules.inspectlib.collector import Inspector
 from tests.support.helpers import no_symlinks
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 

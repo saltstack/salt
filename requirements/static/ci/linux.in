@@ -2,3 +2,15 @@
 pyiface
 pygit2<1.1.0; python_version <= '3.8'
 pygit2>=1.4.0; python_version > '3.8'
+pygit2==1.9.1; python_version >= '3.10'
+pymysql==0.9.3; python_version <= '3.5'
+pymysql>=1.0.2; python_version > '3.5'
+ansible
+twilio
+python-telegram-bot==12.8; python_version <= '3.5'
+python-telegram-bot>=13.7; python_version > '3.5'
+yamllint
+mercurial
+hglib
+redis-py-cluster
+python-consul

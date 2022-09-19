@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import
-
-# Import Salt Libs
 from salt import acl
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 

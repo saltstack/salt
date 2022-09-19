@@ -3,6 +3,7 @@ import socket
 import textwrap
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.dns
 from salt._compat import ipaddress
@@ -99,9 +100,19 @@ class DNShelpersCase(TestCase):
         ]
         schemas = [
             OrderedDict((("address", ipaddress.IPv4Address),)),
-            OrderedDict((("preference", int), ("name", str),)),
             OrderedDict(
-                (("prio", int), ("weight", int), ("port", _to_port), ("name", str),)
+                (
+                    ("preference", int),
+                    ("name", str),
+                )
+            ),
+            OrderedDict(
+                (
+                    ("prio", int),
+                    ("weight", int),
+                    ("port", _to_port),
+                    ("name", str),
+                )
             ),
         ]
 
@@ -135,7 +146,12 @@ class DNShelpersCase(TestCase):
                 "30 mbox6.example.com",
             ],
         ]
-        rschema = OrderedDict((("prio", int), ("srvr", str),))
+        rschema = OrderedDict(
+            (
+                ("prio", int),
+                ("srvr", str),
+            )
+        )
 
         results = [
             OrderedDict([(10, ["mbox.example.com"])]),
@@ -202,7 +218,8 @@ class DNSlookupsCase(TestCase):
         ],
         "TXT": [
             [
-                "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"
+                "v=spf1 a include:_spf4.example.com include:mail.example.eu"
+                " ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"
             ]
         ],
     }
@@ -313,7 +330,8 @@ class DNSlookupsCase(TestCase):
                 "Name:\tweb.example.com\nAddress: 10.3.3.3",
             ],
             "AAAA": [
-                "mocksrvr.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111",
+                "mocksrvr.example.com\thas AAAA address"
+                " 2a00:a00:b01:c02:d03:e04:f05:111",
                 "mocksrvr.example.com\tcanonical name = web.example.com.\n"
                 "web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111\n"
                 "web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:222\n"
@@ -327,7 +345,8 @@ class DNSlookupsCase(TestCase):
                 "example.com\tmail exchanger = 30 mx3.example.nl.",
             ],
             "TXT": [
-                'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+                'example.com\ttext = "v=spf1 a include:_spf4.example.com'
+                ' include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ],
         }
 
@@ -383,27 +402,34 @@ class DNSlookupsCase(TestCase):
             "CNAME": ["mocksrvr.example.com.\tCNAME\tweb.example.com."],
             "MX": [
                 "example.com.\t\tMX\t10 mx1.example.com.",
-                "example.com.\t\tMX\t10 mx1.example.com.\nexample.com.\t\tMX\t20 mx2.example.eu.\nexample.com.\t\tMX\t30 mx3.example.nl.",
+                "example.com.\t\tMX\t10 mx1.example.com.\nexample.com.\t\tMX\t20"
+                " mx2.example.eu.\nexample.com.\t\tMX\t30 mx3.example.nl.",
             ],
             "SSHFP": [
-                "mocksrvr.example.com.\tSSHFP\t1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n"
-                "mocksrvr.example.com.\tSSHFP\t1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\n"
-                "mocksrvr.example.com.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n"
-                "mocksrvr.example.com.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B"
+                "mocksrvr.example.com.\tSSHFP\t1 1"
+                " 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\nmocksrvr.example.com.\tSSHFP\t1"
+                " 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\nmocksrvr.example.com.\tSSHFP\t3"
+                " 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\nmocksrvr.example.com.\tSSHFP\t4"
+                " 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B"
             ],
             "TXT": [
-                'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+                'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com'
+                ' include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ],
         }
 
         secure = {
             "A": [
-                "mocksrvr.example.com.\tA\t10.1.1.1\n"
-                "mocksrvr.example.com.\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
-                "web.example.com.\t\tA\t10.1.1.1\n"
-                "web.example.com.\t\tA\t10.2.2.2\n"
-                "web.example.com.\t\tA\t10.3.3.3\n"
-                "web.example.com.\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
+                "mocksrvr.example.com.\tA\t10.1.1.1\nmocksrvr.example.com.\tRRSIG\tA 8"
+                " 3 7200 20170420000000 20170330000000 1629 example.com."
+                " Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi"
+                " Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw"
+                " 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
+                "web.example.com.\t\tA\t10.1.1.1\nweb.example.com.\t\tA\t10.2.2.2\nweb.example.com.\t\tA\t10.3.3.3\nweb.example.com.\tRRSIG\tA"
+                " 8 3 7200 20170420000000 20170330000000 1629 example.com."
+                " Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi"
+                " Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw"
+                " 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
             ]
         }
 
@@ -446,7 +472,10 @@ class DNSlookupsCase(TestCase):
         wrongs = [
             {
                 "retcode": 1,
-                "stderr": "Error: error sending query: No (valid) nameservers defined in the resolver",
+                "stderr": (
+                    "Error: error sending query: No (valid) nameservers defined in the"
+                    " resolver"
+                ),
             }
         ]
 
@@ -477,24 +506,30 @@ class DNSlookupsCase(TestCase):
                 "example.com.\t4404\tIN\tMX\t30 mx3.example.nl.",
             ],
             "SSHFP": [
-                "mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe\n"
-                "mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597\n"
-                "mocksrvr.example.com.\t3339\tIN\tSSHFP\t3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5\n"
-                "mocksrvr.example.com.\t3339\tIN\tSSHFP\t4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b"
+                "mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 1"
+                " 0aabda8af5418108e8a5d3f90f207226b2c89fbe\nmocksrvr.example.com.\t3339\tIN\tSSHFP\t1"
+                " 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597\nmocksrvr.example.com.\t3339\tIN\tSSHFP\t3"
+                " 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5\nmocksrvr.example.com.\t3339\tIN\tSSHFP\t4"
+                " 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b"
             ],
             "TXT": [
-                'example.com.\t4404\tIN\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+                'example.com.\t4404\tIN\tTXT\t"v=spf1 a include:_spf4.example.com'
+                ' include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ],
         }
 
         secure = {
             "A": [
-                "mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n"
-                "mocksrvr.example.com.\t4404\tIN\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
-                "web.example.com.\t4404\tIN\tA\t10.1.1.1\n"
-                "web.example.com.\t4404\tIN\tA\t10.2.2.2\n"
-                "web.example.com.\t4404\tIN\tA\t10.3.3.3\n"
-                "web.example.com.\t4404\tIN\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
+                "mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\nmocksrvr.example.com.\t4404\tIN\tRRSIG\tA"
+                " 8 3 7200 20170420000000 20170330000000 1629 example.com."
+                " Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi"
+                " Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw"
+                " 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
+                "web.example.com.\t4404\tIN\tA\t10.1.1.1\nweb.example.com.\t4404\tIN\tA\t10.2.2.2\nweb.example.com.\t4404\tIN\tA\t10.3.3.3\nweb.example.com.\t4404\tIN\tRRSIG\tA"
+                " 8 3 7200 20170420000000 20170330000000 1629 example.com."
+                " Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi"
+                " Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw"
+                " 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=",
             ]
         }
 
@@ -572,7 +607,8 @@ class DNSlookupsCase(TestCase):
                 "web.example.com has address 10.3.3.3",
             ],
             "AAAA": [
-                "mocksrvr.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111",
+                "mocksrvr.example.com has IPv6 address"
+                " 2a00:a00:b01:c02:d03:e04:f05:111",
                 "mocksrvr.example.com is an alias for web.example.com.\n"
                 "web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111\n"
                 "web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:222\n"
@@ -590,13 +626,18 @@ class DNSlookupsCase(TestCase):
                 "example.com mail is handled by 30 mx3.example.nl.",
             ],
             "SSHFP": [
-                "mocksrvr.example.com has SSHFP record 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n"
-                "mocksrvr.example.com has SSHFP record 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n"
-                "mocksrvr.example.com has SSHFP record 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n"
-                "mocksrvr.example.com has SSHFP record 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B"
+                "mocksrvr.example.com has SSHFP record 1 1"
+                " 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\nmocksrvr.example.com has"
+                " SSHFP record 1 2"
+                " 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344"
+                " A67E5597\nmocksrvr.example.com has SSHFP record 3 1"
+                " A3B605CE6F044617C6077C46A7CD5D17A767F0D5\nmocksrvr.example.com has"
+                " SSHFP record 4 2"
+                " 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B"
             ],
             "TXT": [
-                'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+                'example.com descriptive text "v=spf1 a include:_spf4.example.com'
+                ' include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ],
         }
 
@@ -641,7 +682,8 @@ class DNSlookupsCase(TestCase):
                 "Name:\tweb.example.com\nAddress: 10.3.3.3",
             ],
             "AAAA": [
-                "mocksrvr.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111",
+                "mocksrvr.example.com\thas AAAA address"
+                " 2a00:a00:b01:c02:d03:e04:f05:111",
                 "mocksrvr.example.com\tcanonical name = web.example.com.\n"
                 "web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111\n"
                 "web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:222\n"
@@ -659,13 +701,17 @@ class DNSlookupsCase(TestCase):
                 "example.com\tmail exchanger = 30 mx3.example.nl.",
             ],
             "SSHFP": [
-                "mocksrvr.example.com\trdata_44 = 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n"
-                "mocksrvr.example.com\trdata_44 = 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n"
-                "mocksrvr.example.com\trdata_44 = 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n"
-                "mocksrvr.example.com\trdata_44 = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B"
+                "mocksrvr.example.com\trdata_44 = 1 1"
+                " 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\nmocksrvr.example.com\trdata_44"
+                " = 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344"
+                " A67E5597\nmocksrvr.example.com\trdata_44 = 3 1"
+                " A3B605CE6F044617C6077C46A7CD5D17A767F0D5\nmocksrvr.example.com\trdata_44"
+                " = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB"
+                " C859AB1B"
             ],
             "TXT": [
-                'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+                'example.com\ttext = "v=spf1 a include:_spf4.example.com'
+                ' include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ],
         }
 

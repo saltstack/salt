@@ -3,6 +3,7 @@ Tests for loop state(s)
 """
 
 import pytest
+
 import salt.states.loop
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -228,7 +229,9 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                     "name": "foo.bar",
                     "result": False,
                     "changes": {},
-                    "comment": "Call did not produce the expected result after 1 attempts",
+                    "comment": (
+                        "Call did not produce the expected result after 1 attempts"
+                    ),
                 },
             )
 
@@ -263,8 +266,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                     "name": "foo.bar",
                     "result": False,
                     "changes": {},
-                    "comment": "Exception occurred while executing foo.bar: {}:{}".format(
-                        type(KeyError()), "'FOO'"
+                    "comment": (
+                        "Exception occurred while executing foo.bar: {}:{}".format(
+                            type(KeyError()), "'FOO'"
+                        )
                     ),
                 },
             )
@@ -350,6 +355,8 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                     "name": "foo.bar",
                     "result": False,
                     "changes": {},
-                    "comment": "Call did not produce the expected result after 3 attempts",
+                    "comment": (
+                        "Call did not produce the expected result after 3 attempts"
+                    ),
                 },
             )

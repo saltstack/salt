@@ -2,16 +2,11 @@
 Salt module to manage RAID arrays with mdadm
 """
 import logging
-
-# Import python libs
 import os
 import re
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -38,7 +33,8 @@ def __virtual__():
     if not salt.utils.path.which("mdadm"):
         return (
             False,
-            "The mdadm execution module cannot be loaded: the mdadm binary is not in the path.",
+            "The mdadm execution module cannot be loaded: the mdadm binary is not in"
+            " the path.",
         )
     return __virtualname__
 

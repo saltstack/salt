@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 This is a simple proxy-minion designed to connect to and communicate with
 the bottle-based web service contained in https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.http
@@ -19,7 +16,6 @@ __proxyenabled__ = ["rest_sample"]
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
 GRAINS_CACHE = {}
-DETAILS = {}
 
 # Want logging!
 log = logging.getLogger(__file__)
@@ -42,14 +38,10 @@ def __virtual__():
 
 def init(opts):
     log.debug("rest_sample proxy init() called...")
-    DETAILS["initialized"] = True
-
-    # Save the REST URL
-    DETAILS["url"] = opts["proxy"]["url"]
-
+    __context__["rest_sample"] = {"initialized": True, "url": opts["proxy"]["url"]}
     # Make sure the REST URL ends with a '/'
-    if not DETAILS["url"].endswith("/"):
-        DETAILS["url"] += "/"
+    if not __context__["rest_sample"]["url"].endswith("/"):
+        __context__["rest_sample"]["url"] += "/"
 
 
 def initialized():
@@ -58,7 +50,7 @@ def initialized():
     places occur before the proxy can be initialized, return whether
     our init() function has been called
     """
-    return DETAILS.get("initialized", False)
+    return __context__["rest_sample"].get("initialized", False)
 
 
 def alive(opts):
@@ -84,26 +76,28 @@ def grains():
     """
     Get the grains from the proxied device
     """
-    if not DETAILS.get("grains_cache", {}):
+    if not __context__["rest_sample"].get("grains_cache", {}):
         r = salt.utils.http.query(
-            DETAILS["url"] + "info", decode_type="json", decode=True
+            __context__["rest_sample"]["url"] + "info", decode_type="json", decode=True
         )
-        DETAILS["grains_cache"] = r["dict"]
-    return DETAILS["grains_cache"]
+        __context__["rest_sample"]["grains_cache"] = r["dict"]
+    return __context__["rest_sample"]["grains_cache"]
 
 
 def grains_refresh():
     """
     Refresh the grains from the proxied device
     """
-    DETAILS["grains_cache"] = None
+    __context__["rest_sample"]["grains_cache"] = None
     return grains()
 
 
 def fns():
     return {
-        "details": "This key is here because a function in "
-        "grains/rest_sample.py called fns() here in the proxymodule."
+        "details": (
+            "This key is here because a function in "
+            "grains/rest_sample.py called fns() here in the proxymodule."
+        )
     }
 
 
@@ -112,7 +106,9 @@ def service_start(name):
     Start a "service" on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "service/start/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "service/start/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -122,7 +118,9 @@ def service_stop(name):
     Stop a "service" on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "service/stop/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "service/stop/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -132,7 +130,9 @@ def service_restart(name):
     Restart a "service" on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "service/restart/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "service/restart/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -142,7 +142,9 @@ def service_list():
     List "services" on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "service/list", decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "service/list",
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -152,7 +154,9 @@ def service_status(name):
     Check if a service is running on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "service/status/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "service/status/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -162,7 +166,9 @@ def package_list():
     List "packages" installed on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "package/list", decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "package/list",
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -171,7 +177,7 @@ def package_install(name, **kwargs):
     """
     Install a "package" on the REST server
     """
-    cmd = DETAILS["url"] + "package/install/" + name
+    cmd = __context__["rest_sample"]["url"] + "package/install/" + name
     if kwargs.get("version", False):
         cmd += "/" + kwargs["version"]
     else:
@@ -181,7 +187,7 @@ def package_install(name, **kwargs):
 
 
 def fix_outage():
-    r = salt.utils.http.query(DETAILS["url"] + "fix_outage")
+    r = salt.utils.http.query(__context__["rest_sample"]["url"] + "fix_outage")
     return r
 
 
@@ -191,7 +197,9 @@ def uptodate(name):
     Call the REST endpoint to see if the packages on the "server" are up to date.
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "package/remove/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "package/remove/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -202,7 +210,9 @@ def package_remove(name):
     Remove a "package" on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "package/remove/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "package/remove/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -212,7 +222,9 @@ def package_status(name):
     Check the installation status of a package on the REST server
     """
     r = salt.utils.http.query(
-        DETAILS["url"] + "package/status/" + name, decode_type="json", decode=True
+        __context__["rest_sample"]["url"] + "package/status/" + name,
+        decode_type="json",
+        decode=True,
     )
     return r["dict"]
 
@@ -221,7 +233,9 @@ def ping():
     """
     Is the REST server up?
     """
-    r = salt.utils.http.query(DETAILS["url"] + "ping", decode_type="json", decode=True)
+    r = salt.utils.http.query(
+        __context__["rest_sample"]["url"] + "ping", decode_type="json", decode=True
+    )
     try:
         return r["dict"].get("ret", False)
     except Exception:  # pylint: disable=broad-except

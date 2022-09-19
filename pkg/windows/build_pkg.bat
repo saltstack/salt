@@ -52,16 +52,9 @@ if Defined x (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==3 (
-    Set "PyDir=C:\Python37"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=7"
-) else (
-    :: Placeholder for future version
-    :: Set "PyDir=C:\Python4"
-    :: Set "PyVerMajor=0"
-    :: Set "PyVerMinor=0"
-)
+if %PyDir%=="" (Set "PyDir=C:\Python38")
+if %PyVerMajor%=="" (Set "PyVerMajor=3")
+if %PyVerMinor%=="" (Set "PyVerMinor=8")
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (
@@ -119,8 +112,8 @@ xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo ----------------------------------------------------------------------
 
 :: Set the location of the ssm to download
-Set Url64="https://repo.saltstack.com/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
-Set Url32="https://repo.saltstack.com/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
+Set Url64="https://repo.saltproject.io/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
+Set Url32="https://repo.saltproject.io/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
 
 :: Check for 64 bit by finding the Program Files (x86) directory
 If Defined ProgramFiles(x86) (
@@ -143,7 +136,7 @@ If Defined ProgramFiles(x86) goto dependencies_x64
 @echo.
 @echo Copying VCRedist 2013 X86 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2013.exe
+set Url=https://repo.saltproject.io/windows/dependencies/32/vcredist_x86_2013.exe
 set Name=vcredist_x86_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -151,7 +144,7 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 @echo.
 @echo Copying Universal C Runtimes X86 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt_x86.zip
+set Url=https://repo.saltproject.io/windows/dependencies/32/ucrt_x86.zip
 set Name=ucrt_x86.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -163,7 +156,7 @@ goto prereq_end
 @echo.
 @echo Copying VCRedist 2013 X64 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2013.exe
+set Url=https://repo.saltproject.io/windows/dependencies/64/vcredist_x64_2013.exe
 set Name=vcredist_x64_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -171,7 +164,7 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 @echo.
 @echo Copying Universal C Runtimes X64 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt_x64.zip
+set Url=https://repo.saltproject.io/windows/dependencies/64/ucrt_x64.zip
 set Name=ucrt_x64.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -181,8 +174,10 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+:: As of setuptools 53.0 easy_install has been removed
+:: https://github.com/pypa/setuptools/pull/2544
+:: "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+:: "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
@@ -218,6 +213,9 @@ If Exist "%BinDir%\libs\_tkinter.lib" del /Q "%BinDir%\libs\_tkinter.lib" 1>nul
 :: Delete .txt files
 If Exist "%BinDir%\NEWS.txt"   del /Q "%BinDir%\NEWS.txt"   1>nul
 If Exist "%BinDir%\README.txt" del /Q "%BinDir%\README.txt" 1>nul
+
+:: Delete Unneeded Python Libraries
+If Exist "%BinDir%\Lib\site-packages\pythonwin" rd /S /Q "%BinDir%\Lib\site-packages\pythonwin"
 
 :: Delete Non-Windows Modules
 If Exist "%BinDir%\Lib\site-packages\salt\modules\acme.py"^
@@ -584,8 +582,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
 :: Remove Unneeded Components
 If Exist "%BinDir%\Lib\site-packages\salt\cloud"^
     rd /S /Q "%BinDir%\Lib\site-packages\salt\cloud" 1>nul
-If Exist "%BinDir%\Scripts\salt-unity*"^
-    del /Q "%BinDir%\Scripts\salt-unity*" 1>nul
 
 @echo.
 

@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Package helper functions using ``salt.modules.pkg``
 
 .. versionadded:: 2015.8.0
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.minion
-
-# Import salt libs
 import salt.output
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def _get_returner(returner_types):
@@ -41,17 +33,17 @@ def list_upgrades(jid, style="group", outputter="nested", ext_source=None):
         (__opts__["ext_job_cache"], ext_source, __opts__["master_job_cache"])
     )
 
-    data = mminion.returners["{0}.get_jid".format(returner)](jid)
+    data = mminion.returners["{}.get_jid".format(returner)](jid)
     pkgs = {}
 
     if style == "group":
         for minion in data:
             results = data[minion]["return"]
-            for pkg, pkgver in six.iteritems(results):
-                if pkg not in six.iterkeys(pkgs):
+            for pkg, pkgver in results.items():
+                if pkg not in pkgs.keys():
                     pkgs[pkg] = {pkgver: {"hosts": []}}
 
-                if pkgver not in six.iterkeys(pkgs[pkg]):
+                if pkgver not in pkgs[pkg].keys():
                     pkgs[pkg].update({pkgver: {"hosts": []}})
 
                 pkgs[pkg][pkgver]["hosts"].append(minion)

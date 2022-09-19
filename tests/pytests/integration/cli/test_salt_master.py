@@ -1,13 +1,10 @@
-"""
-tests.pytests.integration.cli.test_salt_master
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
 import logging
 import time
 
 import pytest
-import salt.defaults.exitcodes
 from saltfactories.utils import random_string
+
+import salt.defaults.exitcodes
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
@@ -30,4 +27,4 @@ def test_exit_status_correct_usage(salt_factories, master_id):
     assert factory.is_running()
     time.sleep(0.5)
     ret = factory.terminate()
-    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret

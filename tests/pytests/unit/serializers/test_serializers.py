@@ -2,15 +2,16 @@ from textwrap import dedent
 
 import jinja2
 import pytest
+import yaml as _yaml
+
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
 import salt.serializers.plist as plist
 import salt.serializers.python as python
-import salt.serializers.toml as toml
+import salt.serializers.tomlmod as tomlmod
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
-import yaml as _yaml  # future lint: disable=blacklisted-import
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
@@ -358,13 +359,13 @@ def test_configparser():
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(toml.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
+@pytest.mark.skipif(tomlmod.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
 def test_serialize_toml():
     data = {"foo": "bar"}
-    serialized = toml.serialize(data)
+    serialized = tomlmod.serialize(data)
     assert serialized == 'foo = "bar"\n', serialized
 
-    deserialized = toml.deserialize(serialized)
+    deserialized = tomlmod.deserialize(serialized)
     assert deserialized == data, deserialized
 
 
@@ -374,7 +375,8 @@ def test_serialize_plist():
     serialized = plist.serialize(data)
     expected = (
         b'<?xml version="1.0" encoding="UTF-8"?>\n'
-        b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
+        b' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
         b'<plist version="1.0">\n'
         b"<dict>\n"
         b"\t<key>foo</key>\n"

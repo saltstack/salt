@@ -16,18 +16,14 @@ reference the man page for ``sfdisk(8)``.
 """
 
 import logging
-
-# Import python libs
 import os
 import re
 import stat
 import string
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -243,7 +239,7 @@ def list_(device, unit=None):
             else:
                 fields.extend(["file system", "name", "flags"])
             if len(fields) == len(cols):
-                ret["partitions"][cols[0]] = dict(six.moves.zip(fields, cols))
+                ret["partitions"][cols[0]] = dict(zip(fields, cols))
             else:
                 raise CommandExecutionError(
                     "Problem encountered while parsing output from parted"

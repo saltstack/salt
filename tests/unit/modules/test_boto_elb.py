@@ -1,15 +1,14 @@
 import logging
 import os.path
+import sys
 from copy import deepcopy
-
-import pkg_resources
 
 import salt.config
 import salt.loader
 import salt.modules.boto_elb as boto_elb
 import salt.utils.versions
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -27,7 +26,9 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated, mock_elb_deprecated
+    import pkg_resources
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
+    from moto import mock_elb_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -96,9 +97,7 @@ def _has_required_moto():
         )
         if moto_version < salt.utils.versions.LooseVersion(required_moto):
             return False
-        elif six.PY3 and moto_version < salt.utils.versions.LooseVersion(
-            required_moto_py3
-        ):
+        elif moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
             return False
 
     return True
@@ -108,8 +107,9 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
-    "The moto module must be >= to {} for "
-    "PY2 or {} for PY3.".format(required_moto, required_moto_py3),
+    "The moto module must be >= to {} for PY2 or {} for PY3.".format(
+        required_moto, required_moto_py3
+    ),
 )
 class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -247,3 +247,47 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
             instance.id for instance in load_balancer_refreshed.instances
         ]
         self.assertEqual(actual_instances, expected_instances)
+
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
+    @skipIf(
+        sys.version_info > (3, 6),
+        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+    )
+    def test_get_elb_config(self):
+        """
+        tests that given an valid ids in the form of a list that the boto_elb
+        deregister_instances all members of the given list
+        """
+        conn_ec2 = boto.ec2.connect_to_region(region, **boto_conn_parameters)
+        conn_elb = boto.ec2.elb.connect_to_region(region, **boto_conn_parameters)
+        zones = [zone.name for zone in conn_ec2.get_all_zones()]
+        elb_name = "TestGetELBConfig"
+        load_balancer = conn_elb.create_load_balancer(
+            elb_name, zones, [(80, 80, "http")]
+        )
+        reservations = conn_ec2.run_instances("ami-08389d60", min_count=3)
+        all_instance_ids = [instance.id for instance in reservations.instances]
+        load_balancer.register_instances(all_instance_ids)
+
+        # DescribeTags does not appear to be included in moto
+        # so mock the _get_all_tags function.  Ideally we wouldn't
+        # need to mock this.
+        with patch("salt.modules.boto_elb._get_all_tags", MagicMock(return_value=None)):
+            ret = boto_elb.get_elb_config(elb_name, **conn_parameters)
+            _expected_keys = [
+                "subnets",
+                "availability_zones",
+                "canonical_hosted_zone_name_id",
+                "tags",
+                "dns_name",
+                "listeners",
+                "backends",
+                "policies",
+                "vpc_id",
+                "scheme",
+                "canonical_hosted_zone_name",
+                "security_groups",
+            ]
+            for key in _expected_keys:
+                self.assertIn(key, ret)

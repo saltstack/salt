@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.virt as virt
 import salt.utils.xmlutil as xmlutil
 
@@ -188,7 +189,11 @@ def test_gen_xml_passthrough_interfaces():
     Test the virt._gen_net_xml() function for a passthrough forward mode
     """
     xml_data = virt._gen_net_xml(
-        "network", "virbr0", "passthrough", None, interfaces="eth10 eth11 eth12",
+        "network",
+        "virbr0",
+        "passthrough",
+        None,
+        interfaces="eth10 eth11 eth12",
     )
     root = ET.fromstring(xml_data)
     assert root.find("forward").get("mode") == "passthrough"
@@ -204,7 +209,11 @@ def test_gen_xml_hostdev_addresses():
     Test the virt._gen_net_xml() function for a hostdev forward mode with PCI addresses
     """
     xml_data = virt._gen_net_xml(
-        "network", "virbr0", "hostdev", None, addresses="0000:04:00.1 0000:e3:01.2",
+        "network",
+        "virbr0",
+        "hostdev",
+        None,
+        addresses="0000:04:00.1 0000:e3:01.2",
     )
     root = ET.fromstring(xml_data)
     expected_forward = ET.fromstring(
@@ -274,7 +283,8 @@ def test_gen_xml_openvswitch():
 
 
 @pytest.mark.parametrize(
-    "autostart, start", [(True, True), (False, True), (False, False)],
+    "autostart, start",
+    [(True, True), (False, True), (False, False)],
 )
 def test_define(make_mock_network, autostart, start):
     """

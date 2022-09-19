@@ -23,6 +23,7 @@ class NapalmProxyTestCase(TestCase, LoaderModuleMockMixin):
             "proxytype": "napalm",
             "driver": "junos",
             "host": "core05.nrt02",
+            "id": "core05.nrt02",
         }
         module_globals = {
             "__salt__": {
@@ -39,6 +40,7 @@ class NapalmProxyTestCase(TestCase, LoaderModuleMockMixin):
         assert ret is True
 
     def test_alive(self):
+        napalm_proxy.init(self.test_opts)
         ret = napalm_proxy.alive(self.test_opts)
         assert ret is True
 
@@ -72,6 +74,7 @@ class NapalmProxyTestCase(TestCase, LoaderModuleMockMixin):
         assert "details" in ret.keys()
 
     def test_shutdown(self):
+        napalm_proxy.init(self.test_opts)
         ret = napalm_proxy.shutdown(self.test_opts)
         assert ret is True
 

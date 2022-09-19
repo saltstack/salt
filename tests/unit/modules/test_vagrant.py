@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.exceptions
-
-# Import salt libs
 import salt.modules.vagrant as vagrant
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -49,7 +40,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     def test_vagrant_init_positional(self):
         path_nowhere = os.path.join(os.sep, "tmp", "nowhere")
         if salt.utils.platform.is_windows():
-            path_nowhere = "c:{0}".format(path_nowhere)
+            path_nowhere = "c:{}".format(path_nowhere)
         mock_sdb = MagicMock(return_value=None)
         with patch.dict(vagrant.__utils__, {"sdb.sdb_set": mock_sdb}):
             resp = vagrant.init(
@@ -71,7 +62,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 different="very",
             )
             mock_sdb.assert_called_with(
-                "sdb://vagrant_sdb_data/onetest?{0}".format(path_nowhere),
+                "sdb://vagrant_sdb_data/onetest?{}".format(path_nowhere),
                 "test1",
                 self.LOCAL_OPTS,
             )
@@ -142,7 +133,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     def test_vagrant_destroy(self):
         path_mydir = os.path.join(os.sep, "my", "dir")
         if salt.utils.platform.is_windows():
-            path_mydir = "c:{0}".format(path_mydir)
+            path_mydir = "c:{}".format(path_mydir)
         mock_cmd = MagicMock(return_value={"retcode": 0})
         with patch.dict(vagrant.__salt__, {"cmd.run_all": mock_cmd}):
             mock_sdb = MagicMock(return_value=None)
@@ -153,7 +144,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(vagrant.__utils__, {"sdb.sdb_get": mock_sdb_get}):
                     self.assertTrue(vagrant.destroy("test4"))
                     mock_sdb.assert_any_call(
-                        "sdb://vagrant_sdb_data/macfour?{0}".format(path_mydir),
+                        "sdb://vagrant_sdb_data/macfour?{}".format(path_mydir),
                         self.LOCAL_OPTS,
                     )
                     mock_sdb.assert_any_call(

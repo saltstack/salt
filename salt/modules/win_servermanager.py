@@ -9,18 +9,13 @@ available and installed roles/features. Can install and remove roles/features.
 
 
 import logging
+import shlex
 
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 
 log = logging.getLogger(__name__)
 
@@ -228,9 +223,9 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         command = "Install-WindowsFeature"
         management_tools = "-IncludeManagementTools"
 
-    cmd = "{} -Name {} {} {} {} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
-        _cmd_quote(feature),
+        shlex.quote(feature),
         management_tools,
         "-IncludeAllSubFeature" if recurse else "",
         "" if source is None else "-Source {}".format(source),
@@ -372,9 +367,9 @@ def remove(feature, remove_payload=False, restart=False):
         if remove_payload:
             _remove_payload = "-Remove"
 
-    cmd = "{} -Name {} {} {} {} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
-        _cmd_quote(feature),
+        shlex.quote(feature),
         management_tools,
         _remove_payload,
         "-Restart" if restart else "",

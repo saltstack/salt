@@ -58,14 +58,14 @@ import salt.utils.http
 HAS_KEYSTONE = False
 try:
     # pylint: disable=import-error
-    from keystoneclient.v2_0 import client
     import keystoneclient.exceptions
+    from keystoneclient.v2_0 import client
 
     HAS_KEYSTONE = True
-    from keystoneclient.v3 import client as client3
-    from keystoneclient import discover
     from keystoneauth1 import session
     from keystoneauth1.identity import generic
+    from keystoneclient import discover
+    from keystoneclient.v3 import client as client3
 
     # pylint: enable=import-error
 except ImportError:
@@ -86,11 +86,9 @@ def __virtual__():
         return "keystone"
     return (
         False,
-        "keystone execution module cannot be loaded: keystoneclient python library not available.",
+        "keystone execution module cannot be loaded: keystoneclient python library not"
+        " available.",
     )
-
-
-__opts__ = {}
 
 
 def _get_kwargs(profile=None, **connection_args):
@@ -172,11 +170,9 @@ def auth(profile=None, **connection_args):
         salt '*' keystone.auth
     """
     __utils__["versions.warn_until"](
-        "Phosphorus",
-        (
-            "The keystone module has been deprecated and will be removed in {version}.  "
-            "Please update to using the keystoneng module"
-        ),
+        "Argon",
+        "The keystone module has been deprecated and will be removed in {version}.  "
+        "Please update to using the keystoneng module",
     )
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
@@ -370,8 +366,9 @@ def endpoint_get(service, region=None, profile=None, interface=None, **connectio
     ]
     if len(e) > 1:
         return {
-            "Error": "Multiple endpoints found ({}) for the {} service. Please specify region.".format(
-                e, service
+            "Error": (
+                "Multiple endpoints found ({}) for the {} service. Please specify"
+                " region.".format(e, service)
             )
         }
     if len(e) == 1:

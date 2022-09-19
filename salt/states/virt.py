@@ -1360,7 +1360,7 @@ def network_defined(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -1687,7 +1687,7 @@ def network_running(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -2401,9 +2401,10 @@ def volume_defined(
             vol_infos.get("format") != format and format is not None
         ):
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "A volume with the same name but different backing store or format is existing"
+            ret["comment"] = (
+                "A volume with the same name but different backing store or format is"
+                " existing"
+            )
             return ret
 
         # otherwise assume the volume has already been defined

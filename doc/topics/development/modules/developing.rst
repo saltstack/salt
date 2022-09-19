@@ -61,6 +61,45 @@ supports tab-completion.
 
 To exit IPython and continue running Salt, press ``Ctrl-d`` to logout.
 
+.. _loader:
+
+The Salt Loader
+===============
+
+Salt's loader system is responsible for reading `Special Module Contents`_ and
+providing the context for the special `Dunder Dictionaries`_. When modules
+developed for Salt's loader are imported directly, the dunder attributes won't
+be populated. You can use the `Loader Context`_ to work around this.
+
+Loader Context
+--------------
+
+Given the following.
+
+.. code-block:: python
+
+        # coolmod.py
+
+
+        def utils_func_getter(name):
+            return __utils__[name]
+
+You would not be able import ``coolmod`` and run ``utils_func_getter`` because
+``__utils__`` would not be defined. You must run ``coolmod.utils_func_getter``
+in the context of a loader.
+
+.. code-block:: python
+
+        import coolmod
+        import salt.loader
+
+        opts = {}
+        utils = salt.loader.utils(opts)
+        with salt.loader.context(utils):
+            func = coolmod.utils_func_getter("foo.bar")
+
+
+
 Special Module Contents
 =======================
 
@@ -125,7 +164,13 @@ configuration file for the master or minion.
 
     In many places in salt, instead of pulling raw data from the __opts__
     dict, configuration data should be pulled from the salt `get` functions
-    such as config.get, aka - ``__salt__['config.get']('foo:bar')``
+    such as config.get
+
+    .. code-block:: python
+
+        __salt__["config.get"]("foo:bar")
+
+
     The `get` functions also allow for dict traversal via the *:* delimiter.
     Consider using get functions whenever using ``__opts__`` or ``__pillar__``
     and ``__grains__`` (when using grains for configuration data)

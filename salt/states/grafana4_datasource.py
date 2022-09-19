@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Grafana v4.0 data sources
 
@@ -43,9 +42,7 @@ to update data sources if the already exists.
         - basic_auth_password: mypass
         - is_default: true
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-from salt.ext.six import string_types
 from salt.utils.dictdiffer import deep_diff
 
 
@@ -129,7 +126,7 @@ def present(
         Configuration profile used to connect to the Grafana instance.
         Default is 'grafana'.
     """
-    if isinstance(profile, string_types):
+    if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
@@ -155,12 +152,12 @@ def present(
 
     if not datasource:
         if __opts__["test"]:
-            ret["comment"] = "Datasource {0} will be created".format(name)
+            ret["comment"] = "Datasource {} will be created".format(name)
             return ret
         __salt__["grafana4.create_datasource"](profile=profile, **data)
         datasource = __salt__["grafana4.get_datasource"](name, profile=profile)
         ret["result"] = True
-        ret["comment"] = "New data source {0} added".format(name)
+        ret["comment"] = "New data source {} added".format(name)
         ret["changes"] = data
         return ret
 
@@ -171,16 +168,16 @@ def present(
             datasource[key] = None
 
     if data == datasource:
-        ret["comment"] = "Data source {0} already up-to-date".format(name)
+        ret["comment"] = "Data source {} already up-to-date".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Datasource {0} will be updated".format(name)
+        ret["comment"] = "Datasource {} will be updated".format(name)
         return ret
     __salt__["grafana4.update_datasource"](datasource["id"], profile=profile, **data)
     ret["result"] = True
     ret["changes"] = deep_diff(datasource, data, ignore=["id", "orgId", "readOnly"])
-    ret["comment"] = "Data source {0} updated".format(name)
+    ret["comment"] = "Data source {} updated".format(name)
     return ret
 
 
@@ -198,7 +195,7 @@ def absent(name, orgname=None, profile="grafana"):
         Configuration profile used to connect to the Grafana instance.
         Default is 'grafana'.
     """
-    if isinstance(profile, string_types):
+    if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
@@ -206,17 +203,17 @@ def absent(name, orgname=None, profile="grafana"):
 
     if not datasource:
         ret["result"] = True
-        ret["comment"] = "Data source {0} already absent".format(name)
+        ret["comment"] = "Data source {} already absent".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Datasource {0} will be deleted".format(name)
+        ret["comment"] = "Datasource {} will be deleted".format(name)
         return ret
     __salt__["grafana4.delete_datasource"](datasource["id"], profile=profile)
 
     ret["result"] = True
     ret["changes"][name] = "Absent"
-    ret["comment"] = "Data source {0} was deleted".format(name)
+    ret["comment"] = "Data source {} was deleted".format(name)
 
     return ret
 

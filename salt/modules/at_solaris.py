@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Wrapper for at(1) on Solaris-like systems
 
@@ -12,25 +11,16 @@ Wrapper for at(1) on Solaris-like systems
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
-
-# Import python libs
 import re
 import time
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import 3rd-party libs
-# pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 __virtualname__ = "at"
@@ -102,7 +92,7 @@ def atq(tag=None):
         specs.append(tmp[5])
 
         # make sure job is str
-        job = six.text_type(job)
+        job = str(job)
 
         # search for any tags
         atjob_file = "/var/spool/cron/atjobs/{job}".format(job=job)
@@ -208,7 +198,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
 
     # build job
     if "tag" in kwargs:
-        stdin = "### SALT: {0}\n{1}".format(kwargs["tag"], " ".join(args[1:]))
+        stdin = "### SALT: {}\n{}".format(kwargs["tag"], " ".join(args[1:]))
     else:
         stdin = " ".join(args[1:])
 
@@ -226,7 +216,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         return {"jobs": [], "error": res["stderr"]}
     else:
         jobid = res["stderr"].splitlines()[1]
-        jobid = six.text_type(jobid.split()[1])
+        jobid = str(jobid.split()[1])
         return atq(jobid)
 
 
@@ -250,7 +240,7 @@ def atc(jobid):
                 [salt.utils.stringutils.to_unicode(x) for x in rfh.readlines()]
             )
     else:
-        return {"error": "invalid job id '{0}'".format(jobid)}
+        return {"error": "invalid job id '{}'".format(jobid)}
 
 
 def _atq(**kwargs):
@@ -267,8 +257,8 @@ def _atq(**kwargs):
     day = kwargs.get("day", None)
     month = kwargs.get("month", None)
     year = kwargs.get("year", None)
-    if year and len(six.text_type(year)) == 2:
-        year = "20{0}".format(year)
+    if year and len(str(year)) == 2:
+        year = "20{}".format(year)
 
     jobinfo = atq()["jobs"]
     if not jobinfo:
@@ -292,28 +282,28 @@ def _atq(**kwargs):
 
         if not hour:
             pass
-        elif "{0:02d}".format(int(hour)) == job["time"].split(":")[0]:
+        elif "{:02d}".format(int(hour)) == job["time"].split(":")[0]:
             pass
         else:
             continue
 
         if not minute:
             pass
-        elif "{0:02d}".format(int(minute)) == job["time"].split(":")[1]:
+        elif "{:02d}".format(int(minute)) == job["time"].split(":")[1]:
             pass
         else:
             continue
 
         if not day:
             pass
-        elif "{0:02d}".format(int(day)) == job["date"].split("-")[2]:
+        elif "{:02d}".format(int(day)) == job["date"].split("-")[2]:
             pass
         else:
             continue
 
         if not month:
             pass
-        elif "{0:02d}".format(int(month)) == job["date"].split("-")[1]:
+        elif "{:02d}".format(int(month)) == job["date"].split("-")[1]:
             pass
         else:
             continue

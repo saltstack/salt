@@ -10,8 +10,8 @@ import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 try:
-    import win32com.client
     import pywintypes
+    import win32com.client
 
     HAS_PYWIN32 = True
 except ImportError:
@@ -386,7 +386,7 @@ class WindowsUpdateAgent:
             wua.refresh()
         """
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386526(v=vs.85).aspx
-        search_string = "Type='Software' or " "Type='Driver'"
+        search_string = "Type='Software' or Type='Driver'"
 
         # Create searcher object
         searcher = self._session.CreateUpdateSearcher()
@@ -1042,7 +1042,8 @@ class WindowsUpdateAgent:
                                     )
                                 except AttributeError:
                                     log.debug(
-                                        "Windows Update: Error reading InstallationBehavior COM Object"
+                                        "Windows Update: Error reading"
+                                        " InstallationBehavior COM Object"
                                     )
                                     requires_reboot = 2
                                 ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[
