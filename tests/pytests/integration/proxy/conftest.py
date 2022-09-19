@@ -16,7 +16,13 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
     """
     Create the pillar files for controlproxy and two dummy proxy minions
     """
-    proxy_one, proxy_two = pytest.helpers.proxy.delta_proxy_minion_ids()
+    (
+        proxy_one,
+        proxy_two,
+        proxy_three,
+        proxy_four,
+    ) = pytest.helpers.proxy.delta_proxy_minion_ids()
+
     top_file = """
     base:
       {control}:
@@ -25,10 +31,16 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
         - {one}
       {two}:
         - {two}
+      {three}:
+        - {three}
+      {four}:
+        - {four}
     """.format(
         control=salt_delta_proxy_factory.id,
         one=proxy_one,
         two=proxy_two,
+        three=proxy_three,
+        four=proxy_four,
     )
     controlproxy_pillar_file = """
     proxy:
@@ -36,16 +48,16 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
         ids:
           - {}
           - {}
+          - {}
+          - {}
     """.format(
-        proxy_one, proxy_two
+        proxy_one,
+        proxy_two,
+        proxy_three,
+        proxy_four,
     )
 
-    dummy_proxy_one_pillar_file = """
-    proxy:
-      proxytype: dummy
-    """
-
-    dummy_proxy_two_pillar_file = """
+    dummy_proxy_pillar_file = """
     proxy:
       proxytype: dummy
     """
@@ -55,12 +67,18 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one), dummy_proxy_one_pillar_file
+        "{}.sls".format(proxy_one), dummy_proxy_pillar_file
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two), dummy_proxy_two_pillar_file
+        "{}.sls".format(proxy_two), dummy_proxy_pillar_file
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
+    dummy_proxy_three_tempfile = salt_master.pillar_tree.base.temp_file(
+        "{}.sls".format(proxy_three), dummy_proxy_pillar_file
+    )
+    dummy_proxy_four_tempfile = salt_master.pillar_tree.base.temp_file(
+        "{}.sls".format(proxy_four), dummy_proxy_pillar_file
+    )
+    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, dummy_proxy_three_tempfile, dummy_proxy_four_tempfile:
         yield
 
 

@@ -606,6 +606,8 @@ def delta_proxy_minion_ids():
     return [
         "dummy_proxy_one",
         "dummy_proxy_two",
+        "dummy_proxy_three",
+        "dummy_proxy_four",
     ]
 
 
