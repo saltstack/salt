@@ -18,6 +18,14 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def _load_matchers(opts):
+    """
+    Store matchers in __context__ so they're only loaded once
+    """
+    __context__["matchers"] = {}
+    __context__["matchers"] = salt.loader.matchers(opts)
+
+
 def match(tgt, opts=None, minion_id=None):
     """
     Runs the compound target check
@@ -25,7 +33,8 @@ def match(tgt, opts=None, minion_id=None):
     if not opts:
         opts = __opts__
     nodegroups = opts.get("nodegroups", {})
-    matchers = salt.loader.matchers(opts)
+    if "matchers" not in __context__:
+        _load_matchers(opts)
     if not minion_id:
         minion_id = opts.get("id")
 
@@ -103,7 +112,7 @@ def match(tgt, opts=None, minion_id=None):
 
             results.append(
                 str(
-                    matchers["{}_match.match".format(engine)](
+                    __context__["matchers"]["{}_match.match".format(engine)](
                         *engine_args, **engine_kwargs
                     )
                 )
@@ -111,7 +120,9 @@ def match(tgt, opts=None, minion_id=None):
 
         else:
             # The match is not explicitly defined, evaluate it as a glob
-            results.append(str(matchers["glob_match.match"](word, opts, minion_id)))
+            results.append(
+                str(__context__["matchers"]["glob_match.match"](word, opts, minion_id))
+            )
 
     results = " ".join(results)
     log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
