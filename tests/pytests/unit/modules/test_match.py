@@ -253,3 +253,33 @@ def test_list_match_different_minion_id():
 
     # passing minion_id, should return True
     assert match.list_("bar02,bar04", "bar04")
+
+
+def test_matchers_loaded_only_once(minion_id):
+    """
+    Test issue #62283
+    """
+    mock_compound_match = MagicMock()
+    target = "bar04"
+
+    with patch.object(
+        salt.loader,
+        "matchers",
+        return_value={"compound_match.match": mock_compound_match},
+    ) as matchers:
+        # do this 5 times
+        for run in range(0, 5):
+            match.compound(target)
+
+        # matcher loading was only performed once
+        matchers.assert_called_once()
+        # The matcher should get called with minion_id
+        assert len(matchers.call_args[0]) == 1
+        assert matchers.call_args[0][0].get("id") == minion_id
+
+        # compound match was called 5 times
+        assert mock_compound_match.call_count == 5
+        # The compound matcher should not get minion_id, no opts should be passed
+        mock_compound_match.assert_called_with(
+            target, minion_id=None, opts={"extension_modules": "", "id": minion_id}
+        )
