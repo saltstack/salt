@@ -1734,6 +1734,7 @@ _OS_FAMILY_MAP = {
     "AstraLinuxSE": "Debian",
     "Alinux": "RedHat",
     "Mendel": "Debian",
+    "OSMC": "Debian",
 }
 
 # Matches any possible format:
