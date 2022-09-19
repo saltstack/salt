@@ -55,8 +55,12 @@ def __clean_tmp(tmp):
     """
     try:
         rm_rf(tmp)
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error(
+            "Exception while removing temp directory: %s",
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
 
 
 def guess_archive_type(name):

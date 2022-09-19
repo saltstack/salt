@@ -1,1 +1,0 @@
-Fix --subset command line option, and support old 'sub' parameter name in cmd_subset for backwards compatibility

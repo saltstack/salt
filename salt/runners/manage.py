@@ -578,7 +578,9 @@ def versions():
     ret = {}
     client = salt.client.get_local_client(__opts__["conf_file"])
     try:
-        minions = client.cmd("*", "test.version", timeout=__opts__["timeout"])
+        minions = client.cmd(
+            "*", "test.version", full_return=True, timeout=__opts__["timeout"]
+        )
     except SaltClientError as client_error:
         print(client_error)
         return ret
@@ -596,11 +598,11 @@ def versions():
     master_version = salt.version.__saltstack_version__
 
     for minion in minions:
-        if not minions[minion]:
+        if not minions[minion] or minions[minion]["retcode"]:
             minion_version = False
             ver_diff = -2
         else:
-            minion_version = salt.version.SaltStackVersion.parse(minions[minion])
+            minion_version = salt.version.SaltStackVersion.parse(minions[minion]["ret"])
             ver_diff = salt.utils.compat.cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
@@ -624,7 +626,7 @@ def versions():
 
 def bootstrap(
     version="develop",
-    script=None,
+    script="https://bootstrap.saltproject.io",
     hosts="",
     script_args="",
     roster="flat",
@@ -640,7 +642,7 @@ def bootstrap(
     version : develop
         Git tag of version to install
 
-    script : https://bootstrap.saltstack.com
+    script : https://bootstrap.saltproject.io/
         URL containing the script to execute
 
     hosts
@@ -700,11 +702,9 @@ def bootstrap(
     .. code-block:: bash
 
         salt-run manage.bootstrap hosts='host1,host2'
-        salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
-        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' script='https://bootstrap.saltstack.com/develop'
+        salt-run manage.bootstrap hosts='host1,host2' version='v3004.2'
+        salt-run manage.bootstrap hosts='host1,host2' version='v3004.2' script='https://bootstrap.saltproject.io/develop'
     """
-    if script is None:
-        script = "https://bootstrap.saltstack.com"
 
     client_opts = __opts__.copy()
     if roster is not None:
@@ -797,10 +797,10 @@ def bootstrap_psexec(
             '>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<'
         )
         source_list = sorted(
-            [
+            (
                 [path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
                 for path, ver, plat, date in salty_rx.findall(source)
-            ],
+            ),
             key=operator.itemgetter(3),
             reverse=True,
         )

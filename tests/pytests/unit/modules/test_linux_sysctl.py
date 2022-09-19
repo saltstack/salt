@@ -5,10 +5,15 @@ Tests for salt.modules.linux_sysctl module
 """
 
 import pytest
+
 import salt.modules.linux_sysctl as linux_sysctl
 import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, mock_open, patch
+
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="sysctl not available on Windows"),
+]
 
 
 @pytest.fixture
@@ -23,6 +28,15 @@ def test_get():
     mock_cmd = MagicMock(return_value=1)
     with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
         assert linux_sysctl.get("net.ipv4.ip_forward") == 1
+
+
+def test_get_no_sysctl_binary():
+    """
+    Tests the failure of get function when no binary exists
+    """
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        with pytest.raises(CommandExecutionError):
+            linux_sysctl.get("net.ipv4.ip_forward")
 
 
 def test_assign_proc_sys_failed():
@@ -105,7 +119,7 @@ def test_persist_no_conf_success():
     config = "/etc/sysctl.conf"
     with patch("os.path.isfile", MagicMock(return_value=False)), patch(
         "os.path.exists", MagicMock(return_value=True)
-    ):
+    ), patch("salt.utils.path.which", MagicMock(return_value="/bin/sysctl")):
         asn_cmd = {
             "pid": 1337,
             "retcode": 0,

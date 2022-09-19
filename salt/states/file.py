@@ -341,11 +341,10 @@ def _get_accumulator_filepath():
 
 def _load_accumulators():
     def _deserialize(path):
-        serial = salt.payload.Serial(__opts__)
         ret = {"accumulators": {}, "accumulators_deps": {}}
         try:
             with salt.utils.files.fopen(path, "rb") as f:
-                loaded = serial.load(f)
+                loaded = salt.payload.load(f)
                 return loaded if loaded else ret
         except (OSError, NameError):
             # NameError is a msgpack error from salt-ssh
@@ -359,10 +358,9 @@ def _load_accumulators():
 def _persist_accummulators(accumulators, accumulators_deps):
     accumm_data = {"accumulators": accumulators, "accumulators_deps": accumulators_deps}
 
-    serial = salt.payload.Serial(__opts__)
     try:
         with salt.utils.files.fopen(_get_accumulator_filepath(), "w+b") as f:
-            serial.dump(accumm_data, f)
+            salt.payload.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
         pass
@@ -452,7 +450,7 @@ def _gen_recurse_managed_files(
             # the same list.
             _filenames = list(filenames)
             for filename in _filenames:
-                if filename.startswith(lname):
+                if filename.startswith(lname + os.sep):
                     log.debug(
                         "** skipping file ** %s, it intersects a symlink", filename
                     )
@@ -532,9 +530,9 @@ def _gen_recurse_managed_files(
             if keep_symlinks:
                 islink = False
                 for link in symlinks:
-                    if mdir.startswith(link, 0):
+                    if mdir.startswith(link + os.sep, 0):
                         log.debug(
-                            "** skipping empty dir ** %s, it intersectsa symlink", mdir
+                            "** skipping empty dir ** %s, it intersects a symlink", mdir
                         )
                         islink = True
                         break
@@ -1884,6 +1882,9 @@ def absent(name, **kwargs):
     be deleted. This will work to reverse any of the functions in the file
     state module. If a directory is supplied, it will be recursively deleted.
 
+    If only the contents of the directory need to be deleted but not the directory
+    itself, use :mod:`file.directory <salt.states.file.directory>` with ``clean=True``
+
     name
         The path which should be deleted
     """
@@ -1934,14 +1935,31 @@ def absent(name, **kwargs):
     return ret
 
 
-def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
+def tidied(
+    name,
+    age=0,
+    matches=None,
+    rmdirs=False,
+    size=0,
+    exclude=None,
+    full_path_match=False,
+    followlinks=False,
+    time_comparison="atime",
+    **kwargs
+):
     """
+    .. versionchanged:: 3005
+
     Remove unwanted files based on specific criteria. Multiple criteria
     are OR’d together, so a file that is too large but is not old enough
     will still get tidied.
 
     If neither age nor size is given all files which match a pattern in
     matches will be removed.
+
+    NOTE: The regex patterns in this function are used in ``re.match()``, so
+    there is an implicit "beginning of string" anchor (``^``) in the regex and
+    it is unanchored at the other end unless explicitly entered (``$``).
 
     name
         The directory tree that should be tidied
@@ -1958,6 +1976,35 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     size
         Maximum allowed file size. Files greater or equal to this size are
         removed. Doesn't apply to directories or symbolic links
+
+    exclude
+        List of regular expressions to filter the ``matches`` parameter and better
+        control what gets removed.
+
+        .. versionadded:: 3005
+
+    full_path_match
+        Match the ``matches`` and ``exclude`` regex patterns against the entire
+        file path instead of just the file or directory name. Default: ``False``
+
+        .. versionadded:: 3005
+
+    followlinks
+        This module will not descend into subdirectories which are pointed to by
+        symbolic links. If you wish to force it to do so, you may give this
+        option the value ``True``. Default: ``False``
+
+        .. versionadded:: 3005
+
+    time_comparison
+        Default: ``atime``. Options: ``atime``/``mtime``/``ctime``. This value
+        is used to set the type of time comparison made using ``age``. The
+        default is to compare access times (atime) or the last time the file was
+        read. A comparison by modification time (mtime) uses the last time the
+        contents of the file was changed. The ctime parameter is the last time
+        the contents, owner,  or permissions of the file were changed.
+
+        .. versionadded:: 3005
 
     .. code-block:: yaml
 
@@ -1979,6 +2026,17 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     if not os.path.isdir(name):
         return _error(ret, "{} does not exist or is not a directory.".format(name))
 
+    # Check time_comparison parameter
+    poss_comp = ["atime", "ctime", "mtime"]
+    if not isinstance(time_comparison, str) or time_comparison.lower() not in poss_comp:
+        time_comparison = "atime"
+    time_comparison = time_comparison.lower()
+
+    # Convert size with human units to bytes
+    if isinstance(size, str):
+        # add handle_metric=True when #61833 is merged
+        size = salt.utils.stringutils.human_to_bytes(size)
+
     # Define some variables
     todelete = []
     today = date.today()
@@ -1989,17 +2047,23 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     progs = []
     for regex in matches:
         progs.append(re.compile(regex))
+    exes = []
+    for regex in exclude or []:
+        exes.append(re.compile(regex))
 
     # Helper to match a given name against one or more pre-compiled regular
-    # expressions
+    # expressions and also allow for excluding matched names by regex
     def _matches(name):
         for prog in progs:
             if prog.match(name):
+                for _ex in exes:
+                    if _ex.match(name):
+                        return False
                 return True
         return False
 
     # Iterate over given directory tree, depth-first
-    for root, dirs, files in os.walk(top=name, topdown=False):
+    for root, dirs, files in os.walk(top=name, topdown=False, followlinks=followlinks):
         # Check criteria for the found files and directories
         for elem in files + dirs:
             myage = 0
@@ -2007,20 +2071,39 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
             deleteme = True
             path = os.path.join(root, elem)
             if os.path.islink(path):
-                # Get age of symlink (not symlinked file)
-                myage = abs(today - date.fromtimestamp(os.lstat(path).st_atime))
-            elif elem in dirs:
-                # Get age of directory, check if directories should be deleted at all
-                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
-                deleteme = rmdirs
+                # Get timestamp of symlink (not symlinked file)
+                if time_comparison == "ctime":
+                    mytimestamp = os.lstat(path).st_ctime
+                elif time_comparison == "mtime":
+                    mytimestamp = os.lstat(path).st_mtime
+                else:
+                    mytimestamp = os.lstat(path).st_atime
             else:
-                # Get age and size of regular file
-                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
-                mysize = os.path.getsize(path)
+                # Get timestamp of file or directory
+                if time_comparison == "ctime":
+                    mytimestamp = os.path.getctime(path)
+                elif time_comparison == "mtime":
+                    mytimestamp = os.path.getmtime(path)
+                else:
+                    mytimestamp = os.path.getatime(path)
+
+                if elem in dirs:
+                    # Check if directories should be deleted at all
+                    deleteme = rmdirs
+                else:
+                    # Get size of regular file
+                    mysize = os.path.getsize(path)
+
+            # Calculate the age and set the name to match
+            myage = abs(today - date.fromtimestamp(mytimestamp))
+            filename = elem
+            if full_path_match:
+                filename = path
+
             # Verify against given criteria, collect all elements that should be removed
             if (
                 (mysize >= size or myage.days >= age)
-                and _matches(name=elem)
+                and _matches(name=filename)
                 and deleteme
             ):
                 todelete.append(path)
@@ -2138,6 +2221,7 @@ def managed(
     win_inheritance=True,
     win_perms_reset=False,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     r"""
@@ -2718,6 +2802,15 @@ def managed(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3025,6 +3118,7 @@ def managed(
                     setype=setype,
                     serange=serange,
                     verify_ssl=verify_ssl,
+                    follow_symlinks=follow_symlinks,
                     **kwargs
                 )
 
@@ -3040,11 +3134,14 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if exc.strerror.startswith("Path not found"):
+                        if not isinstance(
+                            ret["changes"], tuple
+                        ) and exc.strerror.startswith("Path not found"):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
                 ret["result"], ret["comment"] = ret["changes"]
+                ret["changes"] = {}
             elif ret["changes"]:
                 ret["result"] = None
                 ret["comment"] = "The file {} is set to be changed".format(name)
@@ -3084,6 +3181,7 @@ def managed(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
+            use_etag=use_etag,
             **kwargs
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3138,6 +3236,7 @@ def managed(
                 serole=serole,
                 setype=setype,
                 serange=serange,
+                use_etag=use_etag,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3216,6 +3315,7 @@ def managed(
                 serole=serole,
                 setype=setype,
                 serange=serange,
+                use_etag=use_etag,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3389,13 +3489,13 @@ def directory(
         file.
 
     clean
-        Make sure that only files that are set up by salt and required by this
-        function are kept. If this option is set then everything in this
-        directory will be deleted unless it is required.
-        'clean' and 'max_depth' are mutually exclusive.
+        Remove any files that are not referenced by a required ``file`` state.
+        See examples below for more info. If this option is set then everything
+        in this directory will be deleted unless it is required. 'clean' and
+        'max_depth' are mutually exclusive.
 
     require
-        Require other resources such as packages or files
+        Require other resources such as packages or files.
 
     exclude_pat
         When 'clean' is set to True, exclude this pattern from removal list
@@ -3508,6 +3608,135 @@ def directory(
                 fred_snuffy:
                   perms: full_control
             - win_inheritance: False
+
+
+    For ``clean: True`` there is no mechanism that allows all states and
+    modules to enumerate the files that they manage, so for file.directory to
+    know what files are managed by Salt, a ``file`` state targeting managed
+    files is required. To use a contrived example, the following states will
+    always have changes, despite the file named ``okay`` being created by a
+    Salt state:
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+
+        will_always_clean:
+          file.directory:
+            - name: /tmp/dont/do/this
+            - clean: True
+
+    Because ``cmd.run`` has no way of communicating that it's creating a file,
+    ``will_always_clean`` will remove the newly created file. Of course, every
+    time the states run the same thing will happen - the
+    ``silly_way_of_creating_a_file`` will crete the file and
+    ``will_always_clean`` will always remove it. Over and over again, no matter
+    how many times you run it.
+
+    To make this example work correctly, we need to add a ``file`` state that
+    targets the file, and a ``require`` between the file states.
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+          file.managed:
+             - name: /tmp/dont/do/this/okay
+             - create: False
+             - replace: False
+             - require_in:
+               - file: will_always_clean
+
+    Now there is a ``file`` state that ``clean`` can check, so running those
+    states will work as expected. The file will be created with the specific
+    contents, and ``clean`` will ignore the file because it is being managed by
+    a salt ``file`` state. Note that if ``require_in`` was placed under
+    ``cmd.run``, it would **not** work, because the requisite is for the cmd,
+    not the file.
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+             # This part should be under file.managed
+             - require_in:
+               - file: will_always_clean
+          file.managed:
+             - name: /tmp/dont/do/this/okay
+             - create: False
+             - replace: False
+
+
+    Any other state that creates a file as a result, for example ``pkgrepo``,
+    must have the resulting files referenced in a file state in order for
+    ``clean: True`` to ignore them.  Also note that the requisite
+    (``require_in`` vs ``require``) works in both directions:
+
+    .. code-block:: yaml
+
+        clean_dir:
+          file.directory:
+            - name: /tmp/a/better/way
+            - require:
+              - file: a_better_way
+
+        a_better_way:
+          file.managed:
+            - name: /tmp/a/better/way/truely
+            - makedirs: True
+            - contents: a much better way
+
+    Works the same as this:
+
+    .. code-block:: yaml
+
+        clean_dir:
+          file.directory:
+            - name: /tmp/a/better/way
+            - clean: True
+
+        a_better_way:
+          file.managed:
+            - name: /tmp/a/better/way/truely
+            - makedirs: True
+            - contents: a much better way
+            - require_in:
+              - file: clean_dir
+
+    A common mistake here is to forget the state name and id are both required for requisites:
+
+    .. code-block:: yaml
+
+        # Correct:
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              - file: clean_dir
+
+        # Incorrect
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              # should be `- file: clean_dir`
+              - clean_dir
+
+        # Also incorrect
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              # should be `- file: clean_dir`
+              - file
+
     """
     name = os.path.expanduser(name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -3558,7 +3787,10 @@ def directory(
         u_check = _check_user(user, group)
         if u_check:
             # The specified user or group do not exist
-            return _error(ret, u_check)
+            if __opts__["test"]:
+                log.warning(u_check)
+            else:
+                return _error(ret, u_check)
 
     # Must be an absolute path
     if not os.path.isabs(name):
@@ -5776,8 +6008,11 @@ def blockreplace(
     return ret
 
 
-def comment(name, regex, char="#", backup=".bak"):
+def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     """
+    .. versionadded:: 0.9.5
+    .. versionchanged:: 3005
+
     Comment out specified lines in a file.
 
     name
@@ -5802,6 +6037,12 @@ def comment(name, regex, char="#", backup=".bak"):
             after the first invocation.
 
         Set to False/None to not keep a backup.
+    ignore_missing
+        Ignore a failure to find the regex in the file. This is useful for
+        scenarios where a line must only be commented if it is found in the
+        file.
+
+        .. versionadded:: 3005
 
     Usage:
 
@@ -5811,7 +6052,6 @@ def comment(name, regex, char="#", backup=".bak"):
           file.comment:
             - regex: ^bind 127.0.0.1
 
-    .. versionadded:: 0.9.5
     """
     name = os.path.expanduser(name)
 
@@ -5826,12 +6066,17 @@ def comment(name, regex, char="#", backup=".bak"):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
+    uncomment_regex = r"^(?!\s*{}).*".format(char) + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__["file.search"](name, regex, multiline=True):
+    if not __salt__["file.search"](name, uncomment_regex, multiline=True):
         if __salt__["file.search"](name, comment_regex, multiline=True):
             ret["comment"] = "Pattern already commented"
+            ret["result"] = True
+            return ret
+        elif ignore_missing:
+            ret["comment"] = "Pattern not found and ignore_missing set to True"
             ret["result"] = True
             return ret
         else:
@@ -5842,6 +6087,7 @@ def comment(name, regex, char="#", backup=".bak"):
         ret["comment"] = "File {} is set to be updated".format(name)
         ret["result"] = None
         return ret
+
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
         slines = slines.decode(__salt_system_encoding__)
@@ -5856,7 +6102,7 @@ def comment(name, regex, char="#", backup=".bak"):
         nlines = nlines.splitlines(True)
 
     # Check the result
-    ret["result"] = __salt__["file.search"](name, unanchor_regex, multiline=True)
+    ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
         if not __utils__["files.is_text"](name):
@@ -6862,7 +7108,13 @@ def patch(
             __opts__["test"] = orig_test
             sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = orig_test
 
-        if not result["result"]:
+        # TODO adding the not orig_test is just a patch
+        # The call above to managed ends up in win_dacl utility and overwrites
+        # the ret dict, specifically "result". This surfaces back here and is
+        # providing an incorrect representation of the actual value.
+        # This fix requires re-working the dacl utility when test mode is passed
+        # to it from another function, such as this one, and it overwrites ret.
+        if not orig_test and not result["result"]:
             log.debug(
                 "failed to download %s",
                 salt.utils.url.redact_http_basic_auth(source_match),
@@ -6905,6 +7157,16 @@ def patch(
             reverse_pass = _patch(patch_rejects, ["-R", "-f"], dry_run=True)
             already_applied = reverse_pass["retcode"] == 0
 
+            # Check if the patch command threw an error upon execution
+            # and return the error here. According to gnu on patch-messages
+            # patch exits with a status of 0 if successful
+            # patch exits with a status of 1 if some hunks cannot be applied
+            # patch exits with a status of 2 if something else went wrong
+            # www.gnu.org/software/diffutils/manual/html_node/patch-Messages.html
+            if pre_check["retcode"] == 2 and pre_check["stderr"]:
+                ret["comment"] = pre_check["stderr"]
+                ret["result"] = False
+                return ret
             if already_applied:
                 ret["comment"] = "Patch was already applied"
                 ret["result"] = True
@@ -7278,7 +7540,9 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     """
     name = os.path.expanduser(name)
+    name = os.path.expandvars(name)
     source = os.path.expanduser(source)
+    source = os.path.expandvars(source)
 
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if not name:
@@ -7327,7 +7591,7 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
     # All tests pass, move the file into place
     try:
         if os.path.islink(source):
-            linkto = os.readlink(source)
+            linkto = salt.utils.path.readlink(source)
             os.symlink(linkto, name)
             os.unlink(source)
         else:
@@ -7743,7 +8007,7 @@ def serialize(
                     ret["comment"] = "Failed to deserialize existing data: {}".format(
                         exc
                     )
-                    return False
+                    return ret
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(
@@ -8224,6 +8488,10 @@ def shortcut(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     """
+    salt.utils.versions.warn_until(
+        version="Argon",
+        message="This function is being deprecated in favor of 'shortcut.present'",
+    )
     user = _test_owner(kwargs, user=user)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not salt.utils.platform.is_windows():
@@ -8416,10 +8684,16 @@ def shortcut(
 
 
 def cached(
-    name, source_hash="", source_hash_name=None, skip_verify=False, saltenv="base"
+    name,
+    source_hash="",
+    source_hash_name=None,
+    skip_verify=False,
+    saltenv="base",
+    use_etag=False,
 ):
     """
     .. versionadded:: 2017.7.3
+    .. versionchanged:: 3005
 
     Ensures that a file is saved to the minion's cache. This state is primarily
     invoked by other states to ensure that we do not re-download a source file
@@ -8463,6 +8737,15 @@ def cached(
     saltenv
         Used to specify the environment from which to download a file from the
         Salt fileserver (i.e. those with ``salt://`` URL).
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
 
     This state will in most cases not be useful in SLS files, but it is useful
@@ -8509,11 +8792,12 @@ def cached(
     if (
         not skip_verify
         and not source_hash
+        and not use_etag
         and parsed.scheme in salt.utils.files.REMOTE_PROTOS
     ):
         ret["comment"] = (
             "Unable to verify upstream hash of source file {}, please set "
-            "source_hash or set skip_verify to True".format(
+            "source_hash or set skip_verify or use_etag to True".format(
                 salt.utils.url.redact_http_basic_auth(name)
             )
         )
@@ -8602,47 +8886,23 @@ def cached(
     else:
         pre_hash = None
 
-    def _try_cache(path, checksum):
-        """
-        This helper is not needed anymore in develop as the fileclient in the
-        develop branch now has means of skipping a download if the existing
-        hash matches one passed to cp.cache_file. Remove this helper and the
-        code that invokes it, once we have merged forward into develop.
-        """
-        if not path or not checksum:
-            return True
-        form = salt.utils.files.HASHES_REVMAP.get(len(checksum))
-        if form is None:
-            # Shouldn't happen, an invalid checksum length should be caught
-            # before we get here. But in the event this gets through, don't let
-            # it cause any trouble, and just return True.
-            return True
-        try:
-            return salt.utils.hashutils.get_hash(path, form=form) != checksum
-        except (OSError, ValueError):
-            # Again, shouldn't happen, but don't let invalid input/permissions
-            # in the call to get_hash blow this up.
-            return True
-
     # Cache the file. Note that this will not actually download the file if
-    # either of the following is true:
+    # any of the following are true:
     #   1. source is a salt:// URL and the fileserver determines that the hash
     #      of the minion's copy matches that of the fileserver.
     #   2. File is remote (http(s), ftp, etc.) and the specified source_hash
     #      matches the cached copy.
+    #   3. File is a remote web source (http[s]), use_etag is enabled, and the
+    #      remote file hasn't changed since the last cache.
     # Remote, non salt:// sources _will_ download if a copy of the file was
     # not already present in the minion cache.
-    if _try_cache(local_copy, source_sum.get("hsum")):
-        # The _try_cache helper is obsolete in the develop branch. Once merged
-        # forward, remove the helper as well as this if statement, and dedent
-        # the below block.
-        try:
-            local_copy = __salt__["cp.cache_file"](
-                name, saltenv=saltenv, source_hash=source_sum.get("hsum")
-            )
-        except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
-            return ret
+    try:
+        local_copy = __salt__["cp.cache_file"](
+            name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        return ret
 
     if not local_copy:
         ret[
@@ -8793,3 +9053,77 @@ def mod_beacon(name, **kwargs):
             ),
             "result": False,
         }
+
+
+def pruned(name, recurse=False, ignore_errors=False, older_than=None):
+    """
+    .. versionadded:: 3006.0
+
+    Ensure that the named directory is absent. If it exists and is empty, it
+    will be deleted. An entire directory tree can be pruned of empty
+    directories as well, by using the ``recurse`` option.
+
+    name
+        The directory which should be deleted if empty.
+
+    recurse
+        If set to ``True``, this option will recursive deletion of empty
+        directories. This is useful if nested paths are all empty, and would
+        be the only items preventing removal of the named root directory.
+
+    ignore_errors
+        If set to ``True``, any errors encountered while attempting to delete a
+        directory are ignored. This **AUTOMATICALLY ENABLES** the ``recurse``
+        option since it's not terribly useful to ignore errors on the removal of
+        a single directory. Useful for pruning only the empty directories in a
+        tree which contains non-empty directories as well.
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+    """
+    name = os.path.expanduser(name)
+
+    ret = {"name": name, "changes": {}, "comment": "", "result": True}
+
+    if ignore_errors:
+        recurse = True
+
+    if os.path.isdir(name):
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["changes"]["deleted"] = name
+            ret["comment"] = "Directory {} is set for removal".format(name)
+            return ret
+
+        res = __salt__["file.rmdir"](
+            name, recurse=recurse, verbose=True, older_than=older_than
+        )
+        result = res.pop("result")
+
+        if result:
+            if recurse and res["deleted"]:
+                ret[
+                    "comment"
+                ] = "Recursively removed empty directories under {}".format(name)
+                ret["changes"]["deleted"] = sorted(res["deleted"])
+            elif not recurse:
+                ret["comment"] = "Removed directory {}".format(name)
+                ret["changes"]["deleted"] = name
+            return ret
+        elif ignore_errors and res["deleted"]:
+            ret["comment"] = "Recursively removed empty directories under {}".format(
+                name
+            )
+            ret["changes"]["deleted"] = sorted(res["deleted"])
+            return ret
+
+        ret["result"] = result
+        ret["changes"] = res
+        ret["comment"] = "Failed to remove directory {}".format(name)
+        return ret
+
+    ret["comment"] = "Directory {} is not present".format(name)
+    return ret

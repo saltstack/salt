@@ -1,8 +1,10 @@
 import contextlib
 import logging
 import re
+import string
 
 import pytest
+
 import salt.utils.platform
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
@@ -188,7 +190,75 @@ def test_secure_password():
     """
     test secure_password
     """
-    ret = salt.utils.pycrypto.secure_password()
-    check = re.compile(r"[!@#$%^&*()_=+]")
-    assert check.search(ret) is None
-    assert isinstance(ret, str)
+    with patch("salt.utils.pycrypto.HAS_RANDOM", True):
+        ret = salt.utils.pycrypto.secure_password()
+        check = re.compile(r"[!@#$%^&*()_=+]")
+        check_printable = re.compile(
+            r"[^{}]".format(
+                re.escape(
+                    string.ascii_lowercase
+                    + string.ascii_uppercase
+                    + string.digits
+                    + string.punctuation
+                )
+            )
+        )
+        check_whitespace = re.compile(r"[{}]".format(string.whitespace))
+        assert check_printable.search(ret) is None
+        assert check_whitespace.search(ret) is None
+        assert ret
+        assert salt.utils.pycrypto.secure_password(length=1, chars="A") == "A"
+        assert len(salt.utils.pycrypto.secure_password(length=64)) == 64
+
+
+def test_secure_password_all_chars():
+    """
+    test secure_password
+    """
+    with patch("salt.utils.pycrypto.HAS_RANDOM", True):
+        ret = salt.utils.pycrypto.secure_password(
+            lowercase=True,
+            uppercase=True,
+            digits=True,
+            punctuation=True,
+            whitespace=True,
+            printable=True,
+        )
+        check = re.compile(r"[^{}]".format(re.escape(string.printable)))
+        assert check.search(ret) is None
+        assert ret
+
+
+def test_secure_password_no_has_random():
+    """
+    test secure_password
+    """
+    with patch("salt.utils.pycrypto.HAS_RANDOM", False):
+        ret = salt.utils.pycrypto.secure_password()
+        check_printable = re.compile(
+            r"[^{}]".format(
+                re.escape(
+                    string.ascii_lowercase
+                    + string.ascii_uppercase
+                    + string.digits
+                    + string.punctuation
+                )
+            )
+        )
+        check_whitespace = re.compile(r"[{}]".format(string.whitespace))
+        assert check_printable.search(ret) is None
+        assert check_whitespace.search(ret) is None
+        assert ret
+        assert salt.utils.pycrypto.secure_password(length=1, chars="A") == "A"
+        assert len(salt.utils.pycrypto.secure_password(length=64)) == 64
+
+
+def test_secure_password_all_chars_no_has_random():
+    """
+    test secure_password
+    """
+    with patch("salt.utils.pycrypto.HAS_RANDOM", False):
+        ret = salt.utils.pycrypto.secure_password(printable=True)
+        check = re.compile("[^{}]".format(re.escape(string.printable)))
+        assert check.search(ret) is None
+        assert ret

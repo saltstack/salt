@@ -16,9 +16,8 @@ ioloop>=0.1a0
 libnacl>=1.8.0
 lxml>=4.6.3
 mako>=1.1.4
-psutil>=5.8.0
 pyasn1>=0.4.8
-pycparser>=2.20
+pycparser>=2.21
 pycurl>=7.43.0.5  # PyCurl does not provide a whl file for newer versions
 pymssql>=2.2.1
 pymysql>=1.0.2
@@ -26,8 +25,10 @@ pyopenssl>=20.0.1
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 requests>=2.25.1
-setproctitle
+setproctitle>=1.1.10 ; python_version < '3.10'
+setproctitle>=1.2.3 ; python_version >= '3.10'
 timelib>=0.2.5
+urllib3>=1.26.5
 # Watchdog pulls in a GPL-3 package, argh, which cannot be shipped on the
 # windows distribution package.
 #

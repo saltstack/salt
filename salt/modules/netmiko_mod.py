@@ -189,8 +189,7 @@ from salt.exceptions import CommandExecutionError
 from salt.utils.args import clean_kwargs
 
 try:
-    from netmiko import ConnectHandler
-    from netmiko import BaseConnection
+    from netmiko import BaseConnection, ConnectHandler
 
     HAS_NETMIKO = True
 except ImportError:

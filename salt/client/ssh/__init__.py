@@ -11,7 +11,9 @@ import hashlib
 import logging
 import multiprocessing
 import os
+import queue
 import re
+import shlex
 import subprocess
 import sys
 import tarfile
@@ -25,7 +27,6 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.loader
-import salt.log
 import salt.minion
 import salt.output
 import salt.roster
@@ -39,12 +40,14 @@ import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.network
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
+from salt._logging import LOG_LEVELS
+from salt._logging.mixins import MultiprocessingStateMixin
 from salt.template import compile_template
-from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
@@ -136,13 +139,11 @@ if [ -n "$SET_PATH" ]
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-    then SUDO="sudo "
+    then SUDO="{{SUDO}} "
 fi
 SUDO_USER="{{SUDO_USER}}"
 if [ "$SUDO" ] && [ "$SUDO_USER" ]
-then SUDO="sudo -u {{SUDO_USER}}"
-elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
-then SUDO="sudo "
+then SUDO="$SUDO -u $SUDO_USER"
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
@@ -188,7 +189,7 @@ EOF'''.format(
     ]
 )
 
-if not is_windows() and not is_junos():
+if not salt.utils.platform.is_windows() and not salt.utils.platform.is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
@@ -201,7 +202,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-class SSH:
+class SSH(MultiprocessingStateMixin):
     """
     Create an SSH execution system
     """
@@ -213,7 +214,7 @@ class SSH:
         pull_sock = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
         if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
-                "master", opts["sock_dir"], opts["transport"], opts=opts, listen=False
+                "master", opts["sock_dir"], opts=opts, listen=False
             )
         else:
             self.event = None
@@ -306,18 +307,26 @@ class SSH:
                 "/var/tmp", ".{}".format(uuid.uuid4().hex[:6])
             )
             self.opts["ssh_wipe"] = "True"
-        self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(
             self.opts["cachedir"],
             extra_mods=self.opts.get("thin_extra_mods"),
             overwrite=self.opts["regen_thin"],
-            python2_bin=self.opts["python2_bin"],
-            python3_bin=self.opts["python3_bin"],
             extended_cfg=self.opts.get("ssh_ext_alternatives"),
         )
         self.mods = mod_data(self.fsclient)
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        # This will invoke __init__ of the most derived class.
+        self.__init__(state["opts"])
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["opts"] = self.opts
+        return state
 
     @property
     def parse_tgt(self):
@@ -374,7 +383,11 @@ class SSH:
                 roster_data = self.__parsed_rosters[roster_filename]
                 if not isinstance(roster_data, bool):
                     for host_id in roster_data:
-                        if hostname in [host_id, roster_data[host_id].get("host")]:
+                        try:
+                            roster_host = roster_data[host_id].get("host")
+                        except AttributeError:
+                            roster_host = roster_data[host_id]
+                        if hostname in [host_id, roster_host]:
                             if hostname != self.opts["tgt"]:
                                 self.opts["tgt"] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
@@ -614,11 +627,7 @@ class SSH:
                 if "id" in ret:
                     returned.add(ret["id"])
                     yield {ret["id"]: ret["ret"]}
-            except Exception:  # pylint: disable=broad-except
-                # This bare exception is here to catch spurious exceptions
-                # thrown by que.get during healthy operation. Please do not
-                # worry about this bare exception, it is entirely here to
-                # control program flow.
+            except queue.Empty:
                 pass
             for host in running:
                 if not running[host]["thread"].is_alive():
@@ -631,7 +640,7 @@ class SSH:
                                 if "id" in ret:
                                     returned.add(ret["id"])
                                     yield {ret["id"]: ret["ret"]}
-                        except Exception:  # pylint: disable=broad-except
+                        except queue.Empty:
                             pass
 
                         if host not in returned:
@@ -910,6 +919,7 @@ class Single:
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
         self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
+        self.ssh_pre_flight_args = kwargs.get("ssh_pre_flight_args", None)
 
         if self.ssh_pre_flight:
             self.ssh_pre_file = os.path.basename(self.ssh_pre_flight)
@@ -961,7 +971,6 @@ class Single:
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
-        self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.shell = salt.client.ssh.shell.gen_shell(opts, **args)
         if self.winrm:
@@ -1002,7 +1011,7 @@ class Single:
 
         self.shell.send(self.ssh_pre_flight, script)
 
-        return self.execute_script(script)
+        return self.execute_script(script, script_args=self.ssh_pre_flight_args)
 
     def check_thin_dir(self):
         """
@@ -1140,6 +1149,7 @@ class Single:
             opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
             opts_pkg["thin_dir"] = self.opts["thin_dir"]
             opts_pkg["master_tops"] = self.opts["master_tops"]
+            opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
             opts_pkg["__master_opts__"] = self.context["master_opts"]
             if "known_hosts_file" in self.opts:
                 opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
@@ -1179,10 +1189,10 @@ class Single:
             }
             if data_cache:
                 with salt.utils.files.fopen(datap, "w+b") as fp_:
-                    fp_.write(self.serial.dumps(data))
+                    fp_.write(salt.payload.dumps(data))
         if not data and data_cache:
             with salt.utils.files.fopen(datap, "rb") as fp_:
-                data = self.serial.load(fp_)
+                data = salt.payload.load(fp_)
         opts = data.get("opts", {})
         opts["grains"] = data.get("grains")
 
@@ -1269,7 +1279,14 @@ class Single:
         """
         Prepare the command string
         """
-        sudo = "sudo" if self.target["sudo"] else ""
+        if self.target.get("sudo"):
+            sudo = (
+                "sudo -p '{}'".format(salt.client.ssh.shell.SUDO_PROMPT)
+                if self.target.get("passwd")
+                else "sudo"
+            )
+        else:
+            sudo = ""
         sudo_user = self.target["sudo_user"]
         if "_caller_cachedir" in self.opts:
             cachedir = self.opts["_caller_cachedir"]
@@ -1279,10 +1296,7 @@ class Single:
         debug = ""
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
-        if (
-            salt.log.LOG_LEVELS["debug"]
-            >= salt.log.LOG_LEVELS[self.opts.get("log_level", "info")]
-        ):
+        if LOG_LEVELS["debug"] >= LOG_LEVELS[self.opts.get("log_level", "info")]:
             debug = "1"
         arg_str = '''
 OPTIONS.config = \
@@ -1319,7 +1333,7 @@ ARGS = {arguments}\n'''.format(
             cmd = SSH_SH_SHIM.format(
                 DEBUG=debug,
                 SUDO=sudo,
-                SUDO_USER=sudo_user,
+                SUDO_USER=sudo_user or "",
                 SSH_PY_CODE=py_code_enc,
                 HOST_PY_MAJOR=sys.version_info[0],
                 SET_PATH=self.set_path,
@@ -1329,15 +1343,22 @@ ARGS = {arguments}\n'''.format(
 
         return cmd
 
-    def execute_script(self, script, extension="py", pre_dir=""):
+    def execute_script(self, script, extension="py", pre_dir="", script_args=None):
         """
         execute a script on the minion then delete
         """
+        args = ""
+        if script_args:
+            if not isinstance(script_args, (list, tuple)):
+                script_args = shlex.split(str(script_args))
+            args = " {}".format(" ".join([shlex.quote(str(el)) for el in script_args]))
         if extension == "ps1":
             ret = self.shell.exec_cmd('"powershell {}"'.format(script))
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd("/bin/sh '{}{}'".format(pre_dir, script))
+                ret = self.shell.exec_cmd(
+                    "/bin/sh '{}{}'{}".format(pre_dir, script, args)
+                )
             else:
                 ret = saltwinshell.call_python(self, script)
 

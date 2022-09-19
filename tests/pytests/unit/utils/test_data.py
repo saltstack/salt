@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+
 import salt.utils.data
 
 
@@ -70,3 +71,33 @@ def test_get_value_simple_type_path():
 
 def test_get_value_None_path():
     assert [{"value": None}] == salt.utils.data.get_value({"a": None}, "a:b", [])
+
+
+def test_flatten_recursion_error():
+    """
+    Test the flatten function for reference cycle detection
+    """
+    data = [1, 2, 3, [4]]
+    data.append(data)
+    with pytest.raises(RecursionError) as err:
+        salt.utils.data.flatten(data)
+    assert str(err.value) == "Reference cycle detected. Check input list."
+
+
+def test_sample():
+    lst = ["one", "two", "three", "four"]
+    assert len(salt.utils.data.sample(lst, 0)) == 0
+    assert len(salt.utils.data.sample(lst, 2)) == 2
+    pytest.raises(ValueError, salt.utils.data.sample, lst, 5)
+    assert salt.utils.data.sample(lst, 2, seed="static") == ["four", "two"]
+
+
+def test_shuffle():
+    lst = ["one", "two", "three", "four"]
+    assert len(salt.utils.data.shuffle(lst)) == 4
+    assert salt.utils.data.shuffle(lst, seed="static") == [
+        "four",
+        "two",
+        "three",
+        "one",
+    ]

@@ -275,14 +275,7 @@ transaction.
 
 """
 
-import copy
 import logging
-import os
-import sys
-import tempfile
-
-# required by _check_queue invocation later
-import time  # pylint: disable=unused-import
 
 import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
@@ -310,11 +303,6 @@ def __virtual__():
         return True
     else:
         return (False, "Module transactional_update requires a transactional system")
-
-
-class TransactionalUpdateHighstate(salt.client.ssh.state.SSHHighState):
-    def _master_tops(self):
-        return self.client.master_tops()
 
 
 def _global_params(self_update, snapshot=None, quiet=False):
@@ -950,65 +938,42 @@ def call(function, *args, **kwargs):
 
     activate_transaction = kwargs.pop("activate_transaction", False)
 
-    # Generate the salt-thin and create a temporary directory in a
-    # place that the new transaction will have access to, and where we
-    # can untar salt-thin
-    thin_path = __utils__["thin.gen_thin"](
-        __opts__["cachedir"],
-        extra_mods=__salt__["config.option"]("thin_extra_mods", ""),
-        so_mods=__salt__["config.option"]("thin_so_mods", ""),
-    )
-    thin_dest_path = tempfile.mkdtemp(dir=__opts__["cachedir"])
-    # Some bug in Salt is preventing us to use `archive.tar` here. A
-    # AsyncZeroMQReqChannel is not closed at the end of the salt-call,
-    # and makes the client never exit.
-    #
-    # stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
-    #
-    stdout = __salt__["cmd.run"](["tar", "xzf", thin_path, "-C", thin_dest_path])
-    if stdout:
-        __utils__["files.rm_rf"](thin_dest_path)
-        return {"result": False, "comment": stdout}
-
     try:
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
-                os.path.join(thin_dest_path, "salt-call"),
-                "--metadata",
-                "--local",
-                "--log-file",
-                os.path.join(thin_dest_path, "log"),
-                "--cachedir",
-                os.path.join(thin_dest_path, "cache"),
+                "salt-call",
                 "--out",
                 "json",
                 "-l",
                 "quiet",
+                "--no-return-event",
                 "--",
                 function,
             ]
             + list(args)
             + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
         )
+
         try:
             ret_stdout = run([str(x) for x in salt_argv], snapshot="continue")
         except salt.exceptions.CommandExecutionError as e:
+            # This happens when there was an problem with salt-call execution
             ret_stdout = e.message
 
         # Process "real" result in stdout
         try:
             data = __utils__["json.find_json"](ret_stdout)
             local = data.get("local", data)
-            if isinstance(local, dict) and "retcode" in local:
-                __context__["retcode"] = local["retcode"]
-            return local.get("return", data)
+            if isinstance(local, dict):
+                if "retcode" in local:
+                    __context__["retcode"] = local["retcode"]
+                return local.get("return", local)
+            else:
+                return local
         except ValueError:
             return {"result": False, "retcode": 1, "comment": ret_stdout}
     finally:
-        __utils__["files.rm_rf"](thin_dest_path)
-
         # Check if reboot is needed
         if activate_transaction and pending_transaction():
             reboot()
@@ -1044,49 +1009,7 @@ def apply_(mods=None, **kwargs):
     return highstate(**kwargs)
 
 
-def _create_and_execute_salt_state(
-    chunks, file_refs, test, hash_type, activate_transaction
-):
-    """Create the salt_state tarball, and execute it in a transaction"""
-
-    # Create the tar containing the state pkg and relevant files.
-    salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
-    trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__
-    )
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
-
-    ret = None
-
-    # Create a temporary directory accesible later by the transaction
-    # where we can move the salt_state.tgz
-    salt_state_path = tempfile.mkdtemp(dir=__opts__["cachedir"])
-    salt_state_path = os.path.join(salt_state_path, "salt_state.tgz")
-    try:
-        salt.utils.files.copyfile(trans_tar, salt_state_path)
-        ret = call(
-            "state.pkg",
-            salt_state_path,
-            test=test,
-            pkg_sum=trans_tar_sum,
-            hash_type=hash_type,
-            activate_transaction=activate_transaction,
-        )
-    finally:
-        __utils__["files.rm_rf"](salt_state_path)
-
-    return ret
-
-
-def sls(
-    mods,
-    saltenv="base",
-    test=None,
-    exclude=None,
-    activate_transaction=False,
-    queue=False,
-    **kwargs
-):
+def sls(mods, activate_transaction=False, queue=False, **kwargs):
     """Execute the states in one or more SLS files inside a transaction.
 
     saltenv
@@ -1132,55 +1055,14 @@ def sls(
     if conflict is not None:
         return conflict
 
-    # Get a copy of the pillar data, to avoid overwriting the current
-    # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
-    pillar.update(kwargs.get("pillar", {}))
+    concurrent = kwargs.pop("concurrent", True)
 
-    # Clone the options data and apply some default values. May not be
-    # needed, as this module just delegate
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = TransactionalUpdateHighstate(
-        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
-
-    if isinstance(mods, str):
-        mods = mods.split(",")
-
-    high_data, errors = st_.render_highstate({saltenv: mods})
-    if exclude:
-        if isinstance(exclude, str):
-            exclude = exclude.split(",")
-        if "__exclude__" in high_data:
-            high_data["__exclude__"].extend(exclude)
-        else:
-            high_data["__exclude__"] = exclude
-
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
-
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    if errors:
-        return errors
-
-    high_data = st_.state.apply_exclude(high_data)
-
-    # Compile and verify the raw chunks
-    chunks = st_.state.compile_high_data(high_data)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(
-        chunks, file_refs, test, hash_type, activate_transaction
+    return call(
+        "state.sls",
+        mods,
+        activate_transaction=activate_transaction,
+        concurrent=concurrent,
+        **kwargs
     )
 
 
@@ -1216,40 +1098,15 @@ def highstate(activate_transaction=False, queue=False, **kwargs):
     if conflict is not None:
         return conflict
 
-    # Get a copy of the pillar data, to avoid overwriting the current
-    # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
-    pillar.update(kwargs.get("pillar", {}))
-
-    # Clone the options data and apply some default values. May not be
-    # needed, as this module just delegate
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = TransactionalUpdateHighstate(
-        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
-
-    # Compile and verify the raw chunks
-    chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-    # Check for errors
-    for chunk in chunks:
-        if not isinstance(chunk, dict):
-            __context__["retcode"] = 1
-            return chunks
-
-    test = kwargs.pop("test", False)
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(
-        chunks, file_refs, test, hash_type, activate_transaction
+    return call(
+        "state.highstate",
+        activate_transaction=activate_transaction,
+        concurrent=True,
+        **kwargs
     )
 
 
-def single(fun, name, test=None, activate_transaction=False, queue=False, **kwargs):
+def single(fun, name, activate_transaction=False, queue=False, **kwargs):
     """Execute a single state function with the named kwargs, returns
     False if insufficient data is sent to the command
 
@@ -1282,44 +1139,11 @@ def single(fun, name, test=None, activate_transaction=False, queue=False, **kwar
     if conflict is not None:
         return conflict
 
-    # Get a copy of the pillar data, to avoid overwriting the current
-    # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
-    pillar.update(kwargs.get("pillar", {}))
-
-    # Clone the options data and apply some default values. May not be
-    # needed, as this module just delegate
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHState(opts, pillar)
-
-    # state.fun -> [state, fun]
-    comps = fun.split(".")
-    if len(comps) < 2:
-        __context__["retcode"] = 1
-        return "Invalid function passed"
-
-    # Create the low chunk, using kwargs as a base
-    kwargs.update({"state": comps[0], "fun": comps[1], "__id__": name, "name": name})
-
-    # Verify the low chunk
-    err = st_.verify_data(kwargs)
-    if err:
-        __context__["retcode"] = 1
-        return err
-
-    # Must be a list of low-chunks
-    chunks = [kwargs]
-
-    # Retrieve file refs for the state run, so we can copy relevant
-    # files down to the minion before executing the state
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(
-        chunks, file_refs, test, hash_type, activate_transaction
+    return call(
+        "state.single",
+        fun=fun,
+        name=name,
+        activate_transaction=activate_transaction,
+        concurrent=True,
+        **kwargs
     )

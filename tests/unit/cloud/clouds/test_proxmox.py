@@ -2,6 +2,7 @@
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
+import textwrap
 
 from salt.cloud.clouds import proxmox
 from tests.support.mixins import LoaderModuleMockMixin
@@ -139,6 +140,59 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             )
             assert result == {}
 
+    def test_find_agent_ips(self):
+        """
+        Test find_agent_ip will return an IP
+        """
+
+        with patch(
+            "salt.cloud.clouds.proxmox.query",
+            return_value={
+                "result": [
+                    {
+                        "name": "eth0",
+                        "ip-addresses": [
+                            {"ip-address": "1.2.3.4", "ip-address-type": "ipv4"},
+                            {"ip-address": "2001::1:2", "ip-address-type": "ipv6"},
+                        ],
+                    },
+                    {
+                        "name": "eth1",
+                        "ip-addresses": [
+                            {"ip-address": "2.3.4.5", "ip-address-type": "ipv4"},
+                        ],
+                    },
+                    {
+                        "name": "dummy",
+                    },
+                ]
+            },
+        ) as mock_query:
+            vm_ = {
+                "technology": "qemu",
+                "host": "myhost",
+                "driver": "proxmox",
+                "ignore_cidr": "1.0.0.0/8",
+            }
+
+            # CASE 1: Test ipv4 and ignore_cidr
+            result = proxmox._find_agent_ip(vm_, ANY)
+            mock_query.assert_any_call(
+                "get", "nodes/myhost/qemu/{}/agent/network-get-interfaces".format(ANY)
+            )
+
+            assert result == "2.3.4.5"
+
+            # CASE 2: Test ipv6
+
+            vm_["protocol"] = "ipv6"
+            result = proxmox._find_agent_ip(vm_, ANY)
+            mock_query.assert_any_call(
+                "get", "nodes/myhost/qemu/{}/agent/network-get-interfaces".format(ANY)
+            )
+
+            assert result == "2001::1:2"
+
     def test__authenticate_with_custom_port(self):
         """
         Test the use of a custom port for Proxmox connection
@@ -162,3 +216,49 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 verify=True,
                 data={"username": ("fakeuser",), "password": "secretpassword"},
             )
+
+    def test__import_api_v6(self):
+        """
+        Test _import_api handling of a Proxmox VE 6 response.
+        """
+        response = textwrap.dedent(
+            """\
+            var pveapi = [
+               {
+                  "info" : {
+                  }
+               }
+            ]
+            ;
+            """
+        )
+        self._test__import_api(response)
+
+    def test__import_api_v7(self):
+        """
+        Test _import_api handling of a Proxmox VE 7 response.
+        """
+        response = textwrap.dedent(
+            """\
+            const apiSchema = [
+               {
+                  "info" : {
+                  }
+               }
+            ]
+            ;
+            """
+        )
+        self._test__import_api(response)
+
+    def _test__import_api(self, response):
+        """
+        Test _import_api recognition of varying Proxmox VE responses.
+        """
+        requests_get_mock = MagicMock()
+        requests_get_mock.return_value.status_code = 200
+        requests_get_mock.return_value.text = response
+        with patch("requests.get", requests_get_mock):
+            proxmox._import_api()
+        self.assertEqual(proxmox.api, [{"info": {}}])
+        return

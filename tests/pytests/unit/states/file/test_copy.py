@@ -3,6 +3,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -42,12 +43,12 @@ def configure_loader_modules():
 
 
 # 'copy' function tests: 1
-def test_copy():
+def test_copy(tmp_path):
     """
     Test if the source file exists on the system, copy it to the named file.
     """
-    name = "/tmp/salt"
-    source = "/tmp/salt/salt"
+    name = str(tmp_path / "salt")
+    source = str(tmp_path / "salt" / "salt")
     user = "salt"
     group = "saltstack"
 
@@ -132,7 +133,9 @@ def test_copy():
                             assert filestate.copy_(name, source, preserve=True) == ret
 
                         with patch.dict(filestate.__opts__, {"test": False}):
-                            comt = "The target directory /tmp is not present"
+                            comt = "The target directory {} is not present".format(
+                                tmp_path
+                            )
                             ret.update({"comment": comt, "result": False})
                             assert filestate.copy_(name, source, preserve=True) == ret
 
@@ -177,7 +180,7 @@ def test_copy():
                         {
                             "comment": comt,
                             "result": True,
-                            "changes": {"/tmp/salt": "/tmp/salt/salt"},
+                            "changes": {name: source},
                         }
                     )
                     res = filestate.copy_(name, source, group=group, preserve=False)
@@ -198,7 +201,7 @@ def test_copy():
                         {
                             "comment": comt,
                             "result": True,
-                            "changes": {"/tmp/salt": "/tmp/salt/salt"},
+                            "changes": {name: source},
                         }
                     )
                     res = filestate.copy_(name, source, group=group, preserve=False)

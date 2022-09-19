@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 import salt.config
 import salt.master
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -129,6 +130,7 @@ class TransportMethodsTest(TestCase):
             "_send_ssh_pub",
             "get_method",
             "destroy",
+            "connect",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:

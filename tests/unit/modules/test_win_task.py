@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.win_task as win_task
 import salt.utils.platform
 from tests.support.unit import TestCase, skipIf

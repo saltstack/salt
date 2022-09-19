@@ -18,6 +18,8 @@ import zipfile
 import distro
 import jinja2
 import msgpack
+import yaml
+
 import salt
 import salt.exceptions
 import salt.ext.tornado as tornado
@@ -27,7 +29,6 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
 import salt.version
-import yaml
 
 # This is needed until we drop support for python 3.6
 has_immutables = False
@@ -583,8 +584,6 @@ def gen_thin(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
     absonly=True,
     compress="gzip",
     extended_cfg=None,
@@ -603,12 +602,6 @@ def gen_thin(
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to"
-            " gen_thin",
-        )
     if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
             'The minimum required python version to run salt-ssh is "3".'
@@ -786,8 +779,6 @@ def gen_min(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
 ):
     """
     Generate the salt-min tarball and print the location of the tarball
@@ -803,12 +794,6 @@ def gen_min(
         salt-run min.generate mako,wempy 1
         salt-run min.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to"
-            " gen_min",
-        )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):
         os.makedirs(mindir)
@@ -936,12 +921,12 @@ def gen_min(
         "salt/pillar",
         "salt/pillar/__init__.py",
         "salt/utils/textformat.py",
-        "salt/log",
-        "salt/log/__init__.py",
-        "salt/log/handlers",
-        "salt/log/handlers/__init__.py",
-        "salt/log/mixins.py",
-        "salt/log/setup.py",
+        "salt/log_handlers",
+        "salt/log_handlers/__init__.py",
+        "salt/_logging/__init__.py",
+        "salt/_logging/handlers.py",
+        "salt/_logging/impl.py",
+        "salt/_logging/mixins.py",
         "salt/cli",
         "salt/cli/__init__.py",
         "salt/cli/caller.py",
@@ -950,7 +935,10 @@ def gen_min(
         "salt/cli/call.py",
         "salt/fileserver",
         "salt/fileserver/__init__.py",
-        "salt/transport",
+        "salt/channel",
+        "salt/channel/__init__.py",
+        "salt/channel/client.py",
+        "salt/transport",  # XXX Are the transport imports still needed?
         "salt/transport/__init__.py",
         "salt/transport/client.py",
         "salt/exceptions.py",

@@ -6,6 +6,7 @@ import re
 import sys
 
 import pytest
+
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
@@ -23,14 +24,14 @@ log = logging.getLogger(__name__)
 
 def test_fib(salt_call_cli):
     ret = salt_call_cli.run("test.fib", "3")
-    assert ret.exitcode == 0
-    assert ret.json[0] == 2
+    assert ret.returncode == 0
+    assert ret.data[0] == 2
 
 
 def test_fib_txt_output(salt_call_cli):
     ret = salt_call_cli.run("--output=txt", "test.fib", "3")
-    assert ret.exitcode == 0
-    assert ret.json is None
+    assert ret.returncode == 0
+    assert ret.data is None
     assert (
         re.match(r"local: \(2, [0-9]{1}\.(([0-9]+)(e-([0-9]+))?)\)\s", ret.stdout)
         is not None
@@ -40,8 +41,8 @@ def test_fib_txt_output(salt_call_cli):
 @pytest.mark.parametrize("indent", [-1, 0, 1])
 def test_json_out_indent(salt_call_cli, indent):
     ret = salt_call_cli.run("--out=json", "--out-indent={}".format(indent), "test.ping")
-    assert ret.exitcode == 0
-    assert ret.json is True
+    assert ret.returncode == 0
+    assert ret.data is True
     if indent == -1:
         expected_output = '{"local": true}\n'
     elif indent == 0:
@@ -67,8 +68,8 @@ def test_local_sls_call(salt_master, salt_call_cli):
             "state.sls",
             "saltcalllocal",
         )
-        assert ret.exitcode == 0
-        state_run_dict = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
         assert state_run_dict["name"] == "test.echo"
         assert state_run_dict["result"] is True
         assert state_run_dict["changes"]["ret"] == "hello"
@@ -84,9 +85,9 @@ def test_local_salt_call(salt_call_cli):
         ret = salt_call_cli.run(
             "--local", "state.single", "file.append", name=str(filename), text="foo"
         )
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
-        state_run_dict = next(iter(ret.json.values()))
+        state_run_dict = next(iter(ret.data.values()))
         assert state_run_dict["changes"]
 
         # 2nd sanity check: make sure that "foo" only exists once in the file
@@ -97,7 +98,7 @@ def test_local_salt_call(salt_call_cli):
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_user_delete_kw_output(salt_call_cli):
     ret = salt_call_cli.run("-d", "user.delete", _timeout=120)
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     expected_output = "salt '*' user.delete name"
     if not salt.utils.platform.is_windows():
         expected_output += " remove=True force=True"
@@ -109,7 +110,7 @@ def test_salt_documentation_too_many_arguments(salt_call_cli):
     Test to see if passing additional arguments shows an error
     """
     ret = salt_call_cli.run("-d", "virtualenv.create", "/tmp/ve")
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "You can only get documentation for one method at one time" in ret.stderr
 
 
@@ -121,7 +122,7 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     """
     expected_comment = "No states found for this minion"
     ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert expected_comment in ret.stdout
 
 
@@ -132,7 +133,7 @@ def test_issue_15074_output_file_append(salt_call_cli):
         ret = salt_call_cli.run(
             "--output-file", str(output_file_append), "test.versions"
         )
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         first_run_output = output_file_append.read_text()
 
@@ -144,7 +145,7 @@ def test_issue_15074_output_file_append(salt_call_cli):
             "--output-file-append",
             "test.versions",
         )
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
         second_run_output = output_file_append.read_text()
 
@@ -159,7 +160,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
         with salt.utils.files.set_umask(0o077):
             # Let's create an initial output file with some data
             ret = salt_call_cli.run("--output-file", str(output_file), "--grains")
-            assert ret.exitcode == 0
+            assert ret.returncode == 0
             try:
                 stat1 = output_file.stat()
             except OSError:
@@ -171,7 +172,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             ret = salt_call_cli.run(
                 "--output-file", str(output_file), "--output-file-append", "--grains"
             )
-            assert ret.exitcode == 0
+            assert ret.returncode == 0
             stat2 = output_file.stat()
             assert stat1.st_mode == stat2.st_mode
             # Data was appeneded to file
@@ -182,7 +183,7 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
 
             # Not appending data
             ret = salt_call_cli.run("--output-file", str(output_file), "--grains")
-            assert ret.exitcode == 0
+            assert ret.returncode == 0
             try:
                 stat3 = output_file.stat()
             except OSError:
@@ -198,7 +199,7 @@ def test_42116_cli_pillar_override(salt_call_cli):
         "issue-42116-cli-pillar-override",
         pillar={"myhost": "localhost"},
     )
-    state_run_dict = next(iter(ret.json.values()))
+    state_run_dict = next(iter(ret.data.values()))
     assert state_run_dict["changes"]
     assert (
         state_run_dict["comment"] == 'Command "ping -c 2 localhost" run'
@@ -234,13 +235,13 @@ def test_pillar_items_masterless(salt_minion, salt_call_cli):
 
     with top_tempfile, basic_tempfile:
         ret = salt_call_cli.run("--local", "pillar.items")
-        assert ret.exitcode == 0
-        assert "knights" in ret.json
-        assert sorted(ret.json["knights"]) == sorted(
+        assert ret.returncode == 0
+        assert "knights" in ret.data
+        assert sorted(ret.data["knights"]) == sorted(
             ["Lancelot", "Galahad", "Bedevere", "Robin"]
         )
-        assert "monty" in ret.json
-        assert ret.json["monty"] == "python"
+        assert "monty" in ret.data
+        assert ret.data["monty"] == "python"
 
 
 def test_masterless_highstate(salt_minion, salt_call_cli, tmp_path):
@@ -270,8 +271,8 @@ def test_masterless_highstate(salt_minion, salt_call_cli, tmp_path):
         "top.sls", top_sls
     ), salt_minion.state_tree.base.temp_file("core.sls", core_state):
         ret = salt_call_cli.run("--local", "state.highstate")
-        assert ret.exitcode == 0
-        state_run_dict = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
         assert state_run_dict["result"] is True
         assert state_run_dict["__id__"] == expected_id
 
@@ -295,14 +296,14 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
             "echo foo",
         )
         if sys.version_info >= (3, 5, 4):
-            assert ret.exitcode == 0
+            assert ret.returncode == 0
             assert (
                 "[WARNING ] The log_file does not exist. Logging not setup correctly or"
                 " syslog service not started." in ret.stderr
             )
-            assert ret.json == "foo", ret
+            assert ret.data == "foo", ret
         else:
-            assert ret.exitcode == 2
+            assert ret.returncode == salt.defaults.exitcodes.EX_UNAVAILABLE
             assert "Failed to setup the Syslog logging handler" in ret.stderr
 
 
@@ -311,21 +312,21 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
 def test_return(salt_call_cli, salt_run_cli):
     command = "echo returnTOmaster"
     ret = salt_call_cli.run("cmd.run", command)
-    assert ret.exitcode == 0
-    assert ret.json == "returnTOmaster"
+    assert ret.returncode == 0
+    assert ret.data == "returnTOmaster"
 
     ret = salt_run_cli.run("jobs.list_jobs")
-    assert ret.exitcode == 0
+    assert ret.returncode == 0
     jid = target = None
-    for jid, details in ret.json.items():
+    for jid, details in ret.data.items():
         if command in details["Arguments"]:
             target = details["Target"]
             break
 
     ret = salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60)
-    assert ret.exitcode == 0
-    assert target in ret.json
-    assert ret.json[target] == "returnTOmaster"
+    assert ret.returncode == 0
+    assert target in ret.data
+    assert ret.data[target] == "returnTOmaster"
 
 
 def test_exit_status_unknown_argument(salt_call_cli):
@@ -333,7 +334,7 @@ def test_exit_status_unknown_argument(salt_call_cli):
     Ensure correct exit status when an unknown argument is passed to salt CLI.
     """
     ret = salt_call_cli.run("--unknown-argument")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_USAGE, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_USAGE, ret
     assert "Usage" in ret.stderr
     assert "no such option: --unknown-argument" in ret.stderr
 
@@ -344,7 +345,7 @@ def test_exit_status_correct_usage(salt_call_cli):
 
     """
     ret = salt_call_cli.run("test.true")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_OK, ret
 
 
 def test_context_retcode_salt_call(salt_call_cli):
@@ -355,27 +356,27 @@ def test_context_retcode_salt_call(salt_call_cli):
     # Test salt-call, making sure to also confirm the behavior of
     # retcode_passthrough.
     ret = salt_call_cli.run("test.retcode", "0")
-    assert ret.exitcode == 0, ret
+    assert ret.returncode == 0, ret
     ret = salt_call_cli.run("test.retcode", "42")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
     ret = salt_call_cli.run("--retcode-passthrough", "test.retcode", "42")
-    assert ret.exitcode == 42, ret
+    assert ret.returncode == 42, ret
 
     # Test a state run that exits with one or more failures
     ret = salt_call_cli.run("state.single", "test.fail_without_changes", "foo")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
     ret = salt_call_cli.run(
         "--retcode-passthrough", "state.single", "test.fail_without_changes", "foo"
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_STATE_FAILURE, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_STATE_FAILURE, ret
 
     # Test a state compiler error
     ret = salt_call_cli.run("state.apply", "thisslsfiledoesnotexist")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
     ret = salt_call_cli.run(
         "--retcode-passthrough", "state.apply", "thisslsfiledoesnotexist"
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR, ret
 
 
 def test_salt_call_error(salt_call_cli):
@@ -384,22 +385,22 @@ def test_salt_call_error(salt_call_cli):
     an exception.
     """
     ret = salt_call_cli.run("test.raise_exception", "TypeError")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_call_cli.run(
         "test.raise_exception", "salt.exceptions.CommandNotFoundError"
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_call_cli.run(
         "test.raise_exception", "salt.exceptions.CommandExecutionError"
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_call_cli.run(
         "test.raise_exception", "salt.exceptions.SaltInvocationError"
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_call_cli.run(
         "test.raise_exception",
@@ -408,7 +409,38 @@ def test_salt_call_error(salt_call_cli):
         "No such file or directory",
         "/tmp/foo.txt",
     )
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
 
     ret = salt_call_cli.run("test.echo", "{foo: bar, result: False}")
-    assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+    assert ret.returncode == salt.defaults.exitcodes.EX_GENERIC, ret
+
+
+def test_local_salt_call_no_function_no_retcode(salt_call_cli):
+    """
+    This tests ensures that when salt-call --local is called
+    with a module but without a function the return code is 1
+    and we receive the docs for all module functions.
+
+    Also ensure we don't get an exception.
+    """
+    with pytest.helpers.temp_file() as filename:
+
+        ret = salt_call_cli.run("--local", "test")
+        assert ret.returncode == 1
+
+        state_run_dict = ret.data
+        assert "test" in state_run_dict
+        assert state_run_dict["test"] == "'test' is not available."
+
+        assert "test.recho" in state_run_dict
+
+        expected = """
+    Return a reversed string
+
+    CLI Example:
+
+        salt '*' test.recho 'foo bar baz quo qux'
+    """
+        a = state_run_dict["test.recho"]
+        b = expected
+        assert state_run_dict["test.recho"] == expected

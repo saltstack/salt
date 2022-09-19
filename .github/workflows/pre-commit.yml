@@ -2,8 +2,14 @@ name: Pre-Commit
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Pre-Commit:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Run Pre-Commit Against Salt
 
     runs-on: ubuntu-latest
@@ -47,7 +53,7 @@ jobs:
     - name: Check ALL Files On Branch
       if: github.event_name != 'pull_request'
       env:
-        SKIP: lint-salt,lint-tests,pyupgrade,remove-import-headers,rstcheck
+        SKIP: lint-salt,lint-tests,remove-import-headers,rstcheck
       run: |
         pre-commit run --show-diff-on-failure --color=always --all-files
 

@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.service as service
@@ -244,7 +245,7 @@ def test_running():
 
         with patch.dict(service.__opts__, {"test": True}):
             with patch.dict(service.__salt__, {"service.status": tmock}):
-                assert service.running("salt") == ret[10]
+                assert service.running("salt") == ret[5]
 
             with patch.dict(service.__salt__, {"service.status": fmock}):
                 assert service.running("salt") == ret[3]
@@ -506,6 +507,26 @@ def test_enabled():
     ret = {"changes": "saltstack", "comment": "", "name": "salt", "result": True}
     mock = MagicMock(return_value={"changes": "saltstack"})
     with patch.object(service, "_enable", mock):
+        assert service.enabled("salt") == ret
+        assert service.__context__ == {"service.state": "enabled"}
+
+
+def test_enabled_in_test_mode():
+    ret = {
+        "changes": {},
+        "comment": "Service salt not present; if created in this state run, it would have been enabled",
+        "name": "salt",
+        "result": None,
+    }
+    mock = MagicMock(
+        return_value={
+            "result": "False",
+            "comment": "The named service salt is not available",
+        }
+    )
+    with patch.object(service, "_enable", mock), patch.dict(
+        service.__opts__, {"test": True}
+    ):
         assert service.enabled("salt") == ret
         assert service.__context__ == {"service.state": "enabled"}
 

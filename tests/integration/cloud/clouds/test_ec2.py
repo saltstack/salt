@@ -5,10 +5,11 @@
 
 import os
 
+import yaml
+
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
-import yaml
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support import win_installer
 from tests.support.runtests import RUNTIME_VARS
@@ -104,6 +105,11 @@ class EC2Test(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        ipv6Address_present = False
+        for each in ret_val:
+            if "ipv6Address:" in each:
+                ipv6Address_present = True
+        assert ipv6Address_present
 
         self.assertDestroyInstance()
 

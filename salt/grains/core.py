@@ -24,8 +24,8 @@ import uuid
 from errno import EACCES, EPERM
 
 import distro
+
 import salt.exceptions
-import salt.log
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -197,6 +197,15 @@ def _linux_cpudata():
                 elif key == "Processor":
                     grains["cpu_model"] = val.split("-")[0]
                     grains["num_cpus"] = 1
+                # PPC64LE support - /proc/cpuinfo
+                #
+                # processor	: 0
+                # cpu		: POWER9 (architected), altivec supported
+                # clock		: 2750.000000MHz
+                # revision	: 2.2 (pvr 004e 0202)
+                elif key == "cpu":
+                    grains["cpu_model"] = val
+
     if "num_cpus" not in grains:
         grains["num_cpus"] = 0
     if "cpu_model" not in grains:
@@ -527,11 +536,11 @@ def _osx_memdata():
             .replace(",", ".")
         )
         if swap_total.endswith("K"):
-            _power = 2 ** 10
+            _power = 2**10
         elif swap_total.endswith("M"):
-            _power = 2 ** 20
+            _power = 2**20
         elif swap_total.endswith("G"):
-            _power = 2 ** 30
+            _power = 2**30
         swap_total = float(swap_total[:-1]) * _power
 
         grains["mem_total"] = int(mem) // 1024 // 1024
@@ -625,7 +634,7 @@ def _windows_memdata():
     # get the Total Physical memory as reported by msinfo32
     tot_bytes = win32api.GlobalMemoryStatusEx()["TotalPhys"]
     # return memory info in gigabytes
-    grains["mem_total"] = int(tot_bytes / (1024 ** 2))
+    grains["mem_total"] = int(tot_bytes / (1024**2))
     return grains
 
 
@@ -711,14 +720,14 @@ def _windows_virtual(osdata):
     elif "VirtualBox" in productname:
         grains["virtual"] = "VirtualBox"
     # Product Name: VMware Virtual Platform
-    elif "VMware Virtual Platform" in productname:
+    elif "VMware" in productname:
         grains["virtual"] = "VMware"
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
     elif "Microsoft" in manufacturer and "Virtual Machine" in productname:
         grains["virtual"] = "VirtualPC"
     # Manufacturer: Parallels Software International Inc.
-    elif "Parallels Software" in manufacturer:
+    elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in productname:
@@ -784,8 +793,7 @@ def _virtual(osdata):
                 try:
                     ret = __salt__["cmd.run_all"](virtinfo)
                 except salt.exceptions.CommandExecutionError:
-                    if salt.log.is_logging_configured():
-                        failed_commands.add(virtinfo)
+                    failed_commands.add(virtinfo)
                 else:
                     if ret["stdout"].endswith("not supported"):
                         command = "prtdiag"
@@ -806,23 +814,21 @@ def _virtual(osdata):
             ret = __salt__["cmd.run_all"](cmd)
 
             if ret["retcode"] > 0:
-                if salt.log.is_logging_configured():
-                    # systemd-detect-virt always returns > 0 on non-virtualized
-                    # systems
-                    # prtdiag only works in the global zone, skip if it fails
-                    if (
-                        salt.utils.platform.is_windows()
-                        or "systemd-detect-virt" in cmd
-                        or "prtdiag" in cmd
-                    ):
-                        continue
-                    failed_commands.add(command)
-                continue
-        except salt.exceptions.CommandExecutionError:
-            if salt.log.is_logging_configured():
-                if salt.utils.platform.is_windows():
+                # systemd-detect-virt always returns > 0 on non-virtualized
+                # systems
+                # prtdiag only works in the global zone, skip if it fails
+                if (
+                    salt.utils.platform.is_windows()
+                    or "systemd-detect-virt" in cmd
+                    or "prtdiag" in cmd
+                ):
                     continue
                 failed_commands.add(command)
+                continue
+        except salt.exceptions.CommandExecutionError:
+            if salt.utils.platform.is_windows():
+                continue
+            failed_commands.add(command)
             continue
 
         output = ret["stdout"]
@@ -880,6 +886,17 @@ def _virtual(osdata):
                     break
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
+                    break
+                elif line == "ibm_power-kvm":
+                    grains["virtual"] = "kvm"
+                    break
+                elif line == "ibm_power-lpar_shared":
+                    grains["virtual"] = "LPAR"
+                    grains["virtual_subtype"] = "shared"
+                    break
+                elif line == "ibm_power-lpar_dedicated":
+                    grains["virtual"] = "LPAR"
+                    grains["virtual_subtype"] = "dedicated"
                     break
             break
         elif command == "dmidecode":
@@ -1117,6 +1134,8 @@ def _virtual(osdata):
                 grains["virtual"] = "OpenStack"
             if maker.startswith("Bochs"):
                 grains["virtual"] = "kvm"
+            if maker.startswith("Amazon EC2"):
+                grains["virtual"] = "Nitro"
         if sysctl:
             hv_vendor = __salt__["cmd.run"]("{} -n hw.hv_vendor".format(sysctl))
             model = __salt__["cmd.run"]("{} -n hw.model".format(sysctl))
@@ -1534,6 +1553,55 @@ def _osx_platform_data():
     return grains
 
 
+def _linux_devicetree_platform_data():
+    """
+    Additional data for Linux Devicetree subsystem - https://www.kernel.org/doc/html/latest/devicetree/usage-model.html
+    Returns: A dictionary containing values for the following:
+        - manufacturer
+        - produtname
+        - serialnumber
+    """
+
+    def _read_dt_string(path):
+        try:
+            # /proc/device-tree should be used instead of /sys/firmware/devicetree/base
+            # see https://github.com/torvalds/linux/blob/v5.13/Documentation/ABI/testing/sysfs-firmware-ofw#L14
+            loc = "/proc/device-tree/{}".format(path)
+            if os.path.isfile(loc):
+                with salt.utils.files.fopen(loc, mode="r") as f:
+                    return f.read().rstrip("\x00")  # all strings are null-terminated
+        except Exception:  # pylint: disable=broad-except
+            return None
+
+        return None
+
+    grains = {}
+
+    model = _read_dt_string("model")
+    if model:
+        # Devicetree spec v0.3, section 2.3.2
+        tmp = model.split(",", 1)
+        if len(tmp) == 2:
+            # format "manufacturer,model"
+            grains["manufacturer"] = tmp[0]
+            grains["productname"] = tmp[1]
+        else:
+            grains["productname"] = tmp[0]
+
+    # not in specs, but observed on "Linux on Power" systems
+    systemid = _read_dt_string("system-id")
+    if systemid:
+        grains["serialnumber"] = systemid
+
+    # not in spec, but populated for ARM Linux - https://github.com/torvalds/linux/blob/master/arch/arm/kernel/setup.c#L961
+    # as this is "more correct" naming, this should have priority over system-id
+    serial = _read_dt_string("serial-number")
+    if serial:
+        grains["serialnumber"] = serial
+
+    return grains
+
+
 def id_():
     """
     Return the id
@@ -1666,6 +1734,7 @@ _OS_FAMILY_MAP = {
     "AstraLinuxSE": "Debian",
     "Alinux": "RedHat",
     "Mendel": "Debian",
+    "OSMC": "Debian",
 }
 
 # Matches any possible format:
@@ -1775,15 +1844,15 @@ def _parse_cpe_name(cpe):
             ret["phase"] = cpe[5] if len(cpe) > 5 else None
             ret["part"] = part.get(cpe[1][1:])
         elif len(cpe) == 6 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"] = [
+            ret["vendor"], ret["product"], ret["version"] = (
                 x if x != "*" else None for x in cpe[3:6]
-            ]
+            )
             ret["phase"] = None
             ret["part"] = part.get(cpe[2])
         elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"], ret["phase"] = [
+            ret["vendor"], ret["product"], ret["version"], ret["phase"] = (
                 x if x != "*" else None for x in cpe[3:7]
-            ]
+            )
             ret["part"] = part.get(cpe[2])
 
     return ret
@@ -2103,9 +2172,9 @@ def os_data():
         log.trace(
             "Getting OS name, release, and codename from distro id, version, codename"
         )
-        (osname, osrelease, oscodename) = [
+        (osname, osrelease, oscodename) = (
             x.strip('"').strip("'") for x in _linux_distribution()
-        ]
+        )
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -2144,6 +2213,10 @@ def os_data():
             grains["os"] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
+
+        # only if devicetree is mounted
+        if os.path.isdir("/proc/device-tree"):
+            grains.update(_linux_devicetree_platform_data())
     elif grains["kernel"] == "SunOS":
         if salt.utils.platform.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
@@ -2528,7 +2601,7 @@ def ip4_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and secondary.get("type") == "inet":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip4_interfaces": ret}
@@ -2553,7 +2626,7 @@ def ip6_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and secondary.get("type") == "inet6":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip6_interfaces": ret}
@@ -2717,6 +2790,7 @@ def _hw_data(osdata):
 
     Provides
         biosversion
+        biosvendor
         productname
         manufacturer
         serialnumber
@@ -2735,6 +2809,7 @@ def _hw_data(osdata):
         # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
         sysfs_firmware_info = {
             "biosversion": "bios_version",
+            "biosvendor": "bios_vendor",
             "productname": "product_name",
             "manufacturer": "sys_vendor",
             "biosreleasedate": "bios_date",
@@ -2774,6 +2849,7 @@ def _hw_data(osdata):
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
         grains = {
             "biosversion": __salt__["smbios.get"]("bios-version"),
+            "biosvendor": __salt__["smbios.get"]("bios-vendor"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
@@ -2812,6 +2888,7 @@ def _hw_data(osdata):
             # In theory, it will be easier to add new fields to this later
             fbsd_hwdata = {
                 "biosversion": "smbios.bios.version",
+                "biosvendor": "smbios.bios.vendor",
                 "manufacturer": "smbios.system.maker",
                 "serialnumber": "smbios.system.serial",
                 "productname": "smbios.system.product",
@@ -2838,6 +2915,7 @@ def _hw_data(osdata):
         sysctl = salt.utils.path.which("sysctl")
         nbsd_hwdata = {
             "biosversion": "machdep.dmi.board-version",
+            "biosvendor": "machdep.dmi.bios-vendor",
             "manufacturer": "machdep.dmi.system-vendor",
             "serialnumber": "machdep.dmi.system-serial",
             "productname": "machdep.dmi.system-product",
@@ -3021,7 +3099,7 @@ def get_server_id():
         return {}
     id_ = __opts__.get("id", "")
     hash_ = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
-    return {"server_id": abs(hash_ % (2 ** 31))}
+    return {"server_id": abs(hash_ % (2**31))}
 
 
 def get_master():
@@ -3100,6 +3178,8 @@ def kernelparams():
                         value = data[1].strip('"')
 
                     grains["kernelparams"] += [(data[0], value)]
+        except FileNotFoundError:
+            grains = {}
         except OSError as exc:
             grains = {}
             log.debug("Failed to read /proc/cmdline: %s", exc)

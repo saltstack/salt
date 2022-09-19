@@ -1,1 +1,0 @@
-Fixing various functions in the file state module that use user.info to get group information, certain hosts particularly proxy minions do not have the user.info function avaiable.

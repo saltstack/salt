@@ -6,6 +6,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from salt.ext.tornado.httpclient import HTTPClient
@@ -127,12 +128,18 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
+    )
     @pytest.mark.slow_test
     def test_recv_known_host_entries(self):
         """
         Check that known host information is returned from remote host
         """
-        ret = self.run_function("ssh.recv_known_host_entries", ["github.com"])
+        ret = self.run_function(
+            "ssh.recv_known_host_entries", ["github.com"], enc="ssh-rsa"
+        )
         try:
             self.assertNotEqual(ret, None)
             self.assertEqual(ret[0]["enc"], "ssh-rsa")
@@ -212,6 +219,10 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
+    )
     @pytest.mark.slow_test
     def test_set_known_host(self):
         """
@@ -219,7 +230,10 @@ class SSHModuleTest(ModuleCase):
         """
         # add item
         ret = self.run_function(
-            "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
+            "ssh.set_known_host",
+            ["root", "github.com"],
+            enc="ssh-rsa",
+            config=self.known_hosts,
         )
         try:
             self.assertEqual(ret["status"], "updated")

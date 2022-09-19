@@ -14,6 +14,7 @@ import tempfile
 import textwrap
 
 import pytest
+
 import salt.serializers.configparser
 import salt.serializers.plist
 import salt.utils.atomicfile
@@ -844,6 +845,26 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Check that we identified a hash mismatch
             self.assertIn("does not exist", ret["comment"])
 
+    def test_test_managed_issue_55269(self):
+        """
+        Make sure that we exit gracefully in case a local source does not exist
+        when file.managed is run with test=1.
+        """
+        name = self.tmp_dir / "local_source_does_not_exist_testing"
+        self.addCleanup(salt.utils.files.safe_rm, str(name))
+        local_path = os.path.join(RUNTIME_VARS.BASE_FILES, "grail", "scene99")
+
+        for proto in ("file://", ""):
+            source = proto + local_path
+            log.debug("Trying source %s", source)
+            ret = self.run_state(
+                "file.managed", name=str(name), source=source, test=True
+            )
+            self.assertSaltFalseReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret["changes"])
+            self.assertIn("does not exist", ret["comment"])
+
     def test_managed_unicode_jinja_with_tojson_filter(self):
         """
         Using {{ varname }} with a list or dictionary which contains unicode
@@ -1118,7 +1139,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = "0111"
         changed_mode = "0555"
 
-        if grains["os_family"] in ("VMware Photon OS",):
+        if grains["os"] in ("VMware Photon OS",):
             initial_modes = {
                 0: {sub: "0750", subsub: "0110"},
                 1: {sub: "0110", subsub: "0110"},
@@ -2707,6 +2728,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(ret["some-utf8-file-create2"]["changes"], {"diff": diff})
             if salt.utils.platform.is_windows():
                 import subprocess
+
                 import win32api
 
                 proc = subprocess.run(
@@ -4937,6 +4959,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertIn("Patch would not apply cleanly", ret["comment"])
+        if IS_WINDOWS:
+            reject_file = reject_file.replace("\\", "\\\\")
+            reject_file = "'{}'".format(reject_file)
         self.assertRegex(
             ret["comment"], "saving rejects to (file )?{}".format(reject_file)
         )
@@ -4973,6 +4998,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertIn("Patch would not apply cleanly", ret["comment"])
+        if IS_WINDOWS:
+            reject_file = reject_file.replace("\\", "\\\\")
+            reject_file = "'{}'".format(reject_file)
         self.assertRegex(
             ret["comment"], "saving rejects to (file )?{}".format(reject_file)
         )

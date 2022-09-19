@@ -221,7 +221,7 @@ def present(
     lambda_funcname_format
         Please review the earlier example for the usage.  The only substituable keys in the funcname
         format are {stage}, {api}, {resource}, {method}.
-        Any other keys or positional subsitution parameters will be flagged as an invalid input.
+        Any other keys or positional substitution parameters will be flagged as an invalid input.
 
     authorization_type
         This field can be either 'NONE', or 'AWS_IAM'.  This will be applied to all methods in the given
@@ -1576,12 +1576,13 @@ class _Swagger:
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in update_model_schema_response:
-                        ret[
-                            "comment"
-                        ] = "Failed to update existing model {} with schema {}, " "error: {}".format(
-                            model,
-                            _dict_to_json_pretty(schema),
-                            update_model_schema_response["error"]["message"],
+                        ret["comment"] = (
+                            "Failed to update existing model {} with schema {}, "
+                            "error: {}".format(
+                                model,
+                                _dict_to_json_pretty(schema),
+                                update_model_schema_response["error"]["message"],
+                            )
                         )
                     return ret
 

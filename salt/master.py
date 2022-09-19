@@ -18,6 +18,7 @@ import time
 
 import salt.acl
 import salt.auth
+import salt.channel.server
 import salt.client
 import salt.client.ssh.client
 import salt.crypt
@@ -27,14 +28,12 @@ import salt.engines
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.key
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
 import salt.runner
 import salt.serializers.msgpack
 import salt.state
-import salt.transport.server
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.crypt
@@ -58,7 +57,8 @@ import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.tornado.stack_context import StackContext
-from salt.transport import iter_transport_opts
+from salt.transport import TRANSPORTS
+from salt.utils.channel import iter_transport_opts
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import (
     enable_sigusr1_handler,
@@ -128,6 +128,44 @@ class SMaster:
         """
         return salt.daemons.masterapi.access_keys(self.opts)
 
+    @classmethod
+    def get_serial(cls, opts=None, event=None):
+        with cls.secrets["aes"]["secret"].get_lock():
+            if cls.secrets["aes"]["serial"].value == sys.maxsize:
+                cls.rotate_secrets(opts, event, use_lock=False)
+            else:
+                cls.secrets["aes"]["serial"].value += 1
+            return cls.secrets["aes"]["serial"].value
+
+    @classmethod
+    def rotate_secrets(cls, opts=None, event=None, use_lock=True):
+        log.info("Rotating master AES key")
+        if opts is None:
+            opts = {}
+
+        for secret_key, secret_map in cls.secrets.items():
+            # should be unnecessary-- since no one else should be modifying
+            if use_lock:
+                with secret_map["secret"].get_lock():
+                    secret_map["secret"].value = salt.utils.stringutils.to_bytes(
+                        secret_map["reload"]()
+                    )
+                    if "serial" in secret_map:
+                        secret_map["serial"].value = 0
+            else:
+                secret_map["secret"].value = salt.utils.stringutils.to_bytes(
+                    secret_map["reload"]()
+                )
+                if "serial" in secret_map:
+                    secret_map["serial"].value = 0
+            if event:
+                event.fire_event({"rotate_{}_key".format(secret_key): True}, tag="key")
+
+        if opts.get("ping_on_rotate"):
+            # Ping all minions to get them to pick up the new key
+            log.debug("Pinging all connected minions due to key rotation")
+            salt.utils.master.ping_all_connected_minions(opts)
+
 
 class Maintenance(salt.utils.process.SignalHandlingProcess):
     """
@@ -140,6 +178,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         :param dict opts: The salt options
         """
+        self.master_secrets = kwargs.pop("master_secrets", None)
         super().__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
@@ -147,7 +186,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # Track key rotation intervals
         self.rotate = int(time.time())
         # A serializer for general maint operations
-        self.serial = salt.payload.Serial(self.opts)
 
     def _post_fork_init(self):
         """
@@ -156,6 +194,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         in the parent process, then once the fork happens you'll start getting
         errors like "WARNING: Mixing fork() and threads detected; memory leaked."
         """
+        if self.master_secrets is not None:
+            SMaster.secrets = self.master_secrets
         # Load Runners
         ropts = dict(self.opts)
         ropts["quiet"] = True
@@ -200,8 +240,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         This is where any data that needs to be cleanly maintained from the
         master is maintained.
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         # init things that need to be done after the process is forked
         self._post_fork_init()
 
@@ -214,6 +252,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         old_present = set()
         while True:
             now = int(time.time())
+            log.trace("Running maintenance routines")
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
@@ -237,7 +276,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts["key_cache"] == "sched":
             keys = []
             # TODO DRY from CKMinions
-            if self.opts["transport"] in ("zeromq", "tcp"):
+            if self.opts["transport"] in TRANSPORTS:
                 acc = "minions"
             else:
                 acc = "accepted"
@@ -252,7 +291,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             with salt.utils.atomicfile.atomic_open(
                 os.path.join(self.opts["pki_dir"], acc, ".key_cache"), mode="wb"
             ) as cache_file:
-                self.serial.dump(keys, cache_file)
+                salt.payload.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         """
@@ -281,21 +320,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 to_rotate = True
 
         if to_rotate:
-            log.info("Rotating master AES key")
-            for secret_key, secret_map in SMaster.secrets.items():
-                # should be unnecessary-- since no one else should be modifying
-                with secret_map["secret"].get_lock():
-                    secret_map["secret"].value = salt.utils.stringutils.to_bytes(
-                        secret_map["reload"]()
-                    )
-                self.event.fire_event(
-                    {"rotate_{}_key".format(secret_key): True}, tag="key"
-                )
+            SMaster.rotate_secrets(self.opts, self.event)
             self.rotate = now
-            if self.opts.get("ping_on_rotate"):
-                # Ping all minions to get them to pick up the new key
-                log.debug("Pinging all connected minions due to key rotation")
-                salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_git_pillar(self):
         """
@@ -461,8 +487,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         """
         Start the update threads
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if (
             self.opts["fileserver_update_niceness"]
             and not salt.utils.platform.is_windows()
@@ -671,22 +695,27 @@ class Master(SMaster):
                         salt.crypt.Crypticle.generate_key_string()
                     ),
                 ),
+                "serial": multiprocessing.Value(
+                    ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+                ),
                 "reload": salt.crypt.Crypticle.generate_key_string,
             }
+
             log.info("Creating master process manager")
             # Since there are children having their own ProcessManager we should wait for kill more time.
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info("Creating master publisher process")
-            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for _, opts in iter_transport_opts(self.opts):
-                chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
+                chan = salt.channel.server.PubServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager, kwargs={"secrets": SMaster.secrets})
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
             self.process_manager.add_process(
-                salt.utils.event.EventPublisher, args=(self.opts,)
+                salt.utils.event.EventPublisher,
+                args=(self.opts,),
+                name="EventPublisher",
             )
 
             if self.opts.get("reactor"):
@@ -707,12 +736,17 @@ class Master(SMaster):
 
             # must be after channels
             log.info("Creating master maintenance process")
-            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            self.process_manager.add_process(
+                Maintenance,
+                args=(self.opts,),
+                kwargs={"master_secrets": SMaster.secrets},
+                name="Maintenance",
+            )
 
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")
                 self.process_manager.add_process(
-                    salt.utils.event.EventReturn, args=(self.opts,)
+                    salt.utils.event.EventReturn, args=(self.opts,), name="EventReturn"
                 )
 
             ext_procs = self.opts.get("ext_processes", [])
@@ -723,7 +757,8 @@ class Master(SMaster):
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
                     cls = _tmp.__getattribute__(cls)
-                    self.process_manager.add_process(cls, args=(self.opts,))
+                    name = "ExtProcess({})".format(cls.__qualname__)
+                    self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
 
@@ -731,7 +766,9 @@ class Master(SMaster):
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
                 self.process_manager.add_process(
-                    salt.utils.master.ConnectedCache, args=(self.opts,)
+                    salt.utils.master.ConnectedCache,
+                    args=(self.opts,),
+                    name="ConnectedCache",
                 )
                 # workaround for issue #16315, race condition
                 log.debug("Sleeping for two seconds to let concache rest")
@@ -739,11 +776,7 @@ class Master(SMaster):
 
             log.info("Creating master request server process")
             kwargs = {}
-            if salt.utils.platform.is_windows():
-                kwargs["log_queue"] = log_queue
-                kwargs[
-                    "log_queue_level"
-                ] = salt.log.setup.get_multiprocessing_logging_level()
+            if salt.utils.platform.spawning_platform():
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -753,7 +786,9 @@ class Master(SMaster):
                 name="ReqServer",
             )
 
-            self.process_manager.add_process(FileserverUpdate, args=(self.opts,))
+            self.process_manager.add_process(
+                FileserverUpdate, args=(self.opts,), name="FileServerUpdate"
+            )
 
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
@@ -765,7 +800,8 @@ class Master(SMaster):
                             answer={
                                 "mapping": self.opts["discovery"].get("mapping", {})
                             },
-                        ).run
+                        ).run,
+                        name="SSDPDiscoveryServer",
                     )
                 else:
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
@@ -786,12 +822,9 @@ class Master(SMaster):
 
         self.process_manager.run()
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.process_manager.kill_children()
+        self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
 
@@ -828,11 +861,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         """
         Binds the reply server
         """
-        if self.log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-        if self.log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
         if self.secrets is not None:
             SMaster.secrets = self.secrets
 
@@ -852,18 +880,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         )
 
         req_channels = []
-        tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
-            if transport != "tcp":
-                tcp_only = False
-
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs["log_queue"] = self.log_queue
-            kwargs["log_queue_level"] = self.log_queue_level
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -880,8 +900,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 name = "MWorker-{}".format(ind)
                 self.process_manager.add_process(
                     MWorker,
-                    args=(self.opts, self.master_key, self.key, req_channels, name),
-                    kwargs=kwargs,
+                    args=(self.opts, self.master_key, self.key, req_channels),
                     name=name,
                 )
         self.process_manager.run()
@@ -911,7 +930,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     salt master.
     """
 
-    def __init__(self, opts, mkey, key, req_channels, name, **kwargs):
+    def __init__(self, opts, mkey, key, req_channels, **kwargs):
         """
         Create a salt master worker process
 
@@ -922,8 +941,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :rtype: MWorker
         :return: Master worker
         """
-        kwargs["name"] = name
-        self.name = name
         super().__init__(**kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -951,8 +968,19 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
-            channel.close()
-        self.clear_funcs.destroy()
+            try:
+                channel.close()
+            except Exception:  # pylint: disable=broad-except
+                # Don't stop closing additional channels because an
+                # exception occurred.
+                pass
+        clear_funcs = getattr(self, "clear_funcs", None)
+        if clear_funcs is not None:
+            try:
+                clear_funcs.destroy()
+            except Exception:  # pylint: disable=broad-except
+                # Don't stop signal handling because an exception occurred.
+                pass
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
@@ -1077,8 +1105,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Start a Master Worker
         """
-        salt.utils.process.appendproctitle(self.name)
-
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True
@@ -1110,6 +1136,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.opts,
             self.key,
         )
+        self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -1171,6 +1198,7 @@ class AESFuncs(TransportMethods):
         "_dir_list",
         "_symlink_list",
         "_file_envs",
+        "_ext_nodes",  # To be removed in 3006 (Sulfur) #60980
     )
 
     def __init__(self, opts):
@@ -1186,7 +1214,6 @@ class AESFuncs(TransportMethods):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
@@ -1369,6 +1396,10 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
+
+    # Needed so older minions can request master_tops
+    # To be removed in 3006 (Sulfur) #60980
+    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1570,6 +1601,7 @@ class AESFuncs(TransportMethods):
             pillar_override=load.get("pillar_override", {}),
             pillarenv=load.get("pillarenv"),
             extra_minion_data=load.get("extra_minion_data"),
+            clean_cache=load.get("clean_cache"),
         )
         data = pillar.compile_pillar()
         self.fs_.update_opts()
@@ -1950,6 +1982,7 @@ class ClearFuncs(TransportMethods):
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
+        self.channels = []
 
     def runner(self, clear_load):
         """
@@ -2291,8 +2324,11 @@ class ClearFuncs(TransportMethods):
         """
         Take a load and send it across the network to connected minions
         """
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
+        if not self.channels:
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.PubServerChannel.factory(opts)
+                self.channels.append(chan)
+        for chan in self.channels:
             chan.publish(load)
 
     @property
@@ -2463,3 +2499,13 @@ class ClearFuncs(TransportMethods):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        while self.channels:
+            chan = self.channels.pop()
+            chan.close()
+
+    def connect(self):
+        if self.channels:
+            return
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.PubServerChannel.factory(opts)
+            self.channels.append(chan)

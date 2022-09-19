@@ -60,8 +60,8 @@ try:
     # pylint: enable=unused-import
     from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
     from boto.ec2.networkinterface import (
-        NetworkInterfaceSpecification,
         NetworkInterfaceCollection,
+        NetworkInterfaceSpecification,
     )
 
     HAS_BOTO = True
@@ -232,9 +232,9 @@ def get_eip_address_info(
 
     .. versionadded:: 2016.3.0
     """
-    if type(addresses) == (type("string")):
+    if isinstance(addresses, str):
         addresses = [addresses]
-    if type(allocation_ids) == (type("string")):
+    if isinstance(allocation_ids, str):
         allocation_ids = [allocation_ids]
 
     ret = _get_all_eip_addresses(

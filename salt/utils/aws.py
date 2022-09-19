@@ -34,7 +34,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 DEFAULT_LOCATION = "us-east-1"
-DEFAULT_AWS_API_VERSION = "2014-10-01"
+DEFAULT_AWS_API_VERSION = "2016-11-15"
 AWS_RETRY_CODES = [
     "RequestLimitExceeded",
     "InsufficientInstanceCapacity",
@@ -68,7 +68,7 @@ def sleep_exponential_backoff(attempts):
     A failure rate of >10% is observed when using the salt-api with an asynchronous client
     specified (runner_async).
     """
-    time.sleep(random.uniform(1, 2 ** attempts))
+    time.sleep(random.uniform(1, 2**attempts))
 
 
 def creds(provider):
@@ -188,7 +188,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
 
     for key, creds in __AssumeCache__.items():
         if (creds["Expiration"] - now) <= 120:
-            __AssumeCache__.delete(key)
+            __AssumeCache__[key].delete()
 
     if role_arn in __AssumeCache__:
         c = __AssumeCache__[role_arn]

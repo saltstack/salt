@@ -6,6 +6,7 @@ import os
 import tempfile
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.saltmod as saltmod
@@ -215,7 +216,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         ret.update(
             {
                 "result": True,
-                "changes": {"out": "highstate", "ret": {tgt: ""}},
+                "changes": {"ret": {tgt: ""}},
                 "comment": (
                     "Function ran successfully. Function state ran on {}.".format(tgt)
                 ),
@@ -352,7 +353,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     @pytest.mark.slow_test
     def test_state_ssh(self):
         """
-        Test saltmod passes roster to saltutil.cmd
+        Test saltmod state passes roster to saltutil.cmd
         """
         origcmd = saltmod.__salt__["saltutil.cmd"]
         cmd_kwargs = {}
@@ -367,6 +368,27 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             ret = saltmod.state(
                 "state.sls", tgt="*", ssh=True, highstate=True, roster="my_roster"
             )
+        assert "roster" in cmd_kwargs
+        assert cmd_kwargs["roster"] == "my_roster"
+
+    @pytest.mark.slow_test
+    def test_function_ssh(self):
+        """
+        Test saltmod function passes roster to saltutil.cmd
+        """
+        origcmd = saltmod.__salt__["saltutil.cmd"]
+        cmd_kwargs = {}
+        cmd_args = []
+
+        def cmd_mock(*args, **kwargs):
+            cmd_args.extend(args)
+            cmd_kwargs.update(kwargs)
+            return origcmd(*args, **kwargs)
+
+        with patch.dict(saltmod.__opts__, {"test": False}), patch.dict(
+            saltmod.__salt__, {"saltutil.cmd": cmd_mock}
+        ):
+            saltmod.function("state", tgt="*", ssh=True, roster="my_roster")
         assert "roster" in cmd_kwargs
         assert cmd_kwargs["roster"] == "my_roster"
 

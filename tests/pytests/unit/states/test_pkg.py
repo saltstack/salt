@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
@@ -34,6 +35,15 @@ def pkgs():
         "pkga": {"old": "1.0.1", "new": "2.0.1"},
         "pkgb": {"old": "1.0.2", "new": "2.0.2"},
         "pkgc": {"old": "1.0.3", "new": "2.0.3"},
+    }
+
+
+@pytest.fixture(scope="module")
+def list_pkgs():
+    return {
+        "pkga": "1.0.1",
+        "pkgb": "1.0.2",
+        "pkgc": "1.0.3",
     }
 
 
@@ -518,3 +528,202 @@ def test_mod_aggregate():
     }
     res = pkg.mod_aggregate(low, chunks, running)
     assert res == expected
+
+
+def test_installed_with_changes_test_true(list_pkgs):
+    """
+    Test pkg.installed with simulated changes
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": list_pkgs,
+        },
+    ):
+
+        expected = {"dummy": {"new": "installed", "old": ""}}
+        # Run state with test=true
+        with patch.dict(pkg.__opts__, {"test": True}):
+            ret = pkg.installed("dummy", test=True)
+            assert ret["result"] is None
+            assert ret["changes"] == expected
+
+
+@pytest.mark.parametrize("action", ["removed", "purged"])
+def test_removed_purged_with_changes_test_true(list_pkgs, action):
+    """
+    Test pkg.removed with simulated changes
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+
+    mock_parse_targets = MagicMock(return_value=[{"pkga": None}, "repository"])
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": list_pkgs,
+            "pkg_resource.parse_targets": mock_parse_targets,
+            "pkg_resource.version_clean": MagicMock(return_value=None),
+        },
+    ):
+
+        expected = {"pkga": {"new": "{}".format(action), "old": ""}}
+        pkg_actions = {"removed": pkg.removed, "purged": pkg.purged}
+
+        # Run state with test=true
+        with patch.dict(pkg.__opts__, {"test": True}):
+            ret = pkg_actions[action]("pkga", test=True)
+            assert ret["result"] is None
+            assert ret["changes"] == expected
+
+
+@pytest.mark.parametrize(
+    "package_manager",
+    [("Zypper"), ("YUM/DNF"), ("APT")],
+)
+def test_held_unheld(package_manager):
+    """
+    Test pkg.held and pkg.unheld with Zypper, YUM/DNF and APT
+    """
+
+    if package_manager == "Zypper":
+        list_holds_func = "pkg.list_locks"
+        list_holds_mock = MagicMock(
+            return_value={
+                "bar": {
+                    "type": "package",
+                    "match_type": "glob",
+                    "case_sensitive": "on",
+                },
+                "minimal_base": {
+                    "type": "pattern",
+                    "match_type": "glob",
+                    "case_sensitive": "on",
+                },
+                "baz": {
+                    "type": "package",
+                    "match_type": "glob",
+                    "case_sensitive": "on",
+                },
+            }
+        )
+    elif package_manager == "YUM/DNF":
+        list_holds_func = "pkg.list_holds"
+        list_holds_mock = MagicMock(
+            return_value=[
+                "bar-0:1.2.3-1.1.*",
+                "baz-0:2.3.4-2.1.*",
+            ]
+        )
+    elif package_manager == "APT":
+        list_holds_func = "pkg.get_selections"
+        list_holds_mock = MagicMock(
+            return_value={
+                "hold": [
+                    "bar",
+                    "baz",
+                ]
+            }
+        )
+
+    def pkg_hold(name, pkgs=None, *_args, **__kwargs):
+        if name and pkgs is None:
+            pkgs = [name]
+        ret = {}
+        for pkg in pkgs:
+            ret.update(
+                {
+                    pkg: {
+                        "name": pkg,
+                        "changes": {"new": "hold", "old": ""},
+                        "result": True,
+                        "comment": "Package {} is now being held.".format(pkg),
+                    }
+                }
+            )
+        return ret
+
+    def pkg_unhold(name, pkgs=None, *_args, **__kwargs):
+        if name and pkgs is None:
+            pkgs = [name]
+        ret = {}
+        for pkg in pkgs:
+            ret.update(
+                {
+                    pkg: {
+                        "name": pkg,
+                        "changes": {"new": "", "old": "hold"},
+                        "result": True,
+                        "comment": "Package {} is no longer held.".format(pkg),
+                    }
+                }
+            )
+        return ret
+
+    hold_mock = MagicMock(side_effect=pkg_hold)
+    unhold_mock = MagicMock(side_effect=pkg_unhold)
+
+    # Testing with Zypper
+    with patch.dict(
+        pkg.__salt__,
+        {
+            list_holds_func: list_holds_mock,
+            "pkg.hold": hold_mock,
+            "pkg.unhold": unhold_mock,
+        },
+    ):
+        # Holding one of two packages
+        ret = pkg.held("held-test", pkgs=["foo", "bar"])
+        assert "foo" in ret["changes"]
+        assert len(ret["changes"]) == 1
+        hold_mock.assert_called_once_with(name="held-test", pkgs=["foo"])
+        unhold_mock.assert_not_called()
+
+        hold_mock.reset_mock()
+        unhold_mock.reset_mock()
+
+        # Holding one of two packages and replacing all the rest held packages
+        ret = pkg.held("held-test", pkgs=["foo", "bar"], replace=True)
+        assert "foo" in ret["changes"]
+        assert "baz" in ret["changes"]
+        assert len(ret["changes"]) == 2
+        hold_mock.assert_called_once_with(name="held-test", pkgs=["foo"])
+        unhold_mock.assert_called_once_with(name="held-test", pkgs=["baz"])
+
+        hold_mock.reset_mock()
+        unhold_mock.reset_mock()
+
+        # Remove all holds
+        ret = pkg.held("held-test", pkgs=[], replace=True)
+        assert "bar" in ret["changes"]
+        assert "baz" in ret["changes"]
+        assert len(ret["changes"]) == 2
+        hold_mock.assert_not_called()
+        unhold_mock.assert_any_call(name="held-test", pkgs=["baz"])
+        unhold_mock.assert_any_call(name="held-test", pkgs=["bar"])
+
+        hold_mock.reset_mock()
+        unhold_mock.reset_mock()
+
+        # Unolding one of two packages
+        ret = pkg.unheld("held-test", pkgs=["foo", "bar"])
+        assert "bar" in ret["changes"]
+        assert len(ret["changes"]) == 1
+        unhold_mock.assert_called_once_with(name="held-test", pkgs=["bar"])
+        hold_mock.assert_not_called()
+
+        hold_mock.reset_mock()
+        unhold_mock.reset_mock()
+
+        # Remove all holds
+        ret = pkg.unheld("held-test", all=True)
+        assert "bar" in ret["changes"]
+        assert "baz" in ret["changes"]
+        assert len(ret["changes"]) == 2
+        hold_mock.assert_not_called()
+        unhold_mock.assert_any_call(name="held-test", pkgs=["baz"])
+        unhold_mock.assert_any_call(name="held-test", pkgs=["bar"])

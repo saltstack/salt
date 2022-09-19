@@ -39,10 +39,36 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def secure_password(length=20, use_random=True):
+def secure_password(
+    length=20,
+    use_random=True,
+    chars=None,
+    lowercase=True,
+    uppercase=True,
+    digits=True,
+    punctuation=True,
+    whitespace=False,
+    printable=False,
+):
     """
     Generate a secure password.
     """
+    chars = chars or ""
+    if printable:
+        # as printable includes all other string character classes
+        # the other checks can be skipped
+        chars = string.printable
+    if not chars:
+        if lowercase:
+            chars += string.ascii_lowercase
+        if uppercase:
+            chars += string.ascii_uppercase
+        if digits:
+            chars += string.digits
+        if punctuation:
+            chars += string.punctuation
+        if whitespace:
+            chars += string.whitespace
     try:
         length = int(length)
         pw = ""
@@ -60,12 +86,14 @@ def secure_password(length=20, use_random=True):
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r"[\W_]", encoding=encoding),
+                    salt.utils.stringutils.to_str(
+                        r"[^{}]".format(re.escape(chars)), encoding=encoding
+                    ),
                     "",
                     char,
                 )
             else:
-                pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
+                pw += random.SystemRandom().choice(chars)
         return pw
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Failed to generate secure passsword")

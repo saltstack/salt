@@ -27,14 +27,16 @@ from operator import itemgetter
 
 import salt.config
 import salt.loader
+import salt.utils.args
 import salt.utils.stringutils
+import salt.utils.versions
 import salt.version
 from salt.exceptions import SaltInvocationError, SaltSystemExit
 
 try:
     from azure.common.credentials import (
-        UserPassCredentials,
         ServicePrincipalCredentials,
+        UserPassCredentials,
     )
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
@@ -306,9 +308,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         return ret
 
     try:
-        local_configs, remote_configs = [
+        local_configs, remote_configs = (
             sorted(config, key=itemgetter("name")) for config in (new, old)
-        ]
+        )
     except TypeError:
         ret["comment"] = "configurations must be provided as a list of dictionaries!"
         return ret

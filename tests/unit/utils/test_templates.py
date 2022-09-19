@@ -10,6 +10,7 @@ from collections import OrderedDict
 from pathlib import PurePath, PurePosixPath
 
 import pytest
+
 import salt.utils.files
 import salt.utils.templates
 from tests.support.helpers import with_tempdir
@@ -258,7 +259,7 @@ class WrapRenderTestCase(TestCase):
         if tmplpath.startswith("\\"):
             tmplpath = "C:{}".format(tmplpath)
         expected["tplpath"] = tmplpath
-        actual = salt.utils.templates._generate_sls_context(tmplpath, sls)
+        actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
     @patch("salt.utils.templates.generate_sls_context")
@@ -424,31 +425,6 @@ class WrapRenderTestCase(TestCase):
             sls_path="foo_foo",
             slspath="foo/foo",
         )
-
-    @patch("salt.utils.templates._generate_sls_context_legacy", return_value="legacy")
-    @patch("salt.utils.templates._generate_sls_context", return_value="new")
-    @patch("salt.utils.templates.features.get", return_value=True)
-    def test_feature_flag_on(self, feature_get, new_impl, legacy_impl):
-        """Test feature flag selection with FF on"""
-        tplpath = "tplpath"
-        sls = "sls"
-        self.assertEqual("new", salt.utils.templates.generate_sls_context(tplpath, sls))
-        new_impl.assert_called_with(tplpath, sls)
-        legacy_impl.assert_not_called()
-
-    @patch("salt.utils.templates._generate_sls_context_legacy", return_value="legacy")
-    @patch("salt.utils.templates._generate_sls_context", return_value="new")
-    @patch("salt.utils.templates.features.get", return_value=False)
-    def test_feature_flag_off(self, feature_get, new_impl, legacy_impl):
-        """Test feature flag selection with FF on"""
-        tplpath = "tplpath"
-        sls = "sls"
-        self.assertEqual(
-            "legacy", salt.utils.templates.generate_sls_context(tplpath, sls)
-        )
-
-        new_impl.assert_not_called()
-        legacy_impl.assert_called_with(tplpath, sls)
 
     @skipIf(sys.platform == "win32", "Backslash not possible under windows")
     def test_generate_sls_context__backslash_in_path(self):

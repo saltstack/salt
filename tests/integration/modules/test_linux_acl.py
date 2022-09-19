@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase
@@ -16,7 +17,6 @@ from tests.support.unit import skipIf
 
 
 @pytest.mark.skip_if_binaries_missing("getfacl")
-@pytest.mark.windows_whitelisted
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the linux_acl module

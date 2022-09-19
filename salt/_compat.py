@@ -11,21 +11,18 @@ if sys.version_info >= (3, 9, 5):
 else:
     import salt.ext.ipaddress as ipaddress
 
+# importlib_metadata before version 3.3.0 does not include the functionality we need.
+try:
+    import importlib_metadata
 
-if sys.version_info >= (3, 6):
-    # importlib_metadata available for python version lower than 3.6 do not
-    # include the functionality we need.
-    try:
-        import importlib_metadata
-
-        importlib_metadata_version = [
-            int(part)
-            for part in importlib_metadata.version("importlib_metadata").split(".")
-            if part.isdigit()
-        ]
-        if tuple(importlib_metadata_version) < (3, 3, 0):
-            # Use the vendored importlib_metadata
-            import salt.ext.importlib_metadata as importlib_metadata
-    except ImportError:
+    importlib_metadata_version = [
+        int(part)
+        for part in importlib_metadata.version("importlib_metadata").split(".")
+        if part.isdigit()
+    ]
+    if tuple(importlib_metadata_version) < (3, 3, 0):
         # Use the vendored importlib_metadata
         import salt.ext.importlib_metadata as importlib_metadata
+except ImportError:
+    # Use the vendored importlib_metadata
+    import salt.ext.importlib_metadata as importlib_metadata

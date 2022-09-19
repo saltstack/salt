@@ -10,6 +10,7 @@
 import logging
 
 import pytest
+
 import salt.modules.mysql as mysql
 from tests.support.mock import MagicMock, call, mock_open, patch
 
@@ -515,6 +516,26 @@ def test_db_create():
     )
 
 
+def test_alter_db():
+    """
+    Test MySQL alter_db function in mysql exec module
+    """
+    mock_get_db = {
+        "character_set": "utf8",
+        "collate": "utf8_unicode_ci",
+        "name": "my_test",
+    }
+    mock = MagicMock(return_value=mock_get_db)
+    with patch.object(mysql, "db_get", return_value=mock) as mock_db_get:
+        _test_call(
+            mysql.alter_db,
+            "ALTER DATABASE `my_test` CHARACTER SET utf8 COLLATE utf8_unicode_ci;",
+            "my_test",
+            "utf8",
+            "utf8_unicode_ci",
+        )
+
+
 def test_user_list():
     """
     Test MySQL user_list function in mysql exec module
@@ -947,10 +968,5 @@ def test__connect_mysqldb():
     mysqldb_connect_mock = MagicMock(autospec=True, return_value=MockMySQLConnect())
     with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
         with patch("MySQLdb.connect", mysqldb_connect_mock):
-            ret = mysql._connect()
+            mysql._connect()
             assert "mysql.error" not in mysql.__context__
-            # If 'use_unicode' is activated here, it would retrieve utf8 strings
-            # as unicode() objects in salt and we do not want that. So it needs
-            # to be False
-            _, connargs = mysqldb_connect_mock.call_args
-            assert connargs["use_unicode"] is False
