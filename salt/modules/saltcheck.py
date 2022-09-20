@@ -747,12 +747,20 @@ class SaltCheck:
         """
         Generic call of salt Caller command
         """
+        # remote functions and modules won't work with local file client
+        # these aren't exhaustive lists, so add to them when a module or
+        # function can't operate without the remote file client
+        remote_functions = ["file.check_managed_changes"]
+        remote_modules = ["cp"]
+        mod = fun.split(".", maxsplit=1)[0]
+
         conf_file = __opts__["conf_file"]
         local_opts = salt.config.minion_config(conf_file)
         # Save orginal file_client to restore after salt.client.Caller run
         orig_file_client = local_opts["file_client"]
         mlocal_opts = copy.deepcopy(local_opts)
-        mlocal_opts["file_client"] = "local"
+        if fun not in remote_functions and mod not in remote_modules:
+            mlocal_opts["file_client"] = "local"
         value = False
         if args and kwargs:
             value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args, **kwargs)
