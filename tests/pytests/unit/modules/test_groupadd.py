@@ -1,6 +1,7 @@
 import pytest
 
 import salt.modules.groupadd as groupadd
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 try:
@@ -25,8 +26,11 @@ def test_add():
     """
     with patch(
         "salt.utils.path.which",
-        MagicMock(side_effect=["/bin/groupadd", "/bin/groupadd"]),
+        MagicMock(side_effect=[None, "/bin/groupadd", "/bin/groupadd"]),
     ):
+        with pytest.raises(CommandExecutionError):
+            groupadd.add("test", 100)
+
         mock = MagicMock(return_value={"retcode": 0})
         with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
             assert groupadd.add("test", 100) is True
@@ -82,12 +86,14 @@ def test_chgid():
     """
     with patch(
         "salt.utils.path.which",
-        MagicMock(return_value="/bin/groupmod"),
+        MagicMock(side_effect=[None, "/bin/groupmod"]),
     ):
-        mock = MagicMock(return_value=None)
-        with patch.dict(groupadd.__salt__, {"cmd.run": mock}):
-            mock = MagicMock(side_effect=[{"gid": 10}, {"gid": 500}])
-            with patch.object(groupadd, "info", mock):
+        cmd_mock = MagicMock(return_value=None)
+        with patch.dict(groupadd.__salt__, {"cmd.run": cmd_mock}):
+            info_mock = MagicMock(side_effect=[{"gid": 10}, {"gid": 10}, {"gid": 500}])
+            with patch.object(groupadd, "info", info_mock):
+                with pytest.raises(CommandExecutionError):
+                    groupadd.chgid("test", 500)
                 assert groupadd.chgid("test", 500) is True
 
 
@@ -97,8 +103,11 @@ def test_delete():
     """
     with patch(
         "salt.utils.path.which",
-        MagicMock(return_value="/bin/groupdel"),
+        MagicMock(side_effect=[None, "/bin/groupdel"]),
     ):
+        with pytest.raises(CommandExecutionError):
+            groupadd.delete("test")
+
         mock_ret = MagicMock(return_value={"retcode": 0})
         with patch.dict(groupadd.__salt__, {"cmd.run_all": mock_ret}):
             assert groupadd.delete("test") is True
@@ -137,9 +146,19 @@ def test_adduser():
     with patch(
         "salt.utils.path.which",
         MagicMock(
-            side_effect=["/bin/gpasswd", "/bin/usermod", "/bin/gpasswd", "/bin/usermod"]
+            side_effect=[
+                None,
+                "/bin/gpasswd",
+                "/bin/usermod",
+                "/bin/gpasswd",
+                "/bin/usermod",
+            ]
         ),
     ):
+        with patch.dict(groupadd.__grains__, os_version_list[0]["grains"]):
+            with pytest.raises(CommandExecutionError):
+                groupadd.adduser("test", "root")
+
         for os_version in os_version_list:
             mock = MagicMock(return_value={"retcode": 0})
             with patch.dict(groupadd.__grains__, os_version["grains"]), patch.dict(
@@ -182,9 +201,31 @@ def test_deluser():
     with patch(
         "salt.utils.path.which",
         MagicMock(
-            side_effect=["/bin/gpasswd", "/bin/usermod", "/bin/gpasswd", "/bin/usermod"]
+            side_effect=[
+                None,
+                "/bin/gpasswd",
+                "/bin/usermod",
+                "/bin/gpasswd",
+                "/bin/usermod",
+            ]
         ),
     ):
+        with patch.dict(groupadd.__grains__, os_version_list[0]["grains"]), patch.dict(
+            groupadd.__salt__,
+            {
+                "group.info": MagicMock(
+                    return_value={
+                        "passwd": "*",
+                        "gid": 0,
+                        "name": "test",
+                        "members": ["root"],
+                    }
+                ),
+            },
+        ):
+            with pytest.raises(CommandExecutionError):
+                groupadd.deluser("test", "root")
+
         for os_version in os_version_list:
             mock_retcode = MagicMock(return_value=0)
             mock_stdout = MagicMock(return_value="test foo")
@@ -244,6 +285,7 @@ def test_members():
         "salt.utils.path.which",
         MagicMock(
             side_effect=[
+                None,
                 "/bin/gpasswd",
                 "/bin/gpasswd",
                 "/bin/groupmod",
@@ -254,6 +296,10 @@ def test_members():
             ]
         ),
     ):
+        with patch.dict(groupadd.__grains__, os_version_list[0]["grains"]):
+            with pytest.raises(CommandExecutionError):
+                groupadd.members("test", "foo")
+
         for os_version in os_version_list:
             mock_ret = MagicMock(return_value={"retcode": 0})
             mock_stdout = MagicMock(return_value={"cmd.run_stdout": 1})
