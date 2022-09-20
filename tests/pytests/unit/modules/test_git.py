@@ -9,6 +9,7 @@ import os
 import subprocess
 
 import pytest
+
 import salt.modules.git as git_mod  # Don't potentially shadow GitPython
 from salt.utils.versions import LooseVersion
 from tests.support.mock import MagicMock, Mock, patch

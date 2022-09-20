@@ -11,10 +11,12 @@ import os
 import pathlib
 import platform
 import socket
+import tempfile
 import textwrap
 from collections import namedtuple
 
 import pytest
+
 import salt.grains.core as core
 import salt.loader
 import salt.modules.cmdmod
@@ -346,31 +348,6 @@ def test_missing_os_release():
     with patch("salt.utils.files.fopen", mock_open(read_data={})):
         os_release = core._parse_os_release("/etc/os-release", "/usr/lib/os-release")
     assert os_release == {}
-
-
-@pytest.mark.skip_unless_on_windows
-def test__windows_platform_data():
-    grains = core._windows_platform_data()
-    keys = [
-        "biosversion",
-        "osrelease",
-        "kernelrelease",
-        "motherboard",
-        "serialnumber",
-        "timezone",
-        "uuid",
-        "manufacturer",
-        "kernelversion",
-        "osservicepack",
-        "virtual",
-        "productname",
-        "osfullname",
-        "osmanufacturer",
-        "osversion",
-        "windowsdomain",
-    ]
-    for key in keys:
-        assert key in grains
 
 
 @pytest.mark.skip_unless_on_linux
@@ -958,6 +935,28 @@ def test_rocky_8_os_grains(os_release_dir):
 
 
 @pytest.mark.skip_unless_on_linux
+def test_osmc_os_grains(os_release_dir):
+    """
+    Test if OS grains are parsed correctly in OSMC
+    """
+    _os_release_map = {
+        "_linux_distribution": ("OSMC", "2022.03-1", "Open Source Media Center"),
+    }
+
+    expectation = {
+        "os": "OSMC",
+        "os_family": "Debian",
+        "oscodename": "Open Source Media Center",
+        "osfullname": "OSMC",
+        "osrelease": "2022.03-1",
+        "osrelease_info": (2022, "03-1"),
+        "osmajorrelease": 2022,
+        "osfinger": "OSMC-2022",
+    }
+    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_mendel_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Mendel Linux
@@ -1163,7 +1162,7 @@ def test_windows_platform_data():
         "productname",
         "serialnumber",
         "timezone",
-        "virtual",
+        # "virtual", <-- only present on VMs
         "windowsdomain",
         "windowsdomaintype",
     ]
@@ -1179,12 +1178,14 @@ def test_windows_platform_data():
         "8",
         "8.1",
         "10",
+        "11",
         "2008Server",
         "2008ServerR2",
         "2012Server",
         "2012ServerR2",
         "2016Server",
         "2019Server",
+        "2022Server",
     ]
     assert returned_grains["osrelease"] in valid_releases
 
@@ -2430,6 +2431,64 @@ def test_virtual_has_virtual_grain():
 
 
 @pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    ("osdata", "expected"),
+    [
+        ({"kernel": "Not Windows"}, {}),
+        ({"kernel": "Windows"}, {"virtual": "physical"}),
+        ({"kernel": "Windows", "manufacturer": "QEMU"}, {"virtual": "kvm"}),
+        ({"kernel": "Windows", "manufacturer": "Bochs"}, {"virtual": "kvm"}),
+        (
+            {"kernel": "Windows", "productname": "oVirt"},
+            {"virtual": "kvm", "virtual_subtype": "oVirt"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "RHEV Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "rhev"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "VirtualBox"},
+            {"virtual": "VirtualBox"},
+        ),
+        (
+            # Old value
+            {"kernel": "Windows", "productname": "VMware Virtual Platform"},
+            {"virtual": "VMware"},
+        ),
+        (
+            # Server 2019 Value
+            {"kernel": "Windows", "productname": "VMware7,1"},
+            {"virtual": "VMware"},
+        ),
+        (
+            # Shorter value
+            {"kernel": "Windows", "productname": "VMware"},
+            {"virtual": "VMware"},
+        ),
+        (
+            {
+                "kernel": "Windows",
+                "manufacturer": "Microsoft",
+                "productname": "Virtual Machine",
+            },
+            {"virtual": "VirtualPC"},
+        ),
+        (
+            {"kernel": "Windows", "manufacturer": "Parallels Software"},
+            {"virtual": "Parallels"},
+        ),
+    ],
+)
+def test__windows_virtual(osdata, expected):
+    result = core._windows_virtual(osdata)
+    assert result == expected
+
+
+@pytest.mark.skip_unless_on_windows
 def test_windows_virtual_set_virtual_grain():
     osdata = {}
 
@@ -2610,6 +2669,7 @@ def test__hw_data_linux_empty():
         assert core._hw_data({"kernel": "Linux"}) == {
             "biosreleasedate": "",
             "biosversion": "",
+            "biosvendor": "",
             "manufacturer": "",
             "productname": "",
             "serialnumber": "",
@@ -2703,6 +2763,38 @@ def test_kernelparams_return_linux(cmdline, expectation):
         assert core.kernelparams() == expectation
 
 
+@pytest.mark.skip_unless_on_linux
+def test_kernelparams_return_linux_non_utf8():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
+    expected = {
+        "kernelparams": [
+            ("TEST_KEY1", "VAL1"),
+            ("TEST_KEY2", "VAL2"),
+            ("BOOTABLE_FLAG", "\udc80"),
+            ("TEST_KEY_NOVAL", None),
+            ("TEST_KEY3", "3"),
+        ]
+    }
+
+    with tempfile.TemporaryDirectory() as tempdir:
+
+        def _open_mock(file_name, *args, **kwargs):
+            return _salt_utils_files_fopen(
+                os.path.join(tempdir, "cmdline"), *args, **kwargs
+            )
+
+        with salt.utils.files.fopen(
+            os.path.join(tempdir, "cmdline"),
+            "wb",
+        ) as cmdline_fh, patch("salt.utils.files.fopen", _open_mock):
+            cmdline_fh.write(
+                b'TEST_KEY1=VAL1 TEST_KEY2=VAL2 BOOTABLE_FLAG="\x80" TEST_KEY_NOVAL TEST_KEY3=3\n'
+            )
+            cmdline_fh.close()
+            assert core.kernelparams() == expected
+
+
 def test_linux_gpus():
     """
     Test GPU detection on Linux systems
@@ -2788,3 +2880,256 @@ def test_get_server_id():
 
     with patch.dict(core.__opts__, {"id": "otherid"}):
         assert core.get_server_id() != expected
+
+
+def test_linux_cpudata_ppc64le():
+    cpuinfo = """processor	: 0
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 1
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 2
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 3
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 4
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 5
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 6
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              processor	: 7
+              cpu		: POWER9 (architected), altivec supported
+              clock		: 2750.000000MHz
+              revision	: 2.2 (pvr 004e 0202)
+
+              timebase	: 512000000
+              platform	: pSeries
+              model		: IBM,9009-42A
+              machine		: CHRP IBM,9009-42A
+              MMU		: Hash
+              """
+
+    expected = {
+        "num_cpus": 8,
+        "cpu_model": "POWER9 (architected), altivec supported",
+        "cpu_flags": [],
+    }
+
+    with patch("os.path.isfile", return_value=True):
+        with patch("salt.utils.files.fopen", mock_open(read_data=cpuinfo)):
+            assert expected == core._linux_cpudata()
+
+
+@pytest.mark.parametrize(
+    "virt,expected",
+    [
+        ("ibm_power-kvm", {"virtual": "kvm"}),
+        ("ibm_power-lpar_shared", {"virtual": "LPAR", "virtual_subtype": "shared"}),
+        (
+            "ibm_power-lpar_dedicated",
+            {"virtual": "LPAR", "virtual_subtype": "dedicated"},
+        ),
+        ("ibm_power-some_other", {"virtual": "physical"}),
+    ],
+)
+def test_ibm_power_virtual(virt, expected):
+    """
+    Test if virtual grains are parsed correctly on various IBM power virt types
+    """
+    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False)):
+        with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+            with patch.dict(
+                core.__salt__,
+                {
+                    "cmd.run_all": MagicMock(
+                        return_value={
+                            "pid": 78,
+                            "retcode": 0,
+                            "stderr": "",
+                            "stdout": virt,
+                        }
+                    )
+                },
+            ):
+                osdata = {
+                    "kernel": "test",
+                }
+                ret = core._virtual(osdata)
+                assert expected == ret
+
+
+@pytest.mark.parametrize(
+    "test_input,expected",
+    [
+        (
+            {
+                "/proc/device-tree/model": "fsl,MPC8349EMITX",
+                "/proc/device-tree/system-id": "fsl,ABCDEF",
+            },
+            {
+                "manufacturer": "fsl",
+                "productname": "MPC8349EMITX",
+                "serialnumber": "fsl,ABCDEF",
+            },
+        ),
+        (
+            {
+                "/proc/device-tree/model": "MPC8349EMITX",
+                "/proc/device-tree/system-id": "fsl,ABCDEF",
+            },
+            {"productname": "MPC8349EMITX", "serialnumber": "fsl,ABCDEF"},
+        ),
+        (
+            {"/proc/device-tree/model": "IBM,123456,789"},
+            {"manufacturer": "IBM", "productname": "123456,789"},
+        ),
+        (
+            {"/proc/device-tree/system-id": "IBM,123456,789"},
+            {"serialnumber": "IBM,123456,789"},
+        ),
+        (
+            {
+                "/proc/device-tree/model": "Raspberry Pi 4 Model B Rev 1.1",
+                "/proc/device-tree/serial-number": "100000000123456789",
+            },
+            {
+                "serialnumber": "100000000123456789",
+                "productname": "Raspberry Pi 4 Model B Rev 1.1",
+            },
+        ),
+        (
+            {
+                "/proc/device-tree/serial-number": "100000000123456789",
+                "/proc/device-tree/system-id": "fsl,ABCDEF",
+            },
+            {"serialnumber": "100000000123456789"},
+        ),
+    ],
+)
+def test_linux_devicetree_data(test_input, expected):
+    def _mock_open(filename, *args, **kwargs):
+        """
+        Helper mock because we want to return arbitrary value based on the filename, rather than expecting we get the proper calls in order
+        """
+
+        def _raise_fnfe():
+            raise FileNotFoundError()
+
+        m = MagicMock()
+        m.__enter__.return_value.read = (
+            lambda: test_input.get(filename)  # pylint: disable=W0640
+            if filename in test_input  # pylint: disable=W0640
+            else _raise_fnfe()
+        )
+
+        return m
+
+    with patch("os.path.isfile", return_value=True):
+        with patch("salt.utils.files.fopen", new=_mock_open):
+            assert expected == core._linux_devicetree_platform_data()
+
+
+@pytest.mark.skip_on_windows
+def test_linux_proc_files_with_non_utf8_chars():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
+    empty_mock = MagicMock(return_value={})
+
+    with tempfile.TemporaryDirectory() as tempdir:
+
+        def _mock_open(filename, *args, **kwargs):
+            return _salt_utils_files_fopen(
+                os.path.join(tempdir, "cmdline-1"), *args, **kwargs
+            )
+
+        with salt.utils.files.fopen(
+            os.path.join(tempdir, "cmdline-1"),
+            "wb",
+        ) as cmdline_fh, patch("os.path.isfile", return_value=False), patch(
+            "salt.utils.files.fopen", _mock_open
+        ), patch.dict(
+            core.__salt__,
+            {
+                "cmd.retcode": salt.modules.cmdmod.retcode,
+                "cmd.run": MagicMock(return_value=""),
+            },
+        ), patch.object(
+            core, "_linux_bin_exists", return_value=False
+        ), patch.object(
+            core, "_parse_lsb_release", return_value=empty_mock
+        ), patch.object(
+            core, "_parse_os_release", return_value=empty_mock
+        ), patch.object(
+            core, "_hw_data", return_value=empty_mock
+        ), patch.object(
+            core, "_virtual", return_value=empty_mock
+        ), patch.object(
+            core, "_bsd_cpudata", return_value=empty_mock
+        ), patch.object(
+            os, "stat", side_effect=OSError()
+        ):
+            cmdline_fh.write(
+                b"/usr/lib/systemd/systemd\x00--switched-root\x00--system\x00--deserialize\x0028\x80\x00"
+            )
+            cmdline_fh.close()
+            os_grains = core.os_data()
+            assert os_grains != {}
+
+
+@pytest.mark.skip_on_windows
+def test_virtual_linux_proc_files_with_non_utf8_chars():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
+    def _is_file_mock(filename):
+        if filename == "/proc/1/environ":
+            return True
+        return False
+
+    with tempfile.TemporaryDirectory() as tempdir:
+
+        def _mock_open(filename, *args, **kwargs):
+            return _salt_utils_files_fopen(
+                os.path.join(tempdir, "environ"), *args, **kwargs
+            )
+
+        with salt.utils.files.fopen(
+            os.path.join(tempdir, "environ"),
+            "wb",
+        ) as environ_fh, patch("os.path.isfile", _is_file_mock), patch(
+            "salt.utils.files.fopen", _mock_open
+        ), patch.object(
+            salt.utils.path, "which", MagicMock(return_value=None)
+        ), patch.dict(
+            core.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={"retcode": 1, "stderr": "", "stdout": ""}
+                ),
+                "cmd.run": MagicMock(return_value=""),
+            },
+        ):
+            environ_fh.write(b"KEY1=VAL1 KEY2=VAL2\x80 KEY2=VAL2")
+            environ_fh.close()
+            virt_grains = core._virtual({"kernel": "Linux"})
+            assert virt_grains == {"virtual": "physical"}

@@ -3,6 +3,7 @@ import socket
 import textwrap
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.dns
 from salt._compat import ipaddress

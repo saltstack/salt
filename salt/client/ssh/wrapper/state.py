@@ -9,7 +9,6 @@ import time
 import salt.client.ssh.shell
 import salt.client.ssh.state
 import salt.loader
-import salt.log
 import salt.minion
 import salt.roster
 import salt.state

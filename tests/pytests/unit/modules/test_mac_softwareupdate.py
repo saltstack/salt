@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.mac_softwareupdate as mac_softwareupdate
 from tests.support.mock import MagicMock, patch
 
