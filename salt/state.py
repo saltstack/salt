@@ -787,6 +787,36 @@ class State:
         self.inject_globals = {}
         self.mocked = mocked
 
+    def _match_global_state_conditions(self, full, state, name):
+        """
+        Return ``None`` if global state conditions are met. Otherwise, pass a
+        return dictionary which effectively creates a no-op outcome.
+
+        This operation is "explicit allow", in that ANY state and condition
+        combination which matches will allow the state to be run.
+        """
+        matches = []
+        ret = None
+        ret_dict = {
+            "name": name,
+            "comment": "Failed to meet global state conditions. State not called.",
+            "changes": {},
+            "result": None,
+        }
+        if isinstance(self.opts.get("global_state_conditions"), dict):
+            for state_match, conditions in self.opts["global_state_conditions"].items():
+                if state_match in ["*", full, state]:
+                    if isinstance(conditions, str):
+                        conditions = [conditions]
+                    if isinstance(conditions, list):
+                        matches.extend(
+                            self.functions["match.compound"](condition)
+                            for condition in conditions
+                        )
+        if matches and not any(matches):
+            ret = ret_dict
+        return ret
+
     def _gather_pillar(self):
         """
         Whenever a state run starts, gather the pillar data fresh
@@ -2046,7 +2076,11 @@ class State:
         instance.format_slots(cdata)
         tag = _gen_tag(low)
         try:
-            ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
+            ret = instance._match_global_state_conditions(
+                cdata["full"], low["state"], name
+            )
+            if not ret:
+                ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -2305,9 +2339,13 @@ class State:
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata["full"]](
-                            *cdata["args"], **cdata["kwargs"]
+                        ret = self._match_global_state_conditions(
+                            cdata["full"], low["state"], low["name"]
                         )
+                        if not ret:
+                            ret = self.states[cdata["full"]](
+                                *cdata["args"], **cdata["kwargs"]
+                            )
                 self.states.inject_globals = {}
             if (
                 "check_cmd" in low
