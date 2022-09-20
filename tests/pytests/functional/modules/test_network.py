@@ -11,7 +11,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def url(modules):
-    return "www.amazon.com"
+    return "ec2.amazon.com"
 
 
 @pytest.fixture(scope="module")
