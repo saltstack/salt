@@ -4,6 +4,7 @@ import textwrap
 import time
 
 import pytest
+
 import salt.exceptions
 import salt.utils.network as network
 from salt._compat import ipaddress
@@ -110,18 +111,14 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 """
 
-NETLINK_SS = """
-State      Recv-Q Send-Q               Local Address:Port                 Peer Address:Port
-ESTAB      0      0                    127.0.0.1:56726                    127.0.0.1:4505
-ESTAB      0      0                    ::ffff:1.2.3.4:5678                ::ffff:1.2.3.4:4505
-"""
-
 LINUX_NETLINK_SS_OUTPUT = """\
 State       Recv-Q Send-Q                                                            Local Address:Port                                                                           Peer Address:Port
 TIME-WAIT   0      0                                                                         [::1]:8009                                                                                  [::1]:40368
 LISTEN      0      128                                                                   127.0.0.1:5903                                                                                0.0.0.0:*
 ESTAB       0      0                                                            [::ffff:127.0.0.1]:4506                                                                    [::ffff:127.0.0.1]:32315
 ESTAB       0      0                                                                 192.168.122.1:4506                                                                       192.168.122.177:24545
+ESTAB       0      0                                                                    127.0.0.1:56726                                                                             127.0.0.1:4505
+ESTAB       0      0                                                                ::ffff:1.2.3.4:5678                                                                        ::ffff:1.2.3.4:4505
 """
 
 IPV4_SUBNETS = {
@@ -633,11 +630,11 @@ class NetworkTestCase(TestCase):
                 with patch(
                     "subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT
                 ):
-                    remotes = network._netlink_tool_remote_on("4506", "local")
+                    remotes = network._netlink_tool_remote_on("4506", "local_port")
                     self.assertEqual(remotes, {"192.168.122.177", "::ffff:127.0.0.1"})
 
     def test_netlink_tool_remote_on_b(self):
-        with patch("subprocess.check_output", return_value=NETLINK_SS):
+        with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
             remotes = network._netlink_tool_remote_on("4505", "remote_port")
             self.assertEqual(remotes, {"127.0.0.1", "::ffff:1.2.3.4"})
 
@@ -1273,3 +1270,15 @@ class NetworkTestCase(TestCase):
             ),
         ):
             self.assertEqual(network.get_fqhostname(), host)
+
+    def test_ip_bracket(self):
+        test_ipv4 = "127.0.0.1"
+        test_ipv6 = "::1"
+        test_ipv6_uri = "[::1]"
+        self.assertEqual(test_ipv4, network.ip_bracket(test_ipv4))
+        self.assertEqual(test_ipv6, network.ip_bracket(test_ipv6_uri, strip=True))
+        self.assertEqual("[{}]".format(test_ipv6), network.ip_bracket(test_ipv6))
+        self.assertEqual("[{}]".format(test_ipv6), network.ip_bracket(test_ipv6_uri))
+
+        ip_addr_obj = ipaddress.ip_address(test_ipv4)
+        self.assertEqual(test_ipv4, network.ip_bracket(ip_addr_obj))

@@ -7,6 +7,7 @@
 import copy
 
 import pytest
+
 import salt.returners.etcd_return as etcd_return
 import salt.utils.etcd_util as etcd_util
 import salt.utils.jid
@@ -16,7 +17,7 @@ from tests.support.mock import MagicMock, call, create_autospec, patch
 
 @pytest.fixture
 def instance():
-    return create_autospec(etcd_util.EtcdClient)
+    return create_autospec(etcd_util.EtcdBase)
 
 
 @pytest.fixture

@@ -100,8 +100,8 @@ def minion_process():
 
     salt._logging.in_mainprocess.__pid__ = os.getpid()
     # Now the remaining required imports
-    import salt.utils.platform
     import salt.cli.daemons
+    import salt.utils.platform
 
     # salt_minion spawns this function in a new process
 
@@ -169,8 +169,9 @@ def salt_minion():
 
     salt.utils.process.notify_systemd()
 
-    import salt.cli.daemons
     import multiprocessing
+
+    import salt.cli.daemons
 
     # Fix for setuptools generated scripts, so that it will
     # work with multiprocessing fork emulation.
@@ -328,9 +329,10 @@ def salt_proxy():
     """
     Start a proxy minion.
     """
+    import multiprocessing
+
     import salt.cli.daemons
     import salt.utils.platform
-    import multiprocessing
 
     if "" in sys.path:
         sys.path.remove("")

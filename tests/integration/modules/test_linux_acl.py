@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase

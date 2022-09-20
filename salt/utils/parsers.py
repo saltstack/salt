@@ -2927,6 +2927,12 @@ class SaltCallOptionParser(
             help="Force a refresh of the grains cache.",
         )
         self.add_option(
+            "--no-return-event",
+            default=False,
+            action="store_true",
+            help=("Do not produce the return event back to master."),
+        )
+        self.add_option(
             "-t",
             "--timeout",
             default=60,

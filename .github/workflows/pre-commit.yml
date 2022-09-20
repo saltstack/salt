@@ -2,8 +2,14 @@ name: Pre-Commit
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Pre-Commit:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Run Pre-Commit Against Salt
 
     runs-on: ubuntu-latest

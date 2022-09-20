@@ -1,6 +1,7 @@
 from textwrap import dedent
 
 import pytest
+
 import salt.modules.pdbedit as pdbedit
 from tests.support.mock import MagicMock, patch
 

@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import pytest
+
 import salt.states.file as filestate
 import salt.utils.files
 import salt.utils.json

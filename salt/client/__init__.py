@@ -38,11 +38,11 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -590,10 +590,9 @@ class LocalClient:
         # even though it has already been imported.
         # when cmd_batch is called via the NetAPI
         # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        import salt.utils.args
 
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {
@@ -1886,7 +1885,7 @@ class LocalClient:
         )
 
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
 
@@ -1989,7 +1988,7 @@ class LocalClient:
 
         master_uri = (
             "tcp://"
-            + salt.utils.zeromq.ip_bracket(self.opts["interface"])
+            + salt.utils.network.ip_bracket(self.opts["interface"])
             + ":"
             + str(self.opts["ret_port"])
         )

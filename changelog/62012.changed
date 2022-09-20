@@ -1,3 +1,0 @@
-`zabbix.user_get` returns full user info with groups and medias
-`zabbix.user_addmedia` returns error for Zabbix 4.0+ due to `user.addmedia` method removal
-`zabbix.user_deletemedia` returns error for Zabbix 4.0+ due to `user.deletemedia` method removal

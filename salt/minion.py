@@ -820,11 +820,11 @@ class MinionBase:
                     self.connected = True
                     raise salt.ext.tornado.gen.Return((opts["master"], pub_channel))
                 except SaltClientError:
+                    if pub_channel:
+                        pub_channel.close()
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
-                        if pub_channel:
-                            pub_channel.close()
                         raise
 
     def _discover_masters(self):
@@ -1237,7 +1237,6 @@ class Minion(MinionBase):
         self.safe = safe
 
         self._running = None
-        self.win_proc = []
         self.subprocess_list = salt.utils.process.SubprocessList()
         self.loaded_base_name = loaded_base_name
         self.connected = False
@@ -1623,7 +1622,7 @@ class Minion(MinionBase):
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
         ) as event:
-            ret = yield event.fire_event(
+            ret = yield event.fire_event_async(
                 load, "__master_req_channel_payload", timeout=timeout
             )
             raise salt.ext.tornado.gen.Return(ret)
@@ -1766,7 +1765,7 @@ class Minion(MinionBase):
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
         name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
-            if sys.platform.startswith("win"):
+            if salt.utils.platform.spawning_platform():
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None

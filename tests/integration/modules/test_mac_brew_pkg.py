@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on

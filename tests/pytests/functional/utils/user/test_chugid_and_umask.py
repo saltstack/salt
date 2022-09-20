@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 
 import pytest
+
 import salt.utils.user
 
 pytestmark = [

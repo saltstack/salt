@@ -18,7 +18,7 @@ from tests.support.unit import TestCase, skipIf
 HAS_LIBS = True
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
-    from pyVim.connect import SmartConnect, Disconnect
+    from pyVim.connect import Disconnect, SmartConnect
     from pyVmomi import vim, vmodl
 except ImportError:
     HAS_LIBS = False

@@ -1,1 +1,0 @@
-Fixed highstate outputter not displaying with salt.function in orchestration when module returns a dictionary.
