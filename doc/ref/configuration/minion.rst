@@ -2473,7 +2473,7 @@ default configuration set up at install time.
     snapper_states_config: root
 
 ``global_state_conditions``
--------------------------
+---------------------------
 
 Default: ``None``
 
