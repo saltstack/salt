@@ -361,6 +361,8 @@ def deluser(name, username, root=None):
             return not retcode
         else:
             return True
+    except CommandExecutionError:
+        raise
     except Exception:  # pylint: disable=broad-except
         return True
 
