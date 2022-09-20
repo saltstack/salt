@@ -77,6 +77,7 @@ from salt.exceptions import (
 
 try:
     import xmlrpc.client
+
     from lxml import etree
 
     HAS_XML_LIBS = True
@@ -338,7 +339,9 @@ def list_nodes_select(call=None):
         )
 
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -893,10 +896,7 @@ def _get_device_template(disk, disk_info, template=None):
         for arg in args:
             if arg not in disk_info:
                 raise SaltCloudSystemExit(
-                    "The disk {} requires a {}\
-                    argument".format(
-                        disk, arg
-                    )
+                    "The disk {} requires a {} argument".format(disk, arg)
                 )
 
     _require_disk_opts("disk_type", "size")
@@ -911,8 +911,7 @@ def _get_device_template(disk, disk_info, template=None):
             clone_image = get_template_image(kwargs={"name": template})
 
         clone_image_id = get_image_id(kwargs={"name": clone_image})
-        temp = "DISK=[IMAGE={}, IMAGE_ID={}, CLONE=YES,\
-                        SIZE={}]".format(
+        temp = "DISK=[IMAGE={}, IMAGE_ID={}, CLONE=YES, SIZE={}]".format(
             clone_image, clone_image_id, size
         )
         return temp
@@ -1028,7 +1027,8 @@ def create(vm_):
             )
         if "CLONE" not in str(template):
             raise SaltCloudSystemExit(
-                "Missing an image disk to clone. Must define a clone disk alongside all other disk definitions."
+                "Missing an image disk to clone. Must define a clone disk alongside all"
+                " other disk definitions."
             )
 
     template_args = "\n".join(template)
@@ -1172,7 +1172,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
@@ -1594,7 +1594,8 @@ def image_snapshot_delete(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            "The image_snapshot_delete function requires a 'snapshot_id' to be provided."
+            "The image_snapshot_delete function requires a 'snapshot_id' to be"
+            " provided."
         )
 
     if image_id:
@@ -1661,7 +1662,8 @@ def image_snapshot_revert(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            "The image_snapshot_revert function requires a 'snapshot_id' to be provided."
+            "The image_snapshot_revert function requires a 'snapshot_id' to be"
+            " provided."
         )
 
     if image_id:
@@ -3210,8 +3212,8 @@ def vm_disk_snapshot_create(name, kwargs=None, call=None):
 
     if disk_id is None or description is None:
         raise SaltCloudSystemExit(
-            "The vm_disk_snapshot_create function requires a 'disk_id' and a 'description' "
-            "to be provided."
+            "The vm_disk_snapshot_create function requires a 'disk_id' and a"
+            " 'description' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3263,8 +3265,8 @@ def vm_disk_snapshot_delete(name, kwargs=None, call=None):
 
     if disk_id is None or snapshot_id is None:
         raise SaltCloudSystemExit(
-            "The vm_disk_snapshot_create function requires a 'disk_id' and a 'snapshot_id' "
-            "to be provided."
+            "The vm_disk_snapshot_create function requires a 'disk_id' and a"
+            " 'snapshot_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3318,8 +3320,8 @@ def vm_disk_snapshot_revert(name, kwargs=None, call=None):
 
     if disk_id is None or snapshot_id is None:
         raise SaltCloudSystemExit(
-            "The vm_disk_snapshot_revert function requires a 'disk_id' and a 'snapshot_id' "
-            "to be provided."
+            "The vm_disk_snapshot_revert function requires a 'disk_id' and a"
+            " 'snapshot_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -3511,8 +3513,7 @@ def vm_monitoring(name, call=None):
 
     if response[0] is False:
         log.error(
-            "There was an error retrieving the specified VM's monitoring "
-            "information."
+            "There was an error retrieving the specified VM's monitoring information."
         )
         return {}
     else:
@@ -3880,8 +3881,7 @@ def vn_add_ar(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": vn_name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_add_ar function requires a 'vn_id' and a 'vn_name' to "
-            "be provided."
+            "The vn_add_ar function requires a 'vn_id' and a 'vn_name' to be provided."
         )
 
     if data:
@@ -4038,7 +4038,7 @@ def vn_delete(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_delete function requires a 'name' or a 'vn_id' " "to be provided."
+            "The vn_delete function requires a 'name' or a 'vn_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -4106,8 +4106,7 @@ def vn_free_ar(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": vn_name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_free_ar function requires a 'vn_id' or a 'vn_name' to "
-            "be provided."
+            "The vn_free_ar function requires a 'vn_id' or a 'vn_name' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -4177,7 +4176,7 @@ def vn_hold(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": vn_name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_hold function requires a 'vn_id' or a 'vn_name' to " "be provided."
+            "The vn_hold function requires a 'vn_id' or a 'vn_name' to be provided."
         )
 
     if data:
@@ -4191,7 +4190,7 @@ def vn_hold(call=None, kwargs=None):
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
-            "The vn_hold function requires either 'data' or a 'path' to " "be provided."
+            "The vn_hold function requires either 'data' or a 'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -4250,8 +4249,7 @@ def vn_info(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_info function requires either a 'name' or a 'vn_id' "
-            "to be provided."
+            "The vn_info function requires either a 'name' or a 'vn_id' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -4320,8 +4318,7 @@ def vn_release(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": vn_name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_release function requires a 'vn_id' or a 'vn_name' to "
-            "be provided."
+            "The vn_release function requires a 'vn_id' or a 'vn_name' to be provided."
         )
 
     if data:
@@ -4335,8 +4332,7 @@ def vn_release(call=None, kwargs=None):
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
-            "The vn_release function requires either 'data' or a 'path' to "
-            "be provided."
+            "The vn_release function requires either 'data' or a 'path' to be provided."
         )
 
     server, user, password = _get_xml_rpc()
@@ -4407,8 +4403,7 @@ def vn_reserve(call=None, kwargs=None):
         vn_id = get_vn_id(kwargs={"name": vn_name})
     else:
         raise SaltCloudSystemExit(
-            "The vn_reserve function requires a 'vn_id' or a 'vn_name' to "
-            "be provided."
+            "The vn_reserve function requires a 'vn_id' or a 'vn_name' to be provided."
         )
 
     if data:
@@ -4457,7 +4452,7 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempts,
             )

@@ -210,7 +210,9 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             #    testprofile2 has remove_config_on_destroy: False
             #    and shutdown_on_destroy: True
             {
-                "nodeS1": "a system.shutdown worked message"  # last call shuts down the minion
+                "nodeS1": (  # last call shuts down the minion
+                    "a system.shutdown worked message"
+                )
             },
         ]
         mm_cmd = MagicMock(side_effect=result_list)

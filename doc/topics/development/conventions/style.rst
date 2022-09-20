@@ -19,8 +19,11 @@ Linting
 =======
 
 Most Salt style conventions are codified in Salt's ``.pylintrc`` file.
-Salt's pylint file has two dependencies: pylint_ and saltpylint_, however, linting should
-be done using :ref:`nox <getting_set_up_for_tests>`.
+Salt's linting has two major dependencies: pylint_ and saltpylint_, the full lint
+requirements can be found under ``requirements/static/ci/lint.in`` and the pinned
+requirements at ``requirements/static/ci/py3.<minor-version>/lint.txt``, however,
+linting should be done using :ref:`nox <getting_set_up_for_tests>`, which is how
+pull requests are checked.
 
 .. code-block:: bash
 
@@ -133,7 +136,7 @@ Dictionaries should be initialized using `{}` instead of `dict()`.
 
 See here_ for an in-depth discussion of this topic.
 
-.. _here: https://doughellmann.com/blog/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2/
+.. _here: https://doughellmann.com/posts/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2/
 
 
 Imports

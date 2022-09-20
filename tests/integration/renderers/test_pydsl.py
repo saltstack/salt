@@ -3,6 +3,7 @@ import shutil
 import textwrap
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils

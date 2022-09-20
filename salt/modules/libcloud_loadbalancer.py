@@ -42,8 +42,8 @@ REQUIRED_LIBCLOUD_VERSION = "1.5.0"
 try:
     # pylint: disable=unused-import
     import libcloud
+    from libcloud.loadbalancer.base import Algorithm, Member
     from libcloud.loadbalancer.providers import get_driver
-    from libcloud.loadbalancer.base import Member, Algorithm
 
     # pylint: enable=unused-import
     if hasattr(libcloud, "__version__") and _LooseVersion(
@@ -61,10 +61,12 @@ def __virtual__():
     Only load if libcloud libraries exist.
     """
     if not HAS_LIBCLOUD:
-        msg = (
-            "A apache-libcloud library with version at least {} was not " "found"
-        ).format(REQUIRED_LIBCLOUD_VERSION)
-        return (False, msg)
+        return (
+            False,
+            "A apache-libcloud library with version at least {} was not found".format(
+                REQUIRED_LIBCLOUD_VERSION
+            ),
+        )
     return True
 
 

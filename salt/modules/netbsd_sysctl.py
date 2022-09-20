@@ -22,8 +22,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The netbsd_sysctl execution module failed to load: "
-        "only available on NetBSD.",
+        "The netbsd_sysctl execution module failed to load: only available on NetBSD.",
     )
 
 

@@ -199,7 +199,7 @@ def installed(
 
             for app in installing:
                 try:
-                    log.info("Copying {} to {}".format(app, target))
+                    log.info("Copying %s to %s", app, target)
 
                     out = __salt__["macpackage.install_app"](
                         os.path.join(mount_point, app), target

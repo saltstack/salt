@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of InfluxDB 0.8 users
 ================================
@@ -8,9 +7,6 @@ Management of InfluxDB 0.8 users
 .. versionadded:: 2014.7.0
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -57,7 +53,7 @@ def present(
         database, user, password, host, port
     ):
         ret["result"] = False
-        ret["comment"] = "Database {0} does not exist".format(database)
+        ret["comment"] = "Database {} does not exist".format(database)
         return ret
 
     # check if user exists
@@ -66,7 +62,7 @@ def present(
     ):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {0} is not present and needs to be created".format(
+            ret["comment"] = "User {} is not present and needs to be created".format(
                 name
             )
             return ret
@@ -74,16 +70,16 @@ def present(
         if __salt__["influxdb08.user_create"](
             name, passwd, database, user, password, host, port
         ):
-            ret["comment"] = "User {0} has been created".format(name)
+            ret["comment"] = "User {} has been created".format(name)
             ret["changes"][name] = "Present"
             return ret
         else:
-            ret["comment"] = "Failed to create user {0}".format(name)
+            ret["comment"] = "Failed to create user {}".format(name)
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "User {0} is already present".format(name)
+    ret["comment"] = "User {} is already present".format(name)
     return ret
 
 
@@ -116,19 +112,19 @@ def absent(name, database=None, user=None, password=None, host=None, port=None):
     if __salt__["influxdb08.user_exists"](name, database, user, password, host, port):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {0} is present and needs to be removed".format(name)
+            ret["comment"] = "User {} is present and needs to be removed".format(name)
             return ret
         if __salt__["influxdb08.user_remove"](
             name, database, user, password, host, port
         ):
-            ret["comment"] = "User {0} has been removed".format(name)
+            ret["comment"] = "User {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove user {0}".format(name)
+            ret["comment"] = "Failed to remove user {}".format(name)
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "User {0} is not present, so it cannot be removed".format(name)
+    ret["comment"] = "User {} is not present, so it cannot be removed".format(name)
     return ret

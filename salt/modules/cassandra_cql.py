@@ -96,14 +96,13 @@ __virtualname__ = "cassandra_cql"
 HAS_DRIVER = False
 try:
     # pylint: disable=import-error,no-name-in-module
-    from cassandra.cluster import Cluster
-    from cassandra.cluster import NoHostAvailable
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.cluster import Cluster, NoHostAvailable
     from cassandra.connection import (
         ConnectionException,
         ConnectionShutdown,
         OperationTimedOut,
     )
-    from cassandra.auth import PlainTextAuthProvider
     from cassandra.query import dict_factory
 
     # pylint: enable=import-error,no-name-in-module
@@ -160,7 +159,8 @@ def _load_properties(property_name, config_option, set_default=False, default=No
                 loaded_property = default
             else:
                 log.error(
-                    "No cassandra %s specified in the configuration or passed to the module.",
+                    "No cassandra %s specified in the configuration or passed to the"
+                    " module.",
                     config_option,
                 )
                 raise CommandExecutionError(
@@ -732,11 +732,13 @@ def keyspace_exists(
         salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
     """
     query = {
-        "2": "select keyspace_name from system.schema_keyspaces where keyspace_name = '{}';".format(
-            keyspace
+        "2": (
+            "select keyspace_name from system.schema_keyspaces where keyspace_name ="
+            " '{}';".format(keyspace)
         ),
-        "3": "select keyspace_name from system_schema.keyspaces where keyspace_name = '{}';".format(
-            keyspace
+        "3": (
+            "select keyspace_name from system_schema.keyspaces where keyspace_name ="
+            " '{}';".format(keyspace)
         ),
     }
 

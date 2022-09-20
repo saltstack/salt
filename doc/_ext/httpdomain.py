@@ -25,7 +25,7 @@ from sphinx.util.docfields import GroupedField, TypedField
 from sphinx.util.nodes import make_refnode
 
 
-class DocRef(object):
+class DocRef:
     """Represents a link to an RFC which defines an HTTP method."""
 
     def __init__(self, base_url, anchor, section):
@@ -42,7 +42,7 @@ class DocRef(object):
         location of the RFC which defines some HTTP method.
 
         """
-        return "{0}#{1}{2}".format(self.base_url, self.anchor, self.section)
+        return "{}#{}{}".format(self.base_url, self.anchor, self.section)
 
 
 #: The URL of the HTTP/1.1 RFC which defines the HTTP methods OPTIONS, GET,
@@ -293,10 +293,11 @@ def http_statuscode_role(name, rawtext, text, lineno, inliner, options={}, conte
     if code == 418:
         url = "http://www.ietf.org/rfc/rfc2324.txt"
     if code == 449:
-        url = "http://msdn.microsoft.com/en-us/library" "/dd891478(v=prot.10).aspx"
+        url = "http://msdn.microsoft.com/en-us/library/dd891478(v=prot.10).aspx"
     elif code in HTTP_STATUS_CODES:
-        url = "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html" "#sec10." + (
-            "%d.%d" % (code // 100, 1 + code % 100)
+        url = (
+            "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10."
+            + "%d.%d" % (code // 100, 1 + code % 100)
         )
     else:
         url = ""
@@ -338,7 +339,7 @@ class HTTPIndex(Index):
     shortname = "routing table"
 
     def __init__(self, *args, **kwargs):
-        super(HTTPIndex, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.ignore = [
             [l for l in x.split("/") if l]
@@ -351,7 +352,7 @@ class HTTPIndex(Index):
         for prefix in self.ignore:
             if letters[: len(prefix)] == prefix:
                 return "/" + "/".join(letters[: len(prefix) + 1])
-        return "/%s" % (letters[0] if letters else "",)
+        return "/{}".format(letters[0] if letters else "")
 
     def generate(self, docnames=None):
         content = {}
@@ -435,7 +436,7 @@ class HTTPDomain(Domain):
 
     @property
     def routes(self):
-        return dict((key, self.data[key]) for key in self.object_types)
+        return {key: self.data[key] for key in self.object_types}
 
     def clear_doc(self, docname):
         for typ, routes in self.routes.items():

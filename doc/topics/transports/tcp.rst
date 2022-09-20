@@ -2,7 +2,7 @@
 TCP Transport
 =============
 
-The tcp transport is an implementation of Salt's channels using raw tcp sockets.
+The tcp transport is an implementation of Salt's transport using raw tcp sockets.
 Since this isn't using a pre-defined messaging library we will describe the wire
 protocol, message semantics, etc. in this document.
 
@@ -83,17 +83,17 @@ Crypto
 The current implementation uses the same crypto as the ``zeromq`` transport.
 
 
-Pub Channel
-===========
-For the pub channel we send messages without "message ids" which the remote end
-interprets as a one-way send.
+Publish Server and Client
+=========================
+For the publish server and client we send messages without "message ids" which
+the remote end interprets as a one-way send.
 
 .. note::
 
     As of today we send all publishes to all minions and rely on minion-side filtering.
 
 
-Req Channel
-===========
-For the req channel we send messages with a "message id". This "message id" allows
-us to multiplex messages across the socket.
+Request Server and Client
+=========================
+For the request server and client we send messages with a "message id". This
+"message id" allows us to multiplex messages across the socket.

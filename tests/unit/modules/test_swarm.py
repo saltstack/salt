@@ -1,9 +1,4 @@
-# Import Python libs
-
-# Import Salt Libs
 import salt.modules.swarm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase

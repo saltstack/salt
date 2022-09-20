@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of MySQL grants (user permissions)
 =============================================
@@ -45,7 +44,6 @@ instructions.
        - database: somedb.sometable
        - user: joe
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
@@ -191,7 +189,7 @@ def present(
     if __opts__["test"]:
         # there is probably better things to make in test mode
         ret["result"] = None
-        ret["comment"] = ("MySQL grant {0} is set to be created").format(name)
+        ret["comment"] = "MySQL grant {} is set to be created".format(name)
         return ret
     if __salt__["mysql.grant_add"](
         grant, database, user, host, grant_option, escape, ssl_option, **connection_args
@@ -204,7 +202,7 @@ def present(
         ret["comment"] = ret["comment"].format(grant, database, user, host)
         err = _get_mysql_error()
         if err is not None:
-            ret["comment"] += " ({0})".format(err)
+            ret["comment"] += " ({})".format(err)
         ret["result"] = False
     return ret
 
@@ -246,12 +244,12 @@ def absent(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "MySQL grant {0} is set to be " "revoked".format(name)
+            ret["comment"] = "MySQL grant {} is set to be revoked".format(name)
             return ret
         if __salt__["mysql.grant_revoke"](
             grant, database, user, host, grant_option, **connection_args
         ):
-            ret["comment"] = "Grant {0} on {1} for {2}@{3} has been " "revoked".format(
+            ret["comment"] = "Grant {} on {} for {}@{} has been revoked".format(
                 grant, database, user, host
             )
             ret["changes"][name] = "Absent"
@@ -259,24 +257,28 @@ def absent(
         else:
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] = (
-                    "Unable to revoke grant {0} on {1} for "
-                    "{2}@{3} ({4})".format(grant, database, user, host, err)
+                ret[
+                    "comment"
+                ] = "Unable to revoke grant {} on {} for {}@{} ({})".format(
+                    grant, database, user, host, err
                 )
                 ret["result"] = False
                 return ret
     else:
         err = _get_mysql_error()
         if err is not None:
-            ret["comment"] = (
-                "Unable to determine if grant {0} on {1} for "
-                "{2}@{3} exists ({4})".format(grant, database, user, host, err)
+            ret[
+                "comment"
+            ] = "Unable to determine if grant {} on {} for {}@{} exists ({})".format(
+                grant, database, user, host, err
             )
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = (
-        "Grant {0} on {1} to {2}@{3} is not present, so it" " cannot be revoked"
-    ).format(grant, database, user, host)
+    ret[
+        "comment"
+    ] = "Grant {} on {} to {}@{} is not present, so it cannot be revoked".format(
+        grant, database, user, host
+    )
     return ret

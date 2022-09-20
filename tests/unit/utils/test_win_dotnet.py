@@ -1,13 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_dotnet as win_dotnet
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 

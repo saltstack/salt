@@ -226,29 +226,83 @@ If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll") -and (Test-Pa
     # Remove temp files
     Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar" -Force -Recurse
     Remove-Item "$file" -Force
-
 }
 
 #------------------------------------------------------------------------------
-# Check for installation of Microsoft Visual C++ Build Tools
+# Check for installation of AccessControl Plugin for NSIS
 #------------------------------------------------------------------------------
-Write-Output " - Checking for Microsoft Visual C++ Build Tools installation . . ."
-If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
-    # Found Microsoft Visual C++ Build Tools, do nothing
-    Write-Output " - Microsoft Visual C++ Build Tools Found . . ."
+Write-Output " - Checking for AccessControl Plugin installation  . . ."
+If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\AccessControl.dll") -and (Test-Path "$($ini[$bitPaths]['NSISPluginsDirU'])\AccessControl.dll") ) {
+    # Found AccessControl Plugin, do nothing
+    Write-Output " - AccessControl Plugin Found . . ."
 } Else {
-    # Microsoft Visual C++ Build Tools not found, install
-    Write-Output " - Microsoft Visual C++ Build Tools Not Found . . ."
-    Write-Output " - Downloading $($ini['Prerequisites']['VCppBuildTools']) . . ."
-    $file = "$($ini['Prerequisites']['VCppBuildTools'])"
+    # AccessControl Plugin not found, install
+    Write-Output " - AccessControl Plugin Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISPluginAccessControl']) . . ."
+    $file = "$($ini['Prerequisites']['NSISPluginAccessControl'])"
     $url  = "$($ini['Settings']['SaltRepo'])/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$file"
     DownloadFileWithProgress $url $file
 
+    # Extract Zip File
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file "$($ini['Settings']['DownloadDir'])\nsisaccesscontrol"
+
+    # Copy dlls to plugins directory (both ANSI and Unicode)
+    Write-Output " - Copying dlls to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisaccesscontrol\Plugins\i386-ansi\AccessControl.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\AccessControl.dll" -Force
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisaccesscontrol\Plugins\i386-unicode\AccessControl.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\AccessControl.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisaccesscontrol" -Force -Recurse
+    Remove-Item "$file" -Force
+}
+
+#------------------------------------------------------------------------------
+# Check for installation of the MoveFileFolder Library for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for MoveFileFolder Library installation . . ."
+If ( Test-Path "$($ini[$bitPaths]['NSISDir'])\Include\MoveFileFolder.nsh" ) {
+    # Found MoveFileFolder Library for NSIS, do nothing
+    Write-Output " - MoveFileFolder Library for NSIS Found . . ."
+} Else {
+    # MoveFileFolder Library for NSIS not found, install
+    Write-Output " - MoveFileFolder Library for NSIS Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISLibMoveFileFolder']) . . ."
+    $file = "$($ini['Prerequisites']['NSISLibMoveFileFolder'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Move library to the include directory
+    Write-Output " - Copying library to include directory . . ."
+    Move-Item "$file" "$( $ini[$bitPaths]['NSISDir'] )\Include\MoveFileFolder.nsh" -Force
+}
+
+#------------------------------------------------------------------------------
+# Check for installation of Microsoft Visual Studio 2015 Build Tools
+#------------------------------------------------------------------------------
+Write-Output " - Checking for Microsoft Visual Studio 2015 Build Tools installation . . ."
+If (Test-Path "$($ini[$bitPaths]['VS2015BuildToolsDir'])\cl.exe") {
+    # Found Microsoft Visual Studio 2015 Build Tools, do nothing
+    Write-Output " - Microsoft Visual Studio 2015 Build Tools Found . . ."
+} Else {
+    # Microsoft Visual Studio 2015 Build Tools not found, install
+    Write-Output " - Microsoft Visual Studio 2015 Build Tools Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['VS2015BuildTools']) . . ."
+    $file = "$($ini['Prerequisites']['VS2015BuildTools'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Zip File
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file "$($ini['Settings']['DownloadDir'])\vs2015buildtools"
+
     # Install Microsoft Visual C++ Build Tools
-    Write-Output " - Installing $($ini['Prerequisites']['VCppBuildTools']) . . ."
-    $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCppBuildTools'])"
-    $p    = Start-Process $file -ArgumentList '/Quiet' -Wait -NoNewWindow -PassThru
+    Write-Output " - Installing $($ini['Prerequisites']['VS2015BuildTools']) . . ."
+    $file = "$($ini['Settings']['DownloadDir'])\vs2015buildtools\install.bat"
+    $p    = Start-Process $file -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -355,9 +409,9 @@ ForEach($key in $ini[$bitDLLs].Keys) {
     Write-Output "   - $key . . ."
     $file = "$($ini[$bitDLLs][$key])"
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$($file.Split("/")[-1])"
     DownloadFileWithProgress $url $file
-    Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
+    Copy-Item $file -destination $($ini['Settings']['Python3Dir'])
 }
 
 #------------------------------------------------------------------------------

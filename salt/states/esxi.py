@@ -129,7 +129,7 @@ try:
     ):
 
         log.debug(
-            "pyVmomi not loaded: Incompatible versions " "of Python. See Issue #29537."
+            "pyVmomi not loaded: Incompatible versions of Python. See Issue #29537."
         )
         raise ImportError()
     HAS_PYVMOMI = True
@@ -1319,9 +1319,9 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
             s = ", ".join(["'{}'".format(id) for id in added_capacity_disk_displays])
             if __opts__["test"]:
                 comments.append(
-                    "State {} will add "
-                    "capacity disk(s) {} to disk group #{}."
-                    "".format(name, s, idx)
+                    "State {} will add capacity disk(s) {} to disk group #{}.".format(
+                        name, s, idx
+                    )
                 )
                 log.info(comments[-1])
                 changes = True
@@ -1335,14 +1335,15 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                 )
             except VMwareSaltError as err:
                 comments.append(
-                    "Error adding capacity disk(s) {} to "
-                    "disk group #{}: {}.".format(s, idx, err)
+                    "Error adding capacity disk(s) {} to disk group #{}: {}.".format(
+                        s, idx, err
+                    )
                 )
                 log.error(comments[-1])
                 errors = True
                 continue
 
-            com = "Added capacity disk(s) {} to disk group #{}" "".format(s, idx)
+            com = "Added capacity disk(s) {} to disk group #{}".format(s, idx)
             log.info(com)
             comments.append(com)
             diskgroup_changes[str(idx)] = {
@@ -1522,8 +1523,9 @@ def host_cache_configured(
         )
         if not existing_disks:
             raise VMwareObjectRetrievalError(
-                "Disk with scsi address '{}' was not found in host '{}'"
-                "".format(datastore["backing_disk_scsi_addr"], hostname)
+                "Disk with scsi address '{}' was not found in host '{}'".format(
+                    datastore["backing_disk_scsi_addr"], hostname
+                )
             )
         backing_disk = existing_disks[0]
         backing_disk_display = "{} (id:{})".format(
@@ -1689,13 +1691,13 @@ def host_cache_configured(
                     )
                 )
             else:
-                if (existing_datastore["capacity"] / 1024.0 ** 2) < swap_size_MiB:
+                if (existing_datastore["capacity"] / 1024.0**2) < swap_size_MiB:
 
                     raise ArgumentValueError(
                         "Capacity of host cache datastore '{}' ({} MiB) is "
                         "smaller than the required swap size ({} MiB)".format(
                             existing_datastore["name"],
-                            existing_datastore["capacity"] / 1024.0 ** 2,
+                            existing_datastore["capacity"] / 1024.0**2,
                             swap_size_MiB,
                         )
                     )
@@ -1705,9 +1707,7 @@ def host_cache_configured(
                     swap_size_MiB=swap_size_MiB,
                     service_instance=si,
                 )
-                comments.append(
-                    "Host cache configured on host " "'{}'.".format(hostname)
-                )
+                comments.append("Host cache configured on host '{}'.".format(hostname))
         else:
             comments.append(
                 "Host cache on host '{}' is already correctly "

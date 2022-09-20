@@ -57,7 +57,6 @@ from time import sleep, time
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -232,7 +231,7 @@ def eni_present(
     """
     if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "One (but not both) of subnet_id or " "subnet_name must be provided."
+            "One (but not both) of subnet_id or subnet_name must be provided."
         )
     if not groups:
         raise SaltInvocationError("groups is a required argument.")
@@ -351,10 +350,13 @@ def eni_present(
                             profile=profile,
                         )
                         ret["result"] = False
-                        msg = "Failed to assocaite the allocated EIP address with the ENI.  The EIP {}".format(
-                            "was successfully released."
-                            if _ret
-                            else "was NOT RELEASED."
+                        msg = (
+                            "Failed to assocaite the allocated EIP address with the"
+                            " ENI.  The EIP {}".format(
+                                "was successfully released."
+                                if _ret
+                                else "was NOT RELEASED."
+                            )
                         )
                         ret["comment"] = " ".join([ret["comment"], msg])
                         return ret
@@ -386,7 +388,10 @@ def eni_present(
                 elif "public_ip" in eip_alloc:
                     arecord["value"] = eip_alloc["public_ip"]
                 else:
-                    msg = "Unable to add an A record for the public IP address, a public IP address does not seem to be allocated to this ENI."
+                    msg = (
+                        "Unable to add an A record for the public IP address, a public"
+                        " IP address does not seem to be allocated to this ENI."
+                    )
                     raise CommandExecutionError(msg)
             else:
                 arecord["value"] = r["result"]["private_ip_address"]
@@ -841,14 +846,13 @@ def instance_present(
 
     if not salt.utils.data.exactly_one((image_id, image_name)):
         raise SaltInvocationError(
-            "Exactly one of image_id OR " "image_name must be provided."
+            "Exactly one of image_id OR image_name must be provided."
         )
     if (public_ip or allocation_id or allocate_eip) and not salt.utils.data.exactly_one(
         (public_ip, allocation_id, allocate_eip)
     ):
         raise SaltInvocationError(
-            "At most one of public_ip, allocation_id OR "
-            "allocate_eip may be provided."
+            "At most one of public_ip, allocation_id OR allocate_eip may be provided."
         )
 
     if instance_id:
@@ -875,7 +879,8 @@ def instance_present(
             _create = True
         elif len(instances) > 1:
             log.debug(
-                "Multiple instances matching criteria found - cannot determine a singular instance-id"
+                "Multiple instances matching criteria found - cannot determine a"
+                " singular instance-id"
             )
             instance_id = None  # No way to know, we'll just have to bail later....
         else:
@@ -1002,11 +1007,10 @@ def instance_present(
         if r[0].get("instance_id"):
             if r[0]["instance_id"] != instance_id:
                 ret["result"] = False
-                ret["comment"] = (
-                    "EIP {} is already associated with instance "
-                    "{}.".format(
-                        public_ip if public_ip else allocation_id, r[0]["instance_id"]
-                    )
+                ret[
+                    "comment"
+                ] = "EIP {} is already associated with instance {}.".format(
+                    public_ip if public_ip else allocation_id, r[0]["instance_id"]
                 )
                 return ret
         else:
@@ -1049,10 +1053,9 @@ def instance_present(
                 continue
             else:
                 if __opts__["test"]:
-                    changed_attrs[
-                        k
-                    ] = "The instance attribute {} is set to be changed from '{}' to '{}'.".format(
-                        k, curr.get(k), v
+                    changed_attrs[k] = (
+                        "The instance attribute {} is set to be changed from '{}' to"
+                        " '{}'.".format(k, curr.get(k), v)
                     )
                     continue
                 try:
@@ -1229,9 +1232,8 @@ def instance_absent(
             )
         except CommandExecutionError as e:
             ret["result"] = None
-            ret["comment"] = (
-                "Couldn't determine current status of instance "
-                "{}.".format(instance_name or name)
+            ret["comment"] = "Couldn't determine current status of instance {}.".format(
+                instance_name or name
             )
             return ret
 
@@ -1435,8 +1437,10 @@ def volume_absent(
         ret["comment"] = "Volume matching criteria not found, assuming already absent"
         return ret
     if len(vols) > 1:
-        msg = "More than one volume matched criteria, can't continue in state {}".format(
-            name
+        msg = (
+            "More than one volume matched criteria, can't continue in state {}".format(
+                name
+            )
         )
         log.error(msg)
         ret["comment"] = msg
@@ -1647,11 +1651,11 @@ def volume_present(
 
     if not salt.utils.data.exactly_one((volume_name, volume_id)):
         raise SaltInvocationError(
-            "Exactly one of 'volume_name', 'volume_id', " " must be provided."
+            "Exactly one of 'volume_name', 'volume_id',  must be provided."
         )
     if not salt.utils.data.exactly_one((instance_name, instance_id)):
         raise SaltInvocationError(
-            "Exactly one of 'instance_name', or 'instance_id'" " must be provided."
+            "Exactly one of 'instance_name', or 'instance_id' must be provided."
         )
     if device is None:
         raise SaltInvocationError("Parameter 'device' is required.")
@@ -1674,8 +1678,9 @@ def volume_present(
         filters.update({"tag:Name": volume_name})
         vols = __salt__["boto_ec2.get_all_volumes"](filters=filters, **args)
         if len(vols) > 1:
-            msg = "More than one volume matched volume name {}, can't continue in state {}".format(
-                volume_name, name
+            msg = (
+                "More than one volume matched volume name {}, can't continue in"
+                " state {}".format(volume_name, name)
             )
             raise SaltInvocationError(msg)
         if len(vols) < 1:
@@ -1714,8 +1719,9 @@ def volume_present(
             )
             if _rt["success"] is False:
                 raise SaltInvocationError(
-                    "Error updating requested volume "
-                    "{} with name {}. {}".format(volume_id, volume_name, _rt["comment"])
+                    "Error updating requested volume {} with name {}. {}".format(
+                        volume_id, volume_name, _rt["comment"]
+                    )
                 )
             old_dict["volume_id"] = None
             new_dict["volume_id"] = volume_id
@@ -1729,7 +1735,7 @@ def volume_present(
     vol = vols[0]
     if vol.zone != instance.placement:
         raise SaltInvocationError(
-            ("Volume {} in {} cannot attach to instance" " {} in {}.").format(
+            "Volume {} in {} cannot attach to instance {} in {}.".format(
                 volume_id, vol.zone, instance_id, instance.placement
             )
         )
@@ -1742,10 +1748,9 @@ def volume_present(
             return ret
         else:
             if __opts__["test"]:
-                ret["comment"] = (
-                    "The volume {} is set to be detached"
-                    " from {}({} and attached on {}({})."
-                ).format(
+                ret[
+                    "comment"
+                ] = "The volume {} is set to be detached from {}({} and attached on {}({}).".format(
                     attach_data.instance_id,
                     attach_data.devic,
                     volume_id,
@@ -1764,10 +1769,10 @@ def volume_present(
                 old_dict["device"] = attach_data.device
             else:
                 raise SaltInvocationError(
-                    (
-                        "The volume {} is already attached on instance {}({})."
-                        " Failed to detach"
-                    ).format(volume_id, attach_data.instance_id, attach_data.device)
+                    "The volume {} is already attached on instance {}({})."
+                    " Failed to detach".format(
+                        volume_id, attach_data.instance_id, attach_data.device
+                    )
                 )
     else:
         old_dict["instance_id"] = instance_id
@@ -1843,7 +1848,7 @@ def private_ips_present(
 
     if not private_ip_addresses:
         raise SaltInvocationError(
-            "You must provide the private_ip_addresses to associate with the " "ENI"
+            "You must provide the private_ip_addresses to associate with the ENI"
         )
 
     ret = {
@@ -1923,7 +1928,7 @@ def private_ips_present(
 
         else:
             # Testing mode, show that there were ips to add
-            ret["comment"] = "ips on eni: {}\n" "ips that would be added: {}\n".format(
+            ret["comment"] = "ips on eni: {}\nips that would be added: {}\n".format(
                 "\n\t- " + "\n\t- ".join(ret["changes"]["old"]),
                 "\n\t- " + "\n\t- ".join(ips_to_add),
             )
@@ -1980,7 +1985,7 @@ def private_ips_absent(
 
     if not private_ip_addresses:
         raise SaltInvocationError(
-            "You must provide the private_ip_addresses to unassociate with " "the ENI"
+            "You must provide the private_ip_addresses to unassociate with the ENI"
         )
     if not isinstance(private_ip_addresses, list):
         private_ip_addresses = [private_ip_addresses]
@@ -2076,12 +2081,9 @@ def private_ips_absent(
 
         else:
             # Testing mode, show that there were ips to remove
-            ret["comment"] = (
-                "ips on eni: {}\n"
-                "ips that would be removed: {}\n".format(
-                    "\n\t- " + "\n\t- ".join(ret["changes"]["old"]),
-                    "\n\t- " + "\n\t- ".join(ips_to_remove),
-                )
+            ret["comment"] = "ips on eni: {}\nips that would be removed: {}\n".format(
+                "\n\t- " + "\n\t- ".join(ret["changes"]["old"]),
+                "\n\t- " + "\n\t- ".join(ips_to_remove),
             )
             ret["changes"] = {}
             ret["result"] = None

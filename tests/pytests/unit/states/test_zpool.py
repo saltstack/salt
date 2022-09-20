@@ -9,6 +9,7 @@ Tests for salt.states.zpool
 """
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.zpool as zpool
@@ -163,7 +164,10 @@ def test_present_import_fail(utils_patch):
     ret = {
         "name": "myzpool",
         "result": False,
-        "comment": "storage pool myzpool was not imported, no (valid) layout specified for creation",
+        "comment": (
+            "storage pool myzpool was not imported, no (valid) layout specified for"
+            " creation"
+        ),
         "changes": {},
     }
 
@@ -243,7 +247,10 @@ def test_present_create_fail(utils_patch):
     ret = {
         "name": "myzpool",
         "result": False,
-        "comment": "storage pool myzpool was not imported, no (valid) layout specified for creation",
+        "comment": (
+            "storage pool myzpool was not imported, no (valid) layout specified for"
+            " creation"
+        ),
         "changes": {},
     }
 
@@ -403,7 +410,10 @@ def test_present_update_success(utils_patch):
     ):
         assert (
             zpool.present(
-                "myzpool", config=config, layout=layout, properties=properties,
+                "myzpool",
+                config=config,
+                layout=layout,
+                properties=properties,
             )
             == ret
         )
@@ -485,7 +495,10 @@ def test_present_update_nochange_success(utils_patch):
             with patch.dict(zpool.__utils__, utils_patch):
                 assert (
                     zpool.present(
-                        "myzpool", config=config, layout=layout, properties=properties,
+                        "myzpool",
+                        config=config,
+                        layout=layout,
+                        properties=properties,
                     )
                     == ret
                 )

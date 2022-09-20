@@ -1,8 +1,7 @@
 import pytest
+
 import salt.modules.kubeadm as kubeadm
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -684,8 +683,7 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = {
             "retcode": 0,
-            "stdout": "[config/images] Pulled image1\n"
-            "[config/images] Pulled image2\n",
+            "stdout": "[config/images] Pulled image1\n[config/images] Pulled image2\n",
         }
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),
@@ -702,8 +700,7 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = {
             "retcode": 0,
-            "stdout": "[config/images] Pulled image1\n"
-            "[config/images] Pulled image2\n",
+            "stdout": "[config/images] Pulled image1\n[config/images] Pulled image2\n",
         }
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),

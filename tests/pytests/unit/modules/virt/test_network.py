@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.virt as virt
 import salt.utils.xmlutil as xmlutil
 
@@ -188,7 +189,11 @@ def test_gen_xml_passthrough_interfaces():
     Test the virt._gen_net_xml() function for a passthrough forward mode
     """
     xml_data = virt._gen_net_xml(
-        "network", "virbr0", "passthrough", None, interfaces="eth10 eth11 eth12",
+        "network",
+        "virbr0",
+        "passthrough",
+        None,
+        interfaces="eth10 eth11 eth12",
     )
     root = ET.fromstring(xml_data)
     assert root.find("forward").get("mode") == "passthrough"
@@ -204,7 +209,11 @@ def test_gen_xml_hostdev_addresses():
     Test the virt._gen_net_xml() function for a hostdev forward mode with PCI addresses
     """
     xml_data = virt._gen_net_xml(
-        "network", "virbr0", "hostdev", None, addresses="0000:04:00.1 0000:e3:01.2",
+        "network",
+        "virbr0",
+        "hostdev",
+        None,
+        addresses="0000:04:00.1 0000:e3:01.2",
     )
     root = ET.fromstring(xml_data)
     expected_forward = ET.fromstring(
@@ -274,7 +283,8 @@ def test_gen_xml_openvswitch():
 
 
 @pytest.mark.parametrize(
-    "autostart, start", [(True, True), (False, True), (False, False)],
+    "autostart, start",
+    [(True, True), (False, True), (False, False)],
 )
 def test_define(make_mock_network, autostart, start):
     """
@@ -366,8 +376,11 @@ def test_update_nat_nochange(make_mock_network):
     define_mock.assert_not_called()
 
 
-@pytest.mark.parametrize("test", [True, False])
-def test_update_nat_change(make_mock_network, test):
+@pytest.mark.parametrize(
+    "test, netmask",
+    [(True, "netmask='255.255.255.0'"), (True, "prefix='24'"), (False, "prefix='24'")],
+)
+def test_update_nat_change(make_mock_network, test, netmask):
     """
     Test updating a NAT network with changes
     """
@@ -380,13 +393,15 @@ def test_update_nat_change(make_mock_network, test):
           <bridge name='virbr0' stp='on' delay='0'/>
           <mac address='52:54:00:cd:49:6b'/>
           <domain name='my.lab' localOnly='yes'/>
-          <ip address='192.168.122.1' netmask='255.255.255.0'>
+          <ip address='192.168.122.1' {}>
             <dhcp>
               <range start='192.168.122.2' end='192.168.122.254'/>
             </dhcp>
           </ip>
         </network>
-        """
+        """.format(
+            netmask
+        )
     )
     assert virt.network_update(
         "default",

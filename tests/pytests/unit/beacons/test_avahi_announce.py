@@ -5,6 +5,7 @@
     Avahi announce beacon test cases
 """
 import pytest
+
 import salt.beacons.avahi_announce as avahi_announce
 
 
@@ -28,5 +29,6 @@ def test_empty_config():
     ret = avahi_announce.validate(config)
     assert ret == (
         False,
-        "Configuration for avahi_announce beacon must contain servicetype, port and txt items.",
+        "Configuration for avahi_announce beacon must contain servicetype, port and txt"
+        " items.",
     )

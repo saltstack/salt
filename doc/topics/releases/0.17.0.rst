@@ -39,7 +39,7 @@ presently supports watching the event bus and firing commands over Salt.
 
 At this time, Halite is not available as a package, but installation
 documentation is available at:
-http://docs.saltstack.com/topics/tutorials/halite.html
+https://docs.saltproject.io/topics/tutorials/halite.html
 
 Halite is, like the rest of Salt, Open Source!
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Copy pillar data from a bucket in Amazon S3
 
@@ -88,35 +87,22 @@ for each environment rather than specifying multiple_env. This is due
 to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import pickle
 import time
+import urllib.parse
 from copy import deepcopy
 
 import salt.utils.files
 import salt.utils.hashutils
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import filter
-from salt.ext.six.moves.urllib.parse import quote as _quote
-
-# Import salt libs
 from salt.pillar import Pillar
 
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-
-# Set up logging
 log = logging.getLogger(__name__)
 
 
-class S3Credentials(object):
+class S3Credentials:
     def __init__(
         self,
         key,
@@ -190,8 +176,8 @@ def ext_pillar(
     if s3_sync_on_update:
         # sync the buckets to the local cache
         log.info("Syncing local pillar cache from S3...")
-        for saltenv, env_meta in six.iteritems(metadata):
-            for bucket, files in six.iteritems(_find_files(env_meta)):
+        for saltenv, env_meta in metadata.items():
+            for bucket, files in _find_files(env_meta).items():
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(bucket, saltenv, file_path)
                     log.info("%s - %s : %s", bucket, saltenv, file_path)
@@ -292,7 +278,7 @@ def _get_buckets_cache_filename(bucket, prefix):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, "{0}-{1}-files.cache".format(bucket, prefix))
+    return os.path.join(cache_dir, "{}-{}-files.cache".format(bucket, prefix))
 
 
 def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, prefix):
@@ -432,7 +418,7 @@ def _find_files(metadata):
 
     ret = {}
 
-    for bucket, data in six.iteritems(metadata):
+    for bucket, data in metadata.items():
         if bucket not in ret:
             ret[bucket] = []
 
@@ -490,7 +476,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path, cached_file_path):
         kms_keyid=creds.kms_keyid,
         bucket=bucket,
         service_url=creds.service_url,
-        path=_quote(path),
+        path=urllib.parse.quote(path),
         local_file=cached_file_path,
         verify_ssl=creds.verify_ssl,
         location=creds.location,

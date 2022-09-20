@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 """
 
-# Import future libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
-
-# Import Python libs
 import textwrap
 
 # Import Salt Module
@@ -17,8 +12,6 @@ import salt.modules.acme as acme
 import salt.utils.dictupdate
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -151,7 +144,9 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             "Not After": "2019-06-02 10:29:37",
             "Subject Hash": "54:3B:6C:A4",
             "Serial Number": "59:AB:CB:A0:FB:90:E8:4B",
-            "SHA1 Finger Print": "F1:8D:F3:26:1B:D3:88:32:CD:B6:FA:3B:85:58:DA:C7:6F:62:BE:7E",
+            "SHA1 Finger Print": (
+                "F1:8D:F3:26:1B:D3:88:32:CD:B6:FA:3B:85:58:DA:C7:6F:62:BE:7E"
+            ),
             "SHA-256 Finger Print": (
                 "FB:A4:5F:71:D6:5D:6C:B6:1D:2C:FD:91:09:2C:1C:52:"
                 "3C:EC:B6:4D:1A:95:65:37:04:D0:E2:5E:C7:64:0C:9C"

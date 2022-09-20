@@ -6,10 +6,11 @@ import socket
 from contextlib import closing
 
 import pytest
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
 from tests.support.mock import MagicMock, patch
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -187,7 +188,10 @@ class HTTPPostTestCase(TestCase):
         """
         Test handling of a multipart/form-data POST using the requests backend
         """
-        match_this = '{0}\r\nContent-Disposition: form-data; name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        match_this = (
+            "{0}\r\nContent-Disposition: form-data;"
+            ' name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        )
         ret = http.query(
             self.post_web_root,
             method="POST",
@@ -287,7 +291,7 @@ class HTTPGetTestCase(TestCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("{}/core.sls".format(self.get_webserver.root), core_state):
+        with temp_file("core.sls", core_state, self.get_webserver.root):
             for backend in ["tornado", "requests", "urllib2"]:
                 ret = http.query(self.get_webserver.url("core.sls"), backend=backend)
                 body = ret.get("body", "")

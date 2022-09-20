@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A returner that will inform a Django system that
 returns are available using Django's signal system.
@@ -27,7 +26,6 @@ An example Django module that registers a function called
 
 """
 # Import Python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -64,8 +62,7 @@ def returner(ret):
 
     for signal in signaled:
         log.debug(
-            "Django returner function 'returner' signaled %s "
-            "which responded with %s",
+            "Django returner function 'returner' signaled %s which responded with %s",
             signal[0],
             signal[1],
         )
@@ -81,8 +78,7 @@ def save_load(jid, load, minions=None):
 
     for signal in signaled:
         log.debug(
-            "Django returner function 'save_load' signaled %s "
-            "which responded with %s",
+            "Django returner function 'save_load' signaled %s which responded with %s",
             signal[0],
             signal[1],
         )

@@ -3,4 +3,4 @@
 
 pyzmq<=20.0.0 ; python_version < "3.6"
 pyzmq>=17.0.0 ; python_version < "3.9"
-pyzmq>=19.0.2 ; python_version >= "3.9"
+pyzmq>19.0.2 ; python_version >= "3.9"

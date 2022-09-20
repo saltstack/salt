@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Megan Wilhite (mwilhite@saltstack.com)`
 
@@ -7,13 +6,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.returners.syslog_return as syslog
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -54,4 +48,4 @@ class SyslogReturnerTestCase(TestCase, LoaderModuleMockMixin):
             try:
                 syslog.returner(ret)
             except Exception as e:  # pylint: disable=broad-except
-                self.fail("syslog.returner() failed with exception: {0}".format(e))
+                self.fail("syslog.returner() failed with exception: {}".format(e))
