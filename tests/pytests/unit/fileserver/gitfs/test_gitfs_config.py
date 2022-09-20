@@ -65,7 +65,7 @@ def configure_loader_modules(tmp_path):
         "__role": "master",
     }
     if salt.utils.platform.is_windows():
-        opts["gitfs_remotes"] = opts["gitfs_remotes"].replace("\\", "/")
+        opts["gitfs_remotes"][0] = opts["gitfs_remotes"][0].replace("\\", "/")
 
     return {gitfs: {"__opts__": opts}}
 
