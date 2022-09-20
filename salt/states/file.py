@@ -746,9 +746,17 @@ def _check_directory(
                     fchange = {}
                     path = os.path.join(root, fname)
                     stats = __salt__["file.stats"](path, None, follow_symlinks)
-                    if user is not None and user != stats.get("user"):
+                    if (
+                        user is not None
+                        and not user == stats.get("user")
+                        and not user == stats.get("uid")
+                    ):
                         fchange["user"] = user
-                    if group is not None and group != stats.get("group"):
+                    if (
+                        group is not None
+                        and not group == stats.get("group")
+                        and not user == stats.get("gid")
+                    ):
                         fchange["group"] = group
                     smode = salt.utils.files.normalize_mode(stats.get("mode"))
                     file_mode = salt.utils.files.normalize_mode(file_mode)

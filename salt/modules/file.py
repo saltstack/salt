@@ -5101,6 +5101,7 @@ def check_perms(
         ``follow_symlinks`` option added
     """
     name = os.path.expanduser(name)
+    mode = salt.utils.files.normalize_mode(mode)
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": [], "result": True}
@@ -5109,121 +5110,127 @@ def check_perms(
         orig_comment = ret["comment"]
         ret["comment"] = []
 
-    # Check permissions
-    perms = {}
+    # Check current permissions
     cur = stats(name, follow_symlinks=follow_symlinks)
-    perms["luser"] = cur["user"]
-    perms["lgroup"] = cur["group"]
-    perms["lmode"] = salt.utils.files.normalize_mode(cur["mode"])
+
+    # Record initial stat for return later. Check whether we're receiving IDs
+    # or names so luser == cuser comparison makes sense.
+    perms = {}
+    perms["luser"] = cur["uid"] if isinstance(user, int) else cur["user"]
+    perms["lgroup"] = cur["gid"] if isinstance(group, int) else cur["group"]
+    perms["lmode"] = cur["mode"]
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
 
-    # user/group changes if needed, then check if it worked
+    # Check and make user/group/mode changes, then verify they were successful
     if user:
-        if isinstance(user, int):
-            user = uid_to_user(user)
         if (
-            salt.utils.platform.is_windows()
-            and user_to_uid(user) != user_to_uid(perms["luser"])
-        ) or (not salt.utils.platform.is_windows() and user != perms["luser"]):
+            salt.utils.platform.is_windows() and not user_to_uid(user) == cur["uid"]
+        ) or (
+            not salt.utils.platform.is_windows()
+            and not user == cur["user"]
+            and not user == cur["uid"]
+        ):
             perms["cuser"] = user
 
     if group:
-        if isinstance(group, int):
-            group = gid_to_group(group)
         if (
-            salt.utils.platform.is_windows()
-            and group_to_gid(group) != group_to_gid(perms["lgroup"])
-        ) or (not salt.utils.platform.is_windows() and group != perms["lgroup"]):
+            salt.utils.platform.is_windows() and not group_to_gid(group) == cur["gid"]
+        ) or (
+            not salt.utils.platform.is_windows()
+            and not group == cur["group"]
+            and not group == cur["gid"]
+        ):
             perms["cgroup"] = group
 
     if "cuser" in perms or "cgroup" in perms:
         if not __opts__["test"]:
-            if os.path.islink(name) and not follow_symlinks:
+            if is_link and not follow_symlinks:
                 chown_func = lchown
             else:
                 chown_func = chown
             if user is None:
-                user = perms["luser"]
+                user = cur["user"]
             if group is None:
-                group = perms["lgroup"]
+                group = cur["group"]
             try:
-                chown_func(name, user, group)
-                # Python os.chown() does reset the suid and sgid,
-                # that's why setting the right mode again is needed here.
-                set_mode(name, mode)
+                err = chown_func(name, user, group)
+                if err:
+                    ret["result"] = False
+                    ret["comment"].append(err)
+                else:
+                    # Python os.chown() resets the suid and sgid, hence we
+                    # setting the previous mode again. Pending mode changes
+                    # will be applied later.
+                    set_mode(name, cur["mode"])
             except OSError:
                 ret["result"] = False
 
+    # Mode changes if needed
+    if mode is not None:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if is_link and not follow_symlinks:
+            pass
+
+        if __opts__["test"] is True:
+            ret["changes"]["mode"] = mode
+        else:
+            if not mode == cur["mode"]:
+                set_mode(name, mode)
+
+    # verify user/group/mode changes
+    post = stats(name, follow_symlinks=follow_symlinks)
     if user:
-        if isinstance(user, int):
-            user = uid_to_user(user)
         if (
-            salt.utils.platform.is_windows()
-            and user_to_uid(user)
-            != user_to_uid(get_user(name, follow_symlinks=follow_symlinks))
-            and user != ""
+            salt.utils.platform.is_windows() and not user_to_uid(user) == post["uid"]
         ) or (
             not salt.utils.platform.is_windows()
-            and user != get_user(name, follow_symlinks=follow_symlinks)
-            and user != ""
+            and not user == post["user"]
+            and not user == post["uid"]
         ):
             if __opts__["test"] is True:
                 ret["changes"]["user"] = user
             else:
                 ret["result"] = False
                 ret["comment"].append("Failed to change user to {}".format(user))
-        elif "cuser" in perms and user != "":
+        elif "cuser" in perms:
             ret["changes"]["user"] = user
 
     if group:
-        if isinstance(group, int):
-            group = gid_to_group(group)
         if (
-            salt.utils.platform.is_windows()
-            and group_to_gid(group)
-            != group_to_gid(get_group(name, follow_symlinks=follow_symlinks))
-            and user != ""
+            salt.utils.platform.is_windows() and not group_to_gid(group) == post["gid"]
         ) or (
             not salt.utils.platform.is_windows()
-            and group != get_group(name, follow_symlinks=follow_symlinks)
-            and user != ""
+            and not group == post["group"]
+            and not group == post["gid"]
         ):
             if __opts__["test"] is True:
                 ret["changes"]["group"] = group
             else:
                 ret["result"] = False
                 ret["comment"].append("Failed to change group to {}".format(group))
-        elif "cgroup" in perms and user != "":
+        elif "cgroup" in perms:
             ret["changes"]["group"] = group
 
-    # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
+        if is_link and not follow_symlinks:
             pass
+
+        if not mode == post["mode"]:
+            ret["result"] = False
+            ret["comment"].append("Failed to change mode to {}".format(mode))
         else:
-            mode = salt.utils.files.normalize_mode(mode)
-            if mode != perms["lmode"]:
-                if __opts__["test"] is True:
-                    ret["changes"]["mode"] = mode
-                else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
-                        ret["result"] = False
-                        ret["comment"].append(
-                            "Failed to change mode to {}".format(mode)
-                        )
-                    else:
-                        ret["changes"]["mode"] = mode
+            ret["changes"]["mode"] = mode
 
     # Modify attributes of file if needed
     if attrs is not None and not is_dir:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
+        if is_link and not follow_symlinks:
             pass
         else:
             diff_attrs = _cmp_attrs(name, attrs)
