@@ -12,6 +12,13 @@
 #              This script will upload a copy of the package to apple and wait
 #              for the notarization to return. This can take several minutes.
 #
+#              This script should be run with sudo. If not, it will attempt to
+#              elevate and run with sudo. In order for the environment variables
+#              to be available in sudo you need to pass the `-E` option. For
+#              example:
+#
+#              sudo -E ./notarize.sh
+#
 # Requirements:
 #     - Full Xcode Installation
 #       I had issues installing Xcode after installing Command Line Tools. This
@@ -27,7 +34,7 @@
 #     Example:
 #         The following will notarize the 'salt-v2015.8.3-signed.pkg' file
 #
-#         ./notarize.sh salt-v2015.8.3-signed.pkg
+#         sudo ./notarize.sh salt-v2015.8.3-signed.pkg
 #
 # Environment Setup:
 #
@@ -42,6 +49,15 @@
 ################################################################################
 echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Notarize Salt Package"
+
+# Make sure the script is launched with sudo
+# We're doing this with notarize because the package we're notarizing was
+# built with sudo... so, we need sudo here in order to staple the notarization
+# to the package
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo -E /bin/bash -c "$(printf '%q ' "${BASH_SOURCE[0]}" "$@")"
+fi
 
 ################################################################################
 # Check input parameters
@@ -110,15 +126,27 @@ while sleep 30; do
     # Uncomment for debugging
     # cat "$NOTARIZE_INFO_LOG"
 
-    # once notarization is complete, run stapler and exit
+    # Continue checking until Status is no longer "in progress"
     if ! grep -q "Status: in progress" "$NOTARIZE_INFO_LOG"; then
         echo ""
-        echo "**** Stapling Notarization to the Package"
-        xcrun stapler staple "$PACKAGE" > /dev/null
         break
     fi
 
 done
+
+# Make sure the result is "success", then staple
+if ! grep -q "Status: success" "$NOTARIZE_INFO_LOG"; then
+    echo "**** There was a problem notarizing the package"
+    echo "**** View the log for details:"
+    awk -F ': ' '/LogFileURL/ {print $2}' "$NOTARIZE_INFO_LOG"
+    exit 1
+fi
+
+echo "**** Stapling Notarization to the Package"
+if ! xcrun stapler staple "$PACKAGE" > "$NOTARIZE_INFO_LOG"; then
+    cat "$NOTARIZE_INFO_LOG" 1>&2
+    exit 1
+fi
 
 echo "Notarize Salt Package Completed Successfully"
 echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
