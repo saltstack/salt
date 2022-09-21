@@ -160,7 +160,7 @@ salt/matchers/*:
   - integration.states.test_match
   - pytests.integration.cli.test_matcher
   - pytests.unit.modules.test_match
-  - unit.matchers.test_confirm_top
+  - pytests.unit.matchers.test_confirm_top
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell
