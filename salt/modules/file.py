@@ -1654,8 +1654,8 @@ def _get_flags(flags):
         return _flags
     else:
         raise CommandExecutionError(
-            f'Invalid re flags: "{flags}", must be given either as a single '
-            'string, a list of strings, as an integer, or as an re flag'
+            f"Invalid re flags: "{flags}", must be given either as a single "
+            "string, a list of strings, as an integer, or as an re flag"
         )
 
 
@@ -4582,7 +4582,7 @@ def get_managed(
     skip_verify=False,
     verify_ssl=True,
     use_etag=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Return the managed file data for file.managed
@@ -4790,7 +4790,7 @@ def get_managed(
                     pillar=__pillar__,
                     grains=__opts__["grains"],
                     opts=__opts__,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 return (
@@ -5402,7 +5402,7 @@ def check_managed(
     setype=None,
     serange=None,
     follow_symlinks=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Check to see what changes need to be made for a file
@@ -5443,7 +5443,7 @@ def check_managed(
             context,
             defaults,
             skip_verify,
-            **kwargs
+            **kwargs,
         )
         if comments:
             __clean_tmp(sfn)
@@ -5501,7 +5501,7 @@ def check_managed_changes(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Return a dictionary of what changes need to be made for a file
@@ -5553,7 +5553,7 @@ def check_managed_changes(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
-            **kwargs
+            **kwargs,
         )
 
         # Ensure that user-provided hash string is lowercase
@@ -5966,7 +5966,7 @@ def manage_file(
     serange=None,
     verify_ssl=True,
     use_etag=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Checks the destination against what was retrieved with get_managed and
