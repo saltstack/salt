@@ -1622,35 +1622,42 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
 def _get_flags(flags):
     """
-    Return an integer appropriate for use as a flag for the re module from a
-    list of human-readable strings
+    Return the names of the Regex flags that correspond to flags
 
     .. code-block:: python
 
-        >>> _get_flags(['MULTILINE', 'IGNORECASE'])
-        10
+        >>> _get_flags(['IGNORECASE', 'MULTILINE'])
+        re.IGNORECASE|re.MULTILINE
         >>> _get_flags('MULTILINE')
-        8
-        >>> _get_flags(2)
-        2
+        re.MULTILINE
+        >>> _get_flags(8)
+        re.MULTILINE
+        >>> _get_flags(re.IGNORECASE)
+        re.IGNORECASE
     """
-    if isinstance(flags, str):
-        flags = [flags]
+    if isinstance(flags, re.RegexFlag):
+      return flags
+    elif isinstance(flags, int):
+      return re.RegexFlag(flags)
+    elif isinstance(flags, str):
+      flags = [flags]
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
-        _flags_acc = []
+        _flags = re.RegexFlag(0)
+
         for flag in flags:
-            _flag = int(getattr(re, str(flag).upper()))
-
-            _flags_acc.append(_flag)
-
-        return reduce(operator.__or__, _flags_acc)
-    elif isinstance(flags, int):
-        return flags
+            if isinstance(flag, re.RegexFlag):
+                _flags |= flag
+            else:
+                _flag = getattr(re.RegexFlag, str(flag).upper(), None)
+                if not _flag:
+                    raise CommandExecutionError(f"Invalid re flag given: {flag}")
+                _flags |= _flag
+        return _flags
     else:
-        raise SaltInvocationError(
-            'Invalid re flags: "{}", must be given either as a single flag '
-            "string, a list of strings, or as an integer".format(flags)
+        raise CommandExecutionError(
+            f'Invalid re flags: "{flags}", must be given either as a single flag '
+            'string, a list of strings, or as an integer'
         )
 
 
@@ -2510,8 +2517,8 @@ def replace(
             "Only one of append and prepend_if_not_found is permitted"
         )
 
-    flags_num = _get_flags(flags)
-    cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), flags_num)
+    re_flags = _get_flags(flags)
+    cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), re_flags)
     filesize = os.path.getsize(path)
     if bufsize == "file":
         bufsize = filesize
@@ -2579,7 +2586,7 @@ def replace(
                             "^{}($|(?=\r\n))".format(re.escape(content))
                         ),
                         r_data,
-                        flags=flags_num,
+                        flags=re_flags,
                     ):
                         # Content was found, so set found.
                         found = True
@@ -3129,7 +3136,11 @@ def search(path, pattern, flags=8, bufsize=1, ignore_if_missing=False, multiline
         salt '*' file.search /etc/crontab 'mymaintenance.sh'
     """
     if multiline:
-        flags = _add_flags(flags, "MULTILINE")
+        re_flags = _add_flags(flags, "MULTILINE")
+    else:
+        re_flags = _get_flags(flags)
+
+    if re.RegexFlag.MULTILINE in re_flags:
         bufsize = "file"
 
     # This function wraps file.replace on purpose in order to enforce
@@ -3139,7 +3150,7 @@ def search(path, pattern, flags=8, bufsize=1, ignore_if_missing=False, multiline
         path,
         pattern,
         "",
-        flags=flags,
+        flags=re_flags,
         bufsize=bufsize,
         dry_run=True,
         search_only=True,
