@@ -1642,15 +1642,11 @@ def _get_flags(flags):
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
         _flags = re.RegexFlag(0)
-
         for flag in flags:
-            if isinstance(flag, re.RegexFlag):
-                _flags |= flag
-            else:
-                _flag = getattr(re.RegexFlag, str(flag).upper(), None)
-                if not _flag:
-                    raise CommandExecutionError(f"Invalid re flag given: {flag}")
-                _flags |= _flag
+            _flag = getattr(re.RegexFlag, str(flag).upper(), None)
+            if not _flag:
+                raise CommandExecutionError(f"Invalid re flag given: {flag}")
+            _flags |= _flag
         return _flags
     else:
         raise CommandExecutionError(
