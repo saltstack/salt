@@ -16,6 +16,7 @@ import hashlib
 import itertools
 import logging
 import mmap
+import operator
 import os
 import re
 import shutil
@@ -27,6 +28,7 @@ import time
 import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
+from functools import reduce
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -1634,11 +1636,11 @@ def _get_flags(flags):
         re.IGNORECASE
     """
     if isinstance(flags, re.RegexFlag):
-        return flags
+      return flags
     elif isinstance(flags, int):
-        return re.RegexFlag(flags)
+      return re.RegexFlag(flags)
     elif isinstance(flags, str):
-        flags = [flags]
+      flags = [flags]
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
         _flags = re.RegexFlag(0)
@@ -1654,8 +1656,8 @@ def _get_flags(flags):
         return _flags
     else:
         raise CommandExecutionError(
-            f'Invalid re flags: "{flags}", must be given either as a single '
-            'string, a list of strings, as an integer, or as an re flag'
+            f'Invalid re flags: "{flags}", must be given either as a single flag '
+            'string, a list of strings, or as an integer'
         )
 
 
