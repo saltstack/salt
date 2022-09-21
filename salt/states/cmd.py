@@ -404,8 +404,8 @@ def wait(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     umask
@@ -561,8 +561,8 @@ def wait_script(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     umask
@@ -643,6 +643,17 @@ def run(
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
 
+    .. note::
+
+       The ``**kwargs`` of ``cmd.run`` are passed down to one of the following
+       exec modules:
+
+       * ``cmdmod.run_all``: If used with default ``runas``
+       * ``cmdmod.run_chroot``: If used with non-``root`` value for ``runas``
+
+       For more information on what args are available for either of these,
+       refer to the :ref:`cmdmod documentation <cmdmod-module>`.
+
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -656,7 +667,7 @@ def run(
         will run inside a chroot
 
     runas
-        The user name to run the command as
+        The user name (or uid) to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -702,8 +713,8 @@ def run(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     prepend_path
@@ -935,7 +946,7 @@ def script(
 
         .. note::
 
-            For Window's users, specifically Server users, it may be necessary
+            For Windows users, specifically Server users, it may be necessary
             to specify your runas user using the User Logon Name instead of the
             legacy logon name. Traditionally, logons would be in the following
             format.
@@ -1000,8 +1011,8 @@ def script(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     saltenv : ``base``

@@ -12,7 +12,16 @@ Statistics
 - Total Issue References: **63**
 - Total PR References: **223**
 
-- Contributors: **62** (`Ch3LL`_, `DennisHarper`_, `DmitryKuzmenko`_, `L4rS6`_, `MasterNayru`_, `Seb-Solon`_, `The-Loeki`_, `UtahDave`_, `aabognah`_, `alankrita`_, `amontalban`_, `ardakuyumcu`_, `attiasr`_, `bdrung`_, `bewing`_, `cachedout`_, `cro`_, `defanator`_, `discountbin`_, `dmurphy18`_, `drawsmcgraw`_, `eldadru`_, `garethgreenaway`_, `githubcdr`_, `gtmanfred`_, `hkrist`_, `isbm`_, `jbadson`_, `jeanpralo`_, `jettero`_, `jinm`_, `joe-niland`_, `kaszuba`_, `lomeroe`_, `lorengordon`_, `mateiw`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `mirceaulinic`_, `mlalpho`_, `narendraingale2`_, `nmadhok`_, `rallytime`_, `redbaron4`_, `roaldnefs`_, `s0undt3ch`_, `skazi0`_, `skizunov`_, `smarsching`_, `sofixa`_, `sp1r`_, `sthrasher`_, `techhat`_, `terminalmage`_, `thatch45`_, `thor`_, `ticosax`_, `twangboy`_, `vutny`_, `whiteinge`_, `zer0def`_)
+- Contributors: **62** (`Ch3LL`_, `DennisHarper`_, `DmitryKuzmenko`_, `L4rS6`_, `MasterNayru`_,
+  `Seb-Solon`_, `The-Loeki`_, `UtahDave`_, `aabognah`_, `alankrita`_, `amontalban`_,
+  `ardakuyumcu`_, `attiasr`_, `bdrung`_, `bewing`_, `cachedout`_, `cro`_, `defanator`_,
+  `discountbin`_, `dmurphy18`_, `drawsmcgraw`_, `eldadru`_, `garethgreenaway`_, `githubcdr`_,
+  `gtmanfred`_, `hkrist`_, `isbm`_, `jbadson`_, `jeanpralo`_, `jettero`_, `jinm`_, `joe-niland`_,
+  `kaszuba`_, `lomeroe`_, `lorengordon`_, `mateiw`_, `mcalmer`_, `mchugh19`_, `meaksh`_,
+  `mirceaulinic`_, `mlalpho`_, `narendraingale2`_, `nmadhok`_, `rallytime`_, `redbaron4`_,
+  `roaldnefs`_, `s0undt3ch`_, `skazi0`_, `skizunov`_, `smarsching`_, `sofixa`_, `sp1r`_,
+  `sthrasher`_, `techhat`_, `terminalmage`_, `thatch45`_, `thor`_, `ticosax`_, `twangboy`_,
+  `vutny`_, `whiteinge`_, `zer0def`_)
 
 
 AIX Support Expanded
@@ -864,7 +873,7 @@ Changelog for v2016.11.3..v2016.11.4
 
   * d68067f1d7 Merge remote-tracking branch 'main/2016.11' into pip-cache-fixes
 
-  * 4f23a23ca8 Fixed the `test_install_download_cache_argument_in_resulting_command` to accomodate introduced cache directory argument fixes and renamed it to `test_install_download_cache_dir_arguments_in_resulting_command`.
+  * 4f23a23ca8 Fixed the `test_install_download_cache_argument_in_resulting_command` to accommodate introduced cache directory argument fixes and renamed it to `test_install_download_cache_dir_arguments_in_resulting_command`.
 
   * 9d0f94eeba Fixed unnecessary API changes introduced with suggested changes.
 
@@ -1378,7 +1387,7 @@ Changelog for v2016.11.3..v2016.11.4
 
   * 116201f345 Merge pull request `#40059`_ from terminalmage/fix-virtualenv-traceback
 
-    * e3cfd29d6b Fix traceback when virtualenv.managed is invoked with nonexistant user
+    * e3cfd29d6b Fix traceback when virtualenv.managed is invoked with nonexistent user
 
   * a01b52b9a3 Merge pull request `#40090`_ from rallytime/bp-40056
 
@@ -1414,9 +1423,9 @@ Changelog for v2016.11.3..v2016.11.4
 
   * 8dcffc7751 Merge pull request `#40018`_ from meaksh/2016.3-handling-timeouts-for-manage.up-runner
 
-    * 9f5c3b7dcd Allows to set custom timeouts for 'manage.up' and 'manage.status'
+    * 9f5c3b7dcd Allows one to set custom timeouts for 'manage.up' and 'manage.status'
 
-    * 2102d9c75c Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+    * 2102d9c75c Allows one to set 'timeout' and 'gather_job_timeout' via kwargs
 
   * 22fc5299a2 Merge pull request `#40038`_ from velom/fix-pip-freeze-parsing
 
@@ -1444,9 +1453,9 @@ Changelog for v2016.11.3..v2016.11.4
 
   * e73a1d0e54 Merge pull request `#40072`_ from meaksh/2016.11-handling-timeouts-for-manage.up-runner
 
-  * 40246d3723 Allows to set custom timeouts for 'manage.up' and 'manage.status'
+  * 40246d3723 Allows one to set custom timeouts for 'manage.up' and 'manage.status'
 
-  * ad232fdc01 Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+  * ad232fdc01 Allows one to set 'timeout' and 'gather_job_timeout' via kwargs
 
 * **PR** `#40045`_: (`terminalmage`_) Fix error when chhome is invoked by user.present state in Windows
   @ *2017-03-15 19:00:41 UTC*
@@ -1490,7 +1499,7 @@ Changelog for v2016.11.3..v2016.11.4
 
   * 0c61d064ad Merge pull request `#39980`_ from vutny/cmd-run-state-bg
 
-    * a81dc9dfc1 [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+    * a81dc9dfc1 [2016.3] Allow using `bg` kwarg for `cmd.run` state function
 
   * b042484455 Merge pull request `#39994`_ from rallytime/ulimits-dockerng-version
 
@@ -1808,14 +1817,14 @@ Changelog for v2016.11.3..v2016.11.4
 
   * 6539dbdbca Do not use name resolving for --notrim check
 
-* **ISSUE** `#38231`_: (`tjuup`_) Typo: salt-key deleteed (refs: `#39799`_)
+* **ISSUE** `#38231`_: (`tjuup`_) Typo: salt-key deleted (refs: `#39799`_)
 
-* **PR** `#39799`_: (`Ch3LL`_) Fix deleteed message when key is deleted
+* **PR** `#39799`_: (`Ch3LL`_) Fix deleted message when key is deleted
   @ *2017-03-03 05:17:43 UTC*
 
   * d0440e2a2a Merge pull request `#39799`_ from Ch3LL/fix_salt_key_msg
 
-  * 8346682cf7 Fix deleteed message when key is deleted
+  * 8346682cf7 Fix deleted message when key is deleted
 
 * **ISSUE** `#38962`_: (`gstachowiak`_) Broken /jobs in salt-api in salt 2016.11.1 (Carbon) (refs: `#39472`_)
 
@@ -2029,12 +2038,12 @@ Changelog for v2016.11.3..v2016.11.4
 
 * **ISSUE** `#38836`_: (`toanctruong`_) file.managed with S3 Source errors out with obscure message (refs: `#39609`_, `#39589`_)
 
-* **PR** `#39609`_: (`gtmanfred`_) intialize the Client stuff in FSClient
+* **PR** `#39609`_: (`gtmanfred`_) initialize the Client stuff in FSClient
   @ *2017-02-24 18:50:55 UTC*
 
   * 0bc6027e68 Merge pull request `#39609`_ from gtmanfred/2016.11
 
-  * 0820620ef8 intialize the Client stuff in FSClient
+  * 0820620ef8 initialize the Client stuff in FSClient
 
 * **PR** `#39615`_: (`skizunov`_) Bonjour/Avahi beacons: Make sure TXT record length is valid
   @ *2017-02-24 18:47:05 UTC*

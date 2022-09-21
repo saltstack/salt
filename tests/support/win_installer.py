@@ -14,7 +14,7 @@ import hashlib
 import requests
 
 PREFIX = "Salt-Minion-"
-REPO = "https://repo.saltstack.com/windows"
+REPO = "https://repo.saltproject.io/windows"
 
 
 def latest_installer_name(arch="AMD64", **kwargs):

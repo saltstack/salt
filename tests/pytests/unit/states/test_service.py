@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.service as service
@@ -244,7 +245,7 @@ def test_running():
 
         with patch.dict(service.__opts__, {"test": True}):
             with patch.dict(service.__salt__, {"service.status": tmock}):
-                assert service.running("salt") == ret[10]
+                assert service.running("salt") == ret[5]
 
             with patch.dict(service.__salt__, {"service.status": fmock}):
                 assert service.running("salt") == ret[3]
@@ -327,6 +328,22 @@ def test_running():
                     ):
                         assert service.running("salt", True) == ret[6]
                         assert service.__context__ == {"service.state": "running"}
+
+
+def test_running_in_offline_mode():
+    """
+    Tests the case in which a service.running state is executed on an offline environemnt
+
+    """
+    name = "thisisnotarealservice"
+    with patch.object(service, "_offline", MagicMock(return_value=True)):
+        ret = service.running(name=name)
+        assert ret == {
+            "changes": {},
+            "comment": "Running in OFFLINE mode. Nothing to do",
+            "result": True,
+            "name": name,
+        }
 
 
 def test_dead():
@@ -467,6 +484,22 @@ def test_dead_with_missing_service():
         }
 
 
+def test_dead_in_offline_mode():
+    """
+    Tests the case in which a service.dead state is executed on an offline environemnt
+
+    """
+    name = "thisisnotarealservice"
+    with patch.object(service, "_offline", MagicMock(return_value=True)):
+        ret = service.dead(name=name)
+        assert ret == {
+            "changes": {},
+            "comment": "Running in OFFLINE mode. Nothing to do",
+            "result": True,
+            "name": name,
+        }
+
+
 def test_enabled():
     """
     Test to verify that the service is enabled
@@ -474,6 +507,26 @@ def test_enabled():
     ret = {"changes": "saltstack", "comment": "", "name": "salt", "result": True}
     mock = MagicMock(return_value={"changes": "saltstack"})
     with patch.object(service, "_enable", mock):
+        assert service.enabled("salt") == ret
+        assert service.__context__ == {"service.state": "enabled"}
+
+
+def test_enabled_in_test_mode():
+    ret = {
+        "changes": {},
+        "comment": "Service salt not present; if created in this state run, it would have been enabled",
+        "name": "salt",
+        "result": None,
+    }
+    mock = MagicMock(
+        return_value={
+            "result": "False",
+            "comment": "The named service salt is not available",
+        }
+    )
+    with patch.object(service, "_enable", mock), patch.dict(
+        service.__opts__, {"test": True}
+    ):
         assert service.enabled("salt") == ret
         assert service.__context__ == {"service.state": "enabled"}
 
@@ -671,6 +724,8 @@ def test_running_with_reload():
             service.__utils__, utils
         ), patch.dict(
             service.__opts__, {"test": False}
+        ), patch(
+            "salt.utils.systemd.offline", MagicMock(return_value=False)
         ):
             service.dead(service_name, enable=False)
             result = service.running(name=service_name, enable=True, reload=False)

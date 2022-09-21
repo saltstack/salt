@@ -1155,7 +1155,7 @@ def get(*dataset, **kwargs):
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.
 
-        .. versionchanged:: Silicon
+        .. versionchanged:: 3004
 
         type is ignored on Solaris 10 and 11 since not a valid parameter on those platforms
 

@@ -231,11 +231,43 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         # between Python releases.
         lines_written = sorted(mtime_map_mock.write_calls())
         expected = sorted(
-            [
-                salt.utils.stringutils.to_bytes(
-                    "{key}:{val}\n".format(key=key, val=val)
-                )
-                for key, val in new_mtime_map.items()
-            ]
+            salt.utils.stringutils.to_bytes("{key}:{val}\n".format(key=key, val=val))
+            for key, val in new_mtime_map.items()
         )
         assert lines_written == expected, lines_written
+
+    def test_update_mtime_map_unicode_error(self):
+        """
+        Test that a malformed mtime_map (which causes an UnicodeDecodeError
+        exception) is handled properly.
+        """
+        new_mtime_map = {
+            "/srv/salt/große:Datei.txt": 1594263261.0616212,
+        }
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            mtime_map_path = os.path.join(tmpdirname, "roots", "mtime_map")
+            os.makedirs(os.path.dirname(mtime_map_path))
+            with salt.utils.files.fopen(mtime_map_path, "wb") as fp:
+                fp.write(b"\x9c")
+
+            with patch(
+                "salt.fileserver.reap_fileserver_cache_dir",
+                MagicMock(return_value=True),
+            ), patch(
+                "salt.fileserver.generate_mtime_map",
+                MagicMock(return_value=new_mtime_map),
+            ), patch.dict(
+                roots.__opts__,
+                {"fileserver_events": False, "cachedir": tmpdirname},
+            ):
+                ret = roots.update()
+
+        assert ret == {
+            "changed": True,
+            "files": {
+                "changed": [],
+                "removed": [],
+                "added": ["/srv/salt/große:Datei.txt"],
+            },
+            "backend": "roots",
+        }, ret

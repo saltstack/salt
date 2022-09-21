@@ -96,14 +96,13 @@ __virtualname__ = "cassandra_cql"
 HAS_DRIVER = False
 try:
     # pylint: disable=import-error,no-name-in-module
-    from cassandra.cluster import Cluster
-    from cassandra.cluster import NoHostAvailable
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.cluster import Cluster, NoHostAvailable
     from cassandra.connection import (
         ConnectionException,
         ConnectionShutdown,
         OperationTimedOut,
     )
-    from cassandra.auth import PlainTextAuthProvider
     from cassandra.query import dict_factory
 
     # pylint: enable=import-error,no-name-in-module

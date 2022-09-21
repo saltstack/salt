@@ -21,6 +21,8 @@ import time
 import traceback
 import uuid
 
+from jinja2 import Template
+
 import salt.client
 import salt.cloud
 import salt.config
@@ -39,7 +41,6 @@ import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.vt
 import salt.utils.yaml
-from jinja2 import Template
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -60,10 +61,10 @@ except ImportError:
 
 try:
     from pypsexec.client import Client as PsExecClient
-    from pypsexec.scmr import Service as ScmrService
     from pypsexec.exceptions import SCMRException
-    from smbprotocol.tree import TreeConnect
+    from pypsexec.scmr import Service as ScmrService
     from smbprotocol.exceptions import SMBResponseException
+    from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
     logging.getLogger("pypsexec").setLevel(logging.WARNING)
@@ -77,11 +78,10 @@ WINRM_MIN_VER = "0.3.0"
 
 
 try:
-    import winrm
-    from winrm.exceptions import WinRMTransportError
-
     # Verify WinRM 0.3.0 or greater
     import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+    import winrm
+    from winrm.exceptions import WinRMTransportError
 
     winrm_pkg = pkg_resources.get_distribution("pywinrm")
     if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
@@ -123,6 +123,9 @@ SSH_PASSWORD_PROMP_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\ *$", re.M)
 SSH_PASSWORD_PROMP_SUDO_RE = re.compile(
     r"(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:", re.M
 )
+
+SERVER_ALIVE_INTERVAL = 60
+SERVER_ALIVE_COUNT_MAX = 3
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -183,18 +186,24 @@ def __ssh_gateway_arguments(kwargs):
         ssh_gateway_user = kwargs.get("ssh_gateway_user", "root")
 
         # Setup ProxyCommand
-        extended_arguments = '-oProxyCommand="ssh {} {} {} {} {}@{} -p {} {}"'.format(
-            # Don't add new hosts to the host key database
-            "-oStrictHostKeyChecking=no",
-            # Set hosts key database path to /dev/null, i.e., non-existing
-            "-oUserKnownHostsFile=/dev/null",
-            # Don't re-use the SSH connection. Less failures.
-            "-oControlPath=none",
-            ssh_gateway_key,
-            ssh_gateway_user,
-            ssh_gateway,
-            ssh_gateway_port,
-            ssh_gateway_command,
+        extended_arguments = " ".join(
+            (
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-oServerAliveInterval={}".format(
+                    kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+                ),
+                "-oServerAliveCountMax={}".format(
+                    kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+                ),
+                "-oUserKnownHostsFile=/dev/null",
+                "-oControlPath=none",
+                str(ssh_gateway_key),
+                "{}@{}".format(ssh_gateway_user, ssh_gateway),
+                "-p",
+                str(ssh_gateway_port),
+                str(ssh_gateway_command),
+            )
         )
 
         log.info(
@@ -691,7 +700,14 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             return False
 
 
-def wait_for_port(host, port=22, timeout=900, gateway=None):
+def wait_for_port(
+    host,
+    port=22,
+    timeout=900,
+    gateway=None,
+    server_alive_interval=SERVER_ALIVE_INTERVAL,
+    server_alive_count_max=SERVER_ALIVE_COUNT_MAX,
+):
     """
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
@@ -765,6 +781,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(server_alive_interval),
+            "-oServerAliveCountMax={}".format(server_alive_count_max),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -1369,21 +1388,18 @@ def deploy_windows(
                 salt.utils.smb.delete_directory("salttemp", "C$", conn=smb_conn)
         # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
-            winrm_cmd(winrm_session, "sc", ["stop", "salt-minion"])
-            time.sleep(5)
-            winrm_cmd(winrm_session, "sc", ["start", "salt-minion"])
+            winrm_cmd(winrm_session, "net", ["stop", "salt-minion"])
+            winrm_cmd(winrm_session, "net", ["start", "salt-minion"])
         else:
             stdout, stderr, ret_code = run_psexec_command(
-                "cmd.exe", "/c sc stop salt-minion", host, username, password
+                "cmd.exe", "/c net stop salt-minion", host, username, password
             )
             if ret_code != 0:
                 return False
 
-            time.sleep(5)
-
             log.debug("Run psexec: sc start salt-minion")
             stdout, stderr, ret_code = run_psexec_command(
-                "cmd.exe", "/c sc start salt-minion", host, username, password
+                "cmd.exe", "/c net start salt-minion", host, username, password
             )
             if ret_code != 0:
                 return False
@@ -1492,6 +1508,7 @@ def deploy_script(
                 "port": port,
                 "username": username,
                 "timeout": ssh_timeout,
+                "ssh_timeout": ssh_timeout,
                 "display_ssh_output": display_ssh_output,
                 "sudo_password": sudo_password,
                 "sftp": opts.get("use_sftp", False),
@@ -1746,6 +1763,7 @@ def deploy_script(
                     kwargs=dict(
                         name=name, sock_dir=sock_dir, timeout=newtimeout, queue=queue
                     ),
+                    name="DeployScriptCheckAuth({})".format(name),
                 )
                 log.debug("Starting new process to wait for salt-minion")
                 process.start()
@@ -2051,9 +2069,7 @@ def fire_event(key, msg, tag, sock_dir, args=None, transport="zeromq"):
     """
     Fire deploy action
     """
-    with salt.utils.event.get_event(
-        "master", sock_dir, transport, listen=False
-    ) as event:
+    with salt.utils.event.get_event("master", sock_dir, listen=False) as event:
         try:
             event.fire_event(msg, tag)
         except ValueError:
@@ -2147,6 +2163,13 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2264,6 +2287,13 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.

@@ -13,6 +13,7 @@ import salt.auth.ldap
 import salt.cache
 import salt.payload
 import salt.roster
+import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -209,10 +210,9 @@ class CkMinions:
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
-        if self.opts.get("transport", "zeromq") in ("zeromq", "tcp"):
+        if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
         else:
             self.acc = "accepted"
@@ -270,7 +270,7 @@ class CkMinions:
             if self.opts["key_cache"] and os.path.exists(pki_cache_fn):
                 log.debug("Returning cached minion list")
                 with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
-                    return self.serial.load(fn_)
+                    return salt.payload.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
@@ -737,20 +737,27 @@ class CkMinions:
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         """
-        Return a Bool. This function returns if the expression sent in is
-        within the scope of the valid expression
+        Validate the target minions against the possible valid minions.
+
+        If ``minions`` is provided, they will be compared against the valid
+        minions. Otherwise, ``expr`` and ``tgt_type`` will be used to expand
+        to a list of target minions.
+
+        Return True if all of the requested minions are valid minions,
+        otherwise return False.
         """
 
         v_minions = set(self.check_minions(valid, "compound").get("minions", []))
+        if not v_minions:
+            # There are no valid minions, so it doesn't matter what we are
+            # targeting - this is a fail.
+            return False
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res["minions"])
         else:
             minions = set(minions)
-        d_bool = not bool(minions.difference(v_minions))
-        if len(v_minions) == len(minions) and d_bool:
-            return True
-        return d_bool
+        return minions.issubset(v_minions)
 
     def match_check(self, regex, fun):
         """

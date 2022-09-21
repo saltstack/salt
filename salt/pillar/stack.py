@@ -40,7 +40,7 @@ Installing the PillarStack ``ext_pillar`` is as simple as dropping the
 ``stack.py`` file in the ``<extension_modules>/pillar`` directory (no external
 python module required), given that ``extension_modules`` is set in your
 salt-master configuration, see:
-http://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules
+https://docs.saltproject.io/en/latest/ref/configuration/master.html#extension-modules
 
 Configuration in Salt
 ---------------------
@@ -378,10 +378,11 @@ import logging
 import os
 import posixpath
 
+from jinja2 import Environment, FileSystemLoader
+
 import salt.utils.data
 import salt.utils.jinja
 import salt.utils.yaml
-from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 strategies = ("overwrite", "merge-first", "merge-last", "remove")

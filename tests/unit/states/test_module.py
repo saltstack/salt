@@ -107,7 +107,13 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {module: {"__opts__": {"test": False}, "__salt__": {CMD: MagicMock()}}}
+        return {
+            module: {
+                "__opts__": {"test": False},
+                "__salt__": {CMD: MagicMock()},
+                "__low__": {"__id__": "test"},
+            },
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -170,7 +176,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.utils.args.get_function_argspec", MagicMock(return_value=self.bspec)
         ):
-            ret = module._run(CMD, m_names="anyname")
+            ret = module._legacy_run(CMD, m_names="anyname")
         self.assertEqual(ret["comment"], "'names' must be a list.")
 
     def test_run_testmode(self):
@@ -382,7 +388,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         name isn't available
         """
         with patch.dict(module.__salt__, {}, clear=True):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertFalse(ret["result"])
         self.assertEqual(
             ret["comment"], "Module function {} is not available".format(CMD)
@@ -393,7 +399,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         Tests the return of module.run state when test=True is passed in
         """
         with patch.dict(module.__opts__, {"test": True}):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertEqual(
             ret["comment"], "Module function {} is set to execute".format(CMD)
         )
@@ -405,7 +411,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.utils.args.get_function_argspec", MagicMock(return_value=self.aspec)
         ):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertIn("The following arguments are missing:", ret["comment"])
         self.assertIn("world", ret["comment"])
         self.assertIn("hello", ret["comment"])

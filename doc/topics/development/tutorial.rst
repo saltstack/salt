@@ -207,9 +207,9 @@ https://help.github.com/
 
 There are many topics covered by the Salt Developer documentation:
 
-https://docs.saltstack.com/en/latest/topics/development/index.html
+https://docs.saltproject.io/en/latest/topics/development/index.html
 
 The contributing documentation presents more details on specific contributing
 topics:
 
-https://docs.saltstack.com/en/latest/topics/development/contributing.html
+https://docs.saltproject.io/en/latest/topics/development/contributing.html
