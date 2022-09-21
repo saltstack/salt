@@ -1,0 +1,1 @@
+Modified "_get_flags" function so that it returns regex flag names instead of integers
