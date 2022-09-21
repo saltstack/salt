@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.config
 import salt.states.winrepo as winrepo
 import salt.utils.path

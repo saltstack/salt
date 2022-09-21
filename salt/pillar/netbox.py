@@ -952,8 +952,22 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             api_url, minion_id, site_name, site_id, headers, api_query_result_limit
         )
     if proxy_return:
-        platform_id = ret["netbox"]["platform"]["id"]
-        primary_ip = ret["netbox"]["primary_ip"]["address"]
+        if ret["netbox"]["platform"]:
+            platform_id = ret["netbox"]["platform"]["id"]
+        else:
+            log.error(
+                'You have set "proxy_return" to "True" but you have not set the platform in NetBox for "%s"',
+                minion_id,
+            )
+            return
+        if ret["netbox"]["primary_ip"]:
+            primary_ip = ret["netbox"]["primary_ip"]["address"]
+        else:
+            log.error(
+                'You have set "proxy_return" to "True" but you have not set the primary IPv4 or IPv6 address in NetBox for "%s"',
+                minion_id,
+            )
+            return
         proxy = _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers)
         if proxy:
             ret["proxy"] = proxy
