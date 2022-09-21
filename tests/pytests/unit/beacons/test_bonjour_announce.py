@@ -5,6 +5,7 @@
     Bonjour announce beacon test cases
 """
 import pytest
+
 import salt.beacons.bonjour_announce as bonjour_announce
 
 
@@ -28,5 +29,6 @@ def test_empty_config():
     ret = bonjour_announce.validate(config)
     assert ret == (
         False,
-        "Configuration for bonjour_announce beacon must contain servicetype, port and txt items.",
+        "Configuration for bonjour_announce beacon must contain servicetype, port and"
+        " txt items.",
     )

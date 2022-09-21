@@ -5,12 +5,10 @@
 import logging
 import os
 import signal
-import sys
 import threading
 import traceback
 import types
 
-# pylint: disable=3rd-party-module-not-gated
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -21,7 +19,6 @@ import salt.engines
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -59,6 +56,14 @@ log = logging.getLogger(__name__)
 
 
 def post_master_init(self, master):
+    """
+    Function to finish init after a proxy
+    minion has finished connecting to a master.
+
+    This is primarily loading modules, pillars, etc. (since they need
+    to know which master they connected to)
+    """
+
     log.debug("subclassed LazyLoaded _post_master_init")
     if self.connected:
         self.opts["master"] = master
@@ -99,15 +104,14 @@ def post_master_init(self, master):
         if "mine_interval" in self.opts["pillar"]:
             self.opts["mine_interval"] = self.opts["pillar"]["mine_interval"]
         if "mine_functions" in self.opts["pillar"]:
-            general_proxy_mines = self.opts.get("mine_functions", [])
+            general_proxy_mines = self.opts.get("mine_functions", {})
             specific_proxy_mines = self.opts["pillar"]["mine_functions"]
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
             except TypeError as terr:
                 log.error(
-                    "Unable to merge mine functions from the pillar in the opts, for proxy {}".format(
-                        self.opts["id"]
-                    )
+                    "Unable to merge mine functions from the pillar in the opts, for proxy %s",
+                    self.opts["id"],
                 )
 
     fq_proxyname = self.opts["proxy"]["proxytype"]
@@ -179,7 +183,6 @@ def post_master_init(self, master):
 
     self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
 
-    self.serial = salt.payload.Serial(self.opts)
     self.mod_opts = self._prep_mod_opts()
     self.matchers = salt.loader.matchers(self.opts)
     self.beacons = salt.beacons.Beacon(self.opts, self.functions)
@@ -307,7 +310,12 @@ def post_master_init(self, master):
 
 
 def target(cls, minion_instance, opts, data, connected):
+    """
+    Handle targeting of the minion.
 
+    Calling _thread_multi_return or _thread_return
+    depending on a single or multiple commands.
+    """
     if not minion_instance:
         minion_instance = cls(opts)
         minion_instance.connected = connected
@@ -366,8 +374,6 @@ def target(cls, minion_instance, opts, data, connected):
 
             proxy_init_fn = minion_instance.proxy[fq_proxyname + ".init"]
             proxy_init_fn(opts)
-        if not hasattr(minion_instance, "serial"):
-            minion_instance.serial = salt.payload.Serial(opts)
         if not hasattr(minion_instance, "proc_dir"):
             uid = salt.utils.user.get_uid(user=opts.get("user", None))
             minion_instance.proc_dir = salt.minion.get_proc_dir(
@@ -396,7 +402,7 @@ def thread_return(cls, minion_instance, opts, data):
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
     executors = (
@@ -457,9 +463,8 @@ def thread_return(cls, minion_instance, opts, data):
                 executors = [executors]
             elif not isinstance(executors, list) or not executors:
                 raise SaltInvocationError(
-                    "Wrong executors specification: {}. String or non-empty list expected".format(
-                        executors
-                    )
+                    "Wrong executors specification: {}. String or non-empty list"
+                    " expected".format(executors)
                 )
             if opts.get("sudo_user", "") and executors[-1] != "sudo":
                 executors[-1] = "sudo"  # replace the last one with sudo
@@ -636,7 +641,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
 
     multifunc_ordered = opts.get("multifunc_ordered", False)
     num_funcs = len(data["fun"])
@@ -734,6 +739,10 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
 
 def handle_payload(self, payload):
+    """
+    Verify the publication and then pass
+    the payload along to _handle_decoded_payload.
+    """
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
@@ -792,9 +801,8 @@ def handle_decoded_payload(self, data):
         process_count = len(salt.utils.minion.running(self.opts))
         while process_count >= process_count_max:
             log.warning(
-                "Maximum number of processes reached while executing jid {}, waiting...".format(
-                    data["jid"]
-                )
+                "Maximum number of processes reached while executing jid %s, waiting...",
+                data["jid"],
             )
             yield salt.ext.tornado.gen.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))
@@ -805,22 +813,23 @@ def handle_decoded_payload(self, data):
     # side.
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
+    name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
-        if sys.platform.startswith("win"):
+        if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we're
             # running on windows
             instance = None
         with default_signals(signal.SIGINT, signal.SIGTERM):
             process = SignalHandlingProcess(
                 target=self._target,
-                name="ProcessPayload",
+                name=name,
                 args=(instance, self.opts, data, self.connected),
             )
     else:
         process = threading.Thread(
             target=self._target,
             args=(instance, self.opts, data, self.connected),
-            name=data["jid"],
+            name=name,
         )
 
     if multiprocessing_enabled:
@@ -830,12 +839,13 @@ def handle_decoded_payload(self, data):
             process.start()
     else:
         process.start()
-    process.name = "{}-Job-{}".format(process.name, data["jid"])
     self.subprocess_list.add(process)
 
 
 def target_load(self, load):
-    # Verify that the publication is valid
+    """
+    Verify that the publication is valid.
+    """
     if "tgt" not in load or "jid" not in load or "fun" not in load or "arg" not in load:
         return False
     # Verify that the publication applies to this minion

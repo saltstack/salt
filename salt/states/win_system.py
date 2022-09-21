@@ -73,7 +73,7 @@ def computer_desc(name):
         ret["changes"] = {"old": before_desc, "new": name}
     else:
         ret["result"] = False
-        ret["comment"] = "Unable to set computer description to " "'{}'".format(name)
+        ret["comment"] = "Unable to set computer description to '{}'".format(name)
     return ret
 
 
@@ -461,13 +461,15 @@ def shutdown(
 
     if only_on_pending_reboot and not __salt__["system.get_pending_reboot"]():
         if __opts__["test"]:
-            ret["comment"] = (
-                "System {} will be skipped because " "no reboot is pending"
-            ).format(action)
+            ret[
+                "comment"
+            ] = "System {} will be skipped because no reboot is pending".format(action)
         else:
-            ret["comment"] = (
-                "System {} has been skipped because " "no reboot was pending"
-            ).format(action)
+            ret[
+                "comment"
+            ] = "System {} has been skipped because no reboot was pending".format(
+                action
+            )
         return ret
 
     if __opts__["test"]:

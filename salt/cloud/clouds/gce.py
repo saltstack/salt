@@ -66,14 +66,11 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 LIBCLOUD_IMPORT_ERROR = None
 try:
     import libcloud
-    from libcloud.compute.types import Provider
+    from libcloud.common.google import ResourceInUseError, ResourceNotFoundError
     from libcloud.compute.providers import get_driver
-    from libcloud.loadbalancer.types import Provider as Provider_lb
+    from libcloud.compute.types import Provider
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-    from libcloud.common.google import (
-        ResourceInUseError,
-        ResourceNotFoundError,
-    )
+    from libcloud.loadbalancer.types import Provider as Provider_lb
 
     HAS_LIBCLOUD = True
 except ImportError:
@@ -243,12 +240,6 @@ def _expand_address(addy):
     ret = {}
     ret.update(addy.__dict__)
     ret["extra"]["zone"] = addy.region.name
-    return ret
-
-
-def _expand_region(region):
-    ret = {}
-    ret["name"] = region.name
     return ret
 
 
@@ -1186,7 +1177,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
-    kwargs["region"] = _expand_region(kwargs["region"])
+    kwargs["region"] = {"name": ex_region.name}
 
     conn = get_conn()
 
@@ -2260,7 +2251,7 @@ def create_attach_volumes(name, kwargs, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     volumes = literal_eval(kwargs["volumes"])
@@ -2294,8 +2285,8 @@ def request_instance(vm_):
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
-            "VM names must start with a letter, only contain letters, numbers, or dashes "
-            "and cannot end in a dash."
+            "VM names must start with a letter, only contain letters, numbers, or"
+            " dashes and cannot end in a dash."
         )
 
     try:

@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Manage GlusterFS pool.
 """
 
-# Import python libs
-from __future__ import absolute_import, generators, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.cloud as suc
 import salt.utils.network
 from salt.exceptions import SaltCloudException
@@ -22,7 +18,8 @@ RESULT_CODES = [
     "Host {0} is already part of another cluster",
     "Volume on {0} conflicts with existing volumes",
     "UUID of {0} is the same as local uuid",
-    '{0} responded with "unknown peer". This could happen if {0} doesn\'t have localhost defined',
+    '{0} responded with "unknown peer". This could happen if {0} doesn\'t have'
+    " localhost defined",
     "Failed to add peer. Information on {0}'s logs",
     "Cluster quorum is not met. Changing peers is not allowed.",
     "Failed to update list of missed snapshots from {0}",
@@ -85,16 +82,16 @@ def peered(name):
 
     if peers and any(name in v["hostnames"] for v in peers.values()):
         ret["result"] = True
-        ret["comment"] = "Host {0} already peered".format(name)
+        ret["comment"] = "Host {} already peered".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Peer {0} will be added.".format(name)
+        ret["comment"] = "Peer {} will be added.".format(name)
         ret["result"] = None
         return ret
 
     if not __salt__["glusterfs.peer"](name):
-        ret["comment"] = "Failed to peer with {0}, please check logs for errors".format(
+        ret["comment"] = "Failed to peer with {}, please check logs for errors".format(
             name
         )
         return ret
@@ -103,12 +100,12 @@ def peered(name):
     newpeers = __salt__["glusterfs.peer_status"]()
     if newpeers and any(name in v["hostnames"] for v in newpeers.values()):
         ret["result"] = True
-        ret["comment"] = "Host {0} successfully peered".format(name)
+        ret["comment"] = "Host {} successfully peered".format(name)
         ret["changes"] = {"new": newpeers, "old": peers}
     else:
         ret[
             "comment"
-        ] = "Host {0} was successfully peered but did not appear in the list of peers".format(
+        ] = "Host {} was successfully peered but did not appear in the list of peers".format(
             name
         )
     return ret
@@ -183,7 +180,7 @@ def volume_present(
     volumes = __salt__["glusterfs.list_volumes"]()
     if name not in volumes:
         if __opts__["test"]:
-            comment = "Volume {0} will be created".format(name)
+            comment = "Volume {} will be created".format(name)
             if start:
                 comment += " and started"
             ret["comment"] = comment
@@ -195,16 +192,16 @@ def volume_present(
         )
 
         if not vol_created:
-            ret["comment"] = "Creation of volume {0} failed".format(name)
+            ret["comment"] = "Creation of volume {} failed".format(name)
             return ret
         old_volumes = volumes
         volumes = __salt__["glusterfs.list_volumes"]()
         if name in volumes:
             ret["changes"] = {"new": volumes, "old": old_volumes}
-            ret["comment"] = "Volume {0} is created".format(name)
+            ret["comment"] = "Volume {} is created".format(name)
 
     else:
-        ret["comment"] = "Volume {0} already exists".format(name)
+        ret["comment"] = "Volume {} already exists".format(name)
 
     if start:
         if __opts__["test"]:
@@ -253,26 +250,26 @@ def started(name):
     volinfo = __salt__["glusterfs.info"]()
     if name not in volinfo:
         ret["result"] = False
-        ret["comment"] = "Volume {0} does not exist".format(name)
+        ret["comment"] = "Volume {} does not exist".format(name)
         return ret
 
     if int(volinfo[name]["status"]) == 1:
-        ret["comment"] = "Volume {0} is already started".format(name)
+        ret["comment"] = "Volume {} is already started".format(name)
         ret["result"] = True
         return ret
     elif __opts__["test"]:
-        ret["comment"] = "Volume {0} will be started".format(name)
+        ret["comment"] = "Volume {} will be started".format(name)
         ret["result"] = None
         return ret
 
     vol_started = __salt__["glusterfs.start_volume"](name)
     if vol_started:
         ret["result"] = True
-        ret["comment"] = "Volume {0} is started".format(name)
+        ret["comment"] = "Volume {} is started".format(name)
         ret["change"] = {"new": "started", "old": "stopped"}
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to start volume {0}".format(name)
+        ret["comment"] = "Failed to start volume {}".format(name)
 
     return ret
 
@@ -306,23 +303,23 @@ def add_volume_bricks(name, bricks):
 
     volinfo = __salt__["glusterfs.info"]()
     if name not in volinfo:
-        ret["comment"] = "Volume {0} does not exist".format(name)
+        ret["comment"] = "Volume {} does not exist".format(name)
         return ret
 
     if int(volinfo[name]["status"]) != 1:
-        ret["comment"] = "Volume {0} is not started".format(name)
+        ret["comment"] = "Volume {} is not started".format(name)
         return ret
 
     current_bricks = [brick["path"] for brick in volinfo[name]["bricks"].values()]
     if not set(bricks) - set(current_bricks):
         ret["result"] = True
-        ret["comment"] = "Bricks already added in volume {0}".format(name)
+        ret["comment"] = "Bricks already added in volume {}".format(name)
         return ret
 
     bricks_added = __salt__["glusterfs.add_volume_bricks"](name, bricks)
     if bricks_added:
         ret["result"] = True
-        ret["comment"] = "Bricks successfully added to volume {0}".format(name)
+        ret["comment"] = "Bricks successfully added to volume {}".format(name)
         new_bricks = [
             brick["path"]
             for brick in __salt__["glusterfs.info"]()[name]["bricks"].values()
@@ -330,7 +327,7 @@ def add_volume_bricks(name, bricks):
         ret["changes"] = {"new": new_bricks, "old": current_bricks}
         return ret
 
-    ret["comment"] = "Adding bricks to volume {0} failed".format(name)
+    ret["comment"] = "Adding bricks to volume {} failed".format(name)
     return ret
 
 
@@ -363,9 +360,7 @@ def op_version(name, version):
         return ret
 
     if current == version:
-        ret[
-            "comment"
-        ] = "Glusterfs cluster.op-version for {0} already set to {1}".format(
+        ret["comment"] = "Glusterfs cluster.op-version for {} already set to {}".format(
             name, version
         )
         ret["result"] = True
@@ -373,7 +368,7 @@ def op_version(name, version):
     elif __opts__["test"]:
         ret[
             "comment"
-        ] = "An attempt would be made to set the cluster.op-version for {0} to {1}.".format(
+        ] = "An attempt would be made to set the cluster.op-version for {} to {}.".format(
             name, version
         )
         ret["result"] = None
@@ -426,7 +421,7 @@ def max_op_version(name):
     if current == max_version:
         ret[
             "comment"
-        ] = "The cluster.op-version is already set to the cluster.max-op-version of {0}".format(
+        ] = "The cluster.op-version is already set to the cluster.max-op-version of {}".format(
             current
         )
         ret["result"] = True
@@ -434,7 +429,7 @@ def max_op_version(name):
     elif __opts__["test"]:
         ret[
             "comment"
-        ] = "An attempt would be made to set the cluster.op-version to {0}.".format(
+        ] = "An attempt would be made to set the cluster.op-version to {}.".format(
             max_version
         )
         ret["result"] = None

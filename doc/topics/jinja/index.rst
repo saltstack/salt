@@ -279,6 +279,43 @@ that YAML only allows special escapes inside double quotes so
 use ``yaml_encode`` or ``yaml_dquote``).
 
 
+.. jinja_ref:: dict_to_sls_yaml_params
+
+``dict_to_sls_yaml_params``
+---------------------------
+
+.. versionadded:: 3005
+
+Renders a formatted multi-line YAML string from a Python dictionary. Each
+key/value pair in the dictionary will be added as a single-key dictionary
+to a list that will then be sent to the YAML formatter.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set thing_params = {
+        "name": "thing",
+        "changes": True,
+        "warnings": "OMG! Stuff is happening!"
+       }
+    %}
+
+    thing:
+      test.configurable_test_state:
+        {{ thing_params | dict_to_sls_yaml_params | indent }}
+
+Returns:
+
+.. code-block:: yaml
+
+    thing:
+      test.configurable_test_state:
+        - name: thing
+        - changes: true
+        - warnings: OMG! Stuff is happening!
+
+
 .. jinja_ref:: to_bool
 
 ``to_bool``
@@ -649,6 +686,161 @@ Returns:
 .. code-block:: text
 
   1, 4
+
+
+.. jinja_ref:: flatten
+
+``flatten``
+-----------
+
+.. versionadded:: 3005
+
+Flatten a list.
+
+.. code-block:: jinja
+
+    {{ [3, [4, 2] ] | flatten }}
+    # => [3, 4, 2]
+
+Flatten only the first level of a list:
+
+.. code-block:: jinja
+
+    {{ [3, [4, [2]] ] | flatten(levels=1) }}
+    # => [3, 4, [2]]
+
+Preserve nulls in a list, by default ``flatten`` removes them.
+
+.. code-block:: jinja
+
+    {{ [3, None, [4, [2]] ] | flatten(levels=1, preserve_nulls=True) }}
+    # => [3, None, 4, [2]]
+
+
+.. jinja_ref:: combinations
+
+``combinations``
+----------------
+
+.. versionadded:: 3005
+
+Invokes the ``combinations`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | combinations(2) %}{{ one~two }} {% endfor %}
+    # => AB AC AD BC BD CD
+
+
+.. jinja_ref:: combinations_with_replacement
+
+``combinations_with_replacement``
+---------------------------------
+
+.. versionadded:: 3005
+
+Invokes the ``combinations_with_replacement`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABC" | combinations_with_replacement(2) %}{{ one~two }} {% endfor %}
+    # => AA AB AC BB BC CC
+
+
+.. jinja_ref:: compress
+
+``compress``
+------------
+
+.. versionadded:: 3005
+
+Invokes the ``compress`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for val in "ABCDEF" | compress([1,0,1,0,1,1]) %}{{ val }} {% endfor %}
+    # => A C E F
+
+
+.. jinja_ref:: permutations
+
+``permutations``
+----------------
+
+.. versionadded:: 3005
+
+Invokes the ``permutations`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | permutations(2) %}{{ one~two }} {% endfor %}
+    # => AB AC AD BA BC BD CA CB CD DA DB DC
+
+
+.. jinja_ref:: product
+
+``product``
+-----------
+
+.. versionadded:: 3005
+
+Invokes the ``product`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | product("xy") %}{{ one~two }} {% endfor %}
+    # => Ax Ay Bx By Cx Cy Dx Dy
+
+
+.. jinja_ref:: zip
+
+``zip``
+-------
+
+.. versionadded:: 3005
+
+Invokes the native Python ``zip`` function.
+
+The ``zip`` function returns a zip object, which is an iterator of tuples where
+the first item in each passed iterator is paired together, and then the second
+item in each passed iterator are paired together etc.
+
+If the passed iterators have different lengths, the iterator with the least
+items decides the length of the new iterator.
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | zip("xy") %}{{ one~two }} {% endfor %}
+    # => Ax By
+
+
+.. jinja_ref:: zip_longest
+
+``zip_longest``
+---------------
+
+.. versionadded:: 3005
+
+Invokes the ``zip_longest`` function from the ``itertools`` library.
+
+See the `itertools documentation`_ for more information.
+
+.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.zip_longest
+
+.. code-block:: jinja
+
+    {% for one, two in "ABCD" | zip_longest("xy", fillvalue="-") %}{{ one~two }} {% endfor %}
+    # => Ax By C- D-
 
 
 .. jinja_ref:: method_call
@@ -1071,6 +1263,54 @@ Returns:
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
 
 
+.. jinja_ref:: random_sample
+
+``random_sample``
+-----------------
+
+.. versionadded:: 3005
+
+Returns a given sample size from a list. The ``seed`` parameter can be used to
+return a predictable outcome.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set my_list = ["one", "two", "three", "four"] %}
+  {{ my_list | random_sample(2) }}
+
+Returns:
+
+.. code-block:: text
+
+  ["four", "one"]
+
+
+.. jinja_ref:: random_shuffle
+
+``random_shuffle``
+------------------
+
+.. versionadded:: 3005
+
+Returns a shuffled copy of an input list. The ``seed`` parameter can be used to
+return a predictable outcome.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set my_list = ["one", "two", "three", "four"] %}
+  {{ my_list | random_shuffle }}
+
+Returns:
+
+.. code-block:: text
+
+  ["four", "three", "one", "two"]
+
+
 .. jinja_ref:: set_dict_key_value
 
 ``set_dict_key_value``
@@ -1483,6 +1723,33 @@ Returns:
 
   Example 1: snakeCaseForTheWin
   Example 2: SnakeCaseForTheWin
+
+
+.. jinja_ref:: human_to_bytes
+
+``human_to_bytes``
+------------------
+
+.. versionadded:: 3005
+
+Given a human-readable byte string (e.g. 2G, 30MB, 64KiB), return the number of bytes.
+Will return 0 if the argument has unexpected form.
+
+.. code-block:: jinja
+
+  Example 1: {{ "32GB" | human_to_bytes }}
+
+  Example 2: {{ "32GB" | human_to_bytes(handle_metric=True) }}
+
+  Example 3: {{ "32" | human_to_bytes(default_unit="GiB") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: 34359738368
+  Example 2: 32000000000
+  Example 3: 34359738368
 
 Networking Filters
 ------------------

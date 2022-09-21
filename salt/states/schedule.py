@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of the Salt scheduler
 ==============================================
@@ -97,7 +96,6 @@ Management of the Salt scheduler
     python-dateutil is installed on the minion.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name, **kwargs):
@@ -135,7 +133,7 @@ def present(name, **kwargs):
         Requires python-croniter.
 
     run_on_start
-        Whether the job will run when Salt minion starts, or the job will be
+        Whether the scheduled job will run when Salt minion starts, or the job will be
         skipped **once** and run at the next scheduled run.  Value should be a
         boolean.
 
@@ -172,7 +170,7 @@ def present(name, **kwargs):
         also specifying the ``once_fmt`` option.
 
     enabled
-        Whether the job should be enabled or disabled.  Value should be a boolean.
+        Whether the scheduled job should be enabled or disabled.  Value should be a boolean.
 
     return_job
         Whether to return information to the Salt master upon job completion.
@@ -195,7 +193,7 @@ def present(name, **kwargs):
         as a dictionary.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
 
     skip_during_range
         This will ensure that the scheduled command does not run within the
@@ -203,7 +201,7 @@ def present(name, **kwargs):
         date strings using the dateutil format. Requires python-dateutil.
 
     run_after_skip_range
-        Whether the job should run immediately after the skip_during_range time
+        Whether the scheduled job should run immediately after the skip_during_range time
         period ends.
 
     """
@@ -229,7 +227,7 @@ def present(name, **kwargs):
                 new_item["enabled"] = True
 
         if new_item == current_schedule[name]:
-            ret["comment"].append("Job {0} in correct state".format(name))
+            ret["comment"].append("Job {} in correct state".format(name))
         else:
             if "test" in __opts__ and __opts__["test"]:
                 kwargs["test"] = True
@@ -243,7 +241,7 @@ def present(name, **kwargs):
                     ret["comment"] = result["comment"]
                     return ret
                 else:
-                    ret["comment"].append("Modifying job {0} in schedule".format(name))
+                    ret["comment"].append("Modifying job {} in schedule".format(name))
                     ret["changes"] = result["changes"]
     else:
         if "test" in __opts__ and __opts__["test"]:
@@ -257,7 +255,8 @@ def present(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Adding new job {0} to schedule".format(name))
+                ret["comment"].append("Adding new job {} to schedule".format(name))
+                ret["changes"] = result["changes"]
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -271,7 +270,11 @@ def absent(name, **kwargs):
         The unique name that is given to the scheduled job.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
+
+        When used with absent this will decide whether the scheduled job will be removed
+        from the saved scheduled jobs and not be available when the Salt minion is
+        restarted.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
@@ -289,9 +292,10 @@ def absent(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Removed job {0} from schedule".format(name))
+                ret["comment"].append("Removed job {} from schedule".format(name))
+                ret["changes"] = result["changes"]
     else:
-        ret["comment"].append("Job {0} not present in schedule".format(name))
+        ret["comment"].append("Job {} not present in schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -305,7 +309,7 @@ def enabled(name, **kwargs):
         The unique name that is given to the scheduled job.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
 
     """
 
@@ -321,12 +325,13 @@ def enabled(name, **kwargs):
             result = __salt__["schedule.enable_job"](name, **kwargs)
             if not result["result"]:
                 ret["result"] = result["result"]
+                ret["changes"] = result["changes"]
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Enabled job {0} from schedule".format(name))
+                ret["comment"].append("Enabled job {} from schedule".format(name))
     else:
-        ret["comment"].append("Job {0} not present in schedule".format(name))
+        ret["comment"].append("Job {} not present in schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -340,7 +345,7 @@ def disabled(name, **kwargs):
         The unique name that is given to the scheduled job.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
 
     """
 
@@ -359,9 +364,9 @@ def disabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Disabled job {0} from schedule".format(name))
+                ret["comment"].append("Disabled job {} from schedule".format(name))
     else:
-        ret["comment"].append("Job {0} not present in schedule".format(name))
+        ret["comment"].append("Job {} not present in schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret

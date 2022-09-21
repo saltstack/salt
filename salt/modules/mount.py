@@ -368,7 +368,12 @@ class _fstab_entry:
         """
         entry = self.dict_from_line(line)
         for key, value in self.criteria.items():
-            if entry[key] != value:
+            if key == "opts":
+                ex_opts = sorted(entry.get(key, "").split(","))
+                cr_opts = sorted(value.split(","))
+                if ex_opts != cr_opts:
+                    return False
+            elif entry[key] != value:
                 return False
         return True
 
@@ -401,7 +406,10 @@ class _vfstab_entry:
         "opts",
     )
     # NOTE: weird formatting to match default spacing on Solaris
-    vfstab_format = "{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n"
+    vfstab_format = (
+        "{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3}"
+        " {mount_at_boot:<6} {opts}\n"
+    )
 
     @classmethod
     def dict_from_line(cls, line):
@@ -464,7 +472,12 @@ class _vfstab_entry:
         """
         entry = self.dict_from_line(line)
         for key, value in self.criteria.items():
-            if entry[key] != value:
+            if key == "opts":
+                ex_opts = sorted(entry.get(key, "").split(","))
+                cr_opts = sorted(value.split(","))
+                if ex_opts != cr_opts:
+                    return False
+            elif entry[key] != value:
                 return False
         return True
 
@@ -543,7 +556,7 @@ class _FileSystemsEntry:
     def dict_from_cmd_line(cls, ipargs, keys):
         cmdln_dict = ipargs
         if keys:
-            for key, value in keys:
+            for key, value in keys.items():
                 # ignore unknown or local scope keys
                 if key.startswith("__"):
                     continue
@@ -565,6 +578,17 @@ class _FileSystemsEntry:
                 strg_out += "\t{}\t\t= {}".format(k, v) + os.linesep
         strg_out += os.linesep
         return str(strg_out)
+
+    @classmethod
+    def dict_to_list_lines(cls, fsys_dict_entry):
+        entry = fsys_dict_entry
+        list_out = []
+        list_out.append(str(entry["name"] + ":" + os.linesep))
+        for k, v in entry.items():
+            if "name" not in k:
+                list_out.append(str("\t{}\t\t= {}".format(k, v) + os.linesep))
+        list_out.append(str(os.linesep))
+        return list_out
 
     def dict_from_entry(self):
         ret = OrderedDict()
@@ -614,7 +638,12 @@ class _FileSystemsEntry:
         evalue_dict = fsys_view[1]
         for key, value in self.criteria.items():
             if key in evalue_dict:
-                if evalue_dict[key] != value:
+                if key == "opts":
+                    ex_opts = sorted(evalue_dict.get(key, "").split(","))
+                    cr_opts = sorted(value.split(","))
+                    if ex_opts != cr_opts:
+                        return False
+                elif evalue_dict[key] != value:
                     return False
             else:
                 return False
@@ -1153,8 +1182,7 @@ def set_automaster(
                         comps[2] = device_fmt
                     if change:
                         log.debug(
-                            "auto_master entry for mount point %s needs to be "
-                            "updated",
+                            "auto_master entry for mount point %s needs to be updated",
                             name,
                         )
                         newline = "{}\t{}\t{}\n".format(name, type_opts, device_fmt)
@@ -1329,8 +1357,10 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
         if force_mount:
             # We need to force the mount but first we should unmount
             umount(name, device, user=user)
-        lopts = ",".join(opts)
-        args = "-o {}".format(lopts)
+        args = ""
+        if opts:
+            lopts = ",".join(opts)
+            args = "-o {}".format(lopts)
 
         if fstype:
             # use of fstype on AIX differs from typical Linux use of
@@ -1888,10 +1918,13 @@ def set_filesystems(
                 # The line was changed, commit it!
                 for fsys_view in view_lines:
                     entry = fsys_view[1]
-                    mystrg = _FileSystemsEntry.dict_to_lines(entry)
-                    ofile.writelines(salt.utils.data.encode(mystrg))
+                    list_strgs = _FileSystemsEntry.dict_to_list_lines(entry)
+                    ofile.writelines(salt.utils.data.encode(list_strgs))
+
         except OSError:
             raise CommandExecutionError("File not writable {}".format(config))
+        except Exception as exc:
+            raise CommandExecutionError("set_filesystems error exception {exc}")
 
     return ret
 
@@ -1935,9 +1968,11 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
             with salt.utils.files.fopen(config, "wb") as ofile:
                 for fsys_view in view_lines:
                     entry = fsys_view[1]
-                    mystrg = _FileSystemsEntry.dict_to_lines(entry)
-                    ofile.writelines(salt.utils.data.encode(mystrg))
+                    list_strgs = _FileSystemsEntry.dict_to_list_lines(entry)
+                    ofile.writelines(salt.utils.data.encode(list_strgs))
         except OSError as exc:
             raise CommandExecutionError("Couldn't write to {}: {}".format(config, exc))
+        except Exception as exc:
+            raise CommandExecutionError("rm_filesystems error exception {exc}")
 
     return modified

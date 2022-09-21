@@ -35,6 +35,7 @@ Pipfile.lock
 /tests/cachedir/
 /tests/unit/templates/roots/
 /var/
+/venv/
 
 # setuptools stuff
 *.egg-info
@@ -87,6 +88,7 @@ tests/unit/templates/roots
 
 # Pycharm
 .idea
+venv/
 
 # VS Code
 .vscode
@@ -116,3 +118,6 @@ kitchen.local.yml
 Gemfile.lock
 /artifacts/
 requirements/static/*/py*/*.log
+
+# Vim's default session file
+Session.vim

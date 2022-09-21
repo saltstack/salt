@@ -29,6 +29,13 @@ try:
 except ImportError:
     HAS_RPMUTILS = False
 
+try:
+    import rpm_vercmp
+
+    HAS_PY_RPM = True
+except ImportError:
+    HAS_PY_RPM = False
+
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +58,8 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (
             False,
-            "The rpm execution module failed to load: failed to detect os or os_family grains.",
+            "The rpm execution module failed to load: failed to detect os or os_family"
+            " grains.",
         )
 
     enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux")
@@ -60,8 +68,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The rpm execution module failed to load: only available on redhat/suse type systems "
-        "or amazon, xcp or xenserver.",
+        "The rpm execution module failed to load: only available on redhat/suse type"
+        " systems or amazon, xcp or xenserver.",
     )
 
 
@@ -538,23 +546,32 @@ def info(*packages, **kwargs):
     # Construct query format
     attr_map = {
         "name": "name: %{NAME}\\n",
-        "relocations": "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n",
+        "relocations": (
+            "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n"
+        ),
         "version": "version: %{VERSION}\\n",
         "vendor": "vendor: %{VENDOR}\\n",
         "release": "release: %{RELEASE}\\n",
         "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
         "build_date_time_t": "build_date_time_t: %{BUILDTIME}\\n",
         "build_date": "build_date: %{BUILDTIME}\\n",
-        "install_date_time_t": "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
-        "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "install_date_time_t": (
+            "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n"
+        ),
+        "install_date": (
+            "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n"
+        ),
         "build_host": "build_host: %{BUILDHOST}\\n",
         "group": "group: %{GROUP}\\n",
         "source_rpm": "source_rpm: %{SOURCERPM}\\n",
         "size": "size: " + size_tag + "\\n",
         "arch": "arch: %{ARCH}\\n",
         "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
-        "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
-        "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n",
+        "signature": (
+            "signature:"
+            " %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
+            "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n"
+        ),
         "packager": "%|PACKAGER?{packager: %{PACKAGER}\\n}|",
         "url": "%|URL?{url: %{URL}\\n}|",
         "summary": "summary: %{SUMMARY}\\n",
@@ -586,7 +603,7 @@ def info(*packages, **kwargs):
 
     cmd = " ".join(cmd)
     call = __salt__["cmd.run_all"](
-        cmd + (" --queryformat '{}'".format("".join(query))),
+        cmd + " --queryformat '{}'".format("".join(query)),
         output_loglevel="trace",
         env={"TZ": "UTC"},
         clean_env=True,
@@ -710,6 +727,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
+        elif HAS_PY_RPM:
+            cmp_func = rpm_vercmp.vercmp
         else:
             log.warning(
                 "Please install a package that provides rpm.labelCompare for "
@@ -724,7 +743,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
         if cmp_func is None:
             if salt.utils.path.which("rpmdev-vercmp"):
                 log.warning(
-                    "Installing the rpmdevtools package may surface dev tools in production."
+                    "Installing the rpmdevtools package may surface dev tools in"
+                    " production."
                 )
 
                 # rpmdev-vercmp always uses epochs, even when zero
@@ -766,7 +786,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     )
             else:
                 log.warning(
-                    "Falling back on salt.utils.versions.version_cmp() for version comparisons"
+                    "Falling back on salt.utils.versions.version_cmp() for version"
+                    " comparisons"
                 )
         else:
             # If one EVR is missing a release but not the other and they
@@ -778,7 +799,17 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             if not ver1_r or not ver2_r:
                 ver1_r = ver2_r = ""
 
-            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
+            if HAS_PY_RPM:
+                # handle epoch version comparison first
+                # rpm_vercmp.vercmp does not handle epoch version comparison
+                ret = salt.utils.versions.version_cmp(ver1_e, ver2_e)
+                if ret in (1, -1):
+                    return ret
+                cmp_result = cmp_func(ver1, ver2)
+            else:
+                cmp_result = cmp_func(
+                    (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
+                )
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
                     "Comparison result '{}' is invalid".format(cmp_result)

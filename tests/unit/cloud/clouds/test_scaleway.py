@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 
-# Import Salt Libs
 import salt.utils.json
 from salt.cloud.clouds import scaleway
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class DummyRequest(object):
+class DummyRequest:
     def __init__(self, status_code, **response):
         self.status_code = status_code
         self.response = response

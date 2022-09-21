@@ -1,4 +1,5 @@
 """
+Module for kubeadm
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
@@ -340,7 +341,7 @@ def token_list(kubeconfig=None, rootfs=None):
             # break the parser.
             values = re.findall(r"(\S+(?:\s\S+)*)", line)
             if len(header) != len(values):
-                log.error("Error parsing line: {}".format(line))
+                log.error("Error parsing line: '%s'", line)
                 continue
             tokens.append({key: value for key, value in zip(header, values)})
     return tokens

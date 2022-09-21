@@ -1,4 +1,5 @@
 import pytest
+
 import salt.cloud.clouds.openstack as openstack
 from tests.support.mock import call, patch
 
@@ -62,7 +63,8 @@ def test_when_ignore_cidr_is_configured_and_ip_is_provided_result_is_expected(
     "comment,example_ips,ignored_cidr,expected",
     [
         (
-            "ignore_cidr matches first 2 ips, expected value will be first ip that doesn't match cidr.",
+            "ignore_cidr matches first 2 ips, expected value will be first ip that"
+            " doesn't match cidr.",
             ["203.0.113.1", "203.0.113.2", "192.0.2.1", "192.0.2.2"],
             "203.0.113.0/24",
             "192.0.2.1",
@@ -74,7 +76,8 @@ def test_when_ignore_cidr_is_configured_and_ip_is_provided_result_is_expected(
             "203.0.113.1",
         ),
         (
-            "ignore_cidr doesn't match any IPs, expected value will be first ip in list.",
+            "ignore_cidr doesn't match any IPs, expected value will be first ip in"
+            " list.",
             ["203.0.113.1", "203.0.113.2", "192.0.2.1", "192.0.2.2"],
             "198.51.100.0/24",
             "203.0.113.1",

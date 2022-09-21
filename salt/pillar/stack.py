@@ -40,7 +40,7 @@ Installing the PillarStack ``ext_pillar`` is as simple as dropping the
 ``stack.py`` file in the ``<extension_modules>/pillar`` directory (no external
 python module required), given that ``extension_modules`` is set in your
 salt-master configuration, see:
-http://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules
+https://docs.saltproject.io/en/latest/ref/configuration/master.html#extension-modules
 
 Configuration in Salt
 ---------------------
@@ -378,10 +378,11 @@ import logging
 import os
 import posixpath
 
+from jinja2 import Environment, FileSystemLoader
+
 import salt.utils.data
 import salt.utils.jinja
 import salt.utils.yaml
-from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 strategies = ("overwrite", "merge-first", "merge-last", "remove")
@@ -399,8 +400,9 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         t, matcher = matcher.split(":", 1)
         if t not in traverse:
             raise Exception(
-                'Unknown traverse option "{}", '
-                "should be one of {}".format(t, traverse.keys())
+                'Unknown traverse option "{}", should be one of {}'.format(
+                    t, traverse.keys()
+                )
             )
         cfgs = matchs.get(traverse[t](matcher, None), [])
         if not isinstance(cfgs, list):
@@ -444,8 +446,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
         paths = glob.glob(os.path.join(basedir, item))
         if not paths:
             log.info(
-                'Ignoring pillar stack template "%s": can\'t find from root '
-                'dir "%s"',
+                'Ignoring pillar stack template "%s": can\'t find from root dir "%s"',
                 item,
                 basedir,
             )

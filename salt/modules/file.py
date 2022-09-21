@@ -28,7 +28,7 @@ import time
 import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
-from functools import reduce  # pylint: disable=redefined-builtin
+from functools import reduce
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -174,7 +174,8 @@ def _chattr_version():
     cmd = [tune2fs]
     result = __salt__["cmd.run"](cmd, ignore_retcode=True, python_shell=False)
     match = re.search(
-        r"tune2fs (?P<version>[0-9\.]+)", salt.utils.stringutils.to_str(result),
+        r"tune2fs (?P<version>[0-9\.]+)",
+        salt.utils.stringutils.to_str(result),
     )
     if match is None:
         version = None
@@ -587,7 +588,8 @@ def _cmp_attrs(path, attrs):
         new.add("e")
 
     return AttrChanges(
-        added="".join(new - old) or None, removed="".join(old - new) or None,
+        added="".join(new - old) or None,
+        removed="".join(old - new) or None,
     )
 
 
@@ -872,9 +874,9 @@ def get_source_sum(
         # The source_hash is a hash expression
         ret = {}
         try:
-            ret["hash_type"], ret["hsum"] = [
+            ret["hash_type"], ret["hsum"] = (
                 x.strip() for x in source_hash.split("=", 1)
-            ]
+            )
         except AttributeError:
             _invalid_source_hash_format()
         except ValueError:
@@ -1542,7 +1544,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                     found = True
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
 
     # We've searched the whole file. If we didn't find anything, return False
@@ -1636,7 +1638,7 @@ def _get_flags(flags):
         flags = [flags]
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
-        _flags_acc = []
+        _flags_acc = [0]  # An initial 0 avoids resucing on empty list, an error
         for flag in flags:
             _flag = getattr(re, str(flag).upper())
 
@@ -1687,7 +1689,7 @@ def _mkstemp_copy(path, preserve_inode=True):
         temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to create temp file. " "Exception: {}".format(exc)
+            "Unable to create temp file. Exception: {}".format(exc)
         )
     # use `copy` to preserve the inode of the
     # original file, and thus preserve hardlinks
@@ -1699,18 +1701,18 @@ def _mkstemp_copy(path, preserve_inode=True):
             shutil.copy2(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to copy file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to copy file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
     else:
         try:
             shutil.move(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to move file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to move file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
 
     return temp_file
@@ -2485,7 +2487,7 @@ def replace(
     symlink = False
     if is_link(path):
         symlink = True
-        target_path = os.readlink(path)
+        target_path = salt.utils.path.readlink(path)
         given_path = os.path.expanduser(path)
 
     path = os.path.realpath(os.path.expanduser(path))
@@ -2561,7 +2563,7 @@ def replace(
             else:
                 result, nrepl = re.subn(
                     cpattern,
-                    repl.replace("\\", "\\\\") if backslash_literal else repl,
+                    repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                     r_data,
                     count,
                 )
@@ -2591,10 +2593,12 @@ def replace(
                     else r_data.splitlines(True)
                 )
                 new_file = result.splitlines(True)
+                if orig_file == new_file:
+                    has_changes = False
 
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
     finally:
         if r_data and isinstance(r_data, mmap.mmap):
@@ -2620,7 +2624,7 @@ def replace(
                         r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
                         result, nrepl = re.subn(
                             cpattern,
-                            repl.replace("\\", "\\\\") if backslash_literal else repl,
+                            repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                             r_data,
                             count,
                         )
@@ -2707,8 +2711,7 @@ def replace(
             os.remove(temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to delete temp file '{}'. "
-                "Exception: {}".format(temp_file, exc)
+                "Unable to delete temp file '{}'. Exception: {}".format(temp_file, exc)
             )
 
     if not dry_run and not salt.utils.platform.is_windows():
@@ -3173,17 +3176,27 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     options
         Options to pass to patch.
 
+    .. note::
+        Windows now supports using patch as of 3004.
+
+        In order to use this function in Windows, please install the
+        patch binary through your own means and ensure it's found
+        in the system Path. If installing through git-for-windows,
+        please select the optional "Use Git and optional Unix tools
+        from the Command Prompt" option when installing Git.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
+
+        salt '*' file.patch C:\\file1.txt C:\\file3.patch
     """
     patchpath = salt.utils.path.which("patch")
     if not patchpath:
         raise CommandExecutionError(
-            "patch executable not found. Is the distribution's patch "
-            "package installed?"
+            "patch executable not found. Is the distribution's patch package installed?"
         )
 
     cmd = [patchpath]
@@ -3696,9 +3709,22 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path):
+def symlink(src, path, force=False):
     """
     Create a symbolic link (symlink, soft link) to a file
+
+    Args:
+
+        src (str): The path to a file or directory
+
+        path (str): The path to the link. Must be an absolute path
+
+        force (bool):
+            Overwrite an existing symlink with the same name
+            .. versionadded:: 3005
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -3708,22 +3734,34 @@ def symlink(src, path):
     """
     path = os.path.expanduser(path)
 
-    try:
-        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
-            log.debug("link already in correct state: %s -> %s", path, src)
-            return True
-    except OSError:
-        pass
+    if os.path.islink(path):
+        try:
+            if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(
+                src
+            ):
+                log.debug("link already in correct state: %s -> %s", path, src)
+                return True
+        except OSError:
+            pass
+
+        if force:
+            os.unlink(path)
+        else:
+            msg = "Found existing symlink: {}".format(path)
+            raise CommandExecutionError(msg)
+
+    if os.path.exists(path):
+        msg = "Existing path is not a symlink: {}".format(path)
+        raise CommandExecutionError(msg)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("File path must be absolute.")
+        raise SaltInvocationError("Link path must be absolute: {}".format(path))
 
     try:
         os.symlink(src, path)
         return True
     except OSError:
         raise CommandExecutionError("Could not create '{}'".format(path))
-    return False
 
 
 def rename(src, dst):
@@ -3795,7 +3833,8 @@ def copy(src, dst, recurse=False, remove_existing=False):
         if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
             if not recurse:
                 raise SaltInvocationError(
-                    "Cannot copy overwriting a directory without recurse flag set to true!"
+                    "Cannot copy overwriting a directory without recurse flag set to"
+                    " true!"
                 )
             if remove_existing:
                 if os.path.exists(dst):
@@ -3916,7 +3955,27 @@ def readlink(path, canonicalize=False):
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
-    If canonicalize is set to True, then it return the final target
+
+    Args:
+
+        path (str):
+            The path to the symlink
+
+        canonicalize (bool):
+            Get the canonical path eliminating any symbolic links encountered in
+            the path
+
+    Returns:
+
+        str: The path that the symlink points to
+
+    Raises:
+
+        SaltInvocationError: path is not absolute
+
+        SaltInvocationError: path is not a link
+
+        CommandExecutionError: error reading the symbolic link
 
     CLI Example:
 
@@ -3925,17 +3984,23 @@ def readlink(path, canonicalize=False):
         salt '*' file.readlink /path/to/link
     """
     path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("Path to link must be absolute.")
+        raise SaltInvocationError("Path to link must be absolute: {}".format(path))
 
     if not os.path.islink(path):
-        raise SaltInvocationError("A valid link was not specified.")
+        raise SaltInvocationError("A valid link was not specified: {}".format(path))
 
     if canonicalize:
         return os.path.realpath(path)
     else:
-        return os.readlink(path)
+        try:
+            return salt.utils.path.readlink(path)
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                raise CommandExecutionError("Not a symbolic link: {}".format(path))
+            raise CommandExecutionError(exc.__str__())
 
 
 def readdir(path):
@@ -4063,11 +4128,33 @@ def stats(path, hash_type=None, follow_symlinks=True):
     return ret
 
 
-def rmdir(path):
+def rmdir(path, recurse=False, verbose=False, older_than=None):
     """
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 3006.0
+        Changed return value for failure to a boolean.
 
     Remove the specified directory. Fails if a directory is not empty.
+
+    recurse
+        When ``recurse`` is set to ``True``, all empty directories
+        within the path are pruned.
+
+        .. versionadded:: 3006.0
+
+    verbose
+        When ``verbose`` is set to ``True``, a dictionary is returned
+        which contains more information about the removal process.
+
+        .. versionadded:: 3006.0
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -4075,6 +4162,9 @@ def rmdir(path):
 
         salt '*' file.rmdir /tmp/foo/
     """
+    ret = False
+    deleted = []
+    errors = []
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
@@ -4083,11 +4173,46 @@ def rmdir(path):
     if not os.path.isdir(path):
         raise SaltInvocationError("A valid directory was not specified.")
 
-    try:
-        os.rmdir(path)
-        return True
-    except OSError as exc:
-        return exc.strerror
+    if older_than:
+        now = time.time()
+        try:
+            older_than = now - (int(older_than) * 86400)
+            log.debug("Now (%s) looking for directories older than %s", now, older_than)
+        except (TypeError, ValueError) as exc:
+            older_than = 0
+            log.error("Unable to set 'older_than'. Defaulting to 0 days. (%s)", exc)
+
+    if recurse:
+        for root, dirs, _ in os.walk(path, topdown=False):
+            for subdir in dirs:
+                subdir_path = os.path.join(root, subdir)
+                if (
+                    older_than and os.path.getmtime(subdir_path) < older_than
+                ) or not older_than:
+                    try:
+                        log.debug("Removing '%s'", subdir_path)
+                        os.rmdir(subdir_path)
+                        deleted.append(subdir_path)
+                    except OSError as exc:
+                        errors.append([subdir_path, str(exc)])
+                        log.error("Could not remove '%s': %s", subdir_path, exc)
+        ret = not errors
+
+    if (older_than and os.path.getmtime(path) < older_than) or not older_than:
+        try:
+            log.debug("Removing '%s'", path)
+            os.rmdir(path)
+            deleted.append(path)
+            ret = True if ret or not recurse else False
+        except OSError as exc:
+            ret = False
+            errors.append([path, str(exc)])
+            log.error("Could not remove '%s': %s", path, exc)
+
+    if verbose:
+        return {"deleted": deleted, "errors": errors, "result": ret}
+    else:
+        return ret
 
 
 def remove(path):
@@ -4315,7 +4440,9 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single_src, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single_src, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single_src, single_hash)
                         break
@@ -4359,7 +4486,9 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single, source_hash)
                         break
@@ -4424,7 +4553,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
     else:
         ret = {}
         ret["result"] = False
-        ret["comment"] = ("Specified template format {} is not supported").format(
+        ret["comment"] = "Specified template format {} is not supported".format(
             template
         )
         return ret
@@ -4446,6 +4575,7 @@ def get_managed(
     defaults,
     skip_verify=False,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     """
@@ -4501,6 +4631,15 @@ def get_managed(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -4573,7 +4712,7 @@ def get_managed(
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
-                else:
+                elif not use_etag:
                     msg = (
                         "Unable to verify upstream hash of source file {}, "
                         "please set source_hash or set skip_verify to True".format(
@@ -4586,7 +4725,7 @@ def get_managed(
         # Check if we have the template or remote file cached
         cache_refetch = False
         cached_dest = __salt__["cp.is_cached"](source, saltenv)
-        if cached_dest and (source_hash or skip_verify):
+        if cached_dest and (source_hash or skip_verify or use_etag):
             htype = source_sum.get("hash_type", "sha256")
             cached_sum = get_hash(cached_dest, form=htype)
             if skip_verify:
@@ -4594,7 +4733,9 @@ def get_managed(
                 # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {"hsum": cached_sum, "hash_type": htype}
-            elif cached_sum != source_sum.get("hsum", __opts__["hash_type"]):
+            elif use_etag or cached_sum != source_sum.get(
+                "hsum", __opts__["hash_type"]
+            ):
                 cache_refetch = True
             else:
                 sfn = cached_dest
@@ -4608,6 +4749,7 @@ def get_managed(
                     saltenv,
                     source_hash=source_sum.get("hsum"),
                     verify_ssl=verify_ssl,
+                    use_etag=use_etag,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
@@ -4648,7 +4790,7 @@ def get_managed(
                 return (
                     sfn,
                     {},
-                    ("Specified template format {} is not supported").format(template),
+                    "Specified template format {} is not supported".format(template),
                 )
 
             if data["result"]:
@@ -4895,7 +5037,7 @@ def extract_hash(
 
     if partial:
         log.debug(
-            "file.extract_hash: Returning the partially identified %s hash " "'%s'",
+            "file.extract_hash: Returning the partially identified %s hash '%s'",
             partial["hash_type"],
             partial["hsum"],
         )
@@ -5072,11 +5214,15 @@ def check_perms(
                 else:
                     if diff_attrs.added:
                         chattr(
-                            name, operator="add", attributes=diff_attrs.added,
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
                         )
                     if diff_attrs.removed:
                         chattr(
-                            name, operator="remove", attributes=diff_attrs.removed,
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
                         )
                     cmp_attrs = _cmp_attrs(name, attrs)
                     if any(attr for attr in cmp_attrs):
@@ -5101,9 +5247,11 @@ def check_perms(
                 current_serange,
             ) = get_selinux_context(name).split(":")
             log.debug(
-                "Current selinux context user:{} role:{} type:{} range:{}".format(
-                    current_seuser, current_serole, current_setype, current_serange
-                )
+                "Current selinux context user:%s role:%s type:%s range:%s",
+                current_seuser,
+                current_serole,
+                current_setype,
+                current_serange,
             )
         except ValueError:
             log.error("Unable to get current selinux attributes")
@@ -5172,7 +5320,7 @@ def check_perms(
                             range=requested_serange,
                             persist=True,
                         )
-                        log.debug("selinux set result: {}".format(result))
+                        log.debug("selinux set result: %s", result)
                         (
                             current_seuser,
                             current_serole,
@@ -5247,10 +5395,17 @@ def check_managed(
     serole=None,
     setype=None,
     serange=None,
+    follow_symlinks=False,
     **kwargs
 ):
     """
     Check to see what changes need to be made for a file
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -5302,6 +5457,7 @@ def check_managed(
         serole=serole,
         setype=setype,
         serange=serange,
+        follow_symlinks=follow_symlinks,
     )
     # Ignore permission for files written temporary directories
     # Files in any path will still be set correctly using get_managed()
@@ -5338,6 +5494,7 @@ def check_managed_changes(
     setype=None,
     serange=None,
     verify_ssl=True,
+    follow_symlinks=False,
     **kwargs
 ):
     """
@@ -5352,6 +5509,12 @@ def check_managed_changes(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -5418,6 +5581,7 @@ def check_managed_changes(
         serole=serole,
         setype=setype,
         serange=serange,
+        follow_symlinks=follow_symlinks,
     )
     __clean_tmp(sfn)
     return changes
@@ -5439,6 +5603,7 @@ def check_file_meta(
     setype=None,
     serange=None,
     verify_ssl=True,
+    follow_symlinks=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -5515,6 +5680,12 @@ def check_file_meta(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
     """
     changes = {}
     if not source_sum:
@@ -5522,7 +5693,9 @@ def check_file_meta(
 
     try:
         lstats = stats(
-            name, hash_type=source_sum.get("hash_type", None), follow_symlinks=False
+            name,
+            hash_type=source_sum.get("hash_type", None),
+            follow_symlinks=follow_symlinks,
         )
     except CommandExecutionError:
         lstats = {}
@@ -5614,9 +5787,11 @@ def check_file_meta(
                     current_serange,
                 ) = get_selinux_context(name).split(":")
                 log.debug(
-                    "Current selinux context user:{} role:{} type:{} range:{}".format(
-                        current_seuser, current_serole, current_setype, current_serange
-                    )
+                    "Current selinux context user:%s role:%s type:%s range:%s",
+                    current_seuser,
+                    current_serole,
+                    current_setype,
+                    current_serange,
                 )
             except ValueError as exc:
                 log.error("Unable to get current selinux attributes")
@@ -5784,6 +5959,7 @@ def manage_file(
     setype=None,
     serange=None,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     """
@@ -5904,6 +6080,15 @@ def manage_file(
 
         .. versionadded:: 3002
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -5915,6 +6100,12 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    check_web_source_hash = bool(
+        source
+        and urllib.parse.urlparse(source).scheme != "salt"
+        and not skip_verify
+        and not use_etag
+    )
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": "", "result": True}
@@ -5960,13 +6151,15 @@ def manage_file(
             or source_sum.get("hsum", __opts__["hash_type"]) != name_sum
         ):
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
+                sfn = __salt__["cp.cache_file"](
+                    source, saltenv, verify_ssl=verify_ssl, use_etag=use_etag
+                )
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -5988,9 +6181,9 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    ret["changes"]["diff"] = get_diff(
-                        real_name, sfn, show_filenames=False
-                    )
+                    file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    if file_diff:
+                        ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
                     ret["changes"]["diff"] = exc.strerror
 
@@ -6063,7 +6256,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6172,7 +6365,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6853,22 +7046,20 @@ def restore_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     salt.utils.files.backup_minion(path, _get_bkroot())
     try:
         shutil.copyfile(backup["Location"], path)
     except OSError as exc:
-        ret["comment"] = "Unable to restore {} to {}: " "{}".format(
+        ret["comment"] = "Unable to restore {} to {}: {}".format(
             backup["Location"], path, exc
         )
         return ret
     else:
         ret["result"] = True
-        ret["comment"] = "Successfully restored {} to " "{}".format(
+        ret["comment"] = "Successfully restored {} to {}".format(
             backup["Location"], path
         )
 
@@ -6914,9 +7105,7 @@ def delete_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     try:

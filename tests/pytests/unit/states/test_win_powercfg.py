@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_powercfg as powercfg
 from tests.support.mock import MagicMock, patch
 
@@ -60,7 +61,8 @@ def test_set_monitor_test_true_with_change():
     }
     get_monitor_return_value = MagicMock(return_value={"ac": 45, "dc": 22})
     with patch.dict(
-        powercfg.__salt__, {"powercfg.get_monitor_timeout": get_monitor_return_value},
+        powercfg.__salt__,
+        {"powercfg.get_monitor_timeout": get_monitor_return_value},
     ):
         with patch.dict(powercfg.__opts__, {"test": True}):
             assert powercfg.set_timeout("monitor", 0) == ret

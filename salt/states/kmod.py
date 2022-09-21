@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Loading and unloading of kernel modules
 =======================================
@@ -30,7 +29,6 @@ Multiple modules can be specified for both kmod.present and kmod.absent.
           - snd_timer
           - snd
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -84,10 +82,10 @@ def present(name, persist=False, mods=None):
     # Intersection of loaded and proposed modules
     already_loaded = list(set(loaded_mods) & set(mods))
     if len(already_loaded) == 1:
-        comment = "Kernel module {0} is already present".format(already_loaded[0])
+        comment = "Kernel module {} is already present".format(already_loaded[0])
         _append_comment(ret, comment)
     elif len(already_loaded) > 1:
-        comment = "Kernel modules {0} are already present".format(
+        comment = "Kernel modules {} are already present".format(
             ", ".join(already_loaded)
         )
         _append_comment(ret, comment)
@@ -103,9 +101,9 @@ def present(name, persist=False, mods=None):
         if ret["comment"]:
             ret["comment"] += "\n"
         if len(not_loaded) == 1:
-            comment = "Kernel module {0} is set to be loaded".format(not_loaded[0])
+            comment = "Kernel module {} is set to be loaded".format(not_loaded[0])
         else:
-            comment = "Kernel modules {0} are set to be loaded".format(
+            comment = "Kernel modules {} are set to be loaded".format(
                 ", ".join(not_loaded)
             )
         _append_comment(ret, comment)
@@ -115,11 +113,9 @@ def present(name, persist=False, mods=None):
     unavailable = list(set(not_loaded) - set(__salt__["kmod.available"]()))
     if unavailable:
         if len(unavailable) == 1:
-            comment = "Kernel module {0} is unavailable".format(unavailable[0])
+            comment = "Kernel module {} is unavailable".format(unavailable[0])
         else:
-            comment = "Kernel modules {0} are unavailable".format(
-                ", ".join(unavailable)
-            )
+            comment = "Kernel modules {} are unavailable".format(", ".join(unavailable))
         _append_comment(ret, comment)
         ret["result"] = False
 
@@ -148,24 +144,22 @@ def present(name, persist=False, mods=None):
 
     # Update comment with results
     if len(loaded["yes"]) == 1:
-        _append_comment(ret, "Loaded kernel module {0}".format(loaded["yes"][0]))
+        _append_comment(ret, "Loaded kernel module {}".format(loaded["yes"][0]))
     elif len(loaded["yes"]) > 1:
         _append_comment(
-            ret, "Loaded kernel modules {0}".format(", ".join(loaded["yes"]))
+            ret, "Loaded kernel modules {}".format(", ".join(loaded["yes"]))
         )
 
     if len(loaded["no"]) == 1:
-        _append_comment(ret, "Failed to load kernel module {0}".format(loaded["no"][0]))
+        _append_comment(ret, "Failed to load kernel module {}".format(loaded["no"][0]))
     if len(loaded["no"]) > 1:
         _append_comment(
-            ret, "Failed to load kernel modules {0}".format(", ".join(loaded["no"]))
+            ret, "Failed to load kernel modules {}".format(", ".join(loaded["no"]))
         )
 
     if loaded["failed"]:
         for mod, msg in loaded["failed"]:
-            _append_comment(
-                ret, "Failed to load kernel module {0}: {1}".format(mod, msg)
-            )
+            _append_comment(ret, "Failed to load kernel module {}: {}".format(mod, msg))
 
     return ret
 
@@ -207,12 +201,12 @@ def absent(name, persist=False, comment=True, mods=None):
             ret["result"] = None
             if len(to_unload) == 1:
                 _append_comment(
-                    ret, "Kernel module {0} is set to be removed".format(to_unload[0])
+                    ret, "Kernel module {} is set to be removed".format(to_unload[0])
                 )
             elif len(to_unload) > 1:
                 _append_comment(
                     ret,
-                    "Kernel modules {0} are set to be removed".format(
+                    "Kernel modules {} are set to be removed".format(
                         ", ".join(to_unload)
                     ),
                 )
@@ -236,35 +230,35 @@ def absent(name, persist=False, comment=True, mods=None):
 
         # Update comment with results
         if len(unloaded["yes"]) == 1:
-            _append_comment(ret, "Removed kernel module {0}".format(unloaded["yes"][0]))
+            _append_comment(ret, "Removed kernel module {}".format(unloaded["yes"][0]))
         elif len(unloaded["yes"]) > 1:
             _append_comment(
-                ret, "Removed kernel modules {0}".format(", ".join(unloaded["yes"]))
+                ret, "Removed kernel modules {}".format(", ".join(unloaded["yes"]))
             )
 
         if len(unloaded["no"]) == 1:
             _append_comment(
-                ret, "Failed to remove kernel module {0}".format(unloaded["no"][0])
+                ret, "Failed to remove kernel module {}".format(unloaded["no"][0])
             )
         if len(unloaded["no"]) > 1:
             _append_comment(
                 ret,
-                "Failed to remove kernel modules {0}".format(", ".join(unloaded["no"])),
+                "Failed to remove kernel modules {}".format(", ".join(unloaded["no"])),
             )
 
         if unloaded["failed"]:
             for mod, msg in unloaded["failed"]:
                 _append_comment(
-                    ret, "Failed to remove kernel module {0}: {1}".format(mod, msg)
+                    ret, "Failed to remove kernel module {}: {}".format(mod, msg)
                 )
 
         return ret
 
     else:
         if len(mods) == 1:
-            ret["comment"] = "Kernel module {0} is already removed".format(mods[0])
+            ret["comment"] = "Kernel module {} is already removed".format(mods[0])
         else:
-            ret["comment"] = "Kernel modules {0} are already removed".format(
+            ret["comment"] = "Kernel modules {} are already removed".format(
                 ", ".join(mods)
             )
 

@@ -15,6 +15,6 @@ serializer modules
     msgpack
     plist
     python
-    toml
+    tomlmod
     yaml
     yamlex

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing (practically) any network device with
 Cisco Network Services Orchestrator (Cisco NSO). Cisco NSO uses a series of
@@ -172,12 +171,9 @@ responding:
     salt <id> test.ping
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 from salt.exceptions import SaltSystemExit
 
 # This must be present or the Salt loader won't load this module.
