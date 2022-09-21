@@ -4331,8 +4331,8 @@ def recurse(
         Force symlink creation. This option will force the symlink creation.
         If a file or directory is obstructing symlink creation it will be
         recursively removed so that symlink creation can proceed. This
-        option is usually not needed except in special circumstances. This 
-        option is not taken in account if ``fileserver_followsymlinks`` is 
+        option is usually not needed except in special circumstances. This
+        option is not taken in account if ``fileserver_followsymlinks`` is
         set to False.
 
     win_owner
