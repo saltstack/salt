@@ -1654,7 +1654,7 @@ def _get_flags(flags):
         return _flags
     else:
         raise CommandExecutionError(
-            f"Invalid re flags: "{flags}", must be given either as a single "
+            f'Invalid re flags: "{flags}", must be given either as a single flag '
             "string, a list of strings, as an integer, or as an re flag"
         )
 
