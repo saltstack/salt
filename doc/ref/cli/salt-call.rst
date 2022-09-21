@@ -79,6 +79,10 @@ Options
 
     Exit with the salt call retcode and not the salt binary retcode
 
+.. option:: --no-return-event
+
+    Do not send the return event back to master.
+
 .. option:: --metadata
 
     Print out the execution metadata as well as the return. This will print out

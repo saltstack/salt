@@ -1,5 +1,6 @@
 import logging
 import os.path
+import sys
 from collections import namedtuple
 
 import pkg_resources  # pylint: disable=3rd-party-module-not-gated
@@ -14,14 +15,15 @@ from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error
 try:
-    import salt.modules.boto_route53 as boto_route53
-    from boto.route53.exception import DNSServerError
     import boto
+    from boto.route53.exception import DNSServerError
+
+    import salt.modules.boto_route53 as boto_route53
 
     boto.ENDPOINTS_PATH = os.path.join(
         RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
     )
-    from moto import mock_route53_deprecated
+    from moto import mock_route53_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -99,6 +101,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.opts
 
+    @skipIf(sys.version_info >= (3, 10), "Fail with python 3.10")
     @mock_route53_deprecated
     def test_create_healthcheck(self):
         """

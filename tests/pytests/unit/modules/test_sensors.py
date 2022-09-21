@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.sensors as sensors
 from tests.support.mock import MagicMock, patch
 

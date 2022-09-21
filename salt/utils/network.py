@@ -11,6 +11,7 @@ import os
 import platform
 import random
 import re
+import shutil
 import socket
 import subprocess
 import types
@@ -22,7 +23,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.zeromq
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
@@ -743,12 +743,12 @@ def _interfaces_ip(out):
                 type_, value = tuple(cols[0:2])
                 iflabel = cols[-1:][0]
                 if type_ in ("inet", "inet6"):
+                    ipaddr, netmask, broadcast, scope = parse_network(value, cols)
+                    addr_obj = dict()
                     if "secondary" not in cols:
-                        ipaddr, netmask, broadcast, scope = parse_network(value, cols)
                         if type_ == "inet":
                             if "inet" not in data:
                                 data["inet"] = list()
-                            addr_obj = dict()
                             addr_obj["address"] = ipaddr
                             addr_obj["netmask"] = netmask
                             addr_obj["broadcast"] = broadcast
@@ -757,25 +757,28 @@ def _interfaces_ip(out):
                         elif type_ == "inet6":
                             if "inet6" not in data:
                                 data["inet6"] = list()
-                            addr_obj = dict()
                             addr_obj["address"] = ipaddr
                             addr_obj["prefixlen"] = netmask
                             addr_obj["scope"] = scope
                             data["inet6"].append(addr_obj)
                     else:
-                        if "secondary" not in data:
-                            data["secondary"] = list()
-                        ip_, mask, brd, scp = parse_network(value, cols)
-                        data["secondary"].append(
-                            {
-                                "type": type_,
-                                "address": ip_,
-                                "netmask": mask,
-                                "broadcast": brd,
-                                "label": iflabel,
-                            }
-                        )
-                        del ip_, mask, brd, scp
+                        if type_ == "inet":
+                            if "secondary" not in data:
+                                data["secondary"] = list()
+                            addr_obj["type"] = type_
+                            addr_obj["address"] = ipaddr
+                            addr_obj["netmask"] = netmask
+                            addr_obj["broadcast"] = broadcast
+                            addr_obj["label"] = iflabel
+                            data["secondary"].append(addr_obj)
+                        elif type_ == "inet6":
+                            if "secondary" not in data:
+                                data["secondary"] = list()
+                            addr_obj["type"] = type_
+                            addr_obj["address"] = ipaddr
+                            addr_obj["prefixlen"] = netmask
+                            addr_obj["scope"] = scope
+                            data["secondary"].append(addr_obj)
                 elif type_.startswith("link"):
                     data["hwaddr"] = value
         if iface:
@@ -1003,10 +1006,10 @@ def _junos_interfaces_ifconfig(out):
 
     pip = re.compile(
         r".*?inet\s*(primary)*\s+mtu"
-        r" (\d+)\s+local=[^\d]*(.*?)\s+dest=[^\d]*(.*?)\/([\d]*)\s+bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
+        r" (\d+)\s+local=[^\d]*(.*?)\s{0,40}dest=[^\d]*(.*?)\/([\d]*)\s{0,40}bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
     )
     pip6 = re.compile(
-        r".*?inet6 mtu [^\d]+\s+local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
+        r".*?inet6 mtu [^\d]+\s{0,40}local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
     )
 
     pupdown = re.compile("UP")
@@ -1719,8 +1722,13 @@ def _netlink_tool_remote_on(port, which_end):
         elif "ESTAB" not in line:
             continue
         chunks = line.split()
+        local_host, local_port = chunks[3].rsplit(":", 1)
         remote_host, remote_port = chunks[4].rsplit(":", 1)
 
+        if which_end == "remote_port" and int(remote_port) != int(port):
+            continue
+        if which_end == "local_port" and int(local_port) != int(port):
+            continue
         remotes.add(remote_host.strip("[]"))
 
     if valid is False:
@@ -1988,11 +1996,14 @@ def _linux_remotes_on(port, which_end):
 
     """
     remotes = set()
+    lsof_binary = shutil.which("lsof")
+    if lsof_binary is None:
+        return remotes
 
     try:
         data = subprocess.check_output(
             [
-                "lsof",
+                lsof_binary,
                 "-iTCP:{:d}".format(port),
                 "-n",
                 "-P",
@@ -2160,6 +2171,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
         if ipv6 is False
         else socket.AF_UNSPEC
     )
+    socket_error = False
     try:
         refresh_dns()
         addrinfo = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
@@ -2173,20 +2185,37 @@ def dns_check(addr, port, safe=False, ipv6=None):
             ),
         )
     except OSError:
-        pass
+        socket_error = True
+
+    # If ipv6 is set to True, attempt another lookup using the IPv4 family,
+    # just in case we're attempting to lookup an IPv4 IP
+    # as an IPv6 hostname.
+    if socket_error and ipv6:
+        try:
+            refresh_dns()
+            addrinfo = socket.getaddrinfo(
+                addr, port, socket.AF_INET, socket.SOCK_STREAM
+            )
+            ip_addrs = _test_addrs(addrinfo, port)
+        except TypeError:
+            raise SaltSystemExit(
+                code=42,
+                msg=(
+                    "Attempt to resolve address '{}' failed. Invalid or unresolveable"
+                    " address".format(addr)
+                ),
+            )
+        except OSError:
+            error = True
 
     if not ip_addrs:
         err = "DNS lookup or connection check of '{}' failed.".format(addr)
         if safe:
-            if salt.log.is_console_configured():
-                # If logging is not configured it also means that either
-                # the master or minion instance calling this hasn't even
-                # started running
-                log.error(err)
+            log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
 
-    return salt.utils.zeromq.ip_bracket(ip_addrs[0])
+    return ip_bracket(ip_addrs[0])
 
 
 def _test_addrs(addrinfo, port):
@@ -2302,3 +2331,15 @@ def filter_by_networks(values, networks):
             raise ValueError("Do not know how to filter a {}".format(type(values)))
     else:
         return values
+
+
+def ip_bracket(addr, strip=False):
+    """
+    Ensure IP addresses are URI-compatible - specifically, add brackets
+    around IPv6 literals if they are not already present.
+    """
+    addr = str(addr)
+    addr = addr.lstrip("[")
+    addr = addr.rstrip("]")
+    addr = ipaddress.ip_address(addr)
+    return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)

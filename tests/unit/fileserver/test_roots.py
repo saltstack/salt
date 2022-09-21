@@ -231,12 +231,8 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         # between Python releases.
         lines_written = sorted(mtime_map_mock.write_calls())
         expected = sorted(
-            [
-                salt.utils.stringutils.to_bytes(
-                    "{key}:{val}\n".format(key=key, val=val)
-                )
-                for key, val in new_mtime_map.items()
-            ]
+            salt.utils.stringutils.to_bytes("{key}:{val}\n".format(key=key, val=val))
+            for key, val in new_mtime_map.items()
         )
         assert lines_written == expected, lines_written
 

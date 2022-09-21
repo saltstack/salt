@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_dism as dism
 from tests.support.mock import MagicMock, patch
 

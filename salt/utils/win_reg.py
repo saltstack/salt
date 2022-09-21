@@ -35,9 +35,9 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
-    import win32gui
     import win32api
     import win32con
+    import win32gui
 
     HAS_WINDOWS_MODULES = True
 except ImportError:

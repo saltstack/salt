@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout
@@ -287,7 +288,7 @@ class BuildoutTestCase(Base):
     @pytest.mark.slow_test
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
+            a.replace(self.root, "") for a in buildout._find_cfgs(self.root)
         )
         assertlist = sorted(
             [
@@ -353,7 +354,7 @@ class BuildoutOnlineTestCase(Base):
             )
         except subprocess.CalledProcessError:
             subprocess.check_call(
-                [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy.dis]
+                [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy_dis]
             )
 
             url = (
@@ -401,7 +402,7 @@ class BuildoutOnlineTestCase(Base):
                 ]
             )
 
-    @skipIf(True, "TODO this test should probably be fixed")
+    @pytest.mark.skip(reason="TODO this test should probably be fixed")
     def test_buildout_bootstrap(self):
         b_dir = os.path.join(self.tdir, "b")
         bd_dir = os.path.join(self.tdir, "b", "bdistribute")
