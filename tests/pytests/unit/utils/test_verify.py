@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.utils.verify
 from tests.support.mock import patch
 

@@ -2,8 +2,14 @@ name: Docs
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Salt:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Build Salt Documentation
     runs-on: ubuntu-latest
 
@@ -59,6 +65,9 @@ jobs:
         path: doc/_build/html
 
   Manpages:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Build Salt man Pages
     runs-on: ubuntu-latest
 

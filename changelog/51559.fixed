@@ -1,1 +1,0 @@
-remove escaping of dbname in mysql.alter_db function.

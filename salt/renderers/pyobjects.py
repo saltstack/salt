@@ -210,6 +210,24 @@ The following pairs of lines are functionally equivalent:
     value = __salt__['config.get']('foo:bar:baz', 'qux')
 
 
+Opts dictionary and SLS name
+----------------------------
+
+Pyobjects provides variable access to the minion options dictionary and the SLS
+name that the code resides in. These variables are the same as the `opts` and
+`sls` variables available in the Jinja renderer.
+
+The following lines show how to access that information.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    test_mode = __opts__["test"]
+    sls_name = __sls__
+
+
 Map Data
 --------
 
@@ -400,6 +418,8 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                 "__salt__": __salt__,
                 "__pillar__": __pillar__,
                 "__grains__": __grains__,
+                "__opts__": __opts__,
+                "__sls__": sls,
             }
         )
     except NameError:

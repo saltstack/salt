@@ -3,11 +3,12 @@
 """
 
 import pytest
+
 import salt.utils.platform
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
-    pytest.mark.slow_test,
+    #    pytest.mark.slow_test,
 ]
 
 
@@ -52,7 +53,7 @@ def test_batch_run_number(salt_cli, salt_minion, salt_sub_minion, run_timeout):
 
 
 def test_batch_run_grains_targeting(
-    salt_cli, salt_minion, salt_sub_minion, run_timeout
+    grains, salt_cli, salt_minion, salt_sub_minion, run_timeout
 ):
     """
     Tests executing a batch command using a percentage divisor as well as grains
@@ -60,14 +61,11 @@ def test_batch_run_grains_targeting(
     """
     sub_min_ret = "Executing run on [{}]".format(repr(salt_sub_minion.id))
     min_ret = "Executing run on [{}]".format(repr(salt_minion.id))
-    os_grain = salt_cli.run("grains.get", "os", minion_tgt=salt_minion.id).json
-
-    os_grain = os_grain.strip()
     cmd = salt_cli.run(
         "-C",
         "-b 25%",
         "test.ping",
-        minion_tgt="G@os:{} and not localhost".format(os_grain.replace(" ", "?")),
+        minion_tgt="G@os:{} and not localhost".format(grains["os"].replace(" ", "?")),
         _timeout=run_timeout,
     )
     assert sub_min_ret in cmd.stdout
@@ -86,7 +84,7 @@ def test_batch_exit_code(salt_cli, salt_minion, salt_sub_minion, run_timeout):
         minion_tgt="*minion*",
         _timeout=run_timeout,
     )
-    assert cmd.exitcode == 2
+    assert cmd.returncode == 2
 
 
 # Test for failhard + batch. The best possible solution here was to do something like that:
@@ -180,7 +178,7 @@ def test_batch_retcode(salt_cli, salt_minion, salt_sub_minion, run_timeout):
         _timeout=run_timeout,
     )
 
-    assert cmd.exitcode == 23
+    assert cmd.returncode == 23
     assert not cmd.stderr
     assert "true" in cmd.stdout
 
@@ -199,5 +197,46 @@ def test_multiple_modules_in_batch(salt_cli, salt_minion, salt_sub_minion, run_t
         _timeout=run_timeout,
     )
 
-    assert cmd.exitcode == 23
+    assert cmd.returncode == 23
     assert not cmd.stderr
+
+
+def test_batch_module_stopping_failed_respond(
+    salt_cli, salt_minion, salt_sub_minion, run_timeout
+):
+    """
+    Test that minion failed to respond to job sent and stops the batch run
+    """
+
+    minions_list = []
+    retcode = None
+    test_data_failed = {"failed": True}
+
+    # Executing salt with batch: 1 and with failhard. It should stop after the first error.
+    cmd = salt_cli.run(
+        "test.outputter",
+        test_data_failed,
+        "-b 1",
+        "--out=yaml",
+        "--failhard",
+        minion_tgt="*minion*",
+        _timeout=run_timeout,
+    )
+
+    # Parsing the output. Idea is to fetch number on minions and retcode of the execution, but not 'ret' key.
+    # data dictionary should be overwritten, should fail regardless of failhard
+    # number of minions check should still fail.
+    for line in cmd.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("Executing run on"):
+            minions_list.append(line)
+        if line.startswith("retcode"):
+            retcode = int(line.split(" ")[-1])
+        if line.startswith("failed"):
+            failure = line.split(" ")[-1]
+    # We expect to have only one minion to be run
+    assert 2 == len(minions_list)
+    # We expect to find a retcode in the output
+    assert None is not retcode
+    # We expect failure to be True
+    assert failure == "true"

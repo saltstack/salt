@@ -4,6 +4,7 @@
 """
 
 import pytest
+
 import salt.states.slack as slack
 from tests.support.mock import MagicMock, patch
 

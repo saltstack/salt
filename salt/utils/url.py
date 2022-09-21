@@ -41,6 +41,7 @@ def create(path, saltenv=None):
     """
     join `path` and `saltenv` into a 'salt://' URL.
     """
+    path = path.replace("\\", "/")
     if salt.utils.platform.is_windows():
         path = salt.utils.path.sanitize_win_path(path)
     path = salt.utils.data.decode(path)

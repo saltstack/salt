@@ -378,10 +378,11 @@ import logging
 import os
 import posixpath
 
+from jinja2 import Environment, FileSystemLoader
+
 import salt.utils.data
 import salt.utils.jinja
 import salt.utils.yaml
-from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 strategies = ("overwrite", "merge-first", "merge-last", "remove")

@@ -2,6 +2,7 @@ import os
 import sys
 
 import pytest
+
 import salt.modules.pip as pip
 import salt.utils.files
 import salt.utils.platform

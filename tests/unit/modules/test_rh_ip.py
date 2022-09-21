@@ -6,9 +6,11 @@ import copy
 import os
 
 import jinja2.exceptions
+
 import salt.modules.rh_ip as rh_ip
+import salt.modules.systemd_service as service_mod
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase
 
 
@@ -269,10 +271,24 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test to apply global network configuration.
         """
-        with patch.dict(
-            rh_ip.__salt__, {"service.restart": MagicMock(return_value=True)}
+        # This should be pytest.mark.parametrize, when this gets ported to
+        # pytest approach. This is just following previous patterns here.
+        # Edge cases are 7 & 8
+        mock_service = create_autospec(service_mod.restart, return_value=True)
+        for majorrelease, expected_service_name in (
+            (3, "network"),
+            (7, "network"),
+            (8, "NetworkManager"),
+            (42, "NetworkManager"),
         ):
-            self.assertTrue(rh_ip.apply_network_settings())
+            with patch.dict(
+                rh_ip.__salt__, {"service.restart": mock_service}
+            ), patch.dict(
+                rh_ip.__grains__,
+                {"osmajorrelease": majorrelease},
+            ):
+                self.assertTrue(rh_ip.apply_network_settings())
+                mock_service.assert_called_with(expected_service_name)
 
     def test_build_network_settings(self):
         """

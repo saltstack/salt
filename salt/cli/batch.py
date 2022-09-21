@@ -199,7 +199,7 @@ class Batch:
                     show_jid=show_jid,
                     verbose=show_verbose,
                     gather_job_timeout=self.opts["gather_job_timeout"],
-                    **self.eauth
+                    **self.eauth,
                 )
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -276,33 +276,53 @@ class Batch:
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
                 failhard = False
-                # If we are executing multiple modules with the same cmd,
-                # We use the highest retcode.
-                retcode = 0
-                if "retcode" in data:
-                    if isinstance(data["retcode"], dict):
-                        try:
-                            data["retcode"] = max(data["retcode"].values())
-                        except ValueError:
-                            data["retcode"] = 0
-                    if self.opts.get("failhard") and data["retcode"] > 0:
-                        failhard = True
-                    retcode = data["retcode"]
 
-                if self.opts.get("raw"):
-                    ret[minion] = data
-                    yield data, retcode
+                # need to check if Minion failed to respond to job sent
+                failed_check = data.get("failed", False)
+                if failed_check:
+                    log.debug(
+                        "Minion '%s' failed to respond to job sent, data '%s'",
+                        minion,
+                        data,
+                    )
+                    if not self.quiet:
+                        # We already know some minions didn't respond to the ping, so inform
+                        # inform user attempt to run a job failed
+                        salt.utils.stringutils.print_cli(
+                            "Minion '%s' failed to respond to job sent", minion
+                        )
+
+                    if self.opts.get("failhard"):
+                        failhard = True
                 else:
-                    ret[minion] = data["ret"]
-                    yield {minion: data["ret"]}, retcode
-                if not self.quiet:
-                    ret[minion] = data["ret"]
-                    data[minion] = data.pop("ret")
-                    if "out" in data:
-                        out = data.pop("out")
+                    # If we are executing multiple modules with the same cmd,
+                    # We use the highest retcode.
+                    retcode = 0
+                    if "retcode" in data:
+                        if isinstance(data["retcode"], dict):
+                            try:
+                                data["retcode"] = max(data["retcode"].values())
+                            except ValueError:
+                                data["retcode"] = 0
+                        if self.opts.get("failhard") and data["retcode"] > 0:
+                            failhard = True
+                        retcode = data["retcode"]
+
+                    if self.opts.get("raw"):
+                        ret[minion] = data
+                        yield data, retcode
                     else:
-                        out = None
-                    salt.output.display_output(data, out, self.opts)
+                        ret[minion] = data["ret"]
+                        yield {minion: data["ret"]}, retcode
+                    if not self.quiet:
+                        ret[minion] = data["ret"]
+                        data[minion] = data.pop("ret")
+                        if "out" in data:
+                            out = data.pop("out")
+                        else:
+                            out = None
+                        salt.output.display_output(data, out, self.opts)
+
                 if failhard:
                     log.error(
                         "Minion %s returned with non-zero exit code. "

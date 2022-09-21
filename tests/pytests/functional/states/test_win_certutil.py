@@ -2,6 +2,7 @@
 Tests for win_certutil state module
 """
 import pytest
+
 import salt.utils.files
 
 pytestmark = [

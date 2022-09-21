@@ -325,10 +325,12 @@ def _file_lists(load, form):
             log.critical("Unable to make cachedir %s", list_cachedir)
             return []
     list_cache = os.path.join(
-        list_cachedir, "{}.p".format(salt.utils.files.safe_filename_leaf(saltenv))
+        list_cachedir,
+        "{}.p".format(salt.utils.files.safe_filename_leaf(actual_saltenv)),
     )
     w_lock = os.path.join(
-        list_cachedir, ".{}.w".format(salt.utils.files.safe_filename_leaf(saltenv))
+        list_cachedir,
+        ".{}.w".format(salt.utils.files.safe_filename_leaf(actual_saltenv)),
     )
     cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
         __opts__, form, list_cache, w_lock
