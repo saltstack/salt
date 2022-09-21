@@ -113,7 +113,8 @@ salt/auth/*:
   - pytests.integration.cli.test_salt_auth
 
 salt/cache/*:
-  - unit.cache.test_cache
+  - pytests.unit.cache.test_cache
+  - pytests.unit.cache.test_memcache
   - pytests.functional.cache.test_consul
   - pytests.functional.cache.test_etcd
   - pytests.functional.cache.test_localfs
@@ -159,7 +160,7 @@ salt/matchers/*:
   - integration.states.test_match
   - pytests.integration.cli.test_matcher
   - pytests.unit.modules.test_match
-  - unit.matchers.test_confirm_top
+  - pytests.unit.matchers.test_confirm_top
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell
