@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.random_org as random_org
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.mixins import LoaderModuleMockMixin

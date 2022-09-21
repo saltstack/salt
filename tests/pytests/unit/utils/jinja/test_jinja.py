@@ -2,8 +2,13 @@
 Tests for salt.utils.jinja
 """
 import salt.utils.dateutils  # pylint: disable=unused-import
-from jinja2 import Markup
 from salt.utils.jinja import indent, tojson
+
+try:
+    from markupsafe import Markup
+except ImportError:
+    # jinja < 3.1
+    from jinja2 import Markup
 
 
 def test_tojson():

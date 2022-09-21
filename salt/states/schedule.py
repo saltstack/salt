@@ -133,7 +133,7 @@ def present(name, **kwargs):
         Requires python-croniter.
 
     run_on_start
-        Whether the job will run when Salt minion starts, or the job will be
+        Whether the scheduled job will run when Salt minion starts, or the job will be
         skipped **once** and run at the next scheduled run.  Value should be a
         boolean.
 
@@ -170,7 +170,7 @@ def present(name, **kwargs):
         also specifying the ``once_fmt`` option.
 
     enabled
-        Whether the job should be enabled or disabled.  Value should be a boolean.
+        Whether the scheduled job should be enabled or disabled.  Value should be a boolean.
 
     return_job
         Whether to return information to the Salt master upon job completion.
@@ -193,7 +193,7 @@ def present(name, **kwargs):
         as a dictionary.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
 
     skip_during_range
         This will ensure that the scheduled command does not run within the
@@ -201,7 +201,7 @@ def present(name, **kwargs):
         date strings using the dateutil format. Requires python-dateutil.
 
     run_after_skip_range
-        Whether the job should run immediately after the skip_during_range time
+        Whether the scheduled job should run immediately after the skip_during_range time
         period ends.
 
     """
@@ -270,7 +270,11 @@ def absent(name, **kwargs):
         The unique name that is given to the scheduled job.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
+
+        When used with absent this will decide whether the scheduled job will be removed
+        from the saved scheduled jobs and not be available when the Salt minion is
+        restarted.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
@@ -305,7 +309,7 @@ def enabled(name, **kwargs):
         The unique name that is given to the scheduled job.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
 
     """
 
@@ -341,7 +345,7 @@ def disabled(name, **kwargs):
         The unique name that is given to the scheduled job.
 
     persist
-        Whether the job should persist between minion restarts, defaults to True.
+        Whether changes to the scheduled job should be saved, defaults to True.
 
     """
 

@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.modules.rpm_lowpkg as rpm
 import salt.utils.path

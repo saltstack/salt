@@ -7,7 +7,6 @@ The setup script for salt
 import contextlib
 import distutils.dist
 import glob
-import operator
 import os
 import platform
 import sys
@@ -175,77 +174,6 @@ exec(compile(open(SALT_VERSION).read(), SALT_VERSION, "exec"))
 # ----- Helper Functions -------------------------------------------------------------------------------------------->
 
 
-def _parse_op(op):
-    """
-    >>> _parse_op('>')
-    'gt'
-    >>> _parse_op('>=')
-    'ge'
-    >>> _parse_op('=>')
-    'ge'
-    >>> _parse_op('=> ')
-    'ge'
-    >>> _parse_op('<')
-    'lt'
-    >>> _parse_op('<=')
-    'le'
-    >>> _parse_op('==')
-    'eq'
-    >>> _parse_op(' <= ')
-    'le'
-    """
-    op = op.strip()
-    if ">" in op:
-        if "=" in op:
-            return "ge"
-        else:
-            return "gt"
-    elif "<" in op:
-        if "=" in op:
-            return "le"
-        else:
-            return "lt"
-    elif "!" in op:
-        return "ne"
-    else:
-        return "eq"
-
-
-def _parse_ver(ver):
-    """
-    >>> _parse_ver("'3.4'  # pyzmq 17.1.0 stopped building wheels for python3.4")
-    '3.4'
-    >>> _parse_ver('"3.4"')
-    '3.4'
-    >>> _parse_ver('"2.6.17"')
-    '2.6.17'
-    """
-    if "#" in ver:
-        ver, _ = ver.split("#", 1)
-        ver = ver.strip()
-    return ver.strip("'").strip('"')
-
-
-def _check_ver(pyver, op, wanted):
-    """
-    >>> _check_ver('2.7.15', 'gt', '2.7')
-    True
-    >>> _check_ver('2.7.15', 'gt', '2.7.15')
-    False
-    >>> _check_ver('2.7.15', 'ge', '2.7.15')
-    True
-    >>> _check_ver('2.7.15', 'eq', '2.7.15')
-    True
-    """
-    pyver = distutils.version.LooseVersion(pyver)
-    wanted = distutils.version.LooseVersion(wanted)
-    if not isinstance(pyver, str):
-        pyver = str(pyver)
-    if not isinstance(wanted, str):
-        wanted = str(wanted)
-    return getattr(operator, "__{}__".format(op))(pyver, wanted)
-
-
 def _parse_requirements_file(requirements_file):
     parsed_requirements = []
     with open(requirements_file) as rfh:
@@ -256,20 +184,7 @@ def _parse_requirements_file(requirements_file):
             if IS_WINDOWS_PLATFORM:
                 if "libcloud" in line:
                     continue
-            try:
-                pkg, pyverspec = line.rsplit(";", 1)
-            except ValueError:
-                pkg, pyverspec = line, ""
-            pyverspec = pyverspec.strip()
-            if pyverspec and (
-                not pkg.startswith("pycrypto") or pkg.startswith("pycryptodome")
-            ):
-                _, op, ver = pyverspec.split(" ", 2)
-                if not _check_ver(
-                    platform.python_version(), _parse_op(op), _parse_ver(ver)
-                ):
-                    continue
-            parsed_requirements.append(pkg)
+            parsed_requirements.append(line)
     return parsed_requirements
 
 
@@ -1115,6 +1030,7 @@ class SaltDistribution(distutils.dist.Distribution):
         package_data = {
             "salt.templates": [
                 "rh_ip/*.jinja",
+                "suse_ip/*.jinja",
                 "debian_ip/*.jinja",
                 "virt/*.jinja",
                 "git/*",
@@ -1258,6 +1174,11 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_entry_points(self):
+        entrypoints = {
+            "pyinstaller40": [
+                "hook-dirs = salt.utils.pyinstaller:get_hook_dirs",
+            ],
+        }
         # console scripts common to all scenarios
         scripts = [
             "salt-call = salt.scripts:salt_call",
@@ -1268,7 +1189,8 @@ class SaltDistribution(distutils.dist.Distribution):
             if IS_WINDOWS_PLATFORM:
                 return {"console_scripts": scripts}
             scripts.append("salt-cloud = salt.scripts:salt_cloud")
-            return {"console_scripts": scripts}
+            entrypoints["console_scripts"] = scripts
+            return entrypoints
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
@@ -1281,7 +1203,8 @@ class SaltDistribution(distutils.dist.Distribution):
                     "spm = salt.scripts:salt_spm",
                 ]
             )
-            return {"console_scripts": scripts}
+            entrypoints["console_scripts"] = scripts
+            return entrypoints
 
         # *nix, so, we need all scripts
         scripts.extend(
@@ -1298,7 +1221,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 "spm = salt.scripts:salt_spm",
             ]
         )
-        return {"console_scripts": scripts}
+        entrypoints["console_scripts"] = scripts
+        return entrypoints
 
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 

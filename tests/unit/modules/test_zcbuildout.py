@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout
@@ -287,7 +288,7 @@ class BuildoutTestCase(Base):
     @pytest.mark.slow_test
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
+            a.replace(self.root, "") for a in buildout._find_cfgs(self.root)
         )
         assertlist = sorted(
             [

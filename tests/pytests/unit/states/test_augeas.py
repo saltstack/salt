@@ -6,6 +6,7 @@
 import os
 
 import pytest
+
 import salt.states.augeas as augeas
 from tests.support.mock import MagicMock, mock_open, patch
 
