@@ -1,1 +1,0 @@
-Sets correctly the lvm grain even when lvm's command execution outputs a WARNING

@@ -4,10 +4,11 @@ import socket
 import time
 
 import pytest
-import salt.utils.stringutils
 import zmq
+from pytestshellutils.utils import ports
+
+import salt.utils.stringutils
 from salt.log_handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
-from saltfactories.utils.ports import get_unused_localhost_port
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 def datagram_server():
     logger = logging.getLogger("test_logstash_logger")
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    port = get_unused_localhost_port()
+    port = ports.get_unused_localhost_port()
     handler = DatagramLogstashHandler("127.0.0.1", port)
     try:
         server.bind(("127.0.0.1", port))
@@ -34,7 +35,7 @@ def zmq_server():
     logger = logging.getLogger("test_logstash_logger")
     context = zmq.Context()
     server = context.socket(zmq.SUB)
-    port = get_unused_localhost_port()
+    port = ports.get_unused_localhost_port()
     handler = ZMQLogstashHander("tcp://127.0.0.1:{}".format(port))
     try:
         server.setsockopt(zmq.SUBSCRIBE, b"")

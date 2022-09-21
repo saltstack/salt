@@ -8,41 +8,17 @@ data, modify the ACL of files/directories
             - salt.utils.win_dacl
 """
 
-# pylint: disable=unused-import
-import contextlib  # do not remove, used in imported file.py functions
-import datetime  # do not remove.
-import difflib  # do not remove, used in imported file.py functions
-import errno  # do not remove, used in imported file.py functions
-import fnmatch  # do not remove, used in imported file.py functions
-import glob  # do not remove, used in imported file.py functions
-import hashlib  # do not remove, used in imported file.py functions
-import io  # do not remove, used in imported file.py functions
-import itertools  # same as above, do not remove, it's used in __clean_tmp
+import errno
 import logging
-import mmap  # do not remove, used in imported file.py functions
-import operator  # do not remove
 import os
 import os.path
-import re  # do not remove, used in imported file.py functions
-import shutil  # do not remove, used in imported file.py functions
 import stat
-import string  # do not remove, used in imported file.py functions
-import sys  # do not remove, used in imported file.py functions
-import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
-import urllib.parse
-from collections.abc import Iterable, Mapping
-from functools import reduce  # do not remove
+import sys
 
-import salt.utils.atomicfile  # do not remove, used in imported file.py functions
+import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# do not remove, used in imported file.py functions
-from salt.modules.file import check_hash  # pylint: disable=W0611
 from salt.modules.file import (
-    HASHES,
-    HASHES_REVMAP,
-    RE_FLAG_TABLE,
     __clean_tmp,
     _add_flags,
     _assert_occurrence,
@@ -52,9 +28,7 @@ from salt.modules.file import (
     _get_eol,
     _get_flags,
     _mkstemp_copy,
-    _psed,
     _regex_to_static,
-    _sed_esc,
     _set_line,
     _set_line_eol,
     _set_line_indent,
@@ -65,6 +39,7 @@ from salt.modules.file import (
     basename,
     blockreplace,
     check_file_meta,
+    check_hash,
     check_managed,
     check_managed_changes,
     comment,
@@ -114,29 +89,97 @@ from salt.modules.file import (
     uncomment,
     write,
 )
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 
 HAS_WINDOWS_MODULES = False
 try:
     if salt.utils.platform.is_windows():
+        import pywintypes
         import win32api
         import win32con
         import win32file
         import win32security
+
         import salt.platform.win
 
         HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
-# This is to fix the pylint error: E0602: Undefined variable "WindowsError"
-try:
-    from exceptions import WindowsError  # pylint: disable=no-name-in-module
-except ImportError:
-
-    class WindowsError(OSError):
-        pass
-
+if salt.utils.platform.is_windows():
+    if HAS_WINDOWS_MODULES:
+        # namespace functions from file.py
+        replace = namespaced_function(replace, globals())
+        search = namespaced_function(search, globals())
+        _get_flags = namespaced_function(_get_flags, globals())
+        _binary_replace = namespaced_function(_binary_replace, globals())
+        _splitlines_preserving_trailing_newline = namespaced_function(
+            _splitlines_preserving_trailing_newline, globals()
+        )
+        _error = namespaced_function(_error, globals())
+        _get_bkroot = namespaced_function(_get_bkroot, globals())
+        list_backups = namespaced_function(list_backups, globals())
+        restore_backup = namespaced_function(restore_backup, globals())
+        delete_backup = namespaced_function(delete_backup, globals())
+        extract_hash = namespaced_function(extract_hash, globals())
+        append = namespaced_function(append, globals())
+        get_managed = namespaced_function(get_managed, globals())
+        check_managed = namespaced_function(check_managed, globals())
+        check_managed_changes = namespaced_function(check_managed_changes, globals())
+        check_file_meta = namespaced_function(check_file_meta, globals())
+        manage_file = namespaced_function(manage_file, globals())
+        source_list = namespaced_function(source_list, globals())
+        file_exists = namespaced_function(file_exists, globals())
+        __clean_tmp = namespaced_function(__clean_tmp, globals())
+        directory_exists = namespaced_function(directory_exists, globals())
+        touch = namespaced_function(touch, globals())
+        contains = namespaced_function(contains, globals())
+        contains_regex = namespaced_function(contains_regex, globals())
+        contains_glob = namespaced_function(contains_glob, globals())
+        get_source_sum = namespaced_function(get_source_sum, globals())
+        find = namespaced_function(find, globals())
+        psed = namespaced_function(psed, globals())
+        get_sum = namespaced_function(get_sum, globals())
+        check_hash = namespaced_function(check_hash, globals())
+        get_hash = namespaced_function(get_hash, globals())
+        get_diff = namespaced_function(get_diff, globals())
+        line = namespaced_function(line, globals())
+        access = namespaced_function(access, globals())
+        copy = namespaced_function(copy, globals())
+        readdir = namespaced_function(readdir, globals())
+        readlink = namespaced_function(readlink, globals())
+        read = namespaced_function(read, globals())
+        rmdir = namespaced_function(rmdir, globals())
+        truncate = namespaced_function(truncate, globals())
+        blockreplace = namespaced_function(blockreplace, globals())
+        prepend = namespaced_function(prepend, globals())
+        seek_read = namespaced_function(seek_read, globals())
+        seek_write = namespaced_function(seek_write, globals())
+        rename = namespaced_function(rename, globals())
+        lstat = namespaced_function(lstat, globals())
+        path_exists_glob = namespaced_function(path_exists_glob, globals())
+        write = namespaced_function(write, globals())
+        pardir = namespaced_function(pardir, globals())
+        join = namespaced_function(join, globals())
+        comment = namespaced_function(comment, globals())
+        uncomment = namespaced_function(uncomment, globals())
+        comment_line = namespaced_function(comment_line, globals())
+        _regex_to_static = namespaced_function(_regex_to_static, globals())
+        _set_line = namespaced_function(_set_line, globals())
+        _set_line_indent = namespaced_function(_set_line_indent, globals())
+        _set_line_eol = namespaced_function(_set_line_eol, globals())
+        _get_eol = namespaced_function(_get_eol, globals())
+        _mkstemp_copy = namespaced_function(_mkstemp_copy, globals())
+        _add_flags = namespaced_function(_add_flags, globals())
+        apply_template_on_contents = namespaced_function(
+            apply_template_on_contents, globals()
+        )
+        dirname = namespaced_function(dirname, globals())
+        basename = namespaced_function(basename, globals())
+        list_backups_dir = namespaced_function(list_backups_dir, globals())
+        normpath_ = namespaced_function(normpath_, globals())
+        _assert_occurrence = namespaced_function(_assert_occurrence, globals())
+        patch = namespaced_function(patch, globals())
 
 log = logging.getLogger(__name__)
 
@@ -148,104 +191,8 @@ def __virtual__():
     """
     Only works on Windows systems
     """
-    if salt.utils.platform.is_windows():
-        if HAS_WINDOWS_MODULES:
-            # Load functions from file.py
-            global get_managed, manage_file, patch
-            global source_list, __clean_tmp, file_exists
-            global check_managed, check_managed_changes, check_file_meta
-            global append, _error, directory_exists, touch, contains
-            global contains_regex, contains_glob, get_source_sum
-            global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, line, _get_flags, extract_hash, comment_line
-            global access, copy, readdir, read, rmdir, truncate, replace, search
-            global _binary_replace, _get_bkroot, list_backups, restore_backup
-            global _splitlines_preserving_trailing_newline, readlink
-            global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global write, pardir, join, _add_flags, apply_template_on_contents
-            global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _set_line_indent, dirname, basename
-            global list_backups_dir, normpath_, _assert_occurrence
-            global _set_line_eol, _get_eol
-            global _set_line
-
-            replace = _namespaced_function(replace, globals())
-            search = _namespaced_function(search, globals())
-            _get_flags = _namespaced_function(_get_flags, globals())
-            _binary_replace = _namespaced_function(_binary_replace, globals())
-            _splitlines_preserving_trailing_newline = _namespaced_function(
-                _splitlines_preserving_trailing_newline, globals()
-            )
-            _error = _namespaced_function(_error, globals())
-            _get_bkroot = _namespaced_function(_get_bkroot, globals())
-            list_backups = _namespaced_function(list_backups, globals())
-            restore_backup = _namespaced_function(restore_backup, globals())
-            delete_backup = _namespaced_function(delete_backup, globals())
-            extract_hash = _namespaced_function(extract_hash, globals())
-            append = _namespaced_function(append, globals())
-            get_managed = _namespaced_function(get_managed, globals())
-            check_managed = _namespaced_function(check_managed, globals())
-            check_managed_changes = _namespaced_function(
-                check_managed_changes, globals()
-            )
-            check_file_meta = _namespaced_function(check_file_meta, globals())
-            manage_file = _namespaced_function(manage_file, globals())
-            source_list = _namespaced_function(source_list, globals())
-            file_exists = _namespaced_function(file_exists, globals())
-            __clean_tmp = _namespaced_function(__clean_tmp, globals())
-            directory_exists = _namespaced_function(directory_exists, globals())
-            touch = _namespaced_function(touch, globals())
-            contains = _namespaced_function(contains, globals())
-            contains_regex = _namespaced_function(contains_regex, globals())
-            contains_glob = _namespaced_function(contains_glob, globals())
-            get_source_sum = _namespaced_function(get_source_sum, globals())
-            find = _namespaced_function(find, globals())
-            psed = _namespaced_function(psed, globals())
-            get_sum = _namespaced_function(get_sum, globals())
-            check_hash = _namespaced_function(check_hash, globals())
-            get_hash = _namespaced_function(get_hash, globals())
-            get_diff = _namespaced_function(get_diff, globals())
-            line = _namespaced_function(line, globals())
-            access = _namespaced_function(access, globals())
-            copy = _namespaced_function(copy, globals())
-            readdir = _namespaced_function(readdir, globals())
-            readlink = _namespaced_function(readlink, globals())
-            read = _namespaced_function(read, globals())
-            rmdir = _namespaced_function(rmdir, globals())
-            truncate = _namespaced_function(truncate, globals())
-            blockreplace = _namespaced_function(blockreplace, globals())
-            prepend = _namespaced_function(prepend, globals())
-            seek_read = _namespaced_function(seek_read, globals())
-            seek_write = _namespaced_function(seek_write, globals())
-            rename = _namespaced_function(rename, globals())
-            lstat = _namespaced_function(lstat, globals())
-            path_exists_glob = _namespaced_function(path_exists_glob, globals())
-            write = _namespaced_function(write, globals())
-            pardir = _namespaced_function(pardir, globals())
-            join = _namespaced_function(join, globals())
-            comment = _namespaced_function(comment, globals())
-            uncomment = _namespaced_function(uncomment, globals())
-            comment_line = _namespaced_function(comment_line, globals())
-            _regex_to_static = _namespaced_function(_regex_to_static, globals())
-            _set_line = _namespaced_function(_set_line, globals())
-            _set_line_indent = _namespaced_function(_set_line_indent, globals())
-            _set_line_eol = _namespaced_function(_set_line_eol, globals())
-            _get_eol = _namespaced_function(_get_eol, globals())
-            _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
-            _add_flags = _namespaced_function(_add_flags, globals())
-            apply_template_on_contents = _namespaced_function(
-                apply_template_on_contents, globals()
-            )
-            dirname = _namespaced_function(dirname, globals())
-            basename = _namespaced_function(basename, globals())
-            list_backups_dir = _namespaced_function(list_backups_dir, globals())
-            normpath_ = _namespaced_function(normpath_, globals())
-            _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
-            patch = _namespaced_function(patch, globals())
-
-        else:
-            return False, "Module win_file: Missing Win32 modules"
-
+    if not salt.utils.platform.is_windows() or not HAS_WINDOWS_MODULES:
+        return False, "Module win_file: Missing Win32 modules"
     return __virtualname__
 
 
@@ -942,6 +889,241 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     if stat.S_ISSOCK(pstat.st_mode):
         ret["type"] = "socket"
     ret["target"] = os.path.realpath(path)
+    return ret
+
+
+def _get_version_os(flags):
+    """
+    Helper function to parse the OS data
+
+    Args:
+        flags: The flags as returned by the GetFileVersionInfo function
+
+    Returns:
+        list: A list of Operating system properties found in the flag
+    """
+    file_os = []
+    file_os_flags = {
+        0x00000001: "16-bit Windows",
+        0x00000002: "16-bit Presentation Manager",
+        0x00000003: "32-bit Presentation Manager",
+        0x00000004: "32-bit Windows",
+        0x00010000: "MS-DOS",
+        0x00020000: "16-bit OS/2",
+        0x00030000: "32-bit OS/2",
+        0x00040000: "Windows NT",
+    }
+    for item in file_os_flags:
+        if item & flags == item:
+            file_os.append(file_os_flags[item])
+    return file_os
+
+
+def _get_version_type(file_type, file_subtype):
+    ret_type = None
+    file_types = {
+        0x00000001: "Application",
+        0x00000002: "DLL",
+        0x00000003: "Driver",
+        0x00000004: "Font",
+        0x00000005: "Virtual Device",
+        0x00000007: "Static Link Library",
+    }
+    driver_subtypes = {
+        0x00000001: "Printer",
+        0x00000002: "Keyboard",
+        0x00000003: "Language",
+        0x00000004: "Display",
+        0x00000005: "Mouse",
+        0x00000006: "Network",
+        0x00000007: "System",
+        0x00000008: "Installable",
+        0x00000009: "Sound",
+        0x0000000A: "Communications",
+        0x0000000C: "Versioned Printer",
+    }
+    font_subtypes = {
+        0x00000001: "Raster",
+        0x00000002: "Vector",
+        0x00000003: "TrueType",
+    }
+    if file_type in file_types:
+        ret_type = file_types[file_type]
+
+    if ret_type == "Driver":
+        if file_subtype in driver_subtypes:
+            ret_type = "{} Driver".format(driver_subtypes[file_subtype])
+    if ret_type == "Font":
+        if file_subtype in font_subtypes:
+            ret_type = "{} Font".format(font_subtypes[file_subtype])
+    if ret_type == "Virtual Device":
+        # The Virtual Device Identifier
+        ret_type = "Virtual Device: {}".format(file_subtype)
+    return ret_type
+
+
+def _get_version(path, fixed_info=None):
+    """
+    Get's the version of the file passed in path, or the fixed_info object if
+    passed.
+
+    Args:
+
+        path (str): The path to the file
+
+        fixed_info (obj): The fixed info object returned by the
+            GetFileVersionInfo function
+
+    Returns:
+        str: The version of the file
+    """
+    if not fixed_info:
+        try:
+            # Backslash returns a VS_FIXEDFILEINFO structure
+            # https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+            fixed_info = win32api.GetFileVersionInfo(path, "\\")
+        except pywintypes.error:
+            log.debug("No version info found: %s", path)
+            return ""
+
+    return "{}.{}.{}.{}".format(
+        win32api.HIWORD(fixed_info["FileVersionMS"]),
+        win32api.LOWORD(fixed_info["FileVersionMS"]),
+        win32api.HIWORD(fixed_info["FileVersionLS"]),
+        win32api.LOWORD(fixed_info["FileVersionLS"]),
+    )
+
+
+def version(path):
+    r"""
+    .. versionadded:: 3005
+
+    Get the version of a file.
+
+    .. note::
+        Not all files have version information. The following are common file
+        types that contain version information:
+
+            - .exe
+            - .dll
+            - .sys
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        str: The version of the file if the file contains it. Otherwise, an
+            empty string will be returned.
+
+    Raises:
+        CommandExecutionError: If the file does not exist
+        CommandExecutionError: If the path is not a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * file.version C:\Windows\notepad.exe
+    """
+    # Input validation
+    if not os.path.exists(path):
+        raise CommandExecutionError("File not found: {}".format(path))
+    if os.path.isdir(path):
+        raise CommandExecutionError("Not a file: {}".format(path))
+    return _get_version(path)
+
+
+def version_details(path):
+    r"""
+    .. versionadded:: 3005
+
+    Get file details for a file. Similar to what's in the details tab on the
+    file properties.
+
+    .. note::
+        Not all files have version information. The following are common file
+        types that contain version information:
+
+            - .exe
+            - .dll
+            - .sys
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        dict: A dictionary containing details about the file related to version.
+            An empty dictionary if the file contains no version information.
+
+    Raises:
+        CommandExecutionError: If the file does not exist
+        CommandExecutionError: If the path is not a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * file.version_details C:\Windows\notepad.exe
+    """
+    # Input validation
+    if not os.path.exists(path):
+        raise CommandExecutionError("File not found: {}".format(path))
+    if os.path.isdir(path):
+        raise CommandExecutionError("Not a file: {}".format(path))
+
+    ret = {}
+    try:
+        # Backslash returns a VS_FIXEDFILEINFO structure
+        # https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+        fixed_info = win32api.GetFileVersionInfo(path, "\\")
+    except pywintypes.error:
+        log.debug("No version info found: %s", path)
+        return ret
+
+    ret["Version"] = _get_version(path, fixed_info)
+    ret["OperatingSystem"] = _get_version_os(fixed_info["FileOS"])
+    ret["FileType"] = _get_version_type(
+        fixed_info["FileType"], fixed_info["FileSubtype"]
+    )
+
+    try:
+        # \VarFileInfo\Translation returns a list of available
+        # (language, codepage) pairs that can be used to retrieve string info.
+        # We only care about the first pair.
+        # https://docs.microsoft.com/en-us/windows/win32/menurc/varfileinfo-block
+        language, codepage = win32api.GetFileVersionInfo(
+            path, "\\VarFileInfo\\Translation"
+        )[0]
+    except pywintypes.error:
+        log.debug("No extended version info found: %s", path)
+        return ret
+
+    # All other properties are in the StringFileInfo block
+    # \StringFileInfo\<hex language><hex codepage>\<property name>
+    # https://docs.microsoft.com/en-us/windows/win32/menurc/stringfileinfo-block
+    property_names = (
+        "Comments",
+        "CompanyName",
+        "FileDescription",
+        "FileVersion",
+        "InternalName",
+        "LegalCopyright",
+        "LegalTrademarks",
+        "OriginalFilename",
+        "PrivateBuild",
+        "ProductName",
+        "ProductVersion",
+        "SpecialBuild",
+    )
+    for prop_name in property_names:
+        str_info_path = "\\StringFileInfo\\{:04X}{:04X}\\{}".format(
+            language, codepage, prop_name
+        )
+        try:
+            ret[prop_name] = win32api.GetFileVersionInfo(path, str_info_path)
+        except pywintypes.error:
+            pass
+
     return ret
 
 

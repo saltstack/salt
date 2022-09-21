@@ -5,6 +5,7 @@
 
 
 import pytest
+
 import salt.modules.mine as mine
 import salt.utils.mine
 from salt.utils.odict import OrderedDict

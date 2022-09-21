@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.states.libcloud_dns as libcloud_dns
 from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
