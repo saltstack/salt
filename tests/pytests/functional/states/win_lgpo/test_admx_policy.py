@@ -24,7 +24,7 @@ def configure_loader_modules(tmp_path):
     return {
         lgpo_mod: {
             "__salt__": {
-                "file.file_exists":  win_file.file_exists,
+                "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
             },
             "__opts__": {
@@ -40,7 +40,7 @@ def configure_loader_modules(tmp_path):
             },
             "__opts__": {
                 "test": False,
-            }
+            },
         },
     }
 
@@ -52,22 +52,11 @@ def test_allow_telemetry_subsequent_runs():
     """
     reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
     reg_pol.unlink(missing_ok=True)
-    result = lgpo_mod.set_computer_policy(
-        name="AllowTelemetry",
-        setting="Disabled",
-    )
+    result = lgpo_mod.set_computer_policy(name="AllowTelemetry", setting="Disabled")
     assert result is True
     expected = {
-        "new": {
-            "Computer Configuration": {
-                "Manage preview builds": "Disabled"
-            }
-        },
-        "old": {
-            "Computer Configuration": {
-                "Manage preview builds": "Not Configured"
-            }
-        },
+        "new": {"Computer Configuration": {"Manage preview builds": "Disabled"}},
+        "old": {"Computer Configuration": {"Manage preview builds": "Not Configured"}},
     }
     result = lgpo.set_(
         name="Manage preview builds",

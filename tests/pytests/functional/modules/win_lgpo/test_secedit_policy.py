@@ -22,7 +22,7 @@ def configure_loader_modules(tmp_path):
     return {
         lgpo: {
             "__salt__": {
-                "file.file_exists":  win_file.file_exists,
+                "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
                 "file.remove": win_file.remove,
                 "cmd.retcode": cmdmod.retcode,
@@ -67,12 +67,9 @@ def configure_loader_modules(tmp_path):
             ],
             False,
         ),
-
-    ]
+    ],
 )
-def test_secedit_policy(
-    shell, name, setting, exp_regexes, cumulative_rights, tmp_path
-):
+def test_secedit_policy(shell, name, setting, exp_regexes, cumulative_rights, tmp_path):
     result = lgpo.set_computer_policy(
         name=name,
         setting=setting,
@@ -87,4 +84,3 @@ def test_secedit_policy(
     for exp_regex in exp_regexes:
         match = re.search(exp_regex, content, re.IGNORECASE | re.MULTILINE)
         assert match is not None
-

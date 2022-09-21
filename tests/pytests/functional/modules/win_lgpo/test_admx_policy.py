@@ -2,11 +2,11 @@ import logging
 import os
 import pathlib
 import re
-import requests
 import shutil
 import zipfile
 
 import pytest
+import requests
 
 import salt.modules.grains as grains
 import salt.modules.win_file as win_file
@@ -29,7 +29,7 @@ def configure_loader_modules(tmp_path):
     return {
         lgpo: {
             "__salt__": {
-                "file.file_exists":  win_file.file_exists,
+                "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
             },
             "__opts__": {
@@ -114,7 +114,8 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
 
 
 @pytest.mark.parametrize(
-    "name, setting, exp_regexes", [
+    "name, setting, exp_regexes",
+    [
         (
             r"Configure Windows NTP Client",
             "Disabled",
@@ -224,7 +225,9 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
-            "Do not allow Clipboard redirection",
+            # Use key name until github issue #62732 is fixed
+            # "Do not allow Clipboard redirection",
+            "TS_CLIENT_CLIPBOARD",
             "Disabled",
             [
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0"
@@ -383,7 +386,7 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\lockdown_zones\\2[\s]*1406[\s]*DWORD:1"
             ],
         ),
-    ]
+    ],
 )
 def test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
     reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
@@ -399,7 +402,8 @@ def test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
 
 
 @pytest.mark.parametrize(
-    "name, setting, exp_regexes", [
+    "name, setting, exp_regexes",
+    [
         (
             "Point and Print Restrictions",
             {
@@ -454,8 +458,8 @@ def test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
                 r" c:\\windows\\system32\\grouppolicy\\user\\registry.pol[\s]*;"
                 r" PARSING COMPLETED."
             ],
-        )
-    ]
+        ),
+    ],
 )
 def test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
     reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\User\Registry.pol")
@@ -528,13 +532,8 @@ def test_set_computer_policy_windows_update(lgpo_bin, shell):
             the_policy_check_disabled.append(
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DELETE",
             )
-        elif (
-            "Install updates for other Microsoft products"
-            in item["element_aliases"]
-        ):
-            the_policy.update(
-                {"Install updates for other Microsoft products": True}
-            )
+        elif "Install updates for other Microsoft products" in item["element_aliases"]:
+            the_policy.update({"Install updates for other Microsoft products": True})
             the_policy_check_enabled.append(
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DWORD:1\s*"
             )
