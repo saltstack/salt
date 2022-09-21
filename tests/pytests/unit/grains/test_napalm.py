@@ -12,10 +12,6 @@ from tests.support.mock import MagicMock, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    patcher = patch.object(
-        napalm_grains.salt.utils.napalm, "is_proxy", MagicMock(return_value=True)
-    )
-    patcher.start()
     test_device_cache = {
         "DRIVER": napalm_test_support.MockNapalmDevice(),
         "DRIVER_NAME": "cisco",
@@ -38,8 +34,11 @@ def configure_loader_modules():
     }
     device_cache_patcher = patch("salt.grains.napalm.DEVICE_CACHE", test_device_cache)
     grains_cache_patcher = patch("salt.grains.napalm.GRAINS_CACHE", test_cache)
+    is_proxy_patcher = patch.object(
+        napalm_grains.salt.utils.napalm, "is_proxy", MagicMock(return_value=True)
+    )
 
-    with device_cache_patcher, grains_cache_patcher:
+    with device_cache_patcher, grains_cache_patcher, is_proxy_patcher:
         yield {napalm_grains: module_globals}
 
 
