@@ -1,1 +1,0 @@
-change dep warn from Silicon to Phosphorus for the cmd,show,system_info and add_config functions in the nxos module.

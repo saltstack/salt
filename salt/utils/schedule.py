@@ -6,6 +6,8 @@ config file or for the minion via config or pillar).
 
 Detailed tutorial about scheduling jobs can be found :ref:`here
 <scheduling-jobs>`.
+
+Requires that python-dateutil is installed on the minion.
 """
 
 
@@ -682,9 +684,12 @@ class Schedule:
         """
         Execute this method in a multiprocess or thread
         """
-        if salt.utils.platform.is_windows() or self.opts.get("transport") == "zeromq":
+        if (
+            salt.utils.platform.spawning_platform()
+            or self.opts.get("transport") == "zeromq"
+        ):
             # Since function references can't be pickled and pickling
-            # is required when spawning new processes on Windows, regenerate
+            # is required when spawning new processes on spawning platforms, regenerate
             # the functions and returners.
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
@@ -723,11 +728,6 @@ class Schedule:
                     "specified as a dictionary.  Ignoring."
                 )
 
-        if multiprocessing_enabled:
-            # We just want to modify the process name if we're on a different process
-            salt.utils.process.appendproctitle(
-                "{} {}".format(self.__class__.__name__, ret["jid"])
-            )
         data_returner = data.get("returner", None)
 
         if not self.standalone:
@@ -786,7 +786,7 @@ class Schedule:
                     )
                     # write this to /var/cache/salt/minion/proc
                     with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                        fp_.write(salt.payload.Serial(self.opts).dumps(ret))
+                        fp_.write(salt.payload.dumps(ret))
 
             # if the func support **kwargs, lets pack in the pub data we have
             # TODO: pack the *same* pub data as a minion?
@@ -806,7 +806,6 @@ class Schedule:
                     salt.utils.event.get_event(
                         self.opts["__role"],
                         self.opts["sock_dir"],
-                        self.opts["transport"],
                         opts=self.opts,
                         listen=False,
                     ),
@@ -1793,10 +1792,10 @@ class Schedule:
             self.handle_func(False, func, data, jid)
             return
 
-        if multiprocessing_enabled and salt.utils.platform.is_windows():
+        if multiprocessing_enabled and salt.utils.platform.spawning_platform():
             # Temporarily stash our function references.
             # You can't pickle function references, and pickling is
-            # required when spawning new processes on Windows.
+            # required when spawning new processes on spawning platforms.
             functions = self.functions
             self.functions = {}
             returners = self.returners
@@ -1810,27 +1809,28 @@ class Schedule:
             else:
                 thread_cls = threading.Thread
 
+            name = "Schedule(name={}, jid={})".format(data["name"], jid)
             if multiprocessing_enabled:
                 with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
                     proc = thread_cls(
                         target=self.handle_func,
                         args=(multiprocessing_enabled, func, data, jid),
+                        name=name,
                     )
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
                     proc.start()
-                    proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
                     self._subprocess_list.add(proc)
             else:
                 proc = thread_cls(
                     target=self.handle_func,
                     args=(multiprocessing_enabled, func, data, jid),
+                    name=name,
                 )
                 proc.start()
-                proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
                 self._subprocess_list.add(proc)
         finally:
-            if multiprocessing_enabled and salt.utils.platform.is_windows():
+            if multiprocessing_enabled and salt.utils.platform.spawning_platform():
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
@@ -1852,7 +1852,7 @@ def clean_proc_dir(opts):
         with salt.utils.files.fopen(fn_, "rb") as fp_:
             job = None
             try:
-                job = salt.payload.Serial(opts).load(fp_)
+                job = salt.payload.load(fp_)
             except Exception:  # pylint: disable=broad-except
                 # It's corrupted
                 # Windows cannot delete an open file

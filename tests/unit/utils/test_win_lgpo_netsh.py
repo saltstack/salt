@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.platform
 import salt.utils.win_lgpo_netsh as win_lgpo_netsh
 from salt.exceptions import CommandExecutionError

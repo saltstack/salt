@@ -38,7 +38,7 @@ class VultrTest(CloudTest):
         """
         size_list = self.run_cloud("--list-sizes {}".format(self.PROVIDER))
         self.assertIn(
-            "2048 MB RAM,64 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
+            "2048 MB RAM,55 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
         )
 
     # Commented for now, Vultr driver does not yet support key management

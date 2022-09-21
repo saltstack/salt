@@ -6,6 +6,7 @@
 import os
 
 import pytest
+
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError

@@ -24,7 +24,7 @@ import logging
 
 import salt.output
 
-# See https://docs.saltstack.com/en/latest/topics/tutorials/http.html
+# See https://docs.saltproject.io/en/latest/topics/tutorials/http.html
 import salt.utils.http
 
 log = logging.getLogger(__name__)

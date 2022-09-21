@@ -126,8 +126,7 @@ class MockSubscriber:
         """
         Create a mock return from a jid, minion, and fun
         """
-        serial = salt.payload.Serial({"serial": "msgpack"})
-        dumped = serial.dumps(
+        dumped = salt.payload.dumps(
             {
                 "fun_args": [],
                 "jid": jid,
@@ -179,7 +178,7 @@ def test_batch_issue_56273():
             ):
                 ret = list(batch.run())
     assert len(ret) == 4
-    for val in ret:
+    for val, _ in ret:
         values = list(val.values())
         assert len(values) == 1
         assert values[0] is True

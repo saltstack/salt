@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **66**
 - Total PR References: **177**
 
-- Contributors: **52** (`Ch3LL`_, `DarkKnightCZ`_, `DmitryKuzmenko`_, `Inveracity`_, `abalashov`_, `abednarik`_, `adelcast`_, `ajacoutot`_, `amendlik`_, `anlutro`_, `aphor`_, `artxki`_, `bbinet`_, `bensherman`_, `cachedout`_, `christoe`_, `clinta`_, `cro`_, `dmurphy18`_, `dongweiming`_, `eliasp`_, `eradman`_, `farcaller`_, `garethgreenaway`_, `glomium`_, `gtmanfred`_, `isbm`_, `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `jmacfar`_, `jnhmcknight`_, `justinta`_, `l2ol33rt`_, `lomeroe`_, `meaksh`_, `nulfox`_, `opdude`_, `peterdemin`_, `rallytime`_, `s0undt3ch`_, `secumod`_, `sjmh`_, `sjorge`_, `terminalmage`_, `thatch45`_, `themalkolm`_, `ticosax`_, `tmehlinger`_, `twangboy`_, `vutny`_, `whiteinge`_)
+- Contributors: **52** (`Ch3LL`_, `DarkKnightCZ`_, `DmitryKuzmenko`_, `Inveracity`_, `abalashov`_,
+  `abednarik`_, `adelcast`_, `ajacoutot`_, `amendlik`_, `anlutro`_, `aphor`_, `artxki`_, `bbinet`_,
+  `bensherman`_, `cachedout`_, `christoe`_, `clinta`_, `cro`_, `dmurphy18`_, `dongweiming`_,
+  `eliasp`_, `eradman`_, `farcaller`_, `garethgreenaway`_, `glomium`_, `gtmanfred`_, `isbm`_,
+  `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `jmacfar`_, `jnhmcknight`_, `justinta`_,
+  `l2ol33rt`_, `lomeroe`_, `meaksh`_, `nulfox`_, `opdude`_, `peterdemin`_, `rallytime`_,
+  `s0undt3ch`_, `secumod`_, `sjmh`_, `sjorge`_, `terminalmage`_, `thatch45`_, `themalkolm`_,
+  `ticosax`_, `tmehlinger`_, `twangboy`_, `vutny`_, `whiteinge`_)
 
 
 Returner Changes
@@ -178,7 +185,7 @@ Changelog for v2016.3.1..v2016.3.2
 
     * fb223e1bd4 Invalidate the target cache very quickly (`#34862`_)
 
-    * 1ca1367289 Fail git.latest states with uncommitted changes when force_reset=False (`#34869`_)
+    * 1ca1367289 Fail git.latest states with uncomitted changes when force_reset=False (`#34869`_)
 
     * 4f4381e5b9 Merge pull request `#34859`_ from cachedout/fix_wheel_test
 
@@ -403,7 +410,7 @@ Changelog for v2016.3.1..v2016.3.2
 
 * **ISSUE** `saltstack/salt#34630`_: (`bdrung`_) Spelling errors (refs: `#34756`_, `#34722`_)
 
-* **ISSUE** `saltstack/salt#33923`_: (`pavankumar2203`_) Salt module certutil install doesnt work (refs: `#34756`_)
+* **ISSUE** `saltstack/salt#33923`_: (`pavankumar2203`_) Salt module certutil install doesn't work (refs: `#34756`_)
 
   * **PR** `#34756`_: (`jacobhammons`_) Rebuild man pages
 
@@ -1428,7 +1435,7 @@ Changelog for v2016.3.1..v2016.3.2
 
   * 68092cdc8c When specifying the SSH identity to use with Git as a salt URL, eg. salt://files/identity, if that file exists outside of the default base environment the file won't be accessible so we need to include the saltenv.
 
-* **ISSUE** `#34120`_: (`rmohta`_) Correct package name to systemd-python for RHEL 7 in docs.saltstack.com (refs: `#34138`_)
+* **ISSUE** `#34120`_: (`rmohta`_) Correct package name to systemd-python for RHEL 7 in docs.saltproject.io (refs: `#34138`_)
 
 * **ISSUE** `#31402`_: (`vutny`_) [repo] systemd-python required package is missing from RHEL7 archive (refs: `#34138`_)
 
@@ -1703,14 +1710,14 @@ Changelog for v2016.3.1..v2016.3.2
 
   * 887a415138 Adds new Understanding Jinja topic, and fixes several Jinja doc issues. Removes the "Full list of builtin ..." from each module reference list, leaving just the module type for scanability.
 
-* **PR** `#33900`_: (`amendlik`_) Document sudo policy for gitfs post-recieve hook
+* **PR** `#33900`_: (`amendlik`_) Document sudo policy for gitfs post-receive hook
   @ *2016-06-14 01:04:35 UTC*
 
   * a400f6a6c3 Merge pull request `#33900`_ from amendlik/gitfs-hook-doc
 
   * b4a28e2684 Add clarifying documentation about the need for sudo in the git hook
 
-  * 1046279cb7 Document sudo policy for gitfs post-recieve hook
+  * 1046279cb7 Document sudo policy for gitfs post-receive hook
 
 * **PR** `#33980`_: (`twangboy`_) Use full path to python.exe
   @ *2016-06-14 00:46:14 UTC*
@@ -1823,7 +1830,7 @@ Changelog for v2016.3.1..v2016.3.2
 
   * 2cf787d4ba 2016.3.0 known issues update
 
-  * **PR** `#33908`_: (`ticosax`_) [boto_lambda] handle ommitted Permissions parameter
+  * **PR** `#33908`_: (`ticosax`_) [boto_lambda] handle omitted Permissions parameter
 
 * **ISSUE** `#33575`_: (`anlutro`_) File states seem slower in 2016.3, especially on first cache retrieval (refs: `#33896`_)
 

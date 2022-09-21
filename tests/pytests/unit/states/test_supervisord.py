@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.supervisord as supervisord
 from tests.support.mock import MagicMock, patch
 

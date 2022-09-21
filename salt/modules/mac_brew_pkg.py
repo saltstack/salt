@@ -110,8 +110,15 @@ def _call_brew(*cmd, failhard=True):
     """
     user = __salt__["file.get_user"](_homebrew_bin())
     runas = user if user != __opts__["user"] else None
+    _cmd = []
+    if runas:
+        _cmd = ["sudo -i -n -H -u {} -- ".format(runas)]
+    _cmd = _cmd + [salt.utils.path.which("brew")] + list(cmd)
+    _cmd = " ".join(_cmd)
+
+    runas = None
     result = __salt__["cmd.run_all"](
-        [salt.utils.path.which("brew")] + list(cmd),
+        cmd=_cmd,
         runas=runas,
         output_loglevel="trace",
         python_shell=False,
@@ -251,7 +258,10 @@ def latest_version(*names, **kwargs):
 
     def get_version(pkg_info):
         # Perhaps this will need an option to pick devel by default
-        return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        version = pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
+            version = "{}_{}".format(version, pkg_info["revision"])
+        return version
 
     versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
 

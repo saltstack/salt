@@ -22,18 +22,19 @@
 import sys
 
 
-__all__ = ['install', 'NullFinder', 'PyPy_repr', 'Protocol']
+# __all__ = ['install', 'NullFinder', 'PyPy_repr', 'Protocol']
+__all__ = ['install', 'NullFinder', 'PyPy_repr']
 
 
-try:
-    from typing import Protocol
-except ImportError:  # pragma: no cover
-    """
-    pytest-mypy complains here because:
-    error: Incompatible import of "Protocol" (imported name has type
-    "typing_extensions._SpecialForm", local name has type "typing._SpecialForm")
-    """
-    from salt.ext.typing_extensions import Protocol  # type: ignore
+# try:
+#     from typing import Protocol
+# except ImportError:  # pragma: no cover
+#     """
+#     pytest-mypy complains here because:
+#     error: Incompatible import of "Protocol" (imported name has type
+#     "typing_extensions._SpecialForm", local name has type "typing._SpecialForm")
+#     """
+#     from salt.ext.typing_extensions import Protocol  # type: ignore
 
 
 def install(cls):

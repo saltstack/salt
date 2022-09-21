@@ -828,7 +828,6 @@ def request(mods=None, **kwargs):
     kwargs["test"] = True
     ret = apply_(mods, **kwargs)
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     req = check_request()
     req.update(
         {
@@ -845,7 +844,7 @@ def request(mods=None, **kwargs):
                 # Make sure cache file isn't read-only
                 __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
             with salt.utils.files.fopen(notify_path, "w+b") as fp_:
-                serial.dump(req, fp_)
+                salt.payload.dump(req, fp_)
         except OSError:
             log.error(
                 "Unable to write state request file %s. Check permission.", notify_path
@@ -866,10 +865,9 @@ def check_request(name=None):
         salt '*' state.check_request
     """
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, "rb") as fp_:
-            req = serial.load(fp_)
+            req = salt.payload.load(fp_)
         if name:
             return req[name]
         return req
@@ -889,7 +887,6 @@ def clear_request(name=None):
         salt '*' state.clear_request
     """
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     if not os.path.isfile(notify_path):
         return True
     if not name:
@@ -909,7 +906,7 @@ def clear_request(name=None):
                     # Make sure cache file isn't read-only
                     __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
                 with salt.utils.files.fopen(notify_path, "w+b") as fp_:
-                    serial.dump(req, fp_)
+                    salt.payload.dump(req, fp_)
             except OSError:
                 log.error(
                     "Unable to write state request file %s. Check permission.",
@@ -1016,6 +1013,15 @@ def highstate(test=None, queue=False, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
+    concurrent : False
+        Execute state runs concurrently instead of serially
+
+        .. warning::
+
+            This flag is potentially dangerous. It is designed for use when
+            multiple state runs can safely be run at the same time. Do *not*
+            use this flag for performance optimization.
+
     localconfig
         Optionally, instead of using the minion config, load minion opts from
         the file specified by this argument, and then merge them with the
@@ -1056,9 +1062,15 @@ def highstate(test=None, queue=False, **kwargs):
         }
         return ret
 
-    conflict = _check_queue(queue, kwargs)
-    if conflict is not None:
-        return conflict
+    concurrent = kwargs.get("concurrent", False)
+
+    if queue:
+        _wait(kwargs.get("__pub_jid"))
+    else:
+        conflict = running(concurrent)
+        if conflict:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return conflict
 
     orig_test = __opts__.get("test", None)
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
@@ -1314,7 +1326,6 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             "is specified."
         )
 
-    serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
         __opts__["cachedir"],
         "{}.cache.p".format(kwargs.get("cache_name", "highstate")),
@@ -1369,7 +1380,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             if kwargs.get("cache"):
                 if os.path.isfile(cfn):
                     with salt.utils.files.fopen(cfn, "rb") as fp_:
-                        high_ = serial.load(fp_)
+                        high_ = salt.payload.load(fp_)
                         return st_.state.call_high(high_, orchestration_jid)
 
         # If the state file is an integer, convert to a string then to unicode
@@ -1405,7 +1416,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                 # Make sure cache file isn't read-only
                 __salt__["cmd.run"](["attrib", "-R", cache_file], python_shell=False)
             with salt.utils.files.fopen(cache_file, "w+b") as fp_:
-                serial.dump(ret, fp_)
+                salt.payload.dump(ret, fp_)
         except OSError:
             log.error(
                 "Unable to write to SLS cache file %s. Check permission.", cache_file
@@ -1418,7 +1429,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
         try:
             with salt.utils.files.fopen(cfn, "w+b") as fp_:
                 try:
-                    serial.dump(high_, fp_)
+                    salt.payload.dump(high_, fp_)
                 except TypeError:
                     # Can't serialize pydsl
                     pass
@@ -2482,7 +2493,6 @@ def event(
     with salt.utils.event.get_event(
         node,
         sock_dir or __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:

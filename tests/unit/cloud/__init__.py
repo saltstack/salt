@@ -3,6 +3,7 @@
     ~~~~~~~~~~~~~~~~
 """
 import pytest
+
 import salt.cloud
 from tests.support.unit import TestCase
 
