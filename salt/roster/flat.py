@@ -26,7 +26,7 @@ def targets(tgt, tgt_type="glob", **kwargs):
         __opts__["renderer"],
         __opts__["renderer_blacklist"],
         __opts__["renderer_whitelist"],
-        mask_value="passw*",
+        mask_value="*passw*",
         **kwargs
     )
     conditioned_raw = {}

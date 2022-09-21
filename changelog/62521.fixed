@@ -1,0 +1,1 @@
+Fixed the omitted "pool" parameter when cloning a VM with the proxmox salt-cloud driver

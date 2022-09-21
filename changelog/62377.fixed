@@ -1,0 +1,1 @@
+Fix groups with duplicate GIDs are not returned by get_group_list

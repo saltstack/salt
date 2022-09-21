@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.9/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via requests
 cffi==1.14.6
     # via cryptography
@@ -37,9 +37,9 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==2.11.3
+jinja2==3.1.0
     # via -r requirements/base.txt
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -55,27 +55,29 @@ portend==2.4
     # via cherrypy
 psutil==5.8.0
     # via -r requirements/base.txt
-pycparser==2.17
-    # via cffi
+pycparser==2.21 ; python_version >= "3.9"
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==19.1.0
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-pytz==2021.1
+pytz==2022.1
     # via tempora
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==21.0.2 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

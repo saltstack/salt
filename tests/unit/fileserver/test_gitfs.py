@@ -11,6 +11,7 @@ import tempfile
 import textwrap
 
 import pytest
+
 import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files

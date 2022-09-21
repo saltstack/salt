@@ -19,7 +19,9 @@ last_state_extra = {"value": False, "no_devices": False}
 def __virtual__():
     which_result = salt.utils.path.which("adb")
     if which_result is None:
-        return False
+        err_msg = "adb is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     else:
         return __virtualname__
 

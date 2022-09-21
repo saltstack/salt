@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.publish as publish
 from salt.exceptions import SaltReqTimeoutError
 from tests.support.mock import MagicMock, patch
@@ -91,7 +92,7 @@ def test_runner():
     mock = MagicMock(return_value=True)
     mock_id = MagicMock(return_value="salt_id")
     with patch("salt.crypt.SAuth", return_value=SAuth(publish.__opts__)):
-        with patch("salt.transport.client.ReqChannel", Channel()):
+        with patch("salt.channel.client.ReqChannel", Channel()):
             with patch.dict(publish.__opts__, {"master_uri": mock, "id": mock_id}):
                 Channel.flag = 0
                 assert publish.runner("manage.down")

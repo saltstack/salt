@@ -67,7 +67,18 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_auth_key_sk_ed25519_cert(self):
         self.user_info_mock = {"home": "/dev/null"}
-        valid_key = "AAAAI3NrLXNzaC1lZDI1NTE5LWNlcnQtdjAxQG9wZW5zc2guY29tAAAAIPMSTMKuDdipIQl8IA3UXl5WHYcIyF2tfwrri/Wd/oV3AAAAIKuzsywoer6Y7oYtLXse/TKjVqqKjEpUq+4zMkQ9FEwJAAAABHNzaDoAAAAAAAAAAAAAAAEAAAARbWF4QHNjaHUgdXNlciBrZXkAAAAHAAAAA21heAAAAABgGcIwAAAAAHLlxlwAAAAAAAAAggAAABVwZXJtaXQtWDExLWZvcndhcmRpbmcAAAAAAAAAF3Blcm1pdC1hZ2VudC1mb3J3YXJkaW5nAAAAAAAAABZwZXJtaXQtcG9ydC1mb3J3YXJkaW5nAAAAAAAAAApwZXJtaXQtcHR5AAAAAAAAAA5wZXJtaXQtdXNlci1yYwAAAAAAAAAAAAAAMwAAAAtzc2gtZWQyNTUxOQAAACDI8h3vsne8ZtyH7JRHmkImHXQciefsH4e99ka3HJzKPQAAAFMAAAALc3NoLWVkMjU1MTkAAABAHzruY+hPXK2ONt9d2XFUttvdSR7dW9Yy7stru4zopgUbo0CjTlKyogb7PiRryt5JExT1Wkux1q3oBtyvSdG+Cw=="
+        valid_key = (
+            "AAAAI3NrLXNzaC1lZDI1NTE5LWNlcnQtdjAxQG9wZW5zc2guY29tAAAAIPMSTMKu"
+            "DdipIQl8IA3UXl5WHYcIyF2tfwrri/Wd/oV3AAAAIKuzsywoer6Y7oYtLXse/TKj"
+            "VqqKjEpUq+4zMkQ9FEwJAAAABHNzaDoAAAAAAAAAAAAAAAEAAAARbWF4QHNjaHUg"
+            "dXNlciBrZXkAAAAHAAAAA21heAAAAABgGcIwAAAAAHLlxlwAAAAAAAAAggAAABVw"
+            "ZXJtaXQtWDExLWZvcndhcmRpbmcAAAAAAAAAF3Blcm1pdC1hZ2VudC1mb3J3YXJk"
+            "aW5nAAAAAAAAABZwZXJtaXQtcG9ydC1mb3J3YXJkaW5nAAAAAAAAAApwZXJtaXQt"
+            "cHR5AAAAAAAAAA5wZXJtaXQtdXNlci1yYwAAAAAAAAAAAAAAMwAAAAtzc2gtZWQy"
+            "NTUxOQAAACDI8h3vsne8ZtyH7JRHmkImHXQciefsH4e99ka3HJzKPQAAAFMAAAAL"
+            "c3NoLWVkMjU1MTkAAABAHzruY+hPXK2ONt9d2XFUttvdSR7dW9Yy7stru4zopgUb"
+            "o0CjTlKyogb7PiRryt5JExT1Wkux1q3oBtyvSdG+Cw=="
+        )
         # we expect 'fail', but not 'Invalid public key'
         self.assertEqual(
             ssh.set_auth_key(
