@@ -182,6 +182,9 @@ if not HAS_APT:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
             self._parse_sources(line)
 
+        def str(self):
+            return self.repo_line()
+
         def repo_line(self):
             """
             Return the repo line for the sources file
@@ -2946,7 +2949,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if mod_source.uri != repo_uri:
         mod_source.uri = repo_uri
-        mod_source.line = mod_source.repo_line()
+        mod_source.line = mod_source.str()
 
     sources.save()
     # on changes, explicitly refresh
