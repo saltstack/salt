@@ -934,3 +934,96 @@ def test_aggregate_requisites():
             "/tmp/install-tmux",
             "google-cloud-repo",
         ]
+
+
+def test_mod_aggregate():
+    """
+    Test to ensure that the requisites are included in the aggregated low state.
+    """
+    # The low that is returned from _mod_aggregrate
+    low = {
+        "state": "pkg",
+        "name": "sl",
+        "__sls__": "test.62439",
+        "__env__": "base",
+        "__id__": "sl",
+        "require_in": [OrderedDict([("file", "/tmp/foo")])],
+        "order": 10002,
+        "aggregate": True,
+        "fun": "installed",
+    }
+
+    # Chunks that have been processed through the pkg mod_aggregate function
+    chunks = [
+        {
+            "state": "file",
+            "name": "/tmp/foo",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "/tmp/foo",
+            "content": "This is some content",
+            "order": 10000,
+            "require": [{"pkg": "sl"}],
+            "fun": "managed",
+        },
+        {
+            "state": "pkg",
+            "name": "figlet",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "figlet",
+            "__agg__": True,
+            "require": [OrderedDict([("file", "/tmp/foo")])],
+            "order": 10001,
+            "aggregate": True,
+            "fun": "installed",
+        },
+        {
+            "state": "pkg",
+            "name": "sl",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "sl",
+            "require_in": [OrderedDict([("file", "/tmp/foo")])],
+            "order": 10002,
+            "aggregate": True,
+            "fun": "installed",
+        },
+    ]
+
+    running = {}
+
+    mock_pkg_mod_aggregate = {
+        "state": "pkg",
+        "name": "sl",
+        "__sls__": "test.62439",
+        "__env__": "base",
+        "__id__": "sl",
+        "require_in": [OrderedDict([("file", "/tmp/foo")])],
+        "order": 10002,
+        "fun": "installed",
+        "__agg__": True,
+        "pkgs": ["figlet", "sl"],
+    }
+
+    with patch("salt.state.State._gather_pillar") as state_patch:
+        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        state_obj = salt.state.State(minion_opts)
+        with patch.dict(
+            state_obj.states,
+            {"pkg.mod_aggregate": MagicMock(return_value=mock_pkg_mod_aggregate)},
+        ):
+            low_ret = state_obj._mod_aggregate(low, running, chunks)
+
+            # Ensure the low returned contains require
+            assert "require_in" in low_ret
+
+            # Ensure all the requires from pkg states are in low
+            assert low_ret["require_in"] == [OrderedDict([("file", "/tmp/foo")])]
+
+            # Ensure that the require requisite from the
+            # figlet state doesn't find its way into this state
+            assert "require" not in low_ret
+
+            # Ensure pkgs were aggregated
+            assert low_ret["pkgs"] == ["figlet", "sl"]
