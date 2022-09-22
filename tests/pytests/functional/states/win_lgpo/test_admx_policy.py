@@ -51,20 +51,26 @@ def test_allow_telemetry_subsequent_runs():
     """
     reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
     reg_pol.unlink(missing_ok=True)
+    # Set an initial state for RA_Unsolicit
+    result = lgpo_mod.set_computer_policy(name="RA_Unsolicit", setting="Not Configured")
+    assert result is True
+    # Set AllowTelemetry
     result = lgpo_mod.set_computer_policy(name="AllowTelemetry", setting="Disabled")
     assert result is True
     expected = {
         "new": {"Computer Configuration": {"Manage preview builds": "Disabled"}},
         "old": {"Computer Configuration": {"Manage preview builds": "Not Configured"}},
     }
+    # Set RA_Unsolicit with a state. AllowTelemetry should NOT be in the results
     result = lgpo.set_(
-        name="Manage preview builds",
+        name="RA_Unsolicit",
         setting="Disabled",
         policy_class="Machine",
     )
+    # Run it again and there should be no changes
     assert result["changes"] == expected
     result = lgpo.set_(
-        name="Manage preview builds",
+        name="RA_Unsolicit",
         setting="Disabled",
         policy_class="Machine",
     )

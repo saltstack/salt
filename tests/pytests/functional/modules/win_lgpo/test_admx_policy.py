@@ -12,6 +12,7 @@ import salt.modules.grains as grains
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as lgpo
 import salt.utils.files
+import salt.utils.win_dacl as win_dacl
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,11 @@ def configure_loader_modules(tmp_path):
             },
             "__opts__": {
                 "cachedir": str(cachedir),
+            },
+        },
+        win_file: {
+            "__utils__": {
+                "dacl.set_perms": win_dacl.set_perms,
             },
         },
     }
@@ -628,7 +634,7 @@ def test_set_computer_policy_multiple_policies(lgpo_bin, shell):
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
         shell=shell,
-        name="Do not allow Clipboard redirection",
+        name="TS_CLIENT_CLIPBOARD",
         setting="Disabled",
         exp_regexes=[
             r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT"
