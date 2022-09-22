@@ -64,7 +64,7 @@ def clean_comp():
 @pytest.fixture(scope="function")
 def clean_user():
     reg_pol = pathlib.Path(
-        os.getenv("SystemRoot"),  "System32", "GroupPolicy", "User", "Registry.pol"
+        os.getenv("SystemRoot"), "System32", "GroupPolicy", "User", "Registry.pol"
     )
     reg_pol.unlink(missing_ok=True)
     yield reg_pol
