@@ -63,9 +63,10 @@ class _Puppet:
         self.kwargs = {"color": "false"}  # e.g. --tags=apache::server
         self.args = []  # e.g. --noop
 
-        conf = salt.utils.yaml.safe_load(
-          __salt__["cmd.run"]("puppet config print --render-as yaml vardir rundir confdir")
+        puppet_config = __salt__["cmd.run"](
+            "puppet config print --render-as yaml vardir rundir confdir"
         )
+        conf = salt.utils.yaml.safe_load(puppet_config)
         self.vardir = conf["vardir"]
         self.rundir = conf["rundir"]
         self.confdir = conf["confdir"]
