@@ -934,6 +934,24 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: grains_refresh_pre_exec
+
+``grains_refresh_pre_exec``
+---------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+The ``grains_refresh_pre_exec`` setting allows for a minion to check its grains
+prior to the execution of any operation to see if they have changed and, if
+so, to inform the master of the new grains. This operation is moderately
+expensive, therefore care should be taken before enabling this behavior.
+
+.. code-block:: yaml
+
+    grains_refresh_pre_exec: True
+
 .. conf_minion:: metadata_server_grains
 
 ``metadata_server_grains``
@@ -2301,7 +2319,7 @@ will be shown for each state run.
 .. conf_minion:: state_output_pct
 
 ``state_output_pct``
-------------------------
+--------------------
 
 Default: ``False``
 
@@ -2311,6 +2329,20 @@ as a percent of total actions will be shown for each state run.
 .. code-block:: yaml
 
     state_output_pct: False
+
+.. conf_minion:: state_compress_ids
+
+``state_compress_ids``
+----------------------
+
+Default: ``False``
+
+The ``state_compress_ids`` setting aggregates information about states which
+have multiple "names" under the same state ID in the highstate output.
+
+.. code-block:: yaml
+
+    state_compress_ids: False
 
 .. conf_minion:: autoload_dynamic_modules
 

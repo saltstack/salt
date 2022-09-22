@@ -1,6 +1,6 @@
 !define PRODUCT_NAME "Salt Minion"
 !define PRODUCT_NAME_OTHER "Salt"
-!define PRODUCT_PUBLISHER "SaltStack, Inc"
+!define PRODUCT_PUBLISHER "VMware, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_CALL_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-call.exe"
 !define PRODUCT_CP_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-cp.exe"

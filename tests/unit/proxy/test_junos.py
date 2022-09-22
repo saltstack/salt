@@ -6,9 +6,9 @@ from tests.support.mock import ANY, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
+    import jxmlease  # pylint: disable=unused-import
     from jnpr.junos.device import Device  # pylint: disable=unused-import
     from jnpr.junos.exception import ConnectError
-    import jxmlease  # pylint: disable=unused-import
 
     HAS_JUNOS = True
 except ImportError:

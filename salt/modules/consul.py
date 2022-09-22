@@ -74,9 +74,11 @@ def _query(
     if method == "GET":
         data = None
     else:
-        if data is None:
-            data = {}
-        data = salt.utils.json.dumps(data)
+        if data is not None:
+            if type(data) != str:
+                data = salt.utils.json.dumps(data)
+        else:
+            data = salt.utils.json.dumps({})
 
     result = salt.utils.http.query(
         url,
@@ -278,7 +280,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     _current = get(consul_url=consul_url, token=token, key=key)
 
     if "flags" in kwargs:
-        if kwargs["flags"] >= 0 and kwargs["flags"] <= 2 ** 64:
+        if kwargs["flags"] >= 0 and kwargs["flags"] <= 2**64:
             query_params["flags"] = kwargs["flags"]
 
     if "cas" in kwargs:
@@ -2293,7 +2295,7 @@ def acl_clone(consul_url=None, token=None, **kwargs):
     if res["res"]:
         ret["res"] = True
         ret["message"] = "ACL {} cloned.".format(kwargs["name"])
-        ret["ID"] = ret["data"]
+        ret["ID"] = res["data"]
     else:
         ret["res"] = False
         ret["message"] = "Cloning ACL item {} failed.".format(kwargs["name"])
@@ -2388,7 +2390,7 @@ def event_fire(consul_url=None, token=None, name=None, **kwargs):
     if res["res"]:
         ret["res"] = True
         ret["message"] = "Event {} fired.".format(name)
-        ret["data"] = ret["data"]
+        ret["data"] = res["data"]
     else:
         ret["res"] = False
         ret["message"] = "Cloning ACL item {} failed.".format(kwargs["name"])

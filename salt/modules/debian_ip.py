@@ -15,6 +15,7 @@ import time
 
 import jinja2
 import jinja2.exceptions
+
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict
@@ -1649,8 +1650,8 @@ def build_bond(iface, **settings):
     # Load kernel module
     __salt__["kmod.load"]("bonding")
 
-    # install ifenslave-2.6
-    __salt__["pkg.install"]("ifenslave-2.6")
+    # install ifenslave
+    __salt__["pkg.install"]("ifenslave")
 
     return _read_file(path)
 

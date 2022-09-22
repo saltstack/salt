@@ -1,4 +1,5 @@
 """
+Module for rebootmgr
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None

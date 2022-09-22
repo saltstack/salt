@@ -2563,7 +2563,7 @@ def replace(
             else:
                 result, nrepl = re.subn(
                     cpattern,
-                    repl.replace("\\", "\\\\") if backslash_literal else repl,
+                    repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                     r_data,
                     count,
                 )
@@ -2593,6 +2593,8 @@ def replace(
                     else r_data.splitlines(True)
                 )
                 new_file = result.splitlines(True)
+                if orig_file == new_file:
+                    has_changes = False
 
     except OSError as exc:
         raise CommandExecutionError(
@@ -2622,7 +2624,7 @@ def replace(
                         r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
                         result, nrepl = re.subn(
                             cpattern,
-                            repl.replace("\\", "\\\\") if backslash_literal else repl,
+                            repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                             r_data,
                             count,
                         )
@@ -4126,11 +4128,33 @@ def stats(path, hash_type=None, follow_symlinks=True):
     return ret
 
 
-def rmdir(path):
+def rmdir(path, recurse=False, verbose=False, older_than=None):
     """
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 3006.0
+        Changed return value for failure to a boolean.
 
     Remove the specified directory. Fails if a directory is not empty.
+
+    recurse
+        When ``recurse`` is set to ``True``, all empty directories
+        within the path are pruned.
+
+        .. versionadded:: 3006.0
+
+    verbose
+        When ``verbose`` is set to ``True``, a dictionary is returned
+        which contains more information about the removal process.
+
+        .. versionadded:: 3006.0
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -4138,6 +4162,9 @@ def rmdir(path):
 
         salt '*' file.rmdir /tmp/foo/
     """
+    ret = False
+    deleted = []
+    errors = []
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
@@ -4146,11 +4173,46 @@ def rmdir(path):
     if not os.path.isdir(path):
         raise SaltInvocationError("A valid directory was not specified.")
 
-    try:
-        os.rmdir(path)
-        return True
-    except OSError as exc:
-        return exc.strerror
+    if older_than:
+        now = time.time()
+        try:
+            older_than = now - (int(older_than) * 86400)
+            log.debug("Now (%s) looking for directories older than %s", now, older_than)
+        except (TypeError, ValueError) as exc:
+            older_than = 0
+            log.error("Unable to set 'older_than'. Defaulting to 0 days. (%s)", exc)
+
+    if recurse:
+        for root, dirs, _ in os.walk(path, topdown=False):
+            for subdir in dirs:
+                subdir_path = os.path.join(root, subdir)
+                if (
+                    older_than and os.path.getmtime(subdir_path) < older_than
+                ) or not older_than:
+                    try:
+                        log.debug("Removing '%s'", subdir_path)
+                        os.rmdir(subdir_path)
+                        deleted.append(subdir_path)
+                    except OSError as exc:
+                        errors.append([subdir_path, str(exc)])
+                        log.error("Could not remove '%s': %s", subdir_path, exc)
+        ret = not errors
+
+    if (older_than and os.path.getmtime(path) < older_than) or not older_than:
+        try:
+            log.debug("Removing '%s'", path)
+            os.rmdir(path)
+            deleted.append(path)
+            ret = True if ret or not recurse else False
+        except OSError as exc:
+            ret = False
+            errors.append([path, str(exc)])
+            log.error("Could not remove '%s': %s", path, exc)
+
+    if verbose:
+        return {"deleted": deleted, "errors": errors, "result": ret}
+    else:
+        return ret
 
 
 def remove(path):
@@ -5333,10 +5395,17 @@ def check_managed(
     serole=None,
     setype=None,
     serange=None,
+    follow_symlinks=False,
     **kwargs
 ):
     """
     Check to see what changes need to be made for a file
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -5388,6 +5457,7 @@ def check_managed(
         serole=serole,
         setype=setype,
         serange=serange,
+        follow_symlinks=follow_symlinks,
     )
     # Ignore permission for files written temporary directories
     # Files in any path will still be set correctly using get_managed()
@@ -5424,6 +5494,7 @@ def check_managed_changes(
     setype=None,
     serange=None,
     verify_ssl=True,
+    follow_symlinks=False,
     **kwargs
 ):
     """
@@ -5438,6 +5509,12 @@ def check_managed_changes(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -5481,14 +5558,10 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if (
-                urllib.parse.urlparse(source).scheme
-                in (
-                    "salt",
-                    "file",
-                )
-                or source.startswith("/")
-            ):
+            if urllib.parse.urlparse(source).scheme in (
+                "salt",
+                "file",
+            ) or source.startswith("/"):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
@@ -5508,6 +5581,7 @@ def check_managed_changes(
         serole=serole,
         setype=setype,
         serange=serange,
+        follow_symlinks=follow_symlinks,
     )
     __clean_tmp(sfn)
     return changes
@@ -5529,6 +5603,7 @@ def check_file_meta(
     setype=None,
     serange=None,
     verify_ssl=True,
+    follow_symlinks=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -5605,6 +5680,12 @@ def check_file_meta(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
     """
     changes = {}
     if not source_sum:
@@ -5612,7 +5693,9 @@ def check_file_meta(
 
     try:
         lstats = stats(
-            name, hash_type=source_sum.get("hash_type", None), follow_symlinks=False
+            name,
+            hash_type=source_sum.get("hash_type", None),
+            follow_symlinks=follow_symlinks,
         )
     except CommandExecutionError:
         lstats = {}

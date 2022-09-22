@@ -1,14 +1,13 @@
 import pytest
+
 import salt.modules.saltutil as saltutil
 import salt.states.saltmod as saltmod
 from tests.support.mock import create_autospec, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {saltmod: {"__opts__": {"__role": "testsuite"}}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {saltmod: {"__opts__": {"__role": "testsuite"}}}
 
 
 @pytest.fixture
