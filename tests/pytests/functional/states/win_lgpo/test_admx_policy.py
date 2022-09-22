@@ -6,7 +6,6 @@ import pytest
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as lgpo_mod
 import salt.states.win_lgpo as lgpo
-import salt.utils.files
 
 log = logging.getLogger(__name__)
 
