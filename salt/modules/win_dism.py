@@ -557,7 +557,7 @@ def remove_package(package, image=None, restart=False):
     return __salt__["cmd.run_all"](cmd)
 
 
-def get_kg_package_name(kb, image=None):
+def get_kb_package_name(kb, image=None):
     """
     Get the actual package name on the system based on the KB name
 
@@ -618,7 +618,7 @@ def remove_kb(kb, image=None, restart=False):
     """
     pkg_name = get_kb_package_name(kb=kb, image=image)
     if pkg_name is None:
-        msg = "{} not installed".format(search)
+        msg = "{} not installed".format(kb)
         raise CommandExecutionError(msg)
     log.debug("Found: %s", pkg_name)
     return remove_package(package=pkg_name, image=image, restart=restart)
