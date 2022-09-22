@@ -51,10 +51,26 @@ def osrelease():
     yield osrelease_grains.get("osrelease", None)
 
 
+@pytest.fixture(scope="function")
+def clean_comp():
+    reg_pol = pathlib.Path(os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol")
+    reg_pol.unlink(missing_ok=True)
+    yield reg_pol
+    reg_pol.unlink(missing_ok=True)
+
+
+@pytest.fixture(scope="function")
+def clean_user():
+    reg_pol = pathlib.Path(os.getenv("SystemRoot"),  "System32", "GroupPolicy", "User", "Registry.pol")
+    reg_pol.unlink(missing_ok=True)
+    yield reg_pol
+    reg_pol.unlink(missing_ok=True)
+
+
 @pytest.fixture(scope="module")
 def lgpo_bin():
-    if not os.path.exists(r"C:\Windows\System32\lgpo.exe"):
-        sys_dir = pathlib.Path(r"C:\Windows\System32")
+    sys_dir = pathlib.Path(os.getenv("SystemRoot"), "System32")
+    if not (sys_dir / "lgpo.exe").exists():
         zip_file = sys_dir / "lgpo.zip"
         # download lgpo.zip
         log.debug("Downloading LGPO.exe from Microsoft")
@@ -76,11 +92,11 @@ def lgpo_bin():
         log.debug("Cleaning up LGPO artifacts")
         zip_file.unlink(missing_ok=True)
         lgpo_bin.unlink(missing_ok=True)
-        if os.path.exists(sys_dir / "LGPO_30"):
+        if (sys_dir / "LGPO_30").exists():
             shutil.rmtree(str(sys_dir / "LGPO_30"))
     else:
         log.debug("LGPO.exe already present")
-        yield r"C:\Windows\System32\lgpo.exe"
+        yield str(sys_dir / "lgpo.exe")
 
 
 def _test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
@@ -394,9 +410,7 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
         ),
     ],
 )
-def test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
-    reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
-    reg_pol.unlink(missing_ok=True)
+def test_set_computer_policy(clean_comp, lgpo_bin, shell, name, setting, exp_regexes):
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
         shell=shell,
@@ -404,7 +418,6 @@ def test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
         setting=setting,
         exp_regexes=exp_regexes,
     )
-    reg_pol.unlink()
 
 
 @pytest.mark.parametrize(
@@ -467,9 +480,7 @@ def test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
         ),
     ],
 )
-def test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
-    reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\User\Registry.pol")
-    reg_pol.unlink(missing_ok=True)
+def test_set_user_policy(clean_user, lgpo_bin, shell, name, setting, exp_regexes):
     _test_set_user_policy(
         lgpo_bin=lgpo_bin,
         shell=shell,
@@ -477,10 +488,9 @@ def test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
         setting=setting,
         exp_regexes=exp_regexes,
     )
-    reg_pol.unlink()
 
 
-def test_set_computer_policy_windows_update(lgpo_bin, shell):
+def test_set_computer_policy_windows_update(clean_comp, lgpo_bin, shell):
     """
     Test setting/unsetting/changing WindowsUpdate policy
     """
@@ -587,8 +597,6 @@ def test_set_computer_policy_windows_update(lgpo_bin, shell):
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallFourthWeek[\s]*DELETE"
             )
 
-    reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
-    reg_pol.unlink(missing_ok=True)
     # enable Automatic Updates
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
@@ -597,7 +605,7 @@ def test_set_computer_policy_windows_update(lgpo_bin, shell):
         setting=the_policy,
         exp_regexes=the_policy_check_enabled,
     )
-    reg_pol.unlink(missing_ok=True)
+    clean_comp.unlink(missing_ok=True)
     # disable Configure Automatic Updates
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
@@ -606,7 +614,7 @@ def test_set_computer_policy_windows_update(lgpo_bin, shell):
         setting="Disabled",
         exp_regexes=the_policy_check_disabled,
     )
-    reg_pol.unlink(missing_ok=True)
+    clean_comp.unlink(missing_ok=True)
     # set Configure Automatic Updates to 'Not Configured'
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
@@ -619,17 +627,13 @@ def test_set_computer_policy_windows_update(lgpo_bin, shell):
             r" PARSING COMPLETED."
         ],
     )
-    # Cleanup
-    reg_pol.unlink(missing_ok=True)
 
 
-def test_set_computer_policy_multiple_policies(lgpo_bin, shell):
+def test_set_computer_policy_multiple_policies(clean_comp, lgpo_bin, shell):
     """
     Tests setting several ADMX policies in succession and validating the
     configuration
     """
-    reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
-    reg_pol.unlink(missing_ok=True)
     # set one policy
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
@@ -696,4 +700,3 @@ def test_set_computer_policy_multiple_policies(lgpo_bin, shell):
             r"\\AU[\s]*AllowMUUpdateService[\s]*DELETE",
         ],
     )
-    reg_pol.unlink()
