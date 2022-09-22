@@ -203,11 +203,17 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 zypper.__zypper__.xml.call("crashme")
 
+        output_to_user = "Output to user"
+        sniffer = RunSniffer(stdout=output_to_user, retcode=1)
+        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
             with self.assertRaisesRegex(
-                CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"
+                CommandExecutionError,
+                "^Zypper command failure: {}$".format(output_to_user),
             ):
                 zypper.__zypper__.call("crashme again")
 
+        sniffer = RunSniffer(retcode=1)
+        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
             zypper.__zypper__.noraise.call("stay quiet")
             self.assertEqual(zypper.__zypper__.error_msg, "Check Zypper's logs.")
 
