@@ -171,12 +171,10 @@ def test_dynamic_file_roots(tmp_path):
     assert "dynamo.sls" in ret2
 
 
-pytest.mark.skipif(
+@pytest.mark.skipif(
     salt.utils.platform.is_windows(),
     reason="Windows does not support this master function",
 )
-
-
 def test_update_no_change():
     # process all changes that have happen
     # changes will always take place the first time during testing
