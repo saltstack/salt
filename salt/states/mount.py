@@ -70,6 +70,7 @@ def mounted(
     extra_mount_ignore_fs_keys=None,
     extra_mount_translate_options=None,
     hidden_opts=None,
+    bind_mount_copy_active_opts=True,
     **kwargs
 ):
     """
@@ -186,6 +187,12 @@ def mounted(
         as part of the state application
 
         .. versionadded:: 2015.8.2
+
+    bind_mount_copy_active_opts
+        If set to ``False``, this option disables the default behavior of
+        copying the options from the bind mount if it was found to be active.
+
+        .. versionadded:: 3006.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
@@ -242,13 +249,14 @@ def mounted(
                 while True:
                     if _device in active:
                         _real_device = active[_device]["device"]
-                        opts = list(
-                            set(
-                                opts
-                                + active[_device]["opts"]
-                                + active[_device]["superopts"]
+                        if bind_mount_copy_active_opts:
+                            opts = sorted(
+                                set(
+                                    opts
+                                    + active[_device]["opts"]
+                                    + active[_device]["superopts"]
+                                )
                             )
-                        )
                         active[real_name]["opts"].append("bind")
                         break
                     _device = os.path.dirname(_device)
@@ -256,13 +264,14 @@ def mounted(
             else:
                 # Remote file systems act differently.
                 if _device in active:
-                    opts = list(
-                        set(
-                            opts
-                            + active[_device]["opts"]
-                            + active[_device]["superopts"]
+                    if bind_mount_copy_active_opts:
+                        opts = sorted(
+                            set(
+                                opts
+                                + active[_device]["opts"]
+                                + active[_device]["superopts"]
+                            )
                         )
-                    )
                     active[real_name]["opts"].append("bind")
                 real_device = active[real_name]["device"]
         else:
@@ -407,6 +416,7 @@ def mounted(
                 if extra_mount_translate_options:
                     mount_translate_options.update(extra_mount_translate_options)
 
+                trigger_remount = []
                 for opt in opts:
                     if opt in mount_translate_options:
                         opt = mount_translate_options[opt]
@@ -460,58 +470,65 @@ def mounted(
                         and opt not in mount_ignore_fs_keys.get(fstype, [])
                         and opt not in mount_invisible_keys
                     ):
-                        if __opts__["test"]:
-                            ret["result"] = None
-                            ret[
-                                "comment"
-                            ] = "Remount would be forced because options ({}) changed".format(
-                                opt
+                        trigger_remount.append(opt)
+
+                if trigger_remount:
+                    if __opts__["test"]:
+                        ret["result"] = None
+                        ret[
+                            "comment"
+                        ] = "Remount would be forced because options ({}) changed".format(
+                            ",".join(sorted(trigger_remount))
+                        )
+                        return ret
+                    else:
+                        # Some file systems require umounting and mounting if options change
+                        # add others to list that require similiar functionality
+                        if fstype in ["nfs", "cvfs"] or fstype.startswith("fuse"):
+                            ret["changes"]["umount"] = (
+                                "Forced unmount and mount because "
+                                + "options ({}) changed".format(
+                                    ",".join(sorted(trigger_remount))
+                                )
                             )
-                            return ret
-                        else:
-                            # Some file systems require umounting and mounting if options change
-                            # add others to list that require similiar functionality
-                            if fstype in ["nfs", "cvfs"] or fstype.startswith("fuse"):
-                                ret["changes"]["umount"] = (
-                                    "Forced unmount and mount because "
-                                    + "options ({}) changed".format(opt)
-                                )
-                                unmount_result = __salt__["mount.umount"](real_name)
-                                if unmount_result is True:
-                                    mount_result = __salt__["mount.mount"](
-                                        real_name,
-                                        device,
-                                        mkmnt=mkmnt,
-                                        fstype=fstype,
-                                        opts=opts,
-                                    )
-                                    ret["result"] = mount_result
-                                else:
-                                    ret["result"] = False
-                                    ret["comment"] = "Unable to unmount {}: {}.".format(
-                                        real_name, unmount_result
-                                    )
-                                    return ret
-                            else:
-                                ret["changes"]["umount"] = (
-                                    "Forced remount because "
-                                    + "options ({}) changed".format(opt)
-                                )
-                                remount_result = __salt__["mount.remount"](
+                            unmount_result = __salt__["mount.umount"](real_name)
+                            if unmount_result is True:
+                                mount_result = __salt__["mount.mount"](
                                     real_name,
                                     device,
                                     mkmnt=mkmnt,
                                     fstype=fstype,
                                     opts=opts,
                                 )
-                                ret["result"] = remount_result
-                                # Cleanup after the remount, so we
-                                # don't write remount into fstab
-                                if "remount" in opts:
-                                    opts.remove("remount")
+                                ret["result"] = mount_result
+                            else:
+                                ret["result"] = False
+                                ret["comment"] = "Unable to unmount {}: {}.".format(
+                                    real_name, unmount_result
+                                )
+                                return ret
+                        else:
+                            ret["changes"]["umount"] = (
+                                "Forced remount because "
+                                + "options ({}) changed".format(
+                                    ",".join(sorted(trigger_remount))
+                                )
+                            )
+                            remount_result = __salt__["mount.remount"](
+                                real_name,
+                                device,
+                                mkmnt=mkmnt,
+                                fstype=fstype,
+                                opts=opts,
+                            )
+                            ret["result"] = remount_result
+                            # Cleanup after the remount, so we
+                            # don't write remount into fstab
+                            if "remount" in opts:
+                                opts.remove("remount")
 
-                            # Update the cache
-                            update_mount_cache = True
+                        # Update the cache
+                        update_mount_cache = True
 
                 mount_cache = __salt__["mount.read_mount_cache"](real_name)
                 if "opts" in mount_cache:
