@@ -166,7 +166,7 @@ def _generate_token(minion_id, issue_params=None, wrap=None):
     payload["meta"] = _get_metadata(minion_id, _config("metadata:token"))
     client = _get_master_client()
     log.trace("Sending token creation request to Vault.")
-    res = client.post(endpoint, payload, wrap=wrap)
+    res = client.post(endpoint, payload=payload, wrap=wrap)
 
     if wrap:
         return _filter_wrapped(res)
@@ -742,7 +742,10 @@ def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
 
 
 def _parse_issue_params(params, issue_type=None, params_from_master=False):
-    if not _config("issue:allow_minion_override_params") and not params_from_master:
+    if (
+        not (_config("issue:allow_minion_override_params") and not params_from_master)
+        or params is None
+    ):
         params = {}
 
     no_override_params = [
@@ -777,7 +780,10 @@ def _parse_issue_params(params, issue_type=None, params_from_master=False):
     ret = {}
 
     for valid_param, vault_param in valid_params.items():
-        if valid_param in configured_params:
+        if (
+            valid_param in configured_params
+            and configured_params[valid_param] is not None
+        ):
             ret[vault_param] = configured_params[valid_param]
         if valid_param in params and vault_param not in no_override_params:
             ret[vault_param] = params[valid_param]
