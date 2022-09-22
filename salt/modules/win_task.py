@@ -539,7 +539,7 @@ def create_task(
 
     .. code-block:: bash
 
-        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time=01:00
+        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time='"01:00"'
     """
     # Check for existing task
     if name in list_tasks(location) and not force:
