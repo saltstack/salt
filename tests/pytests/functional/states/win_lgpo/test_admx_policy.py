@@ -58,8 +58,8 @@ def test_allow_telemetry_subsequent_runs():
     result = lgpo_mod.set_computer_policy(name="AllowTelemetry", setting="Disabled")
     assert result is True
     expected = {
-        "new": {"Computer Configuration": {"Manage preview builds": "Disabled"}},
-        "old": {"Computer Configuration": {"Manage preview builds": "Not Configured"}},
+        "new": {"Computer Configuration": {"RA_Unsolicit": "Disabled"}},
+        "old": {"Computer Configuration": {"RA_Unsolicit": "Not Configured"}},
     }
     # Set RA_Unsolicit with a state. AllowTelemetry should NOT be in the results
     result = lgpo.set_(
