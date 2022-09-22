@@ -53,7 +53,9 @@ def osrelease():
 
 @pytest.fixture(scope="function")
 def clean_comp():
-    reg_pol = pathlib.Path(os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol")
+    reg_pol = pathlib.Path(
+        os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol"
+    )
     reg_pol.unlink(missing_ok=True)
     yield reg_pol
     reg_pol.unlink(missing_ok=True)
@@ -61,7 +63,9 @@ def clean_comp():
 
 @pytest.fixture(scope="function")
 def clean_user():
-    reg_pol = pathlib.Path(os.getenv("SystemRoot"),  "System32", "GroupPolicy", "User", "Registry.pol")
+    reg_pol = pathlib.Path(
+        os.getenv("SystemRoot"),  "System32", "GroupPolicy", "User", "Registry.pol"
+    )
     reg_pol.unlink(missing_ok=True)
     yield reg_pol
     reg_pol.unlink(missing_ok=True)
