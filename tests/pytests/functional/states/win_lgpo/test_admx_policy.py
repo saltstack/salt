@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 
 import pytest
@@ -44,13 +45,19 @@ def configure_loader_modules(tmp_path):
     }
 
 
-def test_allow_telemetry_subsequent_runs():
+@pytest.fixture(scope="function")
+def clean_comp():
+    reg_pol = pathlib.Path(os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol")
+    reg_pol.unlink(missing_ok=True)
+    yield reg_pol
+    reg_pol.unlink(missing_ok=True)
+
+
+def test_allow_telemetry_subsequent_runs(clean_comp):
     """
     Tests that the AllowTelemetry policy is applied correctly and that it
     doesn't appear in subsequent group policy states as having changed
     """
-    reg_pol = pathlib.Path(r"C:\Windows\System32\GroupPolicy\Machine\Registry.pol")
-    reg_pol.unlink(missing_ok=True)
     # Set an initial state for RA_Unsolicit
     result = lgpo_mod.set_computer_policy(name="RA_Unsolicit", setting="Not Configured")
     assert result is True
@@ -75,4 +82,3 @@ def test_allow_telemetry_subsequent_runs():
         policy_class="Machine",
     )
     assert result["changes"] == {}
-    reg_pol.unlink()
