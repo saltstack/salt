@@ -29,10 +29,12 @@ def test_get():
     Tests the return of get function
     """
     mock_cmd = MagicMock(return_value=1)
-    with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
-        assert linux_sysctl.get("net.ipv4.ip_forward") == 1
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
+            assert linux_sysctl.get("net.ipv4.ip_forward") == 1
     mock_cmd.assert_called_once_with(
-        ["sysctl", "-n", "net.ipv4.ip_forward"], python_shell=False
+        ["/usr/sbin/sysctl", "-n", "net.ipv4.ip_forward"], python_shell=False
     )
 
 
@@ -48,14 +50,18 @@ net.ipv4.ip_forward = 1
 net.ipv4.tcp_rmem = 4096	131072	6291456
 """
     )
-    with patch.dict(linux_sysctl.__salt__, {"cmd.run_stdout": mock_cmd}):
-        assert linux_sysctl.show() == {
-            "kernel.core_pattern": "|/usr/share/kdump-tools/dump-core %p %s %t %e",
-            "kernel.printk": "3 4 1 3",
-            "net.ipv4.ip_forward": "1",
-            "net.ipv4.tcp_rmem": "4096\t131072\t6291456",
-        }
-    mock_cmd.assert_called_once_with(["sysctl", "-a"], output_loglevel="trace")
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch.dict(linux_sysctl.__salt__, {"cmd.run_stdout": mock_cmd}):
+            assert linux_sysctl.show() == {
+                "kernel.core_pattern": "|/usr/share/kdump-tools/dump-core %p %s %t %e",
+                "kernel.printk": "3 4 1 3",
+                "net.ipv4.ip_forward": "1",
+                "net.ipv4.tcp_rmem": "4096\t131072\t6291456",
+            }
+    mock_cmd.assert_called_once_with(
+        ["/usr/sbin/sysctl", "-a"], output_loglevel="trace"
+    )
 
 
 def test_show_config_file(tmp_path):
@@ -122,11 +128,14 @@ def test_assign_cmd_failed():
             "stdout": "net.ipv4.ip_forward = backward",
         }
         mock_cmd = MagicMock(return_value=cmd)
-        with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
-            with pytest.raises(CommandExecutionError):
-                linux_sysctl.assign("net.ipv4.ip_forward", "backward")
+        which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+        with patch("salt.utils.path.which", which_mock):
+            with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
+                with pytest.raises(CommandExecutionError):
+                    linux_sysctl.assign("net.ipv4.ip_forward", "backward")
         mock_cmd.assert_called_once_with(
-            ["sysctl", "-w", "net.ipv4.ip_forward=backward"], python_shell=False
+            ["/usr/sbin/sysctl", "-w", "net.ipv4.ip_forward=backward"],
+            python_shell=False,
         )
 
 
@@ -146,7 +155,7 @@ def test_assign_success():
         with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
             assert linux_sysctl.assign("net.ipv4.ip_forward", 1) == ret
         mock_cmd.assert_called_once_with(
-            ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
+            ["/usr/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
         )
 
 
@@ -171,16 +180,19 @@ def test_persist_int(tmp_path):
         config_file.write(config_file_content)
     mock_run = MagicMock(return_value="2")
     mock_run_all = MagicMock()
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("fs.suid_dumpable", 2, config=config) == "Already set"
-        )
-        mock_run.assert_called_once_with(
-            ["sysctl", "-n", "fs.suid_dumpable"], python_shell=False
-        )
-        mock_run_all.assert_not_called()
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("fs.suid_dumpable", 2, config=config)
+                == "Already set"
+            )
+            mock_run.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-n", "fs.suid_dumpable"], python_shell=False
+            )
+            mock_run_all.assert_not_called()
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
@@ -192,11 +204,15 @@ def test_persist_no_conf_failure():
     Tests adding of config file failure
     """
     fopen_mock = MagicMock(side_effect=OSError())
-    with patch("os.path.isfile", MagicMock(return_value=False)), patch(
-        "os.path.exists", MagicMock(return_value=False)
-    ), patch("os.makedirs", MagicMock()), patch("salt.utils.files.fopen", fopen_mock):
-        with pytest.raises(CommandExecutionError):
-            linux_sysctl.persist("net.ipv4.ip_forward", 42, config=None)
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.isfile", MagicMock(return_value=False)), patch(
+            "os.path.exists", MagicMock(return_value=False)
+        ), patch("os.makedirs", MagicMock()), patch(
+            "salt.utils.files.fopen", fopen_mock
+        ):
+            with pytest.raises(CommandExecutionError):
+                linux_sysctl.persist("net.ipv4.ip_forward", 42, config=None)
     fopen_mock.called_once()
 
 
@@ -219,20 +235,22 @@ def test_persist_no_conf_success():
         sys_cmd = "systemd 208\n+PAM +LIBWRAP"
         mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-        with patch("salt.utils.files.fopen", mock_open()) as m_open, patch.dict(
-            linux_sysctl.__context__, {"salt.utils.systemd.version": 232}
-        ), patch.dict(
-            linux_sysctl.__salt__,
-            {"cmd.run_stdout": mock_sys_cmd, "cmd.run_all": mock_asn_cmd},
-        ), patch.dict(
-            systemd.__context__,
-            {"salt.utils.systemd.booted": True, "salt.utils.systemd.version": 232},
-        ):
-            linux_sysctl.persist("net.ipv4.ip_forward", 1, config=config)
-            writes = m_open.write_calls()
-            assert writes == ["#\n# Kernel sysctl configuration\n#\n"], writes
+        which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+        with patch("salt.utils.path.which", which_mock):
+            with patch("salt.utils.files.fopen", mock_open()) as m_open, patch.dict(
+                linux_sysctl.__context__, {"salt.utils.systemd.version": 232}
+            ), patch.dict(
+                linux_sysctl.__salt__,
+                {"cmd.run_stdout": mock_sys_cmd, "cmd.run_all": mock_asn_cmd},
+            ), patch.dict(
+                systemd.__context__,
+                {"salt.utils.systemd.booted": True, "salt.utils.systemd.version": 232},
+            ):
+                linux_sysctl.persist("net.ipv4.ip_forward", 1, config=config)
+                writes = m_open.write_calls()
+                assert writes == ["#\n# Kernel sysctl configuration\n#\n"], writes
         mock_asn_cmd.assert_called_once_with(
-            ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
+            ["/usr/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
         )
 
 
@@ -254,17 +272,19 @@ def test_persist_read_conf_success():
         sys_cmd = "systemd 208\n+PAM +LIBWRAP"
         mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-        with patch("salt.utils.files.fopen", mock_open()), patch.dict(
-            linux_sysctl.__context__, {"salt.utils.systemd.version": 232}
-        ), patch.dict(
-            linux_sysctl.__salt__,
-            {"cmd.run_stdout": mock_sys_cmd, "cmd.run_all": mock_asn_cmd},
-        ), patch.dict(
-            systemd.__context__, {"salt.utils.systemd.booted": True}
-        ):
-            assert linux_sysctl.persist("net.ipv4.ip_forward", 1) == "Updated"
+        which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+        with patch("salt.utils.path.which", which_mock):
+            with patch("salt.utils.files.fopen", mock_open()), patch.dict(
+                linux_sysctl.__context__, {"salt.utils.systemd.version": 232}
+            ), patch.dict(
+                linux_sysctl.__salt__,
+                {"cmd.run_stdout": mock_sys_cmd, "cmd.run_all": mock_asn_cmd},
+            ), patch.dict(
+                systemd.__context__, {"salt.utils.systemd.booted": True}
+            ):
+                assert linux_sysctl.persist("net.ipv4.ip_forward", 1) == "Updated"
         mock_asn_cmd.assert_called_once_with(
-            ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
+            ["/usr/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
         )
 
 
@@ -295,16 +315,19 @@ net.ipv4.tcp_rmem	=	4096	131072	6291456
         }
     )
 
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("net.ipv4.ip_forward", "0", config=config) == "Updated"
-        )
-        mock_run.assert_not_called()
-        mock_run_all.assert_called_once_with(
-            ["sysctl", "-w", "net.ipv4.ip_forward=0"], python_shell=False
-        )
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("net.ipv4.ip_forward", "0", config=config)
+                == "Updated"
+            )
+            mock_run.assert_not_called()
+            mock_run_all.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"], python_shell=False
+            )
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
@@ -333,17 +356,19 @@ def test_persist_value_with_spaces_already_set(tmp_path):
         config_file.write(config_file_content)
     mock_run = MagicMock(return_value=value)
     mock_run_all = MagicMock()
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("kernel.core_pattern", value, config=config)
-            == "Already set"
-        )
-        mock_run.assert_called_once_with(
-            ["sysctl", "-n", "kernel.core_pattern"], python_shell=False
-        )
-        mock_run_all.assert_not_called()
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("kernel.core_pattern", value, config=config)
+                == "Already set"
+            )
+            mock_run.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-n", "kernel.core_pattern"], python_shell=False
+            )
+            mock_run_all.assert_not_called()
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
@@ -368,19 +393,22 @@ def test_persist_value_with_spaces_already_configured(tmp_path):
             "stdout": "kernel.core_pattern = " + value,
         }
     )
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("kernel.core_pattern", value, config=config)
-            == "Updated"
-        )
-        mock_run.assert_called_once_with(
-            ["sysctl", "-n", "kernel.core_pattern"], python_shell=False
-        )
-        mock_run_all.assert_called_once_with(
-            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
-        )
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("kernel.core_pattern", value, config=config)
+                == "Updated"
+            )
+            mock_run.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-n", "kernel.core_pattern"], python_shell=False
+            )
+            mock_run_all.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-w", "kernel.core_pattern=" + value],
+                python_shell=False,
+            )
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
@@ -404,17 +432,20 @@ def test_persist_value_with_spaces_update_config(tmp_path):
             "stdout": "kernel.core_pattern = " + value,
         }
     )
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("kernel.core_pattern", value, config=config)
-            == "Updated"
-        )
-        mock_run.assert_not_called()
-        mock_run_all.assert_called_once_with(
-            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
-        )
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("kernel.core_pattern", value, config=config)
+                == "Updated"
+            )
+            mock_run.assert_not_called()
+            mock_run_all.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-w", "kernel.core_pattern=" + value],
+                python_shell=False,
+            )
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
@@ -435,16 +466,19 @@ def test_persist_value_with_spaces_new_file(tmp_path):
             "stdout": "kernel.core_pattern = " + value,
         }
     )
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("kernel.core_pattern", value, config=config)
-            == "Updated"
-        )
-        mock_run_all.assert_called_once_with(
-            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
-        )
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("kernel.core_pattern", value, config=config)
+                == "Updated"
+            )
+            mock_run_all.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-w", "kernel.core_pattern=" + value],
+                python_shell=False,
+            )
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()
@@ -473,16 +507,19 @@ def test_persist_value_with_tabs_new_file(tmp_path):
             "stdout": "kernel.core_pattern = " + value,
         }
     )
-    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
-        linux_sysctl.__salt__, {"cmd.run_all": mock_run_all}
-    ):
-        assert (
-            linux_sysctl.persist("kernel.core_pattern", value, config=config)
-            == "Updated"
-        )
-        mock_run_all.assert_called_once_with(
-            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
-        )
+    which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+    with patch("salt.utils.path.which", which_mock):
+        with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+            linux_sysctl.__salt__, {"cmd.run_all": mock_run_all}
+        ):
+            assert (
+                linux_sysctl.persist("kernel.core_pattern", value, config=config)
+                == "Updated"
+            )
+            mock_run_all.assert_called_once_with(
+                ["/usr/sbin/sysctl", "-w", "kernel.core_pattern=" + value],
+                python_shell=False,
+            )
     assert os.path.isfile(config)
     with fopen(config, encoding="utf-8") as config_file:
         written = config_file.read()

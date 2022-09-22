@@ -118,7 +118,7 @@ def get(name):
         salt '*' sysctl.get net.ipv4.ip_forward
     """
     _sysctl = "{}".format(_which("sysctl"))
-    cmd = [_sysctl, "-a"]
+    cmd = [_sysctl, "-n", name]
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -143,7 +143,7 @@ def assign(name, value):
 
     ret = {}
     _sysctl = "{}".format(_which("sysctl"))
-    cmd = [_sysctl, "-a"]
+    cmd = [_sysctl, "-w", "{}={}".format(name, value)]
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
