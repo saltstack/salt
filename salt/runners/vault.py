@@ -133,8 +133,13 @@ def generate_new_token(
             "auth": {},
         }
 
-        token = _generate_token(minion_id, issue_params=issue_params)
-        ret.update(token)
+        wrap = _config("issue:wrap")
+        token = _generate_token(minion_id, issue_params=issue_params, wrap=wrap)
+
+        if wrap:
+            ret.update(token)
+        else:
+            ret["auth"] = token.serialize_for_minion()
 
         return ret
     except Exception as err:  # pylint: disable=broad-except

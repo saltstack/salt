@@ -866,7 +866,7 @@ def clear_token_cache(connection_only=True):
         Defaults to True.
     """
     log.debug("Deleting vault connection cache.")
-    vault.clear_cache(__opts__, connection_only=connection_only)
+    vault.clear_cache(__opts__, connection=connection_only)
 
 
 def policy_fetch(policy):
