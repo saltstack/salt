@@ -152,8 +152,10 @@ def test_assign_success():
         }
         ret = {"net.ipv4.ip_forward": "1"}
         mock_cmd = MagicMock(return_value=cmd)
-        with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
-            assert linux_sysctl.assign("net.ipv4.ip_forward", 1) == ret
+        which_mock = MagicMock(return_value="/usr/sbin/sysctl")
+        with patch("salt.utils.path.which", which_mock):
+            with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
+                assert linux_sysctl.assign("net.ipv4.ip_forward", 1) == ret
         mock_cmd.assert_called_once_with(
             ["/usr/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
         )
