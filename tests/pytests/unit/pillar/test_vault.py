@@ -117,6 +117,7 @@ def test_ext_pillar_nesting_key(is_v2_false, vault_kvv1):
         ("no/template/in/use", ["no/template/in/use"]),
         ("salt/minions/{minion}", ["salt/minions/test-minion"]),
         ("salt/roles/{pillar[role]}", ["salt/roles/foo"]),
+        ("salt/roles/{pillar[nonexistent]}", []),
     ],
 )
 def test_get_paths(pattern, expected):
@@ -184,7 +185,11 @@ def test_ext_pillar_merging(is_v2_false):
             assert ext_pillar == expected
 
 
-def text_ext_pillar_disabled_during_policy_pillar_rendering():
+def test_ext_pillar_disabled_during_policy_pillar_rendering():
+    """
+    Ensure ext_pillar returns an empty dict when called during pillar
+    template rendering to prevent a cyclic dependency.
+    """
     mock_version = Mock()
     mock_vault = Mock()
     extra = {"_vault_runner_is_compiling_pillar_templates": True}
@@ -197,3 +202,14 @@ def text_ext_pillar_disabled_during_policy_pillar_rendering():
         )
         assert mock_version.call_count == 0
         assert mock_vault.call_count == 0
+
+
+def test_invalid_config(caplog):
+    """
+    Ensure an empty dict is returned and an error is logged in case
+    the config does not contain path=<...>
+    """
+    with caplog.at_level(logging.ERROR):
+        ext_pillar = vault.ext_pillar("testminion", {}, "secret/path")
+        assert ext_pillar == {}
+        assert "is not a valid Vault ext_pillar config" in caplog.text
