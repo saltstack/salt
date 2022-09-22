@@ -76,7 +76,7 @@ class SaltVersionsInfo(type):
     MAGNESIUM     = SaltVersion("Magnesium"    , info=3002,       released=True)
     ALUMINIUM     = SaltVersion("Aluminium"    , info=3003,       released=True)
     SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
-    PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005)
+    PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005,       released=True)
     SULFUR        = SaltVersion("Sulfur"       , info=3006)
     CHLORINE      = SaltVersion("Chlorine"     , info=3007)
     ARGON         = SaltVersion("Argon"        , info=3008)
