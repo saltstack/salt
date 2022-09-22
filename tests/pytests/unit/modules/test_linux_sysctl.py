@@ -5,6 +5,7 @@ Tests for salt.modules.linux_sysctl module
 """
 
 import pytest
+
 import salt.modules.linux_sysctl as linux_sysctl
 import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError

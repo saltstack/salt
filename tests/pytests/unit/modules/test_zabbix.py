@@ -4,6 +4,7 @@
 """
 
 import pytest
+
 import salt.modules.config as config
 import salt.modules.zabbix as zabbix
 from salt.exceptions import SaltException

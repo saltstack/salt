@@ -6,6 +6,7 @@
 import os
 
 import pytest
+
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.zypperpkg as zypper
 from tests.support.mock import MagicMock, patch

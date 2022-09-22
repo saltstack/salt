@@ -230,7 +230,7 @@ pyasn1==0.4.8
     #   -r requirements/windows.txt
     #   pyasn1-modules
     #   rsa
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
@@ -241,7 +241,7 @@ pycurl==7.43.0.5 ; python_version <= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via -r requirements/windows.txt
@@ -255,6 +255,8 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -262,9 +264,9 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc17 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc20 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.4.0
+pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
 pytest-skip-markers==1.2.0
     # via
@@ -284,6 +286,7 @@ pytest-timeout==1.4.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -355,7 +358,7 @@ sed==0.3.1
     # via -r requirements/static/ci/windows.in
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/windows.txt
 six==1.16.0
     # via

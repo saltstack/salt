@@ -3,6 +3,7 @@ import sys
 import warnings
 
 import pytest
+
 from salt.utils.functools import namespaced_function
 from tests.conftest import CODE_DIR
 

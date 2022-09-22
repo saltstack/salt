@@ -14,8 +14,8 @@ import salt.utils.beacons
 
 try:
     # pylint: disable=no-name-in-module
-    from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
 
     # pylint: enable=no-name-in-module
 

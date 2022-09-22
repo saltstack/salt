@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+
 import salt.proxy.restconf as restconf
 from tests.support.mock import patch
 

@@ -6,6 +6,9 @@ import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import pytest
+import zmq
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
@@ -22,17 +25,16 @@ import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-import zmq
-from pytestshellutils.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
 
 pytestmark = [
+    pytest.mark.skip_on_freebsd(reason="Temporarily skipped on FreeBSD."),
     pytest.mark.skip_on_spawning_platform(
         reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
-    )
+    ),
 ]
 
 

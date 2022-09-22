@@ -4,6 +4,7 @@ import subprocess
 
 import psutil
 import pytest
+
 import salt.exceptions
 
 pytestmark = [

@@ -99,6 +99,7 @@ try:
         import win32con
         import win32file
         import win32security
+
         import salt.platform.win
 
         HAS_WINDOWS_MODULES = True

@@ -5,8 +5,9 @@ import logging
 import time
 
 import pytest
-import salt.modules.mysql as mysqlmod
 from pytestshellutils.utils import format_callback_to_string
+
+import salt.modules.mysql as mysqlmod
 from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 log = logging.getLogger(__name__)

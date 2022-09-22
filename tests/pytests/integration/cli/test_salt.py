@@ -11,9 +11,10 @@ import tempfile
 import time
 
 import pytest
+from pytestshellutils.utils.processes import ProcessResult, terminate_process
+
 import salt.defaults.exitcodes
 import salt.utils.path
-from pytestshellutils.utils.processes import ProcessResult, terminate_process
 
 log = logging.getLogger(__name__)
 

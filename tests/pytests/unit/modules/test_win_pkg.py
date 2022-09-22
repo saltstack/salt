@@ -2,6 +2,7 @@
 Tests for the win_pkg module
 """
 import pytest
+
 import salt.modules.config as config
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg

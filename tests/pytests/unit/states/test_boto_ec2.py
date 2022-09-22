@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.boto_ec2 as boto_ec2
 from tests.support.mock import MagicMock, patch
 

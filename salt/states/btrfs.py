@@ -1,4 +1,6 @@
 """
+Manage BTRFS file systems.
+
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None

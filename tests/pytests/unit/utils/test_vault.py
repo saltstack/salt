@@ -7,6 +7,7 @@ import threading
 from copy import copy
 
 import pytest
+
 import salt.utils.files
 import salt.utils.vault as vault
 from tests.support.mock import ANY, MagicMock, Mock, patch

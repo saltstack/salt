@@ -13,11 +13,12 @@ import datetime
 import logging
 import os
 
+import yaml
+
 import salt.utils.event
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.yaml
-import yaml
 
 try:
     import dateutil.parser as dateutil_parser

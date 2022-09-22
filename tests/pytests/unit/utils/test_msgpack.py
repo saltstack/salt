@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.msgpack
 from tests.support.mock import MagicMock, patch
 
