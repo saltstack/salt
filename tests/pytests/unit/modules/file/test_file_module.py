@@ -364,8 +364,7 @@ def test_group_to_gid_int():
 
 def test__get_flags():
     """
-    Tests if flags are passed in either of the following formats:
-    integer, single flag string, list of strings, regex flag
+    Test to ensure _get_flags returns a regex flag
     """
     flags = 10
     ret = filemod._get_flags(flags)
