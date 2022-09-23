@@ -1,5 +1,8 @@
 import time
 
+# this needs to be from! see test_fromisoformat_polyfill
+from datetime import datetime
+
 import pytest
 import requests
 
@@ -2229,6 +2232,28 @@ def test_vault_client_token_renew_increment_is_honored(
 
 
 @pytest.mark.parametrize(
+    "creation_time,expected",
+    [
+        ("2022-08-22T17:16:21-09:30", 1661222781),
+        ("2022-08-22T17:16:21-01:00", 1661192181),
+        ("2022-08-22T17:16:21+00:00", 1661188581),
+        ("2022-08-22T17:16:21+02:00", 1661181381),
+        ("2022-08-22T17:16:21+12:30", 1661143581),
+    ],
+)
+def test_fromisoformat_polyfill(creation_time, expected):
+    # def wrap_datetime(*args):
+    #     return datetime.datetime(*args)
+    with patch("salt.utils.vault.datetime.datetime") as d:
+        d.fromisoformat.side_effect = AttributeError
+        # needs from datetime import datetime, otherwise results
+        # in infinite recursion
+        d.side_effect = lambda *args: datetime(*args)
+        res = vault._fromisoformat(creation_time)
+        assert res == expected
+
+
+@pytest.mark.parametrize(
     "creation_time",
     [
         1661188581,
@@ -2262,15 +2287,15 @@ def test_vault_lease_creation_time_normalization(creation_time):
 
 
 @pytest.mark.parametrize(
-    "t,duration,offset,expected",
+    "tock,duration,offset,expected",
     [
-        (int(time.time()), 50, 0, True),
-        (int(time.time() - 50), 10, 0, False),
-        (int(time.time()), 60, 10, True),
-        (int(time.time()), 60, 600, False),
+        (0, 50, 0, True),
+        (50, 10, 0, False),
+        (0, 60, 10, True),
+        (0, 60, 600, False),
     ],
 )
-def test_vault_lease_is_valid_accounts_for_time(t, duration, offset, expected):
+def test_vault_lease_is_valid_accounts_for_time(tock, duration, offset, expected):
     """
     Ensure lease validity is checked correctly and can look into the future
     """
@@ -2278,22 +2303,23 @@ def test_vault_lease_is_valid_accounts_for_time(t, duration, offset, expected):
         "lease_id": "id",
         "renewable": False,
         "lease_duration": duration,
-        "creation_time": t,
+        "creation_time": 0,
     }
-    res = vault.VaultLease(**data)
-    assert res.is_valid(offset) == expected
+    with patch("salt.utils.vault.time.time", return_value=tock):
+        res = vault.VaultLease(**data)
+        assert res.is_valid(offset) == expected
 
 
 @pytest.mark.parametrize(
-    "t,duration,offset,expected",
+    "tock,duration,offset,expected",
     [
-        (int(time.time()), 50, 0, True),
-        (int(time.time() - 50), 10, 0, False),
-        (int(time.time()), 60, 10, True),
-        (int(time.time()), 60, 600, False),
+        (0, 50, 0, True),
+        (50, 10, 0, False),
+        (0, 60, 10, True),
+        (0, 60, 600, False),
     ],
 )
-def test_vault_token_is_valid_accounts_for_time(t, duration, offset, expected):
+def test_vault_token_is_valid_accounts_for_time(tock, duration, offset, expected):
     """
     Ensure token time validity is checked correctly and can look into the future
     """
@@ -2302,10 +2328,11 @@ def test_vault_token_is_valid_accounts_for_time(t, duration, offset, expected):
         "renewable": False,
         "lease_duration": duration,
         "num_uses": 0,
-        "creation_time": t,
+        "creation_time": 0,
     }
-    res = vault.VaultToken(**data)
-    assert res.is_valid(offset) == expected
+    with patch("salt.utils.vault.time.time", return_value=tock):
+        res = vault.VaultToken(**data)
+        assert res.is_valid(offset) == expected
 
 
 @pytest.mark.parametrize(
@@ -2316,30 +2343,30 @@ def test_vault_token_is_valid_accounts_for_num_uses(num_uses, uses, expected):
     """
     Ensure token uses validity is checked correctly
     """
+    data = {
+        "client_token": "id",
+        "renewable": False,
+        "lease_duration": 0,
+        "num_uses": num_uses,
+        "creation_time": 0,
+        "use_count": uses,
+    }
     with patch("salt.utils.vault.VaultLease.is_valid", Mock(return_value=True)):
-        data = {
-            "client_token": "id",
-            "renewable": False,
-            "lease_duration": 0,
-            "num_uses": num_uses,
-            "creation_time": 0,
-            "use_count": uses,
-        }
         res = vault.VaultToken(**data)
         assert res.is_valid() == expected
 
 
 @pytest.mark.parametrize(
-    "t,duration,offset,expected",
+    "tock,duration,offset,expected",
     [
-        (int(time.time()), 50, 0, True),
-        (int(time.time() - 50), 10, 0, False),
-        (int(time.time()), 60, 10, True),
-        (int(time.time()), 60, 600, False),
+        (0, 50, 0, True),
+        (50, 10, 0, False),
+        (0, 60, 10, True),
+        (0, 60, 600, False),
     ],
 )
 def test_vault_approle_secret_id_is_valid_accounts_for_time(
-    t, duration, offset, expected
+    tock, duration, offset, expected
 ):
     """
     Ensure secret ID time validity is checked correctly and can look into the future
@@ -2347,12 +2374,13 @@ def test_vault_approle_secret_id_is_valid_accounts_for_time(
     data = {
         "secret_id": "test-secret-id",
         "renewable": False,
-        "creation_time": t,
+        "creation_time": 0,
         "secret_id_num_uses": 0,
         "secret_id_ttl": duration,
     }
-    res = vault.VaultAppRoleSecretId(**data)
-    assert res.is_valid(offset) == expected
+    with patch("salt.utils.vault.time.time", return_value=tock):
+        res = vault.VaultAppRoleSecretId(**data)
+        assert res.is_valid(offset) == expected
 
 
 @pytest.mark.parametrize(
@@ -2365,15 +2393,15 @@ def test_vault_approle_secret_id_is_valid_accounts_for_num_uses(
     """
     Ensure secret ID uses validity is checked correctly
     """
+    data = {
+        "secret_id": "test-secret-id",
+        "renewable": False,
+        "creation_time": 0,
+        "secret_id_ttl": 0,
+        "secret_id_num_uses": num_uses,
+        "use_count": uses,
+    }
     with patch("salt.utils.vault.VaultLease.is_valid", Mock(return_value=True)):
-        data = {
-            "secret_id": "test-secret-id",
-            "renewable": False,
-            "creation_time": 0,
-            "secret_id_ttl": 0,
-            "secret_id_num_uses": num_uses,
-            "use_count": uses,
-        }
         res = vault.VaultAppRoleSecretId(**data)
         assert res.is_valid() == expected
 

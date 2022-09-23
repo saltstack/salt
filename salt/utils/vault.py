@@ -1580,21 +1580,10 @@ class VaultLease:
             try:
                 creation_time = int(creation_time)
             except ValueError:
-                # Most endpoints respond with RFC3339-formatted strings
-                # This is a hacky way to use inbuilt tools only (Python >=v3.7)
-                first, second = creation_time.split(".")
-                second, third = second.split("+")
-                second_off = 6 - len(second)
-                if second_off < 0:
-                    second = second[:6]
-                if second_off > 0:
-                    second = second + "0" * second_off
-                creation_time = int(
-                    datetime.datetime.fromisoformat(
-                        f"{first}.{second}+{third}"
-                    ).timestamp()
-                )
-        self.creation_time = creation_time or int(round(time.time()))
+                creation_time = _fromisoformat(creation_time)
+        self.creation_time = (
+            creation_time if creation_time is not None else int(round(time.time()))
+        )
 
     def is_valid(self, seconds_future=0):
         """
@@ -1634,6 +1623,40 @@ class VaultLease:
         Return a dict of all contained attributes
         """
         return self.__dict__
+
+
+def _fromisoformat(creation_time):
+    """
+    Most endpoints respond with RFC3339-formatted strings
+    This is a hacky way to use inbuilt tools only
+    """
+    # drop subsecond precision to make it easier on us
+    # (length would need to be 3, 6 or 9)
+    creation_time = re.sub(r"\.[\d]+", "", creation_time)
+    try:
+        # Python >=v3.7
+        return int(datetime.datetime.fromisoformat(creation_time).timestamp())
+    except AttributeError:
+        # Python < v3.7
+        dstr, tstr = creation_time.split("T")
+        year = int(dstr[:4])
+        month = int(dstr[5:7])
+        day = int(dstr[8:10])
+        hour = int(tstr[:2])
+        minute = int(tstr[3:5])
+        second = int(tstr[6:8])
+        tz_pos = (tstr.find("-") + 1 or tstr.find("+") + 1) - 1
+        tz_hour = int(tstr[tz_pos + 1 : tz_pos + 3])
+        tz_minute = int(tstr[tz_pos + 4 : tz_pos + 6])
+        if all(x == 0 for x in (tz_hour, tz_minute)):
+            tz = datetime.timezone.utc
+        else:
+            tz_sign = -1 if "-" == tstr[tz_pos] else 1
+            td = datetime.timedelta(hours=tz_hour, minutes=tz_minute)
+            tz = datetime.timezone(tz_sign * td)
+        return int(
+            datetime.datetime(year, month, day, hour, minute, second, 0, tz).timestamp()
+        )
 
 
 class VaultWrappedResponse(VaultLease):
