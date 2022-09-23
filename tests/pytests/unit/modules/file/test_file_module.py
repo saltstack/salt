@@ -362,7 +362,7 @@ def test_group_to_gid_int():
     assert ret == group
 
 
-def test_get_flags_return():
+def test__get_flags():
     """
     Tests if flags are passed in either of the following formats:
     integer, single flag string, list of strings, regex flag
