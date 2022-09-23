@@ -1291,9 +1291,11 @@ def test_fstab_absent_absent():
         salt_mock["mount.fstab"].assert_called_with("/etc/fstab")
 
 
-def test_bind_mount_copy_active_opts():
-    name = "/home/tmp"
-    device = "/home/tmp"
+@pytest.mark.parametrize("mount_name", ["/home/tmp", "/home/tmp with spaces"])
+def test_bind_mount_copy_active_opts(mount_name):
+    name = mount_name
+    device = name
+    active_name = name.replace(" ", "\\040")
     fstype = "none"
     opts = [
         "bind",
@@ -1307,7 +1309,7 @@ def test_bind_mount_copy_active_opts():
 
     mock_active = MagicMock(
         return_value={
-            "/home/tmp": {
+            active_name: {
                 "alt_device": "/dev/vda1",
                 "device": "/dev/vda1",
                 "device_label": None,
@@ -1318,14 +1320,14 @@ def test_bind_mount_copy_active_opts():
                 "mountid": "105",
                 "opts": ["rw", "relatime"],
                 "parentid": "25",
-                "root": "/home/tmp",
+                "root": active_name,
                 "superopts": ["rw", "discard", "errors=remount-ro"],
             },
         }
     )
     mock_read_mount_cache = MagicMock(
         return_value={
-            "device": "/home/tmp",
+            "device": device,
             "fstype": "none",
             "mkmnt": False,
             "opts": ["bind", "nodev", "noexec", "nosuid", "rw"],
@@ -1347,11 +1349,11 @@ def test_bind_mount_copy_active_opts():
         "realpath",
         MagicMock(
             side_effect=[
-                "/home/tmp",
+                name,
                 "/dev/vda1",
-                "/home/tmp",
+                name,
                 "/dev/vda1",
-                "/home/tmp",
+                name,
                 "/dev/vda1",
             ]
         ),
