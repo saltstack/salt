@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import textwrap
 
@@ -359,6 +360,28 @@ def test_group_to_gid_int():
     group = 5034
     ret = filemod.group_to_gid(group)
     assert ret == group
+
+
+def test_get_flags_return():
+    """
+    Tests if flags are passed in either of the following formats:
+    integer, single flag string, list of strings, regex flag
+    """
+    flags = 10
+    ret = filemod._get_flags(flags)
+    assert isinstance(ret, re.RegexFlag)
+
+    flags = 'MULTILINE'
+    ret = filemod._get_flags(flags)
+    assert isinstance(ret, re.RegexFlag)
+
+    flags = ['IGNORECASE', 'MULTILINE']
+    ret = filemod._get_flags(flags)
+    assert isinstance(ret, re.RegexFlag)
+
+    flags = re.IGNORECASE|re.MULTILINE
+    ret = filemod._get_flags(flags)
+    assert isinstance(ret, re.RegexFlag)
 
 
 def test_patch():
