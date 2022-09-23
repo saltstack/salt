@@ -530,7 +530,7 @@ import logging
 
 import salt.utils.vault as vault
 from salt.defaults import NOT_SET
-from salt.exceptions import CommandExecutionError, SaltException
+from salt.exceptions import CommandExecutionError, SaltException, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -753,7 +753,7 @@ def destroy_secret(path, *args):
     """
     .. versionadded:: 3001
 
-    Destroy specified secret version at the path in vault. The vault policy
+    Destroy specified secret versions at the path in vault. The vault policy
     used must allow this. Only supported on Vault KV version 2.
 
     CLI Example:
@@ -773,14 +773,17 @@ def destroy_secret(path, *args):
     path
         The path to the secret, including mount.
 
-    You can specify versions to destroy as supplemental arguments.
+    You can specify versions to destroy as supplemental arguments. At least one
+    is required.
     """
+    if not args:
+        raise SaltInvocationError("Need at least one version to destroy.")
     log.debug("Destroying vault secrets for %s in %s", __grains__["id"], path)
     try:
         vault.destroy_kv(path, list(args), __opts__, __context__)
         return True
     except Exception as err:  # pylint: disable=broad-except
-        log.error("Failed to delete secret! %s: %s", type(err).__name__, err)
+        log.error("Failed to destroy secret! %s: %s", type(err).__name__, err)
         return False
 
 
@@ -893,7 +896,7 @@ def policy_fetch(policy):
     policy
         The name of the policy
     """
-
+    # there is also "sys/policies/acl/{policy}"
     endpoint = f"sys/policy/{policy}"
 
     try:
