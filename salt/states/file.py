@@ -1945,17 +1945,19 @@ def tidied(
     full_path_match=False,
     followlinks=False,
     time_comparison="atime",
+    age_size_logical_operator="OR",
+    age_size_only=None,
     **kwargs
 ):
     """
-    .. versionchanged:: 3005
+    .. versionchanged:: 3006,3005
 
-    Remove unwanted files based on specific criteria. Multiple criteria
-    are OR’d together, so a file that is too large but is not old enough
-    will still get tidied.
+    Remove unwanted files based on specific criteria.
 
-    If neither age nor size is given all files which match a pattern in
-    matches will be removed.
+    The default operation uses an OR operation to evaluate age and size, so a
+    file that is too large but is not old enough will still get tidied. If
+    neither age nor size is given all files which match a pattern in matches
+    will be removed.
 
     NOTE: The regex patterns in this function are used in ``re.match()``, so
     there is an implicit "beginning of string" anchor (``^``) in the regex and
@@ -2006,6 +2008,25 @@ def tidied(
 
         .. versionadded:: 3005
 
+    age_size_logical_operator
+        This parameter can change the default operation (OR) to an AND operation
+        to evaluate age and size. In that scenario, a file that is too large but
+        is not old enough will NOT get tidied. A file will need to fulfill BOTH
+        conditions in order to be tidied. Accepts ``OR`` or ``AND``.
+
+        .. versionadded:: 3006
+
+    age_size_only
+        This parameter can trigger the reduction of age and size conditions
+        which need to be satisfied down to ONLY age or ONLY size. By default,
+        this parameter is ``None`` and both conditions will be evaluated using
+        the logical operator defined in ``age_size_logical_operator``. The
+        parameter can be set to ``age`` or ``size`` in order to restrict
+        evaluation down to that specific condition. Path matching and
+        exclusions still apply.
+
+        .. versionadded:: 3006
+
     .. code-block:: yaml
 
         cleanup:
@@ -2019,6 +2040,16 @@ def tidied(
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if age_size_logical_operator.upper() not in ["AND", "OR"]:
+        age_size_logical_operator = "OR"
+        log.warning("Logical operator must be 'AND' or 'OR'. Defaulting to 'OR'...")
+
+    if age_size_only and age_size_only.lower() not in ["age", "size"]:
+        age_size_only = None
+        log.warning(
+            "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
+        )
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -2034,8 +2065,7 @@ def tidied(
 
     # Convert size with human units to bytes
     if isinstance(size, str):
-        # add handle_metric=True when #61833 is merged
-        size = salt.utils.stringutils.human_to_bytes(size)
+        size = salt.utils.stringutils.human_to_bytes(size, handle_metric=True)
 
     # Define some variables
     todelete = []
@@ -2101,11 +2131,17 @@ def tidied(
                 filename = path
 
             # Verify against given criteria, collect all elements that should be removed
-            if (
-                (mysize >= size or myage.days >= age)
-                and _matches(name=filename)
-                and deleteme
-            ):
+            if age_size_only and age_size_only.lower() in ["age", "size"]:
+                if age_size_only.lower() == "age":
+                    compare_age_size = myage.days >= age
+                else:
+                    compare_age_size = mysize >= size
+            elif age_size_logical_operator.upper() == "AND":
+                compare_age_size = mysize >= size and myage.days >= age
+            else:
+                compare_age_size = mysize >= size or myage.days >= age
+
+            if compare_age_size and _matches(name=filename) and deleteme:
                 todelete.append(path)
 
     # Now delete the stuff
@@ -5853,10 +5889,6 @@ def blockreplace(
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        If ``True``, do not make any edits to the file and simply return the
-        changes that *would* be made.
-
     show_changes
         Controls how changes are presented. If ``True``, the ``Changes``
         section of the state return will contain a unified diff of the changes
@@ -7300,6 +7332,7 @@ def copy_(
     user=None,
     group=None,
     mode=None,
+    dir_mode=None,
     subdir=False,
     **kwargs
 ):
@@ -7356,6 +7389,17 @@ def copy_(
 
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
+
+    dir_mode
+        .. versionadded:: 3006
+
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
+
+        The default mode for new files and directories corresponds to the umask
+        of the salt process. Not enforced for existing files and directories.
 
     subdir
         .. versionadded:: 2015.5.0
@@ -7482,8 +7526,18 @@ def copy_(
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
+            if dir_mode is None and mode is not None:
+                # Add execute bit to each nonzero digit in the mode, if
+                # dir_mode was not specified. Otherwise, any
+                # directories created with makedirs_() below can't be
+                # listed via a shell.
+                mode_list = [x for x in str(mode)][-3:]
+                for idx, part in enumerate(mode_list):
+                    if part != "0":
+                        mode_list[idx] = str(int(part) | 1)
+                dir_mode = "".join(mode_list)
             try:
-                _makedirs(name=name, user=user, group=group, dir_mode=mode)
+                _makedirs(name=name, user=user, group=group, dir_mode=dir_mode)
             except CommandExecutionError as exc:
                 return _error(ret, "Drive {} is not mapped".format(exc.message))
         else:
