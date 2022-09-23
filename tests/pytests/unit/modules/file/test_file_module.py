@@ -379,7 +379,7 @@ def test_get_flags_return():
     ret = filemod._get_flags(flags)
     assert isinstance(ret, re.RegexFlag)
 
-    flags = re.IGNORECASE|re.MULTILINE
+    flags = re.IGNORECASE | re.MULTILINE
     ret = filemod._get_flags(flags)
     assert isinstance(ret, re.RegexFlag)
 
