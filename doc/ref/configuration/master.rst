@@ -2643,19 +2643,6 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 
     yaml_utf8: False
 
-``runner_returns``
-------------------
-
-Default: ``False``
-
-If set to ``True``, runner jobs will be saved to job cache (defined by
-:conf_master:`master_job_cache`).
-
-.. code-block:: yaml
-
-    runner_returns: True
-
-
 .. _master-file-server-settings:
 
 Master File Server Settings

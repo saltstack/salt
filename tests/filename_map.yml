@@ -270,7 +270,6 @@ salt/pillar/__init__.py:
 
 salt/(cli/run\.py|runner\.py):
   - pytests.integration.cli.test_salt_run
-  - integration.runners.test_runner_returns
 
 salt/runners/venafiapi.py:
   - integration.externalapi.test_venafiapi

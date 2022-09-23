@@ -698,8 +698,6 @@ VALID_OPTS = immutabletypes.freeze(
         "reactor_worker_hwm": int,
         # Defines engines. See https://docs.saltproject.io/en/latest/topics/engines/
         "engines": list,
-        # Whether or not to store runner returns in the job cache
-        "runner_returns": bool,
         "serial": str,
         "search": str,
         # A compound target definition.
@@ -1491,7 +1489,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "event_return_whitelist": [],
         "event_return_blacklist": [],
         "event_match_type": "startswith",
-        "runner_returns": True,
         "serial": "msgpack",
         "test": False,
         "state_verbose": True,

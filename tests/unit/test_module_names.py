@@ -142,7 +142,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.proxy.test_simple",
             "integration.reactor.test_reactor",
             "integration.returners.test_noop_return",
-            "integration.runners.test_runner_returns",
             "integration.shell.test_arguments",
             "integration.shell.test_auth",
             "integration.shell.test_call",
