@@ -786,6 +786,7 @@ class State:
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
+        self.global_state_conditions = None
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -803,18 +804,25 @@ class State:
             "changes": {},
             "result": None,
         }
-        if isinstance(self.opts.get("global_state_conditions"), dict):
-            for state_match, conditions in self.opts["global_state_conditions"].items():
-                if state_match in ["*", full, state]:
-                    if isinstance(conditions, str):
-                        conditions = [conditions]
-                    if isinstance(conditions, list):
-                        matches.extend(
-                            self.functions["match.compound"](condition)
-                            for condition in conditions
-                        )
+
+        if not isinstance(self.global_state_conditions, dict):
+            self.global_state_conditions = (
+                self.functions["config.option"]("global_state_conditions") or {}
+            )
+
+        for state_match, conditions in self.global_state_conditions.items():
+            if state_match in ["*", full, state]:
+                if isinstance(conditions, str):
+                    conditions = [conditions]
+                if isinstance(conditions, list):
+                    matches.extend(
+                        self.functions["match.compound"](condition)
+                        for condition in conditions
+                    )
+
         if matches and not any(matches):
             ret = ret_dict
+
         return ret
 
     def _gather_pillar(self):
