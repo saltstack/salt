@@ -371,11 +371,11 @@ def test_get_flags_return():
     ret = filemod._get_flags(flags)
     assert isinstance(ret, re.RegexFlag)
 
-    flags = 'MULTILINE'
+    flags = "MULTILINE"
     ret = filemod._get_flags(flags)
     assert isinstance(ret, re.RegexFlag)
 
-    flags = ['IGNORECASE', 'MULTILINE']
+    flags = ["IGNORECASE", "MULTILINE"]
     ret = filemod._get_flags(flags)
     assert isinstance(ret, re.RegexFlag)
 
