@@ -16,6 +16,7 @@ import time
 
 from pytestshellutils.utils import ports
 from pytestshellutils.utils.processes import terminate_process
+
 from salt.utils.nb_popen import NonBlockingPopen
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin

@@ -7,14 +7,17 @@
 
 
 import copy
+import importlib
 import logging
 import os
 import pathlib
 import textwrap
 
 import pytest
+
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -301,7 +304,8 @@ def test_get_repo_keys(repo_keys_var):
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
         if not HAS_APT:
             with patch("os.listdir", return_value="/tmp/keys"):
-                assert aptpkg.get_repo_keys() == repo_keys_var
+                with patch("pathlib.Path.is_dir", return_value=True):
+                    assert aptpkg.get_repo_keys() == repo_keys_var
         else:
             assert aptpkg.get_repo_keys() == repo_keys_var
 
@@ -761,8 +765,20 @@ def test_mod_repo_match():
                                 "deb http://cdn-aws.deb.debian.org/debian"
                                 " stretch main"
                             )
-                            repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
-                            assert repo[source_line_no_slash]["uri"] == source_uri
+                            if salt.utils.path.which("apt-key"):
+                                repo = aptpkg.mod_repo(
+                                    source_line_no_slash, enabled=False
+                                )
+                                assert repo[source_line_no_slash]["uri"] == source_uri
+                            else:
+                                with pytest.raises(Exception) as err:
+                                    repo = aptpkg.mod_repo(
+                                        source_line_no_slash, enabled=False
+                                    )
+                                assert (
+                                    "missing 'signedby' option when apt-key is missing"
+                                    in str(err.value)
+                                )
 
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
@@ -835,6 +851,49 @@ def test__skip_source():
 
     ret = aptpkg._skip_source(mock_source)
     assert ret is False
+
+
+def test__parse_source():
+    cases = (
+        {"ok": False, "line": "", "invalid": True, "disabled": False},
+        {"ok": False, "line": "#", "invalid": True, "disabled": True},
+        {"ok": False, "line": "##", "invalid": True, "disabled": True},
+        {"ok": False, "line": "# comment", "invalid": True, "disabled": True},
+        {"ok": False, "line": "## comment", "invalid": True, "disabled": True},
+        {"ok": False, "line": "deb #", "invalid": True, "disabled": False},
+        {"ok": False, "line": "# deb #", "invalid": True, "disabled": True},
+        {"ok": False, "line": "deb [ invalid line", "invalid": True, "disabled": False},
+        {
+            "ok": True,
+            "line": "# deb http://debian.org/debian/ stretch main\n",
+            "invalid": False,
+            "disabled": True,
+        },
+        {
+            "ok": True,
+            "line": "deb http://debian.org/debian/ stretch main # comment\n",
+            "invalid": False,
+            "disabled": False,
+        },
+        {
+            "ok": True,
+            "line": "deb [trusted=yes] http://debian.org/debian/ stretch main\n",
+            "invalid": False,
+            "disabled": False,
+        },
+    )
+    with patch.dict("sys.modules", {"aptsources.sourceslist": None}):
+        importlib.reload(aptpkg)
+        NoAptSourceEntry = aptpkg.SourceEntry
+    importlib.reload(aptpkg)
+
+    for case in cases:
+        source = NoAptSourceEntry(case["line"])
+        ok = source._parse_sources(case["line"])
+
+        assert ok is case["ok"]
+        assert source.invalid is case["invalid"]
+        assert source.disabled is case["disabled"]
 
 
 def test_normalize_name():

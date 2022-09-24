@@ -5,6 +5,7 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user

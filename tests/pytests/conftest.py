@@ -14,12 +14,13 @@ import tempfile
 
 import attr
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils import random_string
+
 import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
-from pytestshellutils.utils import ports
 from salt.serializers import yaml
-from saltfactories.utils import random_string
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS

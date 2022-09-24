@@ -1,6 +1,7 @@
 import itertools
 
 import pytest
+
 import salt.config
 import salt.state
 

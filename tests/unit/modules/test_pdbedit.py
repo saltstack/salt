@@ -1,27 +1,25 @@
+import hashlib
+
 import pytest
+
 import salt.modules.pdbedit as pdbedit
-import salt.utils.platform
-from salt.grains.core import _linux_distribution
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-def _is_ubuntu_2204():
-    (osname, osrelease, oscodename) = (
-        x.strip('"').strip("'") for x in _linux_distribution()
-    )
-    return osname == "ubuntu" and osrelease == "22.04"
+def _md4_supported():
+    try:
+        hashlib.new("md4", "".encode("utf-16le"))
+        return True
+    except ValueError:
+        return False
 
 
 pytestmark = [
     pytest.mark.skipif(
-        salt.utils.platform.is_photonos(),
-        reason="Hash type md4 is unsupported on Photon OS",
-    ),
-    pytest.mark.skipif(
-        _is_ubuntu_2204(),
-        reason="Hash type md4 is unsupported on Ubuntu 22.04",
+        not _md4_supported(),
+        reason="Hash type md4 is unsupported on this OS",
     ),
 ]
 
@@ -43,9 +41,6 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
         mock_exa_ver = MagicMock(return_value="Version 4.5.0")
         mock_new_ver = MagicMock(return_value="Version 4.9.2")
         mock_deb_ver = MagicMock(return_value="Version 4.5.16-Debian")
-        (osname, osrelease, oscodename) = (
-            x.strip('"').strip("'") for x in _linux_distribution()
-        )
 
         # NOTE: no pdbedit installed
         with patch("salt.utils.path.which", MagicMock(return_value=None)):

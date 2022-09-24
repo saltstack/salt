@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
 import salt.config
 import salt.pillar.hg_pillar as hg_pillar
 

@@ -12,8 +12,8 @@ import logging
 # Import salt modules
 
 try:
-    import scp
     import paramiko
+    import scp
 
     HAS_SCP = True
 except ImportError:

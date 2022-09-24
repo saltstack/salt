@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout

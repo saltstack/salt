@@ -3,6 +3,7 @@ Unit Tests for the mac_desktop execution module.
 """
 
 import pytest
+
 import salt.modules.mac_desktop as mac_desktop
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

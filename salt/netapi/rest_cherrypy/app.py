@@ -597,6 +597,7 @@ from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
 
 import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
+
 import salt
 import salt.auth
 import salt.exceptions
@@ -627,8 +628,8 @@ except ImportError:
 
 try:
     # Imports related to websocket
-    from .tools import websockets
     from . import event_processor
+    from .tools import websockets
 
     HAS_WEBSOCKETS = True
 except ImportError:
@@ -1899,18 +1900,8 @@ class Login(LowDataAdapter):
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
             else:
-                # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], []).copy()
-                perms.extend(eauth.get("*", []))
-
-                if "groups" in token and token["groups"]:
-                    user_groups = set(token["groups"])
-                    eauth_groups = {
-                        i.rstrip("%") for i in eauth.keys() if i.endswith("%")
-                    }
-
-                    for group in user_groups & eauth_groups:
-                        perms.extend(eauth["{}%".format(group)])
+                perms = salt.netapi.sum_permissions(token, eauth)
+                perms = salt.netapi.sorted_permissions(perms)
 
             if not perms:
                 logger.debug("Eauth permission list not found.")

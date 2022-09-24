@@ -4,6 +4,12 @@ Getting Started With Azure ARM
 
 .. versionadded:: 2016.11.0
 
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. Azure ARM (aka, the Azure Resource Manager) is a next
 generation version of the Azure portal and API. This document describes how to

@@ -1,4 +1,5 @@
 import pytest
+
 from salt.utils import win_runas
 
 
