@@ -368,19 +368,19 @@ def test__get_flags():
     """
     flags = 10
     ret = filemod._get_flags(flags)
-    assert isinstance(ret, re.RegexFlag)
+    assert ret == re.IGNORECASE | re.MULTILINE
 
     flags = "MULTILINE"
     ret = filemod._get_flags(flags)
-    assert isinstance(ret, re.RegexFlag)
+    assert ret == re.MULTILINE
 
     flags = ["IGNORECASE", "MULTILINE"]
     ret = filemod._get_flags(flags)
-    assert isinstance(ret, re.RegexFlag)
+    assert ret == re.IGNORECASE | re.MULTILINE
 
     flags = re.IGNORECASE | re.MULTILINE
     ret = filemod._get_flags(flags)
-    assert isinstance(ret, re.RegexFlag)
+    assert ret == re.IGNORECASE | re.MULTILINE
 
 
 def test_patch():
