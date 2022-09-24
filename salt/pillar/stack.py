@@ -455,9 +455,12 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             log.debug("YAML: basedir=%s, path=%s", basedir, path)
             # FileSystemLoader always expects unix-style paths
             unix_path = _to_unix_slashes(os.path.relpath(path, basedir))
-            obj = salt.utils.yaml.safe_load(
-                jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
-            )
+            try:
+                obj = salt.utils.yaml.safe_load(
+                    jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
+                )
+            except Exception as e:
+                raise Exception(f"for '{path}': {e}")
             if not isinstance(obj, dict):
                 log.info(
                     'Ignoring pillar stack template "%s": Can\'t parse '
