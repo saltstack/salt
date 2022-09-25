@@ -77,7 +77,6 @@ def render(yaml_data, saltenv="base", sls="", argline="", **kws):
                 )
         if not data:
             data = {}
-        log.debug("Results of YAML rendering: \n%s", data)
 
         def _validate_data(data):
             """

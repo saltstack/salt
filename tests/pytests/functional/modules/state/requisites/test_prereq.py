@@ -688,3 +688,44 @@ def test_infinite_recursion_prereq2(state, state_tree):
         ret = state.sls("requisite")
         for state_return in ret:
             assert state_return.result is True
+
+
+def test_requisites_prereq_fail_in_prereq(state, state_tree):
+    sls_contents = """
+    State A:
+      test.configurable_test_state:
+        - result: True
+        - changes: True
+        - name: fail
+
+    State B:
+      test.configurable_test_state:
+        - changes: True
+        - result: False
+        - prereq:
+          - test: State A
+
+    State C:
+      test.nop:
+        - onchanges:
+          - test: State A
+    """
+
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        assert ret["test_|-State A_|-fail_|-configurable_test_state"].result is None
+        assert (
+            ret["test_|-State A_|-fail_|-configurable_test_state"].full_return[
+                "changes"
+            ]
+            == {}
+        )
+
+        assert not ret["test_|-State B_|-State B_|-configurable_test_state"].result
+
+        assert ret["test_|-State C_|-State C_|-nop"].result
+        assert not ret["test_|-State C_|-State C_|-nop"].full_return["__state_ran__"]
+        assert (
+            ret["test_|-State C_|-State C_|-nop"].full_return["comment"]
+            == "State was not run because none of the onchanges reqs changed"
+        )
