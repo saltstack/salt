@@ -159,6 +159,7 @@ def _linux_cpudata():
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
         with salt.utils.files.fopen(cpuinfo, "r") as _fp:
+            grains["num_cpus"] = 0
             for line in _fp:
                 comps = line.split(":")
                 if not len(comps) > 1:
