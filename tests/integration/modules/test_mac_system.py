@@ -22,6 +22,7 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 @pytest.mark.usefixtures("salt_sub_minion")
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("systemsetup")
+@pytest.mark.flaky_jail
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module

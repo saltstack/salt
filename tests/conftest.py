@@ -176,6 +176,40 @@ def pytest_addoption(parser):
         ),
     )
     test_selection_group.addoption(
+        "--core",
+        "--core-tests",
+        dest="core",
+        action="store_true",
+        default=False,
+        help=(
+            "Run salt-core tests. These tests test the engine of salt! "
+            "Default: False"
+        ),
+    )
+    test_selection_group.addoption(
+        "--fast",
+        "--fast-tests",
+        dest="fast",
+        action="store_false",
+        default=True,
+        help=(
+            "Run salt-fast tests. These fast tests that test States and Modules! "
+            "Default: True"
+        ),
+    )
+    test_selection_group.addoption(
+        "--flaky",
+        "--flaky-jail",
+        dest="flaky",
+        action="store_true",
+        default=False,
+        help=(
+            "Run salt-flaky jail tests. These fast tests are in jail for being flaky! "
+            "One day they will be made not flaky."
+            "Default: False"
+        ),
+    )
+    test_selection_group.addoption(
         "--proxy",
         "--proxy-tests",
         dest="proxy",
@@ -496,10 +530,32 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
 
-    if item.get_closest_marker("slow_test"):
-        if item.config.getoption("--run-slow") is False:
+    if item.get_closest_marker("core_test"):
+        if not item.config.getoption("--core-tests"):
             item._skipped_by_mark = True
-            pytest.skip("Slow tests are disabled!")
+            pytest.skip("Core tests are disabled, pass '--core-tests' to enable them.")
+
+    if item.get_closest_marker("slow_test"):
+        if not item.config.getoption("--run-slow"):
+            item._skipped_by_mark = True
+            pytest.skip("Slow tests are disabled, pass '--run-slow' to enable them.")
+
+    if (
+        not item.get_closest_marker("slow_test")
+        and not item.get_closest_marker("core_test")
+    ) or item.get_closest_marker("fast_test"):
+        if not item.config.getoption("--fast-tests"):
+            item._skipped_by_mark = True
+            pytest.skip(
+                "Fast tests are disabled, dont pass '--fast-tests' to enable them."
+            )
+
+    if item.get_closest_marker("flaky_jail"):
+        if not item.config.getoption("--flaky-jail"):
+            item._skipped_by_mark = True
+            pytest.skip(
+                "flaky jail tests are disabled, pass '--flaky-jail' to enable them."
+            )
 
     requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
     if requires_sshd_server_marker is not None:

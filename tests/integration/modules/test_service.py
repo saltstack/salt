@@ -71,6 +71,7 @@ class ServiceModuleTest(ModuleCase):
 
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
+    @pytest.mark.flaky_jail
     def test_service_status_running(self):
         """
         test service.status execution module
