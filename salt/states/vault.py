@@ -67,15 +67,15 @@ def policy_present(name, rules):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = (
-            "Policy would be " + "created" if existing_rules is None else "updated"
+        ret["comment"] = "Policy would be " + (
+            "created" if existing_rules is None else "updated"
         )
         return ret
 
     try:
         __salt__["vault.policy_write"](name, rules)
-        ret["comment"] = (
-            "Policy has been " + "created" if existing_rules is None else "updated"
+        ret["comment"] = "Policy has been " + (
+            "created" if existing_rules is None else "updated"
         )
         return ret
     except CommandExecutionError as err:
