@@ -387,12 +387,9 @@ def __get_size(conn, vm_):
     """
     Need to override libcloud to find the machine type in the proper zone.
     """
-    default_size = "n1-standard-1"
     size = config.get_cloud_config_value(
-        "size", vm_, __opts__, default=default_size, search_global=False
+        "size", vm_, __opts__, default="n1-standard-1", search_global=False
     )
-    if not size or not isinstance(size, str):
-        size = default_size
     return conn.ex_get_size(size, __get_location(conn, vm_))
 
 
@@ -477,12 +474,9 @@ def __get_network(conn, vm_):
     """
     Return a GCE libcloud network object with matching name
     """
-    default_network = "default"
     network = config.get_cloud_config_value(
-        "network", vm_, __opts__, default=default_network, search_global=False
+        "network", vm_, __opts__, default="default", search_global=False
     )
-    if not network or not isinstance(network, str):
-        network = default_network
     return conn.ex_get_network(network)
 
 
