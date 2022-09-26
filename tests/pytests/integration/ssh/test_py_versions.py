@@ -5,6 +5,7 @@ import logging
 
 import pytest
 from saltfactories.utils import random_string
+
 from tests.support.helpers import Keys
 
 pytest.importorskip("docker")
