@@ -1012,6 +1012,30 @@ repos:
           - requirements/static/ci/invoke.in
   # <---- Invoke -----------------------------------------------------------------------------------------------------
 
+  # ----- Tools ---------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-tools-py3.9-requirements
+        name: Linux CI Py3.9 Tools Requirements
+        files: ^requirements/static/ci/(tools\.in|py3.9/(tools|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/tools.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-py3.10-requirements
+        name: Linux CI Py3.10 Tools Requirements
+        files: ^requirements/static/ci/(tools\.in|py3.10/(tools|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/tools.in
+  # <---- Tools -----------------------------------------------------------------------------------------------------
+
   # ----- Local Hooks ----------------------------------------------------------------------------------------------->
   - repo: local
     hooks:
@@ -1229,6 +1253,20 @@ repos:
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.971
+    hooks:
+      - id: mypy
+        alias: mypy-tools
+        name: Run mypy against tools
+        files: ^tools/.*\.py$
+        #args: [--strict]
+        additional_dependencies:
+          - attrs
+          - rich
+          - types-attrs
+          - types-pyyaml
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2021.6.12
