@@ -11,6 +11,7 @@ import os
 import pathlib
 import platform
 import socket
+import tempfile
 import textwrap
 from collections import namedtuple
 
@@ -929,6 +930,28 @@ def test_rocky_8_os_grains(os_release_dir):
         "osrelease_info": (8, 4),
         "osmajorrelease": 8,
         "osfinger": "Rocky Linux-8",
+    }
+    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_osmc_os_grains(os_release_dir):
+    """
+    Test if OS grains are parsed correctly in OSMC
+    """
+    _os_release_map = {
+        "_linux_distribution": ("OSMC", "2022.03-1", "Open Source Media Center"),
+    }
+
+    expectation = {
+        "os": "OSMC",
+        "os_family": "Debian",
+        "oscodename": "Open Source Media Center",
+        "osfullname": "OSMC",
+        "osrelease": "2022.03-1",
+        "osrelease_info": (2022, "03-1"),
+        "osmajorrelease": 2022,
+        "osfinger": "OSMC-2022",
     }
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
@@ -2740,6 +2763,38 @@ def test_kernelparams_return_linux(cmdline, expectation):
         assert core.kernelparams() == expectation
 
 
+@pytest.mark.skip_unless_on_linux
+def test_kernelparams_return_linux_non_utf8():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
+    expected = {
+        "kernelparams": [
+            ("TEST_KEY1", "VAL1"),
+            ("TEST_KEY2", "VAL2"),
+            ("BOOTABLE_FLAG", "\udc80"),
+            ("TEST_KEY_NOVAL", None),
+            ("TEST_KEY3", "3"),
+        ]
+    }
+
+    with tempfile.TemporaryDirectory() as tempdir:
+
+        def _open_mock(file_name, *args, **kwargs):
+            return _salt_utils_files_fopen(
+                os.path.join(tempdir, "cmdline"), *args, **kwargs
+            )
+
+        with salt.utils.files.fopen(
+            os.path.join(tempdir, "cmdline"),
+            "wb",
+        ) as cmdline_fh, patch("salt.utils.files.fopen", _open_mock):
+            cmdline_fh.write(
+                b'TEST_KEY1=VAL1 TEST_KEY2=VAL2 BOOTABLE_FLAG="\x80" TEST_KEY_NOVAL TEST_KEY3=3\n'
+            )
+            cmdline_fh.close()
+            assert core.kernelparams() == expected
+
+
 def test_linux_gpus():
     """
     Test GPU detection on Linux systems
@@ -2993,3 +3048,88 @@ def test_linux_devicetree_data(test_input, expected):
     with patch("os.path.isfile", return_value=True):
         with patch("salt.utils.files.fopen", new=_mock_open):
             assert expected == core._linux_devicetree_platform_data()
+
+
+@pytest.mark.skip_on_windows
+def test_linux_proc_files_with_non_utf8_chars():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
+    empty_mock = MagicMock(return_value={})
+
+    with tempfile.TemporaryDirectory() as tempdir:
+
+        def _mock_open(filename, *args, **kwargs):
+            return _salt_utils_files_fopen(
+                os.path.join(tempdir, "cmdline-1"), *args, **kwargs
+            )
+
+        with salt.utils.files.fopen(
+            os.path.join(tempdir, "cmdline-1"),
+            "wb",
+        ) as cmdline_fh, patch("os.path.isfile", return_value=False), patch(
+            "salt.utils.files.fopen", _mock_open
+        ), patch.dict(
+            core.__salt__,
+            {
+                "cmd.retcode": salt.modules.cmdmod.retcode,
+                "cmd.run": MagicMock(return_value=""),
+            },
+        ), patch.object(
+            core, "_linux_bin_exists", return_value=False
+        ), patch.object(
+            core, "_parse_lsb_release", return_value=empty_mock
+        ), patch.object(
+            core, "_parse_os_release", return_value=empty_mock
+        ), patch.object(
+            core, "_hw_data", return_value=empty_mock
+        ), patch.object(
+            core, "_virtual", return_value=empty_mock
+        ), patch.object(
+            core, "_bsd_cpudata", return_value=empty_mock
+        ), patch.object(
+            os, "stat", side_effect=OSError()
+        ):
+            cmdline_fh.write(
+                b"/usr/lib/systemd/systemd\x00--switched-root\x00--system\x00--deserialize\x0028\x80\x00"
+            )
+            cmdline_fh.close()
+            os_grains = core.os_data()
+            assert os_grains != {}
+
+
+@pytest.mark.skip_on_windows
+def test_virtual_linux_proc_files_with_non_utf8_chars():
+    _salt_utils_files_fopen = salt.utils.files.fopen
+
+    def _is_file_mock(filename):
+        if filename == "/proc/1/environ":
+            return True
+        return False
+
+    with tempfile.TemporaryDirectory() as tempdir:
+
+        def _mock_open(filename, *args, **kwargs):
+            return _salt_utils_files_fopen(
+                os.path.join(tempdir, "environ"), *args, **kwargs
+            )
+
+        with salt.utils.files.fopen(
+            os.path.join(tempdir, "environ"),
+            "wb",
+        ) as environ_fh, patch("os.path.isfile", _is_file_mock), patch(
+            "salt.utils.files.fopen", _mock_open
+        ), patch.object(
+            salt.utils.path, "which", MagicMock(return_value=None)
+        ), patch.dict(
+            core.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={"retcode": 1, "stderr": "", "stdout": ""}
+                ),
+                "cmd.run": MagicMock(return_value=""),
+            },
+        ):
+            environ_fh.write(b"KEY1=VAL1 KEY2=VAL2\x80 KEY2=VAL2")
+            environ_fh.close()
+            virt_grains = core._virtual({"kernel": "Linux"})
+            assert virt_grains == {"virtual": "physical"}
