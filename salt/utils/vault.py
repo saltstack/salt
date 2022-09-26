@@ -1687,6 +1687,16 @@ class VaultWrappedResponse(VaultLease):
         self.token = self.id
         self.ttl = self.lease_duration
 
+    def serialize_for_minion(self):
+        return {
+            "wrap_info": {
+                "token": self.id,
+                "ttl": self.ttl,
+                "creation_time": self.creation_time,
+                "creation_path": self.creation_path,
+            },
+        }
+
 
 class VaultAppRoleSecretId(VaultLease):
     """

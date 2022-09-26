@@ -2248,7 +2248,9 @@ def test_fromisoformat_polyfill(creation_time, expected):
         d.fromisoformat.side_effect = AttributeError
         # needs from datetime import datetime, otherwise results
         # in infinite recursion
-        d.side_effect = lambda *args: datetime(*args)
+        d.side_effect = lambda *args: datetime(
+            *args
+        )  # pylint: disable=unnecessary-lambda
         res = vault._fromisoformat(creation_time)
         assert res == expected
 
