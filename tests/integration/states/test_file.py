@@ -2922,12 +2922,55 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             mode=mode,
         )
         self.assertSaltTrueReturn(ret)
-        file_checks = [str(dest), str(dest.parent), str(dest.parent.parent)]
-        for check in file_checks:
+        file_checks = [
+            (str(dest), mode),
+            (str(dest.parent), "0755"),
+            (str(dest.parent.parent), "0755"),
+        ]
+        for check, expected_mode in file_checks:
             user_check = self.run_function("file.get_user", [check])
             mode_check = self.run_function("file.get_mode", [check])
             self.assertEqual(user_check, user)
-            self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
+            self.assertEqual(salt.utils.files.normalize_mode(mode_check), expected_mode)
+
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
+    @with_tempfile()
+    def test_file_copy_make_dirs_dir_mode(self, source):
+        """
+        ensure make_dirs creates correct user perms
+        """
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, "hosts"), source)
+        dest = self.tmp_dir / "dir3" / "dir4" / "copied_file.txt"
+        self.addCleanup(salt.utils.files.rm_rf, str(dest.parent.parent))
+
+        user = "salt"
+        mode = "0644"
+        dir_mode = "0700"
+
+        ret = self.run_function("user.add", [user])
+        self.assertTrue(ret, "Failed to add user. Are you running as sudo?")
+        ret = self.run_state(
+            "file.copy",
+            name=str(dest),
+            source=source,
+            user=user,
+            makedirs=True,
+            mode=mode,
+            dir_mode=dir_mode,
+        )
+        self.assertSaltTrueReturn(ret)
+        file_checks = [
+            (str(dest), mode),
+            (str(dest.parent), dir_mode),
+            (str(dest.parent.parent), dir_mode),
+        ]
+        for check, expected_mode in file_checks:
+            user_check = self.run_function("file.get_user", [check])
+            mode_check = self.run_function("file.get_mode", [check])
+            self.assertEqual(user_check, user)
+            self.assertEqual(salt.utils.files.normalize_mode(mode_check), expected_mode)
 
     @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")

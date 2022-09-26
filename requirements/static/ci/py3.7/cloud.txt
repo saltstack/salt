@@ -455,6 +455,7 @@ importlib-metadata==4.8.1 ; python_version >= "3.6" and python_version < "3.10"
     #   backports.entry-points-selectable
     #   click
     #   jsonschema
+    #   mako
     #   moto
     #   pluggy
     #   pytest
@@ -510,7 +511,7 @@ lxml==4.9.1
     #   junos-eznc
     #   napalm
     #   ncclient
-mako==1.1.5
+mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.0.1
     # via

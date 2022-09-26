@@ -350,6 +350,38 @@ def test_missing_os_release():
     assert os_release == {}
 
 
+def test__linux_lsb_distrib_data():
+    lsb_distro_information = {
+        "ID": "Ubuntu",
+        "DESCRIPTION": "Ubuntu 20.04.3 LTS",
+        "RELEASE": "20.04",
+        "CODENAME": "focal",
+    }
+    expectation = {
+        "lsb_distrib_id": "Ubuntu",
+        "lsb_distrib_description": "Ubuntu 20.04.3 LTS",
+        "lsb_distrib_release": "20.04",
+        "lsb_distrib_codename": "focal",
+    }
+
+    orig_import = __import__
+
+    def _import_mock(name, *args):
+        if name == "lsb_release":
+            lsb_release_mock = MagicMock()
+            lsb_release_mock.get_distro_information.return_value = (
+                lsb_distro_information
+            )
+            return lsb_release_mock
+        return orig_import(name, *args)
+
+    with patch("{}.__import__".format("builtins"), side_effect=_import_mock):
+        grains, has_error = core._linux_lsb_distrib_data()
+
+    assert grains == expectation
+    assert not has_error
+
+
 @pytest.mark.skip_unless_on_linux
 def test_gnu_slash_linux_in_os_name():
     """
