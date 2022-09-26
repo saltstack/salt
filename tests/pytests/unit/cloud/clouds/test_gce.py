@@ -105,8 +105,6 @@ def config_metadata(request):
 
 @pytest.fixture(
     params=[
-        {"expected": "default", "network": ""},
-        {"expected": "default", "network": None},
         {"expected": "mynetwork", "network": "mynetwork"},
     ]
 )
@@ -116,8 +114,6 @@ def config_network(request):
 
 @pytest.fixture(
     params=[
-        {"expected": "n1-standard-1", "size": ""},
-        {"expected": "n1-standard-1", "size": None},
         {"expected": "e2-standard-2", "size": "e2-standard-2"},
     ]
 )
