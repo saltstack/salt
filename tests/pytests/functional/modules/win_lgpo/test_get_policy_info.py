@@ -34,7 +34,7 @@ def test_62058_whitespace(lgpo):
     assert False
 
 
-def test_62594(lgpo):
+def test_61859(lgpo):
     expected = (
         'ADMX policy name/id "Pol_CipherSuiteOrder" is used in multiple ADMX files.\n'
         "Try one of the following names:\n"
