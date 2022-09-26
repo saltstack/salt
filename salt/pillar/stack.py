@@ -379,6 +379,7 @@ import os
 import posixpath
 
 from jinja2 import Environment, FileSystemLoader
+from yaml import YAMLError
 
 import salt.utils.data
 import salt.utils.jinja
@@ -459,8 +460,9 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                 obj = salt.utils.yaml.safe_load(
                     jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
                 )
-            except Exception as e:
-                raise Exception(f"for '{path}': {e}")
+            except YAMLError as e:
+                # YAMLError inherits Exception with no changes, so constructor just the message
+                raise type(e)("for '{path}': {error}".format(path=path, error=e))
             if not isinstance(obj, dict):
                 log.info(
                     'Ignoring pillar stack template "%s": Can\'t parse '
