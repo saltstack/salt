@@ -2242,15 +2242,13 @@ def test_vault_client_token_renew_increment_is_honored(
     ],
 )
 def test_fromisoformat_polyfill(creation_time, expected):
-    # def wrap_datetime(*args):
-    #     return datetime.datetime(*args)
     with patch("salt.utils.vault.datetime.datetime") as d:
         d.fromisoformat.side_effect = AttributeError
         # needs from datetime import datetime, otherwise results
         # in infinite recursion
-        d.side_effect = lambda *args: datetime(
-            *args
-        )  # pylint: disable=unnecessary-lambda
+
+        # pylint: disable=unnecessary-lambda
+        d.side_effect = lambda *args: datetime(*args)
         res = vault._fromisoformat(creation_time)
         assert res == expected
 
