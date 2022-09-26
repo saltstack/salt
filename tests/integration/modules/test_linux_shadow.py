@@ -135,6 +135,7 @@ class ShadowModuleTest(ModuleCase):
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.flaky_jail
     def test_lock_password(self):
         """
         Test shadow.lock_password

@@ -431,6 +431,8 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
 
 
 @pytest.mark.flaky(max_runs=4)
+@pytest.mark.flaky_jail
+@pytest.mark.flaky_jail
 class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [

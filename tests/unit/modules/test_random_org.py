@@ -196,6 +196,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
     # 'generateDecimalFractions' function tests: 1
 
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.flaky_jail
     def test_generatedecimalfractions(self):
         """
         Test if it generates true random decimal fractions.
@@ -253,6 +254,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
     # 'generateGaussians' function tests: 1
 
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.flaky_jail
     def test_generategaussians(self):
         """
         Test if it generates true random numbers from a

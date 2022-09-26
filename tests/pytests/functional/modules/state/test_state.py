@@ -671,6 +671,7 @@ def test_retry_option(state, state_tree):
             assert state_return.full_return["duration"] >= 3
 
 
+@pytest.mark.flaky_jail
 def test_retry_option_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True immediately (i.e. no retries)

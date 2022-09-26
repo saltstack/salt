@@ -13,6 +13,7 @@ class StatusModuleTest(ModuleCase):
 
     @pytest.mark.skip_on_windows
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.flaky_jail
     def test_status_pid(self):
         """
         status.pid

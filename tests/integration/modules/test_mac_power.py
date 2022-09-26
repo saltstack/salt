@@ -10,6 +10,7 @@ from tests.support.case import ModuleCase
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.flaky_jail
 class MacPowerModuleTest(ModuleCase):
     """
     Validate the mac_power module
@@ -154,6 +155,7 @@ class MacPowerModuleTest(ModuleCase):
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.flaky_jail
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
     """
     Test power.get_sleep_on_power_button
@@ -205,6 +207,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.flaky_jail
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
     """
     Test power.get_restart_power_failure
@@ -255,6 +258,7 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.flaky_jail
 class MacPowerModuleTestWakeOnNet(ModuleCase):
     """
     Test power.get_wake_on_network
@@ -301,6 +305,7 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.flaky_jail
 class MacPowerModuleTestWakeOnModem(ModuleCase):
     """
     Test power.get_wake_on_modem

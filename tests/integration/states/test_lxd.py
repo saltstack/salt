@@ -14,6 +14,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 @pytest.mark.skip_if_binaries_missing("lxc", reason="LXC not installed")
 class LxdTestCase(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.flaky_jail
     def test_01__init_lxd(self):
         ret = self.run_state("lxd.init", name="foobar")
         self.assertSaltTrueReturn(ret)

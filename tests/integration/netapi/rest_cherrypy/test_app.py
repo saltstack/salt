@@ -357,6 +357,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
 
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
+    @pytest.mark.flaky_jail
     def test_all_jobs(self):
         """
         test query to /jobs returns job data

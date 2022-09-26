@@ -23,6 +23,7 @@ class TestJinjaRenderer(ModuleCase):
 
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
+    @pytest.mark.flaky_jail
     def test_salt_contains_function(self):
         """
         Test if we are able to check if a function exists inside the "salt"

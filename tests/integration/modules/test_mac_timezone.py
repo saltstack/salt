@@ -20,6 +20,7 @@ from tests.support.unit import skipIf
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.flaky_jail
 class MacTimezoneModuleTest(ModuleCase):
     """
     Validate the mac_timezone module

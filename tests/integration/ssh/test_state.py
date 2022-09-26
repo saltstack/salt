@@ -283,6 +283,7 @@ class SSHStateTest(SSHCase):
 
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
+    @pytest.mark.flaky_jail
     def test_state_running(self):
         """
         test state.running with salt-ssh
