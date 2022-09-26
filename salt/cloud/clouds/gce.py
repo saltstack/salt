@@ -66,14 +66,11 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 LIBCLOUD_IMPORT_ERROR = None
 try:
     import libcloud
-    from libcloud.compute.types import Provider
+    from libcloud.common.google import ResourceInUseError, ResourceNotFoundError
     from libcloud.compute.providers import get_driver
-    from libcloud.loadbalancer.types import Provider as Provider_lb
+    from libcloud.compute.types import Provider
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-    from libcloud.common.google import (
-        ResourceInUseError,
-        ResourceNotFoundError,
-    )
+    from libcloud.loadbalancer.types import Provider as Provider_lb
 
     HAS_LIBCLOUD = True
 except ImportError:

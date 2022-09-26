@@ -1822,17 +1822,13 @@ def default_route(family=None):
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
         default_route["inet6"] = ["::/0", "default"]
-    elif (
-        __grains__["os"]
-        in [
-            "FreeBSD",
-            "NetBSD",
-            "OpenBSD",
-            "MacOS",
-            "Darwin",
-        ]
-        or __grains__["kernel"] in ("SunOS", "AIX")
-    ):
+    elif __grains__["os"] in [
+        "FreeBSD",
+        "NetBSD",
+        "OpenBSD",
+        "MacOS",
+        "Darwin",
+    ] or __grains__["kernel"] in ("SunOS", "AIX"):
         default_route["inet"] = ["default"]
         default_route["inet6"] = ["default"]
     else:

@@ -4,6 +4,7 @@ import shutil
 import sys
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase

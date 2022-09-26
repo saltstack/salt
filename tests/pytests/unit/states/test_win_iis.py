@@ -5,6 +5,7 @@
 """
 
 import pytest
+
 import salt.states.win_iis as win_iis
 from tests.support.mock import MagicMock, patch
 

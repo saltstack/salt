@@ -10,12 +10,13 @@ import uuid
 
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.runtests import RUNTIME_VARS
@@ -423,7 +424,7 @@ class CPModuleTest(ModuleCase):
         """
         cp.cache_file
         """
-        nginx_port = get_unused_localhost_port()
+        nginx_port = ports.get_unused_localhost_port()
         url_prefix = "http://localhost:{}/".format(nginx_port)
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)

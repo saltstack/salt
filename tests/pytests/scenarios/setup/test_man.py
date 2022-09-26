@@ -6,6 +6,7 @@ import os
 import pprint
 
 import pytest
+
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 

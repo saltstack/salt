@@ -9,6 +9,7 @@ import sys
 import textwrap
 
 import pytest
+
 import salt.modules.mount as mount
 import salt.utils.files
 import salt.utils.path
@@ -134,6 +135,18 @@ def test_active():
         mock = MagicMock(return_value={})
         with patch.object(mount, "_active_mounts_aix", mock):
             assert mount.active() == {}
+
+
+def test_fstab_entry_ignores_opt_ordering():
+    entry = mount._fstab_entry(
+        name="/tmp",
+        device="tmpfs",
+        fstype="tmpfs",
+        opts="defaults,nodev,noexec",
+        dump=0,
+        pass_num=0,
+    )
+    assert entry.match("tmpfs\t\t/tmp\ttmpfs\tnodev,defaults,noexec\t0 0\n")
 
 
 def test_fstab():

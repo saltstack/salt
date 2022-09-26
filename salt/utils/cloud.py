@@ -21,6 +21,8 @@ import time
 import traceback
 import uuid
 
+from jinja2 import Template
+
 import salt.client
 import salt.cloud
 import salt.config
@@ -39,7 +41,6 @@ import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.vt
 import salt.utils.yaml
-from jinja2 import Template
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -60,10 +61,10 @@ except ImportError:
 
 try:
     from pypsexec.client import Client as PsExecClient
-    from pypsexec.scmr import Service as ScmrService
     from pypsexec.exceptions import SCMRException
-    from smbprotocol.tree import TreeConnect
+    from pypsexec.scmr import Service as ScmrService
     from smbprotocol.exceptions import SMBResponseException
+    from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
     logging.getLogger("pypsexec").setLevel(logging.WARNING)
@@ -77,11 +78,10 @@ WINRM_MIN_VER = "0.3.0"
 
 
 try:
-    import winrm
-    from winrm.exceptions import WinRMTransportError
-
     # Verify WinRM 0.3.0 or greater
     import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+    import winrm
+    from winrm.exceptions import WinRMTransportError
 
     winrm_pkg = pkg_resources.get_distribution("pywinrm")
     if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):

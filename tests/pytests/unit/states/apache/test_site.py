@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.apache_site as apache_site
 from tests.support.mock import MagicMock, patch
 
