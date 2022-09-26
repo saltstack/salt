@@ -59,6 +59,8 @@ def py_shell():
 
 
 def python_runtime():
+    import traceback
+
     # extract the absolute script path to alter sys.path and specific dunder variables
     script = pathlib.Path(sys.argv[2]).expanduser().resolve()
     sys.path.insert(0, str(script.parent))

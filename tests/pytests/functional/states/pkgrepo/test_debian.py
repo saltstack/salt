@@ -537,6 +537,37 @@ def test_repo_present_absent_no_trailing_slash_uri(pkgrepo, trailing_slash_repo_
     assert ret.result
 
 
+@pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
+def test_repo_present_absent_no_trailing_slash_uri_add_slash(
+    pkgrepo, trailing_slash_repo_file
+):
+    """
+    test adding a repo without a trailing slash, and then running it
+    again with a trailing slash.
+    """
+    # without the trailing slash
+    repo_content = "deb http://www.deb-multimedia.org stable main"
+    # initial creation
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
+    )
+    with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
+        file_content = fp.read()
+    assert file_content.strip() == "deb http://www.deb-multimedia.org stable main"
+    assert ret.changes
+    # now add a trailing slash in the name
+    repo_content = "deb http://www.deb-multimedia.org/ stable main"
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False
+    )
+    with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
+        file_content = fp.read()
+    assert file_content.strip() == "deb http://www.deb-multimedia.org/ stable main"
+    # absent
+    ret = pkgrepo.absent(name=repo_content)
+    assert ret.result
+
+
 @attr.s(kw_only=True)
 class Repo:
     key_root = attr.ib(default=pathlib.Path("/usr", "share", "keyrings"))
