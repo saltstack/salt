@@ -1,0 +1,291 @@
+name: Test Artifact
+
+on:
+  workflow_call:
+    inputs:
+      distro-slug:
+        required: true
+        type: string
+        description: The OS slug to run tests against
+      nox-session:
+        required: true
+        type: string
+        description: The nox session to run
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+
+
+env:
+  NOX_VERSION: "2022.8.7"
+  COLUMNS: 160
+
+jobs:
+
+  dependencies:
+    name: Setup Test Dependencies
+    runs-on:
+      - self-hosted
+    timeout-minutes: 90
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      # Check the existance of nox.{distro-slug}.tar.*.
+      # If it exists, it means the cache was hit and we don't have to regenerate it again
+      - name: Check nox.${{ inputs.distro-slug }}.tar.* Exists
+        id: check-nox-tarball
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "nox.${{ inputs.distro-slug }}.tar.*"
+
+      - name: PyPi Proxy
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+
+      - name: Install Python Tools Scripts
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
+
+      - name: Start VM
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        id: spin-up-vm
+        run: |
+          tools vm create ${{ inputs.distro-slug }}
+
+      - name: Upload Checkout To VM
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          tools vm rsync ${{ inputs.distro-slug }}
+
+      - name: Install Dependencies
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          tools vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
+
+      - name: Compress .nox Directory
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          tools vm compress-dependencies ${{ inputs.distro-slug }}
+
+      - name: Download Compressed .nox Directory
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          tools vm download-dependencies ${{ inputs.distro-slug }}
+
+      - name: Destroy VM
+        if: always()
+        run: |
+          tools vm destroy ${{ inputs.distro-slug }} || true
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  test:
+    name: Test
+    runs-on:
+      - self-hosted
+    timeout-minutes: 240  # 4 Hours
+    needs:
+      - dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        tests-chunk:
+          - unit
+          - functional
+          - integration
+          - scenarios
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      - name: PyPi Proxy
+        run: |
+          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+
+      - name: Install Python Tools Scripts
+        run: |
+          python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+
+      - name: Start VM
+        id: spin-up-vm
+        run: |
+          tools vm create ${{ inputs.distro-slug }}
+
+      - name: Upload Checkout To VM
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          tools vm rsync ${{ inputs.distro-slug }}
+
+      - name: Decompress .nox Directory
+        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        run: |
+          tools vm decompress-dependencies ${{ inputs.distro-slug }}
+
+      - name: Run Tests
+        id: run-tests
+        run: |
+          tools vm test --print-tests-selection --skip-requirements-install \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
+
+      - name: Combine Coverage Reports
+        if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'cancelled' && steps.run-tests.conclusion != 'skipped'
+        run: |
+          tools vm combine-coverage ${{ inputs.distro-slug }}
+
+      - name: Download Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'cancelled' && steps.run-tests.conclusion != 'skipped'
+        run: |
+          tools vm download-artifacts ${{ inputs.distro-slug }}
+          tree -a artifacts
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.tests-chunk }}
+
+      - name: Destroy VM
+        if: always()
+        run: |
+          tools vm destroy ${{ inputs.distro-slug }} || true
+
+      - name: Upload Test Run Artifacts
+        if: always() && steps.download-artifacts-from-vm.conclusion == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          path: artifacts
+
+#      - name: Publish Test Report
+#        uses: mikepenz/action-junit-report@v3
+#        if: always() && steps.download-artifacts-from-vm.conclusion == 'success'
+#        with:
+#          check_name: Test Results(${{ inputs.distro-slug }} ${{ matrix.tests-chunk }})
+#          report_paths: 'artifacts/xml-unittests-output/*.xml'
+
+      - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
+        if: always() && steps.download-artifacts-from-vm.conclusion == 'success'
+        run: |
+          nox --force-color -e report-coverage -- salt
+
+      - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
+        if: always() && steps.download-artifacts-from-vm.conclusion == 'success'
+        run: |
+          nox --force-color -e report-coverage -- tests
+
+      - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
+        if: always() && steps.download-artifacts-from-vm.conclusion == 'success'
+        run: |
+          nox --force-color -e report-coverage
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ matrix.tests-chunk }}-tests
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  report:
+    name: Reports for ${{ inputs.distro-slug }}
+    runs-on: ubuntu-latest
+    needs: test
+    if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Download Test Run Artifacts
+        id: download-test-run-artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          path: artifacts
+
+      - name: Show Test Run Artifacts
+        if: always() && steps.download-test-run-artifacts.conclusion == 'success'
+        run: |
+          tree -a artifacts
+
+      - name: Upload Code Coverage DB
+        if: always() && steps.download-test-run-artifacts.conclusion == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: artifacts/coverage
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+
+      - name: Report Salt Code Coverage
+        run: |
+          nox --force-color -e report-coverage -- salt
+
+      - name: Report Tests Code Coverage
+        run: |
+          nox --force-color -e report-coverage -- tests
+
+      - name: Report Combined Code Coverage
+        run: |
+          nox --force-color -e report-coverage
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        # always run even if the previous steps fails
+        if: always() && steps.download-test-run-artifacts.conclusion == 'success'
+        with:
+          check_name: Overall Test Results(${{ inputs.distro-slug }})
+          report_paths: 'artifacts/xml-unittests-output/*.xml'
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-report
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
