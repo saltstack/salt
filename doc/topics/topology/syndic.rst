@@ -28,7 +28,7 @@ Syndic node.
     circumstances, but comprehensive support is lacking. See `issue #62618 on
     GitHub <https://github.com/saltstack/salt/issues/62618>`_ for more
     information. Currently Syndic is only expected to work when running Salt as
-    root, though work is scheduled to fix this in Salt 3006 (Sulphur).
+    root, though work is scheduled to fix this in Salt 3006 (Sulfur).
 
 Configuring the Syndic
 ======================
