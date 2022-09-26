@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  get-changed-files:
+    name: Get Changed Files
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
+    outputs:
+      changed-files: ${{ toJSON(steps.changed-files.outputs) }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get Changed Files
+        id: changed-files
+        uses: dorny/paths-filter@v2
+        with:
+          token: ${{ github.token }}
+          list-files: json
+          filters: |
+            repo:
+              - added|modified:
+                - '**'
+            deleted:
+              - deleted:
+                - '**'
+            docs:
+              - doc/**
+            salt:
+              - added|modified:
+                - setup.py
+                - noxfile.py
+                - salt/**/*.py
+                - tasks/**/*.py
+                - tools/**/*.py
+            tests:
+              - added|modified:
+                - tests/**/*.py
+            pylintrc:
+              - added|modified:
+                - .pylintrc
+
+  pre-commit:
+    name: Pre-Commit
+    uses: ./.github/workflows/pre-commit-action.yml
+    needs:
+      - get-changed-files
+    with:
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  docs:
+    name: Build Docs
+    uses: ./.github/workflows/docs-action.yml
+    needs:
+      - get-changed-files
+    with:
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  lint:
+    name: Lint
+    uses: ./.github/workflows/lint-action.yml
+    needs:
+      - get-changed-files
+    with:
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  debian-11:
+    name: Debian 11
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-11
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  debian-11-arm64:
+    name: Debian 11 ARM64
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  ubuntu-2204:
+    name: Ubuntu 22.04
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  windows-2019:
+    name: Windows 2019
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2019
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - pre-commit
+      - docs
+      - lint
+      - debian-11
+      - debian-11-arm64
+      - ubuntu-2204
+      - windows-2019
+    steps:
+    - name: Download Exit Status Files
+      if: always()
+      uses: actions/download-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
+
+    - name: Delete Exit Status Artifacts
+      if: always()
+      uses: geekyeggo/delete-artifact@v1
+      with:
+        name: exitstatus
+        failOnError: false
+
+    - name: Set Pipeline Exit Status
+      run: |
+        tree exitstatus
+        grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
+
+    - name: Done
+      if: always()
+      run:
+        echo "All worflows finished"

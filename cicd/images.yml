@@ -1,0 +1,13 @@
+debian-11:
+  ami: ami-0446131071e8012bc
+  ssh_username: admin
+debian-11-arm64:
+  ami: ami-00900a8ea49344c7d
+  ssh_username: admin
+ubuntu-22.04:
+  ami: ami-0cfac30ab1d41cf6c
+  ssh_username: ubuntu
+windows-2019:
+  ami: ami-0b4f5ddce805b3c17
+  ssh_username: Administrator
+  connect_timeout: 600
