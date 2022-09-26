@@ -461,8 +461,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
                     jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
                 )
             except YAMLError as e:
-                # YAMLError inherits Exception with no changes, so constructor just the message
-                raise type(e)("for '{path}': {error}".format(path=path, error=e))
+                raise YAMLError("for '{path}': {error}".format(path=path, error=e))
             if not isinstance(obj, dict):
                 log.info(
                     'Ignoring pillar stack template "%s": Can\'t parse '
