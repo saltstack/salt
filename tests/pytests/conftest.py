@@ -23,6 +23,9 @@ import salt.utils.platform
 from salt.serializers import yaml
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
+
+# pylint: disable=unused-import
+from tests.support.pytest.vault import vault_container_version, vault_environ
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -173,9 +176,25 @@ def salt_master_factory(
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": "http://127.0.0.1:{}".format(vault_port),
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
+        "auth": {
+            "method": "token",
+            "token": "testsecret",
+        },
+        "issue": {
+            "token": {
+                "params": {
+                    "uses": 0,
+                }
+            }
+        },
+        "policies": {
+            "assign": [
+                "salt_minion",
+            ]
+        },
+        "server": {
+            "url": f"http://127.0.0.1:{vault_port}",
+        },
     }
 
     # Config settings to test `event_return`

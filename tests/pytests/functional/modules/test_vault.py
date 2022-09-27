@@ -1,18 +1,13 @@
-import json
 import logging
-import time
 
 import pytest
 
-import salt.utils.path
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.pytest.vault import vault_delete_secret, vault_list_secrets
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd", "vault", "getent"),
 ]
-
-VAULT_BINARY = salt.utils.path.which("vault")
 
 log = logging.getLogger(__name__)
 
@@ -21,83 +16,15 @@ log = logging.getLogger(__name__)
 def minion_config_overrides(vault_port):
     return {
         "vault": {
-            "url": "http://127.0.0.1:{}".format(vault_port),
             "auth": {
                 "method": "token",
                 "token": "testsecret",
-                "uses": 0,
-                "policies": [
-                    "testpolicy",
-                ],
+            },
+            "server": {
+                "url": f"http://127.0.0.1:{vault_port}",
             },
         }
     }
-
-
-def vault_container_version_id(value):
-    return "vault=={}".format(value)
-
-
-@pytest.fixture(
-    scope="module",
-    params=["0.9.6", "1.3.1", "latest"],
-    ids=vault_container_version_id,
-)
-def vault_container_version(request, salt_factories, vault_port, shell):
-    vault_version = request.param
-    config = {
-        "backend": {"file": {"path": "/vault/file"}},
-        "default_lease_ttl": "168h",
-        "max_lease_ttl": "720h",
-        "disable_mlock": False,
-    }
-
-    factory = salt_factories.get_container(
-        "vault",
-        "ghcr.io/saltstack/salt-ci-containers/vault:{}".format(vault_version),
-        check_ports=[vault_port],
-        container_run_kwargs={
-            "ports": {"8200/tcp": vault_port},
-            "environment": {
-                "VAULT_DEV_ROOT_TOKEN_ID": "testsecret",
-                "VAULT_LOCAL_CONFIG": json.dumps(config),
-            },
-            "cap_add": "IPC_LOCK",
-        },
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
-    )
-    with factory.started() as factory:
-        attempts = 0
-        while attempts < 3:
-            attempts += 1
-            time.sleep(1)
-            ret = shell.run(
-                VAULT_BINARY,
-                "login",
-                "token=testsecret",
-                env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-            )
-            if ret.returncode == 0:
-                break
-            log.debug("Failed to authenticate against vault:\n%s", ret)
-            time.sleep(4)
-        else:
-            pytest.fail("Failed to login to vault")
-
-        ret = shell.run(
-            VAULT_BINARY,
-            "policy",
-            "write",
-            "testpolicy",
-            "{}/vault.hcl".format(RUNTIME_VARS.FILES),
-            env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-        )
-        if ret.returncode != 0:
-            log.debug("Failed to assign policy to vault:\n%s", ret)
-            pytest.fail("unable to assign policy to vault")
-        yield vault_version
 
 
 @pytest.fixture(scope="module")
@@ -112,32 +39,8 @@ def vault(loaders, modules, vault_container_version, shell, vault_port):
     finally:
         # We're explicitly using the vault CLI and not the salt vault module
         secret_path = "secret/my"
-        ret = shell.run(
-            VAULT_BINARY,
-            "kv",
-            "list",
-            "--format=json",
-            secret_path,
-            env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-        )
-        if ret.returncode == 0:
-            for secret in ret.data:
-                secret_path = "secret/my/{}".format(secret)
-                ret = shell.run(
-                    VAULT_BINARY,
-                    "kv",
-                    "delete",
-                    secret_path,
-                    env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-                )
-                ret = shell.run(
-                    VAULT_BINARY,
-                    "kv",
-                    "metadata",
-                    "delete",
-                    secret_path,
-                    env={"VAULT_ADDR": "http://127.0.0.1:{}".format(vault_port)},
-                )
+        for secret in vault_list_secrets(secret_path):
+            vault_delete_secret(f"{secret_path}/{secret}", metadata=True)
 
 
 @pytest.mark.windows_whitelisted
