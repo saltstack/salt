@@ -64,6 +64,8 @@ def custom_call_brew(*cmd, failhard=True):
                       "outdated": false,
                       "sha256": "4963f503c1e47bfa0f8bdbbbe5694d6a7242d298fb44ff68af80d42f1eaebaf9",
                       "token": "day-o",
+                      "full_token": "day-o",
+                      "tap": "homebrew/cask",
                       "url": "https://shauninman.com/assets/downloads/Day-3.0.zip",
                       "version": "3.0.1"
                     },
@@ -109,6 +111,8 @@ def custom_call_brew(*cmd, failhard=True):
                       "outdated": false,
                       "sha256": "9ed73844838bddf797eadf37e5f7da3771308c3f74d38cd422c18eebaaa8f6b9",
                       "token": "iterm2",
+                      "full_token": "custom/tap/iterm2",
+                      "tap": "custom/tap",
                       "url": "https://iterm2.com/downloads/stable/iTerm2-3_4_3.zip",
                       "version": "3.4.3"
                     }
@@ -302,54 +306,6 @@ def custom_call_brew(*cmd, failhard=True):
             "stderr": "",
             "retcode": 0,
         }
-    elif cmd == ("list", "--cask", "--versions"):
-        result = {
-            "stdout": "day-o 3.0.1\niterm2 3.4.3",
-            "stderr": "",
-            "retcode": 0,
-        }
-    elif cmd == ("info", "--cask", "iterm2"):
-        result = {
-            "stdout": textwrap.dedent(
-                """\
-                iterm2: 3.4.3 (auto_updates)
-                https://www.iterm2.com/
-                /usr/local/Caskroom/iterm2/3.4.3 (119B)
-                From: https://github.com/Homebrew/homebrew-cask/blob/HEAD/Casks/iterm2.rb
-                ==> Name
-                iTerm2
-                ==> Description
-                Terminal emulator as alternative to Apple's Terminal app
-                ==> Artifacts
-                iTerm.app (App)
-                ==> Analytics
-                install: 18,869 (30 days), 61,676 (90 days), 233,825 (365 days)
-                """
-            ),
-            "stderr": "",
-            "retcode": 0,
-        }
-    elif cmd == ("info", "--cask", "day-o"):
-        result = {
-            "stdout": textwrap.dedent(
-                """\
-                day-o: 3.0.1
-                https://shauninman.com/archive/2020/04/08/day_o_mac_menu_bar_clock_for_catalina
-                /usr/local/Caskroom/day-o/3.0.1 (7.3KB)
-                From: https://github.com/Homebrew/homebrew-cask/blob/HEAD/Casks/day-o.rb
-                ==> Name
-                Day-O
-                ==> Description
-                None
-                ==> Artifacts
-                Day-3.0/Day-O.app (App)
-                ==> Analytics
-                install: 30 (30 days), 96 (90 days), 525 (365 days)
-                """
-            ),
-            "stderr": "",
-            "retcode": "",
-        }
 
     return result
 
@@ -469,7 +425,9 @@ def test_list_pkgs_homebrew_cask_pakages():
     """
     expected_pkgs = {
         "homebrew/cask/day-o": "3.0.1",
-        "homebrew/cask/iterm2": "3.4.3",
+        "day-o": "3.0.1",
+        "custom/tap/iterm2": "3.4.3",
+        "iterm2": "3.4.3",
         "jq": "1.6",
         "xz": "5.2.5",
     }
@@ -802,3 +760,147 @@ def test_unhold_not_pinned():
         },
     ):
         assert mac_brew.unhold("foo") == _expected
+
+    def test_info_installed(self):
+        """
+        Tests info_installed method
+        """
+        mock_user = MagicMock(return_value="foo")
+        mock_cmd = MagicMock(return_value="")
+        mock_cmd_all = MagicMock(
+            return_value={
+                "pid": 12345,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": textwrap.dedent(
+                    """\
+                    {
+                      "formulae": [
+                        {
+                          "name": "salt",
+                          "full_name": "cdalvaro/tap/salt",
+                          "tap": "cdalvaro/tap",
+                          "aliases": []
+                        },
+                        {
+                          "name": "vim",
+                          "full_name": "vim",
+                          "tap": "homebrew/core",
+                          "aliases": []
+                        }
+                      ],
+                      "casks": [
+                        {
+                          "token": "visual-studio-code",
+                          "full_token": "visual-studio-code",
+                          "tap": "homebrew/cask",
+                          "name": [
+                            "MicrosoftVisualStudioCode",
+                            "VSCode"
+                          ]
+                        }
+                      ]
+                    }
+                 """
+                ),
+            }
+        )
+        _expected = {
+            "cdalvaro/tap/salt": {
+                "name": "salt",
+                "full_name": "cdalvaro/tap/salt",
+                "tap": "cdalvaro/tap",
+                "aliases": [],
+            },
+            "vim": {
+                "name": "vim",
+                "full_name": "vim",
+                "tap": "homebrew/core",
+                "aliases": [],
+            },
+            "visual-studio-code": {
+                "token": "visual-studio-code",
+                "full_token": "visual-studio-code",
+                "tap": "homebrew/cask",
+                "name": ["MicrosoftVisualStudioCode", "VSCode"],
+            },
+        }
+
+        with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
+            "salt.modules.mac_brew_pkg._list_pinned", return_value=["foo"]
+        ), patch.dict(
+            mac_brew.__salt__,
+            {
+                "file.get_user": mock_user,
+                "cmd.run_all": mock_cmd_all,
+                "cmd.run": mock_cmd,
+            },
+        ):
+            self.assertEqual(
+                mac_brew.info_installed(
+                    "cdalvaro/tap/salt", "vim", "visual-studio-code"
+                ),
+                _expected,
+            )
+
+    def test_list_upgrades(self):
+        """
+        Tests list_upgrades method
+        """
+        mock_user = MagicMock(return_value="foo")
+        mock_cmd = MagicMock(return_value="")
+        mock_cmd_all = MagicMock(
+            return_value={
+                "pid": 12345,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": textwrap.dedent(
+                    """\
+                    {
+                      "formulae": [
+                        {
+                          "name": "cmake",
+                          "installed_versions": ["3.19.3"],
+                          "current_version": "3.19.4",
+                          "pinned": false,
+                          "pinned_version": null
+                        },
+                        {
+                          "name": "fzf",
+                          "installed_versions": ["0.25.0"],
+                          "current_version": "0.25.1",
+                          "pinned": false,
+                          "pinned_version": null
+                        }
+                      ],
+                      "casks": [
+                        {
+                          "name": "ksdiff",
+                          "installed_versions": "2.2.0,122",
+                          "current_version": "2.3.6,123-jan-18-2021"
+                        }
+                      ]
+                    }
+                    """
+                ),
+            }
+        )
+        _expected = {
+            "cmake": "3.19.4",
+            "fzf": "0.25.1",
+            "ksdiff": "2.3.6,123-jan-18-2021",
+        }
+
+        with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
+            "salt.modules.mac_brew_pkg._list_pinned", return_value=["foo"]
+        ), patch.dict(
+            mac_brew.__salt__,
+            {
+                "file.get_user": mock_user,
+                "cmd.run_all": mock_cmd_all,
+                "cmd.run": mock_cmd,
+            },
+        ):
+            self.assertEqual(
+                mac_brew.list_upgrades(refresh=False, include_casks=True), _expected
+            )
