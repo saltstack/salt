@@ -188,8 +188,8 @@ def multiple_device_results():
                 {
                     "id": 512,
                     "url": "https://netbox.example.com/api/dcim/devices/512/",
-                    "name": "minion1",
-                    "display_name": "minion1",
+                    "name": "minion2",
+                    "display_name": "minion2",
                     "device_type": {
                         "id": 4,
                         "url": "https://netbox.example.com/api/dcim/device-types/4/",
@@ -490,9 +490,24 @@ def device_interface_results():
                     "cable": None,
                     "cable_peer": None,
                     "cable_peer_type": None,
-                    "connected_endpoint": None,
-                    "connected_endpoint_type": None,
-                    "connected_endpoint_reachable": None,
+                    "connected_endpoints": [
+                        {
+                            "id": 170,
+                            "url": "https://demo.netbox.dev/api/dcim/interfaces/512/",
+                            "display": "GigabitEthernet1/0/1",
+                            "device": {
+                                "id": 512,
+                                "url": "https://demo.netbox.dev/api/dcim/devices/512/",
+                                "display": "minion2",
+                                "name": "minion2"
+                            },
+                            "name": "GigabitEthernet1/0/1",
+                            "cable": 35,
+                            "_occupied": True
+                        }
+                    ],
+                    "connected_endpoints_type": "dcim.interface",
+                    "connected_endpoints_reachable": True,
                     "tags": [],
                     "count_ipaddresses": 1,
                 },
@@ -520,9 +535,9 @@ def device_interface_results():
                     "cable": None,
                     "cable_peer": None,
                     "cable_peer_type": None,
-                    "connected_endpoint": None,
-                    "connected_endpoint_type": None,
-                    "connected_endpoint_reachable": None,
+                    "connected_endpoints": None,
+                    "connected_endpoints_type": None,
+                    "connected_endpoints_reachable": None,
                     "tags": [],
                     "count_ipaddresses": 1,
                 },
@@ -552,9 +567,18 @@ def device_interfaces_list():
             "cable": None,
             "cable_peer": None,
             "cable_peer_type": None,
-            "connected_endpoint": None,
-            "connected_endpoint_type": None,
-            "connected_endpoint_reachable": None,
+            'connected_endpoints': [{'_occupied': True,
+                                    'cable': 35,
+                                    'device': {'display': 'minion2',
+                                                'id': 512,
+                                                'name': 'minion2',
+                                                'url': 'https://demo.netbox.dev/api/dcim/devices/512/'},
+                                    'display': 'GigabitEthernet1/0/1',
+                                    'id': 170,
+                                    'name': 'GigabitEthernet1/0/1',
+                                    'url': 'https://demo.netbox.dev/api/dcim/interfaces/512/'}],
+            'connected_endpoints_reachable': True,
+            'connected_endpoints_type': 'dcim.interface',
             "tags": [],
             "count_ipaddresses": 1,
         },
@@ -576,9 +600,9 @@ def device_interfaces_list():
             "cable": None,
             "cable_peer": None,
             "cable_peer_type": None,
-            "connected_endpoint": None,
-            "connected_endpoint_type": None,
-            "connected_endpoint_reachable": None,
+            "connected_endpoints": None,
+            "connected_endpoints_type": None,
+            "connected_endpoints_reachable": None,
             "tags": [],
             "count_ipaddresses": 1,
         },
@@ -857,9 +881,24 @@ def device_interfaces_ip_list():
             "cable": None,
             "cable_peer": None,
             "cable_peer_type": None,
-            "connected_endpoint": None,
-            "connected_endpoint_type": None,
-            "connected_endpoint_reachable": None,
+                    "connected_endpoints": [
+                        {
+                            "id": 170,
+                            "url": "https://demo.netbox.dev/api/dcim/interfaces/512/",
+                            "display": "GigabitEthernet1/0/1",
+                            "device": {
+                                "id": 512,
+                                "url": "https://demo.netbox.dev/api/dcim/devices/512/",
+                                "display": "minion2",
+                                "name": "minion2"
+                            },
+                            "name": "GigabitEthernet1/0/1",
+                            "cable": 35,
+                            "_occupied": True
+                        }
+                    ],
+                    "connected_endpoints_type": "dcim.interface",
+                    "connected_endpoints_reachable": True,
             "tags": [],
             "count_ipaddresses": 1,
         },
@@ -901,9 +940,9 @@ def device_interfaces_ip_list():
             "cable": None,
             "cable_peer": None,
             "cable_peer_type": None,
-            "connected_endpoint": None,
-            "connected_endpoint_type": None,
-            "connected_endpoint_reachable": None,
+            "connected_endpoints": None,
+            "connected_endpoints_type": None,
+            "connected_endpoints_reachable": None,
             "tags": [],
             "count_ipaddresses": 1,
         },
@@ -1217,9 +1256,24 @@ def pillar_results():
                     "cable": None,
                     "cable_peer": None,
                     "cable_peer_type": None,
-                    "connected_endpoint": None,
-                    "connected_endpoint_type": None,
-                    "connected_endpoint_reachable": None,
+                    "connected_endpoints": [
+                        {
+                            "id": 170,
+                            "url": "https://demo.netbox.dev/api/dcim/interfaces/512/",
+                            "display": "GigabitEthernet1/0/1",
+                            "device": {
+                                "id": 512,
+                                "url": "https://demo.netbox.dev/api/dcim/devices/512/",
+                                "display": "minion2",
+                                "name": "minion2"
+                            },
+                            "name": "GigabitEthernet1/0/1",
+                            "cable": 35,
+                            "_occupied": True
+                        }
+                    ],
+                    "connected_endpoints_type": "dcim.interface",
+                    "connected_endpoints_reachable": True,
                     "tags": [],
                     "count_ipaddresses": 1,
                 },
@@ -1261,9 +1315,9 @@ def pillar_results():
                     "cable": None,
                     "cable_peer": None,
                     "cable_peer_type": None,
-                    "connected_endpoint": None,
-                    "connected_endpoint_type": None,
-                    "connected_endpoint_reachable": None,
+                    "connected_endpoints": None,
+                    "connected_endpoints_type": None,
+                    "connected_endpoints_reachable": None,
                     "tags": [],
                     "count_ipaddresses": 1,
                 },
@@ -1371,10 +1425,139 @@ def pillar_results():
             "tags": [],
             "custom_fields": {},
             "config_context": {},
+            'connected_devices': {'asset_tag': None,
+                                  'cluster': None,
+                                  'comments': '',
+                                  'config_context': {},
+                                  'created': '2021-02-19',
+                                  'custom_fields': {},
+                                  'device_role': {'id': 45,
+                                                  'name': 'Network',
+                                                  'slug': 'network',
+                                                  'url': 'https://netbox.example.com/api/dcim/device-roles/45/'},
+                                  'device_type': {'display_name': 'Cisco '
+                                                                  'ISR2901',
+                                                  'id': 4,
+                                                  'manufacturer': {'id': 1,
+                                                                   'name': 'Cisco',
+                                                                   'slug': 'cisco',
+                                                                   'url': 'https://netbox.example.com/api/dcim/manufacturers/1/'},
+                                                  'model': 'ISR2901',
+                                                  'slug': 'isr2901',
+                                                  'url': 'https://netbox.example.com/api/dcim/device-types/4/'},
+                                  'display_name': 'minion2',
+                                  'face': None,
+                                  'id': 512,
+                                  'last_updated': '2021-02-19T06:12:04.171105Z',
+                                  'local_context_data': None,
+                                  'name': 'minion2',
+                                  'node_type': 'device',
+                                  'parent_device': None,
+                                  'platform': {'id': 1,
+                                               'name': 'Cisco IOS',
+                                               'slug': 'ios',
+                                               'url': 'https://netbox.example.com/api/dcim/platforms/1/'},
+                                  'position': None,
+                                  'primary_ip': {'address': '192.0.2.3/24',
+                                                 'family': 4,
+                                                 'id': 1150,
+                                                 'url': 'https://netbox.example.com/api/ipam/ip-addresses/1150/'},
+                                  'primary_ip4': {'address': '192.0.2.3/24',
+                                                  'family': 4,
+                                                  'id': 1150,
+                                                  'url': 'https://netbox.example.com/api/ipam/ip-addresses/1150/'},
+                                  'primary_ip6': None,
+                                  'rack': None,
+                                  'serial': '',
+                                  'site': {'id': 18,
+                                           'name': 'Site 1',
+                                           'slug': 'site1',
+                                           'url': 'https://netbox.example.com/api/dcim/sites/18/'},
+                                  'status': {'label': 'Active',
+                                             'value': 'active'},
+                                  'tags': [],
+                                  'tenant': None,
+                                  'url': 'https://netbox.example.com/api/dcim/devices/512/',
+                                  'vc_position': None,
+                                  'vc_priority': None,
+                                  'virtual_chassis': None},
             "created": "2021-02-19",
             "last_updated": "2021-02-19T06:12:04.171105Z",
         },
         "proxy": {"host": "192.0.2.1", "driver": "ios", "proxytype": "napalm"},
+    }
+
+@pytest.fixture
+def connected_devices_results():
+    return {
+                    "id": 512,
+                    "url": "https://netbox.example.com/api/dcim/devices/512/",
+                    "name": "minion2",
+                    "display_name": "minion2",
+                    "device_type": {
+                        "id": 4,
+                        "url": "https://netbox.example.com/api/dcim/device-types/4/",
+                        "manufacturer": {
+                            "id": 1,
+                            "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                            "name": "Cisco",
+                            "slug": "cisco",
+                        },
+                        "model": "ISR2901",
+                        "slug": "isr2901",
+                        "display_name": "Cisco ISR2901",
+                    },
+                    "device_role": {
+                        "id": 45,
+                        "url": "https://netbox.example.com/api/dcim/device-roles/45/",
+                        "name": "Network",
+                        "slug": "network",
+                    },
+                    "node_type": "device",
+                    "tenant": None,
+                    "platform": {
+                        "id": 1,
+                        "url": "https://netbox.example.com/api/dcim/platforms/1/",
+                        "name": "Cisco IOS",
+                        "slug": "ios",
+                    },
+                    "serial": "",
+                    "asset_tag": None,
+                    "site": {
+                        "id": 18,
+                        "url": "https://netbox.example.com/api/dcim/sites/18/",
+                        "name": "Site 1",
+                        "slug": "site1",
+                    },
+                    "rack": None,
+                    "position": None,
+                    "face": None,
+                    "parent_device": None,
+                    "status": {"value": "active", "label": "Active"},
+                    "primary_ip": {
+                        "id": 1150,
+                        "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                        "family": 4,
+                        "address": "192.0.2.3/24",
+                    },
+                    "primary_ip4": {
+                        "id": 1150,
+                        "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                        "family": 4,
+                        "address": "192.0.2.3/24",
+                    },
+                    "primary_ip6": None,
+                    "cluster": None,
+                    "virtual_chassis": None,
+                    "vc_position": None,
+                    "vc_priority": None,
+                    "comments": "",
+                    "local_context_data": None,
+                    "tags": [],
+                    "custom_fields": {},
+                    "config_context": {},
+                    "created": "2021-02-19",
+                    "last_updated": "2021-02-19T06:12:04.171105Z",
     }
 
 
@@ -1968,6 +2151,7 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     site_prefixes,
     proxy_details,
     pillar_results,
+    connected_devices_results
 ):
 
     expected_result = pillar_results
@@ -1978,6 +2162,7 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     default_kwargs["site_details"] = True
     default_kwargs["site_prefixes"] = True
     default_kwargs["proxy_return"] = True
+    default_kwargs["connected_devices"] = True
 
     with patch("salt.pillar.netbox._get_devices", autospec=True) as get_devices, patch(
         "salt.pillar.netbox._get_virtual_machines", autospec=True
@@ -1991,8 +2176,10 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         "salt.pillar.netbox._get_site_prefixes", autospec=True
     ) as get_site_prefixes, patch(
         "salt.pillar.netbox._get_proxy_details", autospec=True
-    ) as get_proxy_details:
-
+    ) as get_proxy_details, patch(
+        "salt.pillar.netbox._get_connected_devices", autospec=True
+    ) as get_connected_decvices:
+    
         get_devices.return_value = device_results["dict"]["results"]
         get_virtual_machines.return_value = no_results["dict"]["results"]
         get_interfaces.return_value = device_interfaces_list
@@ -2000,6 +2187,7 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         get_site_details.return_value = site_results["dict"]
         get_site_prefixes.return_value = site_prefixes
         get_proxy_details.return_value = proxy_details
+        get_connected_decvices.return_value = connected_devices_results
 
         actual_result = netbox.ext_pillar(**default_kwargs)
 
