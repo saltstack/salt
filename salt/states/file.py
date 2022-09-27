@@ -1535,6 +1535,7 @@ def symlink(
     win_perms=None,
     win_deny_perms=None,
     win_inheritance=None,
+    atomic=False,
     **kwargs
 ):
     """
@@ -1613,17 +1614,22 @@ def symlink(
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
+
+    atomic
+        Use atomic file operation to create the symlink.
+
+        .. versionadded:: 3006.0
     """
     name = os.path.expanduser(name)
+
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    if not name:
+        return _error(ret, "Must provide name to file.symlink")
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    if not name:
-        return _error(ret, "Must provide name to file.symlink")
-
     if user is None:
         user = __opts__["user"]
 
@@ -1747,12 +1753,9 @@ def symlink(
 
     if __salt__["file.is_link"](name):
         # The link exists, verify that it matches the target
-        if os.path.normpath(__salt__["file.readlink"](name)) != os.path.normpath(
+        if os.path.normpath(__salt__["file.readlink"](name)) == os.path.normpath(
             target
         ):
-            # The target is wrong, delete the link
-            os.remove(name)
-        else:
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
                 if salt.utils.platform.is_windows():
@@ -1832,14 +1835,7 @@ def symlink(
                         name, backupname, exc
                     ),
                 )
-        elif force:
-            # Remove whatever is in the way
-            if __salt__["file.is_link"](name):
-                __salt__["file.remove"](name)
-                ret["changes"]["forced"] = "Symlink was forcibly replaced"
-            else:
-                __salt__["file.remove"](name)
-        else:
+        elif not force and not atomic:
             # Otherwise throw an error
             fs_entry_type = (
                 "File"
@@ -1853,26 +1849,24 @@ def symlink(
                 "{} exists where the symlink {} should be".format(fs_entry_type, name),
             )
 
-    if not os.path.exists(name):
-        # The link is not present, make it
-        try:
-            __salt__["file.symlink"](target, name)
-        except OSError as exc:
-            ret["result"] = False
-            ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
-                name, target, exc
-            )
-            return ret
-        else:
-            ret["comment"] = "Created new symlink {} -> {}".format(name, target)
-            ret["changes"]["new"] = name
+    try:
+        __salt__["file.symlink"](target, name, force=force, atomic=atomic)
+    except (CommandExecutionError, OSError) as exc:
+        ret["result"] = False
+        ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
+            name, target, exc
+        )
+        return ret
+    else:
+        ret["comment"] = "Created new symlink {} -> {}".format(name, target)
+        ret["changes"]["new"] = name
 
-        if not _check_symlink_ownership(name, user, group, win_owner):
-            if not _set_symlink_ownership(name, user, group, win_owner):
-                ret["result"] = False
-                ret["comment"] += ", but was unable to set ownership to {}:{}".format(
-                    user, group
-                )
+    if not _check_symlink_ownership(name, user, group, win_owner):
+        if not _set_symlink_ownership(name, user, group, win_owner):
+            ret["result"] = False
+            ret["comment"] += ", but was unable to set ownership to {}:{}".format(
+                user, group
+            )
     return ret
 
 
