@@ -261,6 +261,82 @@ def multiple_device_results():
 
 
 @pytest.fixture
+def secondary_device_result():
+    return {
+        "dict": {
+            "id": 512,
+            "url": "https://netbox.example.com/api/dcim/devices/512/",
+            "name": "minion2",
+            "display_name": "minion2",
+            "device_type": {
+                "id": 4,
+                "url": "https://netbox.example.com/api/dcim/device-types/4/",
+                "manufacturer": {
+                    "id": 1,
+                    "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                    "name": "Cisco",
+                    "slug": "cisco",
+                },
+                "model": "ISR2901",
+                "slug": "isr2901",
+                "display_name": "Cisco ISR2901",
+            },
+            "device_role": {
+                "id": 45,
+                "url": "https://netbox.example.com/api/dcim/device-roles/45/",
+                "name": "Network",
+                "slug": "network",
+            },
+            "node_type": "device",
+            "tenant": None,
+            "platform": {
+                "id": 1,
+                "url": "https://netbox.example.com/api/dcim/platforms/1/",
+                "name": "Cisco IOS",
+                "slug": "ios",
+            },
+            "serial": "",
+            "asset_tag": None,
+            "site": {
+                "id": 18,
+                "url": "https://netbox.example.com/api/dcim/sites/18/",
+                "name": "Site 1",
+                "slug": "site1",
+            },
+            "rack": None,
+            "position": None,
+            "face": None,
+            "parent_device": None,
+            "status": {"value": "active", "label": "Active"},
+            "primary_ip": {
+                "id": 1150,
+                "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                "family": 4,
+                "address": "192.0.2.3/24",
+            },
+            "primary_ip4": {
+                "id": 1150,
+                "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                "family": 4,
+                "address": "192.0.2.3/24",
+            },
+            "primary_ip6": None,
+            "cluster": None,
+            "virtual_chassis": None,
+            "vc_position": None,
+            "vc_priority": None,
+            "comments": "",
+            "local_context_data": None,
+            "tags": [],
+            "custom_fields": {},
+            "config_context": {},
+            "created": "2021-02-19",
+            "last_updated": "2021-02-19T06:12:04.171105Z",
+        }
+    }
+
+
+@pytest.fixture
 def virtual_machine_results():
     return {
         "dict": {
@@ -1432,74 +1508,76 @@ def pillar_results():
             "custom_fields": {},
             "config_context": {},
             "connected_devices": {
-                "asset_tag": None,
-                "cluster": None,
-                "comments": "",
-                "config_context": {},
-                "created": "2021-02-19",
-                "custom_fields": {},
-                "device_role": {
-                    "id": 45,
-                    "name": "Network",
-                    "slug": "network",
-                    "url": "https://netbox.example.com/api/dcim/device-roles/45/",
-                },
-                "device_type": {
-                    "display_name": "Cisco " "ISR2901",
-                    "id": 4,
-                    "manufacturer": {
-                        "id": 1,
-                        "name": "Cisco",
-                        "slug": "cisco",
-                        "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                512: {
+                    "asset_tag": None,
+                    "cluster": None,
+                    "comments": "",
+                    "config_context": {},
+                    "created": "2021-02-19",
+                    "custom_fields": {},
+                    "device_role": {
+                        "id": 45,
+                        "name": "Network",
+                        "slug": "network",
+                        "url": "https://netbox.example.com/api/dcim/device-roles/45/",
                     },
-                    "model": "ISR2901",
-                    "slug": "isr2901",
-                    "url": "https://netbox.example.com/api/dcim/device-types/4/",
-                },
-                "display_name": "minion2",
-                "face": None,
-                "id": 512,
-                "last_updated": "2021-02-19T06:12:04.171105Z",
-                "local_context_data": None,
-                "name": "minion2",
-                "node_type": "device",
-                "parent_device": None,
-                "platform": {
-                    "id": 1,
-                    "name": "Cisco IOS",
-                    "slug": "ios",
-                    "url": "https://netbox.example.com/api/dcim/platforms/1/",
-                },
-                "position": None,
-                "primary_ip": {
-                    "address": "192.0.2.3/24",
-                    "family": 4,
-                    "id": 1150,
-                    "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
-                },
-                "primary_ip4": {
-                    "address": "192.0.2.3/24",
-                    "family": 4,
-                    "id": 1150,
-                    "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
-                },
-                "primary_ip6": None,
-                "rack": None,
-                "serial": "",
-                "site": {
-                    "id": 18,
-                    "name": "Site 1",
-                    "slug": "site1",
-                    "url": "https://netbox.example.com/api/dcim/sites/18/",
-                },
-                "status": {"label": "Active", "value": "active"},
-                "tags": [],
-                "tenant": None,
-                "url": "https://netbox.example.com/api/dcim/devices/512/",
-                "vc_position": None,
-                "vc_priority": None,
-                "virtual_chassis": None,
+                    "device_type": {
+                        "display_name": "Cisco " "ISR2901",
+                        "id": 4,
+                        "manufacturer": {
+                            "id": 1,
+                            "name": "Cisco",
+                            "slug": "cisco",
+                            "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                        },
+                        "model": "ISR2901",
+                        "slug": "isr2901",
+                        "url": "https://netbox.example.com/api/dcim/device-types/4/",
+                    },
+                    "display_name": "minion2",
+                    "face": None,
+                    "id": 512,
+                    "last_updated": "2021-02-19T06:12:04.171105Z",
+                    "local_context_data": None,
+                    "name": "minion2",
+                    "node_type": "device",
+                    "parent_device": None,
+                    "platform": {
+                        "id": 1,
+                        "name": "Cisco IOS",
+                        "slug": "ios",
+                        "url": "https://netbox.example.com/api/dcim/platforms/1/",
+                    },
+                    "position": None,
+                    "primary_ip": {
+                        "address": "192.0.2.3/24",
+                        "family": 4,
+                        "id": 1150,
+                        "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                    },
+                    "primary_ip4": {
+                        "address": "192.0.2.3/24",
+                        "family": 4,
+                        "id": 1150,
+                        "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                    },
+                    "primary_ip6": None,
+                    "rack": None,
+                    "serial": "",
+                    "site": {
+                        "id": 18,
+                        "name": "Site 1",
+                        "slug": "site1",
+                        "url": "https://netbox.example.com/api/dcim/sites/18/",
+                    },
+                    "status": {"label": "Active", "value": "active"},
+                    "tags": [],
+                    "tenant": None,
+                    "url": "https://netbox.example.com/api/dcim/devices/512/",
+                    "vc_position": None,
+                    "vc_priority": None,
+                    "virtual_chassis": None,
+                }
             },
             "created": "2021-02-19",
             "last_updated": "2021-02-19T06:12:04.171105Z",
@@ -1511,74 +1589,76 @@ def pillar_results():
 @pytest.fixture
 def connected_devices_results():
     return {
-        "id": 512,
-        "url": "https://netbox.example.com/api/dcim/devices/512/",
-        "name": "minion2",
-        "display_name": "minion2",
-        "device_type": {
-            "id": 4,
-            "url": "https://netbox.example.com/api/dcim/device-types/4/",
-            "manufacturer": {
-                "id": 1,
-                "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
-                "name": "Cisco",
-                "slug": "cisco",
+        512: {
+            "id": 512,
+            "url": "https://netbox.example.com/api/dcim/devices/512/",
+            "name": "minion2",
+            "display_name": "minion2",
+            "device_type": {
+                "id": 4,
+                "url": "https://netbox.example.com/api/dcim/device-types/4/",
+                "manufacturer": {
+                    "id": 1,
+                    "url": "https://netbox.example.com/api/dcim/manufacturers/1/",
+                    "name": "Cisco",
+                    "slug": "cisco",
+                },
+                "model": "ISR2901",
+                "slug": "isr2901",
+                "display_name": "Cisco ISR2901",
             },
-            "model": "ISR2901",
-            "slug": "isr2901",
-            "display_name": "Cisco ISR2901",
-        },
-        "device_role": {
-            "id": 45,
-            "url": "https://netbox.example.com/api/dcim/device-roles/45/",
-            "name": "Network",
-            "slug": "network",
-        },
-        "node_type": "device",
-        "tenant": None,
-        "platform": {
-            "id": 1,
-            "url": "https://netbox.example.com/api/dcim/platforms/1/",
-            "name": "Cisco IOS",
-            "slug": "ios",
-        },
-        "serial": "",
-        "asset_tag": None,
-        "site": {
-            "id": 18,
-            "url": "https://netbox.example.com/api/dcim/sites/18/",
-            "name": "Site 1",
-            "slug": "site1",
-        },
-        "rack": None,
-        "position": None,
-        "face": None,
-        "parent_device": None,
-        "status": {"value": "active", "label": "Active"},
-        "primary_ip": {
-            "id": 1150,
-            "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
-            "family": 4,
-            "address": "192.0.2.3/24",
-        },
-        "primary_ip4": {
-            "id": 1150,
-            "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
-            "family": 4,
-            "address": "192.0.2.3/24",
-        },
-        "primary_ip6": None,
-        "cluster": None,
-        "virtual_chassis": None,
-        "vc_position": None,
-        "vc_priority": None,
-        "comments": "",
-        "local_context_data": None,
-        "tags": [],
-        "custom_fields": {},
-        "config_context": {},
-        "created": "2021-02-19",
-        "last_updated": "2021-02-19T06:12:04.171105Z",
+            "device_role": {
+                "id": 45,
+                "url": "https://netbox.example.com/api/dcim/device-roles/45/",
+                "name": "Network",
+                "slug": "network",
+            },
+            "node_type": "device",
+            "tenant": None,
+            "platform": {
+                "id": 1,
+                "url": "https://netbox.example.com/api/dcim/platforms/1/",
+                "name": "Cisco IOS",
+                "slug": "ios",
+            },
+            "serial": "",
+            "asset_tag": None,
+            "site": {
+                "id": 18,
+                "url": "https://netbox.example.com/api/dcim/sites/18/",
+                "name": "Site 1",
+                "slug": "site1",
+            },
+            "rack": None,
+            "position": None,
+            "face": None,
+            "parent_device": None,
+            "status": {"value": "active", "label": "Active"},
+            "primary_ip": {
+                "id": 1150,
+                "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                "family": 4,
+                "address": "192.0.2.3/24",
+            },
+            "primary_ip4": {
+                "id": 1150,
+                "url": "https://netbox.example.com/api/ipam/ip-addresses/1150/",
+                "family": 4,
+                "address": "192.0.2.3/24",
+            },
+            "primary_ip6": None,
+            "cluster": None,
+            "virtual_chassis": None,
+            "vc_position": None,
+            "vc_priority": None,
+            "comments": "",
+            "local_context_data": None,
+            "tags": [],
+            "custom_fields": {},
+            "config_context": {},
+            "created": "2021-02-19",
+            "last_updated": "2021-02-19T06:12:04.171105Z",
+        }
     }
 
 
@@ -1835,6 +1915,29 @@ def test_when_we_retrieve_device_interface_ips_then_return_list(
             "device",
             headers,
             default_kwargs["api_query_result_limit"],
+        )
+
+        assert actual_result == expected_result
+
+
+def test_connected_endpoints(
+    default_kwargs,
+    headers,
+    connected_devices_results,
+    device_interfaces_list,
+    secondary_device_result,
+):
+
+    expected_result = connected_devices_results
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = secondary_device_result
+
+        actual_result = netbox._get_connected_devices(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            device_interfaces_list,
+            headers,
         )
 
         assert actual_result == expected_result
