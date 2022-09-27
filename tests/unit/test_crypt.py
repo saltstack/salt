@@ -1,14 +1,12 @@
-# coding: utf-8
-from __future__ import absolute_import
-
 import os
 import shutil
 import tempfile
 
+import pytest
+
 import salt.utils.files
+import salt.utils.stringutils
 from salt import crypt
-from salt.ext import six
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, MockCall, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -19,14 +17,14 @@ try:
 except ImportError:
     HAS_M2 = False
 try:
-    from Cryptodome.PublicKey import RSA  # pylint: disable=unused-import
+    from Cryptodome.PublicKey import RSA
 
     HAS_PYCRYPTO_RSA = True
 except ImportError:
     HAS_PYCRYPTO_RSA = False
 if not HAS_PYCRYPTO_RSA:
     try:
-        from Crypto.PublicKey import RSA
+        from Crypto.PublicKey import RSA  # nosec
 
         HAS_PYCRYPTO_RSA = True
     except ImportError:
@@ -96,10 +94,10 @@ SIG = (
 @skipIf(not HAS_PYCRYPTO_RSA, "pycrypto >= 2.6 is not available")
 @skipIf(HAS_M2, "m2crypto is used by salt.crypt if installed")
 class CryptTestCase(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_gen_keys(self):
-        open_priv_wb = MockCall("/keydir{0}keyname.pem".format(os.sep), "wb+")
-        open_pub_wb = MockCall("/keydir{0}keyname.pub".format(os.sep), "wb+")
+        open_priv_wb = MockCall("/keydir{}keyname.pem".format(os.sep), "wb+")
+        open_pub_wb = MockCall("/keydir{}keyname.pub".format(os.sep), "wb+")
 
         with patch.multiple(
             os,
@@ -111,7 +109,7 @@ class CryptTestCase(TestCase):
                 "os.path.isfile", return_value=True
             ):
                 result = crypt.gen_keys("/keydir", "keyname", 2048)
-                assert result == "/keydir{0}keyname.pem".format(os.sep), result
+                assert result == "/keydir{}keyname.pem".format(os.sep), result
                 assert open_priv_wb not in m_open.calls
                 assert open_pub_wb not in m_open.calls
 
@@ -126,7 +124,7 @@ class CryptTestCase(TestCase):
     @patch("os.chmod", MagicMock())
     @patch("os.chown", MagicMock(), create=True)
     @patch("os.access", MagicMock(return_value=True))
-    @slowTest
+    @pytest.mark.slow_test
     def test_gen_keys_with_passphrase(self):
         key_path = os.path.join(os.sep, "keydir")
         open_priv_wb = MockCall(os.path.join(key_path, "keyname.pem"), "wb+")
@@ -174,14 +172,14 @@ class M2CryptTestCase(TestCase):
     @patch("os.umask", MagicMock())
     @patch("os.chmod", MagicMock())
     @patch("os.access", MagicMock(return_value=True))
-    @slowTest
+    @pytest.mark.slow_test
     def test_gen_keys(self):
         with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem:
             with patch("M2Crypto.RSA.RSA.save_pub_key", MagicMock()) as save_pub:
                 with patch("os.path.isfile", return_value=True):
                     self.assertEqual(
                         crypt.gen_keys("/keydir", "keyname", 2048),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     save_pem.assert_not_called()
                     save_pub.assert_not_called()
@@ -189,20 +187,20 @@ class M2CryptTestCase(TestCase):
                 with patch("os.path.isfile", return_value=False):
                     self.assertEqual(
                         crypt.gen_keys("/keydir", "keyname", 2048),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     save_pem.assert_called_once_with(
-                        "/keydir{0}keyname.pem".format(os.sep), cipher=None
+                        "/keydir{}keyname.pem".format(os.sep), cipher=None
                     )
                     save_pub.assert_called_once_with(
-                        "/keydir{0}keyname.pub".format(os.sep)
+                        "/keydir{}keyname.pub".format(os.sep)
                     )
 
     @patch("os.umask", MagicMock())
     @patch("os.chmod", MagicMock())
     @patch("os.chown", MagicMock())
     @patch("os.access", MagicMock(return_value=True))
-    @slowTest
+    @pytest.mark.slow_test
     def test_gen_keys_with_passphrase(self):
         with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem:
             with patch("M2Crypto.RSA.RSA.save_pub_key", MagicMock()) as save_pub:
@@ -211,7 +209,7 @@ class M2CryptTestCase(TestCase):
                         crypt.gen_keys(
                             "/keydir", "keyname", 2048, passphrase="password"
                         ),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     save_pem.assert_not_called()
                     save_pub.assert_not_called()
@@ -221,26 +219,30 @@ class M2CryptTestCase(TestCase):
                         crypt.gen_keys(
                             "/keydir", "keyname", 2048, passphrase="password"
                         ),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     callback = save_pem.call_args[1]["callback"]
                     save_pem.assert_called_once_with(
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                         cipher="des_ede3_cbc",
                         callback=callback,
                     )
                     self.assertEqual(callback(None), b"password")
                     save_pub.assert_called_once_with(
-                        "/keydir{0}keyname.pub".format(os.sep)
+                        "/keydir{}keyname.pub".format(os.sep)
                     )
 
     def test_sign_message(self):
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             self.assertEqual(SIG, salt.crypt.sign_message("/keydir/keyname.pem", MSG))
 
     def test_sign_message_with_passphrase(self):
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             self.assertEqual(
                 SIG,
@@ -248,13 +250,18 @@ class M2CryptTestCase(TestCase):
             )
 
     def test_verify_signature(self):
-        with patch("salt.utils.files.fopen", mock_open(read_data=six.b(PUBKEY_DATA))):
+        with patch(
+            "salt.utils.files.fopen",
+            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
+        ):
             self.assertTrue(crypt.verify_signature("/keydir/keyname.pub", MSG, SIG))
 
     def test_encrypt_decrypt_bin(self):
-        priv_key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        priv_key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         pub_key = M2Crypto.RSA.load_pub_key_bio(
-            M2Crypto.BIO.MemoryBuffer(six.b(PUBKEY_DATA))
+            M2Crypto.BIO.MemoryBuffer(salt.utils.stringutils.to_bytes(PUBKEY_DATA))
         )
         encrypted = salt.crypt.private_encrypt(priv_key, b"salt")
         decrypted = salt.crypt.public_decrypt(pub_key, encrypted)
@@ -324,19 +331,27 @@ class TestM2CryptoRegression47124(TestCase):
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_verify_bytes(self):
         message = salt.utils.stringutils.to_unicode("meh")
-        with patch("salt.utils.files.fopen", mock_open(read_data=six.b(PUBKEY_DATA))):
+        with patch(
+            "salt.utils.files.fopen",
+            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
+        ):
             salt.crypt.verify_signature("/keydir/keyname.pub", message, self.SIGNATURE)
 
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_verify_unicode(self):
         message = salt.utils.stringutils.to_bytes("meh")
-        with patch("salt.utils.files.fopen", mock_open(read_data=six.b(PUBKEY_DATA))):
+        with patch(
+            "salt.utils.files.fopen",
+            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
+        ):
             salt.crypt.verify_signature("/keydir/keyname.pub", message, self.SIGNATURE)
 
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_sign_bytes(self):
         message = salt.utils.stringutils.to_unicode("meh")
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             signature = salt.crypt.sign_message(
                 "/keydir/keyname.pem", message, passphrase="password"
@@ -346,9 +361,59 @@ class TestM2CryptoRegression47124(TestCase):
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_sign_unicode(self):
         message = salt.utils.stringutils.to_bytes("meh")
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             signature = salt.crypt.sign_message(
                 "/keydir/keyname.pem", message, passphrase="password"
             )
         self.assertEqual(signature, self.SIGNATURE)
+
+
+@skipIf(
+    not HAS_M2 and not HAS_PYCRYPTO_RSA,
+    "No crypto library found. Install either M2Crypto or Cryptodome to run this test",
+)
+class TestCrypt(TestCase):
+    def test_pwdata_decrypt(self):
+        key_string = """-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEAzhBRyyHa7b63RLE71uKMKgrpulcAJjaIaN68ltXcCvy4w9pi
+Kj+4I3Qp6RvUaHOEmymqyjOMjQc6iwpe0scCFqh3nUk5YYaLZ3WAW0htQVlnesgB
+ZiBg9PBeTQY/LzqtudL6RCng/AX+fbnCsddlIysRxnUoNVMvz0gAmCY2mnTDjcTt
+pyxuk2T0AHSHNCKCalm75L1bWDFF+UzFemf536tBfBUGRWR6jWTij85vvCntxHS/
+HdknaTJ50E7XGVzwBJpCyV4Y2VXuW/3KrCNTqXw+jTmEw0vlcshfDg/vb3IxsUSK
+5KuHalKq/nUIc+F4QCJOl+A10goGdIfYC1/67QIDAQABAoIBAAOP+qoFWtCTZH22
+hq9PWVb8u0+yY1lFxhPyDdaZueUiu1r/coUCdv996Z+TEJgBr0AzdzVpsLtbbaKr
+ujnwoNOdc/vvISPTfKN8P4zUcrcXgZd4z7VhR+vUH/0652q8m/ZDdHorMy2IOP8Z
+cAk9DQ2PmA4TRm+tkX0G5KO8vWLsK921aRMWdsKJyQ0lYxl7M8JWupFsCJFr/U+8
+dAVtwnUiS7RnhBABZ1cfNTHYhXVAh4d+a9y/gZ00a66OGqPxiXfhjjDUZ6fGvWKN
+FlhKWEg6YqIx/H4aNXkLI5Rzzhdx/c2ukNm7+X2veRcAW7bcTwk8wxJxciEP5pBi
+1el9VE0CgYEA/lbzdE2M4yRBvTfYYC6BqZcn+BqtrAUc2h3fEy+p7lwlet0af1id
+gWpYpOJyLc0AUfR616/m2y3PwEH/nMKDSTuU7o/qKNtlHW0nQcnhDCjTUydS3+J/
+JM3dhfgVqi03rjqNcgHA2eOEwcu/OBZtiaC0wqKbuRZRtfGffyoO3ssCgYEAz2iw
+wqu/NkA+MdQIxz/a3Is7gGwoFu6h7O+XU2uN8Y2++jSBw9AzzWj31YCvyjuJPAE+
+gxHm6yOnNoLVn423NtibHejhabzHNIK6UImH99bSTKabsxfF2BX6v982BimU1jwc
+bYykzws37oN/poPb5FTpEiAUrsd2bAMn/1S43icCgYEAulHkY0z0aumCpyUkA8HO
+BvjOtPiGRcAxFLBRXPLL3+vtIQachLHcIJRRf+jLkDXfiCo7W4pm6iWzTbqLkMEG
+AD3/qowPFAM1Hct6uL01efzmYsIp+g0o60NMhvnolRQu+Bm4yM30AyqjdHzYBjSX
+5fyuru8EeSCal1j8aOHcpuUCgYEAhGhDH6Pg59NPYSQJjpm3MMA59hwV473n5Yh2
+xKyO6zwgRT6r8MPDrkhqnwQONT6Yt5PbwnT1Q/t4zhXsJnWkFwFk1U1MSeJYEa+7
+HZsPECs2CfT6xPRSO0ac00y+AmUdPT8WruDwfbSdukh8f2MCR9vlBsswKPvxH7dM
+G3aMplUCgYEAmMFgB/6Ox4OsQPPC6g4G+Ezytkc4iVkMEcjiVWzEsYATITjq3weO
+/XDGBYJoBhYwWPi9oBufFc/2pNtWy1FKKXPuVyXQATdA0mfEPbtsHjMFQNZbeKnm
+0na/SysSDCK3P+9ijlbjqLjMmPEmhJxGWTJ7khnTTkfre7/w9ZxJxi8=
+-----END RSA PRIVATE KEY-----"""
+        pwdata = b"""\
+V\x80+b\xca\x06M\xb6\x12\xc6\xe8\xf2\xb5\xbb\xd8m\xc0\x97\x9a\xeb\xb9q\x19\xc3\
+\xcdi\xb84\x90\xaf\x12kT\xe2@u\xd6\xe8T\x89\xa3\xc7\xb2Y\xd1N\x00\xa9\xc0"\xbe\
+\xed\xb1\xc3\xb7^\xbf\xbd\x8b\x13\xd3/L\x1b\xa1`\xe2\xea\x03\x98\x82\xf3uS&|\
+\xe5\xd8J\xce\xfc\x97\x8d\x0b\x949\xc0\xbd^\xef\xc6\xfd\xce\xbb\x1e\xd0"(m\xe1\
+\x95\xfb\xc8/\x07\x93\xb8\xda\x8f\x99\xfe\xdc\xd5\xcb\xdb\xb2\xf11M\xdbD\xcf\
+\x95\x13p\r\xa4\x1c{\xd5\xdb\xc7\xe5\xaf\x95F\x97\xa9\x00p~\xb5\xec\xa4.\xd0\
+\xa4\xb4\xf4f\xcds,Y/\xa1:WF\xb8\xc7\x07\xaa\x0b<\'~\x1b$D9\xd4\x8d\xf0x\xc5\
+\xee\xa8:\xe6\x00\x10\xc5i\x11\xc7]C8\x05l\x8b\x9b\xc3\x83e\xf7y\xadi:0\xb4R\
+\x1a(\x04&yL8\x19s\n\x11\x81\xfd?\xfb2\x80Ll\xa1\xdc\xc9\xb6P\xca\x8d\'\x11\xc1\
+\x07\xa5\xa1\x058\xc7\xce\xbeb\x92\xbf\x0bL\xec\xdf\xc3M\x83\xfb$\xec\xd5\xf9\
+"""
+        self.assertEqual("1234", salt.crypt.pwdata_decrypt(key_string, pwdata))

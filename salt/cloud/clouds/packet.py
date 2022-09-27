@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Packet Cloud Module Using Packet's Python API Client
 ====================================================
@@ -49,24 +48,16 @@ This driver requires Packet's client library: https://pypi.python.org/pypi/packe
         storage_snapshot_frequency: 15min
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import pprint
 import time
 
-# Import Salt Libs
 import salt.config as config
-
-# Import Salt-Cloud Libs
 import salt.utils.cloud
 from salt.cloud.libcloudfuncs import get_image, get_size, script, show_instance
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-from salt.ext.six.moves import range
 from salt.utils.functools import namespaced_function
 
-# Import 3rd-party libs
 try:
     import packet
 
@@ -101,12 +92,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("token",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
 
 
@@ -271,7 +269,7 @@ def is_profile_configured(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or __virtualname__,
+                _get_active_provider_name() or __virtualname__,
                 vm_["profile"],
                 vm_=vm_,
             )
@@ -279,7 +277,7 @@ def is_profile_configured(vm_):
         ):
             return False
 
-        alias, driver = __active_provider_name__.split(":")
+        alias, driver = _get_active_provider_name().split(":")
 
         profile_data = __opts__["providers"][alias][driver]["profiles"][vm_["profile"]]
 
@@ -342,7 +340,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(name),
+        "salt/cloud/{}/creating".format(name),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -357,7 +355,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -377,7 +375,7 @@ def create(vm_):
 
     if device.state != "active":
         log.error(
-            "Error creating %s on PACKET\n\n" "while waiting for initial ready status",
+            "Error creating %s on PACKET\n\nwhile waiting for initial ready status",
             name,
             exc_info_on_loglevel=logging.DEBUG,
         )
@@ -415,7 +413,7 @@ def create(vm_):
 
         volume = manager.create_volume(
             vm_["project_id"],
-            "{0}_storage".format(name),
+            "{}_storage".format(name),
             vm_.get("storage_tier"),
             vm_.get("storage_size"),
             vm_.get("location"),
@@ -429,8 +427,7 @@ def create(vm_):
 
         if volume.state != "active":
             log.error(
-                "Error creating %s on PACKET\n\n"
-                "while waiting for initial ready status",
+                "Error creating %s on PACKET\n\nwhile waiting for initial ready status",
                 name,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -444,7 +441,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(name),
+        "salt/cloud/{}/created".format(name),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -515,7 +512,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -536,6 +535,7 @@ def get_devices_by_token():
 def list_nodes(call=None):
     """
     Returns a list of devices, keeping only a brief listing.
+
     CLI Example:
 
     .. code-block:: bash
@@ -574,13 +574,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudException(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -606,7 +606,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

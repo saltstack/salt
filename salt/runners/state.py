@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Execute orchestration functions
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.loader
 import salt.utils.event
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
 
-LOGGER = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def pause(jid, state_id=None, duration=None):
@@ -90,7 +86,7 @@ def orchestrate(
 
         Runner uses the pillar variable
 
-    .. versionchanged:: develop
+    .. versionchanged:: 2017.5
 
         Runner uses the pillar_enc variable that allows renderers to render the pillar.
         This is usable when supplying the contents of a file as pillar, and the file contains
@@ -215,6 +211,7 @@ def orchestrate_show_sls(
     .. seealso:: The state.show_sls module function
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-run state.orch_show_sls my-orch-formula.my-orch-state 'pillar={ nodegroup: ng1 }'

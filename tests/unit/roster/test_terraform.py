@@ -1,15 +1,11 @@
 """
 unittests for terraform roster
 """
-# Import Python libs
 import os.path
 
-# Import Salt Libs
 import salt.config
 import salt.loader
 from salt.roster import terraform
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS

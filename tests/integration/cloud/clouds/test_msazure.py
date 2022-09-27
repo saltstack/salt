@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support.unit import skipIf
 
@@ -64,7 +58,7 @@ class AzureTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_val = self.run_cloud(
-            "-p azure-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p azure-test {}".format(self.instance_name), timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_val)
         self.assertDestroyInstance(timeout=TIMEOUT)

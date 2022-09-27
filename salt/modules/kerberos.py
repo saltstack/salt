@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Kerberos KDC
 
@@ -20,12 +19,9 @@ authenticate as.
     auth_principal: kadmin/admin
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -49,7 +45,7 @@ def __execute_kadmin(cmd):
 
     if __salt__["file.file_exists"](auth_keytab) and auth_principal:
         return __salt__["cmd.run_all"](
-            'kadmin -k -t {0} -p {1} -q "{2}"'.format(auth_keytab, auth_principal, cmd)
+            'kadmin -k -t {} -p {} -q "{}"'.format(auth_keytab, auth_principal, cmd)
         )
     else:
         log.error("Unable to find kerberos keytab/principal")
@@ -99,7 +95,7 @@ def get_principal(name):
     """
     ret = {}
 
-    cmd = __execute_kadmin("get_principal {0}".format(name))
+    cmd = __execute_kadmin("get_principal {}".format(name))
 
     if cmd["retcode"] != 0 or cmd["stderr"]:
         ret["comment"] = cmd["stderr"].splitlines()[-1]
@@ -155,7 +151,7 @@ def get_policy(name):
     """
     ret = {}
 
-    cmd = __execute_kadmin("get_policy {0}".format(name))
+    cmd = __execute_kadmin("get_policy {}".format(name))
 
     if cmd["retcode"] != 0 or cmd["stderr"]:
         ret["comment"] = cmd["stderr"].splitlines()[-1]
@@ -214,9 +210,9 @@ def create_principal(name, enctypes=None):
     krb_cmd = "addprinc -randkey"
 
     if enctypes:
-        krb_cmd += " -e {0}".format(enctypes)
+        krb_cmd += " -e {}".format(enctypes)
 
-    krb_cmd += " {0}".format(name)
+    krb_cmd += " {}".format(name)
 
     cmd = __execute_kadmin(krb_cmd)
 
@@ -242,7 +238,7 @@ def delete_principal(name):
     """
     ret = {}
 
-    cmd = __execute_kadmin("delprinc -force {0}".format(name))
+    cmd = __execute_kadmin("delprinc -force {}".format(name))
 
     if cmd["retcode"] != 0 or cmd["stderr"]:
         ret["comment"] = cmd["stderr"].splitlines()[-1]
@@ -265,12 +261,12 @@ def create_keytab(name, keytab, enctypes=None):
     """
     ret = {}
 
-    krb_cmd = "ktadd -k {0}".format(keytab)
+    krb_cmd = "ktadd -k {}".format(keytab)
 
     if enctypes:
-        krb_cmd += " -e {0}".format(enctypes)
+        krb_cmd += " -e {}".format(enctypes)
 
-    krb_cmd += " {0}".format(name)
+    krb_cmd += " {}".format(name)
 
     cmd = __execute_kadmin(krb_cmd)
 

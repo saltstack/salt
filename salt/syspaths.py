@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.syspaths
     ~~~~~~~~~~~~~
@@ -14,14 +13,20 @@
     paths that are set in the master/minion config files.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import os
 import os.path
 import sys
 
-__PLATFORM = sys.platform.lower()
+import salt.utils.platform
+import salt.utils.win_reg
+
+if salt.utils.platform.is_junos():
+    __PLATFORM = "junos"
+else:
+    __PLATFORM = sys.platform.lower()
+
 typo_warning = True
 log = logging.getLogger(__name__)
 EXPECTED_VARIABLES = (
@@ -51,9 +56,7 @@ try:
 except ImportError:
     import types
 
-    __generated_syspaths = types.ModuleType(
-        str("salt._syspaths")
-    )  # future lint: blacklisted-function
+    __generated_syspaths = types.ModuleType("salt._syspaths")
     for key in EXPECTED_VARIABLES:
         setattr(__generated_syspaths, key, None)
 else:
@@ -87,11 +90,42 @@ INSTALL_DIR = os.path.dirname(os.path.realpath(__THIS_FILE))
 CLOUD_DIR = os.path.join(INSTALL_DIR, "cloud")
 BOOTSTRAP = os.path.join(CLOUD_DIR, "deploy", "bootstrap-salt.sh")
 
+
+def _get_windows_root_dir():
+    # Try to get the root directory location from the registry
+    # This key will be created by the NullSoft installer
+    # If salt is currently installed in C:\salt and the user performs an
+    # upgrade, then this key will be set to C:\salt
+    root_dir = salt.utils.win_reg.read_value(
+        hive="HKLM", key="SOFTWARE\\Salt Project\\salt", vname="root_dir"
+    )
+    if root_dir["success"]:
+        # Make sure vdata contains something
+        if root_dir["vdata"]:
+            return os.path.expandvars(root_dir["vdata"])
+
+    # If this key does not exist, then salt was not installed using the
+    # new method installer. Could be pip or setup.py or an older version of the
+    # installer.
+    log.debug("Failed to get ROOT_DIR from registry. %s", root_dir["comment"])
+    # Check for C:\salt\conf
+    old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
+    dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "Salt")
+    if os.path.isdir(old_root):
+        # If the old config location is present use it
+        log.debug("ROOT_DIR: %s", os.path.dirname(old_root))
+        return os.path.dirname(old_root)
+    else:
+        # If not, then default to ProgramData
+        log.debug("ROOT_DIR: %s", dflt_root)
+        return dflt_root
+
+
 ROOT_DIR = __generated_syspaths.ROOT_DIR
 if ROOT_DIR is None:
     # The installation time value was not provided, let's define the default
     if __PLATFORM.startswith("win"):
-        ROOT_DIR = r"c:\salt"
+        ROOT_DIR = _get_windows_root_dir()
     else:
         ROOT_DIR = "/"
 
@@ -101,6 +135,8 @@ if CONFIG_DIR is None:
         CONFIG_DIR = os.path.join(ROOT_DIR, "conf")
     elif "freebsd" in __PLATFORM:
         CONFIG_DIR = os.path.join(ROOT_DIR, "usr", "local", "etc", "salt")
+    elif "junos" in __PLATFORM:
+        CONFIG_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "etc")
     elif "netbsd" in __PLATFORM:
         CONFIG_DIR = os.path.join(ROOT_DIR, "usr", "pkg", "etc", "salt")
     elif "sunos5" in __PLATFORM:
@@ -114,6 +150,8 @@ if SHARE_DIR is None:
         SHARE_DIR = os.path.join(ROOT_DIR, "share")
     elif "freebsd" in __PLATFORM:
         SHARE_DIR = os.path.join(ROOT_DIR, "usr", "local", "share", "salt")
+    elif "junos" in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "share")
     elif "netbsd" in __PLATFORM:
         SHARE_DIR = os.path.join(ROOT_DIR, "usr", "share", "salt")
     elif "sunos5" in __PLATFORM:
@@ -123,11 +161,17 @@ if SHARE_DIR is None:
 
 CACHE_DIR = __generated_syspaths.CACHE_DIR
 if CACHE_DIR is None:
-    CACHE_DIR = os.path.join(ROOT_DIR, "var", "cache", "salt")
+    if "junos" in __PLATFORM:
+        CACHE_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "cache")
+    else:
+        CACHE_DIR = os.path.join(ROOT_DIR, "var", "cache", "salt")
 
 SOCK_DIR = __generated_syspaths.SOCK_DIR
 if SOCK_DIR is None:
-    SOCK_DIR = os.path.join(ROOT_DIR, "var", "run", "salt")
+    if "junos" in __PLATFORM:
+        SOCK_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "run")
+    else:
+        SOCK_DIR = os.path.join(ROOT_DIR, "var", "run", "salt")
 
 SRV_ROOT_DIR = __generated_syspaths.SRV_ROOT_DIR
 if SRV_ROOT_DIR is None:
@@ -155,7 +199,10 @@ if LOGS_DIR is None:
 
 PIDFILE_DIR = __generated_syspaths.PIDFILE_DIR
 if PIDFILE_DIR is None:
-    PIDFILE_DIR = os.path.join(ROOT_DIR, "var", "run")
+    if "junos" in __PLATFORM:
+        PIDFILE_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "run")
+    else:
+        PIDFILE_DIR = os.path.join(ROOT_DIR, "var", "run")
 
 SPM_PARENT_PATH = __generated_syspaths.SPM_PARENT_PATH
 if SPM_PARENT_PATH is None:

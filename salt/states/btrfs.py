@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
-
 """
+Manage BTRFS file systems.
+
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
 import os.path
 import tempfile
-import traceback
 
 from salt.exceptions import CommandExecutionError
 
@@ -85,8 +83,8 @@ def __mount_device(action):
 
     @functools.wraps(action)
     def wrapper(*args, **kwargs):
-        name = kwargs["name"]
-        device = kwargs["device"]
+        name = kwargs.get("name", args[0] if args else None)
+        device = kwargs.get("device", args[1] if len(args) > 1 else None)
         use_default = kwargs.get("use_default", False)
 
         ret = {
@@ -103,9 +101,9 @@ def __mount_device(action):
                     ret["comment"].append(msg)
                 kwargs["__dest"] = dest
             ret = action(*args, **kwargs)
-        except Exception as e:  # pylint: disable=broad-except
-            log.error("""Traceback: {}""".format(traceback.format_exc()))
-            ret["comment"].append(e)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Exception raised while mounting device: %s", exc, exc_info=True)
+            ret["comment"].append(exc)
         finally:
             if device:
                 _umount(dest)

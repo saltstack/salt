@@ -1,8 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) DNS State Module
 
 .. versionadded:: 3000
+
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
 
 :maintainer: <devops@eitr.tech>
 :maturity: new
@@ -111,19 +116,10 @@ Optional provider parameters:
                 - connection_auth: {{ profile }}
 
 """
-
-# Python libs
-from __future__ import absolute_import
-
 import logging
+from functools import wraps
 
-# Salt libs
-import salt.ext.six as six
-
-try:
-    from salt.ext.six.moves import range as six_range
-except ImportError:
-    six_range = range
+import salt.utils.azurearm
 
 __virtualname__ = "azurearm_dns"
 
@@ -139,6 +135,28 @@ def __virtual__():
     return (False, "azurearm_dns module could not be loaded")
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def zone_present(
     name,
     resource_group,
@@ -243,16 +261,17 @@ def zone_present(
                 if registration_virtual_networks and not isinstance(
                     registration_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "registration_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "registration_virtual_networks must be supplied as a list of"
+                        " VNET ID paths!"
+                    )
                     return ret
                 reg_vnets = zone.get("registration_virtual_networks", [])
                 remote_reg_vnets = sorted(
-                    [vnet["id"].lower() for vnet in reg_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in reg_vnets if "id" in vnet
                 )
                 local_reg_vnets = sorted(
-                    [vnet.lower() for vnet in registration_virtual_networks or []]
+                    vnet.lower() for vnet in registration_virtual_networks or []
                 )
                 if local_reg_vnets != remote_reg_vnets:
                     ret["changes"]["registration_virtual_networks"] = {
@@ -264,16 +283,17 @@ def zone_present(
                 if resolution_virtual_networks and not isinstance(
                     resolution_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "resolution_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "resolution_virtual_networks must be supplied as a list of VNET"
+                        " ID paths!"
+                    )
                     return ret
                 res_vnets = zone.get("resolution_virtual_networks", [])
                 remote_res_vnets = sorted(
-                    [vnet["id"].lower() for vnet in res_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in res_vnets if "id" in vnet
                 )
                 local_res_vnets = sorted(
-                    [vnet.lower() for vnet in resolution_virtual_networks or []]
+                    vnet.lower() for vnet in resolution_virtual_networks or []
                 )
                 if local_res_vnets != remote_res_vnets:
                     ret["changes"]["resolution_virtual_networks"] = {
@@ -283,12 +303,12 @@ def zone_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "DNS zone {0} is already present.".format(name)
+            ret["comment"] = "DNS zone {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "DNS zone {0} would be updated.".format(name)
+            ret["comment"] = "DNS zone {} would be updated.".format(name)
             return ret
 
     else:
@@ -306,7 +326,7 @@ def zone_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "DNS zone {0} would be created.".format(name)
+        ret["comment"] = "DNS zone {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -328,15 +348,16 @@ def zone_present(
 
     if "error" not in zone:
         ret["result"] = True
-        ret["comment"] = "DNS zone {0} has been created.".format(name)
+        ret["comment"] = "DNS zone {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create DNS zone {0}! ({1})".format(
+    ret["comment"] = "Failed to create DNS zone {}! ({})".format(
         name, zone.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def zone_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000
@@ -367,11 +388,11 @@ def zone_absent(name, resource_group, connection_auth=None):
 
     if "error" in zone:
         ret["result"] = True
-        ret["comment"] = "DNS zone {0} was not found.".format(name)
+        ret["comment"] = "DNS zone {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "DNS zone {0} would be deleted.".format(name)
+        ret["comment"] = "DNS zone {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": zone,
@@ -385,14 +406,15 @@ def zone_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "DNS zone {0} has been deleted.".format(name)
+        ret["comment"] = "DNS zone {} has been deleted.".format(name)
         ret["changes"] = {"old": zone, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete DNS zone {0}!".format(name)
+    ret["comment"] = "Failed to delete DNS zone {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def record_set_present(
     name,
     zone_name,
@@ -579,7 +601,7 @@ def record_set_present(
                     if not isinstance(record, dict):
                         ret[
                             "comment"
-                        ] = "{0} record information must be specified as a dictionary!".format(
+                        ] = "{} record information must be specified as a dictionary!".format(
                             record_str
                         )
                         return ret
@@ -588,34 +610,33 @@ def record_set_present(
                             ret["changes"] = {"new": {record_str: record}}
                 elif record_str[-1] == "s":
                     if not isinstance(record, list):
-                        ret[
-                            "comment"
-                        ] = "{0} record information must be specified as a list of dictionaries!".format(
-                            record_str
+                        ret["comment"] = (
+                            "{} record information must be specified as a list of"
+                            " dictionaries!".format(record_str)
                         )
                         return ret
-                    local, remote = [
+                    local, remote = (
                         sorted(config) for config in (record, rec_set[record_str])
-                    ]
-                    for idx in six_range(0, len(local)):
-                        for key in local[idx]:
-                            local_val = local[idx][key]
-                            remote_val = remote[idx].get(key)
-                            if isinstance(local_val, six.string_types):
+                    )
+                    for val in local:
+                        for key in val:
+                            local_val = val[key]
+                            remote_val = remote.get(key)
+                            if isinstance(local_val, str):
                                 local_val = local_val.lower()
-                            if isinstance(remote_val, six.string_types):
+                            if isinstance(remote_val, str):
                                 remote_val = remote_val.lower()
                             if local_val != remote_val:
                                 ret["changes"] = {"new": {record_str: record}}
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Record set {0} is already present.".format(name)
+            ret["comment"] = "Record set {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Record set {0} would be updated.".format(name)
+            ret["comment"] = "Record set {} would be updated.".format(name)
             return ret
 
     else:
@@ -638,7 +659,7 @@ def record_set_present(
                 ret["changes"]["new"][record] = eval(record)
 
     if __opts__["test"]:
-        ret["comment"] = "Record set {0} would be created.".format(name)
+        ret["comment"] = "Record set {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -670,15 +691,16 @@ def record_set_present(
 
     if "error" not in rec_set:
         ret["result"] = True
-        ret["comment"] = "Record set {0} has been created.".format(name)
+        ret["comment"] = "Record set {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create record set {0}! ({1})".format(
+    ret["comment"] = "Failed to create record set {}! ({})".format(
         name, rec_set.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def record_set_absent(name, zone_name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000
@@ -712,13 +734,13 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
 
     if "error" in rec_set:
         ret["result"] = True
-        ret["comment"] = "Record set {0} was not found in zone {1}.".format(
+        ret["comment"] = "Record set {} was not found in zone {}.".format(
             name, zone_name
         )
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Record set {0} would be deleted.".format(name)
+        ret["comment"] = "Record set {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": rec_set,
@@ -732,9 +754,9 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Record set {0} has been deleted.".format(name)
+        ret["comment"] = "Record set {} has been deleted.".format(name)
         ret["changes"] = {"old": rec_set, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete record set {0}!".format(name)
+    ret["comment"] = "Failed to delete record set {}!".format(name)
     return ret

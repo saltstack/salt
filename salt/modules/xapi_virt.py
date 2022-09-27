@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module (mostly) uses the XenAPI to manage Xen virtual machines.
 
@@ -16,22 +15,16 @@ Useful documentation:
 . https://github.com/xapi-project/xen-api/tree/master/scripts/examples/python
 . http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
 import os
-
-# Import python libs
 import sys
 
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import map, range
 
 try:
     import importlib  # pylint: disable=minimum-python-version
@@ -57,7 +50,7 @@ def _check_xenapi():
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
             xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
-            xapipath = "/usr/lib/xen-{0}/lib/python".format(xenversion)
+            xapipath = "/usr/lib/xen-{}/lib/python".format(xenversion)
             if os.path.isdir(xapipath):
                 sys.path.append(xapipath)
 
@@ -163,7 +156,7 @@ def _get_metrics_record(xapi, rectype, record):
     Internal, returns metrics record for a rectype
     """
     metrics_id = record["metrics"]
-    return getattr(xapi, "{0}_metrics".format(rectype)).get_record(metrics_id)
+    return getattr(xapi, "{}_metrics".format(rectype)).get_record(metrics_id)
 
 
 def _get_val(record, keys):
@@ -514,10 +507,10 @@ def vcpu_pin(vm_, vcpu, cpus):
         if cpus == "all":
             cpumap = cpu_make_map("0-63")
         else:
-            cpumap = cpu_make_map("{0}".format(cpus))
+            cpumap = cpu_make_map("{}".format(cpus))
 
         try:
-            xapi.VM.add_to_VCPUs_params_live(vm_uuid, "cpumap{0}".format(vcpu), cpumap)
+            xapi.VM.add_to_VCPUs_params_live(vm_uuid, "cpumap{}".format(vcpu), cpumap)
             return True
         # VM.add_to_VCPUs_params_live() implementation in xend 4.1+ has
         # a bug which makes the client call fail.
@@ -525,7 +518,7 @@ def vcpu_pin(vm_, vcpu, cpus):
         # for that particular one, fallback to xm / xl instead.
         except Exception:  # pylint: disable=broad-except
             return __salt__["cmd.run"](
-                "{0} vcpu-pin {1} {2} {3}".format(_get_xtool(), vm_, vcpu, cpus),
+                "{} vcpu-pin {} {} {}".format(_get_xtool(), vm_, vcpu, cpus),
                 python_shell=False,
             )
 
@@ -649,7 +642,7 @@ def start(config_):
     # On Xen Source, creating a virtual machine using XenAPI is really painful.
     # XCP / XS make it really easy using xapi.Async.VM.start instead. Anyone?
     return __salt__["cmd.run"](
-        "{0} create {1}".format(_get_xtool(), config_), python_shell=False
+        "{} create {}".format(_get_xtool(), config_), python_shell=False
     )
 
 
@@ -777,7 +770,7 @@ def is_hyper():
         with salt.utils.files.fopen("/proc/modules") as fp_:
             if "xen_" not in salt.utils.stringutils.to_unicode(fp_.read()):
                 return False
-    except (OSError, IOError):
+    except OSError:
         return False
     # there must be a smarter way...
     return "xenstore" in __salt__["cmd.run"](__grains__["ps"])
@@ -823,7 +816,7 @@ def vm_cputime(vm_=None):
                 cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
             return {
                 "cputime": int(cputime),
-                "cputime_percent": int("{0:.0f}".format(cputime_percent)),
+                "cputime_percent": int("{:.0f}".format(cputime_percent)),
             }
 
         info = {}

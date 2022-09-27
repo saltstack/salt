@@ -1,6 +1,7 @@
 # import pytest
+import xml.etree.ElementTree as ET
+
 import salt.returners.nagios_nrdp_return as nagios_nrdp_return
-from salt._compat import ElementTree as ET
 
 
 def test_prepare_xml():

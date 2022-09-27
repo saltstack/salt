@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """
 Test the lxc module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
-from salt.ext import six
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing, skip_if_not_root
 from tests.support.unit import skipIf
 
 
@@ -18,11 +13,11 @@ from tests.support.unit import skipIf
     "Needs rewrite to be more distro agnostic. Also, the tearDown "
     "function destroys ALL containers on the box, which is BAD.",
 )
-@skip_if_not_root
-@skip_if_binaries_missing(
-    "lxc-start", message="LXC is not installed or minimal version not met"
-)
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing(
+    "lxc-start", reason="LXC is not installed or minimal version not met"
+)
 class LXCModuleTest(ModuleCase):
     """
     Test the lxc module
@@ -49,7 +44,7 @@ class LXCModuleTest(ModuleCase):
         Clean up any LXCs created.
         """
         r = self.run_function("lxc.list")
-        for k, v in six.iteritems(r):
+        for k, v in r.items():
             for x in v:
                 if x.startswith(self.prefix):
                     self.run_function("lxc.destroy", [x])
@@ -97,11 +92,11 @@ class LXCModuleTest(ModuleCase):
             start=False,
         )
 
-        f = "/var/lib/lxc/{0}/config".format(self.prefix)
+        f = "/var/lib/lxc/{}/config".format(self.prefix)
         conf = self.run_function("lxc.read_conf", [f])
 
         # Due to a segfault in lxc-destroy caused by invalid configs,
         # truncate the config.
-        self.run_function("cmd.run", ["truncate -s 0 {0}".format(f)])
+        self.run_function("cmd.run", ["truncate -s 0 {}".format(f)])
 
         self.assertEqual(conf.get("lxc.network.type"), "macvlan")

@@ -112,7 +112,7 @@ The salt-master needs at least 2 sockets per host that connects to it, one for
 the Publisher and one for response port. Thus, large installations may, upon
 scaling up the number of minions accessing a given master, encounter:
 
-.. code-block:: bash
+.. code-block:: console
 
     12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
     Too many open files

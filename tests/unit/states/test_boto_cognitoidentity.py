@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_cognitoidentity as boto_cognitoidentity
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -20,7 +17,6 @@ from tests.unit.modules.test_boto_cognitoidentity import (
     BotoCognitoIdentityTestCaseMixin,
 )
 
-# Import 3rd-party libs
 try:
     import boto3
     from botocore.exceptions import ClientError
@@ -207,8 +203,9 @@ class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    "The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoCognitoIdentityTestCase(
     BotoCognitoIdentityStateTestCaseBase, BotoCognitoIdentityTestCaseMixin
@@ -261,7 +258,7 @@ class BotoCognitoIdentityTestCase(
         )
         self.assertEqual(result.get("result"), False)
         self.assertIn(
-            "{0}".format([first_pool_ret, third_pool_ret]), result.get("comment", "")
+            "{}".format([first_pool_ret, third_pool_ret]), result.get("comment", "")
         )
 
     def test_present_when_failing_to_create_a_new_identity_pool(self):
@@ -345,7 +342,7 @@ class BotoCognitoIdentityTestCase(
         self.assertTrue(self.conn.create_identity_pool.call_count == 0)
         self.assertTrue(self.conn.set_identity_pool_roles.call_count == 0)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_failing_to_set_identity_pool_roles(self):
         """
         Tests present on a unique instance of identity pool having the matching
@@ -390,7 +387,7 @@ class BotoCognitoIdentityTestCase(
                 self.conn.set_identity_pool_roles.call_args == expected_call_args
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_pool_name_does_not_exist(self):
         """
         Tests the successful case of creating a new instance, and updating its
@@ -442,7 +439,7 @@ class BotoCognitoIdentityTestCase(
             )
             self.assertTrue(self.conn.update_identity_pool.call_count == 0)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_pool_name_exists(self):
         """
         Tests the successful case of updating a single instance with matching
@@ -525,7 +522,7 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), False)
         self.assertEqual(result["changes"], {})
         self.assertTrue(
-            "{0}".format([first_pool_ret, third_pool_ret]) in result.get("comment", "")
+            "{}".format([first_pool_ret, third_pool_ret]) in result.get("comment", "")
         )
 
     def test_absent_when_failing_to_describe_identity_pools(self):
@@ -582,8 +579,8 @@ class BotoCognitoIdentityTestCase(
         )
         self.assertEqual(result.get("result"), True)
         expected_changes = {
-            "new": {"Identity Pool Id {0}".format(second_pool_id): None},
-            "old": {"Identity Pool Id {0}".format(second_pool_id): second_pool_name},
+            "new": {"Identity Pool Id {}".format(second_pool_id): None},
+            "old": {"Identity Pool Id {}".format(second_pool_id): second_pool_name},
         }
         self.assertEqual(result["changes"], expected_changes)
 
@@ -608,12 +605,12 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), True)
         expected_changes = {
             "new": {
-                "Identity Pool Id {0}".format(first_pool_id): None,
-                "Identity Pool Id {0}".format(third_pool_id): None,
+                "Identity Pool Id {}".format(first_pool_id): None,
+                "Identity Pool Id {}".format(third_pool_id): None,
             },
             "old": {
-                "Identity Pool Id {0}".format(first_pool_id): first_pool_name,
-                "Identity Pool Id {0}".format(third_pool_id): third_pool_name,
+                "Identity Pool Id {}".format(first_pool_id): first_pool_name,
+                "Identity Pool Id {}".format(third_pool_id): third_pool_name,
             },
         }
         self.assertEqual(result["changes"], expected_changes)

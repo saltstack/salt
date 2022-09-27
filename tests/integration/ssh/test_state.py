@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import glob
 import logging
 import os
@@ -8,10 +5,10 @@ import shutil
 import threading
 import time
 
-from salt.ext import six
-from salt.ext.six.moves import range
+import pytest
+from saltfactories.utils.tempfiles import temp_file
+
 from tests.support.case import SSHCase
-from tests.support.helpers import flaky, slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 SSH_SLS = "ssh_state_tests"
@@ -37,7 +34,7 @@ class SSHStateTest(SSHCase):
     def _check_request(self, empty=False):
         check = self.run_function("state.check_request", wipe=False)
         if empty:
-            self.assertFalse(bool(check), "bool({0}) is not False".format(check))
+            self.assertFalse(bool(check), "bool({}) is not False".format(check))
         else:
             self._check_dict_ret(
                 ret=check["default"]["test_run"]["local"]["return"],
@@ -45,7 +42,7 @@ class SSHStateTest(SSHCase):
                 exp_ret=SSH_SLS,
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_apply(self):
         """
         test state.apply with salt-ssh
@@ -56,7 +53,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_sls_id(self):
         """
         test state.sls_id with salt-ssh
@@ -83,7 +80,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_sls_wrong_id(self):
         """
         test state.sls_id when id does not exist
@@ -92,7 +89,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function("state.sls_id", ["doesnotexist", SSH_SLS])
         assert "No matches for ID" in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_sls_id_with_pillar(self):
         """
         test state.sls_id with pillar data
@@ -106,7 +103,7 @@ class SSHStateTest(SSHCase):
         )
         self.assertTrue(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_show_sls(self):
         """
         test state.show_sls with salt-ssh
@@ -117,15 +114,34 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_show_top(self):
         """
         test state.show_top with salt-ssh
         """
-        ret = self.run_function("state.show_top")
-        self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
 
-    @slowTest
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
+            ret = self.run_function("state.show_top")
+            self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
+
+    @pytest.mark.slow_test
     def test_state_single(self):
         """
         state.single with salt-ssh
@@ -137,24 +153,43 @@ class SSHStateTest(SSHCase):
         )
 
         self.assertIsInstance(single, dict)
-        for key, value in six.iteritems(single):
+        for key, value in single.items():
             self.assertIsInstance(value, dict)
             self.assertEqual(value["name"], ret_out["name"])
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_show_highstate(self):
         """
         state.show_highstate with salt-ssh
         """
-        high = self.run_function("state.show_highstate")
-        destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
-        self.assertIsInstance(high, dict)
-        self.assertIn(destpath, high)
-        self.assertEqual(high[destpath]["__env__"], "base")
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
 
-    @slowTest
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
+            high = self.run_function("state.show_highstate")
+            destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
+            self.assertIsInstance(high, dict)
+            self.assertIn(destpath, high)
+            self.assertEqual(high[destpath]["__env__"], "base")
+
+    @pytest.mark.slow_test
     def test_state_high(self):
         """
         state.high with salt-ssh
@@ -166,22 +201,41 @@ class SSHStateTest(SSHCase):
         )
 
         self.assertIsInstance(high, dict)
-        for key, value in six.iteritems(high):
+        for key, value in high.items():
             self.assertIsInstance(value, dict)
             self.assertEqual(value["name"], ret_out["name"])
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_show_lowstate(self):
         """
         state.show_lowstate with salt-ssh
         """
-        low = self.run_function("state.show_lowstate")
-        self.assertIsInstance(low, list)
-        self.assertIsInstance(low[0], dict)
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
 
-    @slowTest
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
+            low = self.run_function("state.show_lowstate")
+            self.assertIsInstance(low, list)
+            self.assertIsInstance(low[0], dict)
+
+    @pytest.mark.slow_test
     def test_state_low(self):
         """
         state.low with salt-ssh
@@ -194,13 +248,13 @@ class SSHStateTest(SSHCase):
         )
 
         self.assertIsInstance(low, dict)
-        for key, value in six.iteritems(low):
+        for key, value in low.items():
             self.assertIsInstance(value, dict)
             self.assertEqual(value["name"], ret_out["name"])
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_request_check_clear(self):
         """
         test state.request system with salt-ssh
@@ -214,7 +268,7 @@ class SSHStateTest(SSHCase):
         clear = self.run_function("state.clear_request", wipe=False)
         self._check_request(empty=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_run_request(self):
         """
         test state.request system with salt-ssh
@@ -228,15 +282,16 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @flaky
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_running(self):
         """
         test state.running with salt-ssh
         """
 
+        retval = []
+
         def _run_in_background():
-            self.run_function("state.sls", ["running"], wipe=False)
+            retval.append(self.run_function("state.sls", ["running"], wipe=False))
 
         bg_thread = threading.Thread(target=_run_in_background)
         bg_thread.start()
@@ -244,15 +299,21 @@ class SSHStateTest(SSHCase):
         expected = 'The function "state.pkg" is running as'
         state_ret = []
         for _ in range(30):
-            time.sleep(5)
+            if not bg_thread.is_alive():
+                continue
             get_sls = self.run_function("state.running", wipe=False)
             state_ret.append(get_sls)
             if expected in " ".join(get_sls):
                 # We found the expected return
                 break
+            time.sleep(1)
         else:
+            if not bg_thread.is_alive():
+                bg_failed_msg = "Failed to return clean data"
+                if retval and bg_failed_msg in retval.pop().get("_error", ""):
+                    pytest.skip("Background state run failed, skipping")
             self.fail(
-                "Did not find '{0}' in state.running return: {1}".format(
+                "Did not find '{}' in state.running return: {}".format(
                     expected, state_ret
                 )
             )
@@ -264,7 +325,8 @@ class SSHStateTest(SSHCase):
                 break
             if time.time() > future:
                 self.fail(
-                    "state.pkg is still running overtime. Test did not clean up correctly."
+                    "state.pkg is still running overtime. Test did not clean up"
+                    " correctly."
                 )
 
     def tearDown(self):
@@ -272,7 +334,7 @@ class SSHStateTest(SSHCase):
         make sure to clean up any old ssh directories
         """
         salt_dir = self.run_function("config.get", ["thin_dir"], wipe=False)
-        self.assertIsInstance(salt_dir, six.string_types)
+        self.assertIsInstance(salt_dir, (str,))
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 

@@ -103,6 +103,16 @@ The option can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored. To disable colored output, set the color value to
+``False``.
+
 .. conf_minion:: ipv6
 
 ``ipv6``
@@ -162,6 +172,13 @@ Default: ``str``
 
 The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 ``func`` or ``disable``.
+
+.. code-block:: yaml
+
+    master_type: str
+
+If this option is ``str`` (default), multiple hot masters are configured.    
+Minions can connect to multiple masters simultaneously (all master are "hot").
 
 .. code-block:: yaml
 
@@ -917,6 +934,24 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: grains_refresh_pre_exec
+
+``grains_refresh_pre_exec``
+---------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+The ``grains_refresh_pre_exec`` setting allows for a minion to check its grains
+prior to the execution of any operation to see if they have changed and, if
+so, to inform the master of the new grains. This operation is moderately
+expensive, therefore care should be taken before enabling this behavior.
+
+.. code-block:: yaml
+
+    grains_refresh_pre_exec: True
+
 .. conf_minion:: metadata_server_grains
 
 ``metadata_server_grains``
@@ -1231,7 +1266,7 @@ when trying to authenticate to the master.
 
 .. versionadded:: 2014.7.0
 
-Default: ``60``
+Default: ``5``
 
 When waiting for a master to accept the minion's public key, salt will
 continuously attempt to reconnect until successful. This is the timeout value,
@@ -1240,9 +1275,12 @@ will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
 Unless your master is under unusually heavy load, this should be left at the
 default.
 
+.. note::
+    For high latency networks try increasing this value
+
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
@@ -1409,6 +1447,19 @@ retry timeout will be a random int between ``return_retry_timer`` and
 .. code-block:: yaml
 
     return_retry_timer_max: 10
+
+.. conf_minion:: return_retry_tries
+
+``return_retry_tries``
+--------------------------
+
+Default: ``3``
+
+The maximum number of retries for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_tries: 3
 
 .. conf_minion:: cache_sreqs
 
@@ -2179,6 +2230,28 @@ or just post what changes are going to be made.
 
     test: False
 
+.. conf_minion:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2228,6 +2301,48 @@ states is cluttering the logs. Set it to True to ignore them.
 .. code-block:: yaml
 
     state_output_diff: False
+
+.. conf_minion:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
+.. conf_minion:: state_output_pct
+
+``state_output_pct``
+--------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
+.. conf_minion:: state_compress_ids
+
+``state_compress_ids``
+----------------------
+
+Default: ``False``
+
+The ``state_compress_ids`` setting aggregates information about states which
+have multiple "names" under the same state ID in the highstate output.
+
+.. code-block:: yaml
+
+    state_compress_ids: False
 
 .. conf_minion:: autoload_dynamic_modules
 
@@ -2428,26 +2543,6 @@ Master will not be returned to the Minion.
 
     fileserver_ignoresymlinks: False
 
-.. conf_minion:: fileserver_limit_traversal
-
-``fileserver_limit_traversal``
-------------------------------
-
-.. versionadded:: 2014.1.0
-
-Default: ``False``
-
-By default, the Salt fileserver recurses fully into all defined environments
-to attempt to find files. To limit this behavior so that the fileserver only
-traverses directories with SLS files and special Salt directories like _modules,
-set ``fileserver_limit_traversal`` to ``True``. This might be useful for
-installations where a file root has a very large number of files and performance
-is impacted.
-
-.. code-block:: yaml
-
-    fileserver_limit_traversal: False
-
 .. conf_minion:: hash_type
 
 ``hash_type``
@@ -2596,6 +2691,32 @@ List of renderers which are permitted to be used for pillar decryption.
     decrypt_pillar_renderers:
       - gpg
       - my_custom_renderer
+
+.. conf_minion:: gpg_decrypt_must_succeed
+
+``gpg_decrypt_must_succeed``
+----------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+If this is ``True`` and the ciphertext could not be decrypted, then an error is
+raised.
+
+Sending the ciphertext through basically is *never* desired, for example if a
+state is setting a database password from pillar and gpg rendering fails, then
+the state will update the password to the ciphertext, which by definition is
+not encrypted.
+
+.. warning::
+
+    The value defaults to ``False`` for backwards compatibility.  In the
+    ``Chlorine`` release, this option will default to ``True``.
+
+.. code-block:: yaml
+
+    gpg_decrypt_must_succeed: False
 
 .. conf_minion:: pillarenv
 
@@ -2814,7 +2935,7 @@ Default: ``False``
 
 Enables verification of the master-public-signature returned by the master in
 auth-replies. Please see the tutorial on how to configure this properly
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. versionadded:: 2014.7.0
 
@@ -2945,7 +3066,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -3256,7 +3377,7 @@ should be logged as the minion starts up and initially connects to the
 master. If not, check for debug log level and that the necessary version of
 ZeroMQ is installed.
 
-.. conf_minion:: failhard
+.. conf_minion:: tcp_authentication_retries
 
 ``tcp_authentication_retries``
 ------------------------------
@@ -3271,6 +3392,18 @@ reauthenticate. The tcp transport should try to connect with a new connection
 if the old one times out on reauthenticating.
 
 `-1` for infinite tries.
+
+.. conf_minion:: tcp_reconnect_backoff
+
+``tcp_reconnect_backoff``
+------------------------------
+
+Default: ``1``
+
+The time in seconds to wait before attempting another connection with salt master
+when the previous connection fails while on TCP transport.
+
+.. conf_minion:: failhard
 
 ``failhard``
 ------------

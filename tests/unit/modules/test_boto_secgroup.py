@@ -1,26 +1,16 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os.path
 import random
 import string
 import sys
 from copy import deepcopy
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_secgroup as boto_secgroup
 
-# Import Third Party Libs
 # pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -38,7 +28,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -79,12 +69,12 @@ boto_conn_parameters = {
 
 
 def _random_group_id():
-    group_id = "sg-{0:x}".format(random.randrange(2 ** 32))
+    group_id = "sg-{:x}".format(random.randrange(2**32))
     return group_id
 
 
 def _random_group_name():
-    group_name = "boto_secgroup-{0}".format(
+    group_name = "boto_secgroup-{}".format(
         "".join((random.choice(string.ascii_lowercase)) for char in range(12))
     )
     return group_name
@@ -107,8 +97,9 @@ def _has_required_boto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -126,7 +117,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        super(BotoSecgroupTestCase, self).setUp()
+        super().setUp()
         # __virtual__ must be caller in order for _get_conn to be injected
         boto_secgroup.__virtual__()
 
@@ -168,10 +159,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertEqual(boto_secgroup._split_rules(rules), split_rules)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_create_ec2_classic(self):
         """
@@ -192,10 +180,6 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_create_ec2_vpc(self):
         """
@@ -220,10 +204,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_get_group_id_ec2_classic(self):
         """
@@ -271,10 +252,6 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(group_vpc.id, retrieved_group_id)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_get_config_single_rule_group_name(self):
         """
@@ -329,10 +306,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_exists_true_name_classic(self):
         """
@@ -348,18 +322,10 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         salt_exists_result = boto_secgroup.exists(name=group_name, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_exists_false_name_classic(self):
         pass
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_exists_true_name_vpc(self):
         """
@@ -374,10 +340,6 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertTrue(salt_exists_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_exists_false_name_vpc(self):
         """
@@ -389,10 +351,6 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertFalse(salt_exists_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_exists_true_group_id(self):
         """
@@ -405,10 +363,6 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         salt_exists_result = boto_secgroup.exists(group_id=group.id, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_exists_false_group_id(self):
         """
@@ -418,10 +372,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         salt_exists_result = boto_secgroup.exists(group_id=group_id, **conn_parameters)
         self.assertFalse(salt_exists_result)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_delete_group_ec2_classic(self):
         """
@@ -452,18 +403,10 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         actual_groups = [group.id for group in conn.get_all_security_groups()]
         self.assertEqual(expected_groups, actual_groups)
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test_delete_group_name_ec2_vpc(self):
         pass
 
-    @skipIf(
-        sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-    )
     @mock_ec2_deprecated
     def test__get_conn_true(self):
         """

@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.modules.solr as solr
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -346,7 +340,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(
             solr.signal("signal"),
-            ("signal is an invalid signal. Try: one of: start," " stop, or restart"),
+            "signal is an invalid signal. Try: one of: start, stop or restart",
         )
 
     def test_reload_core(self):

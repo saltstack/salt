@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Config Server Firewall (CSF)
 ========================================
@@ -7,15 +6,10 @@ Support for Config Server Firewall (CSF)
 :platform: Linux
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 
-# Import Salt Libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
 
 def __virtual__():
@@ -34,15 +28,16 @@ def _temp_exists(method, ip):
     on the method supplied, (tempallow, tempdeny).
     """
     _type = method.replace("temp", "").upper()
-    cmd = "csf -t | awk -v code=1 -v type=_type -v ip=ip '$1==type && $2==ip {{code=0}} END {{exit code}}'".format(
-        _type=_type, ip=ip
+    cmd = (
+        "csf -t | awk -v code=1 -v type=_type -v ip=ip '$1==type && $2==ip {{code=0}}"
+        " END {{exit code}}'".format(_type=_type, ip=ip)
     )
     exists = __salt__["cmd.run_all"](cmd)
     return not bool(exists["retcode"])
 
 
 def _exists_with_port(method, rule):
-    path = "/etc/csf/csf.{0}".format(method)
+    path = "/etc/csf/csf.{}".format(method)
     return __salt__["file.contains"](path, rule)
 
 
@@ -61,6 +56,7 @@ def exists(
     Returns true a rule for the ip already exists
     based on the method supplied. Returns false if
     not found.
+
     CLI Example:
 
     .. code-block:: bash
@@ -75,9 +71,7 @@ def exists(
             ip, port, proto, direction, port_origin, ip_origin, comment
         )
         return _exists_with_port(method, rule)
-    exists = __salt__["cmd.run_all"](
-        "egrep ^'{0} +' /etc/csf/csf.{1}".format(ip, method)
-    )
+    exists = __salt__["cmd.run_all"]("egrep ^'{} +' /etc/csf/csf.{}".format(ip, method))
     return not bool(exists["retcode"])
 
 
@@ -85,7 +79,7 @@ def __csf_cmd(cmd):
     """
     Execute csf command
     """
-    csf_cmd = "{0} {1}".format(salt.utils.path.which("csf"), cmd)
+    csf_cmd = "{} {}".format(salt.utils.path.which("csf"), cmd)
     out = __salt__["cmd.run_all"](csf_cmd)
 
     if out["retcode"] != 0:
@@ -93,7 +87,7 @@ def __csf_cmd(cmd):
             ret = out["stdout"]
         else:
             ret = out["stderr"]
-        raise CommandExecutionError("csf failed: {0}".format(ret))
+        raise CommandExecutionError("csf failed: {}".format(ret))
     else:
         ret = out["stdout"]
     return ret
@@ -129,9 +123,9 @@ def _build_args(method, ip, comment):
     Returns the cmd args for csf basic allow/deny commands.
     """
     opt = _get_opt(method)
-    args = "{0} {1}".format(opt, ip)
+    args = "{} {}".format(opt, ip)
     if comment:
-        args += " {0}".format(comment)
+        args += " {}".format(comment)
     return args
 
 
@@ -157,7 +151,9 @@ def _access_rule(
         else:
             if method not in ["allow", "deny"]:
                 return {
-                    "error": "Only allow and deny rules are allowed when specifying a port."
+                    "error": (
+                        "Only allow and deny rules are allowed when specifying a port."
+                    )
                 }
             return _access_rule_with_port(
                 method=method,
@@ -182,7 +178,7 @@ def _build_port_rule(ip, port, proto, direction, port_origin, ip_origin, comment
     }
     rule = "{proto}|{direction}|{port_origin}={port}|{ip_origin}={ip}".format(**kwargs)
     if comment:
-        rule += " #{0}".format(comment)
+        rule += " #{}".format(comment)
 
     return rule
 
@@ -211,8 +207,8 @@ def _remove_access_rule_with_port(
     rule = rule.replace("|", "[|]")
     rule = rule.replace(".", "[.]")
     result = __salt__["file.replace"](
-        "/etc/csf/csf.{0}".format(method),
-        pattern="^{0}(( +)?\#.*)?$\n".format(rule),  # pylint: disable=W1401
+        "/etc/csf/csf.{}".format(method),
+        pattern="^{}(( +)?\\#.*)?$\n".format(rule),  # pylint: disable=W1401
         repl="",
     )
 
@@ -237,7 +233,7 @@ def split_option(option):
 
 
 def get_option(option):
-    pattern = '^{0}(\ +)?\=(\ +)?".*"$'.format(option)  # pylint: disable=W1401
+    pattern = r'^{}(\ +)?\=(\ +)?".*"$'.format(option)  # pylint: disable=W1401
     grep = __salt__["file.grep"]("/etc/csf/csf.conf", pattern, "-E")
     if "stdout" in grep and grep["stdout"]:
         line = grep["stdout"]
@@ -251,8 +247,8 @@ def set_option(option, value):
         return {"error": "No such option exists in csf.conf"}
     result = __salt__["file.replace"](
         "/etc/csf/csf.conf",
-        pattern='^{0}(\ +)?\=(\ +)?".*"'.format(option),  # pylint: disable=W1401
-        repl='{0} = "{1}"'.format(option, value),
+        pattern=r'^{}(\ +)?\=(\ +)?".*"'.format(option),  # pylint: disable=W1401
+        repl='{} = "{}"'.format(option, value),
     )
 
     return result
@@ -279,13 +275,13 @@ def skip_nics(nics, ipv6=False):
         ipv6 = "6"
     else:
         ipv6 = ""
-    nics_csv = ",".join(six.moves.map(six.text_type, nics))
+    nics_csv = ",".join(map(str, nics))
     result = __salt__["file.replace"](
         "/etc/csf/csf.conf",
         # pylint: disable=anomalous-backslash-in-string
-        pattern='^ETH{0}_DEVICE_SKIP(\ +)?\=(\ +)?".*"'.format(ipv6),
+        pattern=r'^ETH{}_DEVICE_SKIP(\ +)?\=(\ +)?".*"'.format(ipv6),
         # pylint: enable=anomalous-backslash-in-string
-        repl='ETH{0}_DEVICE_SKIP = "{1}"'.format(ipv6, nics_csv),
+        repl='ETH{}_DEVICE_SKIP = "{}"'.format(ipv6, nics_csv),
     )
 
     return result
@@ -330,7 +326,7 @@ def _access_rule_with_port(
                 ip_origin=ip_origin,
                 comment=comment,
             )
-            path = "/etc/csf/csf.{0}".format(method)
+            path = "/etc/csf/csf.{}".format(method)
             results[direction] = __salt__["file.append"](path, rule)
     return results
 
@@ -362,19 +358,20 @@ def _build_tmp_access_args(method, ip, ttl, port, direction, comment):
     Builds the cmd args for temporary access/deny opts.
     """
     opt = _get_opt(method)
-    args = "{0} {1} {2}".format(opt, ip, ttl)
+    args = "{} {} {}".format(opt, ip, ttl)
     if port:
-        args += " -p {0}".format(port)
+        args += " -p {}".format(port)
     if direction:
-        args += " -d {0}".format(direction)
+        args += " -d {}".format(direction)
     if comment:
-        args += " #{0}".format(comment)
+        args += " #{}".format(comment)
     return args
 
 
 def running():
     """
     Check csf status
+
     CLI Example:
 
     .. code-block:: bash
@@ -387,6 +384,7 @@ def running():
 def disable():
     """
     Disable csf permanently
+
     CLI Example:
 
     .. code-block:: bash
@@ -400,6 +398,7 @@ def disable():
 def enable():
     """
     Activate csf if not running
+
     CLI Example:
 
     .. code-block:: bash
@@ -413,6 +412,7 @@ def enable():
 def reload():
     """
     Restart csf
+
     CLI Example:
 
     .. code-block:: bash
@@ -427,6 +427,7 @@ def tempallow(ip=None, ttl=None, port=None, direction=None, comment=""):
     Add an rule to the temporary ip allow list.
     See :func:`_access_rule`.
     1- Add an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -441,6 +442,7 @@ def tempdeny(ip=None, ttl=None, port=None, direction=None, comment=""):
     Add a rule to the temporary ip deny list.
     See :func:`_access_rule`.
     1- Add an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -464,6 +466,7 @@ def allow(
     Add an rule to csf allowed hosts
     See :func:`_access_rule`.
     1- Add an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -497,6 +500,7 @@ def deny(
     Add an rule to csf denied hosts
     See :func:`_access_rule`.
     1- Deny an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -511,7 +515,7 @@ def deny(
 
 def remove_temp_rule(ip):
     opt = _get_opt("temprm")
-    args = "{0} {1}".format(opt, ip)
+    args = "{} {}".format(opt, ip)
     return __csf_cmd(args)
 
 
@@ -520,6 +524,7 @@ def unallow(ip):
     Remove a rule from the csf denied hosts
     See :func:`_access_rule`.
     1- Deny an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -534,6 +539,7 @@ def undeny(ip):
     Remove a rule from the csf denied hosts
     See :func:`_access_rule`.
     1- Deny an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -595,16 +601,16 @@ def allow_ports(ports, proto="tcp", direction="in"):
     proto = proto.upper()
     direction = direction.upper()
     _validate_direction_and_proto(direction, proto)
-    ports_csv = ",".join(six.moves.map(six.text_type, ports))
+    ports_csv = ",".join(map(str, ports))
     directions = build_directions(direction)
 
     for direction in directions:
         result = __salt__["file.replace"](
             "/etc/csf/csf.conf",
             # pylint: disable=anomalous-backslash-in-string
-            pattern='^{0}_{1}(\ +)?\=(\ +)?".*"$'.format(proto, direction),
+            pattern=r'^{}_{}(\ +)?\=(\ +)?".*"$'.format(proto, direction),
             # pylint: enable=anomalous-backslash-in-string
-            repl='{0}_{1} = "{2}"'.format(proto, direction, ports_csv),
+            repl='{}_{} = "{}"'.format(proto, direction, ports_csv),
         )
         results.append(result)
 
@@ -629,7 +635,7 @@ def get_ports(proto="tcp", direction="in"):
     _validate_direction_and_proto(direction, proto)
     directions = build_directions(direction)
     for direction in directions:
-        option = "{0}_{1}".format(proto, direction)
+        option = "{}_{}".format(proto, direction)
         results[direction] = _csf_to_list(option)
 
     return results
@@ -694,8 +700,8 @@ def _toggle_testing(val):
 
     result = __salt__["file.replace"](
         "/etc/csf/csf.conf",
-        pattern='^TESTING(\ +)?\=(\ +)?".*"',  # pylint: disable=W1401
-        repl='TESTING = "{0}"'.format(val),
+        pattern=r'^TESTING(\ +)?\=(\ +)?".*"',  # pylint: disable=W1401
+        repl='TESTING = "{}"'.format(val),
     )
     return result
 
