@@ -586,7 +586,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
         default = CommandExecutionError
     if key is not None:
         metadata = False
-    log.debug("Reading Vault secret for %s at %s", __grains__["id"], path)
+    log.debug("Reading Vault secret for %s at %s", __grains__.get("id"), path)
     try:
         data = vault.read_kv(path, __opts__, __context__, include_metadata=metadata)
         if key is not None:
@@ -627,11 +627,13 @@ def write_secret(path, **kwargs):
     path
         The path to the secret, including mount.
     """
-    log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
+    log.debug("Writing vault secrets for %s at %s", __grains__.get("id"), path)
     data = {x: y for x, y in kwargs.items() if not x.startswith("__")}
     try:
-        vault.write_kv(path, data, __opts__, __context__)
-        return True
+        res = vault.write_kv(path, data, __opts__, __context__)
+        if isinstance(res, dict):
+            return res["data"]
+        return res
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to write secret! %s: %s", type(err).__name__, err)
         return False
@@ -655,10 +657,12 @@ def write_raw(path, raw):
     raw
         Secret data to write to <path>. Has to be a mapping.
     """
-    log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
+    log.debug("Writing vault secrets for %s at %s", __grains__.get("id"), path)
     try:
-        vault.write_kv(path, raw, __opts__, __context__)
-        return True
+        res = vault.write_kv(path, raw, __opts__, __context__)
+        if isinstance(res, dict):
+            return res["data"]
+        return res
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to write secret! %s: %s", type(err).__name__, err)
         return False
@@ -693,11 +697,13 @@ def patch_secret(path, **kwargs):
     """
     # TODO: patch can be emulated as read, local update and write
     # -> catch VaultPermissionDeniedError and try that way
-    log.debug("Patching vault secrets for %s at %s", __grains__["id"], path)
+    log.debug("Patching vault secrets for %s at %s", __grains__.get("id"), path)
     data = {x: y for x, y in kwargs.items() if not x.startswith("__")}
     try:
-        vault.patch_kv(path, data, __opts__, __context__)
-        return True
+        res = vault.patch_kv(path, data, __opts__, __context__)
+        if isinstance(res, dict):
+            return res["data"]
+        return res
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to patch secret! %s: %s", type(err).__name__, err)
         return False
@@ -740,10 +746,9 @@ def delete_secret(path, *args):
 
         For KV v2, you can specify versions to soft-delete as supplemental arguments.
     """
-    log.debug("Deleting vault secrets for %s in %s", __grains__["id"], path)
+    log.debug("Deleting vault secrets for %s in %s", __grains__.get("id"), path)
     try:
-        vault.delete_kv(path, __opts__, __context__, versions=list(args) or None)
-        return True
+        return vault.delete_kv(path, __opts__, __context__, versions=list(args) or None)
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to delete secret! %s: %s", type(err).__name__, err)
         return False
@@ -778,10 +783,9 @@ def destroy_secret(path, *args):
     """
     if not args:
         raise SaltInvocationError("Need at least one version to destroy.")
-    log.debug("Destroying vault secrets for %s in %s", __grains__["id"], path)
+    log.debug("Destroying vault secrets for %s in %s", __grains__.get("id"), path)
     try:
-        vault.destroy_kv(path, list(args), __opts__, __context__)
-        return True
+        return vault.destroy_kv(path, list(args), __opts__, __context__)
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to destroy secret! %s: %s", type(err).__name__, err)
         return False
@@ -834,7 +838,7 @@ def list_secrets(path, default=NOT_SET, keys_only=False):
     """
     if default == NOT_SET:
         default = CommandExecutionError
-    log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
+    log.debug("Listing vault secret keys for %s in %s", __grains__.get("id"), path)
     try:
         keys = vault.list_kv(path, __opts__, __context__)
         if keys_only:
@@ -869,7 +873,7 @@ def clear_token_cache(connection_only=True):
         Defaults to True.
     """
     log.debug("Deleting vault connection cache.")
-    vault.clear_cache(__opts__, connection=connection_only)
+    return vault.clear_cache(__opts__, connection=connection_only)
 
 
 def policy_fetch(policy):

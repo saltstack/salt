@@ -24,6 +24,7 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.json
 import salt.utils.versions
+from salt.defaults import NOT_SET
 
 log = logging.getLogger(__name__)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -613,8 +614,16 @@ def _query_master(
             raise VaultConfigExpired()
 
         for key, val in misc_data.items():
-            if key not in result["data"]:
-                result["data"][key] = val
+            tgt = "data" if result.get("data") is not None else "auth"
+            if (
+                salt.utils.data.traverse_dict_and_list(result, f"{tgt}:{key}", NOT_SET)
+                == NOT_SET
+            ):
+                salt.utils.dictupdate.set_dict_key_value(
+                    result,
+                    f"{tgt}:{key}",
+                    val,
+                )
 
         result.pop("wrap_info", None)
         result.pop("wrap_info_nested", None)
@@ -974,7 +983,7 @@ class VaultClient:
         if not res.ok:
             if raise_error:
                 self._raise_status(res)
-            return data or False
+            return data
         if wrap:
             return VaultWrappedResponse(**data["wrap_info"])
         return data
@@ -1633,6 +1642,7 @@ def _fromisoformat(creation_time):
     # drop subsecond precision to make it easier on us
     # (length would need to be 3, 6 or 9)
     creation_time = re.sub(r"\.[\d]+", "", creation_time)
+    creation_time = re.sub(r"Z$", "+00:00", creation_time)
     try:
         # Python >=v3.7
         return int(datetime.datetime.fromisoformat(creation_time).timestamp())

@@ -75,7 +75,7 @@ def generate_token(
         if uses is not None:
             issue_params["uses"] = uses
 
-        token = _generate_token(
+        token, _ = _generate_token(
             minion_id, issue_params=issue_params or None, wrap=False
         )
         ret = {
@@ -134,10 +134,13 @@ def generate_new_token(
         }
 
         wrap = _config("issue:wrap")
-        token = _generate_token(minion_id, issue_params=issue_params, wrap=wrap)
+        token, num_uses = _generate_token(
+            minion_id, issue_params=issue_params, wrap=wrap
+        )
 
         if wrap:
             ret.update(token)
+            ret.update({"misc_data": {"num_uses": num_uses}})
         else:
             ret["auth"] = token
 
@@ -167,9 +170,12 @@ def _generate_token(minion_id, issue_params, wrap):
     res = client.post(endpoint, payload=payload, wrap=wrap)
 
     if wrap:
-        return res.serialize_for_minion()
+        return res.serialize_for_minion(), payload["num_uses"]
+    if "num_uses" not in res["auth"]:
+        # older vault versions do not include num_uses in output
+        res["auth"]["num_uses"] = payload["num_uses"]
     token = vault.VaultToken(**res["auth"])
-    return token.serialize_for_minion()
+    return token.serialize_for_minion(), payload["num_uses"]
 
 
 def get_config(minion_id, signature, impersonated_by_master=False, issue_params=None):
@@ -209,13 +215,14 @@ def get_config(minion_id, signature, impersonated_by_master=False, issue_params=
         wrap = _config("issue:wrap")
 
         if _config("issue:type") == "token":
-            minion_config["auth"]["token"] = _generate_token(
+            minion_config["auth"]["token"], num_uses = _generate_token(
                 minion_id,
                 issue_params=issue_params,
                 wrap=wrap,
             )
             if wrap:
                 minion_config["wrap_info_nested"].append("auth:token")
+                minion_config.update({"misc_data": {"token:num_uses": num_uses}})
         if _config("issue:type") == "approle":
             minion_config["auth"]["approle_mount"] = _config("issue:approle:mount")
             minion_config["auth"]["approle_name"] = minion_id

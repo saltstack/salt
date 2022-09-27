@@ -398,7 +398,9 @@ def test_generate_token(
     Ensure _generate_token calls the API as expected
     """
     wrap = config("issue:wrap")
-    res = vault._generate_token("test-minion", issue_params=None, wrap=wrap)
+    res_token, res_num_uses = vault._generate_token(
+        "test-minion", issue_params=None, wrap=wrap
+    )
     endpoint = "auth/token/create"
     role_name = config("issue:token:role_name")
     payload = {}
@@ -411,12 +413,13 @@ def test_generate_token(
     if role_name:
         endpoint += f"/{role_name}"
     if config("issue:wrap"):
-        assert res == wrapped_serialized
+        assert res_token == wrapped_serialized
         client_token.post.assert_called_once_with(
             endpoint, payload=payload, wrap=config("issue:wrap")
         )
     else:
-        assert res == token_serialized
+        assert res_token == token_serialized
+    assert res_num_uses == 1
 
 
 @pytest.mark.parametrize("policies", [[]], indirect=True)
@@ -458,7 +461,7 @@ def test_generate_token_deprecated(
         "uses": token_serialized["num_uses"],
     }
     with patch("salt.runners.vault._generate_token", autospec=True) as gen:
-        gen.return_value = token_serialized
+        gen.return_value = (token_serialized, token_serialized["num_uses"])
         res = vault.generate_token("test-minion", "sig", ttl=ttl, uses=uses)
         validate_signature.assert_called_once_with("test-minion", "sig", False)
         assert res == expected
@@ -483,17 +486,18 @@ def test_generate_new_token(
     expected = {"server": config("server"), "auth": {}}
     if config("issue:wrap"):
         expected.update(wrapped_serialized)
+        expected.update({"misc_data": {"num_uses": token_serialized["num_uses"]}})
     else:
         expected["auth"] = token_serialized
 
     with patch("salt.runners.vault._generate_token", autospec=True) as gen:
 
         def res_or_wrap(*args, **kwargs):
+            nonlocal token_serialized
             if kwargs.get("wrap"):
                 nonlocal wrapped_serialized
-                return wrapped_serialized
-            nonlocal token_serialized
-            return token_serialized
+                return wrapped_serialized, token_serialized["num_uses"]
+            return token_serialized, token_serialized["num_uses"]
 
         gen.side_effect = res_or_wrap
         res = vault.generate_new_token("test-minion", "sig", issue_params=issue_params)
@@ -538,18 +542,23 @@ def test_get_config_token(
             token_serialized["num_uses"] = issue_params["uses"]
     if config("issue:wrap"):
         expected["auth"].update({"token": wrapped_serialized})
-        expected.update({"wrap_info_nested": ["auth:token"]})
+        expected.update(
+            {
+                "wrap_info_nested": ["auth:token"],
+                "misc_data": {"token:num_uses": token_serialized["num_uses"]},
+            }
+        )
     else:
         expected["auth"].update({"token": token_serialized})
 
     with patch("salt.runners.vault._generate_token", autospec=True) as gen:
 
         def res_or_wrap(*args, **kwargs):
+            nonlocal token_serialized
             if kwargs.get("wrap"):
                 nonlocal wrapped_serialized
-                return wrapped_serialized
-            nonlocal token_serialized
-            return token_serialized
+                return wrapped_serialized, token_serialized["num_uses"]
+            return token_serialized, token_serialized["num_uses"]
 
         gen.side_effect = res_or_wrap
         res = vault.get_config("test-minion", "sig", issue_params=issue_params)

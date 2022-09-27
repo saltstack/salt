@@ -1,4 +1,5 @@
 import time
+from copy import deepcopy
 
 # this needs to be from! see test_fromisoformat_polyfill
 from datetime import datetime
@@ -1670,29 +1671,57 @@ class TestQueryMaster:
         assert out["auth"]["role_id"] == {"bar": "baz"}
 
     @pytest.mark.parametrize("misc_data", ["secret_id_num_uses", "secret_id_ttl"])
+    @pytest.mark.parametrize("key", ["auth", "data"])
     def test_query_master_merges_misc_data(
-        self, opts, publish_runner, saltutil_runner, secret_id_response, misc_data
+        self, opts, publish_runner, saltutil_runner, secret_id_response, misc_data, key
     ):
         """
-        Ensure that "misc_data" is merged into "data" only if the key is not
-        set in data.
+        Ensure that "misc_data" is merged into "data"/"auth" only if the key is not
+        set there.
         This is used to provide miscellaneous information that might only be
         easily available to the master (such as secret_id_num_uses, which is
         not reported in the secret ID generation response currently and would
         consume a token use for the minion to look up).
         """
         response = {
-            "data": secret_id_response["data"],
+            key: secret_id_response["data"],
             "misc_data": {misc_data: "merged"},
         }
-        publish_runner.return_value = saltutil_runner.return_value = response
+        publish_runner.return_value = saltutil_runner.return_value = deepcopy(response)
         out = vault._query_master("func", opts)
-        assert misc_data in out["data"]
+        assert misc_data in out[key]
         assert "misc_data" not in out
         if misc_data in secret_id_response["data"]:
-            assert out["data"][misc_data] == secret_id_response["data"][misc_data]
+            assert out[key][misc_data] == secret_id_response["data"][misc_data]
         else:
-            assert out["data"][misc_data] == "merged"
+            assert out[key][misc_data] == "merged"
+
+    @pytest.mark.parametrize("misc_data", ["nested:value", "nested:num_uses"])
+    @pytest.mark.parametrize("key", ["auth", "data"])
+    def test_query_master_merges_misc_data_recursively(
+        self, opts, publish_runner, saltutil_runner, secret_id_response, misc_data, key
+    ):
+        """
+        Ensure that "misc_data" is merged recursively into "data"/"auth" only if
+        the key is not set there.
+        This is used to provide miscellaneous information that might only be
+        easily available to the master (such as num_uses for old vault versions,
+        which is not reported in the token generation response there and would
+        consume a token use for the minion to look up).
+        """
+        response = {
+            key: {"nested": {"value": "existing"}},
+            "misc_data": {misc_data: "merged"},
+        }
+        publish_runner.return_value = saltutil_runner.return_value = deepcopy(response)
+        out = vault._query_master("func", opts)
+        nested_key = misc_data.split(":")[1]
+        assert nested_key in out[key]["nested"]
+        assert "misc_data" not in out
+        if nested_key in response[key]["nested"]:
+            assert out[key]["nested"][nested_key] == "existing"
+        else:
+            assert out[key]["nested"][nested_key] == "merged"
 
 
 ############################################
@@ -2237,6 +2266,7 @@ def test_vault_client_token_renew_increment_is_honored(
         ("2022-08-22T17:16:21-09:30", 1661222781),
         ("2022-08-22T17:16:21-01:00", 1661192181),
         ("2022-08-22T17:16:21+00:00", 1661188581),
+        ("2022-08-22T17:16:21Z", 1661188581),
         ("2022-08-22T17:16:21+02:00", 1661181381),
         ("2022-08-22T17:16:21+12:30", 1661143581),
     ],
