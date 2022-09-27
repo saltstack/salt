@@ -24,14 +24,14 @@ def pillar_cache_tree(pillar_state_tree, pillar_salt_minion, pillar_salt_call_cl
     try:
         with top_tempfile, pillar_tempfile:
             ret = pillar_salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-            assert ret.exitcode == 0
-            assert ret.json is True
+            assert ret.returncode == 0
+            assert ret.data is True
             yield
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = pillar_salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 @pytest.fixture()
@@ -68,8 +68,8 @@ def pillar_cache_tree_no_refresh(
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = pillar_salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 def test_pillar_cache_refresh(pillar_cache_tree, pillar_salt_call_cli):
@@ -77,10 +77,10 @@ def test_pillar_cache_refresh(pillar_cache_tree, pillar_salt_call_cli):
     Test pillar cache updates after a refresh_pillar
     """
     ret = pillar_salt_call_cli.run("pillar.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert "test" in ret.json
-    assert "test2" in ret.json
+    assert ret.returncode == 0
+    assert ret.data
+    assert "test" in ret.data
+    assert "test2" in ret.data
 
 
 def test_pillar_cache_items(pillar_cache_tree_no_refresh, pillar_salt_call_cli):
@@ -88,11 +88,11 @@ def test_pillar_cache_items(pillar_cache_tree_no_refresh, pillar_salt_call_cli):
     Test pillar cache does not refresh pillar when using pillar.items
     """
     # pillar.items should be empty
-    assert not pillar_salt_call_cli.run("pillar.items").json
+    assert not pillar_salt_call_cli.run("pillar.items").data
     pillar_salt_call_cli.run("saltutil.refresh_pillar", wait=True)
     # pillar.items should contain the new pillar data
     ret = pillar_salt_call_cli.run("pillar.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert "test" in ret.json
-    assert "test2" in ret.json
+    assert ret.returncode == 0
+    assert ret.data
+    assert "test" in ret.data
+    assert "test2" in ret.data

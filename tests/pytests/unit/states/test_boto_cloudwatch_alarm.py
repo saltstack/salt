@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.boto_cloudwatch_alarm as boto_cloudwatch_alarm
 from tests.support.mock import MagicMock, patch
 

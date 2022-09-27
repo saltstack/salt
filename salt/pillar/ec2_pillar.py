@@ -61,8 +61,8 @@ from salt.utils.versions import StrictVersion as _StrictVersion
 
 try:
     import boto.ec2
-    import boto.utils
     import boto.exception
+    import boto.utils
 
     HAS_BOTO = True
 except ImportError:

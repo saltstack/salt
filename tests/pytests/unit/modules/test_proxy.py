@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.proxy as proxy
 from tests.support.mock import MagicMock, call, patch
 
