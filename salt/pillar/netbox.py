@@ -528,7 +528,7 @@ Example output:
           config_context:
           connected_devices:
         ----------
-        1533:
+        512:
             ----------
             airflow:
                 None
@@ -546,7 +546,7 @@ Example output:
                 display:
                     Network switch
                 id:
-                    5
+                    512
                 name:
                     Network switch
                 slug:
@@ -945,7 +945,10 @@ def _get_connected_devices(api_url, minion_id, interfaces, headers):
         if "connected_endpoints" in int_short.keys():
             if int_short["connected_endpoints"]:
                 for device_short in int_short["connected_endpoints"]:
-                    if not device_short["device"]["id"] in connected_devices_ids:
+                    if (
+                        "device" in device_short.keys()
+                        and not device_short["device"]["id"] in connected_devices_ids
+                    ):
                         connected_devices_ids.append(device_short["device"]["id"])
     log.debug("connected_devices_ids: %s", connected_devices_ids)
 
