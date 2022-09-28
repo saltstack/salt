@@ -7,11 +7,15 @@ import shutil
 
 import pytest
 
+from tests.support.pytest.vault import vault_delete_secret, vault_write_secret
+
 log = logging.getLogger(__name__)
 
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("dockerd", "vault", "getent"),
+    pytest.mark.usefixtures("vault_container_version"),
 ]
 
 
@@ -24,25 +28,50 @@ def pillar_state_tree(tmp_path_factory):
         shutil.rmtree(str(_pillar_state_tree), ignore_errors=True)
 
 
+@pytest.fixture(scope="module")
+def vault_pillar_values(vault_container_version):
+    vault_write_secret("secret/path/foo", vault_sourced="fail")
+    try:
+        yield
+    finally:
+        vault_delete_secret("secret/path/foo")
+
+
 @pytest.fixture(scope="class")
 def pillar_salt_master(salt_factories, pillar_state_tree, vault_port):
     config_defaults = {
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
-        "ext_pillar": [{"vault": "path=does/not/matter"}],
+        "ext_pillar": [{"vault": "path=secret/path/foo"}],
         "sdbvault": {
             "driver": "vault",
         },
         "vault": {
-            "auth": {"method": "token", "token": "testsecret"},
-            "policies": [
-                "salt_minion",
-                "salt_minion_{minion}",
-                "salt_role_{pillar[roles]}",
-                "salt_unsafe_{grains[foo]}",
-            ],
-            "policies_cache_time": 0,
-            "url": f"http://127.0.0.1:{vault_port}",
+            "auth": {"token": "testsecret"},
+            "issue": {
+                "token": {
+                    "params": {
+                        # otherwise the tests might fail because of
+                        # cached tokens
+                        "uses": 1,
+                    },
+                },
+            },
+            "policies": {
+                "assign": [
+                    "salt_minion",
+                    "salt_minion_{minion}",
+                    "salt_role_{pillar[roles]}",
+                    "salt_unsafe_{grains[foo]}",
+                    "extpillar_this_should_always_be_absent_{pillar[vault_sourced]}",
+                    "sdb_this_should_always_be_absent_{pillar[vault_sourced_sdb]}",
+                    "exe_this_should_always_be_absent_{pillar[vault_sourced_exe]}",
+                ],
+                "cache_time": 0,
+            },
+            "server": {
+                "url": f"http://127.0.0.1:{vault_port}",
+            },
         },
         "minion_data_cache": False,
     }
@@ -58,16 +87,31 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree, vault_port):
     config_defaults = {
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
+        "ext_pillar": [{"vault": "path=secret/path/foo"}],
         "vault": {
-            "auth": {"method": "token", "token": "testsecret"},
-            "policies": [
-                "salt_minion",
-                "salt_minion_{minion}",
-                "salt_role_{pillar[roles]}",
-                "salt_unsafe_{grains[foo]}",
-            ],
-            "policies_cache_time": 0,
-            "url": f"http://127.0.0.1:{vault_port}",
+            "auth": {"token": "testsecret"},
+            "issue": {
+                "token": {
+                    "params": {
+                        # otherwise the tests might fail because of
+                        # cached tokens
+                        "uses": 1,
+                    },
+                },
+            },
+            "policies": {
+                "assign": [
+                    "salt_minion",
+                    "salt_minion_{minion}",
+                    "salt_role_{pillar[roles]}",
+                    "salt_unsafe_{grains[foo]}",
+                    "extpillar_this_will_not_always_be_absent_{pillar[vault_sourced]}",
+                ],
+                "cache_time": 0,
+            },
+            "server": {
+                "url": f"http://127.0.0.1:{vault_port}",
+            },
         },
         "minion_data_cache": True,
     }
@@ -128,6 +172,8 @@ def pillar_caching_salt_call_cli(pillar_caching_salt_minion):
     return pillar_caching_salt_minion.salt_call_cli()
 
 
+@pytest.mark.usefixtures("vault_pillar_values")
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
 class TestVaultPillarPolicyTemplatesWithoutCache:
     @pytest.fixture(autouse=True)
     def pillar_policy_tree(
@@ -168,7 +214,7 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
             pillar_salt_minion.id
         )
         exe_loop_pillar = r"""
-        bar: {{ salt["vault.read_secret"]("does/not/matter") }}
+        vault_sourced_exe: {{ salt["vault.read_secret"]("secret/path/foo", "vault_sourced") }}
         """
         top_tempfile = pytest.helpers.temp_file("top.sls", top_file, pillar_state_tree)
         exe_loop_tempfile = pytest.helpers.temp_file(
@@ -189,7 +235,7 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
             pillar_salt_minion.id
         )
         sdb_loop_pillar = r"""
-        foo: {{ salt["sdb.get"]("sdb://sdbvault/does/not/matter/val") }}
+        vault_sourced_sdb: {{ salt["sdb.get"]("sdb://sdbvault/secret/path/foo/vault_sourced") }}
         """
         top_tempfile = pytest.helpers.temp_file("top.sls", top_file, pillar_state_tree)
         sdb_loop_tempfile = pytest.helpers.temp_file(
@@ -283,6 +329,8 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
 
 
+@pytest.mark.usefixtures("vault_pillar_values")
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
 class TestVaultPillarPolicyTemplatesWithCache:
     @pytest.fixture(autouse=True)
     def pillar_caching_policy_tree(
@@ -368,6 +416,7 @@ class TestVaultPillarPolicyTemplatesWithCache:
             "salt_role_minion",
             "salt_role_web",
             "salt_unsafe_bar",
+            "extpillar_this_will_not_always_be_absent_fail",
         ]
 
     def test_show_policies_refresh_pillar(
