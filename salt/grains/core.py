@@ -159,6 +159,7 @@ def _linux_cpudata():
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
         with salt.utils.files.fopen(cpuinfo, "r") as _fp:
+            grains["num_cpus"] = 0
             for line in _fp:
                 comps = line.split(":")
                 if not len(comps) > 1:
@@ -166,7 +167,7 @@ def _linux_cpudata():
                 key = comps[0].strip()
                 val = comps[1].strip()
                 if key == "processor":
-                    grains["num_cpus"] = int(val) + 1
+                    grains["num_cpus"] += 1
                 # head -2 /proc/cpuinfo
                 # vendor_id       : IBM/S390
                 # # processors    : 2

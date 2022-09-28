@@ -379,6 +379,11 @@ def _check_user(user, group):
         gid = __salt__["file.group_to_gid"](group)
         if gid == "":
             err += "Group {} is not available".format(group)
+    if err and __opts__["test"]:
+        # Write the warning with error message, but prevent failing,
+        # in case of applying the state in test mode.
+        log.warning(err)
+        return ""
     return err
 
 
@@ -3823,10 +3828,7 @@ def directory(
         u_check = _check_user(user, group)
         if u_check:
             # The specified user or group do not exist
-            if __opts__["test"]:
-                log.warning(u_check)
-            else:
-                return _error(ret, u_check)
+            return _error(ret, u_check)
 
     # Must be an absolute path
     if not os.path.isabs(name):
