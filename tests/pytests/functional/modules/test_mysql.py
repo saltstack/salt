@@ -448,7 +448,7 @@ def test_grant_replication_client_add_revoke(mysql, mysql_container):
     # Grant privileges to user to specific table
     ret = mysql.grant_add(
         grant="REPLICATION CLIENT",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
