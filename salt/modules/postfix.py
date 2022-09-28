@@ -55,28 +55,36 @@ def _parse_master(path=MASTER_CF):
     # and whitespace
     conf_list = []
     conf_dict = {}
+    # We may need to append flags for some lines, this is a placeholder for
+    # where to append
+    dict_key_last = ""
     for line in full_conf.splitlines():
-        if (
-            not line.strip()
-            or line.strip().startswith("#")
-            or line.startswith((" ", "\t", "\n", "\r", "\x0b", "\x0c"))
-        ):
-            conf_list.append(line)
-            continue
-        comps = line.strip().split()
-        conf_line = {
-            "service": comps[0],
-            "conn_type": comps[1],
-            "private": comps[2],
-            "unpriv": comps[3],
-            "chroot": comps[4],
-            "wakeup": comps[5],
-            "maxproc": comps[6],
-            "command": " ".join(comps[7:]),
-        }
-        dict_key = "{} {}".format(comps[0], comps[1])
-        conf_list.append(conf_line)
-        conf_dict[dict_key] = conf_line
+        # Lines starting with whitespace are continuations, we name this flags
+        # here
+        if re.search(SWWS, line):
+            flags = "\t" + line
+            log.debug("flags line: " + flags)
+            conf_dict[dict_key_last]["flags"] = flags
+        else:
+            # Otherwise comments and blanks are ignored
+            if re.search(r"^[^(#|$)]", line):
+                log.debug("config line: " + line)
+                conf_list.append(line)
+                comps = line.strip().split()
+                conf_line = {
+                    "service": comps[0],
+                    "conn_type": comps[1],
+                    "private": comps[2],
+                    "unpriv": comps[3],
+                    "chroot": comps[4],
+                    "wakeup": comps[5],
+                    "maxproc": comps[6],
+                    "command": " ".join(comps[7:]),
+                }
+                dict_key = "{} {}".format(comps[0], comps[1])
+                conf_list.append(conf_line)
+                conf_dict[dict_key] = conf_line
+                dict_key_last = dict_key
 
     return conf_dict, conf_list
 
