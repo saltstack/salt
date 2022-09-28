@@ -19,7 +19,7 @@ def vault_write_policy(name, rules):
     proc = subprocess.run(
         [vault_binary, "policy", "write", name, "-"],
         check=False,
-        stdin=rules,
+        input=rules,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
@@ -70,6 +70,7 @@ def vault_read_policy(policy):
             vault_binary,
             "policy",
             "read",
+            "-format=json",
             policy,
         ],
         check=False,
@@ -90,6 +91,32 @@ def vault_read_policy(policy):
         pytest.fail(f"Unable to read policy `{policy}`")
     res = json.loads(proc.stdout)
     return res["policy"]
+
+
+def vault_list_policies():
+    vault_binary = salt.utils.path.which("vault")
+    proc = subprocess.run(
+        [
+            vault_binary,
+            "policy",
+            "list",
+            "-format=json",
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    if proc.returncode != 0:
+        ret = ProcessResult(
+            returncode=proc.returncode,
+            stdout=proc.stdout,
+            stderr=proc.stderr,
+            cmdline=proc.args,
+        )
+        log.debug("Failed to list policies:\n%s", ret)
+        pytest.fail("Unable to list policies")
+    return json.loads(proc.stdout)
 
 
 def vault_delete_policy(policy):
