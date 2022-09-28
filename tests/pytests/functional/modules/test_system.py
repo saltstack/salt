@@ -9,9 +9,7 @@ import pytest
 
 import salt.utils.files
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.skip_unless_on_linux]
 
 log = logging.getLogger(__name__)
 
