@@ -332,7 +332,7 @@ def test_grant_replication_replica_add_revoke(mysql, mysql_container):
     # Grant privileges to user to specific table
     ret = mysql.grant_add(
         grant="REPLICATION REPLICA",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -341,7 +341,7 @@ def test_grant_replication_replica_add_revoke(mysql, mysql_container):
     # Check the grant exists
     ret = mysql.grant_exists(
         grant="REPLICATION REPLICA",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -359,7 +359,7 @@ def test_grant_replication_replica_add_revoke(mysql, mysql_container):
     # Check the grant does not exist
     ret = mysql.grant_exists(
         grant="REPLICATION REPLICA",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -390,7 +390,7 @@ def test_grant_replication_slave_add_revoke(mysql, mysql_container):
     # Grant privileges to user to specific table
     ret = mysql.grant_add(
         grant="REPLICATION SLAVE",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -399,7 +399,7 @@ def test_grant_replication_slave_add_revoke(mysql, mysql_container):
     # Check the grant exists
     ret = mysql.grant_exists(
         grant="REPLICATION SLAVE",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -417,7 +417,7 @@ def test_grant_replication_slave_add_revoke(mysql, mysql_container):
     # Check the grant does not exist
     ret = mysql.grant_exists(
         grant="REPLICATION SLAVE",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -457,7 +457,7 @@ def test_grant_replication_client_add_revoke(mysql, mysql_container):
     # Check the grant exists
     ret = mysql.grant_exists(
         grant="REPLICATION CLIENT",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -475,7 +475,7 @@ def test_grant_replication_client_add_revoke(mysql, mysql_container):
     # Check the grant does not exist
     ret = mysql.grant_exists(
         grant="REPLICATION CLIENT",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -600,7 +600,7 @@ def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
     # Grant privileges to user to specific table
     ret = mysql.grant_add(
         grant="REPLICA MONITOR",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -609,7 +609,7 @@ def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
     # Check the grant exists
     ret = mysql.grant_exists(
         grant="REPLICA MONITOR",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -627,7 +627,7 @@ def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
     # Check the grant does not exist
     ret = mysql.grant_exists(
         grant="REPLICA MONITOR",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -676,7 +676,7 @@ def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
     # Grant privileges to user to specific table
     ret = mysql.grant_add(
         grant="SLAVE MONITOR",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
@@ -685,7 +685,7 @@ def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
     # Check the grant exists
     ret = mysql.grant_exists(
         grant="SLAVE MONITOR",
-        database="salt.*",
+        database="*.*",
         user="george",
         host="localhost",
     )
