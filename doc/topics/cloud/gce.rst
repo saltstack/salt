@@ -238,7 +238,7 @@ Additionally, the subnetwork your instance is created under is associated with t
 .. versionadded:: 2017.7.0
 
 labels
-----
+------
 
 This setting allows you to set labels on your GCE instances. It
 should be a dictionary and must be parse-able by the python
