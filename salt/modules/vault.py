@@ -940,7 +940,7 @@ def policy_write(policy, rules):
         Rules formatted as in-line HCL
     """
     endpoint = f"sys/policy/{policy}"
-    payload = {"rules": rules}
+    payload = {"policy": rules}
     try:
         return vault.query("POST", endpoint, __opts__, __context__, payload=payload)
     except SaltException as err:
