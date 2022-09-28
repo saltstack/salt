@@ -73,7 +73,7 @@ def minion_opts(
 
 @pytest.fixture(scope="module")
 def loaders(minion_opts):
-    return Loaders(minion_opts)
+    return Loaders(minion_opts, loaded_base_name="{}.loaded".format(__name__))
 
 
 @pytest.fixture(autouse=True)

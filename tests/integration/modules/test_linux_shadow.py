@@ -5,10 +5,11 @@ integration tests for shadow linux
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
-from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
 
 

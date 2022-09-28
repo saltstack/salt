@@ -1,6 +1,7 @@
 from functools import partial
 
 import pytest
+
 import salt.ext.tornado.gen
 from salt.netapi.rest_tornado import saltnado
 

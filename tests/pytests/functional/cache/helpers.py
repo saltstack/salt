@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 import salt.cache
 from salt.exceptions import SaltCacheError
 from tests.support.mock import MagicMock, patch
