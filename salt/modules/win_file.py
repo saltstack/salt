@@ -1456,14 +1456,13 @@ def symlink(src, link, force=False, atomic=False):
             except win32file.error:
                 retry += 1
         try:
-            os.replace(temp_link, link)
             win32file.MoveFileEx(
                 temp_link,
                 link,
                 win32file.MOVEFILE_REPLACE_EXISTING | win32file.MOVEFILE_WRITE_THROUGH,
             )
             return True
-        except OSError:
+        except win32file.error:
             os.remove(temp_link)
             raise CommandExecutionError("Could not create '{}'".format(link))
 
