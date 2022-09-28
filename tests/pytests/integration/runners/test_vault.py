@@ -34,18 +34,20 @@ def pillar_salt_master(salt_factories, pillar_state_tree):
             "driver": "vault",
         },
         "vault": {
-            "auth": {"token": "testsecret"},
+            "auth": {"method": "token", "token": "testsecret"},
             "policies": [
                 "salt_minion",
                 "salt_minion_{minion}",
                 "salt_role_{pillar[roles]}",
                 "salt_unsafe_{grains[foo]}",
             ],
+            "policies_cache_time": 0,
+            "url": "http://127.0.0.1:8200",
         },
         "minion_data_cache": False,
     }
     factory = salt_factories.salt_master_daemon(
-        "vault-pillarpolicy-functional-master", defaults=config_defaults
+        "vault-policy-int-master-uncached", defaults=config_defaults
     )
     with factory.started():
         yield factory
@@ -56,23 +58,21 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree):
     config_defaults = {
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
-        "ext_pillar": [{"vault": "path=does/not/matter"}],
-        "sdbvault": {
-            "driver": "vault",
-        },
         "vault": {
-            "auth": {"token": "testsecret"},
+            "auth": {"method": "token", "token": "testsecret"},
             "policies": [
                 "salt_minion",
                 "salt_minion_{minion}",
                 "salt_role_{pillar[roles]}",
                 "salt_unsafe_{grains[foo]}",
             ],
+            "policies_cache_time": 0,
+            "url": "http://127.0.0.1:8200",
         },
         "minion_data_cache": True,
     }
     factory = salt_factories.salt_master_daemon(
-        "vault-pillarpolicy-functional-master", defaults=config_defaults
+        "vault-policy-int-master-cached", defaults=config_defaults
     )
     with factory.started():
         yield factory
@@ -82,7 +82,7 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree):
 def pillar_salt_minion(pillar_salt_master):
     assert pillar_salt_master.is_running()
     factory = pillar_salt_master.salt_minion_daemon(
-        "vault-pillarpolicy-functional-minion-1",
+        "vault-policy-int-minion-uncached-1",
         defaults={"open_mode": True, "grains": {"foo": "bar"}},
     )
     with factory.started():
@@ -97,7 +97,7 @@ def pillar_salt_minion(pillar_salt_master):
 def pillar_caching_salt_minion(pillar_caching_salt_master):
     assert pillar_caching_salt_master.is_running()
     factory = pillar_caching_salt_master.salt_minion_daemon(
-        "vault-caching-functional-minion-1",
+        "vault-policy-int-minion-cached-1",
         defaults={"open_mode": True, "grains": {"foo": "bar"}},
     )
     with factory.started():
@@ -128,31 +128,8 @@ def pillar_caching_salt_call_cli(pillar_caching_salt_minion):
     return pillar_caching_salt_minion.salt_call_cli()
 
 
-@pytest.fixture()
-def pillar_loop(pillar_state_tree, pillar_policy_tree, pillar_salt_minion):
-    top_file = """
-    base:
-      '{}':
-        - roles
-        - sdb_loop
-        - exe_loop
-    """.format(
-        pillar_salt_minion.id
-    )
-    exe_loop_pillar = r"""
-    bar: {{ salt["vault.read_secret"]("does/not/matter") }}
-    """
-    top_tempfile = pytest.helpers.temp_file("top.sls", top_file, pillar_state_tree)
-    exe_loop_tempfile = pytest.helpers.temp_file(
-        "exe_loop.sls", exe_loop_pillar, pillar_state_tree
-    )
-
-    with top_tempfile, exe_loop_tempfile:
-        yield
-
-
 class TestVaultPillarPolicyTemplatesWithoutCache:
-    @pytest.fixture()
+    @pytest.fixture(autouse=True)
     def pillar_policy_tree(
         self,
         pillar_salt_master,
@@ -162,7 +139,6 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         base:
           '{}':
             - roles
-            - sdb_loop
         """.format(
             pillar_salt_minion.id
         )
@@ -171,26 +147,60 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
           - minion
           - web
         """
-        sdb_loop_pillar_contents = """
-        foo: {{ salt["sdb.get"]("sdb://sdbvault/does/not/matter/val") }}
-        """
         top_file = pillar_salt_master.pillar_tree.base.temp_file(
             "top.sls", top_pillar_contents
         )
         roles_file = pillar_salt_master.pillar_tree.base.temp_file(
             "roles.sls", roles_pillar_contents
         )
-        sdb_loop_file = pillar_salt_master.pillar_tree.base.temp_file(
-            "sdb_loop.sls", sdb_loop_pillar_contents
-        )
 
-        with top_file, roles_file, sdb_loop_file:
+        with top_file, roles_file:
             yield
 
     @pytest.fixture()
-    def minion_data_cache_absent(
-        self, pillar_salt_run_cli, pillar_salt_minion, pillar_policy_tree
-    ):
+    def pillar_exe_loop(self, pillar_state_tree, pillar_salt_minion):
+        top_file = """
+        base:
+          '{}':
+            - roles
+            - exe_loop
+        """.format(
+            pillar_salt_minion.id
+        )
+        exe_loop_pillar = r"""
+        bar: {{ salt["vault.read_secret"]("does/not/matter") }}
+        """
+        top_tempfile = pytest.helpers.temp_file("top.sls", top_file, pillar_state_tree)
+        exe_loop_tempfile = pytest.helpers.temp_file(
+            "exe_loop.sls", exe_loop_pillar, pillar_state_tree
+        )
+
+        with top_tempfile, exe_loop_tempfile:
+            yield
+
+    @pytest.fixture()
+    def pillar_sdb_loop(self, pillar_state_tree, pillar_salt_minion):
+        top_file = """
+        base:
+          '{}':
+            - roles
+            - sdb_loop
+        """.format(
+            pillar_salt_minion.id
+        )
+        sdb_loop_pillar = r"""
+        foo: {{ salt["sdb.get"]("sdb://sdbvault/does/not/matter/val") }}
+        """
+        top_tempfile = pytest.helpers.temp_file("top.sls", top_file, pillar_state_tree)
+        sdb_loop_tempfile = pytest.helpers.temp_file(
+            "sdb_loop.sls", sdb_loop_pillar, pillar_state_tree
+        )
+
+        with top_tempfile, sdb_loop_tempfile:
+            yield
+
+    @pytest.fixture(autouse=True)
+    def minion_data_cache_absent(self, pillar_salt_run_cli, pillar_salt_minion):
         ret = pillar_salt_run_cli.run(
             "cache.flush", f"minions/{pillar_salt_minion.id}", "data"
         )
@@ -202,12 +212,10 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         assert not cached.data
         yield
 
-    def test_show_policies(
-        self, pillar_salt_run_cli, pillar_salt_minion, minion_data_cache_absent
-    ):
+    def test_show_policies(self, pillar_salt_run_cli, pillar_salt_minion):
         """
         Test that pillar data is refreshed correctly before rendering policies when necessary.
-        This test includes the prevention of loop exceptions by sdb/ext_pillar modules
+        This test includes the prevention of loop exceptions by the ext_pillar module
         This refresh does not include grains and pillar data targeted by these grains (unsafe anyways!).
         """
         ret = pillar_salt_run_cli.run(
@@ -220,25 +228,23 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
             "salt_role_web",
         ]
         assert "Pillar render error: Failed to load ext_pillar vault" not in ret.stderr
-        assert "Pillar render error: Rendering SLS 'sdb_loop' failed" not in ret.stderr
 
     def test_show_policies_uncached_data_no_pillar_refresh(
-        self, pillar_salt_run_cli, pillar_salt_minion, minion_data_cache_absent
+        self, pillar_salt_run_cli, pillar_salt_minion
     ):
         """
-        Test that pillar is not refreshed when explicitly disabled
+        Test that the pillar is not refreshed when explicitly disabled
         """
         ret = pillar_salt_run_cli.run(
             "vault.show_policies", pillar_salt_minion.id, refresh_pillar=False, expire=0
         )
         assert ret.data == ["salt_minion", f"salt_minion_{pillar_salt_minion.id}"]
 
-    def test_policy_compilation_prevents_loop(
+    def test_policy_compilation_prevents_loop_for_execution_module(
         self,
         pillar_salt_run_cli,
         pillar_salt_minion,
-        pillar_loop,
-        minion_data_cache_absent,
+        pillar_exe_loop,
     ):
         """
         Test that the runner prevents a recursive cycle from happening
@@ -253,10 +259,32 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
             "salt_role_web",
         ]
         assert "Pillar render error: Rendering SLS 'exe_loop' failed" in ret.stderr
+        assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
+
+    def test_policy_compilation_prevents_loop_for_sdb_module(
+        self,
+        pillar_salt_run_cli,
+        pillar_salt_minion,
+        pillar_sdb_loop,
+    ):
+        """
+        Test that the runner prevents a recursive cycle from happening
+        """
+        ret = pillar_salt_run_cli.run(
+            "vault.show_policies", pillar_salt_minion.id, refresh_pillar=True, expire=0
+        )
+        assert ret.data == [
+            "salt_minion",
+            f"salt_minion_{pillar_salt_minion.id}",
+            "salt_role_minion",
+            "salt_role_web",
+        ]
+        assert "Pillar render error: Rendering SLS 'sdb_loop' failed" in ret.stderr
+        assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
 
 
 class TestVaultPillarPolicyTemplatesWithCache:
-    @pytest.fixture()
+    @pytest.fixture(autouse=True)
     def pillar_caching_policy_tree(
         self, pillar_caching_salt_master, pillar_caching_salt_minion
     ):
@@ -264,7 +292,6 @@ class TestVaultPillarPolicyTemplatesWithCache:
         base:
           '{}':
             - roles
-            - sdb_loop
         """.format(
             pillar_caching_salt_minion.id
         )
@@ -273,23 +300,17 @@ class TestVaultPillarPolicyTemplatesWithCache:
           - minion
           - web
         """
-        sdb_loop_pillar_contents = """
-        foo: {{ salt["sdb.get"]("sdb://sdbvault/does/not/matter/val") }}
-        """
         top_file = pillar_caching_salt_master.pillar_tree.base.temp_file(
             "top.sls", top_pillar_contents
         )
         roles_file = pillar_caching_salt_master.pillar_tree.base.temp_file(
             "roles.sls", roles_pillar_contents
         )
-        sdb_loop_file = pillar_caching_salt_master.pillar_tree.base.temp_file(
-            "sdb_loop.sls", sdb_loop_pillar_contents
-        )
 
-        with top_file, roles_file, sdb_loop_file:
+        with top_file, roles_file:
             yield
 
-    @pytest.fixture()
+    @pytest.fixture(autouse=True)
     def minion_data_cache_present(
         self,
         pillar_caching_salt_call_cli,
@@ -300,7 +321,7 @@ class TestVaultPillarPolicyTemplatesWithCache:
         assert ret.data is True
         yield
 
-    @pytest.fixture()
+    @pytest.fixture(autouse=True)
     def minion_data_cache_outdated(
         self,
         minion_data_cache_present,
@@ -334,7 +355,6 @@ class TestVaultPillarPolicyTemplatesWithCache:
         self,
         pillar_caching_salt_run_cli,
         pillar_caching_salt_minion,
-        minion_data_cache_outdated,
     ):
         """
         Test that pillar data from cache is used when it is available
@@ -354,12 +374,9 @@ class TestVaultPillarPolicyTemplatesWithCache:
         self,
         pillar_caching_salt_run_cli,
         pillar_caching_salt_minion,
-        minion_data_cache_outdated,
     ):
         """
         Test that pillar data is always refreshed when requested.
-        This test includes the prevention of loops by sdb/ext_pillar modules
-        This refresh does not include grains and pillar data targeted by these grains (unsafe anyways!).
         """
         ret = pillar_caching_salt_run_cli.run(
             "vault.show_policies",
@@ -375,5 +392,3 @@ class TestVaultPillarPolicyTemplatesWithCache:
             "salt_role_fresh",
             "salt_unsafe_bar",
         ]
-        assert "Pillar render error: Failed to load ext_pillar vault" not in ret.stderr
-        assert "Pillar render error: Rendering SLS 'sdb_loop' failed" not in ret.stderr

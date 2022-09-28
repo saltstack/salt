@@ -293,7 +293,10 @@ def _get_minion_data(minion_id, refresh_pillar=None):
     _, grains, pillar = salt.utils.minions.get_minion_data(minion_id, __opts__)
 
     if grains is None:
-        grains = {}
+        # In case no cached minion data is available, make sure the utils module
+        # can distinguish a pillar refresh run impersonating a minion from running
+        # on the master.
+        grains = {"id": minion_id}
         # To properly refresh minion grains, something like this could be used:
         # __salt__["salt.execute"](minion_id, "saltutil.refresh_grains", refresh_pillar=False)
         # This is deliberately not done since grains should not be used to target

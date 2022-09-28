@@ -44,7 +44,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         cases = {
             "no-tokens-to-replace": ["no-tokens-to-replace"],
             "single-dict:{minion}": ["single-dict:{}".format(minion_id)],
-            "single-grain:{grains[id]}": [],
+            "single-grain:{grains[os]}": [],
         }
         with patch(
             "salt.utils.minions.get_minion_data",

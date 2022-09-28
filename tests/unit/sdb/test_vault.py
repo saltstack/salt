@@ -5,7 +5,7 @@ Test case for the vault SDB module
 
 import salt.sdb.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
 
 
@@ -201,22 +201,3 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         assert mock_vault.call_args_list == [
             call("GET", "v1/sdb://myvault/path/to/foo")
         ]
-
-    def test_get_disabled_during_policy_pillar_rendering(self):
-        """
-        Ensure that during pillar rendering for templated policies,
-        salt.sdb.vault.get function does not query vault to prevent
-        a cyclic dependency.
-        """
-        mock_version = Mock()
-        mock_vault = Mock()
-        with patch.dict(
-            vault.__utils__,
-            {"vault.make_request": mock_vault, "vault.is_v2": mock_version},
-        ):
-            with patch.dict(
-                vault.__opts__, {"_vault_runner_is_compiling_pillar_templates": True}
-            ):
-                self.assertIsNone(vault.get("sdb://myvault/path/to/foo/foo"))
-                assert mock_version.call_count == 0
-                assert mock_vault.call_count == 0
