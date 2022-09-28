@@ -14,389 +14,210 @@ from tests.support.runtests import RUNTIME_VARS
 log = logging.getLogger(__name__)
 
 
-def vault_write_policy(name, rules):
+def _vault_cmd(cmd, textinput=None, raw=False):
     vault_binary = salt.utils.path.which("vault")
     proc = subprocess.run(
-        [vault_binary, "policy", "write", name, "-"],
+        [vault_binary] + cmd,
         check=False,
-        input=rules,
+        input=textinput,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
     )
-    if proc.returncode != 0:
-        ret = ProcessResult(
-            returncode=proc.returncode,
-            stdout=proc.stdout,
-            stderr=proc.stderr,
-            cmdline=proc.args,
-        )
-        log.debug("Failed to write policy `%s`:\n%s", name, ret)
+
+    ret = ProcessResult(
+        returncode=proc.returncode,
+        stdout=proc.stdout,
+        stderr=proc.stderr,
+        cmdline=proc.args,
+    )
+
+    if raw:
+        return ret
+    if ret.returncode != 0:
+        log.debug("Failed to run vault %s:\n%s", " ".join(cmd), ret)
+        raise RuntimeError()
+    return ret
+
+
+def vault_write_policy(name, rules):
+    try:
+        _vault_cmd(["policy", "write", name, "-"], textinput=rules)
+    except RuntimeError:
         pytest.fail(f"Unable to write policy `{name}`")
 
 
 def vault_write_policy_file(policy, filename=None):
-    vault_binary = salt.utils.path.which("vault")
     if filename is None:
         filename = policy
-    proc = subprocess.run(
-        [
-            vault_binary,
-            "policy",
-            "write",
-            policy,
-            f"{RUNTIME_VARS.FILES}/vault/policies/{filename}.hcl",
-        ],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    if proc.returncode != 0:
-        ret = ProcessResult(
-            returncode=proc.returncode,
-            stdout=proc.stdout,
-            stderr=proc.stderr,
-            cmdline=proc.args,
+    try:
+        _vault_cmd(
+            [
+                "policy",
+                "write",
+                policy,
+                f"{RUNTIME_VARS.FILES}/vault/policies/{filename}.hcl",
+            ]
         )
-        log.debug("Failed to write policy `%s`:\n%s", policy, ret)
+    except RuntimeError:
         pytest.fail(f"Unable to write policy `{policy}`")
 
 
 def vault_read_policy(policy):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [
-            vault_binary,
-            "policy",
-            "read",
-            "-format=json",
-            policy,
-        ],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    if proc.returncode != 0:
-        if "No policy named" in proc.stderr:
+    ret = _vault_cmd(["policy", "read", "-format=json", policy], raw=True)
+    if ret.returncode != 0:
+        if "No policy named" in ret.stderr:
             return None
-        ret = ProcessResult(
-            returncode=proc.returncode,
-            stdout=proc.stdout,
-            stderr=proc.stderr,
-            cmdline=proc.args,
-        )
         log.debug("Failed to read policy `%s`:\n%s", policy, ret)
         pytest.fail(f"Unable to read policy `{policy}`")
-    res = json.loads(proc.stdout)
+    res = json.loads(ret.stdout)
     return res["policy"]
 
 
 def vault_list_policies():
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [
-            vault_binary,
-            "policy",
-            "list",
-            "-format=json",
-        ],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    if proc.returncode != 0:
-        ret = ProcessResult(
-            returncode=proc.returncode,
-            stdout=proc.stdout,
-            stderr=proc.stderr,
-            cmdline=proc.args,
-        )
-        log.debug("Failed to list policies:\n%s", ret)
+    try:
+        ret = _vault_cmd(["policy", "list", "-format=json"])
+    except RuntimeError:
         pytest.fail("Unable to list policies")
-    return json.loads(proc.stdout)
+    return json.loads(ret.stdout)
 
 
 def vault_delete_policy(policy):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [
-            vault_binary,
-            "policy",
-            "delete",
-            policy,
-        ],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    if proc.returncode != 0 or vault_read_policy(policy) is not None:
-        ret = ProcessResult(
-            returncode=proc.returncode,
-            stdout=proc.stdout,
-            stderr=proc.stderr,
-            cmdline=proc.args,
-        )
-        log.debug("Failed to delete policy `%s`:\n%s", policy, ret)
+    try:
+        _vault_cmd(["policy", "delete", policy])
+    except RuntimeError:
         pytest.fail(f"Unable to delete policy `{policy}`")
 
 
 def vault_enable_secret_engine(name, options=None, **kwargs):
-    vault_binary = salt.utils.path.which("vault")
     if options is None:
         options = []
-    cmd = [vault_binary, "secrets", "enable"] + options + [name]
-    proc = subprocess.run(
-        cmd,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0:
-        log.debug("Failed to enable secret engine `%s`:\n%s", name, ret)
+    try:
+        ret = _vault_cmd(["secrets", "enable"] + options + [name])
+    except RuntimeError:
         pytest.fail(f"Could not enable secret engine `{name}`")
 
-    if "path is already in use at" in proc.stdout:
+    if "path is already in use at" in ret.stdout:
         return False
-    if "Success" in proc.stdout:
+    if "Success" in ret.stdout:
         return True
-
     log.debug("Failed to enable secret engine `%s`:\n%s", name, ret)
-    pytest.fail(f"Could not enable secret engine `{name}`: {proc.stdout}")
+    pytest.fail(f"Could not enable secret engine `{name}`: {ret.stdout}")
 
 
 def vault_disable_secret_engine(name):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [vault_binary, "secrets", "disable", name],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0:
-        log.debug("Failed to disable secret engine `%s`:\n%s", name, ret)
+    try:
+        ret = _vault_cmd(["secrets", "disable", name])
+    except RuntimeError:
         pytest.fail(f"Could not disable secret engine `{name}`")
 
-    if "Success" in proc.stdout:
+    if "Success" in ret.stdout:
         return True
-
     log.debug("Failed to disable secret engine `%s`:\n%s", name, ret)
-    pytest.fail(f"Could not disable secret engine `{name}`: {proc.stdout}")
+    pytest.fail(f"Could not disable secret engine `{name}`: {ret.stdout}")
 
 
 def vault_enable_auth_method(name, options=None, **kwargs):
-    vault_binary = salt.utils.path.which("vault")
     if options is None:
         options = []
     cmd = (
-        [vault_binary, "auth", "enable"]
-        + options
-        + [name]
-        + [f"{k}={v}" for k, v in kwargs.items()]
+        ["auth", "enable"] + options + [name] + [f"{k}={v}" for k, v in kwargs.items()]
     )
-    proc = subprocess.run(
-        cmd,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0:
-        log.debug("Failed to enable auth method `%s`:\n%s", name, ret)
+    try:
+        ret = _vault_cmd(cmd)
+    except RuntimeError:
         pytest.fail(f"Could not enable auth method `{name}`")
 
-    if "path is already in use at" in proc.stdout:
+    if "path is already in use at" in ret.stdout:
         return False
-    if "Success" in proc.stdout:
+    if "Success" in ret.stdout:
         return True
-
     log.debug("Failed to enable auth method `%s`:\n%s", name, ret)
-    pytest.fail(f"Could not enable auth method `{name}`: {proc.stdout}")
+    pytest.fail(f"Could not enable auth method `{name}`: {ret.stdout}")
 
 
 def vault_disable_auth_method(name):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [vault_binary, "auth", "disable", name],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0:
-        log.debug("Failed to disable auth method `%s`:\n%s", name, ret)
+    try:
+        ret = _vault_cmd(["auth", "disable", name])
+    except RuntimeError:
         pytest.fail(f"Could not disable auth method `{name}`")
 
-    if "Success" in proc.stdout:
+    if "Success" in ret.stdout:
         return True
-
     log.debug("Failed to disable auth method `%s`:\n%s", name, ret)
-    pytest.fail(f"Could not disable auth method `{name}`: {proc.stdout}")
+    pytest.fail(f"Could not disable auth method `{name}`: {ret.stdout}")
 
 
 def vault_write_secret(path, **kwargs):
-    vault_binary = salt.utils.path.which("vault")
-    cmd = [vault_binary, "kv", "put", path] + [f"{k}={v}" for k, v in kwargs.items()]
-    proc = subprocess.run(
-        cmd,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0 or vault_read_secret(path) != kwargs:
+    cmd = ["kv", "put", path] + [f"{k}={v}" for k, v in kwargs.items()]
+    try:
+        ret = _vault_cmd(cmd)
+    except RuntimeError:
+        pytest.fail(f"Failed to write secret at `{path}`")
+
+    if vault_read_secret(path) != kwargs:
         log.debug("Failed to write secret at `%s`:\n%s", path, ret)
         pytest.fail(f"Failed to write secret at `{path}`")
     return True
 
 
 def vault_write_secret_file(path, data_name):
-    vault_binary = salt.utils.path.which("vault")
     data_path = f"{RUNTIME_VARS.FILES}/vault/data/{data_name}.json"
     with salt.utils.files.fopen(data_path) as f:
         data = json.load(f)
-    cmd = [vault_binary, "kv", "put", path, f"@{data_path}"]
-    proc = subprocess.run(
-        cmd,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0 or vault_read_secret(path) != data:
+    cmd = ["kv", "put", path, f"@{data_path}"]
+    try:
+        ret = _vault_cmd([cmd])
+    except RuntimeError:
+        pytest.fail(f"Failed to write secret at `{path}`")
+
+    if vault_read_secret(path) != data:
         log.debug("Failed to write secret at `%s`:\n%s", path, ret)
         pytest.fail(f"Failed to write secret at `{path}`")
     return True
 
 
 def vault_read_secret(path):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [vault_binary, "kv", "get", "-format=json", path],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0:
-        if "No value found at" in proc.stderr:
+    ret = _vault_cmd(["kv", "get", "-format=json", path], raw=True)
+
+    if ret.returncode != 0:
+        if "No value found at" in ret.stderr:
             return None
         log.debug("Failed to read secret at `%s`:\n%s", path, ret)
         pytest.fail(f"Failed to read secret at `{path}`")
-    res = json.loads(proc.stdout)
+    res = json.loads(ret.stdout)
     if "data" in res["data"]:
         return res["data"]["data"]
     return res["data"]
 
 
 def vault_list_secrets(path):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [vault_binary, "kv", "list", "-format=json", path],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0:
-        if proc.returncode == 2:
+    ret = _vault_cmd(["kv", "list", "-format=json", path], raw=True)
+    if ret.returncode != 0:
+        if ret.returncode == 2:
             return []
         log.debug("Failed to list secrets at `%s`:\n%s", path, ret)
         pytest.fail(f"Failed to list secrets at `{path}`")
-    return json.loads(proc.stdout)
+    return json.loads(ret.stdout)
 
 
 def vault_delete_secret(path, metadata=False):
-    vault_binary = salt.utils.path.which("vault")
-    proc = subprocess.run(
-        [vault_binary, "kv", "delete", path],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
-    if proc.returncode != 0 or vault_read_secret(path) is not None:
+    try:
+        ret = _vault_cmd(["kv", "delete", path])
+    except RuntimeError:
+        pytest.fail(f"Failed to delete secret at `{path}`")
+
+    if vault_read_secret(path) is not None:
         log.debug("Failed to delete secret at `%s`:\n%s", path, ret)
         pytest.fail(f"Failed to delete secret at `{path}`")
 
     if not metadata:
         return True
 
-    proc = subprocess.run(
-        [vault_binary, "kv", "metadata", "delete", path],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    ret = ProcessResult(
-        returncode=proc.returncode,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-        cmdline=proc.args,
-    )
+    ret = _vault_cmd(["kv", "metadata", "delete", path], raw=True)
     if (
-        proc.returncode != 0
-        and "Metadata not supported on KV Version 1" not in proc.stderr
+        ret.returncode != 0
+        and "Metadata not supported on KV Version 1" not in ret.stderr
     ):
         log.debug("Failed to delete secret metadata at `%s`:\n%s", path, ret)
         pytest.fail(f"Failed to delete secret metadata at `{path}`")
