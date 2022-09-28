@@ -2603,6 +2603,33 @@ def test_osdata_virtual_key_win():
         assert osdata_grains["virtual"] != "physical"
 
 
+@pytest.mark.skip_unless_on_linux
+def test_linux_cpu_data_num_cpus():
+    cpuinfo_list = []
+    for i in range(0, 20):
+        cpuinfo_dict = {
+            "processor": i,
+            "cpu_family": 6,
+            "model_name": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+            "flags": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr",
+        }
+        cpuinfo_list.append(cpuinfo_dict)
+    cpuinfo_content = ""
+    for item in cpuinfo_list:
+        cpuinfo_content += (
+            "processor: {}\n" "cpu family: {}\n" "model name: {}\n" "flags: {}\n\n"
+        ).format(
+            item["processor"], item["cpu_family"], item["model_name"], item["flags"]
+        )
+
+    with patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", mock_open(read_data=cpuinfo_content)
+    ):
+        ret = core._linux_cpudata()
+        assert "num_cpus" in ret
+        assert len(cpuinfo_list) == ret["num_cpus"]
+
+
 @pytest.mark.skip_on_windows
 def test_bsd_osfullname():
     """
