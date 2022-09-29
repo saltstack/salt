@@ -25,11 +25,14 @@ def utils_patch():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts, whitelist=["zfs"])
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts, whitelist=["zfs"])
     zfs_obj = {
-        zfs: {"__opts__": opts, "__grains__": {"kernel": "SunOS"}, "__utils__": utils}
+        zfs: {
+            "__opts__": minion_opts,
+            "__grains__": {"kernel": "SunOS"},
+            "__utils__": utils,
+        },
     }
 
     return zfs_obj

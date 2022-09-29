@@ -3,8 +3,7 @@ import logging
 import sys
 
 import pytest
-
-import salt.config
+import salt.utils.stringutils
 import salt.output.highstate as highstate
 from tests.support.mock import patch
 from tests.support.unit import skipIf
@@ -13,15 +12,8 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    overrides = {
-        "extension_modules": "",
-        "optimization_order": [0, 1, 2],
-        "color": False,
-        "state_output_pct": True,
-    }
-    minion_opts.update(overrides)
+def configure_loader_modules(minion_opts):
+    minion_opts.update({"color": False, "state_output_pct": True})
     return {highstate: {"__opts__": minion_opts}}
 
 

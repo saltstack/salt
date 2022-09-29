@@ -34,7 +34,7 @@ def test_format_log_non_ascii_character():
 
 
 @pytest.mark.slow_test
-def test_render_error_on_invalid_requisite():
+def test_render_error_on_invalid_requisite(minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -74,14 +74,13 @@ def test_render_error_on_invalid_requisite():
                 ]
             )
         }
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         minion_opts["pillar"] = {"git": OrderedDict([("test1", "test")])}
         state_obj = salt.state.State(minion_opts)
         with pytest.raises(salt.exceptions.SaltRenderError):
             state_obj.call_high(high_data)
 
 
-def test_verify_onlyif_parse():
+def test_verify_onlyif_parse(minion_opts):
     low_data = {
         "onlyif": [{"fun": "test.arg", "args": ["arg1", "arg2"]}],
         "name": "mysql-server-5.7",
@@ -98,13 +97,12 @@ def test_verify_onlyif_parse():
     expected_result = {"comment": "onlyif condition is true", "result": False}
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, "")
         assert expected_result == return_result
 
 
-def test_verify_onlyif_parse_deep_return():
+def test_verify_onlyif_parse_deep_return(minion_opts):
     low_data = {
         "state": "test",
         "name": "foo",
@@ -124,13 +122,12 @@ def test_verify_onlyif_parse_deep_return():
     expected_result = {"comment": "onlyif condition is true", "result": False}
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, "")
         assert expected_result == return_result
 
 
-def test_verify_onlyif_cmd_error():
+def test_verify_onlyif_cmd_error(minion_opts):
     """
     Simulates a failure in cmd.retcode from onlyif
     This could occur if runas is specified with a user that does not exist
@@ -153,7 +150,6 @@ def test_verify_onlyif_cmd_error():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         mock = MagicMock(side_effect=CommandExecutionError("Boom!"))
         with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
@@ -164,7 +160,7 @@ def test_verify_onlyif_cmd_error():
             assert expected_result == return_result
 
 
-def test_verify_unless_cmd_error():
+def test_verify_unless_cmd_error(minion_opts):
     """
     Simulates a failure in cmd.retcode from unless
     This could occur if runas is specified with a user that does not exist
@@ -187,7 +183,6 @@ def test_verify_unless_cmd_error():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         mock = MagicMock(side_effect=CommandExecutionError("Boom!"))
         with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
@@ -198,7 +193,7 @@ def test_verify_unless_cmd_error():
             assert expected_result == return_result
 
 
-def test_verify_unless_list_cmd():
+def test_verify_unless_list_cmd(minion_opts):
     """
     If any of the unless commands return False (non 0) then the state should
     run (no skip_watch).
@@ -218,13 +213,12 @@ def test_verify_unless_list_cmd():
         "result": False,
     }
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_unless_list_cmd_different_order():
+def test_verify_unless_list_cmd_different_order(minion_opts):
     """
     If any of the unless commands return False (non 0) then the state should
     run (no skip_watch). The order shouldn't matter.
@@ -244,13 +238,12 @@ def test_verify_unless_list_cmd_different_order():
         "result": False,
     }
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_onlyif_list_cmd_different_order():
+def test_verify_onlyif_list_cmd_different_order(minion_opts):
     low_data = {
         "state": "cmd",
         "name": 'echo "something"',
@@ -267,13 +260,12 @@ def test_verify_onlyif_list_cmd_different_order():
         "skip_watch": True,
     }
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_unless_list_cmd_valid():
+def test_verify_unless_list_cmd_valid(minion_opts):
     """
     If any of the unless commands return False (non 0) then the state should
     run (no skip_watch). This tests all commands return False.
@@ -290,13 +282,12 @@ def test_verify_unless_list_cmd_valid():
     }
     expected_result = {"comment": "unless condition is false", "result": False}
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_onlyif_list_cmd_valid():
+def test_verify_onlyif_list_cmd_valid(minion_opts):
     low_data = {
         "state": "cmd",
         "name": 'echo "something"',
@@ -309,13 +300,12 @@ def test_verify_onlyif_list_cmd_valid():
     }
     expected_result = {"comment": "onlyif condition is true", "result": False}
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_unless_list_cmd_invalid():
+def test_verify_unless_list_cmd_invalid(minion_opts):
     """
     If any of the unless commands return False (non 0) then the state should
     run (no skip_watch). This tests all commands return True
@@ -336,13 +326,12 @@ def test_verify_unless_list_cmd_invalid():
         "skip_watch": True,
     }
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_onlyif_list_cmd_invalid():
+def test_verify_onlyif_list_cmd_invalid(minion_opts):
     low_data = {
         "state": "cmd",
         "name": 'echo "something"',
@@ -359,13 +348,12 @@ def test_verify_onlyif_list_cmd_invalid():
         "skip_watch": True,
     }
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_unless_parse():
+def test_verify_unless_parse(minion_opts):
     low_data = {
         "unless": [{"fun": "test.arg", "args": ["arg1", "arg2"]}],
         "name": "mysql-server-5.7",
@@ -386,13 +374,12 @@ def test_verify_unless_parse():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, "")
         assert expected_result == return_result
 
 
-def test_verify_unless_parse_deep_return():
+def test_verify_unless_parse_deep_return(minion_opts):
     low_data = {
         "state": "test",
         "name": "foo",
@@ -412,13 +399,12 @@ def test_verify_unless_parse_deep_return():
     expected_result = {"comment": "unless condition is false", "result": False}
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, "")
         assert expected_result == return_result
 
 
-def test_verify_creates():
+def test_verify_creates(minion_opts):
     low_data = {
         "state": "cmd",
         "name": 'echo "something"',
@@ -431,7 +417,6 @@ def test_verify_creates():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         with patch("os.path.exists") as path_mock:
             path_mock.return_value = True
@@ -452,7 +437,7 @@ def test_verify_creates():
             assert expected_result == return_result
 
 
-def test_verify_creates_list():
+def test_verify_creates_list(minion_opts):
     low_data = {
         "state": "cmd",
         "name": 'echo "something"',
@@ -465,7 +450,6 @@ def test_verify_creates_list():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         with patch("os.path.exists") as path_mock:
             path_mock.return_value = True
@@ -500,7 +484,7 @@ def _expand_win_path(path):
         return path
 
 
-def test_verify_onlyif_parse_slots(tmp_path):
+def test_verify_onlyif_parse_slots(tmp_path, minion_opts):
     name = str(tmp_path / "testfile.txt")
     with salt.utils.files.fopen(name, "w") as fp:
         fp.write("file-contents")
@@ -525,13 +509,12 @@ def test_verify_onlyif_parse_slots(tmp_path):
     }
     expected_result = {"comment": "onlyif condition is true", "result": False}
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, "")
         assert expected_result == return_result
 
 
-def test_verify_onlyif_list_cmd():
+def test_verify_onlyif_list_cmd(minion_opts):
     low_data = {
         "state": "cmd",
         "name": 'echo "something"',
@@ -548,13 +531,12 @@ def test_verify_onlyif_list_cmd():
         "skip_watch": True,
     }
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
         assert expected_result == return_result
 
 
-def test_verify_onlyif_cmd_args():
+def test_verify_onlyif_cmd_args(minion_opts):
     """
     Verify cmd.run state arguments are properly passed to cmd.retcode in onlyif
     """
@@ -579,7 +561,6 @@ def test_verify_onlyif_cmd_args():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         mock = MagicMock()
         with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
@@ -601,7 +582,7 @@ def test_verify_onlyif_cmd_args():
             )
 
 
-def test_verify_unless_parse_slots(tmp_path):
+def test_verify_unless_parse_slots(tmp_path, minion_opts):
     name = str(tmp_path / "testfile.txt")
     with salt.utils.files.fopen(name, "w") as fp:
         fp.write("file-contents")
@@ -631,13 +612,12 @@ def test_verify_unless_parse_slots(tmp_path):
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, "")
         assert expected_result == return_result
 
 
-def test_verify_retry_parsing():
+def test_verify_retry_parsing(minion_opts):
     low_data = {
         "state": "file",
         "name": "/tmp/saltstack.README.rst",
@@ -667,7 +647,6 @@ def test_verify_retry_parsing():
     }
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         minion_opts["test"] = True
         minion_opts["file_client"] = "local"
         state_obj = salt.state.State(minion_opts)
@@ -680,7 +659,7 @@ def test_verify_retry_parsing():
             assert set(expected_result).issubset(set(state_obj.call(low_data)))
 
 
-def test_render_requisite_require_disabled(tmp_path):
+def test_render_requisite_require_disabled(tmp_path, minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -710,7 +689,6 @@ def test_render_requisite_require_disabled(tmp_path):
             },
         }
 
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         minion_opts["cachedir"] = str(tmp_path)
         minion_opts["disabled_requisites"] = ["require"]
         state_obj = salt.state.State(minion_opts)
@@ -721,7 +699,7 @@ def test_render_requisite_require_disabled(tmp_path):
         assert run_num == 0
 
 
-def test_render_requisite_require_in_disabled(tmp_path):
+def test_render_requisite_require_in_disabled(tmp_path, minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -756,7 +734,6 @@ def test_render_requisite_require_in_disabled(tmp_path):
             ),
         }
 
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         minion_opts["cachedir"] = str(tmp_path)
         minion_opts["disabled_requisites"] = ["require_in"]
         state_obj = salt.state.State(minion_opts)
@@ -767,7 +744,7 @@ def test_render_requisite_require_in_disabled(tmp_path):
         assert run_num == 0
 
 
-def test_call_chunk_sub_state_run():
+def test_call_chunk_sub_state_run(minion_opts):
     """
     Test running a batch of states with an external runner
     that returns sub_state_run
@@ -801,7 +778,6 @@ def test_call_chunk_sub_state_run():
     )
     with patch("salt.state.State._gather_pillar") as state_patch:
         with patch("salt.state.State.call", return_value=mock_call_return):
-            minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             minion_opts["disabled_requisites"] = ["require"]
             state_obj = salt.state.State(minion_opts)
             ret = state_obj.call_chunk(low_data, {}, {})
@@ -813,7 +789,7 @@ def test_call_chunk_sub_state_run():
             assert sub_state["__sls__"] == "external"
 
 
-def test_aggregate_requisites():
+def test_aggregate_requisites(minion_opts):
     """
     Test to ensure that the requisites are included in the aggregated low state.
     """
@@ -921,7 +897,6 @@ def test_aggregate_requisites():
     ]
 
     with patch("salt.state.State._gather_pillar") as state_patch:
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         low_ret = state_obj._aggregate_requisites(low, chunks)
 
