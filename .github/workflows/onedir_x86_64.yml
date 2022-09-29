@@ -17,6 +17,16 @@ jobs:
       with:
         fetch-depth: 1000
 
+    - name: Setup SSH 1
+      env:
+        GHA_SSH_KEY: ${{ secrets.GHA_SSH_KEY }}
+        VAGRANT_CLOUD_TOKEN: ${{ secrets.VAGRANT_CLOUD_TOKEN }}
+        SECRETS: ${{ toJson(secrets) }}
+      run: |
+        python3 -c "import os; print(repr(os.environ.get('GHA_SSH_KEY', 'NOTHING')[:10]))"
+        python3 -c "import os; print(repr(os.environ.get('VAGRANT_CLOUD_TOKEN', 'NOTHING1')[:4]))"
+        echo "$SECRETS"
+
     - name: Build onedir
       env:
         CONTAINER_IMAGE: "dwoz1/cicd:onedir-centos7-x86_64"
