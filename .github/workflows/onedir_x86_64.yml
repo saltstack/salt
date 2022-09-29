@@ -26,6 +26,7 @@ jobs:
         python3 -c "import os; print(repr(os.environ.get('GHA_SSH_KEY', 'NOTHING')[:10]))"
         python3 -c "import os; print(repr(os.environ.get('VAGRANT_CLOUD_TOKEN', 'NOTHING1')[:4]))"
         echo "$SECRETS"
+        echo "${{ secrets.VAGRANT_CLOUD_TOKEN }}"
 
     - name: Build onedir
       env:
