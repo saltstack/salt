@@ -382,6 +382,11 @@ def fopen(*args, **kwargs):
     if not binary and not kwargs.get("newline", None):
         kwargs["newline"] = ""
 
+    # Workaround callers with bad buffering setting for binary files
+    if kwargs.get("buffering", -1) == 1 and 'b' in kwargs.get("mode", ""):
+        log.debug("Bad buffering specified for '%s'", args[0], stack_info=True)
+        del(kwargs["buffering"])
+
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
     if is_fcntl_available():
