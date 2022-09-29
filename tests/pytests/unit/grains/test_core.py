@@ -3285,6 +3285,17 @@ def test_virtual_set_virtual_ec2():
         ]
     )
 
+    def _mock_is_file(filename):
+        if filename in (
+            "/proc/1/cgroup",
+            "/proc/cpuinfo",
+            "/sys/devices/virtual/dmi/id/product_name",
+            "/proc/xen/xsd_kva",
+            "/proc/xen/capabilities",
+        ):
+            return False
+        return True
+
     with patch("salt.utils.path.which", which_mock), patch.dict(
         core.__salt__,
         {
@@ -3293,6 +3304,8 @@ def test_virtual_set_virtual_ec2():
             "cmd.retcode": salt.modules.cmdmod.retcode,
             "smbios.get": salt.modules.smbios.get,
         },
+    ), patch("os.path.isfile", _mock_is_file), patch(
+        "os.path.isdir", return_value=False
     ):
 
         virtual_grains = core._virtual(osdata.copy())
