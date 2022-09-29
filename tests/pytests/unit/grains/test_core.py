@@ -3224,6 +3224,11 @@ def test_virtual_set_virtual_ec2():
             "/usr/bin/systemd-detect-virt",
             None,
             None,
+            # Check with systemd-detect-virt returning amazon and no dmidecode available
+            None,
+            "/usr/bin/systemd-detect-virt",
+            None,
+            None,
         ]
     )
     cmd_run_all_mock = MagicMock(
@@ -3282,6 +3287,8 @@ def test_virtual_set_virtual_ec2():
             },
             # Check with systemd-detect-virt when no dmidecode available
             {"retcode": 0, "stderr": "", "stdout": "kvm"},
+            # Check with systemd-detect-virt returning amazon and no dmidecode available
+            {"retcode": 0, "stderr": "", "stdout": "amazon"},
         ]
     )
 
@@ -3322,3 +3329,8 @@ def test_virtual_set_virtual_ec2():
 
         assert virtual_grains["virtual"] == "kvm"
         assert "virtual_subtype" not in virtual_grains
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "Nitro"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2"
