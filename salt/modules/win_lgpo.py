@@ -8427,7 +8427,27 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
             policy_aliases.append("\\".join(full_path_list))
             return True, the_policy, policy_aliases, None
         else:
-            msg = 'ADMX policy name/id "{}" is used in multiple ADMX files'
+            policy_aliases = []
+            for the_policy in admx_search_results:
+                policy_display_name = _getFullPolicyName(
+                    policy_item=the_policy,
+                    policy_name=the_policy.attrib["name"],
+                    return_full_policy_names=True,
+                    adml_language=adml_language,
+                )
+                full_path_list = _build_parent_list(
+                    policy_definition=the_policy,
+                    return_full_policy_names=True,
+                    adml_language=adml_language,
+                )
+                full_path_list.append(policy_display_name)
+                policy_aliases.append("\\".join(full_path_list))
+            policies = "\n - ".join(policy_aliases)
+            msg = (
+                'ADMX policy name/id "{}" is used in multiple ADMX files.\n'
+                "Try one of the following names:\n"
+                " - {}".format(policy_name, policies)
+            )
             return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(

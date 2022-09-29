@@ -350,6 +350,38 @@ def test_missing_os_release():
     assert os_release == {}
 
 
+def test__linux_lsb_distrib_data():
+    lsb_distro_information = {
+        "ID": "Ubuntu",
+        "DESCRIPTION": "Ubuntu 20.04.3 LTS",
+        "RELEASE": "20.04",
+        "CODENAME": "focal",
+    }
+    expectation = {
+        "lsb_distrib_id": "Ubuntu",
+        "lsb_distrib_description": "Ubuntu 20.04.3 LTS",
+        "lsb_distrib_release": "20.04",
+        "lsb_distrib_codename": "focal",
+    }
+
+    orig_import = __import__
+
+    def _import_mock(name, *args):
+        if name == "lsb_release":
+            lsb_release_mock = MagicMock()
+            lsb_release_mock.get_distro_information.return_value = (
+                lsb_distro_information
+            )
+            return lsb_release_mock
+        return orig_import(name, *args)
+
+    with patch("{}.__import__".format("builtins"), side_effect=_import_mock):
+        grains, has_error = core._linux_lsb_distrib_data()
+
+    assert grains == expectation
+    assert not has_error
+
+
 @pytest.mark.skip_unless_on_linux
 def test_gnu_slash_linux_in_os_name():
     """
@@ -2571,6 +2603,33 @@ def test_osdata_virtual_key_win():
         assert osdata_grains["virtual"] != "physical"
 
 
+@pytest.mark.skip_unless_on_linux
+def test_linux_cpu_data_num_cpus():
+    cpuinfo_list = []
+    for i in range(0, 20):
+        cpuinfo_dict = {
+            "processor": i,
+            "cpu_family": 6,
+            "model_name": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+            "flags": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr",
+        }
+        cpuinfo_list.append(cpuinfo_dict)
+    cpuinfo_content = ""
+    for item in cpuinfo_list:
+        cpuinfo_content += (
+            "processor: {}\n" "cpu family: {}\n" "model name: {}\n" "flags: {}\n\n"
+        ).format(
+            item["processor"], item["cpu_family"], item["model_name"], item["flags"]
+        )
+
+    with patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", mock_open(read_data=cpuinfo_content)
+    ):
+        ret = core._linux_cpudata()
+        assert "num_cpus" in ret
+        assert len(cpuinfo_list) == ret["num_cpus"]
+
+
 @pytest.mark.skip_on_windows
 def test_bsd_osfullname():
     """
@@ -3133,3 +3192,145 @@ def test_virtual_linux_proc_files_with_non_utf8_chars():
             environ_fh.close()
             virt_grains = core._virtual({"kernel": "Linux"})
             assert virt_grains == {"virtual": "physical"}
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtual_set_virtual_ec2():
+    osdata = {}
+
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    which_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            "/usr/sbin/virt-what",
+            "/usr/sbin/virt-what",
+            None,
+            "/usr/sbin/dmidecode",
+            # Check with systemd-detect-virt
+            None,
+            "/usr/bin/systemd-detect-virt",
+            None,
+            "/usr/sbin/dmidecode",
+            # Check with systemd-detect-virt when no dmidecode available
+            None,
+            "/usr/bin/systemd-detect-virt",
+            None,
+            None,
+            # Check with systemd-detect-virt returning amazon and no dmidecode available
+            None,
+            "/usr/bin/systemd-detect-virt",
+            None,
+            None,
+        ]
+    )
+    cmd_run_all_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            {"retcode": 0, "stderr": "", "stdout": "xen"},
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.2",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.7 present.",
+                        "",
+                        "Handle 0x0100, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Xen",
+                        "	Product Name: HVM domU",
+                        "	Version: 4.11.amazon",
+                        "	Serial Number: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	UUID: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+            # Check with systemd-detect-virt
+            {"retcode": 0, "stderr": "", "stdout": "kvm"},
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.2",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.7 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Amazon EC2",
+                        "	Product Name: m5.large",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                    ]
+                ),
+            },
+            # Check with systemd-detect-virt when no dmidecode available
+            {"retcode": 0, "stderr": "", "stdout": "kvm"},
+            # Check with systemd-detect-virt returning amazon and no dmidecode available
+            {"retcode": 0, "stderr": "", "stdout": "amazon"},
+        ]
+    )
+
+    def _mock_is_file(filename):
+        if filename in (
+            "/proc/1/cgroup",
+            "/proc/cpuinfo",
+            "/sys/devices/virtual/dmi/id/product_name",
+            "/proc/xen/xsd_kva",
+            "/proc/xen/capabilities",
+        ):
+            return False
+        return True
+
+    with patch("salt.utils.path.which", which_mock), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": salt.modules.cmdmod.run,
+            "cmd.run_all": cmd_run_all_mock,
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+            "smbios.get": salt.modules.smbios.get,
+        },
+    ), patch("os.path.isfile", _mock_is_file), patch(
+        "os.path.isdir", return_value=False
+    ):
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "xen"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "Nitro"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2 (m5.large)"
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert "virtual_subtype" not in virtual_grains
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "Nitro"
+        assert virtual_grains["virtual_subtype"] == "Amazon EC2"

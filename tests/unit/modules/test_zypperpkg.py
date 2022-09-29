@@ -203,17 +203,26 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 zypper.__zypper__.xml.call("crashme")
 
-        output_to_user = "Output to user"
-        sniffer = RunSniffer(stdout=output_to_user, retcode=1)
-        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
+        output_to_user_stdout = "Output to user to stdout"
+        output_to_user_stderr = "Output to user to stderr"
+        sniffer = RunSniffer(
+            stdout=output_to_user_stdout, stderr=output_to_user_stderr, retcode=1
+        )
+        with patch.dict(
+            "salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError,
-                "^Zypper command failure: {}$".format(output_to_user),
+                "^Zypper command failure: {}$".format(
+                    output_to_user_stderr + output_to_user_stdout
+                ),
             ):
                 zypper.__zypper__.call("crashme again")
 
         sniffer = RunSniffer(retcode=1)
-        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
+        with patch.dict(
+            "salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             zypper.__zypper__.noraise.call("stay quiet")
             self.assertEqual(zypper.__zypper__.error_msg, "Check Zypper's logs.")
 
