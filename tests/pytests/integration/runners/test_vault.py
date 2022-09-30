@@ -3,10 +3,14 @@ Tests for the Vault runner
 """
 
 import logging
+import os
 import shutil
+from pathlib import Path
 
 import pytest
+from saltfactories.utils import random_string
 
+import salt.utils.files
 from tests.support.pytest.vault import vault_delete_secret, vault_write_secret
 
 log = logging.getLogger(__name__)
@@ -28,15 +32,6 @@ def pillar_state_tree(tmp_path_factory):
         shutil.rmtree(str(_pillar_state_tree), ignore_errors=True)
 
 
-@pytest.fixture(scope="module")
-def vault_pillar_values(vault_container_version):
-    vault_write_secret("secret/path/foo", vault_sourced="fail")
-    try:
-        yield
-    finally:
-        vault_delete_secret("secret/path/foo")
-
-
 @pytest.fixture(scope="class")
 def pillar_salt_master(salt_factories, pillar_state_tree, vault_port):
     config_defaults = {
@@ -52,7 +47,8 @@ def pillar_salt_master(salt_factories, pillar_state_tree, vault_port):
                 "token": {
                     "params": {
                         # otherwise the tests might fail because of
-                        # cached tokens
+                        # cached tokens (should not, because by default,
+                        # the cache is valid for one session only)
                         "uses": 1,
                     },
                 },
@@ -172,7 +168,16 @@ def pillar_caching_salt_call_cli(pillar_caching_salt_minion):
     return pillar_caching_salt_minion.salt_call_cli()
 
 
-@pytest.mark.usefixtures("vault_pillar_values")
+@pytest.fixture(scope="class")
+def vault_pillar_values_policy(vault_container_version):
+    vault_write_secret("secret/path/foo", vault_sourced="fail")
+    try:
+        yield
+    finally:
+        vault_delete_secret("secret/path/foo")
+
+
+@pytest.mark.usefixtures("vault_pillar_values_policy")
 @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
 class TestVaultPillarPolicyTemplatesWithoutCache:
     @pytest.fixture(autouse=True)
@@ -181,13 +186,11 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         pillar_salt_master,
         pillar_salt_minion,
     ):
-        top_pillar_contents = """
+        top_pillar_contents = f"""
         base:
-          '{}':
+          '{pillar_salt_minion.id}':
             - roles
-        """.format(
-            pillar_salt_minion.id
-        )
+        """
         roles_pillar_contents = """
         roles:
           - minion
@@ -205,14 +208,12 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
 
     @pytest.fixture()
     def pillar_exe_loop(self, pillar_state_tree, pillar_salt_minion):
-        top_file = """
+        top_file = f"""
         base:
-          '{}':
+          '{pillar_salt_minion.id}':
             - roles
             - exe_loop
-        """.format(
-            pillar_salt_minion.id
-        )
+        """
         exe_loop_pillar = r"""
         vault_sourced_exe: {{ salt["vault.read_secret"]("secret/path/foo", "vault_sourced") }}
         """
@@ -226,14 +227,12 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
 
     @pytest.fixture()
     def pillar_sdb_loop(self, pillar_state_tree, pillar_salt_minion):
-        top_file = """
+        top_file = f"""
         base:
-          '{}':
+          '{pillar_salt_minion.id}':
             - roles
             - sdb_loop
-        """.format(
-            pillar_salt_minion.id
-        )
+        """
         sdb_loop_pillar = r"""
         vault_sourced_sdb: {{ salt["sdb.get"]("sdb://sdbvault/secret/path/foo/vault_sourced") }}
         """
@@ -329,20 +328,18 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
 
 
-@pytest.mark.usefixtures("vault_pillar_values")
+@pytest.mark.usefixtures("vault_pillar_values_policy")
 @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
 class TestVaultPillarPolicyTemplatesWithCache:
     @pytest.fixture(autouse=True)
     def pillar_caching_policy_tree(
         self, pillar_caching_salt_master, pillar_caching_salt_minion
     ):
-        top_pillar_contents = """
+        top_pillar_contents = f"""
         base:
-          '{}':
+          '{pillar_caching_salt_minion.id}':
             - roles
-        """.format(
-            pillar_caching_salt_minion.id
-        )
+        """
         roles_pillar_contents = """
         roles:
           - minion
@@ -441,3 +438,718 @@ class TestVaultPillarPolicyTemplatesWithCache:
             "salt_role_fresh",
             "salt_unsafe_bar",
         ]
+
+
+# The tests above use different fixtures because I could not
+# make them behave as expected otherwise.
+
+
+@pytest.fixture(scope="class")
+def vault_salt_master(
+    salt_factories, pillar_state_tree, vault_port, vault_master_config
+):
+    factory = salt_factories.salt_master_daemon(
+        "vault-master", defaults=vault_master_config
+    )
+    with factory.started():
+        yield factory
+
+
+@pytest.fixture(scope="class")
+def vault_salt_minion(vault_salt_master):
+    assert vault_salt_master.is_running()
+    factory = vault_salt_master.salt_minion_daemon(
+        random_string("vault-minion", uppercase=False),
+        defaults={"open_mode": True, "grains": {}},
+    )
+    with factory.started():
+        # Sync All
+        salt_call_cli = factory.salt_call_cli()
+        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+        assert ret.returncode == 0, ret
+        yield factory
+
+
+@pytest.fixture(scope="class")
+def overriding_vault_salt_minion(vault_salt_master, issue_overrides):
+    assert vault_salt_master.is_running()
+    factory = vault_salt_master.salt_minion_daemon(
+        random_string("vault-minion", uppercase=False),
+        defaults={"open_mode": True, "grains": {}},
+        overrides={"vault": {"issue_params": issue_overrides}},
+    )
+    with factory.started():
+        # Sync All
+        salt_call_cli = factory.salt_call_cli()
+        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+        assert ret.returncode == 0, ret
+        yield factory
+
+
+@pytest.fixture(scope="class")
+def vault_salt_run_cli(vault_salt_master):
+    return vault_salt_master.salt_run_cli()
+
+
+@pytest.fixture(scope="class")
+def vault_salt_call_cli(vault_salt_minion):
+    return vault_salt_minion.salt_call_cli()
+
+
+@pytest.fixture(scope="class")
+def pillar_roles_tree(
+    vault_salt_master,
+    vault_salt_minion,
+):
+    top_pillar_contents = f"""
+    base:
+      '{vault_salt_minion.id}':
+        - roles
+    """
+    roles_pillar_contents = """
+    roles:
+      - dev
+      - web
+    # this is for entity metadata since lists are cumbersome at best
+    role: foo
+    """
+    top_file = vault_salt_master.pillar_tree.base.temp_file(
+        "top.sls", top_pillar_contents
+    )
+    roles_file = vault_salt_master.pillar_tree.base.temp_file(
+        "roles.sls", roles_pillar_contents
+    )
+
+    with top_file, roles_file:
+        yield
+
+
+@pytest.fixture(scope="class")
+def vault_pillar_values_approle(vault_salt_minion):
+    vault_write_secret(
+        f"salt/minions/{vault_salt_minion.id}", minion_id_acl_template="worked"
+    )
+    vault_write_secret("salt/roles/foo", pillar_role_acl_template="worked")
+    try:
+        yield
+    finally:
+        vault_delete_secret(f"salt/minions/{vault_salt_minion.id}")
+        vault_delete_secret("salt/roles/foo")
+
+
+@pytest.fixture(scope="class")
+def vault_testing_values(vault_container_version):
+    vault_write_secret("secret/path/foo", success="yeehaaw")
+    try:
+        yield
+    finally:
+        vault_delete_secret("secret/path/foo")
+
+
+@pytest.fixture()
+def minion_conn_cachedir(vault_salt_call_cli):
+    ret = vault_salt_call_cli.run("config.get", "cachedir")
+    assert ret.returncode == 0
+    assert ret.data
+    cachedir = Path(ret.data) / "vault" / "connection"
+    if not cachedir.exists():
+        cachedir.mkdir(parents=True)
+    yield cachedir
+
+
+@pytest.fixture()
+def missing_auth_cache(minion_conn_cachedir):
+    token_cachefile = minion_conn_cachedir / "token.p"
+    secret_id_cachefile = minion_conn_cachedir / "secret_id.p"
+    for file in [secret_id_cachefile, token_cachefile]:
+        if file.exists():
+            file.unlink()
+    yield
+
+
+@pytest.fixture(scope="class")
+def minion_data_cache_present(
+    vault_salt_call_cli,
+    vault_salt_minion,
+    pillar_roles_tree,
+    vault_salt_run_cli,
+):
+    ret = vault_salt_run_cli.run("pillar.show_top", minion=vault_salt_minion.id)
+    assert ret.returncode == 0
+    assert ret.data
+    ret = vault_salt_call_cli.run("saltutil.refresh_pillar", wait=True)
+    assert ret.returncode == 0
+    assert ret.data is True
+    ret = vault_salt_call_cli.run("pillar.items")
+    assert ret.returncode == 0
+    assert ret.data
+    assert "role" in ret.data
+    assert "roles" in ret.data
+    yield
+
+
+@pytest.fixture()
+def conn_cache_absent(minion_conn_cachedir):
+    for file in os.listdir(minion_conn_cachedir):
+        (minion_conn_cachedir / file).unlink()
+    minion_conn_cachedir.rmdir()
+    assert not minion_conn_cachedir.exists()
+    yield
+
+
+@pytest.fixture(scope="class")
+def approles_synced(
+    vault_salt_run_cli,
+    minion_data_cache_present,
+    vault_salt_minion,
+):
+    ret = vault_salt_run_cli.run("vault.sync_approles", vault_salt_minion.id)
+    assert ret.returncode == 0
+    assert ret.data is True
+    ret = vault_salt_run_cli.run("vault.list_approles")
+    assert ret.returncode == 0
+    assert vault_salt_minion.id in ret.data
+    yield
+
+
+@pytest.fixture(scope="class")
+def entities_synced(
+    vault_salt_run_cli,
+    minion_data_cache_present,
+    vault_salt_minion,
+):
+    ret = vault_salt_run_cli.run("vault.sync_entities", vault_salt_minion.id)
+    assert ret.returncode == 0
+    assert ret.data is True
+    ret = vault_salt_run_cli.run("vault.list_approles")
+    assert ret.returncode == 0
+    assert vault_salt_minion.id in ret.data
+    ret = vault_salt_run_cli.run("vault.list_entities")
+    assert ret.returncode == 0
+    assert f"salt_minion_{vault_salt_minion.id}" in ret.data
+    ret = vault_salt_run_cli.run("vault.show_entity", vault_salt_minion.id)
+    assert ret.returncode == 0
+    assert ret.data == {"minion-id": vault_salt_minion.id, "role": "foo"}
+    yield
+
+
+@pytest.mark.usefixtures(
+    "vault_pillar_values_approle",
+    "vault_testing_values",
+    "pillar_roles_tree",
+    "minion_data_cache_present",
+)
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+class TestAppRoleIssuance:
+    @pytest.fixture(scope="class")
+    def vault_master_config(self, pillar_state_tree, vault_port):
+        return {
+            "pillar_roots": {"base": [str(pillar_state_tree)]},
+            "open_mode": True,
+            # ensure approles/entities are generated during pillar rendering
+            "ext_pillar": [
+                {"vault": "path=salt/minions/{minion}"},
+                {"vault": "path=salt/roles/{pillar[role]}"},
+            ],
+            "peer_run": {
+                ".*": [
+                    "vault.get_config",
+                    # for test_auth_method_switch_does_not_break_minion_auth
+                    "vault.generate_new_token",
+                    "vault.generate_secret_id",
+                ],
+            },
+            "vault": {
+                "auth": {"token": "testsecret"},
+                "cache": {
+                    "backend": "file",
+                },
+                "issue": {
+                    "allow_minion_override_params": True,
+                    "type": "approle",
+                    "approle": {
+                        "params": {
+                            "secret_id_num_uses": 0,
+                            "secret_id_ttl": 1800,
+                            "ttl": 1800,
+                            "uses": 0,
+                        }
+                    },
+                },
+                "metadata": {
+                    "entity": {
+                        "minion-id": "{minion}",
+                        "role": "{pillar[role]}",
+                    },
+                },
+                "policies": {
+                    "assign": [
+                        "salt_minion",
+                        "salt_minion_{minion}",
+                        "salt_role_{pillar[roles]}",
+                    ],
+                },
+                "server": {
+                    "url": f"http://127.0.0.1:{vault_port}",
+                },
+            },
+        }
+
+    @pytest.fixture(scope="class")
+    def issue_overrides(self):
+        return {"ttl": 1337, "uses": 42, "secret_id_num_uses": 3, "secret_id_ttl": 1338}
+
+    @pytest.fixture()
+    def cache_auth_outdated(self, missing_auth_cache, minion_conn_cachedir, vault_port):
+        vault_url = f"http://127.0.0.1:{vault_port}"
+        config_data = b"\xdf\x00\x00\x00\x03\xa4auth\xdf\x00\x00\x00\x04\xadapprole_mount\xa7approle\xacapprole_name\xbavault-approle-int-minion-1\xa6method\xa5token\xa9secret_id\xc0\xa5cache\xdf\x00\x00\x00\x03\xa7backend\xa4disk\xa6config\xcd\x0e\x10\xa6secret\xa3ttl\xa6server\xdf\x00\x00\x00\x03\xa9namespace\xc0\xa6verify\xc0\xa3url"
+        config_data += (len(vault_url) + 160).to_bytes(1, "big") + vault_url.encode()
+        config_cachefile = minion_conn_cachedir / "config.p"
+        with salt.utils.files.fopen(config_cachefile, "wb") as f:
+            f.write(config_data)
+        try:
+            yield
+        finally:
+            if config_cachefile.exists():
+                config_cachefile.unlink()
+
+    @pytest.fixture()
+    def cache_server_outdated(self, missing_auth_cache, minion_conn_cachedir):
+        config_data = b"\xdf\x00\x00\x00\x03\xa4auth\xdf\x00\x00\x00\x05\xadapprole_mount\xa7approle\xacapprole_name\xbavault-approle-int-minion-1\xa6method\xa7approle\xa7role_id\xactest-role-id\xa9secret_id\xc3\xa5cache\xdf\x00\x00\x00\x03\xa7backend\xa4disk\xa6config\xcd\x0e\x10\xa6secret\xa3ttl\xa6server\xdf\x00\x00\x00\x03\xa9namespace\xc0\xa6verify\xc0\xa3url\xb2http://127.0.0.1:8"
+        config_cachefile = minion_conn_cachedir / "config.p"
+        with salt.utils.files.fopen(config_cachefile, "wb") as f:
+            f.write(config_data)
+        try:
+            yield
+        finally:
+            if config_cachefile.exists():
+                config_cachefile.unlink()
+
+    def test_minion_can_authenticate(self, vault_salt_call_cli):
+        """
+        Test that the minion can run queries against Vault.
+        The master impersonating the minion is already tested in the fixture setup
+        (ext_pillar).
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+
+    @pytest.mark.usefixtures("entities_synced")
+    def test_minion_pillar_is_populated_as_expected(self, vault_salt_call_cli):
+        """
+        Test that ext_pillar pillar-templated paths are resolved as expectd
+        (and that the ACL policy templates work on the Vault side).
+        """
+        ret = vault_salt_call_cli.run("pillar.items")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("minion_id_acl_template") == "worked"
+        assert ret.data.get("pillar_role_acl_template") == "worked"
+
+    @pytest.mark.usefixtures("approles_synced")
+    @pytest.mark.usefixtures("conn_cache_absent")
+    def test_minion_token_policies_are_assigned_as_expected(
+        self, vault_salt_call_cli, vault_salt_minion
+    ):
+        """
+        Test that issued tokens have the expected policies.
+        """
+        ret = vault_salt_call_cli.run("vault.query", "GET", "auth/token/lookup-self")
+        assert ret.returncode == 0
+        assert ret.data
+        assert set(ret.data["data"]["policies"]) == {
+            "default",
+            "salt_minion",
+            f"salt_minion_{vault_salt_minion.id}",
+            "salt_role_dev",
+            "salt_role_web",
+        }
+
+    @pytest.mark.usefixtures("cache_auth_outdated")
+    def test_auth_method_switch_does_not_break_minion_auth(
+        self, vault_salt_call_cli, caplog
+    ):
+        """
+        Test that after a master configuration switch from another authentication method,
+        minions with cached configuration flush it and request a new one.
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+        assert "Master returned error and requested cache expiration" in caplog.text
+
+    @pytest.mark.usefixtures("cache_server_outdated")
+    def test_server_switch_does_not_break_minion_auth(
+        self, vault_salt_call_cli, caplog
+    ):
+        """
+        Test that after a master configuration switch to another server URL,
+        minions with cached configuration detect the mismatchand request a
+        new configuration.
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+        assert "Mismatch of cached and reported server data detected" in caplog.text
+
+    @pytest.mark.parametrize("ctype", ["config", "token", "secret_id"])
+    def test_cache_is_used_on_the_minion(
+        self, ctype, vault_salt_call_cli, minion_conn_cachedir
+    ):
+        """
+        Test that remote configuration, tokens acquired by authenticating with an AppRole
+        and issued secret IDs are written to cache.
+        """
+        if f"{ctype}.p" not in os.listdir(minion_conn_cachedir):
+            ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+            assert ret.returncode == 0
+        assert f"{ctype}.p" in os.listdir(minion_conn_cachedir)
+
+    @pytest.mark.parametrize("ctype", ["config", "token", "secret_id"])
+    def test_cache_is_used_on_the_impersonating_master(
+        self, ctype, vault_salt_run_cli, vault_salt_minion
+    ):
+        """
+        Test that remote configuration, tokens acquired by authenticating with an AppRole
+        and issued secret IDs are written to cache when a master is impersonating
+        a minion during pillar rendering.
+        """
+        ret = vault_salt_run_cli.run(
+            "cache.list", f"minions/{vault_salt_minion.id}/vault/connection"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ctype in ret.data
+
+    def test_cache_is_used_for_master_token_information(self, vault_salt_run_cli):
+        """
+        Test that a locally configured token is cached, including meta information.
+        """
+        ret = vault_salt_run_cli.run("cache.list", "vault/connection")
+        assert ret.returncode == 0
+        assert ret.data
+        assert "token" in ret.data
+
+    @pytest.mark.usefixtures("approles_synced")
+    def test_issue_param_overrides_work(
+        self, overriding_vault_salt_minion, issue_overrides, vault_salt_run_cli
+    ):
+        """
+        Test that minion overrides of issue params work for AppRoles.
+        """
+        ret = overriding_vault_salt_minion.salt_call_cli().run(
+            "vault.query", "GET", "auth/token/lookup-self"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        ret = vault_salt_run_cli.run(
+            "vault.show_approle", overriding_vault_salt_minion.id
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data["token_explicit_max_ttl"] == issue_overrides["ttl"]
+        assert ret.data["token_num_uses"] == issue_overrides["uses"]
+        assert ret.data["secret_id_num_uses"] == issue_overrides["secret_id_num_uses"]
+        assert ret.data["secret_id_ttl"] == issue_overrides["secret_id_ttl"]
+
+
+@pytest.mark.usefixtures(
+    "vault_testing_values", "pillar_roles_tree", "minion_data_cache_present"
+)
+class TestTokenIssuance:
+    @pytest.fixture(scope="class")
+    def vault_master_config(self, pillar_state_tree, vault_port):
+        return {
+            "pillar_roots": {"base": [str(pillar_state_tree)]},
+            "open_mode": True,
+            "ext_pillar": [{"vault": "path=secrets/path/foo"}],
+            "peer_run": {
+                ".*": [
+                    "vault.get_config",
+                    "vault.generate_new_token",
+                    # for test_auth_method_switch_does_not_break_minion_auth
+                    "vault.generate_secret_id",
+                ],
+            },
+            "vault": {
+                "auth": {"token": "testsecret"},
+                "cache": {
+                    "backend": "file",
+                },
+                "issue": {
+                    "type": "token",
+                    "token": {
+                        "params": {
+                            "uses": 0,
+                        }
+                    },
+                },
+                "policies": {
+                    "assign": [
+                        "salt_minion",
+                        "salt_minion_{minion}",
+                        "salt_role_{pillar[roles]}",
+                    ],
+                    "cache_time": 0,
+                },
+                "server": {
+                    "url": f"http://127.0.0.1:{vault_port}",
+                },
+            },
+            "minion_data_cache": True,
+        }
+
+    @pytest.fixture()
+    def cache_auth_outdated(self, missing_auth_cache, minion_conn_cachedir, vault_port):
+        vault_url = f"http://127.0.0.1:{vault_port}"
+        config_data = b"\xdf\x00\x00\x00\x03\xa4auth\xdf\x00\x00\x00\x05\xadapprole_mount\xa7approle\xacapprole_name\xbavault-approle-int-minion-1\xa6method\xa7approle\xa7role_id\xactest-role-id\xa9secret_id\xc3\xa5cache\xdf\x00\x00\x00\x03\xa7backend\xa4disk\xa6config\xcd\x0e\x10\xa6secret\xa3ttl\xa6server\xdf\x00\x00\x00\x03\xa9namespace\xc0\xa6verify\xc0\xa3url"
+        config_data += (len(vault_url) + 160).to_bytes(1, "big") + vault_url.encode()
+        config_cachefile = minion_conn_cachedir / "config.p"
+        with salt.utils.files.fopen(config_cachefile, "wb") as f:
+            f.write(config_data)
+        try:
+            yield
+        finally:
+            if config_cachefile.exists():
+                config_cachefile.unlink()
+
+    @pytest.fixture(scope="class")
+    def issue_overrides(self):
+        # only ttl and uses are respected, the rest is for testing purposes
+        return {
+            "ttl": 1337,
+            "uses": 42,
+            "secret_id_num_uses": 3,
+            "secret_id_ttl": 1338,
+            "irrelevant_setting": "abc",
+        }
+
+    @pytest.mark.usefixtures("conn_cache_absent")
+    @pytest.mark.parametrize(
+        "vault_container_version", ["0.9.6", "1.3.1", "latest"], indirect=True
+    )
+    def test_minion_can_authenticate(self, vault_salt_call_cli):
+        """
+        Test that the minion can run queries against Vault.
+        The master impersonating the minion is already tested in the fixture setup
+        (ext_pillar).
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+
+    @pytest.mark.usefixtures("conn_cache_absent")
+    @pytest.mark.parametrize(
+        "vault_container_version", ["0.9.6", "1.3.1", "latest"], indirect=True
+    )
+    def test_minion_token_policies_are_assigned_as_expected(
+        self, vault_salt_call_cli, vault_salt_minion
+    ):
+        """
+        Test that issued tokens have the expected policies.
+        """
+        ret = vault_salt_call_cli.run("vault.query", "GET", "auth/token/lookup-self")
+        assert ret.returncode == 0
+        assert ret.data
+        assert set(ret.data["data"]["policies"]) == {
+            "default",
+            "salt_minion",
+            f"salt_minion_{vault_salt_minion.id}",
+            "salt_role_dev",
+            "salt_role_web",
+        }
+
+    @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+    @pytest.mark.usefixtures("cache_auth_outdated")
+    def test_auth_method_switch_does_not_break_minion_auth(
+        self, vault_salt_call_cli, caplog
+    ):
+        """
+        Test that after a master configuration switch from another authentication method,
+        minions with cached configuration flush it and request a new one.
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+        assert "Master returned error and requested cache expiration" in caplog.text
+
+    @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+    @pytest.mark.parametrize("ctype", ["config", "token"])
+    def test_cache_is_used_on_the_minion(
+        self, ctype, vault_salt_call_cli, minion_conn_cachedir
+    ):
+        """
+        Test that remote configuration and tokens are written to cache.
+        """
+        if f"{ctype}.p" not in os.listdir(minion_conn_cachedir):
+            ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+            assert ret.returncode == 0
+        assert f"{ctype}.p" in os.listdir(minion_conn_cachedir)
+
+    @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+    @pytest.mark.parametrize("ctype", ["config", "token"])
+    def test_cache_is_used_on_the_impersonating_master(
+        self, ctype, vault_salt_run_cli, vault_salt_minion
+    ):
+        """
+        Test that remote configuration and tokens are written to cache when a
+        master is impersonating a minion during pillar rendering.
+        """
+        ret = vault_salt_run_cli.run(
+            "cache.list", f"minions/{vault_salt_minion.id}/vault/connection"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ctype in ret.data
+
+    @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+    def test_issue_param_overrides_require_setting(self, overriding_vault_salt_minion):
+        """
+        Test that minion overrides of issue params are not set by default
+        and require setting ``issue:allow_minion_override_params``.
+        """
+        ret = overriding_vault_salt_minion.salt_call_cli().run(
+            "vault.query", "GET", "auth/token/lookup-self"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data["data"]["explicit_max_ttl"] != 1337
+        assert ret.data["data"]["num_uses"] != 41  # one use is consumed by the lookup
+
+
+@pytest.mark.usefixtures("vault_testing_values")
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+class TestAppRoleIssuanceWithoutSecretId:
+    @pytest.fixture(scope="class")
+    def vault_master_config(self, vault_port):
+        return {
+            "open_mode": True,
+            "peer_run": {
+                ".*": [
+                    "vault.get_config",
+                    "vault.generate_secret_id",
+                ],
+            },
+            "vault": {
+                "auth": {"token": "testsecret"},
+                "cache": {
+                    "backend": "file",
+                },
+                "issue": {
+                    "type": "approle",
+                    "approle": {
+                        "params": {
+                            "bind_secret_id": False,
+                            # "at least one constraint should be enabled on the role"
+                            # this should be quite secure :)
+                            "token_bound_cidrs": "0.0.0.0/0",
+                            "ttl": 1800,
+                            "uses": 0,
+                        }
+                    },
+                },
+                "policies": {
+                    "assign": {
+                        "salt_minion",
+                        "salt_minion_{minion}",
+                    },
+                },
+                "server": {
+                    "url": f"http://127.0.0.1:{vault_port}",
+                },
+            },
+        }
+
+    def test_minion_can_authenticate(self, vault_salt_call_cli, caplog):
+        """
+        Test that the minion can run queries against Vault.
+        The master impersonating the minion is already tested in the fixture setup
+        (ext_pillar).
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+        assert "Minion AppRole does not require a secret ID" not in caplog.text
+
+
+@pytest.mark.usefixtures("vault_testing_values")
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
+class TestOldConfigSyntax:
+    @pytest.fixture(scope="class")
+    def vault_master_config(self, pillar_state_tree, vault_port):
+        return {
+            "pillar_roots": {"base": [str(pillar_state_tree)]},
+            "open_mode": True,
+            "peer_run": {
+                ".*": [
+                    "vault.get_config",
+                    "vault.generate_new_token",
+                ],
+            },
+            "vault": {
+                "auth": {
+                    "allow_minion_override": True,
+                    "token": "testsecret",
+                    "token_backend": "file",
+                    "ttl": 90,
+                    "uses": 3,
+                },
+                "policies": [
+                    "salt_minion",
+                    "salt_minion_{minion}",
+                ],
+                "url": f"http://127.0.0.1:{vault_port}",
+            },
+            "minion_data_cache": True,
+        }
+
+    @pytest.fixture(scope="class")
+    def overriding_vault_salt_minion(self, vault_salt_master):
+        assert vault_salt_master.is_running()
+        factory = vault_salt_master.salt_minion_daemon(
+            random_string("vault-minion", uppercase=False),
+            defaults={"open_mode": True, "grains": {}},
+            overrides={"vault": {"auth": {"uses": 5, "ttl": 180}}},
+        )
+        with factory.started():
+            # Sync All
+            salt_call_cli = factory.salt_call_cli()
+            ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+            assert ret.returncode == 0, ret
+            yield factory
+
+    def test_token_is_configured_as_expected(
+        self, vault_salt_call_cli, vault_salt_minion
+    ):
+        """
+        Test that issued tokens have the expected parameters.
+        """
+        ret = vault_salt_call_cli.run("vault.query", "GET", "auth/token/lookup-self")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data["data"]["explicit_max_ttl"] == 90
+        assert ret.data["data"]["num_uses"] == 2  # one use is consumed by the lookup
+        assert set(ret.data["data"]["policies"]) == {
+            "default",
+            "salt_minion",
+            f"salt_minion_{vault_salt_minion.id}",
+        }
+
+    def test_issue_param_overrides_work(self, overriding_vault_salt_minion):
+        """
+        Test that minion overrides of issue params work for the old configuration.
+        """
+        ret = overriding_vault_salt_minion.salt_call_cli().run(
+            "vault.query", "GET", "auth/token/lookup-self"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data["data"]["explicit_max_ttl"] == 180
+        assert ret.data["data"]["num_uses"] == 4  # one use is consumed by the lookup

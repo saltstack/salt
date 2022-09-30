@@ -224,6 +224,14 @@ def vault_delete_secret(path, metadata=False):
     return True
 
 
+def vault_list(path):
+    try:
+        ret = _vault_cmd(["list", "-format=json", path])
+    except RuntimeError:
+        pytest.fail(f"Failed to list path at `{path}`")
+    return json.loads(ret.stdout)
+
+
 @pytest.fixture(scope="session")
 def vault_environ(vault_port):
     with PatchedEnviron(VAULT_ADDR="http://127.0.0.1:{}".format(vault_port)):
@@ -299,6 +307,7 @@ def vault_container_version(request, salt_factories, vault_port, vault_environ):
         if vault_version in ("1.3.1", "latest"):
             vault_enable_secret_engine("kv-v2")
             if vault_version == "latest":
+                vault_enable_auth_method("approle", ["-path=salt-minions"])
                 vault_enable_secret_engine("kv", ["-version=2", "-path=salt"])
 
         yield vault_version

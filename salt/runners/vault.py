@@ -126,7 +126,7 @@ def generate_new_token(
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
         if _config("issue:type") != "token":
-            raise SaltInvocationError("Master does not issue tokens.")
+            return {"expire_cache": True, "error": "Master does not issue tokens."}
 
         ret = {
             "server": _config("server"),
@@ -270,7 +270,7 @@ def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params
 
     try:
         if _config("issue:type") != "approle":
-            raise SaltInvocationError("Master does not issue AppRoles.")
+            return {"expire_cache": True, "error": "Master does not issue AppRoles."}
 
         ret = {
             "server": _config("server"),
@@ -361,7 +361,10 @@ def generate_secret_id(
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
         if _config("issue:type") != "approle":
-            raise SaltInvocationError("Master does not issue AppRoles nor secret-ids.")
+            return {
+                "expire_cache": True,
+                "error": "Master does not issue AppRoles nor secret-ids.",
+            }
 
         approle_meta = _lookup_approle_cached(minion_id)
         if approle_meta is False:
@@ -370,6 +373,12 @@ def generate_secret_id(
         if not _approle_params_match(approle_meta, issue_params):
             _manage_approle(minion_id, issue_params)
             approle_meta = _lookup_approle_cached(minion_id, refresh=True)
+
+        if not approle_meta["bind_secret_id"]:
+            return {
+                "expire_cache": True,
+                "error": "Minion AppRole does not require a secret ID.",
+            }
 
         ret = {
             "server": _config("server"),
@@ -450,12 +459,22 @@ def show_policies(minion_id, refresh_pillar=NOT_SET, expire=None):
         is used. This specifies the expiration timeout in seconds.
         Defaults to config value ``policies_cache_time`` or 60.
 
+    .. note::
+
+        When issuing AppRoles to minions, the shown policies are read from Vault
+        configuration for the minion's AppRole and thus refresh_pillar/expire
+        will not be honored.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-run vault.show_policies myminion
     """
+    if "approle" == _config("issue:type"):
+        meta = _lookup_approle(minion_id)
+        return meta["token_policies"]
+
     if refresh_pillar == NOT_SET:
         refresh_pillar = _config("policies:refresh_pillar")
     expire = expire if expire is not None else _config("policies:cache_time")
@@ -589,6 +608,59 @@ def sync_entities(minions=None, up=False, down=False):
             )
             _manage_entity_alias(minion)
     return True
+
+
+def list_entities():
+    """
+    List all entities that have been created by the Salt master.
+    They are named `salt_minion_{minion_id}`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.list_entities
+    """
+    if "approle" != _config("issue:type"):
+        raise SaltRunnerError("Master does not issue AppRoles to minions.")
+    endpoint = "identity/entity/name"
+    client = _get_master_client()
+    entities = client.list(endpoint)["data"]["keys"]
+    return [x for x in entities if x.startswith("salt_minion_")]
+
+
+def show_entity(minion_id):
+    """
+    Show entity metadata for <minion_id>.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.show_entity db1
+    """
+    if "approle" != _config("issue:type"):
+        raise SaltRunnerError("Master does not issue AppRoles to minions.")
+    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
+    client = _get_master_client()
+    return client.get(endpoint)["data"]["metadata"]
+
+
+def show_approle(minion_id):
+    """
+    Show AppRole configuration for <minion_id>.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.show_approle db1
+    """
+    if "approle" != _config("issue:type"):
+        raise SaltRunnerError("Master does not issue AppRoles to minions.")
+    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
+    client = _get_master_client()
+    return client.get(endpoint)["data"]
 
 
 def cleanup_auth():
@@ -806,8 +878,10 @@ def _parse_issue_params(params, issue_type=None, params_from_master=False):
     elif "approle" == issue_type:
         valid_params = {
             "bind_secret_id": "bind_secret_id",
+            "secret_id_bound_cidrs": "secret_id_bound_cidrs",
             "secret_id_num_uses": "secret_id_num_uses",
             "secret_id_ttl": "secret_id_ttl",
+            "token_bound_cidrs": "token_bound_cidrs",
             "ttl": "token_explicit_max_ttl",
             "uses": "token_num_uses",
         }
@@ -838,7 +912,7 @@ def _parse_issue_params(params, issue_type=None, params_from_master=False):
 def _manage_approle(minion_id, issue_params, params_from_master=False):
     endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
     payload = _parse_issue_params(issue_params, params_from_master=params_from_master)
-    payload["token_policies"] = _get_policies_cached(minion_id, refresh_pillar=True)
+    payload["token_policies"] = _get_policies(minion_id, refresh_pillar=True)
     client = _get_master_client()
     log.debug(f"Creating/updating AppRole for minion {minion_id}.")
     return client.post(endpoint, payload=payload)

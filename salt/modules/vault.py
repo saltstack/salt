@@ -474,11 +474,24 @@ cache_time
     This is important when using pillar values in templates, since compiling
     the pillar is an expensive operation.
 
+    .. note::
+
+        Only effective (and sensible) when issuing tokens to minions. Token policies
+        need to be compiled every time a token is requested, while AppRole-associated
+        policies are written to Vault configuration the first time authentication data
+        is requested (they can be refreshed on demand by running
+        ``salt-run vault.sync_approles``).
+
+        They will also be refreshed in case other issuance parameters are changed
+        (such as uses/ttl), either on the master or the minion
+        (if allow_minion_override_params is True).
+
 refresh_pillar
     .. versionadded:: 3006
 
     Whether to refresh the minion pillar when compiling templated policies
     that contain pillar variables.
+    Only effective when issuing tokens to minions (see note on cache_time above).
 
     - ``null`` (default) only compiles the pillar when no cached pillar is found.
     - ``false`` never compiles the pillar. This means templated policies that
@@ -487,6 +500,8 @@ refresh_pillar
       on the master since the compilation is costly.
 
     .. note::
+
+        Hardcoded to True when issuing AppRoles.
 
         Using cached pillar data only (refresh_pillar=False) might cause the policies
         to be out of sync. If there is no cached pillar data available for the minion,
