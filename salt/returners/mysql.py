@@ -307,15 +307,16 @@ def returner(ret):
                      (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
                      VALUES (%s, %s, %s, %s, %s, %s)"""
 
+            cleaned_return = salt.utils.data.return_obj_string_safe(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    salt.utils.json.dumps(ret["return"]),
+                    salt.utils.json.dumps(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    salt.utils.json.dumps(ret),
+                    salt.utils.json.dumps(cleaned_return),
                 ),
             )
     except salt.exceptions.SaltMasterError as exc:
