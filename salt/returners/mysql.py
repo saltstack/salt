@@ -307,7 +307,7 @@ def returner(ret):
                      (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
                      VALUES (%s, %s, %s, %s, %s, %s)"""
 
-            cleaned_return = salt.utils.data.return_obj_string_safe(ret)
+            cleaned_return = salt.utils.jid.return_obj_string_safe(ret)
             cur.execute(
                 sql,
                 (
