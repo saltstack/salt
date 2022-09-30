@@ -137,7 +137,11 @@ def return_obj_string_safe(response, to_encoding="utf-8"):
     return_obj_string_safe
         encoding type to use, defaulted to "utf-8"
     """
-    if "return" in response.keys() and "return" in response["return"].keys():
+    if (
+        isinstance(response, dict)
+        and "return" in response.keys()
+        and "return" in response["return"].keys()
+    ):
         if isinstance(response["return"]["return"], (bytes, bytearray)):
             response["return"]["return"] = response["return"]["return"].decode(
                 to_encoding, "strict"
