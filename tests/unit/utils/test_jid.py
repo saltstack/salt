@@ -50,3 +50,15 @@ class JidTestCase(TestCase):
             self.assertEqual(
                 str(no_opts), "gen_jid() missing 1 required positional argument: 'opts'"
             )
+
+    def test_return_obj_string_safe(self):
+        # test an expected dict layout
+        responsedata1 = {"return": {"return": b"abcde"}}
+        response = salt.utils.jid.return_obj_string_safe(responsedata1)
+        self.assertEqual(response["return"]["return"], "abcde")
+        self.assertEqual(isinstance(response["return"]["return"], str), True)
+
+        # test an unexpected dict
+        responsedata2 = {"meow": "mix"}
+        response2 = salt.utils.jid.return_obj_string_safe(responsedata2)
+        self.assertEqual(responsedata2, response2)
