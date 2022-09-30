@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.json
 from salt.modules import http
 from salt.pillar import http_json
