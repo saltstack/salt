@@ -1,16 +1,12 @@
 """
 Module to provide MySQL compatibility to salt.
 
-:depends:   - MySQLdb Python module
-
-.. note::
-
-    On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb
-    need to be installed.
+:depends:   - Python module: MySQLdb, mysqlclient, or PyMYSQL
 
 :configuration: In order to connect to MySQL, certain configuration is required
-    in /etc/salt/minion on the relevant minions. Some sample configs might look
-    like::
+    in either the relevant minion config (/etc/salt/minion), or pillar.
+    
+    Some sample configs might look like::
 
         mysql.host: 'localhost'
         mysql.port: 3306
