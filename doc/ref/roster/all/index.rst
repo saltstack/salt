@@ -19,5 +19,5 @@ roster modules
     range
     scan
     sshconfig
-    terraform
     sshknownhosts
+    terraform
