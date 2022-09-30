@@ -1903,10 +1903,7 @@ def absent(name, **kwargs):
             ret["comment"] = "File {} is set for removal".format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__["file.remove"](name, force=True)
-            else:
-                __salt__["file.remove"](name)
+            __salt__["file.remove"](name, force=True)
             ret["comment"] = "Removed file {}".format(name)
             ret["changes"]["removed"] = name
             return ret
@@ -1920,10 +1917,7 @@ def absent(name, **kwargs):
             ret["comment"] = "Directory {} is set for removal".format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__["file.remove"](name, force=True)
-            else:
-                __salt__["file.remove"](name)
+            __salt__["file.remove"](name, force=True)
             ret["comment"] = "Removed directory {}".format(name)
             ret["changes"]["removed"] = name
             return ret
@@ -2154,11 +2148,7 @@ def tidied(
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__["file.remove"](path, force=True)
-                else:
-                    __salt__["file.remove"](path)
-                # Remember what we've removed, will appear in the summary
+                __salt__["file.remove"](path, force=True)
                 ret["changes"]["removed"].append(path)
         except CommandExecutionError as exc:
             return _error(ret, "{}".format(exc))
@@ -7494,7 +7484,7 @@ def copy_(
         elif not __opts__["test"] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__["file.remove"](name)
+                __salt__["file.remove"](name, force=True)
             except OSError:
                 return _error(
                     ret,
