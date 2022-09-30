@@ -349,7 +349,7 @@ def save_load(jid, load, minions=None):
 
         sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
 
-        json_data = salt.utils.json.dumps(salt.utils.data.return_obj_string_safe(load))
+        json_data = salt.utils.json.dumps(salt.utils.jid.return_obj_string_safe(load))
         try:
             cur.execute(sql, (jid, json_data))
         except MySQLdb.IntegrityError:

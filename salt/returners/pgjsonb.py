@@ -300,7 +300,7 @@ def returner(ret):
                     (fun, jid, return, id, success, full_ret, alter_time)
                     VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))"""
 
-            cleaned_return = salt.utils.data.return_obj_string_safe(ret)
+            cleaned_return = salt.utils.jid.return_obj_string_safe(ret)
             cur.execute(
                 sql,
                 (
@@ -343,7 +343,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     """
     with _get_serv(commit=True) as cur:
-        load = salt.utils.data.return_obj_string_safe(load)
+        load = salt.utils.jid.return_obj_string_safe(load)
         try:
             cur.execute(
                 PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
