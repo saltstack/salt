@@ -234,15 +234,16 @@ def returner(ret):
             sql = """INSERT INTO salt_returns
                     (fun, jid, return, id, success, full_ret)
                     VALUES (%s, %s, %s, %s, %s, %s)"""
+            cleaned_return = salt.utils.data.return_obj_string_safe(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    salt.utils.json.dumps(ret["return"]),
+                    salt.utils.json.dumps(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    salt.utils.json.dumps(ret),
+                    salt.utils.json.dumps(cleaned_return),
                 ),
             )
     except salt.exceptions.SaltMasterError:
@@ -278,7 +279,7 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
                (jid, load)
                 VALUES (%s, %s)"""
 
-        json_data = salt.utils.json.dumps(salt.returners._return_obj_string_safe(load))
+        json_data = salt.utils.json.dumps(salt.utils.data.return_obj_string_safe(load))
         try:
             cur.execute(sql, (jid, json_data))
         except psycopg2.IntegrityError:
