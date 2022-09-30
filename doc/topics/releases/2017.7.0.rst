@@ -316,11 +316,11 @@ structure to include job meta data such as ``retcode``.
 
 This is useful at the Python API:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import salt.client
     >>> client = salt.client.LocalClient()
-    >>> client.cmd('*', 'cmd.run', ['return 1'], full_return=True)
+    >>> client.cmd("*", "cmd.run", ["return 1"], full_return=True)
     {'jerry': {'jid': '20170520151213898053', 'ret': '', 'retcode': 1}}
 
 As well as from salt-api:
@@ -441,7 +441,7 @@ have been improved, enhanced and widenened in scope:
   the process. In 2017.7.0 we have introduced the functionality to re-establish
   the connection. One can disable this feature through the
   :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
-  speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
+  specifying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
   in minutes.
 
 New modules:
@@ -675,7 +675,7 @@ Additional Features
 
   .. code-block:: python
 
-      ret1 = __salt__['salt.execute']('*', 'mod.fun')
+      ret1 = __salt__["salt.execute"]("*", "mod.fun")
 
 New Modules
 ===========

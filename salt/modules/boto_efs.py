@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon EFS
 
@@ -35,7 +34,7 @@ Connection module for Amazon EFS
 
     If a region is not specified, the default is us-east-1.
 
-    It's also possible to speficy key, keyid, and region via a profile, either
+    It's also possible to specify key, keyid, and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
     .. code-block:: yaml
@@ -49,16 +48,9 @@ Connection module for Amazon EFS
 """
 
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.versions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import boto3
@@ -85,7 +77,7 @@ def _get_conn(key=None, keyid=None, profile=None, region=None, **kwargs):
     """
     client = None
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, str):
             if profile in __pillar__:
                 profile = __pillar__[profile]
             elif profile in __opts__:
@@ -267,7 +259,7 @@ def create_tags(
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k, v in six.iteritems(tags):
+    for k, v in tags.items():
         new_tags.append({"Key": k, "Value": v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)

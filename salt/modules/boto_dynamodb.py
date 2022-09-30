@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon DynamoDB
 
@@ -44,22 +43,11 @@ Connection module for Amazon DynamoDB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-logger = logging.getLogger(__name__)
-logging.getLogger("boto").setLevel(logging.INFO)
-
 
 try:
     # pylint: disable=unused-import
@@ -67,19 +55,24 @@ try:
     import boto.dynamodb2
 
     # pylint: enable=unused-import
-    from boto.dynamodb2.fields import HashKey, RangeKey
     from boto.dynamodb2.fields import (
         AllIndex,
         GlobalAllIndex,
         GlobalIncludeIndex,
         GlobalKeysOnlyIndex,
+        HashKey,
+        RangeKey,
     )
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError
 
+    logging.getLogger("boto").setLevel(logging.INFO)
+
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -229,7 +222,9 @@ def update(
     """
     Update a DynamoDB table.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.update table_name region=us-east-1
     """
@@ -245,6 +240,7 @@ def create_global_secondary_index(
     Creates a single global secondary index on a DynamoDB table.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_dynamodb.create_global_secondary_index table_name /
@@ -262,6 +258,7 @@ def update_global_secondary_index(
     Updates the throughput of the given global secondary indexes.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_dynamodb.update_global_secondary_index table_name /
@@ -276,7 +273,9 @@ def describe(table_name, region=None, key=None, keyid=None, profile=None):
     """
     Describe a DynamoDB table.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.describe table_name region=us-east-1
     """
@@ -291,14 +290,17 @@ def extract_index(index_data, global_index=False):
     configuration
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt myminion boto_dynamodb.extract_index index
     """
     parsed_data = {}
     keys = []
 
-    for key, value in six.iteritems(index_data):
+    for key, value in index_data.items():
         for item in value:
-            for field, data in six.iteritems(item):
+            for field, data in item.items():
                 if field == "hash_key":
                     parsed_data["hash_key"] = data
                 elif field == "hash_key_data_type":

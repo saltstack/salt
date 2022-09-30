@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 .. _saltify-module:
 
@@ -17,28 +16,21 @@ files as described in the
 :ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
 import salt.client
 import salt.config as config
-import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.cloud
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 try:
     # noinspection PyUnresolvedReferences
-    from impacket.smbconnection import SessionError as smbSessionError
     from impacket.smb3 import SessionError as smb3SessionError
+    from impacket.smbconnection import SessionError as smbSessionError
 
     HAS_IMPACKET = True
 except ImportError:
@@ -46,18 +38,17 @@ except ImportError:
 
 try:
     # noinspection PyUnresolvedReferences
-    from winrm.exceptions import WinRMTransportError
-
     # noinspection PyUnresolvedReferences
     from requests.exceptions import (
         ConnectionError,
         ConnectTimeout,
-        ReadTimeout,
-        SSLError,
-        ProxyError,
-        RetryError,
         InvalidSchema,
+        ProxyError,
+        ReadTimeout,
+        RetryError,
+        SSLError,
     )
+    from winrm.exceptions import WinRMTransportError
 
     HAS_WINRM = True
 except ImportError:
@@ -69,6 +60,13 @@ def __virtual__():
     Needs no special configuration
     """
     return True
+
+
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
 
 
 def avail_locations(call=None):
@@ -95,7 +93,7 @@ def avail_images(call=None):
 
     returns a list of available profiles.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     """
     vm_ = get_configured_provider()
@@ -125,7 +123,7 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     """
     nodes = _list_nodes_full(call)
@@ -171,7 +169,7 @@ def list_nodes_full(call=None):
 
     for 'saltify' minions, returns dict of grains (enhanced).
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
     """
 
     ret = _list_nodes_full(call)
@@ -205,8 +203,10 @@ def _list_nodes_full(call=None):
     """
     List the nodes, ask all 'saltify' minions, return dict of grains.
     """
-    local = salt.client.LocalClient()
-    return local.cmd("salt-cloud:driver:saltify", "grains.items", "", tgt_type="grain")
+    with salt.client.LocalClient() as local:
+        return local.cmd(
+            "salt-cloud:driver:saltify", "grains.items", "", tgt_type="grain"
+        )
 
 
 def list_nodes_select(call=None):
@@ -215,7 +215,9 @@ def list_nodes_select(call=None):
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -223,10 +225,10 @@ def show_instance(name, call=None):
     """
     List the a single node, return dict of grains.
     """
-    local = salt.client.LocalClient()
-    ret = local.cmd(name, "grains.items")
-    ret.update(_build_required_items(ret))
-    return ret
+    with salt.client.LocalClient() as local:
+        ret = local.cmd(name, "grains.items")
+        ret.update(_build_required_items(ret))
+        return ret
 
 
 def create(vm_):
@@ -281,31 +283,33 @@ def create(vm_):
         )
         if wol_mac and wol_host:
             good_ping = False
-            local = salt.client.LocalClient()
             ssh_host = config.get_cloud_config_value(
                 "ssh_host", vm_, __opts__, default=""
             )
-            if ssh_host:
-                log.info("trying to ping %s", ssh_host)
-                count = "n" if salt.utils.platform.is_windows() else "c"
-                cmd = "ping -{} 1 {}".format(count, ssh_host)
-                good_ping = local.cmd(wol_host, "cmd.retcode", [cmd]) == 0
-            if good_ping:
-                log.info("successful ping.")
-            else:
-                log.info("sending wake-on-lan to %s using node %s", wol_mac, wol_host)
-
-                if isinstance(wol_mac, six.string_types):
-                    wol_mac = [wol_mac]  # a smart user may have passed more params
-                ret = local.cmd(wol_host, "network.wol", wol_mac)
-                log.info("network.wol returned value %s", ret)
-                if ret and ret[wol_host]:
-                    sleep_time = config.get_cloud_config_value(
-                        "wol_boot_wait", vm_, __opts__, default=30
+            with salt.client.LocalClient() as local:
+                if ssh_host:
+                    log.info("trying to ping %s", ssh_host)
+                    count = "n" if salt.utils.platform.is_windows() else "c"
+                    cmd = "ping -{} 1 {}".format(count, ssh_host)
+                    good_ping = local.cmd(wol_host, "cmd.retcode", [cmd]) == 0
+                if good_ping:
+                    log.info("successful ping.")
+                else:
+                    log.info(
+                        "sending wake-on-lan to %s using node %s", wol_mac, wol_host
                     )
-                    if sleep_time > 0.0:
-                        log.info("delaying %d seconds for boot", sleep_time)
-                        time.sleep(sleep_time)
+
+                    if isinstance(wol_mac, str):
+                        wol_mac = [wol_mac]  # a smart user may have passed more params
+                    ret = local.cmd(wol_host, "network.wol", wol_mac)
+                    log.info("network.wol returned value %s", ret)
+                    if ret and ret[wol_host]:
+                        sleep_time = config.get_cloud_config_value(
+                            "wol_boot_wait", vm_, __opts__, default=30
+                        )
+                        if sleep_time > 0.0:
+                            log.info("delaying %d seconds for boot", sleep_time)
+                            time.sleep(sleep_time)
         log.info("Provisioning existing machine %s", vm_["name"])
         ret = __utils__["cloud.bootstrap"](vm_, __opts__)
     else:
@@ -319,7 +323,7 @@ def get_configured_provider():
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or "saltify", ()
+        __opts__, _get_active_provider_name() or "saltify", ()
     )
 
 
@@ -431,7 +435,7 @@ def _verify(vm_):
 
 
 def destroy(name, call=None):
-    """ Destroy a node.
+    """Destroy a node.
 
     .. versionadded:: 2018.3.0
 
@@ -453,7 +457,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a, or --action."
+            "The destroy action must be called with -d, --destroy, -a, or --action."
         )
 
     opts = __opts__
@@ -461,64 +465,66 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
     )
 
     vm_ = get_configured_provider()
-    local = salt.client.LocalClient()
-    my_info = local.cmd(name, "grains.get", ["salt-cloud"])
-    try:
-        vm_.update(my_info[name])  # get profile name to get config value
-    except (IndexError, TypeError):
-        pass
-    if config.get_cloud_config_value(
-        "remove_config_on_destroy", vm_, opts, default=True
-    ):
-        ret = local.cmd(
-            name,  # prevent generating new keys on restart
-            "service.disable",
-            ["salt-minion"],
-        )
-        if ret and ret[name]:
-            log.info("disabled salt-minion service on %s", name)
-        ret = local.cmd(name, "config.get", ["conf_file"])
-        if ret and ret[name]:
-            confile = ret[name]
-            ret = local.cmd(name, "file.remove", [confile])
+    with salt.client.LocalClient() as local:
+        my_info = local.cmd(name, "grains.get", ["salt-cloud"])
+        try:
+            vm_.update(my_info[name])  # get profile name to get config value
+        except (IndexError, TypeError):
+            pass
+        if config.get_cloud_config_value(
+            "remove_config_on_destroy", vm_, opts, default=True
+        ):
+            ret = local.cmd(
+                name,  # prevent generating new keys on restart
+                "service.disable",
+                ["salt-minion"],
+            )
             if ret and ret[name]:
-                log.info("removed minion %s configuration file %s", name, confile)
-        ret = local.cmd(name, "config.get", ["pki_dir"])
-        if ret and ret[name]:
-            pki_dir = ret[name]
-            ret = local.cmd(name, "file.remove", [pki_dir])
+                log.info("disabled salt-minion service on %s", name)
+            ret = local.cmd(name, "config.get", ["conf_file"])
             if ret and ret[name]:
-                log.info("removed minion %s key files in %s", name, pki_dir)
+                confile = ret[name]
+                ret = local.cmd(name, "file.remove", [confile])
+                if ret and ret[name]:
+                    log.info("removed minion %s configuration file %s", name, confile)
+            ret = local.cmd(name, "config.get", ["pki_dir"])
+            if ret and ret[name]:
+                pki_dir = ret[name]
+                ret = local.cmd(name, "file.remove", [pki_dir])
+                if ret and ret[name]:
+                    log.info("removed minion %s key files in %s", name, pki_dir)
 
-    if config.get_cloud_config_value("shutdown_on_destroy", vm_, opts, default=False):
-        ret = local.cmd(name, "system.shutdown")
-        if ret and ret[name]:
-            log.info("system.shutdown for minion %s successful", name)
+        if config.get_cloud_config_value(
+            "shutdown_on_destroy", vm_, opts, default=False
+        ):
+            ret = local.cmd(name, "system.shutdown")
+            if ret and ret[name]:
+                log.info("system.shutdown for minion %s successful", name)
 
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
     )
 
-    return {"Destroyed": "{0} was destroyed.".format(name)}
+    return {"Destroyed": "{} was destroyed.".format(name)}
 
 
 def reboot(name, call=None):
     """
     Reboot a saltify minion.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     name
         The name of the VM to reboot.
@@ -535,5 +541,5 @@ def reboot(name, call=None):
             "The reboot action must be called with -a or --action."
         )
 
-    local = salt.client.LocalClient()
-    return local.cmd(name, "system.reboot")
+    with salt.client.LocalClient() as local:
+        return local.cmd(name, "system.reboot")

@@ -1,5 +1,5 @@
-salt.states.snapper module
-==========================
+salt.states.snapper
+===================
 
 .. automodule:: salt.states.snapper
     :members:

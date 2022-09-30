@@ -1,30 +1,22 @@
-# -*- coding: utf-8 -*-
 """
 File server pluggable modules and generic backend functions
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import fnmatch
 import logging
 import os
 import re
-import sys
 import time
 from collections.abc import Sequence
 
-# Import salt libs
 import salt.loader
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
 
@@ -42,7 +34,7 @@ def _unlock_cache(w_lock):
             os.rmdir(w_lock)
         elif os.path.isfile(w_lock):
             os.unlink(w_lock)
-    except (OSError, IOError) as exc:
+    except OSError as exc:
         log.trace("Error removing lockfile %s: %s", w_lock, exc)
 
 
@@ -97,7 +89,7 @@ def wait_lock(lk_fn, dest, wait_timeout=0):
         if timeout:
             if time.time() > timeout:
                 raise ValueError(
-                    "Timeout({0}s) for {1} (lock: {2}) elapsed".format(
+                    "Timeout({}s) for {} (lock: {}) elapsed".format(
                         wait_timeout, dest, lk_fn
                     )
                 )
@@ -112,7 +104,6 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
     """
     refresh_cache = False
     save_cache = True
-    serial = salt.payload.Serial(opts)
     wait_lock(w_lock, list_cache, 5 * 60)
     if not os.path.isfile(list_cache) and _lock_cache(w_lock):
         refresh_cache = True
@@ -139,7 +130,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                             current_time,
                             file_mtime,
                         )
-                        age = 0
+                        age = -1
                     else:
                         age = current_time - file_mtime
                 else:
@@ -158,7 +149,9 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                             list_cache,
                         )
                         return (
-                            salt.utils.data.decode(serial.load(fp_).get(form, [])),
+                            salt.utils.data.decode(
+                                salt.payload.load(fp_).get(form, [])
+                            ),
                             False,
                             False,
                         )
@@ -182,9 +175,8 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     returns the match (if found, along with booleans used by the fileserver
     backend to determine if the cache needs to be refreshed/written).
     """
-    serial = salt.payload.Serial(opts)
     with salt.utils.files.fopen(list_cache, "w+b") as fp_:
-        fp_.write(serial.dumps(data))
+        fp_.write(salt.payload.dumps(data))
         _unlock_cache(w_lock)
         log.trace("Lockfile %s removed", w_lock)
 
@@ -198,9 +190,8 @@ def check_env_cache(opts, env_cache):
     try:
         with salt.utils.files.fopen(env_cache, "rb") as fp_:
             log.trace("Returning env cache data from %s", env_cache)
-            serial = salt.payload.Serial(opts)
-            return salt.utils.data.decode(serial.load(fp_))
-    except (IOError, OSError):
+            return salt.utils.data.decode(salt.payload.load(fp_))
+    except OSError:
         pass
     return None
 
@@ -210,7 +201,7 @@ def generate_mtime_map(opts, path_map):
     Generate a dict of filename -> mtime
     """
     file_map = {}
-    for saltenv, path_list in six.iteritems(path_map):
+    for saltenv, path_list in path_map.items():
         for path in path_list:
             for directory, _, filenames in salt.utils.path.os_walk(path):
                 for item in filenames:
@@ -221,7 +212,7 @@ def generate_mtime_map(opts, path_map):
                         if is_file_ignored(opts, file_path):
                             continue
                         file_map[file_path] = os.path.getmtime(file_path)
-                    except (OSError, IOError):
+                    except OSError:
                         # skip dangling symlinks
                         log.info(
                             "Failed to get mtime on %s, dangling symlink?", file_path
@@ -240,7 +231,7 @@ def diff_mtime_map(map1, map2):
 
     # map1 and map2 are guaranteed to have same keys,
     # so compare mtimes
-    for filename, mtime in six.iteritems(map1):
+    for filename, mtime in map1.items():
         if map2[filename] != mtime:
             return True
 
@@ -330,14 +321,14 @@ def clear_lock(clear_func, role, remote=None, lock_type="update"):
 
     Returns the return data from ``clear_func``.
     """
-    msg = "Clearing {0} lock for {1} remotes".format(lock_type, role)
+    msg = "Clearing {} lock for {} remotes".format(lock_type, role)
     if remote:
-        msg += " matching {0}".format(remote)
+        msg += " matching {}".format(remote)
     log.debug(msg)
     return clear_func(remote=remote, lock_type=lock_type)
 
 
-class Fileserver(object):
+class Fileserver:
     """
     Create a fileserver wrapper object that wraps the fileserver functions and
     iterates over them to execute the desired function within the scope of the
@@ -359,13 +350,13 @@ class Fileserver(object):
                 try:
                     back = back.split(",")
                 except AttributeError:
-                    back = six.text_type(back).split(",")
+                    back = str(back).split(",")
 
         if isinstance(back, Sequence):
             # The test suite uses an ImmutableList type (based on
-            # collections.Sequence) for lists, which breaks this function in
+            # collections.abc.Sequence) for lists, which breaks this function in
             # the test suite. This normalizes the value from the opts into a
-            # list if it is based on collections.Sequence.
+            # list if it is based on collections.abc.Sequence.
             back = list(back)
 
         ret = []
@@ -377,7 +368,7 @@ class Fileserver(object):
         # .keys() attribute rather than on the LazyDict itself.
         server_funcs = self.servers.keys()
         try:
-            subtract_only = all((x.startswith("-") for x in back))
+            subtract_only = all(x.startswith("-") for x in back)
         except AttributeError:
             pass
         else:
@@ -385,17 +376,13 @@ class Fileserver(object):
                 # Only subtracting backends from enabled ones
                 ret = self.opts["fileserver_backend"]
                 for sub in back:
-                    if "{0}.envs".format(sub[1:]) in server_funcs:
+                    if "{}.envs".format(sub[1:]) in server_funcs:
                         ret.remove(sub[1:])
-                    elif "{0}.envs".format(sub[1:-2]) in server_funcs:
-                        ret.remove(sub[1:-2])
                 return ret
 
         for sub in back:
-            if "{0}.envs".format(sub) in server_funcs:
+            if "{}.envs".format(sub) in server_funcs:
                 ret.append(sub)
-            elif "{0}.envs".format(sub[:-2]) in server_funcs:
-                ret.append(sub[:-2])
         return ret
 
     def master_opts(self, load):
@@ -422,7 +409,7 @@ class Fileserver(object):
         cleared = []
         errors = []
         for fsb in back:
-            fstr = "{0}.clear_cache".format(fsb)
+            fstr = "{}.clear_cache".format(fsb)
             if fstr in self.servers:
                 log.debug("Clearing %s fileserver cache", fsb)
                 failed = self.servers[fstr]()
@@ -430,7 +417,7 @@ class Fileserver(object):
                     errors.extend(failed)
                 else:
                     cleared.append(
-                        "The {0} fileserver cache was successfully cleared".format(fsb)
+                        "The {} fileserver cache was successfully cleared".format(fsb)
                     )
         return cleared, errors
 
@@ -444,17 +431,17 @@ class Fileserver(object):
         locked = []
         errors = []
         for fsb in back:
-            fstr = "{0}.lock".format(fsb)
+            fstr = "{}.lock".format(fsb)
             if fstr in self.servers:
-                msg = "Setting update lock for {0} remotes".format(fsb)
+                msg = "Setting update lock for {} remotes".format(fsb)
                 if remote:
-                    if not isinstance(remote, six.string_types):
+                    if not isinstance(remote, str):
                         errors.append(
-                            "Badly formatted remote pattern '{0}'".format(remote)
+                            "Badly formatted remote pattern '{}'".format(remote)
                         )
                         continue
                     else:
-                        msg += " matching {0}".format(remote)
+                        msg += " matching {}".format(remote)
                 log.debug(msg)
                 good, bad = self.servers[fstr](remote=remote)
                 locked.extend(good)
@@ -477,24 +464,24 @@ class Fileserver(object):
         cleared = []
         errors = []
         for fsb in back:
-            fstr = "{0}.clear_lock".format(fsb)
+            fstr = "{}.clear_lock".format(fsb)
             if fstr in self.servers:
                 good, bad = clear_lock(self.servers[fstr], fsb, remote=remote)
                 cleared.extend(good)
                 errors.extend(bad)
         return cleared, errors
 
-    def update(self, back=None):
+    def update(self, back=None, **kwargs):
         """
         Update all of the enabled fileserver backends which support the update
-        function, or
+        function
         """
         back = self.backends(back)
         for fsb in back:
-            fstr = "{0}.update".format(fsb)
+            fstr = "{}.update".format(fsb)
             if fstr in self.servers:
                 log.debug("Updating %s fileserver cache", fsb)
-                self.servers[fstr]()
+                self.servers[fstr](**kwargs)
 
     def update_intervals(self, back=None):
         """
@@ -504,7 +491,7 @@ class Fileserver(object):
         back = self.backends(back)
         ret = {}
         for fsb in back:
-            fstr = "{0}.update_intervals".format(fsb)
+            fstr = "{}.update_intervals".format(fsb)
             if fstr in self.servers:
                 ret[fsb] = self.servers[fstr]()
         return ret
@@ -518,7 +505,7 @@ class Fileserver(object):
         if sources:
             ret = {}
         for fsb in back:
-            fstr = "{0}.envs".format(fsb)
+            fstr = "{}.envs".format(fsb)
             kwargs = (
                 {"ignore_cache": True}
                 if "ignore_cache" in _argspec(self.servers[fstr]).args
@@ -548,7 +535,7 @@ class Fileserver(object):
         """
         back = self.backends(back)
         for fsb in back:
-            fstr = "{0}.init".format(fsb)
+            fstr = "{}.init".format(fsb)
             if fstr in self.servers:
                 self.servers[fstr]()
 
@@ -607,11 +594,11 @@ class Fileserver(object):
         if "saltenv" in kwargs:
             saltenv = kwargs.pop("saltenv")
 
-        if not isinstance(saltenv, six.string_types):
-            saltenv = six.text_type(saltenv)
+        if not isinstance(saltenv, str):
+            saltenv = str(saltenv)
 
         for fsb in back:
-            fstr = "{0}.find_file".format(fsb)
+            fstr = "{}.find_file".format(fsb)
             if fstr in self.servers:
                 fnd = self.servers[fstr](path, saltenv, **kwargs)
                 if fnd.get("path"):
@@ -631,13 +618,13 @@ class Fileserver(object):
 
         if "path" not in load or "loc" not in load or "saltenv" not in load:
             return ret
-        if not isinstance(load["saltenv"], six.string_types):
-            load["saltenv"] = six.text_type(load["saltenv"])
+        if not isinstance(load["saltenv"], str):
+            load["saltenv"] = str(load["saltenv"])
 
         fnd = self.find_file(load["path"], load["saltenv"])
         if not fnd.get("back"):
             return ret
-        fstr = "{0}.serve_file".format(fnd["back"])
+        fstr = "{}.serve_file".format(fnd["back"])
         if fstr in self.servers:
             return self.servers[fstr](load, fnd)
         return ret
@@ -652,8 +639,8 @@ class Fileserver(object):
 
         if "path" not in load or "saltenv" not in load:
             return "", None
-        if not isinstance(load["saltenv"], six.string_types):
-            load["saltenv"] = six.text_type(load["saltenv"])
+        if not isinstance(load["saltenv"], str):
+            load["saltenv"] = str(load["saltenv"])
 
         fnd = self.find_file(
             salt.utils.stringutils.to_unicode(load["path"]), load["saltenv"]
@@ -661,7 +648,7 @@ class Fileserver(object):
         if not fnd.get("back"):
             return "", None
         stat_result = fnd.get("stat", None)
-        fstr = "{0}.file_hash".format(fnd["back"])
+        fstr = "{}.file_hash".format(fnd["back"])
         if fstr in self.servers:
             return self.servers[fstr](load, fnd), stat_result
         return "", None
@@ -698,11 +685,11 @@ class Fileserver(object):
                 try:
                     saltenv = [x.strip() for x in saltenv.split(",")]
                 except AttributeError:
-                    saltenv = [x.strip() for x in six.text_type(saltenv).split(",")]
+                    saltenv = [x.strip() for x in str(saltenv).split(",")]
 
             for idx, val in enumerate(saltenv):
-                if not isinstance(val, six.string_types):
-                    saltenv[idx] = six.text_type(val)
+                if not isinstance(val, str):
+                    saltenv[idx] = str(val)
 
         ret = {}
         fsb = self.backends(load.pop("fsbackend", None))
@@ -721,9 +708,6 @@ class Fileserver(object):
                 )
 
         for back in file_list_backends:
-            # Account for the fact that the file_list cache directory for gitfs
-            # is 'git', hgfs is 'hg', etc.
-            back_virtualname = re.sub("fs$", "", back)
             try:
                 cache_files = os.listdir(os.path.join(list_cachedir, back))
             except OSError as exc:
@@ -740,7 +724,7 @@ class Fileserver(object):
                 if extension != "p":
                     # Filename does not end in ".p". Not a cache file, ignore.
                     continue
-                elif back_virtualname not in fsb or (
+                elif back not in fsb or (
                     saltenv is not None and cache_saltenv not in saltenv
                 ):
                     log.debug(
@@ -761,6 +745,11 @@ class Fileserver(object):
                         cache_saltenv,
                         back,
                     )
+
+        # Ensure reproducible ordering of returns
+        for key in ret:
+            ret[key].sort()
+
         return ret
 
     @ensure_unicode_args
@@ -775,11 +764,11 @@ class Fileserver(object):
         ret = set()
         if "saltenv" not in load:
             return []
-        if not isinstance(load["saltenv"], six.string_types):
-            load["saltenv"] = six.text_type(load["saltenv"])
+        if not isinstance(load["saltenv"], str):
+            load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(load.pop("fsbackend", None)):
-            fstr = "{0}.file_list".format(fsb)
+            fstr = "{}.file_list".format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
@@ -800,11 +789,11 @@ class Fileserver(object):
         ret = set()
         if "saltenv" not in load:
             return []
-        if not isinstance(load["saltenv"], six.string_types):
-            load["saltenv"] = six.text_type(load["saltenv"])
+        if not isinstance(load["saltenv"], str):
+            load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(None):
-            fstr = "{0}.file_list_emptydirs".format(fsb)
+            fstr = "{}.file_list_emptydirs".format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
@@ -825,11 +814,11 @@ class Fileserver(object):
         ret = set()
         if "saltenv" not in load:
             return []
-        if not isinstance(load["saltenv"], six.string_types):
-            load["saltenv"] = six.text_type(load["saltenv"])
+        if not isinstance(load["saltenv"], str):
+            load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(load.pop("fsbackend", None)):
-            fstr = "{0}.dir_list".format(fsb)
+            fstr = "{}.dir_list".format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
@@ -850,21 +839,21 @@ class Fileserver(object):
         ret = {}
         if "saltenv" not in load:
             return {}
-        if not isinstance(load["saltenv"], six.string_types):
-            load["saltenv"] = six.text_type(load["saltenv"])
+        if not isinstance(load["saltenv"], str):
+            load["saltenv"] = str(load["saltenv"])
 
         for fsb in self.backends(load.pop("fsbackend", None)):
-            symlstr = "{0}.symlink_list".format(fsb)
+            symlstr = "{}.symlink_list".format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get("prefix", "").strip("/")
         if prefix != "":
-            ret = dict([(x, y) for x, y in six.iteritems(ret) if x.startswith(prefix)])
+            ret = {x: y for x, y in ret.items() if x.startswith(prefix)}
         return ret
 
 
-class FSChan(object):
+class FSChan:
     """
     A class that mimics the transport channels allowing for local access to
     to the fileserver class class structure

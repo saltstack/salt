@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module exposes the functionality of the TestInfra library
 for use with SaltStack in order to verify the state of your minions.
@@ -7,7 +6,6 @@ module dynamically generates wrappers for the various resources by iterating
 over the values in the ``__all__`` variable exposed by the testinfra.modules
 namespace.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -81,28 +79,32 @@ def _get_method_result(module_, module_instance, method_name, method_arg=None):
             method_obj = getattr(module_instance, method_name)
         except AttributeError:
             raise InvalidArgumentError(
-                "The {0} module does not have any "
-                "property or method named {1}".format(module_, method_name)
+                "The {} module does not have any property or method named {}".format(
+                    module_, method_name
+                )
             )
     if isinstance(method_obj, property):
         return method_obj.fget(module_instance)
     elif isinstance(method_obj, (types.MethodType, types.FunctionType)):
         if not method_arg:
             raise InvalidArgumentError(
-                "{0} is a method of the {1} module. An "
-                "argument dict is required.".format(method_name, module_)
+                "{} is a method of the {} module. An argument dict is required.".format(
+                    method_name, module_
+                )
             )
         try:
             return getattr(module_instance, method_name)(method_arg["parameter"])
         except KeyError:
             raise InvalidArgumentError(
-                "The argument dict supplied has no "
-                'key named "parameter": {0}'.format(method_arg)
+                'The argument dict supplied has no key named "parameter": {}'.format(
+                    method_arg
+                )
             )
         except AttributeError:
             raise InvalidArgumentError(
-                "The {0} module does not have any "
-                "property or method named {1}".format(module_, method_name)
+                "The {} module does not have any property or method named {}".format(
+                    module_, method_name
+                )
             )
     else:
         return method_obj
@@ -135,8 +137,9 @@ def _apply_assertion(expected, result):
                 comparison = re.search
             else:
                 raise InvalidArgumentError(
-                    "Comparison {0} is not a valid "
-                    "selection.".format(expected.get("comparison"))
+                    "Comparison {} is not a valid selection.".format(
+                        expected.get("comparison")
+                    )
                 )
         except KeyError:
             log.exception(
@@ -147,7 +150,7 @@ def _apply_assertion(expected, result):
             raise
         return comparison(expected["expected"], result)
     else:
-        raise TypeError("Expected bool or dict but received {0}".format(type(expected)))
+        raise TypeError("Expected bool or dict but received {}".format(type(expected)))
 
 
 # This does not currently generate documentation from the underlying modules
@@ -208,7 +211,7 @@ def _copy_function(module_name, name=None):
             log.debug("Retrieved module is %s", mod.__dict__)
         except NotImplementedError:
             log.exception(
-                "The %s module is not supported for this backend and/or " "platform.",
+                "The %s module is not supported for this backend and/or platform.",
                 module_name,
             )
             success = False
@@ -218,9 +221,9 @@ def _copy_function(module_name, name=None):
             parameters = mod_sig.parameters
         else:
             if isinstance(mod.__init__, types.MethodType):
-                mod_sig = inspect.getargspec(mod.__init__)
+                mod_sig = __utils__["args.get_function_argspec"](mod.__init__)
             elif hasattr(mod, "__call__"):
-                mod_sig = inspect.getargspec(mod.__call__)
+                mod_sig = __utils__["args.get_function_argspec"](mod.__call__)
             parameters = mod_sig.args
         log.debug("Parameters accepted by module %s: %s", module_name, parameters)
         additional_args = {}
@@ -264,7 +267,7 @@ def _copy_function(module_name, name=None):
     if name is not None:
         # types.FunctionType requires a str for __name__ attribute, using a
         # unicode type will result in a TypeError.
-        name = str(name)  # future lint: disable=blacklisted-function
+        name = str(name)
     else:
         name = func.__name__
     return types.FunctionType(

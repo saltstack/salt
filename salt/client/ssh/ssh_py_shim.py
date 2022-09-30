@@ -1,4 +1,4 @@
-# pylint: disable=no-encoding-in-file,resource-leakage
+# pylint: disable=resource-leakage
 """
 This is a shim that handles checking and updating salt thin and
 then invoking thin.
@@ -30,7 +30,7 @@ EX_SCP_NOT_FOUND = 14
 EX_CANTCREAT = 73
 
 
-class OptionsContainer(object):
+class OptionsContainer:
     """
     An empty class for holding instance attribute values.
     """
@@ -47,7 +47,7 @@ ARGS = None
 
 def get_system_encoding():
     """
-        Get system encoding. Most of this code is a part of salt/__init__.py
+    Get system encoding. Most of this code is a part of salt/__init__.py
     """
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
@@ -136,8 +136,9 @@ def need_deployment():
                 )
             except OSError:
                 sys.stdout.write(
-                    "\n\nUnable to set permissions on thin directory.\nIf sudo_user is set "
-                    "and is not root, be certain the user is in the same group\nas the login user"
+                    "\n\nUnable to set permissions on thin directory.\nIf sudo_user is"
+                    " set and is not root, be certain the user is in the same group\nas"
+                    " the login user"
                 )
                 sys.exit(1)
 
@@ -215,7 +216,13 @@ def reset_time(path=".", amt=None):
         fname = os.path.join(path, fname)
         if os.path.isdir(fname):
             reset_time(fname, amt=amt)
-        os.utime(fname, (amt, amt,))
+        os.utime(
+            fname,
+            (
+                amt,
+                amt,
+            ),
+        )
 
 
 def get_executable():
@@ -239,12 +246,14 @@ def get_executable():
         "python",
     )
     for py_cmd in pycmds:
-        cmd = (
-            py_cmd
-            + " -c  \"import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))\""
-        )
         stdout, _ = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+            [
+                py_cmd,
+                "-c",
+                "import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         ).communicate()
         if sys.version_info[0] == 2 and sys.version_info[1] < 7:
             stdout = stdout.decode(get_system_encoding(), "replace").strip()
@@ -284,8 +293,9 @@ def main(argv):  # pylint: disable=W0613
 
         if os.path.exists(OPTIONS.saltdir) and not os.path.isdir(OPTIONS.saltdir):
             sys.stderr.write(
-                'ERROR: salt path "{0}" exists but is'
-                " not a directory\n".format(OPTIONS.saltdir)
+                'ERROR: salt path "{0}" exists but is not a directory\n'.format(
+                    OPTIONS.saltdir
+                )
             )
             sys.exit(EX_CANTCREAT)
 

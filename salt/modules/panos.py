@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide Palo Alto compatibility to Salt
 
@@ -28,16 +27,12 @@ through the XML API or through a brokered connection to Panorama.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
 import salt.proxy.panos
 import salt.utils.platform
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -134,7 +129,9 @@ def check_software():
     """
     query = {
         "type": "op",
-        "cmd": "<request><system><software><check></check></software></system></request>",
+        "cmd": (
+            "<request><system><software><check></check></software></system></request>"
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -194,7 +191,7 @@ def deactivate_license(key_name=None):
     if not __proxy__["panos.is_required_version"](_required_version):
         return (
             False,
-            "The panos device requires version {0} or greater for this command.".format(
+            "The panos device requires version {} or greater for this command.".format(
                 _required_version
             ),
         )
@@ -204,8 +201,10 @@ def deactivate_license(key_name=None):
     else:
         query = {
             "type": "op",
-            "cmd": "<request><license><deactivate><key><features><member>{0}</member></features>"
-            "</key></deactivate></license></request>".format(key_name),
+            "cmd": (
+                "<request><license><deactivate><key><features><member>{}</member></features>"
+                "</key></deactivate></license></request>".format(key_name)
+            ),
         }
 
     return __proxy__["panos.call"](query)
@@ -230,9 +229,7 @@ def delete_license(key_name=None):
     else:
         query = {
             "type": "op",
-            "cmd": "<delete><license><key>{0}</key></license></delete>".format(
-                key_name
-            ),
+            "cmd": "<delete><license><key>{}</key></license></delete>".format(key_name),
         }
 
     return __proxy__["panos.call"](query)
@@ -251,8 +248,10 @@ def download_antivirus():
     """
     query = {
         "type": "op",
-        "cmd": "<request><anti-virus><upgrade><download>"
-        "<latest></latest></download></upgrade></anti-virus></request>",
+        "cmd": (
+            "<request><anti-virus><upgrade><download>"
+            "<latest></latest></download></upgrade></anti-virus></request>"
+        ),
     }
 
     return _get_job_results(query)
@@ -284,17 +283,21 @@ def download_software_file(filename=None, synch=False):
     if synch is True:
         query = {
             "type": "op",
-            "cmd": "<request><system><software><download>"
-            "<file>{0}</file></download></software></system></request>".format(
-                filename
+            "cmd": (
+                "<request><system><software><download>"
+                "<file>{}</file></download></software></system></request>".format(
+                    filename
+                )
             ),
         }
     else:
         query = {
             "type": "op",
-            "cmd": "<request><system><software><download><sync-to-peer>yes</sync-to-peer>"
-            "<file>{0}</file></download></software></system></request>".format(
-                filename
+            "cmd": (
+                "<request><system><software><download><sync-to-peer>yes</sync-to-peer>"
+                "<file>{}</file></download></software></system></request>".format(
+                    filename
+                )
             ),
         }
 
@@ -327,17 +330,21 @@ def download_software_version(version=None, synch=False):
     if synch is True:
         query = {
             "type": "op",
-            "cmd": "<request><system><software><download>"
-            "<version>{0}</version></download></software></system></request>".format(
-                version
+            "cmd": (
+                "<request><system><software><download>"
+                "<version>{}</version></download></software></system></request>".format(
+                    version
+                )
             ),
         }
     else:
         query = {
             "type": "op",
-            "cmd": "<request><system><software><download><sync-to-peer>yes</sync-to-peer>"
-            "<version>{0}</version></download></software></system></request>".format(
-                version
+            "cmd": (
+                "<request><system><software><download><sync-to-peer>yes</sync-to-peer>"
+                "<version>{}</version></download></software></system></request>".format(
+                    version
+                )
             ),
         }
 
@@ -367,8 +374,10 @@ def fetch_license(auth_code=None):
     else:
         query = {
             "type": "op",
-            "cmd": "<request><license><fetch><auth-code>{0}</auth-code></fetch></license>"
-            "</request>".format(auth_code),
+            "cmd": (
+                "<request><license><fetch><auth-code>{}</auth-code></fetch></license>"
+                "</request>".format(auth_code)
+            ),
         }
 
     return __proxy__["panos.call"](query)
@@ -394,8 +403,10 @@ def get_address(address=None, vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "address/entry[@name='{1}']".format(vsys, address),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "address/entry[@name='{}']".format(vsys, address)
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -421,8 +432,10 @@ def get_address_group(addressgroup=None, vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "address-group/entry[@name='{1}']".format(vsys, addressgroup),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "address-group/entry[@name='{}']".format(vsys, addressgroup)
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -649,13 +662,13 @@ def get_ha_config():
 
 def get_ha_link():
     """
-    Show high-availability link-monitoring state.
+     Show high-availability link-monitoring state.
 
-    CLI Example:
+     CLI Example:
 
-   .. code-block:: bash
+    .. code-block:: bash
 
-        salt '*' panos.get_ha_link
+         salt '*' panos.get_ha_link
 
     """
     query = {
@@ -762,9 +775,7 @@ def get_interface_counters(name="all"):
     """
     query = {
         "type": "op",
-        "cmd": "<show><counter><interface>{0}</interface></counter></show>".format(
-            name
-        ),
+        "cmd": "<show><counter><interface>{}</interface></counter></show>".format(name),
     }
 
     return __proxy__["panos.call"](query)
@@ -787,7 +798,7 @@ def get_interfaces(name="all"):
     """
     query = {
         "type": "op",
-        "cmd": "<show><interface>{0}</interface></show>".format(name),
+        "cmd": "<show><interface>{}</interface></show>".format(name),
     }
 
     return __proxy__["panos.call"](query)
@@ -810,7 +821,7 @@ def get_job(jid=None):
     if not jid:
         raise CommandExecutionError("ID option must not be none.")
 
-    query = {"type": "op", "cmd": "<show><jobs><id>{0}</id></jobs></show>".format(jid)}
+    query = {"type": "op", "cmd": "<show><jobs><id>{}</id></jobs></show>".format(jid)}
 
     return __proxy__["panos.call"](query)
 
@@ -1159,9 +1170,7 @@ def get_predefined_application(application=None):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/predefined/application/entry[@name='{0}']".format(
-            application
-        ),
+        "xpath": "/config/predefined/application/entry[@name='{}']".format(application),
     }
 
     return __proxy__["panos.call"](query)
@@ -1186,8 +1195,10 @@ def get_security_rule(rulename=None, vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "rulebase/security/rules/entry[@name='{1}']".format(vsys, rulename),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "rulebase/security/rules/entry[@name='{}']".format(vsys, rulename)
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -1213,8 +1224,10 @@ def get_service(service=None, vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "service/entry[@name='{1}']".format(vsys, service),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "service/entry[@name='{}']".format(vsys, service)
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -1240,8 +1253,10 @@ def get_service_group(servicegroup=None, vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "service-group/entry[@name='{1}']".format(vsys, servicegroup),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "service-group/entry[@name='{}']".format(vsys, servicegroup)
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -1385,8 +1400,10 @@ def get_system_state(mask=None):
     if mask:
         query = {
             "type": "op",
-            "cmd": "<show><system><state><filter>{0}</filter></state></system></show>".format(
-                mask
+            "cmd": (
+                "<show><system><state><filter>{}</filter></state></system></show>".format(
+                    mask
+                )
             ),
         }
     else:
@@ -1411,7 +1428,7 @@ def get_uncommitted_changes():
     if not __proxy__["panos.is_required_version"](_required_version):
         return (
             False,
-            "The panos device requires version {0} or greater for this command.".format(
+            "The panos device requires version {} or greater for this command.".format(
                 _required_version
             ),
         )
@@ -1493,8 +1510,10 @@ def get_zone(zone="", vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "zone/entry[@name='{1}']".format(vsys, zone),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "zone/entry[@name='{}']".format(vsys, zone)
+        ),
     }
 
     return __proxy__["panos.call"](query)
@@ -1517,15 +1536,20 @@ def get_zones(vsys="1"):
     query = {
         "type": "config",
         "action": "get",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/"
-        "zone".format(vsys),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/"
+            "zone".format(vsys)
+        ),
     }
 
     return __proxy__["panos.call"](query)
 
 
 def install_antivirus(
-    version=None, latest=False, synch=False, skip_commit=False,
+    version=None,
+    latest=False,
+    synch=False,
+    skip_commit=False,
 ):
     """
     Install anti-virus packages.
@@ -1563,19 +1587,23 @@ def install_antivirus(
     if latest is True:
         query = {
             "type": "op",
-            "cmd": "<request><anti-virus><upgrade><install>"
-            "<commit>{0}</commit><sync-to-peer>{1}</sync-to-peer>"
-            "<version>latest</version></install></upgrade></anti-virus></request>".format(
-                c, s
+            "cmd": (
+                "<request><anti-virus><upgrade><install>"
+                "<commit>{}</commit><sync-to-peer>{}</sync-to-peer>"
+                "<version>latest</version></install></upgrade></anti-virus></request>".format(
+                    c, s
+                )
             ),
         }
     else:
         query = {
             "type": "op",
-            "cmd": "<request><anti-virus><upgrade><install>"
-            "<commit>{0}</commit><sync-to-peer>{1}</sync-to-peer>"
-            "<version>{2}</version></install></upgrade></anti-virus></request>".format(
-                c, s, version
+            "cmd": (
+                "<request><anti-virus><upgrade><install>"
+                "<commit>{}</commit><sync-to-peer>{}</sync-to-peer>"
+                "<version>{}</version></install></upgrade></anti-virus></request>".format(
+                    c, s, version
+                )
             ),
         }
 
@@ -1620,9 +1648,11 @@ def install_software(version=None):
 
     query = {
         "type": "op",
-        "cmd": "<request><system><software><install>"
-        "<version>{0}</version></install></software></system></request>".format(
-            version
+        "cmd": (
+            "<request><system><software><install>"
+            "<version>{}</version></install></software></system></request>".format(
+                version
+            )
         ),
     }
 
@@ -1674,7 +1704,9 @@ def refresh_fqdn_cache(force=False):
     else:
         query = {
             "type": "op",
-            "cmd": "<request><system><fqdn><refresh></refresh></fqdn></system></request>",
+            "cmd": (
+                "<request><system><fqdn><refresh></refresh></fqdn></system></request>"
+            ),
         }
 
     return __proxy__["panos.call"](query)
@@ -1722,7 +1754,7 @@ def resolve_address(address=None, vsys=None):
     if not __proxy__["panos.is_required_version"](_required_version):
         return (
             False,
-            "The panos device requires version {0} or greater for this command.".format(
+            "The panos device requires version {} or greater for this command.".format(
                 _required_version
             ),
         )
@@ -1733,15 +1765,17 @@ def resolve_address(address=None, vsys=None):
     if not vsys:
         query = {
             "type": "op",
-            "cmd": "<request><resolve><address>{0}</address></resolve></request>".format(
+            "cmd": "<request><resolve><address>{}</address></resolve></request>".format(
                 address
             ),
         }
     else:
         query = {
             "type": "op",
-            "cmd": "<request><resolve><vsys>{0}</vsys><address>{1}</address></resolve>"
-            "</request>".format(vsys, address),
+            "cmd": (
+                "<request><resolve><vsys>{}</vsys><address>{}</address></resolve>"
+                "</request>".format(vsys, address)
+            ),
         }
 
     return __proxy__["panos.call"](query)
@@ -1766,7 +1800,7 @@ def save_device_config(filename=None):
 
     query = {
         "type": "op",
-        "cmd": "<save><config><to>{0}</to></config></save>".format(filename),
+        "cmd": "<save><config><to>{}</to></config></save>".format(filename),
     }
 
     return __proxy__["panos.call"](query)
@@ -1814,9 +1848,11 @@ def set_authentication_profile(profile=None, deploy=False):
     query = {
         "type": "config",
         "action": "set",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/"
-        "authentication-profile",
-        "element": "<authentication-profile>{0}</authentication-profile>".format(
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/"
+            "authentication-profile"
+        ),
+        "element": "<authentication-profile>{}</authentication-profile>".format(
             profile
         ),
     }
@@ -1855,8 +1891,10 @@ def set_hostname(hostname=None, deploy=False):
     query = {
         "type": "config",
         "action": "set",
-        "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system",
-        "element": "<hostname>{0}</hostname>".format(hostname),
+        "xpath": (
+            "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system"
+        ),
+        "element": "<hostname>{}</hostname>".format(hostname),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -1900,7 +1938,7 @@ def set_management_icmp(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-icmp>{0}</disable-icmp>".format(value),
+        "element": "<disable-icmp>{}</disable-icmp>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -1944,7 +1982,7 @@ def set_management_http(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-http>{0}</disable-http>".format(value),
+        "element": "<disable-http>{}</disable-http>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -1988,7 +2026,7 @@ def set_management_https(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-https>{0}</disable-https>".format(value),
+        "element": "<disable-https>{}</disable-https>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2032,7 +2070,7 @@ def set_management_ocsp(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-http-ocsp>{0}</disable-http-ocsp>".format(value),
+        "element": "<disable-http-ocsp>{}</disable-http-ocsp>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2076,7 +2114,7 @@ def set_management_snmp(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-snmp>{0}</disable-snmp>".format(value),
+        "element": "<disable-snmp>{}</disable-snmp>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2120,7 +2158,7 @@ def set_management_ssh(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-ssh>{0}</disable-ssh>".format(value),
+        "element": "<disable-ssh>{}</disable-ssh>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2164,7 +2202,7 @@ def set_management_telnet(enabled=True, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/service",
-        "element": "<disable-telnet>{0}</disable-telnet>".format(value),
+        "element": "<disable-telnet>{}</disable-telnet>".format(value),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2223,8 +2261,7 @@ def set_ntp_authentication(
 
     if authentication_type == "symmetric" and not authentication_key:
         raise salt.exceptions.CommandExecutionError(
-            "When using symmetric authentication, authentication_key must be "
-            "provided."
+            "When using symmetric authentication, authentication_key must be provided."
         )
 
     if authentication_type == "symmetric" and not key_id:
@@ -2234,7 +2271,7 @@ def set_ntp_authentication(
 
     if authentication_type == "symmetric" and algorithm not in ["md5", "sha1"]:
         raise salt.exceptions.CommandExecutionError(
-            "When using symmetric authentication, algorithm must be md5 or " "sha1."
+            "When using symmetric authentication, algorithm must be md5 or sha1."
         )
 
     if authentication_type == "symmetric":
@@ -2242,11 +2279,15 @@ def set_ntp_authentication(
             query = {
                 "type": "config",
                 "action": "set",
-                "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-                "primary-ntp-server/authentication-type",
-                "element": "<symmetric-key><algorithm><{0}><authentication-key>{1}</authentication-key></{0}>"
-                "</algorithm><key-id>{2}</key-id></symmetric-key>".format(
-                    algorithm, authentication_key, key_id
+                "xpath": (
+                    "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                    "primary-ntp-server/authentication-type"
+                ),
+                "element": (
+                    "<symmetric-key><algorithm><{0}><authentication-key>{1}</authentication-key></{0}>"
+                    "</algorithm><key-id>{2}</key-id></symmetric-key>".format(
+                        algorithm, authentication_key, key_id
+                    )
                 ),
             }
             ret.update({"primary_server": __proxy__["panos.call"](query)})
@@ -2255,11 +2296,15 @@ def set_ntp_authentication(
             query = {
                 "type": "config",
                 "action": "set",
-                "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-                "secondary-ntp-server/authentication-type",
-                "element": "<symmetric-key><algorithm><{0}><authentication-key>{1}</authentication-key></{0}>"
-                "</algorithm><key-id>{2}</key-id></symmetric-key>".format(
-                    algorithm, authentication_key, key_id
+                "xpath": (
+                    "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                    "secondary-ntp-server/authentication-type"
+                ),
+                "element": (
+                    "<symmetric-key><algorithm><{0}><authentication-key>{1}</authentication-key></{0}>"
+                    "</algorithm><key-id>{2}</key-id></symmetric-key>".format(
+                        algorithm, authentication_key, key_id
+                    )
                 ),
             }
             ret.update({"secondary_server": __proxy__["panos.call"](query)})
@@ -2268,8 +2313,10 @@ def set_ntp_authentication(
             query = {
                 "type": "config",
                 "action": "set",
-                "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-                "primary-ntp-server/authentication-type",
+                "xpath": (
+                    "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                    "primary-ntp-server/authentication-type"
+                ),
                 "element": "<autokey/>",
             }
             ret.update({"primary_server": __proxy__["panos.call"](query)})
@@ -2278,8 +2325,10 @@ def set_ntp_authentication(
             query = {
                 "type": "config",
                 "action": "set",
-                "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-                "secondary-ntp-server/authentication-type",
+                "xpath": (
+                    "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                    "secondary-ntp-server/authentication-type"
+                ),
                 "element": "<autokey/>",
             }
             ret.update({"secondary_server": __proxy__["panos.call"](query)})
@@ -2288,8 +2337,10 @@ def set_ntp_authentication(
             query = {
                 "type": "config",
                 "action": "set",
-                "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-                "primary-ntp-server/authentication-type",
+                "xpath": (
+                    "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                    "primary-ntp-server/authentication-type"
+                ),
                 "element": "<none/>",
             }
             ret.update({"primary_server": __proxy__["panos.call"](query)})
@@ -2298,8 +2349,10 @@ def set_ntp_authentication(
             query = {
                 "type": "config",
                 "action": "set",
-                "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-                "secondary-ntp-server/authentication-type",
+                "xpath": (
+                    "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                    "secondary-ntp-server/authentication-type"
+                ),
                 "element": "<none/>",
             }
             ret.update({"secondary_server": __proxy__["panos.call"](query)})
@@ -2336,9 +2389,11 @@ def set_ntp_servers(primary_server=None, secondary_server=None, deploy=False):
         query = {
             "type": "config",
             "action": "set",
-            "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-            "primary-ntp-server",
-            "element": "<ntp-server-address>{0}</ntp-server-address>".format(
+            "xpath": (
+                "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                "primary-ntp-server"
+            ),
+            "element": "<ntp-server-address>{}</ntp-server-address>".format(
                 primary_server
             ),
         }
@@ -2348,9 +2403,11 @@ def set_ntp_servers(primary_server=None, secondary_server=None, deploy=False):
         query = {
             "type": "config",
             "action": "set",
-            "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
-            "secondary-ntp-server",
-            "element": "<ntp-server-address>{0}</ntp-server-address>".format(
+            "xpath": (
+                "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/ntp-servers/"
+                "secondary-ntp-server"
+            ),
+            "element": "<ntp-server-address>{}</ntp-server-address>".format(
                 secondary_server
             ),
         }
@@ -2390,7 +2447,7 @@ def set_permitted_ip(address=None, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/permitted-ip",
-        "element": "<entry name='{0}'></entry>".format(address),
+        "element": "<entry name='{}'></entry>".format(address),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2428,7 +2485,7 @@ def set_timezone(tz=None, deploy=False):
         "type": "config",
         "action": "set",
         "xpath": "/config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/timezone",
-        "element": "<timezone>{0}</timezone>".format(tz),
+        "element": "<timezone>{}</timezone>".format(tz),
     }
 
     ret.update(__proxy__["panos.call"](query))
@@ -2478,10 +2535,10 @@ def test_fib_route(ip=None, vr="vr1"):
     xpath = "<test><routing><fib-lookup>"
 
     if ip:
-        xpath += "<ip>{0}</ip>".format(ip)
+        xpath += "<ip>{}</ip>".format(ip)
 
     if vr:
-        xpath += "<virtual-router>{0}</virtual-router>".format(vr)
+        xpath += "<virtual-router>{}</virtual-router>".format(vr)
 
     xpath += "</fib-lookup></routing></test>"
 
@@ -2537,35 +2594,35 @@ def test_security_policy(
     xpath = "<test><security-policy-match>"
 
     if sourcezone:
-        xpath += "<from>{0}</from>".format(sourcezone)
+        xpath += "<from>{}</from>".format(sourcezone)
 
     if destinationzone:
-        xpath += "<to>{0}</to>".format(destinationzone)
+        xpath += "<to>{}</to>".format(destinationzone)
 
     if source:
-        xpath += "<source>{0}</source>".format(source)
+        xpath += "<source>{}</source>".format(source)
 
     if destination:
-        xpath += "<destination>{0}</destination>".format(destination)
+        xpath += "<destination>{}</destination>".format(destination)
 
     if protocol:
-        xpath += "<protocol>{0}</protocol>".format(protocol)
+        xpath += "<protocol>{}</protocol>".format(protocol)
 
     if port:
-        xpath += "<destination-port>{0}</destination-port>".format(port)
+        xpath += "<destination-port>{}</destination-port>".format(port)
 
     if application:
-        xpath += "<application>{0}</application>".format(application)
+        xpath += "<application>{}</application>".format(application)
 
     if category:
-        xpath += "<category>{0}</category>".format(category)
+        xpath += "<category>{}</category>".format(category)
 
     if allrules:
         xpath += "<show-all>yes</show-all>"
 
     xpath += "</security-policy-match></test>"
 
-    query = {"type": "op", "vsys": "vsys{0}".format(vsys), "cmd": xpath}
+    query = {"type": "op", "vsys": "vsys{}".format(vsys), "cmd": xpath}
 
     return __proxy__["panos.call"](query)
 
@@ -2589,8 +2646,10 @@ def unlock_admin(username=None):
 
     query = {
         "type": "op",
-        "cmd": "<set><management-server><unlock><admin>{0}</admin></unlock></management-server>"
-        "</set>".format(username),
+        "cmd": (
+            "<set><management-server><unlock><admin>{}</admin></unlock></management-server>"
+            "</set>".format(username)
+        ),
     }
 
     return __proxy__["panos.call"](query)

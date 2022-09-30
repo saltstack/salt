@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage IPMI devices over LAN
 ============================
@@ -35,19 +34,16 @@ Every call can override the config defaults:
             - api_pass: apassword
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.ext import six
-
 
 def __virtual__():
     IMPORT_ERR = None
     try:
-        from pyghmi.ipmi import command  # pylint: disable=unused-import
-    except Exception as exc:  # pylint: disable=broad-except
-        IMPORT_ERR = six.text_type(exc)
+        # pylint: disable=unused-import
+        from pyghmi.ipmi import command  # nosec
+
+        # pylint: enable=unused-import
+    except ImportError as exc:
+        IMPORT_ERR = str(exc)
     return (IMPORT_ERR is None, IMPORT_ERR)
 
 
@@ -135,7 +131,7 @@ def power(name="power_on", wait=300, **kwargs):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "would power: {0} system".format(name)
+        ret["comment"] = "would power: {} system".format(name)
         ret["result"] = None
         ret["changes"] = {"old": org, "new": name}
         return ret

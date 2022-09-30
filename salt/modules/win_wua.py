@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing Windows Updates using the Windows Update Agent.
 
@@ -55,19 +54,13 @@ Group Policy using the ``lgpo`` module.
 
 :depends: salt.utils.win_update
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.platform
+import salt.utils.win_service
 import salt.utils.win_update
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import win32com.client
@@ -88,13 +81,45 @@ def __virtual__():
     Only works on Windows systems with PyWin32
     """
     if not salt.utils.platform.is_windows():
-        return False, "WUA: Only available on Window systems"
+        return False, "WUA: Only available on Windows systems"
 
     if not HAS_PYWIN32:
         return False, "WUA: Requires PyWin32 libraries"
 
     if not salt.utils.win_update.HAS_PYWIN32:
         return False, "WUA: Missing Libraries required by salt.utils.win_update"
+
+    if salt.utils.win_service.info("wuauserv")["StartType"] == "Disabled":
+        return (
+            False,
+            "WUA: The Windows Update service (wuauserv) must not be disabled",
+        )
+
+    if salt.utils.win_service.info("msiserver")["StartType"] == "Disabled":
+        return (
+            False,
+            "WUA: The Windows Installer service (msiserver) must not be disabled",
+        )
+
+    if salt.utils.win_service.info("BITS")["StartType"] == "Disabled":
+        return (
+            False,
+            "WUA: The Background Intelligent Transfer service (bits) must not "
+            "be disabled",
+        )
+
+    if not salt.utils.win_service.info("CryptSvc")["StartType"] == "Auto":
+        return (
+            False,
+            "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
+        )
+
+    if salt.utils.win_service.info("TrustedInstaller")["StartType"] == "Disabled":
+        return (
+            False,
+            "WUA: The Windows Module Installer service (TrustedInstaller) must "
+            "not be disabled",
+        )
 
     return True
 
@@ -175,7 +200,7 @@ def available(
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
 
@@ -285,7 +310,7 @@ def get(name, download=False, install=False, online=True):
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
 
@@ -436,7 +461,7 @@ def list(
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
 
@@ -527,7 +552,7 @@ def list(
 
 def installed(summary=False, kbs_only=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Get a list of all updates that are currently installed on the system.
 
@@ -630,11 +655,11 @@ def download(names):
         raise CommandExecutionError("No updates found")
 
     # Make sure it's a list so count comparison is correct
-    if isinstance(names, six.string_types):
+    if isinstance(names, str):
         names = [names]
 
-    if isinstance(names, six.integer_types):
-        names = [six.text_type(names)]
+    if isinstance(names, int):
+        names = [str(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError(
@@ -684,11 +709,11 @@ def install(names):
         raise CommandExecutionError("No updates found")
 
     # Make sure it's a list so count comparison is correct
-    if isinstance(names, six.string_types):
+    if isinstance(names, str):
         names = [names]
 
-    if isinstance(names, six.integer_types):
-        names = [six.text_type(names)]
+    if isinstance(names, int):
+        names = [str(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError(
@@ -920,17 +945,17 @@ def set_wu_settings(
     if time is not None:
         # Check for time as a string: if the time is not quoted, yaml will
         # treat it as an integer
-        if not isinstance(time, six.string_types):
+        if not isinstance(time, str):
             ret["Comment"] = (
                 "Time argument needs to be a string; it may need to "
-                "be quoted. Passed {0}. Time not set.".format(time)
+                "be quoted. Passed {}. Time not set.".format(time)
             )
             ret["Success"] = False
         # Check for colon in the time
         elif ":" not in time:
             ret["Comment"] = (
                 "Time argument needs to be in 00:00 format. "
-                "Passed {0}. Time not set.".format(time)
+                "Passed {}. Time not set.".format(time)
             )
             ret["Success"] = False
         else:
@@ -961,10 +986,15 @@ def set_wu_settings(
                     ret["msupdate"] = msupdate
                 except Exception as error:  # pylint: disable=broad-except
                     # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                    (hr, msg, exc, arg,) = error.args
+                    (
+                        hr,
+                        msg,
+                        exc,
+                        arg,
+                    ) = error.args
                     # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
                     # Consider checking for -2147024891 (0x80070005) Access Denied
-                    ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
+                    ret["Comment"] = "Failed with failure code: {}".format(exc[5])
                     ret["Success"] = False
             else:
                 # msupdate is false, so remove it from the services
@@ -977,13 +1007,18 @@ def set_wu_settings(
                         ret["msupdate"] = msupdate
                     except Exception as error:  # pylint: disable=broad-except
                         # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                        (hr, msg, exc, arg,) = error.args
+                        (
+                            hr,
+                            msg,
+                            exc,
+                            arg,
+                        ) = error.args
                         # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
                         # Consider checking for the following
                         # -2147024891 (0x80070005) Access Denied
                         # -2145091564 (0x80248014) Service Not Found (shouldn't get
                         # this with the check for _get_msupdate_status above
-                        ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
+                        ret["Comment"] = "Failed with failure code: {}".format(exc[5])
                         ret["Success"] = False
                 else:
                     ret["msupdate"] = msupdate
@@ -1087,11 +1122,11 @@ def get_wu_settings():
         # Scheduled Installation Time requires special handling to return the time
         # in the right format
         if obj_au_settings.ScheduledInstallationTime < 10:
-            ret["Scheduled Time"] = "0{0}:00".format(
+            ret["Scheduled Time"] = "0{}:00".format(
                 obj_au_settings.ScheduledInstallationTime
             )
         else:
-            ret["Scheduled Time"] = "{0}:00".format(
+            ret["Scheduled Time"] = "{}:00".format(
                 obj_au_settings.ScheduledInstallationTime
             )
 

@@ -39,30 +39,13 @@ config_opt:
   layer2: 'kosher'
 yaml_utf8: True
 
-external_auth:
-  pam:
-    saltdev:
-      - '@wheel'
-      - '@runner'
-      - test.*
-    saltops%:
-      - '@wheel'
-      - '@runner'
-      - 'test.*'
-  auto:
-    saltdev_auto:
-      - '@wheel'
-      - '@runner'
-      - test.*
-    saltdev_api:
-      - '@wheel'
-      - '@runner'
-      - test.*
-      - grains.*
-    '*':
-      - '@wheel'
-      - '@runner'
-      - test.*
+# DO NOT SET external_auth in this config file, see tests/conftest.py and tests/pytests/conftest.py
+#external_auth:
+#  auto:
+#    '*':
+#      - '@wheel'
+#      - '@runner'
+#      - test.*
 
 master_tops:
   master_tops_test: True
@@ -132,5 +115,9 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379
 venafi:
   fake: "true"

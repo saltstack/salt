@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt's pluggable authentication system
 
@@ -13,30 +12,24 @@ so that any external authentication system can be used inside of Salt
 # 5. Cache auth token with relative data opts['token_dir']
 # 6. Interface to verify tokens
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import collections
 import getpass
 import logging
 import random
 import time
+from collections.abc import Iterable, Mapping
 
-# Import salt libs
+import salt.channel.client
 import salt.config
 import salt.exceptions
 import salt.loader
 import salt.payload
-import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
-import salt.utils.zeromq
-from salt.ext import six
-from salt.ext.six.moves import input
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +50,7 @@ AUTH_INTERNAL_KEYWORDS = frozenset(
 )
 
 
-class LoadAuth(object):
+class LoadAuth:
     """
     Wrap the authentication system to handle peripheral components
     """
@@ -65,7 +58,6 @@ class LoadAuth(object):
     def __init__(self, opts, ckminions=None):
         self.opts = opts
         self.max_fail = 1.0
-        self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
@@ -77,7 +69,7 @@ class LoadAuth(object):
         """
         if "eauth" not in load:
             return ""
-        fstr = "{0}.auth".format(load["eauth"])
+        fstr = "{}.auth".format(load["eauth"])
         if fstr not in self.auth:
             return ""
         try:
@@ -95,7 +87,7 @@ class LoadAuth(object):
         """
         if "eauth" not in load:
             return False
-        fstr = "{0}.auth".format(load["eauth"])
+        fstr = "{}.auth".format(load["eauth"])
         if fstr not in self.auth:
             return False
         # When making auth calls, only username, password, auth, and token
@@ -145,7 +137,7 @@ class LoadAuth(object):
         mod = self.opts["eauth_acl_module"]
         if not mod:
             mod = load["eauth"]
-        fstr = "{0}.acl".format(mod)
+        fstr = "{}.acl".format(mod)
         if fstr not in self.auth:
             return None
         fcall = salt.utils.args.format_call(
@@ -164,7 +156,7 @@ class LoadAuth(object):
         """
         if "eauth" not in load:
             return auth_list
-        fstr = "{0}.process_acl".format(load["eauth"])
+        fstr = "{}.process_acl".format(load["eauth"])
         if fstr not in self.auth:
             return auth_list
         try:
@@ -180,7 +172,7 @@ class LoadAuth(object):
         """
         if "eauth" not in load:
             return False
-        fstr = "{0}.groups".format(load["eauth"])
+        fstr = "{}.groups".format(load["eauth"])
         if fstr not in self.auth:
             return False
         fcall = salt.utils.args.format_call(
@@ -202,9 +194,9 @@ class LoadAuth(object):
         if expire_override is True:
             return True
 
-        if isinstance(expire_override, collections.Mapping):
+        if isinstance(expire_override, Mapping):
             expire_whitelist = expire_override.get(load["eauth"], [])
-            if isinstance(expire_whitelist, collections.Iterable):
+            if isinstance(expire_whitelist, Iterable):
                 if load.get("username") in expire_whitelist:
                     return True
 
@@ -238,7 +230,7 @@ class LoadAuth(object):
         if groups:
             tdata["groups"] = groups
 
-        return self.tokens["{0}.mk_token".format(self.opts["eauth_tokens"])](
+        return self.tokens["{}.mk_token".format(self.opts["eauth_tokens"])](
             self.opts, tdata
         )
 
@@ -249,7 +241,7 @@ class LoadAuth(object):
         """
         tdata = {}
         try:
-            tdata = self.tokens["{0}.get_token".format(self.opts["eauth_tokens"])](
+            tdata = self.tokens["{}.get_token".format(self.opts["eauth_tokens"])](
                 self.opts, tok
             )
         except salt.exceptions.SaltDeserializationError:
@@ -269,6 +261,7 @@ class LoadAuth(object):
 
         if rm_tok:
             self.rm_token(tok)
+            return {}
 
         return tdata
 
@@ -276,7 +269,7 @@ class LoadAuth(object):
         """
         List all tokens in eauth_tokn storage.
         """
-        return self.tokens["{0}.list_tokens".format(self.opts["eauth_tokens"])](
+        return self.tokens["{}.list_tokens".format(self.opts["eauth_tokens"])](
             self.opts
         )
 
@@ -284,7 +277,7 @@ class LoadAuth(object):
         """
         Remove the given token from token storage.
         """
-        self.tokens["{0}.rm_token".format(self.opts["eauth_tokens"])](self.opts, tok)
+        self.tokens["{}.rm_token".format(self.opts["eauth_tokens"])](self.opts, tok)
 
     def authenticate_token(self, load):
         """
@@ -459,8 +452,9 @@ class LoadAuth(object):
             if not self.authenticate_eauth(load):
                 ret["error"] = {
                     "name": "EauthAuthenticationError",
-                    "message": 'Authentication failure of type "eauth" occurred for '
-                    "user {0}.".format(username),
+                    "message": 'Authentication failure of type "eauth" occurred for user {}.'.format(
+                        username
+                    ),
                 }
                 return ret
 
@@ -470,7 +464,7 @@ class LoadAuth(object):
             msg = 'Authentication failure of type "user" occurred'
             if not auth_ret:  # auth_ret can be a boolean or the effective user id
                 if show_username:
-                    msg = "{0} for user {1}.".format(msg, username)
+                    msg = "{} for user {}.".format(msg, username)
                 ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                 return ret
 
@@ -502,7 +496,7 @@ class LoadAuth(object):
         return ret
 
 
-class Resolver(object):
+class Resolver:
     """
     The class used to resolve options for the command line and for generic
     interactive interfaces
@@ -514,10 +508,10 @@ class Resolver(object):
 
     def _send_token_request(self, load):
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
-            six.text_type(self.opts["ret_port"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
+            str(self.opts["ret_port"]),
         )
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             return channel.send(load)
@@ -531,17 +525,16 @@ class Resolver(object):
         if not eauth:
             print("External authentication system has not been specified")
             return ret
-        fstr = "{0}.auth".format(eauth)
+        fstr = "{}.auth".format(eauth)
         if fstr not in self.auth:
             print(
-                (
-                    'The specified external authentication system "{0}" is '
-                    "not available"
-                ).format(eauth)
+                'The specified external authentication system "{}" is not available'.format(
+                    eauth
+                )
             )
             print(
-                "Available eauth types: {0}".format(
-                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
+                "Available eauth types: {}".format(
+                    ", ".join(sorted(k[:-5] for k in self.auth if k.endswith(".auth")))
                 )
             )
             return ret
@@ -551,14 +544,14 @@ class Resolver(object):
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
-                ret[arg] = getpass.getpass("{0}: ".format(arg))
+                ret[arg] = getpass.getpass("{}: ".format(arg))
             else:
-                ret[arg] = input("{0}: ".format(arg))
+                ret[arg] = input("{}: ".format(arg))
         for kwarg, default in list(args["kwargs"].items()):
             if kwarg in self.opts:
                 ret["kwarg"] = self.opts[kwarg]
             else:
-                ret[kwarg] = input("{0} [{1}]: ".format(kwarg, default))
+                ret[kwarg] = input("{} [{}]: ".format(kwarg, default))
 
         # Use current user if empty
         if "username" in ret and not ret["username"]:
@@ -580,7 +573,7 @@ class Resolver(object):
             with salt.utils.files.set_umask(0o177):
                 with salt.utils.files.fopen(self.opts["token_file"], "w+") as fp_:
                     fp_.write(tdata["token"])
-        except (IOError, OSError):
+        except OSError:
             pass
         return tdata
 
@@ -603,7 +596,7 @@ class Resolver(object):
         return tdata
 
 
-class AuthUser(object):
+class AuthUser:
     """
     Represents a user requesting authentication to the salt master
     """

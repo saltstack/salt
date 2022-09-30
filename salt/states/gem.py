@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation of Ruby modules packaged as gems
 =============================================
@@ -14,7 +13,6 @@ you can specify what ruby version and gemset to target.
         - user: rvm
         - ruby: jruby@jgemset
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -120,7 +118,7 @@ def installed(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The gem {0} would have been installed".format(name)
+        ret["comment"] = "The gem {} would have been installed".format(name)
         return ret
     if __salt__["gem.install"](
         name,
@@ -171,7 +169,7 @@ def removed(name, ruby=None, user=None, gem_bin=None):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The gem {0} would have been removed".format(name)
+        ret["comment"] = "The gem {} would have been removed".format(name)
         return ret
     if __salt__["gem.uninstall"](name, ruby, gem_bin=gem_bin, runas=user):
         ret["result"] = True
@@ -205,7 +203,7 @@ def sources_add(name, ruby=None, user=None):
         ret["comment"] = "Gem source is already added."
         return ret
     if __opts__["test"]:
-        ret["comment"] = "The gem source {0} would have been added.".format(name)
+        ret["comment"] = "The gem source {} would have been added.".format(name)
         return ret
     if __salt__["gem.sources_add"](source_uri=name, ruby=ruby, runas=user):
         ret["result"] = True

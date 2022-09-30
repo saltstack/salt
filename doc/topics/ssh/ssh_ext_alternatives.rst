@@ -5,10 +5,10 @@ SSH Ext Alternatives
 ====================
 
 In the 2019.2.0 release the ``ssh_ext_alternatives`` feature was added.
-This allows salt-ssh to work across different python versions. You will
+This allows salt-ssh to work across different supported python versions. You will
 need to ensure you have the following:
 
-  - Salt is installed, with all required dependnecies for both Python2 and Python3
+  - Salt is installed, with all required dependnecies for the Python version.
   - Everything needs to be importable from the respective Python environment.
 
 To enable using this feature you will need to edit the master configuration similar
@@ -31,10 +31,18 @@ to below:
                  markupsafe: /opt/markupsafe
                  backports_abc: /opt/backports_abc.py
 
+.. warning::
+    When using Salt versions >= 3001 and Python 2 is your ``py-version``
+    you need to use an older version of Salt that supports Python 2.
+    For example, if using Salt-SSH version 3001 and you do not want
+    to install Python 3 on your target host you can use ``ssh_ext_alternatives``'s
+    ``path`` option. This option needs to point to a 2019.2.3 Salt installation directory
+    on your Salt-SSH host, which still supports Python 2.
+
 auto_detect
 -----------
 
-In the Sodium release the ``auto_detect`` feature was added for ``ssh_ext_alternatives``.
+In the 3001 release the ``auto_detect`` feature was added for ``ssh_ext_alternatives``.
 This allows salt-ssh to automatically detect the path to all of your dependencies and
 does not require you to define them under ``dependencies``.
 

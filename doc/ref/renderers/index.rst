@@ -19,11 +19,13 @@ Two Kinds of Renderers
 ----------------------
 
 Renderers fall into one of two categories, based on what they output: text or
-data. The one exception to this would be the :mod:`pure python
-<salt.renderers.py>` renderer, which can be used in either capacity.
+data. Some exceptions to this would be the :mod:`pure python
+<salt.renderers.py>` and :mod:`gpg <salt.renderers.gpg>` renderers which could be used in either capacity.
 
 Text Renderers
 **************
+
+.. include:: ../../_incl/jinja_security.rst
 
 A text renderer returns text. These include templating engines such as
 :mod:`jinja <salt.renderers.jinja>`, :mod:`mako <salt.renderers.mako>`, and
@@ -57,7 +59,7 @@ following are all data renderers:
 - :mod:`stateconf <salt.renderers.stateconf>`
 - :mod:`yamlex <salt.renderers.yamlex>`
 - :mod:`yaml <salt.renderers.yaml>`
-
+- :mod:`gpg <salt.renderers.gpg>`
 
 Overriding the Default Renderer
 -------------------------------
@@ -73,17 +75,14 @@ to install a package:
 
     #!py
 
+
     def run():
-        '''
+        """
         Install version 1.5-1.el7 of package "python-foo"
-        '''
+        """
         return {
-            'include': ['python'],
-            'python-foo': {
-                'pkg.installed': [
-                    {'version': '1.5-1.el7'},
-                ]
-            }
+            "include": ["python"],
+            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"}]},
         }
 
 This would be equivalent to the following:
@@ -185,7 +184,8 @@ strings or file-like objects as input. For example:
     import mycoolmodule
     from salt.ext import six
 
-    def render(data, saltenv='base', sls='', **kwargs):
+
+    def render(data, saltenv="base", sls="", **kwargs):
         if not isinstance(data, six.string_types):
             # Read from file-like object
             data = data.read()
@@ -227,7 +227,8 @@ Here is a simple YAML renderer example:
     from salt.utils.yamlloader import SaltYamlSafeLoader
     from salt.ext import six
 
-    def render(yaml_data, saltenv='', sls='', **kws):
+
+    def render(yaml_data, saltenv="", sls="", **kws):
         if not isinstance(yaml_data, six.string_types):
             yaml_data = yaml_data.read()
         data = salt.utils.yaml.safe_load(yaml_data)

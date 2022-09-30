@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Control the Salt command interface
 ==================================
@@ -7,7 +6,7 @@ This state is intended for use from the Salt Master. It provides access to
 sending commands down to minions as well as access to executing master-side
 modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-    .. versionadded: 2016.11.0
+    .. versionadded:: 2016.11.0
 
     Support for masterless minions was added to the ``salt.state`` function,
     so they can run orchestration sls files. This is particularly useful when
@@ -21,9 +20,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import fnmatch
 import logging
 import sys
@@ -32,12 +29,9 @@ import time
 
 import salt.exceptions
 import salt.output
-
-# Import salt libs
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -93,13 +87,13 @@ def _parallel_map(func, inputs):
         thread.start()
         return thread
 
-    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    threads = list(map(create_thread, range(len(inputs))))
     for thread in threads:
         thread.join()
     for error in errors:
         if error is not None:
             exc_type, exc_value, exc_traceback = error
-            six.reraise(exc_type, exc_value, exc_traceback)
+            raise exc_value.with_traceback(exc_traceback)
     return outputs
 
 
@@ -119,6 +113,7 @@ def state(
     pillar=None,
     pillarenv=None,
     expect_minions=True,
+    exclude=None,
     fail_minions=None,
     allow_fail=0,
     concurrent=False,
@@ -139,7 +134,7 @@ def state(
     tgt
         The target specification for the state run.
 
-        .. versionadded: 2016.11.0
+        .. versionadded:: 2016.11.0
 
         Masterless support: When running on a masterless minion, the ``tgt``
         is ignored and will always be the local minion.
@@ -202,6 +197,9 @@ def state(
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -241,6 +239,18 @@ def state(
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -303,6 +313,9 @@ def state(
     if saltenv is not None:
         cmd_kw["kwarg"]["saltenv"] = saltenv
 
+    if exclude is not None:
+        cmd_kw["kwarg"]["exclude"] = exclude
+
     cmd_kw["kwarg"]["queue"] = queue
 
     if isinstance(concurrent, bool):
@@ -313,7 +326,7 @@ def state(
         return state_ret
 
     if batch is not None:
-        cmd_kw["batch"] = six.text_type(batch)
+        cmd_kw["batch"] = str(batch)
 
     if subset is not None:
         cmd_kw["subset"] = subset
@@ -352,11 +365,11 @@ def state(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, six.string_types):
+    elif isinstance(fail_minions, str):
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
 
@@ -365,7 +378,7 @@ def state(
         state_ret["comment"] = "No minions returned"
         return state_ret
 
-    for minion, mdata in six.iteritems(cmd_ret):
+    for minion, mdata in cmd_ret.items():
         if mdata.get("out", "") != "highstate":
             log.warning("Output from salt state not highstate")
 
@@ -391,7 +404,7 @@ def state(
             changes[minion] = m_ret
             continue
         try:
-            for state_item in six.itervalues(m_ret):
+            for state_item in m_ret.values():
                 if isinstance(state_item, dict):
                     if "changes" in state_item and state_item["changes"]:
                         changes[minion] = m_ret
@@ -406,13 +419,13 @@ def state(
         state_ret["changes"] = {"out": "highstate", "ret": changes}
     if len(fail) > allow_fail:
         state_ret["result"] = False
-        state_ret["comment"] = "Run failed on minions: {0}".format(", ".join(fail))
+        state_ret["comment"] = "Run failed on minions: {}".format(", ".join(fail))
     else:
         state_ret["comment"] = "States ran successfully."
         if changes:
-            state_ret["comment"] += " Updating {0}.".format(", ".join(changes))
+            state_ret["comment"] += " Updating {}.".format(", ".join(changes))
         if no_change:
-            state_ret["comment"] += " No changes made to {0}.".format(
+            state_ret["comment"] += " No changes made to {}.".format(
                 ", ".join(no_change)
             )
     if test or __opts__.get("test"):
@@ -481,6 +494,11 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
 
+    roster
+        In the event of using salt-ssh, a roster system can be set
+
+        .. versionadded:: 3005
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
@@ -498,19 +516,21 @@ def function(
     func_ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if kwarg is None:
         kwarg = {}
-    if isinstance(arg, six.string_types):
+    if isinstance(arg, str):
         func_ret["warnings"] = ["Please specify 'arg' as a list of arguments."]
         arg = arg.split()
 
     cmd_kw = {"arg": arg or [], "kwarg": kwarg, "ret": ret, "timeout": timeout}
 
     if batch is not None:
-        cmd_kw["batch"] = six.text_type(batch)
+        cmd_kw["batch"] = str(batch)
     if subset is not None:
         cmd_kw["subset"] = subset
 
     cmd_kw["tgt_type"] = tgt_type
     cmd_kw["ssh"] = ssh
+    if "roster" in kwargs:
+        cmd_kw["roster"] = kwargs["roster"]
     cmd_kw["expect_minions"] = expect_minions
     cmd_kw["_cmd_meta"] = True
 
@@ -525,7 +545,7 @@ def function(
 
     fun = name
     if __opts__["test"] is True:
-        func_ret["comment"] = "Function {0} would be executed on target {1}".format(
+        func_ret["comment"] = "Function {} would be executed on target {}".format(
             fun, tgt
         )
         func_ret["result"] = None
@@ -535,7 +555,7 @@ def function(
         cmd_ret = __salt__["saltutil.cmd"](tgt, fun, **cmd_kw)
     except Exception as exc:  # pylint: disable=broad-except
         func_ret["result"] = False
-        func_ret["comment"] = six.text_type(exc)
+        func_ret["comment"] = str(exc)
         return func_ret
 
     try:
@@ -548,14 +568,14 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, six.string_types):
+    elif isinstance(fail_minions, str):
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
-    for minion, mdata in six.iteritems(cmd_ret):
+    for minion, mdata in cmd_ret.items():
         m_ret = False
         if mdata.get("retcode"):
             func_ret["result"] = False
@@ -577,19 +597,19 @@ def function(
         changes[minion] = m_ret
     if not cmd_ret:
         func_ret["result"] = False
-        func_ret["command"] = "No minions responded"
+        func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
-            func_ret["comment"] = "Running function {0} failed on minions: {1}".format(
+            func_ret["comment"] = "Running function {} failed on minions: {}".format(
                 name, ", ".join(fail)
             )
         else:
             func_ret["comment"] = "Function ran successfully."
         if changes:
-            func_ret["comment"] += " Function {0} ran on {1}.".format(
+            func_ret["comment"] += " Function {} ran on {}.".format(
                 name, ", ".join(changes)
             )
     return func_ret
@@ -641,74 +661,74 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
 
     if __opts__.get("test"):
-        ret["comment"] = "Orchestration would wait for event '{0}'".format(name)
+        ret["comment"] = "Orchestration would wait for event '{}'".format(name)
         ret["result"] = None
         return ret
 
-    sevent = salt.utils.event.get_event(
-        node, __opts__["sock_dir"], __opts__["transport"], opts=__opts__, listen=True
-    )
+    with salt.utils.event.get_event(
+        node, __opts__["sock_dir"], opts=__opts__, listen=True
+    ) as sevent:
 
-    del_counter = 0
-    starttime = time.time()
-    timelimit = starttime + timeout
-    while True:
-        event = sevent.get_event(full=True)
-        is_timedout = time.time() > timelimit
+        del_counter = 0
+        starttime = time.time()
+        timelimit = starttime + timeout
+        while True:
+            event = sevent.get_event(full=True)
+            is_timedout = time.time() > timelimit
 
-        if event is None and not is_timedout:
-            log.trace("wait_for_event: No event data; waiting.")
-            continue
-        elif event is None and is_timedout:
-            ret["comment"] = "Timeout value reached."
-            return ret
+            if event is None and not is_timedout:
+                log.trace("wait_for_event: No event data; waiting.")
+                continue
+            elif event is None and is_timedout:
+                ret["comment"] = "Timeout value reached."
+                return ret
 
-        if fnmatch.fnmatch(event["tag"], name):
-            val = event["data"].get(event_id)
-            if val is None and "data" in event["data"]:
-                val = event["data"]["data"].get(event_id)
+            if fnmatch.fnmatch(event["tag"], name):
+                val = event["data"].get(event_id)
+                if val is None and "data" in event["data"]:
+                    val = event["data"]["data"].get(event_id)
 
-            if val is not None:
-                try:
-                    val_idx = id_list.index(val)
-                except ValueError:
-                    log.trace(
-                        "wait_for_event: Event identifier '%s' not in "
-                        "id_list; skipping.",
-                        event_id,
-                    )
+                if val is not None:
+                    try:
+                        val_idx = id_list.index(val)
+                    except ValueError:
+                        log.trace(
+                            "wait_for_event: Event identifier '%s' not in "
+                            "id_list; skipping.",
+                            event_id,
+                        )
+                    else:
+                        del id_list[val_idx]
+                        del_counter += 1
+                        minions_seen = ret["changes"].setdefault("minions_seen", [])
+                        minions_seen.append(val)
+
+                        log.debug(
+                            "wait_for_event: Event identifier '%s' removed "
+                            "from id_list; %s items remaining.",
+                            val,
+                            len(id_list),
+                        )
                 else:
-                    del id_list[val_idx]
-                    del_counter += 1
-                    minions_seen = ret["changes"].setdefault("minions_seen", [])
-                    minions_seen.append(val)
-
-                    log.debug(
-                        "wait_for_event: Event identifier '%s' removed "
-                        "from id_list; %s items remaining.",
-                        val,
-                        len(id_list),
+                    log.trace(
+                        "wait_for_event: Event identifier '%s' not in event "
+                        "'%s'; skipping.",
+                        event_id,
+                        event["tag"],
                     )
             else:
-                log.trace(
-                    "wait_for_event: Event identifier '%s' not in event "
-                    "'%s'; skipping.",
-                    event_id,
-                    event["tag"],
+                log.debug("wait_for_event: Skipping unmatched event '%s'", event["tag"])
+
+            if len(id_list) == 0:
+                ret["result"] = True
+                ret["comment"] = "All events seen in {} seconds.".format(
+                    time.time() - starttime
                 )
-        else:
-            log.debug("wait_for_event: Skipping unmatched event '%s'", event["tag"])
+                return ret
 
-        if len(id_list) == 0:
-            ret["result"] = True
-            ret["comment"] = "All events seen in {0} seconds.".format(
-                time.time() - starttime
-            )
-            return ret
-
-        if is_timedout:
-            ret["comment"] = "Timeout value reached."
-            return ret
+            if is_timedout:
+                ret["comment"] = "Timeout value reached."
+                return ret
 
 
 def runner(name, **kwargs):
@@ -739,7 +759,7 @@ def runner(name, **kwargs):
             "name": name,
             "result": None,
             "changes": {},
-            "comment": "Runner function '{0}' would be executed.".format(name),
+            "comment": "Runner function '{}' would be executed.".format(name),
         }
         return ret
 
@@ -753,8 +773,9 @@ def runner(name, **kwargs):
 
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": runner_return}, "result": success}
-    ret["comment"] = "Runner function '{0}' {1}.".format(
-        name, "executed" if success else "failed",
+    ret["comment"] = "Runner function '{}' {}.".format(
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True
@@ -768,7 +789,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     """
     Executes multiple runner modules on the master in parallel.
 
-    .. versionadded:: 2017.x.0 (Nitrogen)
+    .. versionadded:: 2018.3.0
 
     A separate thread is spawned for each runner. This state is intended to be
     used with the orchestrate runner in place of the ``saltmod.runner`` state
@@ -808,7 +829,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     #           state.orchestrate
     # Obviously, this will only work if the specified runner does not need any
     # arguments.
-    if isinstance(runners, six.string_types):
+    if isinstance(runners, str):
         runners = {runners: [{name: runners}]}
     # If the runners argument is not a string, it must be a dict. Everything
     # else is considered an error.
@@ -824,7 +845,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     # style used in Salt. For further processing, we convert each of these
     # lists to a dict. This also makes it easier to check whether a name has
     # been specified explicitly.
-    for runner_id, runner_config in six.iteritems(runners):
+    for runner_id, runner_config in runners.items():
         if runner_config is None:
             runner_config = {}
         else:
@@ -849,22 +870,21 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
         )
 
     try:
-        outputs = _parallel_map(call_runner, list(six.itervalues(runners)))
+        outputs = _parallel_map(call_runner, list(runners.values()))
     except salt.exceptions.SaltException as exc:
         return {
             "name": name,
             "result": False,
             "success": False,
             "changes": {},
-            "comment": "One of the runners raised an exception: {0}".format(exc),
+            "comment": "One of the runners raised an exception: {}".format(exc),
         }
     # We bundle the results of the runners with the IDs of the runners so that
     # we can easily identify which output belongs to which runner. At the same
     # time we exctract the actual return value of the runner (saltutil.runner
     # adds some extra information that is not interesting to us).
     outputs = {
-        runner_id: out["return"]
-        for runner_id, out in six.moves.zip(six.iterkeys(runners), outputs)
+        runner_id: out["return"] for runner_id, out in zip(runners.keys(), outputs)
     }
 
     # If each of the runners returned its output in the format compatible with
@@ -873,7 +893,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     highstate_output = all(
         [
             out.get("outputter", "") == "highstate" and "data" in out
-            for out in six.itervalues(outputs)
+            for out in outputs.values()
         ]
     )
 
@@ -894,7 +914,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
                 return obj["changes"]
         else:
             found_changes = {}
-            for key, value in six.iteritems(obj):
+            for key, value in obj.items():
                 change = extract_changes(value)
                 if change:
                     found_changes[key] = change
@@ -903,7 +923,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     if highstate_output:
         failed_runners = [
             runner_id
-            for runner_id, out in six.iteritems(outputs)
+            for runner_id, out in outputs.items()
             if out["data"].get("retcode", 0) != 0
         ]
         all_successful = not failed_runners
@@ -911,7 +931,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             comment = "All runner functions executed successfully."
         else:
             runner_comments = [
-                "Runner {0} failed with return value:\n{1}".format(
+                "Runner {} failed with return value:\n{}".format(
                     runner_id,
                     salt.output.out_format(
                         outputs[runner_id], "nested", __opts__, nested_indent=2
@@ -921,14 +941,14 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             ]
             comment = "\n".join(runner_comments)
         changes = {}
-        for runner_id, out in six.iteritems(outputs):
+        for runner_id, out in outputs.items():
             runner_changes = extract_changes(out["data"])
             if runner_changes:
                 changes[runner_id] = runner_changes
     else:
         failed_runners = [
             runner_id
-            for runner_id, out in six.iteritems(outputs)
+            for runner_id, out in outputs.items()
             if out.get("exit_code", 0) != 0
         ]
         all_successful = not failed_runners
@@ -936,10 +956,10 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             comment = "All runner functions executed successfully."
         else:
             if len(failed_runners) == 1:
-                comment = "Runner {0} failed.".format(failed_runners[0])
+                comment = "Runner {} failed.".format(failed_runners[0])
             else:
-                comment = "Runners {0} failed.".format(", ".join(failed_runners))
-        changes = {"ret": {runner_id: out for runner_id, out in six.iteritems(outputs)}}
+                comment = "Runners {} failed.".format(", ".join(failed_runners))
+        changes = {"ret": {runner_id: out for runner_id, out in outputs.items()}}
     ret = {
         "name": name,
         "result": all_successful,
@@ -982,7 +1002,7 @@ def wheel(name, **kwargs):
     if __opts__.get("test", False):
         ret["result"] = (None,)
         ret["changes"] = {}
-        ret["comment"] = "Wheel function '{0}' would be executed.".format(name)
+        ret["comment"] = "Wheel function '{}' would be executed.".format(name)
         return ret
 
     out = __salt__["saltutil.wheel"](
@@ -995,8 +1015,9 @@ def wheel(name, **kwargs):
 
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": wheel_return}, "result": success}
-    ret["comment"] = "Wheel function '{0}' {1}.".format(
-        name, "executed" if success else "failed",
+    ret["comment"] = "Wheel function '{}' {}.".format(
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True

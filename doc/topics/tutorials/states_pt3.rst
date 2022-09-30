@@ -146,7 +146,8 @@ a value equivalent to the following python pseudo-code:
 .. code-block:: python
 
     import salt.modules.file
-    file.group_to_gid('some_group_that_exists')
+
+    file.group_to_gid("some_group_that_exists")
 
 Note that for the above example to work, ``some_group_that_exists`` must exist
 before the state file is processed by the templating engine.
@@ -156,7 +157,7 @@ MAC address for eth0:
 
 .. code-block:: python
 
-    salt['network.hw_addr']('eth0')
+    salt["network.hw_addr"]("eth0")
 
 To examine the possible arguments to each execution module function,
 one can examine the `module reference documentation </ref/modules/all>`_:

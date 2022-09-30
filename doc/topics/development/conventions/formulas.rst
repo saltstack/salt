@@ -85,7 +85,7 @@ or zip file of the repository. The directory structure is designed to work with
 
         mkdir -p /srv/formulas
         cd /srv/formulas
-        wget https://github.com/saltstack-formulas/apache-formula/archive/master.tar.gz
+        wget -O apache-formula-master.tar.gz https://github.com/saltstack-formulas/apache-formula/archive/master.tar.gz
         tar xf apache-formula-master.tar.gz
 
 2.  Add the new directory to :conf_master:`file_roots`:
@@ -221,11 +221,12 @@ The best way to create new Formula repositories for now is to create a
 repository in your own account on GitHub and notify a SaltStack employee when
 it is ready. We will add you to the Contributors team on the
 `saltstack-formulas`_ organization and help you transfer the repository over.
-Ping a SaltStack employee on IRC (``#salt`` on Freenode), join the
+Ping a SaltStack employee on IRC (`#salt`_ on LiberaChat), join the
 ``#formulas`` channel on the `salt-slack`_ (bridged to ``#saltstack-formulas``
-on Freenode) or send an email to the `salt-users`_ mailing list.  Note that the
-IRC logs are available at https://freenode.logbot.info/salt and
-https://freenode.logbot.info/saltstack-formulas respectively.
+on LiberaChat) or send an email to the `salt-users`_ mailing list.  Note that
+IRC logs are available at http://ngxbot.nginx.org/logs/%23salt/ and archives
+for FreeNode (up to mid-June 2021) https://logbot-archive.s3.amazonaws.com/freenode/salt.gz
+and https://logbot-archive.s3.amazonaws.com/freenode/saltstack-formulas.gz.
 
 There are a lot of repositories in that organization! Team members can manage
 which repositories they are subscribed to on GitHub's watching page:
@@ -245,6 +246,7 @@ your pull request has stayed open for more than a couple days feel free to
 "selfie-merge" your own pull request.
 
 .. _`at-mention`: https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax#mentioning-people-and-teams
+.. _`#salt`: https://web.libera.chat/#salt
 
 Style
 -----
@@ -642,32 +644,29 @@ example is a state tree of two sls files, one simple and one complicated.
         # This example has the minion id in the form 'web-03-dev'.
         # Easily access the grains dictionary:
         try:
-            app, instance_number, environment = __grains__['id'].split('-')
+            app, instance_number, environment = __grains__["id"].split("-")
             instance_number = int(instance_number)
         except ValueError:
-            app, instance_number, environment = ['Unknown', 0, 'dev']
+            app, instance_number, environment = ["Unknown", 0, "dev"]
 
         list_of_roles.add(app)
 
-        if app == 'web' and environment == 'dev':
-            list_of_roles.add('primary')
-            list_of_roles.add('secondary')
-        elif app == 'web' and environment == 'staging':
+        if app == "web" and environment == "dev":
+            list_of_roles.add("primary")
+            list_of_roles.add("secondary")
+        elif app == "web" and environment == "staging":
             if instance_number == 0:
-                list_of_roles.add('primary')
+                list_of_roles.add("primary")
             else:
-                list_of_roles.add('secondary')
+                list_of_roles.add("secondary")
 
         # Easily cross-call Salt execution modules:
-        if __salt__['myutils.query_valid_ec2_instance']():
-            list_of_roles.add('is_ec2_instance')
+        if __salt__["myutils.query_valid_ec2_instance"]():
+            list_of_roles.add("is_ec2_instance")
 
         return {
-            'set_roles_grains': {
-                'grains.present': [
-                    {'name': 'roles'},
-                    {'value': list(list_of_roles)},
-                ],
+            "set_roles_grains": {
+                "grains.present": [{"name": "roles"}, {"value": list(list_of_roles)}],
             },
         }
 
@@ -1275,7 +1274,7 @@ A sample skeleton for the ``README.rst`` file:
     **NOTE**
 
     See the full `Salt Formulas installation and usage instructions
-    <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+    <https://docs.saltproject.io/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================

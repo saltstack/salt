@@ -1,0 +1,1 @@
+Fixes the Puppet module for non-aio Puppet packages for example running the Puppet module on FreeBSD.

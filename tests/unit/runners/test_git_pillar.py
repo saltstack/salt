@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the git_pillar runner
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import copy
 import errno
 import logging
 import tempfile
 
-# Import Salt Libs
 import salt.runners.git_pillar as git_pillar
 import salt.utils.files
 import salt.utils.gitfs
-
-# Import Salt Testing Libs
 from tests.support.gitfs import _OPTS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
@@ -46,7 +39,7 @@ class GitPillarTest(TestCase, LoaderModuleMockMixin):
                 raise
 
     def setup_loader_modules(self):
-        opts = copy.copy(_OPTS)
+        opts = _OPTS.copy()
         opts["cachedir"] = self.tmp_cachedir
         opts["verified_git_pillar_provider"] = "gitfoo"
         opts["ext_pillar"] = [

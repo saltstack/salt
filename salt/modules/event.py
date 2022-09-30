@@ -1,25 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
 import logging
 import os
 import sys
 import traceback
+from collections.abc import Mapping
 
-# Import salt libs
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
 import salt.utils.event
-import salt.utils.zeromq
-from salt.ext import six
+import salt.utils.network
 
 __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
@@ -29,7 +24,7 @@ def _dict_subset(keys, master_dict):
     """
     Return a dictionary of only the subset of keys/values specified in keys
     """
-    return dict([(k, v) for k, v in six.iteritems(master_dict) if k in keys])
+    return {k: v for k, v in master_dict.items() if k in keys}
 
 
 def fire_master(data, tag, preload=None):
@@ -54,7 +49,7 @@ def fire_master(data, tag, preload=None):
         # slower because it has to independently authenticate)
         if "master_uri" not in __opts__:
             __opts__["master_uri"] = "tcp://{ip}:{port}".format(
-                ip=salt.utils.zeromq.ip_bracket(__opts__["interface"]),
+                ip=salt.utils.network.ip_bracket(__opts__["interface"]),
                 port=__opts__.get("ret_port", "4506"),  # TODO, no fallback
             )
         masters = list()
@@ -77,7 +72,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            with salt.transport.client.ReqChannel.factory(
+            with salt.channel.client.ReqChannel.factory(
                 __opts__, master_uri=master
             ) as channel:
                 try:
@@ -117,7 +112,6 @@ def fire(data, tag):
         with salt.utils.event.get_event(
             "minion",  # was __opts__['id']
             sock_dir=__opts__["sock_dir"],
-            transport=__opts__["transport"],
             opts=__opts__,
             listen=False,
         ) as event:
@@ -221,13 +215,13 @@ def send(
         if isinstance(with_grains, list):
             data_dict["grains"] = _dict_subset(with_grains, __grains__)
         else:
-            data_dict["grains"] = __grains__
+            data_dict["grains"] = __grains__.value()
 
     if with_pillar:
         if isinstance(with_pillar, list):
             data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
         else:
-            data_dict["pillar"] = __pillar__
+            data_dict["pillar"] = __pillar__.value()
 
     if with_env_opts:
         data_dict["saltenv"] = __opts__.get("saltenv", "base")
@@ -237,14 +231,14 @@ def send(
         data_dict.update(kwargs)
 
     # Allow values in the ``data`` arg to override any of the above values.
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, Mapping):
         data_dict.update(data)
 
     if (
         __opts__.get("local")
         or __opts__.get("file_client") == "local"
         or __opts__.get("master_type") == "disable"
-    ):
+    ) and not __opts__.get("use_master_when_local"):
         return fire(data_dict, tag)
     else:
         return fire_master(data_dict, tag, preload=preload)

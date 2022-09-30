@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
+
+import pytest
 
 import salt.modules.win_ip as win_ip
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -25,10 +24,7 @@ ETHERNET_CONFIG = (
 )
 
 ETHERNET_ENABLE = (
-    "Ethernet\n"
-    "Type: Dedicated\n"
-    "Administrative state: Enabled\n"
-    "Connect state: Connected"
+    "Ethernet\nType: Dedicated\nAdministrative state: Enabled\nConnect state: Connected"
 )
 
 
@@ -193,7 +189,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_static_ip' function tests: 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_static_ip(self):
         """
         Test if it set static IP configuration on a Windows NIC.

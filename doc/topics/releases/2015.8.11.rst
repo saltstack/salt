@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **70**
 - Total PR References: **221**
 
-- Contributors: **48** (`AAbouZaid`_, `BlaineAtAffirm`_, `DmitryKuzmenko`_, `The-Loeki`_, `abednarik`_, `babilen`_, `bebehei`_, `cachedout`_, `clinta`_, `complexsplit`_, `cro`_, `danslimmon`_, `dcolish`_, `dincamihai`_, `edgan`_, `gerhardqux`_, `ghedo`_, `isbm`_, `jacobhammons`_, `jfindlay`_, `jodv`_, `justinta`_, `l13t`_, `lomeroe`_, `lorengordon`_, `lvg01`_, `mcalmer`_, `meaksh`_, `morganwillcock`_, `oeuftete`_, `opdude`_, `phistrom`_, `rallytime`_, `rmarcinik`_, `ryan-lane`_, `sacren`_, `steverweber`_, `techhat`_, `tegbert`_, `terminalmage`_, `thatch45`_, `the-glu`_, `thegoodduke`_, `ticosax`_, `tveastman`_, `twangboy`_, `vutny`_, `zer0def`_)
+- Contributors: **48** (`AAbouZaid`_, `BlaineAtAffirm`_, `DmitryKuzmenko`_, `The-Loeki`_,
+  `abednarik`_, `babilen`_, `bebehei`_, `cachedout`_, `clinta`_, `complexsplit`_, `cro`_,
+  `danslimmon`_, `dcolish`_, `dincamihai`_, `edgan`_, `gerhardqux`_, `ghedo`_, `isbm`_,
+  `jacobhammons`_, `jfindlay`_, `jodv`_, `justinta`_, `l13t`_, `lomeroe`_, `lorengordon`_,
+  `lvg01`_, `mcalmer`_, `meaksh`_, `morganwillcock`_, `oeuftete`_, `opdude`_, `phistrom`_,
+  `rallytime`_, `rmarcinik`_, `ryan-lane`_, `sacren`_, `steverweber`_, `techhat`_, `tegbert`_,
+  `terminalmage`_, `thatch45`_, `the-glu`_, `thegoodduke`_, `ticosax`_, `tveastman`_, `twangboy`_,
+  `vutny`_, `zer0def`_)
 
 
 Ubuntu 16.04 Packages
@@ -449,7 +456,7 @@ Changelog for v2015.8.10..v2015.8.11
 
   * **PR** `#33599`_: (`lomeroe`_) Fix s3 large file download (refs: `#33681`_)
 
-* **ISSUE** `#34213`_: (`terminalmage`_) gitfs w/pygit2 - corner case, traceback with short hexidecimal environment names (refs: `#34218`_)
+* **ISSUE** `#34213`_: (`terminalmage`_) gitfs w/pygit2 - corner case, traceback with short hexadecimal environment names (refs: `#34218`_)
 
 * **ISSUE** `#34212`_: (`terminalmage`_) gitfs: commit SHAs no longer available as fileserver environments (refs: `#34218`_)
 
@@ -1080,7 +1087,7 @@ Changelog for v2015.8.10..v2015.8.11
 
   * 6b6febb211 unit tests for rpm.checksum() and zypper.download()
 
-* **ISSUE** `#33319`_: (`ghost`_) Salt interpets jinja syntax in contents pillar (refs: `#33513`_)
+* **ISSUE** `#33319`_: (`ghost`_) Salt interprets jinja syntax in contents pillar (refs: `#33513`_)
 
 * **PR** `#33513`_: (`rallytime`_) Add a section to the jinja docs about escaping jinja
   @ *2016-05-26 14:24:58 UTC*
@@ -1143,14 +1150,14 @@ Changelog for v2015.8.10..v2015.8.11
 
   * 68d8050cb8 Fix diskusage beacon
 
-* **PR** `#33465`_: (`meaksh`_) jobs.exit_success allow to check if a job has executed and exit successfully
+* **PR** `#33465`_: (`meaksh`_) jobs.exit_success allow checking if a job has executed and exit successfully
   @ *2016-05-25 16:52:53 UTC*
 
   * 3bfb6bf719 Merge pull request `#33465`_ from meaksh/check-if-job-returns-successfully-2015.8
 
   * 9deb70fd8e jobs.exit_success() now works parsing the results of jobs.lookup_id()
 
-  * 7ba40c4f31 jobs.exit_success allow to check if a job has executed and exit successfully
+  * 7ba40c4f31 jobs.exit_success allow checking if a job has executed and exit successfully
 
   * **PR** `saltstack/salt-jenkins#175`_: (`justinta`_) Adding back shade to setup states (refs: `#33487`_)
 
@@ -1285,7 +1292,7 @@ Changelog for v2015.8.10..v2015.8.11
 
   * **PR** `#33421`_: (`abednarik`_) Documentation update in file.serialize.
 
-  * **PR** `#33398`_: (`lvg01`_) Fix LVM parameter devices as a pure list. Comma seperated lists are c…
+  * **PR** `#33398`_: (`lvg01`_) Fix LVM parameter devices as a pure list. Comma separated lists are c…
 
   * **PR** `#33406`_: (`rallytime`_) Back-port `#33387`_ to 2015.8
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Install Python packages with pip to either the system or a virtualenv
 
@@ -77,9 +76,7 @@ of the 2015.5 branch:
    The issue is described here: https://github.com/saltstack/salt/issues/46163
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 import re
@@ -89,7 +86,6 @@ import tempfile
 
 import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -99,17 +95,17 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-from salt.ext import six
 
 # This needs to be named logger so we don't shadow it in pip.install
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Don't shadow built-in's.
 __func_alias__ = {"list_": "list"}
 
 VALID_PROTOS = ["http", "https", "ftp", "file"]
 
-rex_pip_chain_read = re.compile(r"-r\s(.*)\n?", re.MULTILINE)
+rex_pip_chain_read = re.compile(r"(?:-r\s|--requirement[=\s])(.*)\n?", re.MULTILINE)
+rex_pip_reqs_comment = re.compile(r"(?:^|\s+)#.*$", re.MULTILINE)
 
 
 def __virtual__():
@@ -140,7 +136,7 @@ def _clear_context(bin_env=None):
     """
     contextkey = "pip.version"
     if bin_env is not None:
-        contextkey = "{0}.{1}".format(contextkey, bin_env)
+        contextkey = "{}.{}".format(contextkey, bin_env)
     __context__.pop(contextkey, None)
 
 
@@ -191,12 +187,11 @@ def _get_pip_bin(bin_env):
                     return [os.path.normpath(bin_path), "-m", "pip"]
                 else:
                     logger.debug(
-                        "pip: Found python binary by name but it is not "
-                        "executable: %s",
+                        "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
         raise CommandNotFoundError(
-            "Could not find a pip binary in virtualenv {0}".format(bin_env)
+            "Could not find a pip binary in virtualenv {}".format(bin_env)
         )
 
     # bin_env is the python or pip binary
@@ -209,11 +204,11 @@ def _get_pip_bin(bin_env):
             return [os.path.normpath(bin_env)]
 
         raise CommandExecutionError(
-            "Could not find a pip binary within {0}".format(bin_env)
+            "Could not find a pip binary within {}".format(bin_env)
         )
     else:
         raise CommandNotFoundError(
-            "Access denied to {0}, could not find a pip binary".format(bin_env)
+            "Access denied to {}, could not find a pip binary".format(bin_env)
         )
 
 
@@ -265,9 +260,9 @@ def _find_req(link):
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
-        child_links = rex_pip_chain_read.findall(
-            salt.utils.stringutils.to_unicode(fh_link.read())
-        )
+        reqs_content = salt.utils.stringutils.to_unicode(fh_link.read())
+    reqs_content = rex_pip_reqs_comment.sub("", reqs_content)  # remove comments
+    child_links = rex_pip_chain_read.findall(reqs_content)
 
     base_path = os.path.dirname(link)
     child_links = [os.path.join(base_path, d) for d in child_links]
@@ -283,7 +278,7 @@ def _resolve_requirements_chain(requirements):
 
     chain = []
 
-    if isinstance(requirements, six.string_types):
+    if isinstance(requirements, str):
         requirements = [requirements]
 
     for req_file in requirements:
@@ -300,7 +295,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
     cleanup_requirements = []
 
     if requirements is not None:
-        if isinstance(requirements, six.string_types):
+        if isinstance(requirements, str):
             requirements = [r.strip() for r in requirements.split(",")]
         elif not isinstance(requirements, list):
             raise TypeError("requirements must be a string or list")
@@ -314,7 +309,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 if not cached_requirements:
                     ret = {
                         "result": False,
-                        "comment": "pip requirements file '{0}' not found".format(
+                        "comment": "pip requirements file '{}' not found".format(
                             requirement
                         ),
                     }
@@ -342,7 +337,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     current_directory = os.path.abspath(os.curdir)
 
                 logger.info(
-                    "_process_requirements from directory, " "%s -- requirement: %s",
+                    "_process_requirements from directory, %s -- requirement: %s",
                     cwd,
                     requirement,
                 )
@@ -392,7 +387,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__["file.copy"](req_file, target_path)
 
                     logger.debug(
-                        "Changing ownership of requirements file '%s' to " "user '%s'",
+                        "Changing ownership of requirements file '%s' to user '%s'",
                         target_path,
                         user,
                     )
@@ -412,15 +407,15 @@ def _format_env_vars(env_vars):
     ret = {}
     if env_vars:
         if isinstance(env_vars, dict):
-            for key, val in six.iteritems(env_vars):
-                if not isinstance(key, six.string_types):
-                    key = str(key)  # future lint: disable=blacklisted-function
-                if not isinstance(val, six.string_types):
-                    val = str(val)  # future lint: disable=blacklisted-function
+            for key, val in env_vars.items():
+                if not isinstance(key, str):
+                    key = str(key)
+                if not isinstance(val, str):
+                    val = str(val)
                 ret[key] = val
         else:
             raise CommandExecutionError(
-                "env_vars {0} is not a dictionary".format(env_vars)
+                "env_vars {} is not a dictionary".format(env_vars)
             )
     return ret
 
@@ -680,7 +675,9 @@ def install(
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
-    Complicated CLI example::
+    Complicated CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.install markdown,django \
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
@@ -698,7 +695,7 @@ def install(
     if error:
         return error
 
-    cur_version = version(bin_env, cwd)
+    cur_version = version(bin_env, cwd, user=user)
 
     if use_wheel:
         min_version = "1.4"
@@ -762,9 +759,9 @@ def install(
 
     if log:
         if os.path.isdir(log):
-            raise IOError("'{0}' is a directory. Use --log path_to_file".format(log))
+            raise OSError("'{}' is a directory. Use --log path_to_file".format(log))
         elif not os.access(log, os.W_OK):
-            raise IOError("'{0}' is not writeable".format(log))
+            raise OSError("'{}' is not writeable".format(log))
 
         cmd.extend(["--log", log])
 
@@ -790,12 +787,12 @@ def install(
             int(timeout)
         except ValueError:
             raise ValueError(
-                "'{0}' is not a valid timeout, must be an integer".format(timeout)
+                "'{}' is not a valid timeout, must be an integer".format(timeout)
             )
         cmd.extend(["--timeout", timeout])
 
     if find_links:
-        if isinstance(find_links, six.string_types):
+        if isinstance(find_links, str):
             find_links = [l.strip() for l in find_links.split(",")]
 
         for link in find_links:
@@ -803,25 +800,24 @@ def install(
                 salt.utils.url.validate(link, VALID_PROTOS) or os.path.exists(link)
             ):
                 raise CommandExecutionError(
-                    "'{0}' is not a valid URL or path".format(link)
+                    "'{}' is not a valid URL or path".format(link)
                 )
             cmd.extend(["--find-links", link])
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
-            "'no_index' and ('index_url' or 'extra_index_url') are "
-            "mutually exclusive."
+            "'no_index' and ('index_url' or 'extra_index_url') are mutually exclusive."
         )
 
     if index_url:
         if not salt.utils.url.validate(index_url, VALID_PROTOS):
-            raise CommandExecutionError("'{0}' is not a valid URL".format(index_url))
+            raise CommandExecutionError("'{}' is not a valid URL".format(index_url))
         cmd.extend(["--index-url", index_url])
 
     if extra_index_url:
         if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                "'{0}' is not a valid URL".format(extra_index_url)
+                "'{}' is not a valid URL".format(extra_index_url)
             )
         cmd.extend(["--extra-index-url", extra_index_url])
 
@@ -836,13 +832,13 @@ def install(
                 " use index_url and/or extra_index_url instead"
             )
 
-        if isinstance(mirrors, six.string_types):
+        if isinstance(mirrors, str):
             mirrors = [m.strip() for m in mirrors.split(",")]
 
         cmd.append("--use-mirrors")
         for mirror in mirrors:
             if not mirror.startswith("http://"):
-                raise CommandExecutionError("'{0}' is not a valid URL".format(mirror))
+                raise CommandExecutionError("'{}' is not a valid URL".format(mirror))
             cmd.extend(["--mirrors", mirror])
 
     if disable_version_check:
@@ -883,7 +879,7 @@ def install(
         if exists_action.lower() not in ("s", "i", "w", "b"):
             raise CommandExecutionError(
                 "The exists_action pip option only supports the values "
-                "s, i, w, and b. '{0}' is not valid.".format(exists_action)
+                "s, i, w, and b. '{}' is not valid.".format(exists_action)
             )
         cmd.extend(["--exists-action", exists_action])
 
@@ -911,14 +907,14 @@ def install(
         cmd.extend(["--cert", cert])
 
     if global_options:
-        if isinstance(global_options, six.string_types):
+        if isinstance(global_options, str):
             global_options = [go.strip() for go in global_options.split(",")]
 
         for opt in global_options:
             cmd.extend(["--global-option", opt])
 
     if install_options:
-        if isinstance(install_options, six.string_types):
+        if isinstance(install_options, str):
             install_options = [io.strip() for io in install_options.split(",")]
 
         for opt in install_options:
@@ -929,7 +925,7 @@ def install(
             try:
                 pkgs = [p.strip() for p in pkgs.split(",")]
             except AttributeError:
-                pkgs = [p.strip() for p in six.text_type(pkgs).split(",")]
+                pkgs = [p.strip() for p in str(pkgs).split(",")]
         pkgs = salt.utils.data.stringify(salt.utils.data.decode_list(pkgs))
 
         # It's possible we replaced version-range commas with semicolons so
@@ -945,7 +941,7 @@ def install(
 
     if editable:
         egg_match = re.compile(r"(?:#|#.*?&)egg=([^&]*)")
-        if isinstance(editable, six.string_types):
+        if isinstance(editable, str):
             editable = [e.strip() for e in editable.split(",")]
 
         for entry in editable:
@@ -964,14 +960,14 @@ def install(
         cmd.append("--allow-all-external")
 
     if allow_external:
-        if isinstance(allow_external, six.string_types):
+        if isinstance(allow_external, str):
             allow_external = [p.strip() for p in allow_external.split(",")]
 
         for pkg in allow_external:
             cmd.extend(["--allow-external", pkg])
 
     if allow_unverified:
-        if isinstance(allow_unverified, six.string_types):
+        if isinstance(allow_unverified, str):
             allow_unverified = [p.strip() for p in allow_unverified.split(",")]
 
         for pkg in allow_unverified:
@@ -1106,8 +1102,8 @@ def uninstall(
         try:
             # TODO make this check if writeable
             os.path.exists(log)
-        except IOError:
-            raise IOError("'{0}' is not writeable".format(log))
+        except OSError:
+            raise OSError("'{}' is not writeable".format(log))
 
         cmd.extend(["--log", log])
 
@@ -1133,12 +1129,12 @@ def uninstall(
             int(timeout)
         except ValueError:
             raise ValueError(
-                "'{0}' is not a valid timeout, must be an integer".format(timeout)
+                "'{}' is not a valid timeout, must be an integer".format(timeout)
             )
         cmd.extend(["--timeout", timeout])
 
     if pkgs:
-        if isinstance(pkgs, six.string_types):
+        if isinstance(pkgs, str):
             pkgs = [p.strip() for p in pkgs.split(",")]
         if requirements:
             for requirement in requirements:
@@ -1299,7 +1295,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     return packages
 
 
-def version(bin_env=None, cwd=None):
+def version(bin_env=None, cwd=None, user=None):
     """
     .. versionadded:: 0.17.0
 
@@ -1308,17 +1304,22 @@ def version(bin_env=None, cwd=None):
 
     If unable to detect the pip version, returns ``None``.
 
+    .. versionchanged:: 3001.1
+        The ``user`` parameter was added, to allow specifying the user who runs
+        the version command.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.version
+
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
     contextkey = "pip.version"
     if bin_env is not None:
-        contextkey = "{0}.{1}".format(contextkey, bin_env)
+        contextkey = "{}.{}".format(contextkey, bin_env)
 
     if contextkey in __context__:
         return __context__[contextkey]
@@ -1326,7 +1327,7 @@ def version(bin_env=None, cwd=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append("--version")
 
-    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, python_shell=False)
+    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
     if ret["retcode"]:
         raise CommandNotFoundError("Could not find a `pip` binary")
 
@@ -1354,7 +1355,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
     cmd = _get_pip_bin(bin_env)
     cmd.extend(["list", "--outdated"])
 
-    pip_version = version(bin_env, cwd)
+    pip_version = version(bin_env, cwd, user=user)
     # Pip started supporting the ability to output json starting with 9.0.0
     min_version = "9.0"
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2=min_version):
@@ -1397,7 +1398,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{0}'".format(line))
+                logger.error("Can't parse line %r", line)
                 continue
             packages[name] = version_
 
@@ -1409,7 +1410,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             raise CommandExecutionError("Invalid JSON", info=result)
 
         for pkg in pkgs:
-            packages[pkg["name"]] = "{0} [{1}]".format(
+            packages[pkg["name"]] = "{} [{}]".format(
                 pkg["latest_version"], pkg["latest_filetype"]
             )
 
@@ -1498,7 +1499,6 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1517,7 +1517,7 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, runas=user, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
     errors = False
@@ -1597,19 +1597,29 @@ def list_all_versions(
     """
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["install", "{0}==versions".format(pkg)])
 
     if index_url:
         if not salt.utils.url.validate(index_url, VALID_PROTOS):
-            raise CommandExecutionError("'{0}' is not a valid URL".format(index_url))
+            raise CommandExecutionError("'{}' is not a valid URL".format(index_url))
         cmd.extend(["--index-url", index_url])
 
     if extra_index_url:
         if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                "'{0}' is not a valid URL".format(extra_index_url)
+                "'{}' is not a valid URL".format(extra_index_url)
             )
         cmd.extend(["--extra-index-url", extra_index_url])
+
+    # Is the `pip index` command available
+    pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
+    if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
+        regex = re.compile(r"\s*Available versions: (.*)")
+        cmd.extend(["index", "versions", pkg])
+    else:
+        if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="20.3"):
+            cmd.append("--use-deprecated=legacy-resolver")
+        regex = re.compile(r"\s*Could not find a version.* \(from versions: (.*)\)")
+        cmd.extend(["install", "{}==versions".format(pkg)])
 
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
@@ -1627,15 +1637,13 @@ def list_all_versions(
     if not include_rc:
         filtered.append("rc")
     if filtered:
-        excludes = re.compile(r"^((?!{0}).)*$".format("|".join(filtered)))
+        excludes = re.compile(r"^((?!{}).)*$".format("|".join(filtered)))
     else:
         excludes = re.compile(r"")
 
     versions = []
     for line in result["stdout"].splitlines():
-        match = re.search(
-            r"\s*Could not find a version.* \(from versions: (.*)\)", line
-        )
+        match = regex.search(line)
         if match:
             versions = [
                 v for v in match.group(1).split(", ") if v and excludes.match(v)

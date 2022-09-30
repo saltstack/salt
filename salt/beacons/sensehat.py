@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
 ===============================================================================
@@ -9,20 +8,23 @@ Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
 :maturity:      new
 :depends:       sense_hat Python module
 """
-
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import re
 
-from salt.ext import six
-from salt.ext.six.moves import map
+import salt.utils.beacons
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = "sensehat"
+
 
 def __virtual__():
-    return "sensehat.get_pressure" in __salt__
+    if "sensehat.get_pressure" in __salt__:
+        return __virtualname__
+    else:
+        err_msg = "sensehat.get_pressure is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
@@ -31,14 +33,12 @@ def validate(config):
     """
     # Configuration for sensehat beacon should be a list
     if not isinstance(config, list):
-        return False, ("Configuration for sensehat beacon must be a list.")
+        return False, "Configuration for sensehat beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "sensors" not in _config:
-            return False, ("Configuration for sensehat beacon requires sensors.")
-
+        if "sensors" not in config:
+            return False, "Configuration for sensehat beacon requires sensors."
     return True, "Valid beacon configuration"
 
 
@@ -69,32 +69,31 @@ def beacon(config):
     ret = []
     min_default = {"humidity": "0", "pressure": "0", "temperature": "-273.15"}
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    for sensor in _config.get("sensors", {}):
-        sensor_function = "sensehat.get_{0}".format(sensor)
+    for sensor in config.get("sensors", {}):
+        sensor_function = "sensehat.get_{}".format(sensor)
         if sensor_function not in __salt__:
             log.error("No sensor for meassuring %s. Skipping.", sensor)
             continue
 
-        sensor_config = _config["sensors"][sensor]
+        sensor_config = config["sensors"][sensor]
         if isinstance(sensor_config, list):
-            sensor_min = six.text_type(sensor_config[0])
-            sensor_max = six.text_type(sensor_config[1])
+            sensor_min = str(sensor_config[0])
+            sensor_max = str(sensor_config[1])
         else:
             sensor_min = min_default.get(sensor, "0")
-            sensor_max = six.text_type(sensor_config)
+            sensor_max = str(sensor_config)
 
-        if "%" in sensor_min:
+        if isinstance(sensor_min, str) and "%" in sensor_min:
             sensor_min = re.sub("%", "", sensor_min)
-        if "%" in sensor_max:
+        if isinstance(sensor_max, str) and "%" in sensor_max:
             sensor_max = re.sub("%", "", sensor_max)
         sensor_min = float(sensor_min)
         sensor_max = float(sensor_max)
 
         current_value = __salt__[sensor_function]()
         if not sensor_min <= current_value <= sensor_max:
-            ret.append({"tag": "sensehat/{0}".format(sensor), sensor: current_value})
+            ret.append({"tag": "sensehat/{}".format(sensor), sensor: current_value})
 
     return ret

@@ -629,7 +629,7 @@ will be automatically accepted and have :py:func:`state.apply
 <salt.modules.state.apply_>` executed. On top of this, we're going to add that
 a host coming up that was replaced (meaning a new key) will also be accepted.
 
-Our master configuration will be rather simple. All minions that attempte to
+Our master configuration will be rather simple. All minions that attempt to
 authenticate will match the :strong:`tag` of :strong:`salt/auth`. When it comes
 to the minion key being accepted, we get a more refined :strong:`tag` that
 includes the minion id, which we can use for matching.
@@ -741,24 +741,24 @@ match minion IDs beginning with ``appsrv``).
 
 
 Reactor Tuning for Large-Scale Installations
-=================================================
+============================================
 
 The reactor uses a thread pool implementation that's contained inside
-salt.utils.process.ThreadPool and It uses Python's stdlib Queue to enqueue
+``salt.utils.process.ThreadPool``. It uses Python's stdlib Queue to enqueue
 jobs which are picked up by standard Python threads. If the queue is full,
-False is simply returned by the firing method on the thread pool.
+``False`` is simply returned by the firing method on the thread pool.
 
 As such, there are a few things to say about the selection of proper values
 for the reactor.
 
 For situations where it is expected that many long-running jobs might be
-executed by the reactor, `reactor_worker_hwm` should be increased or even
-set to 0 to bound it only by available memory. If set to zero, a close eye
+executed by the reactor, ``reactor_worker_hwm`` should be increased or even
+set to ``0`` to bound it only by available memory. If set to zero, a close eye
 should be kept on memory consumption.
 
 If many long-running jobs are expected and execution concurrency and
 performance are a concern, you may also increase the value for
-`reactor_worker_threads`. This will control the number of concurrent threads
+``reactor_worker_threads``. This will control the number of concurrent threads
 which are pulling jobs from the queue and executing them. Obviously, this
 bears a relationship to the speed at which the queue itself will fill up.
 The price to pay for this value is that each thread will contain a copy of

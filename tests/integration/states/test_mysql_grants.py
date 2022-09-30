@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the MySQL states
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
-import salt.utils.path
-from salt.ext import six
-from salt.modules import mysql as mysqlmod
+import pytest
 
-# Import Salt Testing libs
+import salt.utils.path
+from salt.modules import mysql as mysqlmod
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -59,12 +52,12 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         "user4": {"name": "user \xe6\xa8\x99", "pwd": "\xe6\xa8\x99\xe6\xa8\x99"},
     }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         """
         Test presence of MySQL server, enforce a root password
         """
-        super(MysqlGrantsStateTest, self).setUp()
+        super().setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
@@ -92,7 +85,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.skipTest("No MySQL Server running, or no root access on it.")
         # Create some users and a test db
-        for user, userdef in six.iteritems(self.users):
+        for user, userdef in self.users.items():
             self._userCreation(uname=userdef["name"], password=userdef["pwd"])
         self.run_state(
             "mysql_database.present",
@@ -114,7 +107,8 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             "CREATE TABLE {tblname} ("
             " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             " data VARCHAR(100)) ENGINE={engine};".format(
-                tblname=mysqlmod.quote_identifier(self.table1), engine="MYISAM",
+                tblname=mysqlmod.quote_identifier(self.table1),
+                engine="MYISAM",
             )
         )
         log.info("Adding table '%s'", self.table1)
@@ -129,7 +123,8 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             "CREATE TABLE {tblname} ("
             " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             " data VARCHAR(100)) ENGINE={engine};".format(
-                tblname=mysqlmod.quote_identifier(self.table2), engine="MYISAM",
+                tblname=mysqlmod.quote_identifier(self.table2),
+                engine="MYISAM",
             )
         )
         log.info("Adding table '%s'", self.table2)
@@ -141,12 +136,12 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             connection_pass=self.password,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         """
         Removes created users and db
         """
-        for user, userdef in six.iteritems(self.users):
+        for user, userdef in self.users.items():
             self._userRemoval(uname=userdef["name"], password=userdef["pwd"])
         self.run_state(
             "mysql_database.absent",
@@ -190,7 +185,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             saltenv={"LC_ALL": "en_US.utf8"},
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_grant_present_absent(self):
         """
         mysql_database.present

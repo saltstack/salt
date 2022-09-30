@@ -240,7 +240,7 @@ Grains Changes
 
   New behavior:
 
-  .. code-block:: bash
+  .. code-block:: console
 
       root@master:~# salt 'testwin200' grains.item cpu_model
       testwin200:
@@ -378,10 +378,7 @@ eAuth Changes
 
   .. code-block:: python
 
-      [{'web*': ['test.*',
-                 'network.*']},
-       '@wheel',
-       '@runner']
+      [{"web*": ["test.*", "network.*"]}, "@wheel", "@runner"]
 
 - External auth is supported by :ref:`salt-run <salt-run>` and
   :ref:`salt-key <salt-key>` now. Note that master must be started to
@@ -554,13 +551,15 @@ General Deprecations
 
   .. code-block:: python
 
-    def fcn(msg='', env='base', refresh=True, saltenv='base', **kwargs):
+    def fcn(msg="", env="base", refresh=True, saltenv="base", **kwargs):
+        ...
 
   has been changed to
 
   .. code-block:: python
 
-    def fcn(msg='', refresh=True, saltenv='base', **kwargs):
+    def fcn(msg="", refresh=True, saltenv="base", **kwargs):
+        ...
 
   - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
     that also accepts arbitrary keyword arguments, then a new warning informs the
@@ -569,12 +568,13 @@ General Deprecations
 
     .. code-block:: python
 
-      def fcn(msg='', refresh=True, saltenv='base', **kwargs):
+      def fcn(msg="", refresh=True, saltenv="base", **kwargs):
+          ...
 
     .. code-block:: python
 
       # will result in a warning log message
-      fcn(msg='add more salt', env='prod', refresh=False)
+      fcn(msg="add more salt", env="prod", refresh=False)
 
   - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
     that does not accept arbitrary keyword arguments, then python will issue an
@@ -582,12 +582,13 @@ General Deprecations
 
     .. code-block:: python
 
-      def fcn(msg='', refresh=True, saltenv='base'):
+      def fcn(msg="", refresh=True, saltenv="base"):
+          ...
 
     .. code-block:: python
 
       # will result in a python TypeError
-      fcn(msg='add more salt', env='prod', refresh=False)
+      fcn(msg="add more salt", env="prod", refresh=False)
 
   - If ``env`` (or ``__env__``) is supplied as a positional argument to a
     function, then undefined behavior will occur, as the removal of ``env`` and
@@ -596,12 +597,13 @@ General Deprecations
 
     .. code-block:: python
 
-      def fcn(msg='', refresh=True, saltenv='base'):
+      def fcn(msg="", refresh=True, saltenv="base"):
+          ...
 
     .. code-block:: python
 
       # will result in refresh evaluating to True and saltenv likely not being a string at all
-      fcn('add more salt', 'prod', False)
+      fcn("add more salt", "prod", False)
 
 - Deprecations in ``minion.py``:
 

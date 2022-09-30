@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing container and VM images
 
 .. versionadded:: 2014.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import pprint
+import shlex
 import uuid
 
-# Import salt libs
 import salt.syspaths
 import salt.utils.kickstart
 import salt.utils.path
@@ -22,15 +18,6 @@ import salt.utils.stringutils
 import salt.utils.validate.path
 import salt.utils.yast
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 
 log = logging.getLogger(__name__)
 
@@ -166,18 +153,18 @@ def bootstrap(
         if not img_size:
             raise SaltInvocationError("An img_size must be specified for a sparse file")
         if not mount_dir:
-            mount_dir = "/opt/salt-genesis.{0}".format(uuid.uuid4())
+            mount_dir = "/opt/salt-genesis.{}".format(uuid.uuid4())
         __salt__["file.mkdir"](mount_dir, "root", "root", "755")
         __salt__["cmd.run"](("fallocate", "-l", img_size, root), python_shell=False)
         _mkpart(root, fs_format, fs_opts, mount_dir)
 
         loop1 = __salt__["cmd.run"]("losetup -f")
         log.debug("First loop device is %s", loop1)
-        __salt__["cmd.run"]("losetup {0} {1}".format(loop1, root))
+        __salt__["cmd.run"]("losetup {} {}".format(loop1, root))
         loop2 = __salt__["cmd.run"]("losetup -f")
         log.debug("Second loop device is %s", loop2)
-        start = six.text_type(2048 * 2048)
-        __salt__["cmd.run"]("losetup -o {0} {1} {2}".format(start, loop2, loop1))
+        start = str(2048 * 2048)
+        __salt__["cmd.run"]("losetup -o {} {} {}".format(start, loop2, loop1))
         __salt__["mount.mount"](mount_dir, loop2)
 
         _populate_cache(platform, pkg_cache, mount_dir)
@@ -193,7 +180,10 @@ def bootstrap(
 
     if platform in ("rpm", "yum"):
         _bootstrap_yum(
-            root, pkgs=pkgs, exclude_pkgs=exclude_pkgs, epel_url=epel_url,
+            root,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
+            epel_url=epel_url,
         )
     elif platform == "deb":
         _bootstrap_deb(
@@ -207,19 +197,22 @@ def bootstrap(
         )
     elif platform == "pacman":
         _bootstrap_pacman(
-            root, img_format=img_format, pkgs=pkgs, exclude_pkgs=exclude_pkgs,
+            root,
+            img_format=img_format,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
         )
 
     if img_format != "dir":
         blkinfo = __salt__["disk.blkid"](loop2)
         __salt__["file.replace"](
-            "{0}/boot/grub/grub.cfg".format(mount_dir),
+            "{}/boot/grub/grub.cfg".format(mount_dir),
             "ad4103fa-d940-47ca-8506-301d8071d467",  # This seems to be the default
             blkinfo[loop2]["UUID"],
         )
         __salt__["mount.umount"](root)
-        __salt__["cmd.run"]("losetup -d {0}".format(loop2))
-        __salt__["cmd.run"]("losetup -d {0}".format(loop1))
+        __salt__["cmd.run"]("losetup -d {}".format(loop2))
+        __salt__["cmd.run"]("losetup -d {}".format(loop1))
         __salt__["file.rmdir"](mount_dir)
 
 
@@ -227,14 +220,14 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     """
     Make a partition, and make it bootable
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     __salt__["partition.mklabel"](root, "msdos")
     loop1 = __salt__["cmd.run"]("losetup -f")
     log.debug("First loop device is %s", loop1)
-    __salt__["cmd.run"]("losetup {0} {1}".format(loop1, root))
+    __salt__["cmd.run"]("losetup {} {}".format(loop1, root))
     part_info = __salt__["partition.list"](loop1)
-    start = six.text_type(2048 * 2048) + "B"
+    start = str(2048 * 2048) + "B"
     end = part_info["info"]["size"]
     __salt__["partition.mkpart"](loop1, "primary", start=start, end=end)
     __salt__["partition.set"](loop1, "1", "boot", "on")
@@ -242,7 +235,7 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     loop2 = __salt__["cmd.run"]("losetup -f")
     log.debug("Second loop device is %s", loop2)
     start = start.rstrip("B")
-    __salt__["cmd.run"]("losetup -o {0} {1} {2}".format(start, loop2, loop1))
+    __salt__["cmd.run"]("losetup -o {} {} {}".format(start, loop2, loop1))
     _mkfs(loop2, fs_format, fs_opts)
     __salt__["mount.mount"](mount_dir, loop2)
     __salt__["cmd.run"](
@@ -252,14 +245,14 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
             "--debug",
             "--no-floppy",
             "--modules=part_msdos linux",
-            "--boot-directory={0}/boot".format(mount_dir),
+            "--boot-directory={}/boot".format(mount_dir),
             loop1,
         ),
         python_shell=False,
     )
     __salt__["mount.umount"](mount_dir)
-    __salt__["cmd.run"]("losetup -d {0}".format(loop2))
-    __salt__["cmd.run"]("losetup -d {0}".format(loop1))
+    __salt__["cmd.run"]("losetup -d {}".format(loop2))
+    __salt__["cmd.run"]("losetup -d {}".format(loop1))
     return part_info
 
 
@@ -267,7 +260,7 @@ def _mkfs(root, fs_format, fs_opts=None):
     """
     Make a filesystem using the appropriate module
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     if fs_opts is None:
         fs_opts = {}
@@ -291,14 +284,18 @@ def _populate_cache(platform, pkg_cache, mount_dir):
         return
 
     if platform == "pacman":
-        cache_dir = "{0}/var/cache/pacman/pkg".format(mount_dir)
+        cache_dir = "{}/var/cache/pacman/pkg".format(mount_dir)
 
     __salt__["file.mkdir"](cache_dir, "root", "root", "755")
     __salt__["file.copy"](pkg_cache, cache_dir, recurse=True, remove_existing=True)
 
 
 def _bootstrap_yum(
-    root, pkg_confs="/etc/yum*", pkgs=None, exclude_pkgs=None, epel_url=EPEL_URL,
+    root,
+    pkg_confs="/etc/yum*",
+    pkgs=None,
+    exclude_pkgs=None,
+    epel_url=EPEL_URL,
 ):
     """
     Bootstrap an image using the yum tools
@@ -327,7 +324,7 @@ def _bootstrap_yum(
     """
     if pkgs is None:
         pkgs = []
-    elif isinstance(pkgs, six.string_types):
+    elif isinstance(pkgs, str):
         pkgs = pkgs.split(",")
 
     default_pkgs = ("yum", "centos-release", "iputils")
@@ -337,7 +334,7 @@ def _bootstrap_yum(
 
     if exclude_pkgs is None:
         exclude_pkgs = []
-    elif isinstance(exclude_pkgs, six.string_types):
+    elif isinstance(exclude_pkgs, str):
         exclude_pkgs = exclude_pkgs.split(",")
 
     for pkg in exclude_pkgs:
@@ -347,37 +344,43 @@ def _bootstrap_yum(
     release_files = [rf for rf in os.listdir("/etc") if rf.endswith("release")]
     __salt__["cmd.run"](
         "cp /etc/resolv/conf {rfs} {root}/etc".format(
-            root=_cmd_quote(root), rfs=" ".join(release_files)
+            root=shlex.quote(root), rfs=" ".join(release_files)
         )
     )
     __salt__["cmd.run"](
         "cp -r {rfs} {root}/etc".format(
-            root=_cmd_quote(root), rfs=" ".join(release_files)
+            root=shlex.quote(root), rfs=" ".join(release_files)
         )
     )
     __salt__["cmd.run"](
         "cp -r {confs} {root}/etc".format(
-            root=_cmd_quote(root), confs=_cmd_quote(pkg_confs)
+            root=shlex.quote(root), confs=shlex.quote(pkg_confs)
         )
     )
 
     yum_args = [
         "yum",
         "install",
-        "--installroot={0}".format(_cmd_quote(root)),
+        "--installroot={}".format(shlex.quote(root)),
         "-y",
     ] + pkgs
     __salt__["cmd.run"](yum_args, python_shell=False)
 
     if "epel-release" not in exclude_pkgs:
         __salt__["cmd.run"](
-            ("rpm", "--root={0}".format(_cmd_quote(root)), "-Uvh", epel_url),
+            ("rpm", "--root={}".format(shlex.quote(root)), "-Uvh", epel_url),
             python_shell=False,
         )
 
 
 def _bootstrap_deb(
-    root, arch, flavor, repo_url=None, static_qemu=None, pkgs=None, exclude_pkgs=None,
+    root,
+    arch,
+    flavor,
+    repo_url=None,
+    static_qemu=None,
+    pkgs=None,
+    exclude_pkgs=None,
 ):
     """
     Bootstrap an image using the Debian tools
@@ -423,17 +426,17 @@ def _bootstrap_deb(
     if isinstance(exclude_pkgs, (list, tuple)):
         exclude_pkgs = ",".join(exclude_pkgs)
 
-    deb_args = ["debootstrap", "--foreign", "--arch", _cmd_quote(arch)]
+    deb_args = ["debootstrap", "--foreign", "--arch", shlex.quote(arch)]
 
     if pkgs:
-        deb_args += ["--include", _cmd_quote(pkgs)]
+        deb_args += ["--include", shlex.quote(pkgs)]
     if exclude_pkgs:
-        deb_args += ["--exclude", _cmd_quote(exclude_pkgs)]
+        deb_args += ["--exclude", shlex.quote(exclude_pkgs)]
 
     deb_args += [
-        _cmd_quote(flavor),
-        _cmd_quote(root),
-        _cmd_quote(repo_url),
+        shlex.quote(flavor),
+        shlex.quote(root),
+        shlex.quote(repo_url),
     ]
 
     __salt__["cmd.run"](deb_args, python_shell=False)
@@ -441,7 +444,7 @@ def _bootstrap_deb(
     if static_qemu:
         __salt__["cmd.run"](
             "cp {qemu} {root}/usr/bin/".format(
-                qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
+                qemu=shlex.quote(static_qemu), root=shlex.quote(root)
             )
         )
 
@@ -455,17 +458,21 @@ def _bootstrap_deb(
     }
     __salt__["cmd.run"](
         "chroot {root} /debootstrap/debootstrap --second-stage".format(
-            root=_cmd_quote(root)
+            root=shlex.quote(root)
         ),
         env=env,
     )
     __salt__["cmd.run"](
-        "chroot {root} dpkg --configure -a".format(root=_cmd_quote(root)), env=env
+        "chroot {root} dpkg --configure -a".format(root=shlex.quote(root)), env=env
     )
 
 
 def _bootstrap_pacman(
-    root, pkg_confs="/etc/pacman*", img_format="dir", pkgs=None, exclude_pkgs=None,
+    root,
+    pkg_confs="/etc/pacman*",
+    img_format="dir",
+    pkgs=None,
+    exclude_pkgs=None,
 ):
     """
     Bootstrap an image using the pacman tools
@@ -495,7 +502,7 @@ def _bootstrap_pacman(
 
     if pkgs is None:
         pkgs = []
-    elif isinstance(pkgs, six.string_types):
+    elif isinstance(pkgs, str):
         pkgs = pkgs.split(",")
 
     default_pkgs = ("pacman", "linux", "systemd-sysvcompat", "grub")
@@ -505,34 +512,32 @@ def _bootstrap_pacman(
 
     if exclude_pkgs is None:
         exclude_pkgs = []
-    elif isinstance(exclude_pkgs, six.string_types):
+    elif isinstance(exclude_pkgs, str):
         exclude_pkgs = exclude_pkgs.split(",")
 
     for pkg in exclude_pkgs:
         pkgs.remove(pkg)
 
     if img_format != "dir":
-        __salt__["mount.mount"](
-            "{0}/proc".format(root), "/proc", fstype="", opts="bind"
-        )
-        __salt__["mount.mount"]("{0}/dev".format(root), "/dev", fstype="", opts="bind")
+        __salt__["mount.mount"]("{}/proc".format(root), "/proc", fstype="", opts="bind")
+        __salt__["mount.mount"]("{}/dev".format(root), "/dev", fstype="", opts="bind")
 
     __salt__["file.mkdir"](
-        "{0}/var/lib/pacman/local".format(root), "root", "root", "755"
+        "{}/var/lib/pacman/local".format(root), "root", "root", "755"
     )
     pac_files = [rf for rf in os.listdir("/etc") if rf.startswith("pacman.")]
     for pac_file in pac_files:
-        __salt__["cmd.run"]("cp -r /etc/{0} {1}/etc".format(pac_file, _cmd_quote(root)))
+        __salt__["cmd.run"]("cp -r /etc/{} {}/etc".format(pac_file, shlex.quote(root)))
     __salt__["file.copy"](
-        "/var/lib/pacman/sync", "{0}/var/lib/pacman/sync".format(root), recurse=True
+        "/var/lib/pacman/sync", "{}/var/lib/pacman/sync".format(root), recurse=True
     )
 
-    pacman_args = ["pacman", "--noconfirm", "-r", _cmd_quote(root), "-S"] + pkgs
+    pacman_args = ["pacman", "--noconfirm", "-r", shlex.quote(root), "-S"] + pkgs
     __salt__["cmd.run"](pacman_args, python_shell=False)
 
     if img_format != "dir":
-        __salt__["mount.umount"]("{0}/proc".format(root))
-        __salt__["mount.umount"]("{0}/dev".format(root))
+        __salt__["mount.umount"]("{}/proc".format(root))
+        __salt__["mount.umount"]("{}/dev".format(root))
 
 
 def _make_nodes(root):
@@ -542,24 +547,24 @@ def _make_nodes(root):
     https://wiki.archlinux.org/index.php/Linux_Containers
     """
     dirs = (
-        ("{0}/etc".format(root), "root", "root", "755"),
-        ("{0}/dev".format(root), "root", "root", "755"),
-        ("{0}/proc".format(root), "root", "root", "755"),
-        ("{0}/dev/pts".format(root), "root", "root", "755"),
-        ("{0}/dev/shm".format(root), "root", "root", "1755"),
+        ("{}/etc".format(root), "root", "root", "755"),
+        ("{}/dev".format(root), "root", "root", "755"),
+        ("{}/proc".format(root), "root", "root", "755"),
+        ("{}/dev/pts".format(root), "root", "root", "755"),
+        ("{}/dev/shm".format(root), "root", "root", "1755"),
     )
 
     nodes = (
-        ("{0}/dev/null".format(root), "c", 1, 3, "root", "root", "666"),
-        ("{0}/dev/zero".format(root), "c", 1, 5, "root", "root", "666"),
-        ("{0}/dev/random".format(root), "c", 1, 8, "root", "root", "666"),
-        ("{0}/dev/urandom".format(root), "c", 1, 9, "root", "root", "666"),
-        ("{0}/dev/tty".format(root), "c", 5, 0, "root", "root", "666"),
-        ("{0}/dev/tty0".format(root), "c", 4, 0, "root", "root", "666"),
-        ("{0}/dev/console".format(root), "c", 5, 1, "root", "root", "600"),
-        ("{0}/dev/full".format(root), "c", 1, 7, "root", "root", "666"),
-        ("{0}/dev/initctl".format(root), "p", 0, 0, "root", "root", "600"),
-        ("{0}/dev/ptmx".format(root), "c", 5, 2, "root", "root", "666"),
+        ("{}/dev/null".format(root), "c", 1, 3, "root", "root", "666"),
+        ("{}/dev/zero".format(root), "c", 1, 5, "root", "root", "666"),
+        ("{}/dev/random".format(root), "c", 1, 8, "root", "root", "666"),
+        ("{}/dev/urandom".format(root), "c", 1, 9, "root", "root", "666"),
+        ("{}/dev/tty".format(root), "c", 5, 0, "root", "root", "666"),
+        ("{}/dev/tty0".format(root), "c", 4, 0, "root", "root", "666"),
+        ("{}/dev/console".format(root), "c", 5, 1, "root", "root", "600"),
+        ("{}/dev/full".format(root), "c", 1, 7, "root", "root", "666"),
+        ("{}/dev/initctl".format(root), "p", 0, 0, "root", "root", "600"),
+        ("{}/dev/ptmx".format(root), "c", 5, 2, "root", "root", "666"),
     )
 
     for path in dirs:
@@ -631,9 +636,12 @@ def _tar(name, root, path=None, compress="bzip2"):
 
     compression, ext = _compress(compress)
 
-    tarfile = "{0}/{1}.tar.{2}".format(path, name, ext)
+    tarfile = "{}/{}.tar.{}".format(path, name, ext)
     out = __salt__["archive.tar"](
-        options="{0}pcf".format(compression), tarfile=tarfile, sources=".", dest=root,
+        options="{}pcf".format(compression),
+        tarfile=tarfile,
+        sources=".",
+        dest=root,
     )
 
 
@@ -655,9 +663,11 @@ def _untar(name, dest=None, path=None, compress="bz2"):
 
     compression, ext = _compress(compress)
 
-    tarfile = "{0}/{1}.tar.{2}".format(path, name, ext)
+    tarfile = "{}/{}.tar.{}".format(path, name, ext)
     out = __salt__["archive.tar"](
-        options="{0}xf".format(compression), tarfile=tarfile, dest=dest,
+        options="{}xf".format(compression),
+        tarfile=tarfile,
+        dest=dest,
     )
 
 
@@ -687,6 +697,8 @@ def ldd_deps(filename, ret=None):
     dependencies for a file; but it does help.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion genesis.ldd_deps bash
         salt myminion genesis.ldd_deps /bin/bash
@@ -730,10 +742,12 @@ def mksls(fmt, src, dst=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg /path/to/dest.sls
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     if fmt == "kickstart":
         return salt.utils.kickstart.mksls(src, dst)

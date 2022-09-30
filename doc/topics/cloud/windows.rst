@@ -12,7 +12,7 @@ Requirements
 
 .. note::
    Support ``winexe`` and ``impacket`` has been deprecated and will be removed in
-   Sodium. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
+   3001. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
    respectivly. These are pure python alternatives that are compatible with all
    supported python versions.
 
@@ -62,7 +62,7 @@ from saltstack.com:
 
 * `SaltStack Download Area`__
 
-.. __: https://repo.saltstack.com/windows/
+.. __: https://repo.saltproject.io/windows/
 
 .. _new-pywinrm:
 
