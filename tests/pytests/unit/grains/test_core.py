@@ -3276,6 +3276,7 @@ def test_linux_proc_files_with_non_utf8_chars():
     _salt_utils_files_fopen = salt.utils.files.fopen
 
     empty_mock = MagicMock(return_value={})
+    os_release_mock = {"NAME": "Linux", "ID": "linux", "PRETTY_NAME": "Linux"}
 
     with tempfile.TemporaryDirectory() as tempdir:
 
@@ -3300,7 +3301,7 @@ def test_linux_proc_files_with_non_utf8_chars():
         ), patch.object(
             core, "_parse_lsb_release", return_value=empty_mock
         ), patch.object(
-            core, "_freedesktop_os_release", return_value=empty_mock
+            core, "_freedesktop_os_release", return_value=os_release_mock
         ), patch.object(
             core, "_hw_data", return_value=empty_mock
         ), patch.object(
