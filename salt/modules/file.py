@@ -3709,7 +3709,7 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path, force=False):
+def symlink(src, path, force=False, atomic=False):
     """
     Create a symbolic link (symlink, soft link) to a file
 
@@ -3723,8 +3723,12 @@ def symlink(src, path, force=False):
             Overwrite an existing symlink with the same name
             .. versionadded:: 3005
 
+        atomic (bool):
+            Use atomic file operations to create the symlink
+            .. versionadded:: 3006.0
+
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
 
     CLI Example:
 
@@ -3733,6 +3737,9 @@ def symlink(src, path, force=False):
         salt '*' file.symlink /path/to/file /path/to/link
     """
     path = os.path.expanduser(path)
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError("Link path must be absolute: {}".format(path))
 
     if os.path.islink(path):
         try:
@@ -3744,18 +3751,32 @@ def symlink(src, path, force=False):
         except OSError:
             pass
 
-        if force:
-            os.unlink(path)
-        else:
+        if not force and not atomic:
             msg = "Found existing symlink: {}".format(path)
             raise CommandExecutionError(msg)
 
-    if os.path.exists(path):
+    if os.path.exists(path) and not force and not atomic:
         msg = "Existing path is not a symlink: {}".format(path)
         raise CommandExecutionError(msg)
 
-    if not os.path.isabs(path):
-        raise SaltInvocationError("Link path must be absolute: {}".format(path))
+    if (os.path.islink(path) or os.path.exists(path)) and force and not atomic:
+        os.unlink(path)
+    elif atomic:
+        link_dir = os.path.dirname(path)
+        retry = 0
+        while retry < 5:
+            temp_link = tempfile.mktemp(dir=link_dir)
+            try:
+                os.symlink(src, temp_link)
+                break
+            except FileExistsError:
+                retry += 1
+        try:
+            os.replace(temp_link, path)
+            return True
+        except OSError:
+            os.remove(temp_link)
+            raise CommandExecutionError("Could not create '{}'".format(path))
 
     try:
         os.symlink(src, path)

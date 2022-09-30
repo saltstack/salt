@@ -82,7 +82,11 @@ __grants__ = [
     "ALTER ROUTINE",
     "BACKUP_ADMIN",
     "BINLOG_ADMIN",
+    "BINLOG ADMIN",
+    "BINLOG MONITOR",
+    "BINLOG REPLAY",
     "CONNECTION_ADMIN",
+    "CONNECTION ADMIN",
     "CREATE",
     "CREATE ROLE",
     "CREATE ROUTINE",
@@ -96,6 +100,7 @@ __grants__ = [
     "ENCRYPTION_KEY_ADMIN",
     "EVENT",
     "EXECUTE",
+    "FEDERATED ADMIN",
     "FILE",
     "GRANT OPTION",
     "GROUP_REPLICATION_ADMIN",
@@ -104,15 +109,21 @@ __grants__ = [
     "LOCK TABLES",
     "PERSIST_RO_VARIABLES_ADMIN",
     "PROCESS",
+    "READ_ONLY ADMIN",
     "REFERENCES",
     "RELOAD",
+    "REPLICA MONITOR",
     "REPLICATION CLIENT",
+    "REPLICATION MASTER ADMIN",
+    "REPLICATION REPLICA",
     "REPLICATION SLAVE",
     "REPLICATION_SLAVE_ADMIN",
+    "REPLICATION SLAVE ADMIN",
     "RESOURCE_GROUP_ADMIN",
     "RESOURCE_GROUP_USER",
     "ROLE_ADMIN",
     "SELECT",
+    "SET USER",
     "SET_USER_ID",
     "SHOW DATABASES",
     "SHOW VIEW",
@@ -618,6 +629,67 @@ def _grant_to_tokens(grant):
         host = ""
 
     return dict(user=user, host=host, grant=grant_tokens, database=database)
+
+
+def _resolve_grant_aliases(grants, server_version):
+    """
+
+    There can be a situation where the database supports grants "A" and "B", where
+    "B" is an alias for "A". In that case, when you want to grant "B" to a user,
+    the database will actually report it added "A". We need to resolve those
+    aliases to not report (wrong) errors.
+
+    :param grants: the tokenized grants
+
+    :param server_version: version string of the connected database
+
+    """
+    if "MariaDB" not in server_version:
+        return grants
+
+    mariadb_version_compare_replication_replica = "10.5.1"
+    mariadb_version_compare_binlog_monitor = "10.5.2"
+    mariadb_version_compare_slave_monitor = "10.5.9"
+
+    resolved_tokens = []
+
+    for token in grants:
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_replication_replica
+            )
+            >= 0
+        ):
+            if token == "REPLICATION REPLICA":
+                # https://mariadb.com/kb/en/grant/#replication-replica
+                resolved_tokens.append("REPLICATION SLAVE")
+                continue
+
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_binlog_monitor
+            )
+            >= 0
+        ):
+            if token == "REPLICATION CLIENT":
+                # https://mariadb.com/kb/en/grant/#replication-client
+                resolved_tokens.append("BINLOG MONITOR")
+                continue
+
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_slave_monitor
+            )
+            >= 0
+        ):
+            if token == "REPLICA MONITOR":
+                # https://mariadb.com/kb/en/grant/#replica-monitor
+                resolved_tokens.append("SLAVE MONITOR")
+                continue
+
+        resolved_tokens.append(token)
+
+    return resolved_tokens
 
 
 def quote_identifier(identifier, for_grants=False):
@@ -2439,6 +2511,9 @@ def grant_exists(
     _grants = {}
     for grant in grants:
         grant_token = _grant_to_tokens(grant)
+        grant_token["grant"] = _resolve_grant_aliases(
+            grant_token["grant"], server_version
+        )
         if grant_token["database"] not in _grants:
             _grants[grant_token["database"]] = {
                 "user": grant_token["user"],
@@ -2450,6 +2525,9 @@ def grant_exists(
             _grants[grant_token["database"]]["grant"].extend(grant_token["grant"])
 
     target_tokens = _grant_to_tokens(target)
+    target_tokens["grant"] = _resolve_grant_aliases(
+        target_tokens["grant"], server_version
+    )
     for database, grant_tokens in _grants.items():
         try:
             _grant_tokens = {}
