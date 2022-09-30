@@ -984,6 +984,32 @@ def test_almalinux_8_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_endeavouros_os_grains(os_release_dir):
+    """
+    Test if OS grains are parsed correctly in EndeavourOS
+    """
+    _os_release_map = {
+        "os_release_file": {
+            "NAME": "EndeavourOS",
+            "VERSION_ID": "22.9",
+        },
+        "_linux_distribution": ("EndeavourOS", "22.9", ""),
+    }
+
+    expectation = {
+        "os": "EndeavourOS",
+        "os_family": "Arch",
+        "oscodename": "",
+        "osfullname": "EndeavourOS",
+        "osrelease": "22.9",
+        "osrelease_info": (22, 9),
+        "osmajorrelease": 22,
+        "osfinger": "EndeavourOS-22",
+    }
+    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+
+
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
     with patch("salt.grains.core.hostname"), patch(
