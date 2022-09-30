@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Parses roster entries out of Host directives from SSH known_hosts
 
@@ -35,14 +34,10 @@ Or with a Saltfile
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 
@@ -98,10 +93,10 @@ def targets(tgt, tgt_type="glob"):
 
     if not os.path.isfile(ssh_known_hosts_file):
         log.error("Cannot find SSH known_hosts file")
-        raise IOError("Cannot find SSH known_hosts file")
+        raise OSError("Cannot find SSH known_hosts file")
     if not os.access(ssh_known_hosts_file, os.R_OK):
         log.error("Cannot access SSH known_hosts file: %s", ssh_known_hosts_file)
-        raise IOError(
+        raise OSError(
             "Cannot access SSH known_hosts file: {}".format(ssh_known_hosts_file)
         )
 
