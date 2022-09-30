@@ -1,4 +1,5 @@
 import pytest
+
 import salt.loader
 import salt.pillar
 from salt.utils.odict import OrderedDict

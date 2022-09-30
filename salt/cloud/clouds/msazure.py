@@ -61,13 +61,14 @@ from salt.exceptions import SaltCloudSystemExit
 HAS_LIBS = False
 try:
     import azure
-    import azure.storage
     import azure.servicemanagement
+    import azure.storage
     from azure.common import (
         AzureConflictHttpError,
-        AzureMissingResourceHttpError,
         AzureException,
+        AzureMissingResourceHttpError,
     )
+
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
 
@@ -103,7 +104,7 @@ def _get_active_provider_name():
         return __active_provider_name__
 
 
-def deprecation_message(function):
+def _deprecation_message(function):
     """
     Decorator wrapper to warn about msazure deprecation
     """
@@ -124,7 +125,7 @@ def deprecation_message(function):
     return wrapped
 
 
-@deprecation_message
+@_deprecation_message
 def get_configured_provider():
     """
     Return the first configured instance.
@@ -136,7 +137,7 @@ def get_configured_provider():
     )
 
 
-@deprecation_message
+@_deprecation_message
 def get_dependencies():
     """
     Warn if dependencies aren't met.
@@ -144,7 +145,7 @@ def get_dependencies():
     return config.check_driver_dependencies(__virtualname__, {"azure": HAS_LIBS})
 
 
-@deprecation_message
+@_deprecation_message
 def get_conn():
     """
     Return a conn object for the passed VM data
@@ -169,7 +170,7 @@ def get_conn():
     )
 
 
-@deprecation_message
+@_deprecation_message
 def script(vm_):
     """
     Return the script deployment object
@@ -184,7 +185,7 @@ def script(vm_):
     )
 
 
-@deprecation_message
+@_deprecation_message
 def avail_locations(conn=None, call=None):
     """
     List available locations for Azure
@@ -209,7 +210,7 @@ def avail_locations(conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def avail_images(conn=None, call=None):
     """
     List available images for Azure
@@ -231,7 +232,7 @@ def avail_images(conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def avail_sizes(call=None):
     """
     Return a list of sizes from Azure
@@ -250,7 +251,7 @@ def avail_sizes(call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_nodes(conn=None, call=None):
     """
     List VMs on this Azure account
@@ -269,7 +270,7 @@ def list_nodes(conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_nodes_full(conn=None, call=None):
     """
     List VMs on this Azure account, with full information
@@ -320,7 +321,7 @@ def list_nodes_full(conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_hosted_services(conn=None, call=None):
     """
     List VMs on this Azure account, with full information
@@ -427,7 +428,7 @@ def list_hosted_services(conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_nodes_select(conn=None, call=None):
     """
     Return a list of the VMs that are on the provider, with select fields
@@ -442,7 +443,7 @@ def list_nodes_select(conn=None, call=None):
     )
 
 
-@deprecation_message
+@_deprecation_message
 def show_instance(name, call=None):
     """
     Show the details from the provider concerning an instance
@@ -470,7 +471,7 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
-@deprecation_message
+@_deprecation_message
 def create(vm_):
     """
     Create a single VM from a data dict
@@ -769,7 +770,7 @@ def create(vm_):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     """
     Create and attach volumes to created node
@@ -870,7 +871,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     """
     Create and attach volumes to created node
@@ -990,7 +991,7 @@ def _wait_for_async(conn, request_id):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def destroy(name, conn=None, call=None, kwargs=None):
     """
     Destroy a VM
@@ -1126,7 +1127,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_storage_services(conn=None, call=None):
     """
     List VMs on this Azure account, with full information
@@ -1153,7 +1154,7 @@ def list_storage_services(conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def get_operation_status(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1195,7 +1196,7 @@ def get_operation_status(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_storage(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1224,7 +1225,7 @@ def list_storage(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_storage(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1261,7 +1262,7 @@ def show_storage(kwargs=None, conn=None, call=None):
 get_storage = show_storage
 
 
-@deprecation_message
+@_deprecation_message
 def show_storage_keys(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1307,7 +1308,7 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
 get_storage_keys = show_storage_keys
 
 
-@deprecation_message
+@_deprecation_message
 def create_storage(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1364,7 +1365,7 @@ def create_storage(kwargs=None, conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def update_storage(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1402,7 +1403,7 @@ def update_storage(kwargs=None, conn=None, call=None):
     return show_storage(kwargs={"name": kwargs["name"]}, call="function")
 
 
-@deprecation_message
+@_deprecation_message
 def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1448,7 +1449,7 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def delete_storage(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1482,7 +1483,7 @@ def delete_storage(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
-@deprecation_message
+@_deprecation_message
 def list_services(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1511,7 +1512,7 @@ def list_services(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_service(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1545,7 +1546,7 @@ def show_service(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def create_service(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1596,7 +1597,7 @@ def create_service(kwargs=None, conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def delete_service(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1630,7 +1631,7 @@ def delete_service(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
-@deprecation_message
+@_deprecation_message
 def list_disks(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1658,7 +1659,7 @@ def list_disks(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_disk(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1693,7 +1694,7 @@ def show_disk(kwargs=None, conn=None, call=None):
 get_disk = show_disk
 
 
-@deprecation_message
+@_deprecation_message
 def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1733,7 +1734,7 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     return True
 
 
-@deprecation_message
+@_deprecation_message
 def delete_disk(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1768,7 +1769,7 @@ def delete_disk(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
-@deprecation_message
+@_deprecation_message
 def update_disk(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1810,7 +1811,7 @@ def update_disk(kwargs=None, conn=None, call=None):
     return show_disk(kwargs={"name": kwargs["name"]}, call="function")
 
 
-@deprecation_message
+@_deprecation_message
 def list_service_certificates(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1845,7 +1846,7 @@ def list_service_certificates(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_service_certificate(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1893,7 +1894,7 @@ def show_service_certificate(kwargs=None, conn=None, call=None):
 get_service_certificate = show_service_certificate
 
 
-@deprecation_message
+@_deprecation_message
 def add_service_certificate(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1947,7 +1948,7 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def delete_service_certificate(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -1995,7 +1996,7 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
-@deprecation_message
+@_deprecation_message
 def list_management_certificates(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2024,7 +2025,7 @@ def list_management_certificates(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_management_certificate(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2061,7 +2062,7 @@ def show_management_certificate(kwargs=None, conn=None, call=None):
 get_management_certificate = show_management_certificate
 
 
-@deprecation_message
+@_deprecation_message
 def add_management_certificate(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2110,7 +2111,7 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def delete_management_certificate(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2146,7 +2147,7 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit("{}: {}".format(kwargs["thumbprint"], exc.message))
 
 
-@deprecation_message
+@_deprecation_message
 def list_virtual_networks(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2169,7 +2170,7 @@ def list_virtual_networks(kwargs=None, conn=None, call=None):
     return data
 
 
-@deprecation_message
+@_deprecation_message
 def list_input_endpoints(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2229,7 +2230,7 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_input_endpoint(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2262,7 +2263,7 @@ def show_input_endpoint(kwargs=None, conn=None, call=None):
 get_input_endpoint = show_input_endpoint
 
 
-@deprecation_message
+@_deprecation_message
 def update_input_endpoint(kwargs=None, conn=None, call=None, activity="update"):
     """
     .. versionadded:: 2015.8.0
@@ -2387,7 +2388,7 @@ xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
     return True
 
 
-@deprecation_message
+@_deprecation_message
 def add_input_endpoint(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2412,7 +2413,7 @@ def add_input_endpoint(kwargs=None, conn=None, call=None):
     )
 
 
-@deprecation_message
+@_deprecation_message
 def delete_input_endpoint(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2435,7 +2436,7 @@ def delete_input_endpoint(kwargs=None, conn=None, call=None):
     )
 
 
-@deprecation_message
+@_deprecation_message
 def show_deployment(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2478,7 +2479,7 @@ def show_deployment(kwargs=None, conn=None, call=None):
 get_deployment = show_deployment
 
 
-@deprecation_message
+@_deprecation_message
 def list_affinity_groups(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2506,7 +2507,7 @@ def list_affinity_groups(kwargs=None, conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def show_affinity_group(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2542,7 +2543,7 @@ def show_affinity_group(kwargs=None, conn=None, call=None):
 get_affinity_group = show_affinity_group
 
 
-@deprecation_message
+@_deprecation_message
 def create_affinity_group(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2590,7 +2591,7 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def update_affinity_group(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2628,7 +2629,7 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
     return show_affinity_group(kwargs={"name": kwargs["name"]}, call="function")
 
 
-@deprecation_message
+@_deprecation_message
 def delete_affinity_group(kwargs=None, conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2662,7 +2663,7 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
-@deprecation_message
+@_deprecation_message
 def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
     """
     .. versionadded:: 2015.8.0
@@ -2691,7 +2692,7 @@ def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
     return azure.storage.BlobService(storage_account, storage_key)
 
 
-@deprecation_message
+@_deprecation_message
 def make_blob_url(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2748,7 +2749,7 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def list_storage_containers(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2776,7 +2777,7 @@ def list_storage_containers(kwargs=None, storage_conn=None, call=None):
     return ret
 
 
-@deprecation_message
+@_deprecation_message
 def create_storage_container(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2823,7 +2824,7 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
         )
 
 
-@deprecation_message
+@_deprecation_message
 def show_storage_container(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2866,7 +2867,7 @@ def show_storage_container(kwargs=None, storage_conn=None, call=None):
 get_storage_container = show_storage_container
 
 
-@deprecation_message
+@_deprecation_message
 def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2912,7 +2913,7 @@ def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 get_storage_container_metadata = show_storage_container_metadata
 
 
-@deprecation_message
+@_deprecation_message
 def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -2967,7 +2968,7 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit("There was a conflict.")
 
 
-@deprecation_message
+@_deprecation_message
 def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3013,7 +3014,7 @@ def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
 get_storage_container_acl = show_storage_container_acl
 
 
-@deprecation_message
+@_deprecation_message
 def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3057,7 +3058,7 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit("There was a conflict.")
 
 
-@deprecation_message
+@_deprecation_message
 def delete_storage_container(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3103,7 +3104,7 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
     return data
 
 
-@deprecation_message
+@_deprecation_message
 def lease_storage_container(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3183,7 +3184,7 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
     return data
 
 
-@deprecation_message
+@_deprecation_message
 def list_blobs(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3259,7 +3260,7 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
     return salt.utils.msazure.list_blobs(storage_conn=storage_conn, **kwargs)
 
 
-@deprecation_message
+@_deprecation_message
 def show_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3291,7 +3292,7 @@ def show_blob_service_properties(kwargs=None, storage_conn=None, call=None):
 get_blob_service_properties = show_blob_service_properties
 
 
-@deprecation_message
+@_deprecation_message
 def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3336,7 +3337,7 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     return data
 
 
-@deprecation_message
+@_deprecation_message
 def show_blob_properties(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3390,7 +3391,7 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
 get_blob_properties = show_blob_properties
 
 
-@deprecation_message
+@_deprecation_message
 def set_blob_properties(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3462,7 +3463,7 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
     return data
 
 
-@deprecation_message
+@_deprecation_message
 def put_blob(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3540,7 +3541,7 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
     return salt.utils.msazure.put_blob(storage_conn=storage_conn, **kwargs)
 
 
-@deprecation_message
+@_deprecation_message
 def get_blob(kwargs=None, storage_conn=None, call=None):
     """
     .. versionadded:: 2015.8.0
@@ -3613,7 +3614,7 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
     return salt.utils.msazure.get_blob(storage_conn=storage_conn, **kwargs)
 
 
-@deprecation_message
+@_deprecation_message
 def query(path, method="GET", data=None, params=None, header_dict=None, decode=True):
     """
     Perform a query directly against the Azure REST API

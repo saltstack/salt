@@ -5,9 +5,10 @@
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-from saltfactories.utils import random_string
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
 

@@ -151,4 +151,4 @@ def test_config_get(salt_cli, proxy_id):
     when targeting deltaproxy managed proxy minions.
     """
     ret = salt_cli.run("config.get", "id", minion_tgt=proxy_id)
-    assert ret.json == proxy_id
+    assert ret.data == proxy_id

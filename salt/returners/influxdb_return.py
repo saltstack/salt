@@ -53,6 +53,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 import logging
 
 import requests
+
 import salt.returners
 import salt.utils.jid
 from salt.utils.decorators import memoize
