@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.pyrax_queues as pyrax_queues
 from tests.support.mock import MagicMock, patch
 

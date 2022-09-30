@@ -23,7 +23,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.zeromq
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
@@ -321,6 +320,16 @@ def is_ipv6(ip_addr):
     """
     try:
         return ipaddress.ip_address(ip_addr).version == 6
+    except ValueError:
+        return False
+
+
+def is_loopback(ip_addr):
+    """
+    Returns a bool telling if the value passed to it is a loopback address
+    """
+    try:
+        return ipaddress.ip_address(ip_addr).is_loopback
     except ValueError:
         return False
 
@@ -1919,11 +1928,11 @@ def _openbsd_remotes_on(port, which_end):
         data = subprocess.check_output(
             ["netstat", "-nf", "inet"]
         )  # pylint: disable=minimum-python-version
-    except subprocess.CalledProcessError:
-        log.error("Failed netstat")
+    except subprocess.CalledProcessError as exc:
+        log.error('Failed "netstat" with returncode = %s', exc.returncode)
         raise
 
-    lines = data.split("\n")
+    lines = salt.utils.stringutils.to_str(data).split("\n")
     for line in lines:
         if "ESTABLISHED" not in line:
             continue
@@ -2216,7 +2225,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
 
-    return salt.utils.zeromq.ip_bracket(ip_addrs[0])
+    return ip_bracket(ip_addrs[0])
 
 
 def _test_addrs(addrinfo, port):
@@ -2332,3 +2341,15 @@ def filter_by_networks(values, networks):
             raise ValueError("Do not know how to filter a {}".format(type(values)))
     else:
         return values
+
+
+def ip_bracket(addr, strip=False):
+    """
+    Ensure IP addresses are URI-compatible - specifically, add brackets
+    around IPv6 literals if they are not already present.
+    """
+    addr = str(addr)
+    addr = addr.lstrip("[")
+    addr = addr.rstrip("]")
+    addr = ipaddress.ip_address(addr)
+    return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)

@@ -2,6 +2,7 @@ import logging
 import time
 
 import pytest
+
 from salt.utils.timeout import wait_for
 from tests.support.unit import TestCase
 

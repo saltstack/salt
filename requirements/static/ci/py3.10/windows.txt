@@ -259,7 +259,7 @@ pycurl==7.43.0.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymysql==1.0.2
     # via -r requirements/static/pkg/py3.10/windows.txt
@@ -351,7 +351,7 @@ s3transfer==0.3.3
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.in
-setproctitle==1.1.10
+setproctitle==1.2.3; python_version >= "3.10"
     # via -r requirements/static/pkg/py3.10/windows.txt
 six==1.15.0
     # via

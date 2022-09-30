@@ -14,6 +14,7 @@ import os
 import os.path
 import stat
 import sys
+import tempfile
 
 import salt.utils.path
 import salt.utils.platform
@@ -99,6 +100,7 @@ try:
         import win32con
         import win32file
         import win32security
+
         import salt.platform.win
 
         HAS_WINDOWS_MODULES = True
@@ -1367,7 +1369,7 @@ def remove(path, force=False):
     return True
 
 
-def symlink(src, link, force=False):
+def symlink(src, link, force=False, atomic=False):
     """
     Create a symbolic link to a file
 
@@ -1388,9 +1390,13 @@ def symlink(src, link, force=False):
             Overwrite an existing symlink with the same name
             .. versionadded:: 3005
 
+        atomic (bool):
+            Use atomic file operations to create the symlink
+            .. versionadded:: 3006.0
+
     Returns:
 
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
 
     CLI Example:
 
@@ -1405,6 +1411,9 @@ def symlink(src, link, force=False):
             "Symlinks are only supported on Windows Vista or later."
         )
 
+    if not os.path.isabs(link):
+        raise SaltInvocationError("Link path must be absolute: {}".format(link))
+
     if os.path.islink(link):
         try:
             if os.path.normpath(salt.utils.path.readlink(link)) == os.path.normpath(
@@ -1415,18 +1424,13 @@ def symlink(src, link, force=False):
         except OSError:
             pass
 
-        if force:
-            os.unlink(link)
-        else:
+        if not force and not atomic:
             msg = "Found existing symlink: {}".format(link)
             raise CommandExecutionError(msg)
 
-    if os.path.exists(link):
+    if os.path.exists(link) and not force and not atomic:
         msg = "Existing path is not a symlink: {}".format(link)
         raise CommandExecutionError(msg)
-
-    if not os.path.isabs(link):
-        raise SaltInvocationError("Link path must be absolute: {}".format(link))
 
     # ensure paths are using the right slashes
     src = os.path.normpath(src)
@@ -1438,6 +1442,29 @@ def symlink(src, link, force=False):
     desired_access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), desired_access)
     salt.platform.win.elevate_token(th)
+
+    if (os.path.islink(link) or os.path.exists(link)) and force and not atomic:
+        os.unlink(link)
+    elif atomic:
+        link_dir = os.path.dirname(link)
+        retry = 0
+        while retry < 5:
+            temp_link = tempfile.mktemp(dir=link_dir)
+            try:
+                win32file.CreateSymbolicLink(temp_link, src, int(is_dir))
+                break
+            except win32file.error:
+                retry += 1
+        try:
+            win32file.MoveFileEx(
+                temp_link,
+                link,
+                win32file.MOVEFILE_REPLACE_EXISTING | win32file.MOVEFILE_WRITE_THROUGH,
+            )
+            return True
+        except win32file.error:
+            os.remove(temp_link)
+            raise CommandExecutionError("Could not create '{}'".format(link))
 
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))

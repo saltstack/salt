@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.pyenv as pyenv
 from tests.support.mock import MagicMock, patch
 

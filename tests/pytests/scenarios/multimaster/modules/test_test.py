@@ -1,4 +1,5 @@
 import pytest
+
 import salt.config
 import salt.version
 

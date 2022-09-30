@@ -11,16 +11,17 @@ import textwrap
 
 import attr
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.bases import Daemon
+from saltfactories.daemons.sshd import Sshd as _Sshd
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.yaml
-from pytestshellutils.utils import ports
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.utils.immutabletypes import freeze
-from saltfactories.bases import Daemon
-from saltfactories.daemons.sshd import Sshd as _Sshd
 from tests.support.case import ModuleCase
 from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import LoaderModuleMockMixin

@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.verify import (

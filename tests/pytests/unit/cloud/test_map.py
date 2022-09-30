@@ -8,6 +8,7 @@ import logging
 import os
 
 import pytest
+
 import salt.cloud
 import salt.config
 from tests.support.mock import MagicMock, patch
