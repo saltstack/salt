@@ -5,7 +5,7 @@ Module to provide MySQL compatibility to salt.
 
 :configuration: In order to connect to MySQL, certain configuration is required
     in either the relevant minion config (/etc/salt/minion), or pillar.
-    
+
     Some sample configs might look like::
 
         mysql.host: 'localhost'
