@@ -1133,7 +1133,7 @@ def test_endeavouros_os_grains(os_release_dir):
         "osmajorrelease": 22,
         "osfinger": "EndeavourOS-22",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
 def test_unicode_error():
