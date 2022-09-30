@@ -360,10 +360,10 @@ To create a control proxy configuration file:
 #. Repeat the previous steps for each control proxy if needed.
 
 #. In an editor, open the proxy config file: ``/etc/salt/proxy``.
-
-#. Add a section for metaproxy and set it's value to deltaproxy.
+   Add a section for metaproxy and set it's value to deltaproxy.
 
    .. code-block:: yaml
+
         metaproxy: deltaproxy
 
 
