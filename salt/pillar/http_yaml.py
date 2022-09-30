@@ -20,8 +20,6 @@ Set the following Salt config to setup an http endpoint as the external pillar s
 You can pass additional parameters, they will be added to the http.query call
 :py:func:`utils.http.query function <salt.utils.http.query>`:
 
-.. autofunction:: salt.utils.http.query
-
 If the with_grains parameter is set, grain keys wrapped in can be provided (wrapped
 in <> brackets) in the url in order to populate pillar data based on the grain value.
 
