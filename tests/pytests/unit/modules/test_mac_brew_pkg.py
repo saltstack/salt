@@ -115,6 +115,52 @@ def custom_call_brew(*cmd, failhard=True):
                       "tap": "custom/tap",
                       "url": "https://iterm2.com/downloads/stable/iTerm2-3_4_3.zip",
                       "version": "3.4.3"
+                    },
+                    {
+                      "token": "discord",
+                      "full_token": "discord",
+                      "tap": null,
+                      "name": [
+                        "Discord"
+                      ],
+                      "desc": "Voice and text chat software",
+                      "homepage": "https://discord.com/",
+                      "url": "https://dl.discordapp.net/apps/osx/0.0.268/Discord.dmg",
+                      "appcast": null,
+                      "version": "0.0.268",
+                      "versions": {
+                      },
+                      "installed": "0.0.266",
+                      "outdated": false,
+                      "sha256": "dfe12315b717ed06ac24d3eaacb700618e96cbb449ed63d2afadcdb70ad09c55",
+                      "artifacts": [
+                        {
+                          "app": [
+                            "Discord.app"
+                          ]
+                        },
+                        {
+                          "zap": [
+                            {
+                              "trash": [
+                                "~/Library/Application Support/discord",
+                                "~/Library/Caches/com.hnc.Discord",
+                                "~/Library/Caches/com.hnc.Discord.ShipIt",
+                                "~/Library/Cookies/com.hnc.Discord.binarycookies",
+                                "~/Library/Preferences/com.hnc.Discord.helper.plist",
+                                "~/Library/Preferences/com.hnc.Discord.plist",
+                                "~/Library/Saved Application State/com.hnc.Discord.savedState"
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "caveats": null,
+                      "depends_on": {
+                      },
+                      "conflicts_with": null,
+                      "container": null,
+                      "auto_updates": true
                     }
                   ],
                   "formulae": [
@@ -426,6 +472,8 @@ def test_list_pkgs_homebrew_cask_pakages():
     expected_pkgs = {
         "homebrew/cask/day-o": "3.0.1",
         "day-o": "3.0.1",
+        "homebrew/cask/discord": "0.0.266",
+        "discord": "0.0.266",
         "custom/tap/iterm2": "3.4.3",
         "iterm2": "3.4.3",
         "jq": "1.6",
