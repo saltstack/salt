@@ -1110,6 +1110,47 @@ def test_almalinux_8_os_grains():
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_endeavouros_os_grains():
+    """
+    Test if OS grains are parsed correctly in EndeavourOS
+    """
+    _os_release_data = {
+        "NAME": "EndeavourOS",
+        "ID": "endeavouros",
+        "PRETTY_NAME": "EndeavourOS",
+        "ID_LIKE": "arch",
+        "BUILD_ID": "rolling",
+        "ANSI_COLOR": "38;2;23;147;209",
+        "HOME_URL": "https://endeavouros.com/",
+        "DOCUMENTATION_URL": "https://discovery.endeavouros.com/",
+        "SUPPORT_URL": "https://forums.endeavouros.com/",
+        "BUG_REPORT_URL": "https://forums.endeavouros.com/c/arch-based-related-questions/bug-reports",
+        "LOGO": "endeavouros",
+        "IMAGE_ID": "endeavouros",
+        "IMAGE_VERSION": "2022.09.10",
+    }
+    _os_release_map = {
+        "os_release_file": {
+            "NAME": "EndeavourOS",
+            "VERSION_ID": "22.9",
+        },
+        "_linux_distribution": ("EndeavourOS", "22.9", ""),
+    }
+
+    expectation = {
+        "os": "EndeavourOS",
+        "os_family": "Arch",
+        "oscodename": "EndeavourOS",
+        "osfullname": "EndeavourOS",
+        "osrelease": "22.9",
+        "osrelease_info": (22, 9),
+        "osmajorrelease": 22,
+        "osfinger": "EndeavourOS-22",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
     with patch("salt.grains.core.hostname"), patch(
