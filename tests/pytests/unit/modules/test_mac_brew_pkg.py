@@ -885,7 +885,10 @@ def test_info_installed():
             "cmd.run": mock_cmd,
         },
     ):
-        assert mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code") == _expected
+        assert (
+            mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code")
+            == _expected
+        )
 
 
 def test_list_upgrades():
