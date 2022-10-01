@@ -810,7 +810,7 @@ def test_unhold_not_pinned():
         assert mac_brew.unhold("foo") == _expected
 
 
-def test_info_installed(self):
+def test_info_installed():
     """
     Tests info_installed method
     """
@@ -885,13 +885,10 @@ def test_info_installed(self):
             "cmd.run": mock_cmd,
         },
     ):
-        self.assertEqual(
-            mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code"),
-            _expected,
-        )
+        assert mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code") == _expected
 
 
-def test_list_upgrades(self):
+def test_list_upgrades():
     """
     Tests list_upgrades method
     """
@@ -949,6 +946,4 @@ def test_list_upgrades(self):
             "cmd.run": mock_cmd,
         },
     ):
-        self.assertEqual(
-            mac_brew.list_upgrades(refresh=False, include_casks=True), _expected
-        )
+        assert mac_brew.list_upgrades(refresh=False, include_casks=True) == _expected
