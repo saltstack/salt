@@ -1111,7 +1111,7 @@ def test_almalinux_8_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_endeavouros_os_grains(os_release_dir):
+def test_endeavouros_os_grains():
     """
     Test if OS grains are parsed correctly in EndeavourOS
     """
@@ -1133,7 +1133,7 @@ def test_endeavouros_os_grains(os_release_dir):
         "osmajorrelease": 22,
         "osfinger": "EndeavourOS-22",
     }
-    _run_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 def test_unicode_error():
