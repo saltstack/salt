@@ -5171,14 +5171,12 @@ def check_perms(
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if is_link and not follow_symlinks:
-            pass
-
-        if __opts__["test"] is True:
-            ret["changes"]["mode"] = mode
-        else:
-            if not mode == cur["mode"]:
-                set_mode(name, mode)
+        if not (is_link and not follow_symlinks):
+            if __opts__["test"] is True:
+                ret["changes"]["mode"] = mode
+            else:
+                if not mode == cur["mode"]:
+                    set_mode(name, mode)
 
     # verify user/group/mode changes
     post = stats(name, follow_symlinks=follow_symlinks)
@@ -5217,22 +5215,18 @@ def check_perms(
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if is_link and not follow_symlinks:
-            pass
-
-        if not mode == post["mode"]:
-            ret["result"] = False
-            ret["comment"].append("Failed to change mode to {}".format(mode))
-        else:
-            ret["changes"]["mode"] = mode
+        if not (is_link and not follow_symlinks):
+            if not mode == post["mode"]:
+                ret["result"] = False
+                ret["comment"].append("Failed to change mode to {}".format(mode))
+            else:
+                ret["changes"]["mode"] = mode
 
     # Modify attributes of file if needed
     if attrs is not None and not is_dir:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if is_link and not follow_symlinks:
-            pass
-        else:
+        if not (is_link and not follow_symlinks):
             diff_attrs = _cmp_attrs(name, attrs)
             if diff_attrs and any(attr for attr in diff_attrs):
                 changes = {
