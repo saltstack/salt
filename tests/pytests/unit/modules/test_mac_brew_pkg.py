@@ -886,9 +886,7 @@ def test_info_installed(self):
         },
     ):
         self.assertEqual(
-            mac_brew.info_installed(
-                "cdalvaro/tap/salt", "vim", "visual-studio-code"
-            ),
+            mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code"),
             _expected,
         )
 
