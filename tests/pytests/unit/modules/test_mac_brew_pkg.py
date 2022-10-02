@@ -887,7 +887,9 @@ def test_info_installed(HOMEBREW_BIN):
             },
         ):
             assert (
-                mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code")
+                mac_brew.info_installed(
+                    "cdalvaro/tap/salt", "vim", "visual-studio-code"
+                )
                 == _expected
             )
 
@@ -951,4 +953,6 @@ def test_list_upgrades(HOMEBREW_BIN):
                 "cmd.run": mock_cmd,
             },
         ):
-            assert mac_brew.list_upgrades(refresh=False, include_casks=True) == _expected
+            assert (
+                mac_brew.list_upgrades(refresh=False, include_casks=True) == _expected
+            )
