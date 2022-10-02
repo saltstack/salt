@@ -5169,13 +5169,12 @@ def check_perms(
 
     # Mode changes if needed
     if mode is not None:
-        # File is a symlink, ignore the mode setting
-        # if follow_symlinks is False
-        if not (is_link and not follow_symlinks):
-            if __opts__["test"] is True:
-                ret["changes"]["mode"] = mode
-            else:
+        if not __opts__["test"] is True:
+            # File is a symlink, ignore the mode setting
+            # if follow_symlinks is False
+            if not (is_link and not follow_symlinks):
                 if not mode == cur["mode"]:
+                    perms["cmode"] = mode
                     set_mode(name, mode)
 
     # verify user/group/mode changes
@@ -5217,9 +5216,12 @@ def check_perms(
         # if follow_symlinks is False
         if not (is_link and not follow_symlinks):
             if not mode == post["mode"]:
-                ret["result"] = False
-                ret["comment"].append("Failed to change mode to {}".format(mode))
-            else:
+                if __opts__["test"] is True:
+                    ret["changes"]["mode"] = mode
+                else:
+                    ret["result"] = False
+                    ret["comment"].append("Failed to change mode to {}".format(mode))
+            elif "cmode" in perms:
                 ret["changes"]["mode"] = mode
 
     # Modify attributes of file if needed
