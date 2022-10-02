@@ -768,7 +768,7 @@ def _check_directory(
                     if (
                         group is not None
                         and not group == stats.get("group")
-                        and not user == stats.get("gid")
+                        and not group == stats.get("gid")
                     ):
                         fchange["group"] = group
                     smode = salt.utils.files.normalize_mode(stats.get("mode"))
