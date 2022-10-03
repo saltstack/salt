@@ -529,7 +529,7 @@ lxml==4.9.1
     # via
     #   junos-eznc
     #   ncclient
-mako==1.1.4
+mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==1.1.1
     # via
