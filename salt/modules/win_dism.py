@@ -561,6 +561,8 @@ def get_kb_package_name(kb, image=None):
     """
     Get the actual package name on the system based on the KB name
 
+    .. versionadded:: 3006
+
     Args:
         kb (str): The name of the KB to remove. Can also be just the KB number
         image (Optional[str]): The path to the root directory of an offline
@@ -594,6 +596,8 @@ def remove_kb(kb, image=None, restart=False):
     Remove a package by passing a KB number. This searches the installed
     packages to get the full package name of the KB. It then calls the
     ``dism.remove_package`` function to remove the package.
+
+    .. versionadded:: 3006
 
     Args:
         kb (str): The name of the KB to remove. Can also be just the KB number
