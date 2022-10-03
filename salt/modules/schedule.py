@@ -192,10 +192,11 @@ def list_(
         # Indicate whether the scheduled job is saved
         # to the minion configuration.
         for item in schedule:
-            if item in saved_schedule:
-                schedule[item]["saved"] = True
-            else:
-                schedule[item]["saved"] = False
+            if isinstance(schedule[item], dict):
+                if item in saved_schedule:
+                    schedule[item]["saved"] = True
+                else:
+                    schedule[item]["saved"] = False
         tmp = {"schedule": schedule}
         return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
