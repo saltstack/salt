@@ -100,7 +100,7 @@ def read_kv(path, opts, context, include_metadata=False):
         return kv.read(path, include_metadata=include_metadata)
     except (VaultAuthExpired, VaultPermissionDeniedError):
         # in case metadata lookups spend a use TODO: check if necessary
-        clear_cache(opts)
+        clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.read(path, include_metadata=include_metadata)
 
@@ -113,7 +113,7 @@ def write_kv(path, data, opts, context):
     try:
         return kv.write(path, data)
     except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts)
+        clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.write(path, data)
 
@@ -126,7 +126,7 @@ def patch_kv(path, data, opts, context):
     try:
         return kv.patch(path, data)
     except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts)
+        clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.patch(path, data)
 
@@ -140,7 +140,7 @@ def delete_kv(path, opts, context, versions=None):
     try:
         return kv.delete(path, versions=versions)
     except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts)
+        clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.delete(path, versions=versions)
 
@@ -153,7 +153,7 @@ def destroy_kv(path, versions, opts, context):
     try:
         return kv.destroy(path, versions)
     except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts)
+        clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.destroy(path, versions)
 
@@ -167,26 +167,54 @@ def list_kv(path, opts, context):
     try:
         return kv.list(path)
     except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts)
+        clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.list(path)
 
 
 def _get_kv(opts, context):
     client, config = get_authd_client(opts, context, get_config=True)
-    cbank = _get_cache_bank(opts)
+    ttl = None
+    connection = True
+    if config["cache"]["kv_metadata"] != "connection":
+        ttl = config["cache"]["kv_metadata"]
+        connection = False
+    cbank = _get_cache_bank(opts, connection=connection)
     ckey = "secret_path_metadata"
-    metadata_cache = VaultCache(config, opts, context, cbank, ckey)
+    metadata_cache = VaultCache(config, opts, context, cbank, ckey, ttl=ttl)
     return VaultKV(client, metadata_cache)
 
 
-def clear_cache(opts, ckey=None, connection=True):
+def clear_cache(opts, context, ckey=None, connection=True):
     """
-    Clears non-session cache.
+    Clears connection cache.
     """
-    cache = salt.cache.factory(opts)
     cbank = _get_cache_bank(opts, connection=connection)
-    cache.flush(cbank, ckey)
+    if cbank in context:
+        if ckey is None:
+            context.pop(cbank)
+        elif ckey in context[cbank]:
+            context[cbank].pop(ckey)
+    cache = salt.cache.factory(opts)
+    if cache.contains(cbank, ckey):
+        return cache.flush(cbank, ckey)
+    local_opts = copy.copy(opts)
+    opts["cache"] = "localfs"
+    cache = salt.cache.factory(local_opts)
+    return cache.flush(cbank, ckey)
+
+
+def _get_cache_backend(config, opts):
+    if "session" == config["cache"]["backend"]:
+        return None
+    if config["cache"]["backend"] in ["localfs", "disk", "file"]:
+        # cache.Cache does not allow setting the type of cache by param
+        local_opts = copy.copy(opts)
+        local_opts["cache"] = "localfs"
+        return salt.cache.factory(local_opts)
+    # this should usually resolve to localfs as well on minions,
+    # but can be overridden by setting cache in the minion config
+    return salt.cache.factory(opts)
 
 
 def expand_pattern_lists(pattern, **mappings):
@@ -288,7 +316,7 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
 
     # do not check the vault server for token validity because that consumes a use
     if retry or not client.token_valid(remote=False):
-        clear_cache(opts)
+        clear_cache(opts, context)
         client, config = _build_authd_client(opts, context, force_local=force_local)
         if not client.token_valid(remote=False):
             raise VaultException(
@@ -710,6 +738,7 @@ def parse_config(config, validate=True):
         "cache": {
             "backend": "session",
             "config": 3600,
+            "kv_metadata": "connection",
             "secret": "ttl",
         },
         "issue": {
@@ -1282,22 +1311,21 @@ class VaultCache:
     like secret path metadata.
     """
 
-    def __init__(self, config, opts, context, cbank, ckey, ttl=None):
+    def __init__(self, config, opts, context, cbank, ckey, ttl=None, cache=None):
         self.config = config
         self.opts = opts
         self.context = context
         self.cbank = cbank
         self.ckey = ckey
         self.ttl = ttl
-        cache = None
-        if config["cache"]["backend"] != "session":
-            cache = salt.cache.factory(opts)
-        self.cache = cache
+        self.cache = cache if cache is not None else _get_cache_backend(config, opts)
 
     def exists(self):
         """
         Check whether data for this domain exists
         """
+        if self.cbank in self.context and self.ckey in self.context[self.cbank]:
+            return True
         if self.cache is not None:
             if not self.cache.contains(self.cbank, self.ckey):
                 return False
@@ -1308,7 +1336,7 @@ class VaultCache:
                     self.flush()
                     return False
             return True
-        return self.cbank in self.context and self.ckey in self.context[self.cbank]
+        return False
 
     def get(self):
         """
@@ -1316,9 +1344,11 @@ class VaultCache:
         """
         if not self.exists():
             return None
+        if self.cbank in self.context and self.ckey in self.context[self.cbank]:
+            return self.context[self.cbank][self.ckey]
         if self.cache is not None:
             return self.cache.fetch(self.cbank, self.ckey)
-        return self.context[self.cbank][self.ckey]
+        raise RuntimeError("This code path should not have been hit.")
 
     def flush(self):
         """
@@ -1326,7 +1356,7 @@ class VaultCache:
         """
         if self.cache is not None:
             self.cache.flush(self.cbank, self.ckey)
-        else:
+        if self.cbank in self.context:
             self.context[self.cbank].pop(self.ckey, None)
 
     def store(self, value):
@@ -1335,7 +1365,6 @@ class VaultCache:
         """
         if self.cache is not None:
             self.cache.store(self.cbank, self.ckey, value)
-            return
         if self.cbank not in self.context:
             self.context[self.cbank] = {}
         self.context[self.cbank][self.ckey] = value
@@ -1354,6 +1383,14 @@ def _get_config_cache(opts, context, cbank, ckey):
         if cache.contains(cbank, ckey):
             # expiration check is done inside the class
             config = cache.fetch(cbank, ckey)
+        elif opts.get("cache", "localfs") != "localfs":
+            local_opts = copy.copy(opts)
+            local_opts["cache"] = "localfs"
+            cache = salt.cache.factory(local_opts)
+            if cache.contains(cbank, ckey):
+                # expiration check is done inside the class
+                config = cache.fetch(cbank, ckey)
+
     return VaultConfigCache(opts, context, cbank, ckey, init_config=config)
 
 
@@ -1390,9 +1427,10 @@ class VaultConfigCache(VaultCache):
                 "Tried to flush uninitialized configuration cache. Skipping flush."
             )
             return
+        # flush the whole connection-scoped cache
         if self.cache is not None:
             self.cache.flush(self.cbank)
-        else:
+        if self.cbank in self.context:
             self.context.pop(self.cbank, None)
         self.config = None
         self.cache = None
@@ -1400,13 +1438,13 @@ class VaultConfigCache(VaultCache):
 
     def _load(self, config):
         if self.config is not None:
-            if self.config["cache"]["backend"] != config["cache"]["backend"]:
+            if (
+                self.config["cache"]["backend"] != "session"
+                and self.config["cache"]["backend"] != config["cache"]["backend"]
+            ):
                 self.flush()
         self.config = config
-        cache = None
-        if self.config["cache"]["backend"] != "session":
-            cache = salt.cache.factory(self.opts)
-        self.cache = cache
+        self.cache = _get_cache_backend(self.config, self.opts)
         self.ttl = self.config["cache"]["config"]
 
     def store(self, value):
@@ -2010,14 +2048,7 @@ class VaultKV:
                 # data and delete operations only differ by HTTP verb
                 path = v2_info["data"]
         elif versions is not None:
-            # semantically, for kv-v1 this resembles destroy
-            if 0 not in versions:
-                raise VaultInvocationError("Versions are not supported on kv-v1 paths.")
-            # if the latest version was requested to be deleted anyways, continue
-            log.warning(
-                "Versions to destroy were requested, but the secret path does "
-                "not use kv-v2. Deleting the secret only."
-            )
+            raise VaultInvocationError("Versioning support requires kv-v2.")
 
         return self.client.request(method, path, payload=payload)
 
@@ -2185,7 +2216,7 @@ def get_vault_connection():
     try:
         token = vault.auth.get_token()
     except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts)
+        clear_cache(opts, context)
         vault = get_authd_client(opts, context)
         token = vault.auth.get_token()
 
@@ -2209,7 +2240,11 @@ def del_cache():
         "Argon",
         "salt.utils.vault.del_cache is deprecated, please use salt.utils.vault.clear_cache.",
     )
-    clear_cache(globals().get("__opts__", {}), connection=False)
+    clear_cache(
+        globals().get("__opts__", {}),
+        globals().get("__context__", {}),
+        connection=False,
+    )
 
 
 def write_cache(connection):  # pylint: disable=unused-argument

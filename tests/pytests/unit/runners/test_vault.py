@@ -349,9 +349,11 @@ def policies(request, policies_default):
     policies_list = getattr(request, "param", policies_default)
     with patch(
         "salt.runners.vault._get_policies_cached", autospec=True
-    ) as get_policies:
-        get_policies.return_value = policies_list
-        yield get_policies
+    ) as get_policies_cached:
+        get_policies_cached.return_value = policies_list
+        with patch("salt.runners.vault._get_policies", autospec=True) as get_policies:
+            get_policies.return_value = policies_list
+            yield
 
 
 @pytest.fixture()

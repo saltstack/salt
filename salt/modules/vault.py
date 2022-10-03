@@ -190,6 +190,7 @@ All possible master configuration options with defaults:
       cache:
         backend: session
         config: 3600
+        kv_metadata: connection
         secret: ttl
       issue:
         allow_minion_override_params: false
@@ -294,9 +295,12 @@ backend
         This used to be found in ``auth:token_backend``.
 
     The cache backend in use. Defaults to ``session``, which will store the
-    vault information in memory only for that session. Setting this to anything
-    else will use the configured cache for minion data (:conf_master:`cache <cache>`),
-    by default the local filesystem.
+    vault information in memory only for that session.
+    ``disk``/``file``/``localfs`` will force using the localfs driver, regardless
+    of configured minion data cache.
+    Setting this to anything else will use the default configured cache for
+    minion data (:conf_master:`cache <cache>`), by default the local filesystem
+    as well.
 
 config
     .. versionadded:: 3006
@@ -304,11 +308,21 @@ config
     The time in seconds to cache queried configuration from the master.
     Defaults to 3600 (1h).
 
+kv_metadata
+    .. versionadded:: 3006
+
+    The time in seconds to cache KV metadata used to determine if a path
+    is using version 1/2 for. Defaults to "connection", which will clear
+    the metadata cache once a new configuration is requested from the
+    master. Setting this to ``None``/``null`` will keep the information
+    indefinitely until the cache is cleared.
+
 secret
     .. versionadded:: 3006
 
     The time in seconds to cache tokens/secret-ids for. Defaults to ``ttl``,
-    which caches the secret for as long as it is valid.
+    which caches the secret for as long as it is valid, unless a new configuration
+    is requested from the master.
 
 ``issue``
 ~~~~~~~~~
@@ -883,12 +897,14 @@ def clear_token_cache(connection_only=True):
     connection_only
         .. versionadded:: 3006
 
-        Only delete cache data scoped to a connection configuration. This is currently
-        true for all Vault cache data, but might change in the future.
+        Only delete cache data scoped to a connection configuration.
+        This includes config and secret cache always and KV metadata
+        cache, depending on if ``vault:cache:kv_metadata`` is set to
+        ``connection``, which is the default value.
         Defaults to True.
     """
     log.debug("Deleting vault connection cache.")
-    return vault.clear_cache(__opts__, connection=connection_only)
+    return vault.clear_cache(__opts__, __context__, connection=connection_only)
 
 
 def policy_fetch(policy):

@@ -311,7 +311,7 @@ def test_clear_token_cache(connection_only):
     """
     with patch("salt.utils.vault.clear_cache") as cache:
         vault.clear_token_cache(connection_only=connection_only)
-        cache.assert_called_once_with(ANY, connection=connection_only)
+        cache.assert_called_once_with(ANY, ANY, connection=connection_only)
 
 
 def test_policy_fetch(query, policy_response):
@@ -371,7 +371,7 @@ def test_policy_write(query, policy_response):
         "sys/policy/test-policy",
         opts=ANY,
         context=ANY,
-        payload={"rules": policy_response["rules"]},
+        payload={"policy": policy_response["rules"]},
     )
 
 

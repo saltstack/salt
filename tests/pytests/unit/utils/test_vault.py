@@ -112,6 +112,7 @@ def test_remote_config(server_config, request):
         "cache": {
             "backend": "session",
             "config": 3600,
+            "kv_metadata": "connection",
             "secret": "ttl",
         },
         "server": server_config,
@@ -836,7 +837,7 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({})
+        clear_cache.assert_called_once_with({}, {})
         assert build_invalid_first.call_count == 2
         if get_config:
             assert config == {}
@@ -854,7 +855,7 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({})
+        clear_cache.assert_called_once_with({}, {})
         assert build_exception_first.call_count == 2
         if get_config:
             assert config == {}
@@ -871,7 +872,7 @@ class TestGetAuthdClient:
 class TestBuildAuthdClient:
     @pytest.fixture(autouse=True)
     def cbank(self):
-        with patch("salt.utils.vault._get_config_cache_bank", autospec=True) as cbank:
+        with patch("salt.utils.vault._get_cache_bank", autospec=True) as cbank:
             cbank.return_value = "vault"
             yield cbank
 
@@ -1526,12 +1527,16 @@ class TestQueryMaster:
         self, opts, response, publish_runner, saltutil_runner
     ):
         """
-        Ensure that falsey return values or reported errors by the master are
-        recognized and raised
+        Ensure that falsey return values invalidate config (auth method change)
+        or reported errors by the master are recognized and raised
         """
         publish_runner.return_value = saltutil_runner.return_value = response
-        with pytest.raises(salt.exceptions.CommandExecutionError):
-            vault._query_master("func", opts)
+        if not response:
+            with pytest.raises(vault.VaultConfigExpired):
+                vault._query_master("func", opts)
+        else:
+            with pytest.raises(salt.exceptions.CommandExecutionError):
+                vault._query_master("func", opts)
 
     @pytest.mark.parametrize(
         "response", [{"expire_cache": True}, {"error": {"error"}, "expire_cache": True}]
@@ -2710,7 +2715,7 @@ def test_clear_cache(ckey, connection):
     if connection:
         cbank += "/connection"
     with patch("salt.cache.factory", autospec=True) as factory:
-        vault.clear_cache({}, ckey=ckey, connection=connection)
+        vault.clear_cache({}, {}, ckey=ckey, connection=connection)
         factory.return_value.flush.assert_called_once_with(cbank, ckey)
 
 
@@ -2726,14 +2731,12 @@ def test_clear_cache(ckey, connection):
     ],
     indirect=["salt_runtype"],
 )
-def test_get_config_cache_bank(connection, salt_runtype, force_local, expected):
+def test_get_cache_bank(connection, salt_runtype, force_local, expected):
     """
     Ensure the cache banks are mapped as expected, depending on run type
     """
     opts = {"grains": {"id": "test-minion"}}
-    cbank = vault._get_config_cache_bank(
-        opts, force_local=force_local, connection=connection
-    )
+    cbank = vault._get_cache_bank(opts, force_local=force_local, connection=connection)
     if connection:
         expected += "/connection"
     assert cbank == expected
@@ -2809,12 +2812,11 @@ class TestVaultCache:
         cache = vault.VaultCache(config, {}, context, cbank, ckey)
         res = cache.get()
         assert res == data
-        if config["cache"]["backend"] != "session":
-            cached.fetch.assert_called_once_with(cbank, ckey)
-        else:
-            cached.fetch.assert_not_called()
+        cached.fetch.assert_not_called()
 
     def test_get_cached_not_outdated(self, config, context, cached, cbank, ckey, data):
+        if config["cache"]["backend"] != "session":
+            context = {}
         cache = vault.VaultCache(config, {}, context, cbank, ckey, ttl=3600)
         res = cache.get()
         assert res == data
@@ -2825,15 +2827,11 @@ class TestVaultCache:
             cached.updated.assert_called_once_with(cbank, ckey)
             cached.fetch.assert_called_once_with(cbank, ckey)
 
-    def test_get_cached_outdated(
-        self, config, context, cached_outdated, cbank, ckey, data
-    ):
-        cache = vault.VaultCache(config, {}, context, cbank, ckey, ttl=1)
+    def test_get_cached_outdated(self, config, cached_outdated, cbank, ckey, data):
+        cache = vault.VaultCache(config, {}, {}, cbank, ckey, ttl=1)
         res = cache.get()
-        if config["cache"]["backend"] == "session":
-            assert res == data
-        else:
-            assert res is None
+        assert res is None
+        if config["cache"]["backend"] != "session":
             cached_outdated.updated.assert_called_once_with(cbank, ckey)
             cached_outdated.flush.assert_called_once_with(cbank, ckey)
         cached_outdated.fetch.assert_not_called()
@@ -2951,21 +2949,24 @@ class TestVaultConfigCache:
     def test_reload(self, config, data, cbank, ckey):
         """
         Ensure that a changed configuration is reloaded correctly and
-        during instantiation
+        during instantiation. When the config backend changes and the
+        previous was not session only, it should be flushed.
         """
-        cache = vault.VaultConfigCache({}, {}, cbank, ckey, config)
-        assert cache.config == config
-        if config is not None:
-            assert cache.ttl == config["cache"]["config"]
-            if config["cache"]["backend"] != "session":
-                assert cache.cache is not None
-        else:
-            assert cache.ttl is None
-            assert cache.cache is None
-        cache.config = data
-        cache._reload()
-        assert cache.ttl == data["cache"]["config"]
-        assert cache.cache is not None
+        with patch("salt.utils.vault.VaultConfigCache.flush") as flush:
+            cache = vault.VaultConfigCache({}, {}, cbank, ckey, config)
+            assert cache.config == config
+            if config is not None:
+                assert cache.ttl == config["cache"]["config"]
+                if config["cache"]["backend"] != "session":
+                    assert cache.cache is not None
+            else:
+                assert cache.ttl is None
+                assert cache.cache is None
+            cache._load(data)
+            assert cache.ttl == data["cache"]["config"]
+            assert cache.cache is not None
+            if config is not None and config["cache"]["backend"] != "session":
+                flush.assert_called_once()
 
     def test_exists(self, config, cached, context, cbank, ckey, data):
         """
@@ -2980,6 +2981,8 @@ class TestVaultConfigCache:
         Ensure cached data is returned and backend settings honored,
         unless the instance has not been initialized yet
         """
+        if config is not None and config["cache"]["backend"] != "session":
+            context = {}
         cache = vault.VaultConfigCache({}, context, cbank, ckey, config)
         res = cache.get()
         if config is not None:
@@ -3021,11 +3024,10 @@ class TestVaultConfigCache:
         """
         cache = vault.VaultConfigCache({}, {}, cbank, ckey)
         assert cache.config is None
-        with patch("salt.utils.vault.VaultConfigCache._reload") as rld:
+        with patch("salt.utils.vault.VaultConfigCache._load") as rld:
             with patch("salt.utils.vault.VaultCache.store") as store:
                 cache.store(data)
-                assert cache.config == data
-                rld.assert_called_once()
+                rld.assert_called_once_with(data)
                 store.assert_called_once()
 
 
@@ -3175,17 +3177,10 @@ class TestKVV1:
         kvv1.delete(self.path)
         kvv1.client.request.assert_called_once_with("DELETE", self.path, payload=None)
 
-    def test_vault_kv_versions_recent(self, kvv1, caplog):
-        """
-        Ensure that when called with versions for KV v1 and only the latest
-        is referenced, the command passes with a warning.
-        """
-        kvv1.delete(self.path, versions=[0])
-        kvv1.client.request.assert_called_once_with("DELETE", self.path, payload=None)
-        assert "Deleting the secret only" in caplog.text
-
-    def test_vault_kv_delete_versions_multiple(self, kvv1):
-        with pytest.raises(vault.VaultInvocationError):
+    def test_vault_kv_delete_versions(self, kvv1):
+        with pytest.raises(
+            vault.VaultInvocationError, match="Versioning support requires kv-v2.*"
+        ):
             kvv1.delete(self.path, versions=[1, 2, 3, 4])
 
     def test_vault_kv_destroy(self, kvv1):
