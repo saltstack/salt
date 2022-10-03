@@ -1,5 +1,6 @@
 """
 A module for working with the Windows Event log system.
+.. versionadded:: 3006
 """
 # https://docs.microsoft.com/en-us/windows/win32/eventlog/event-logging
 
@@ -21,52 +22,6 @@ try:
     IMPORT_STATUS = True
 except ImportError:
     IMPORT_STATUS = False
-
-# keys of all the parts of a Event supported by the API
-EVENT_PARTS = (
-    "closingRecordNumber",
-    "computerName",
-    "data",
-    "eventCategory",
-    "eventID",
-    "eventType",
-    "recordNumber",
-    "reserved",
-    "reservedFlags",
-    "sid",
-    "sourceName",
-    "stringInserts",
-    "timeGenerated",
-    "timeWritten",
-)
-
-EVENT_TYPES = {
-    "Success": 0x0000,
-    "Error": 0x0001,
-    "Warning": 0x0002,
-    "Information": 0x0004,
-    "AuditSuccess": 0x0008,
-    "AuditFailure": 0x0010,
-    0x0000: "Success",
-    0x0001: "Error",
-    0x0002: "Warning",
-    0x0004: "Information",
-    0x0008: "AuditSuccess",
-    0x0010: "AuditFailure",
-}
-
-# keys time
-TIME_PARTS = (
-    "year",
-    "month",
-    "day",
-    "hour",
-    "minute",
-    "second",
-)
-TimeTuple = collections.namedtuple(
-    "TimeTuple", "year, month, day, hour, minute, second"
-)
 
 
 log = logging.getLogger(__name__)
@@ -145,6 +100,9 @@ def _raw_time(time):
     Returns:
         TimeTuple: A TimeTuple
     """
+    TimeTuple = collections.namedtuple(
+        "TimeTuple", "year, month, day, hour, minute, second"
+    )
 
     return TimeTuple(
         time.year, time.month, time.day, time.hour, time.minute, time.second
@@ -162,9 +120,26 @@ def _make_event_dict(event):
     Returns:
         dict: A dictionary containing the event information
     """
+    # keys of all the parts of a Event supported by the API
+    event_parts = (
+        "closingRecordNumber",
+        "computerName",
+        "data",
+        "eventCategory",
+        "eventID",
+        "eventType",
+        "recordNumber",
+        "reserved",
+        "reservedFlags",
+        "sid",
+        "sourceName",
+        "stringInserts",
+        "timeGenerated",
+        "timeWritten",
+    )
 
     event_dict = {}
-    for event_part in EVENT_PARTS:
+    for event_part in event_parts:
         # get object value and add it to the event dict
         event_dict[event_part] = getattr(
             event, event_part[0].upper() + event_part[1:], None
@@ -254,13 +229,22 @@ def _event_generator_with_time(log_name):
     Yields:
         dict: A dictionary object for each event
     """
+    # keys time
+    time_parts = (
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+    )
 
     for event in _event_generator(log_name):
         event_info = {}
         for part in event:
             event_info[part] = event[part]
 
-        for spot, key in enumerate(TIME_PARTS):
+        for spot, key in enumerate(time_parts):
             event_info[key] = event["timeGenerated"][spot]
 
         yield event, event_info
@@ -676,13 +660,28 @@ def add(
     except TypeError:
         raise CommandExecutionError("event_category must be an integer")
 
+    event_types = {
+        "Success": 0x0000,
+        "Error": 0x0001,
+        "Warning": 0x0002,
+        "Information": 0x0004,
+        "AuditSuccess": 0x0008,
+        "AuditFailure": 0x0010,
+        0x0000: "Success",
+        0x0001: "Error",
+        0x0002: "Warning",
+        0x0004: "Information",
+        0x0008: "AuditSuccess",
+        0x0010: "AuditFailure",
+    }
+
     if event_type is None:
-        event_type = EVENT_TYPES["Error"]
-    elif event_type not in EVENT_TYPES:
+        event_type = event_types["Error"]
+    elif event_type not in event_types:
         msg = "Incorrect event type: {}".format(event_type)
         raise CommandExecutionError(msg)
     else:
-        event_type = EVENT_TYPES[event_type]
+        event_type = event_types[event_type]
 
     if event_strings is not None:
         if isinstance(event_strings, str):
