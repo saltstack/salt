@@ -423,6 +423,8 @@ def kb_removed(name, image=None, restart=False):
     """
     Uninstall a KB package
 
+    .. versionadded:: 3006
+
     Args:
         name (str): The name of the KB. Can be with or without the KB at the
             beginning.
