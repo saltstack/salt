@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import salt.modules.file as filemod
@@ -44,8 +46,10 @@ def test_file_tidied_should_use_force_mode_for_file_remove(fake_remove):
 
         file.tidied("/some/directory/tree")
 
+    call_root_file1 = "some root{}file1".format(os.sep)
+    call_root_file2 = "some root{}file2".format(os.sep)
     fake_remove.assert_has_calls(
-        [call("some root/file1", force=True), call("some root/file2", force=True)]
+        [call(call_root_file1, force=True), call(call_root_file2, force=True)]
     )
 
 
