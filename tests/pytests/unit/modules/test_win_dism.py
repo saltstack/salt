@@ -363,7 +363,7 @@ def test_remove_kb_not_found():
     with patch("salt.modules.win_dism.installed_packages", mock_search):
         with pytest.raises(CommandExecutionError) as err:
             dism.remove_kb("1001111")
-        assert str(err.value) == "KB1001111 not installed"
+        assert str(err.value) == "1001111 not installed"
 
 
 def test_installed_packages():
