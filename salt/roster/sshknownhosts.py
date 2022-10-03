@@ -1,6 +1,8 @@
 """
 Parses roster entries out of Host directives from SSH known_hosts
 
+.. versionadded:: 3006.0
+
 Sample configuration:
 
 .. note::
