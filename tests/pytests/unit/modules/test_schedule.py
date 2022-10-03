@@ -914,3 +914,93 @@ def test_list(sock_dir, job1):
                 ) as fopen_mock:
                     ret = schedule.list_()
                     assert ret == expected
+
+
+def test_list_global_enabled(sock_dir, job1):
+    """
+    Test schedule.list when enabled globally
+    """
+    _schedule_data = {"enabled": True, "job1": job1}
+    with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
+        mock = MagicMock(return_value=True)
+        with patch.dict(schedule.__salt__, {"event.fire": mock}):
+            _ret_schedule_data = {
+                "job1": {
+                    "function": "test.ping",
+                    "seconds": 10,
+                    "maxrunning": 1,
+                    "name": "job1",
+                    "enabled": True,
+                    "jid_include": True,
+                },
+                "enabled": True,
+            }
+            _ret_value = {"complete": True, "schedule": _ret_schedule_data}
+            saved_schedule = """schedule:
+  enabled: true
+  job1: {enabled: true, function: test.ping, jid_include: true, maxrunning: 1, name: job1,
+    seconds: 10}
+"""
+
+            expected = """schedule:
+  enabled: true
+  job1:
+    enabled: true
+    function: test.ping
+    jid_include: true
+    maxrunning: 1
+    name: job1
+    saved: true
+    seconds: 10
+"""
+            with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
+                    "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
+                ) as fopen_mock:
+                    ret = schedule.list_()
+                    assert ret == expected
+
+
+def test_list_global_disabled(sock_dir, job1):
+    """
+    Test schedule.list when disabled  globally
+    """
+    _schedule_data = {"disabled": True, "job1": job1}
+    with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
+        mock = MagicMock(return_value=True)
+        with patch.dict(schedule.__salt__, {"event.fire": mock}):
+            _ret_schedule_data = {
+                "job1": {
+                    "function": "test.ping",
+                    "seconds": 10,
+                    "maxrunning": 1,
+                    "name": "job1",
+                    "enabled": True,
+                    "jid_include": True,
+                },
+                "enabled": False,
+            }
+            _ret_value = {"complete": True, "schedule": _ret_schedule_data}
+            saved_schedule = """schedule:
+  enabled: false
+  job1: {enabled: true, function: test.ping, jid_include: true, maxrunning: 1, name: job1,
+    seconds: 10}
+"""
+
+            expected = """schedule:
+  enabled: false
+  job1:
+    enabled: true
+    function: test.ping
+    jid_include: true
+    maxrunning: 1
+    name: job1
+    saved: true
+    seconds: 10
+"""
+            with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
+                    "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
+                ) as fopen_mock:
+                    ret = schedule.list_()
+                    assert ret == expected
