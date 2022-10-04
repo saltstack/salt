@@ -28,7 +28,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -69,7 +69,7 @@ boto_conn_parameters = {
 
 
 def _random_group_id():
-    group_id = "sg-{:x}".format(random.randrange(2 ** 32))
+    group_id = "sg-{:x}".format(random.randrange(2**32))
     return group_id
 
 

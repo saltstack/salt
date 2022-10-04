@@ -401,6 +401,7 @@ execution modules
     rest_sample_utils
     rest_service
     restartcheck
+    restconf
     ret
     rh_ip
     rh_service
@@ -458,6 +459,7 @@ execution modules
     statuspage
     supervisord
     suse_apache
+    suse_ip
     svn
     swarm
     swift
@@ -509,6 +511,7 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_event
     win_file
     win_firewall
     win_groupadd
@@ -526,6 +529,7 @@ execution modules
     win_servermanager
     win_service
     win_shadow
+    win_shortcut
     win_smtp_server
     win_snmp
     win_status
@@ -543,6 +547,7 @@ execution modules
     xfs
     xml
     xmpp
+    yaml
     yumpkg
     zabbix
     zcbuildout

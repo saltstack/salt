@@ -879,7 +879,7 @@ Changelog for v2017.7.4..v2017.7.5
 * **PR** `#45932`_: (`The-Loeki`_) Fix cmd run_all bg error
   @ *2018-02-16 14:53:15 UTC*
 
-  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function (refs: `#45932`_)
+  * **PR** `#39980`_: (`vutny`_) [2016.3] Allow using `bg` kwarg for `cmd.run` state function (refs: `#45932`_)
 
   * 5e0e2a30e2 Merge pull request `#45932`_ from The-Loeki/fix_cmd_run_all_bg
 

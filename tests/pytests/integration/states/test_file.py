@@ -8,10 +8,12 @@ import re
 import textwrap
 
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
-from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 
 log = logging.getLogger(__name__)
 
@@ -105,14 +107,14 @@ def pillar_tree(salt_master, salt_minion, salt_call_cli):
     try:
         with top_tempfile, basic_tempfile:
             ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-            assert ret.exitcode == 0
-            assert ret.json is True
+            assert ret.returncode == 0
+            assert ret.data is True
             yield
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 @pytest.fixture(scope="module")
@@ -120,8 +122,8 @@ def salt_secondary_master(request, salt_factories):
     #
     # Enable a secondary Salt master so we can disable follow_symlinks
     #
-    publish_port = get_unused_localhost_port()
-    ret_port = get_unused_localhost_port()
+    publish_port = ports.get_unused_localhost_port()
+    ret_port = ports.get_unused_localhost_port()
 
     config_defaults = {
         "open_mode": True,
@@ -175,9 +177,10 @@ def salt_cli_secondary_wrapper(salt_secondary_master, salt_secondary_minion):
     return run_command
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.skip_on_windows
 def test_verify_ssl_skip_verify_false(
-    salt_master, salt_call_cli, tmpdir, ssl_webserver
+    salt_master, salt_call_cli, tmp_path, ssl_webserver
 ):
     """
     test verify_ssl when its False and True when managing
@@ -191,7 +194,7 @@ def test_verify_ssl_skip_verify_false(
         - source: {}
         - source_hash: {}
     """.format(
-        tmpdir.join("test_verify_ssl_true.txt"), web_file, web_file + ".sha256"
+        tmp_path / "test_verify_ssl_true.txt", web_file, web_file + ".sha256"
     )
 
     false_content = true_content + "    - verify_ssl: False"
@@ -201,10 +204,10 @@ def test_verify_ssl_skip_verify_false(
         "verify_ssl.sls", true_content
     ) as sfpath:
         ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
-        assert ret.exitcode == 1
+        assert ret.returncode == 1
         assert (
             "SSL: CERTIFICATE_VERIFY_FAILED"
-            in ret.json[next(iter(ret.json))]["comment"]
+            in ret.data[next(iter(ret.data))]["comment"]
         )
 
     # test when verify_ssl is False
@@ -212,8 +215,8 @@ def test_verify_ssl_skip_verify_false(
         "verify_ssl.sls", false_content
     ) as sfpath:
         ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
-        assert ret.exitcode == 0
-        assert ret.json[next(iter(ret.json))]["changes"] == {
+        assert ret.returncode == 0
+        assert ret.data[next(iter(ret.data))]["changes"] == {
             "diff": "New file",
             "mode": "0644",
         }
@@ -241,9 +244,9 @@ def test_contents_pillar_with_pillar_list(
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.sls", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         # Check to make sure the file was created
         assert target_path.is_file()
@@ -257,10 +260,10 @@ def test_managed_file_with_pillar_sls(
     is rendered properly and file is created.
     """
     ret = salt_call_cli.run("pillar.get", "monty")
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
-    target_path = tmp_path / "file-pillar-{}-target.txt".format(ret.json)
+    target_path = tmp_path / "file-pillar-{}-target.txt".format(ret.data)
     sls_name = "file-pillar-get"
     sls_contents = (
         """
@@ -278,9 +281,9 @@ def test_managed_file_with_pillar_sls(
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.sls", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         # Check to make sure the file was created
         assert target_path.is_file()
@@ -312,16 +315,16 @@ def test_issue_50221(
     )
     with sls_tempfile, issue_50221_ext_pillar_tempfile:
         ret = salt_call_cli.run("pillar.get", "issue-50221")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
         # The type of new line, ie, `\n` vs `\r\n` is not important
-        assert ret.json.replace("\r\n", "\n") == expected_content
+        assert ret.data.replace("\r\n", "\n") == expected_content
         ret = salt_call_cli.run(
             "state.apply", sls_name, pillar={"target-path": str(target_path)}
         )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         # Check to make sure the file was created
         assert target_path.is_file()
@@ -374,9 +377,9 @@ def test_issue_60426(
 
     with sls_tempfile, jinja_tempfile:
         ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         # Check to make sure the file was created
         assert target_path.is_file()
@@ -415,9 +418,9 @@ def test_issue_60426(
 
     with sls_tempfile, jinja_tempfile:
         ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         # Check to make sure the file was created
         assert target_path.is_file()
@@ -445,33 +448,33 @@ def test_issue_60203(
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
         assert (
             "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            in ret.json
+            in ret.data
         )
         assert (
             "comment"
-            in ret.json[
+            in ret.data[
                 "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
             ]
         )
         assert (
             "Unable to manage"
-            in ret.json[
+            in ret.data[
                 "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
             ]["comment"]
         )
         assert (
             "/files/test.tar.gz.sha256"
-            in ret.json[
+            in ret.data[
                 "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
             ]["comment"]
         )
         assert (
             "dontshowme"
-            not in ret.json[
+            not in ret.data[
                 "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
             ]["comment"]
         )
@@ -484,7 +487,7 @@ def min_patch_ver():
 
 def _check_minimum_version(salt_call_cli, minimum_patch_ver):
     version = salt_call_cli.run("--local", "cmd.run", "patch --version")
-    version = version.json.split()[2]
+    version = version.data.split()[2]
     if _LooseVersion(version) < _LooseVersion(minimum_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found,"
@@ -538,18 +541,18 @@ def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
         # Store the original contents and make sure they change
         ret = salt_call_cli.run("state.apply", "test_patch")
         # Check to make sure the patch was applied okay
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
 
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch successfully applied"
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
         assert state_run["changes"] == {}
@@ -595,19 +598,19 @@ def test_patch_directory(
     with sls_tempfile, numbers_tempfile, math_tempfile:
         # Run the state file
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch successfully applied"
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
         assert state_run["changes"] == {}
@@ -665,19 +668,19 @@ def test_patch_strip_parsing(
     with sls_tempfile, sls_patch_tempfile, numbers_tempfile, math_tempfile:
         # Run the state using -p1
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch successfully applied"
 
         # Re-run the state using --strip=1
         ret = salt_call_cli.run("state.apply", "test_patch_strip")
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
         assert state_run["changes"] == {}
@@ -719,11 +722,11 @@ def test_patch_saltenv(
 
     with sls_tempfile, math_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is False
         assert state_run[
             "comment"
@@ -789,20 +792,20 @@ def test_patch_single_file_failure(
             pass
 
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is False
         assert "Patch would not apply cleanly" in state_run["comment"]
 
         # Test the reject_file option and ensure that the rejects are written
         # to the path specified.
         ret = salt_call_cli.run("state.apply", "test_patch_reject")
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
 
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert "Patch would not apply cleanly" in state_run["comment"]
         assert (
             re.match(
@@ -870,20 +873,20 @@ def test_patch_directory_failure(
             pass
 
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is False
         assert "Patch would not apply cleanly" in state_run["comment"]
 
         # Test the reject_file option and ensure that the rejects are written
         # to the path specified.
         ret = salt_call_cli.run("state.apply", "test_patch_reject")
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
 
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert "Patch would not apply cleanly" in state_run["comment"]
         assert (
             re.match(
@@ -935,20 +938,20 @@ def test_patch_single_file_template(
 
     with sls_tempfile, numbers_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch successfully applied"
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
         assert state_run["changes"] == {}
@@ -996,20 +999,20 @@ def test_patch_directory_template(
 
     with sls_tempfile, numbers_tempfile, math_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
         assert state_run["changes"] == {}
@@ -1051,9 +1054,9 @@ def test_patch_test_mode(
     with sls_patch_tempfile, numbers_tempfile:
         # Test application with test=True mode
         ret = salt_call_cli.run("state.apply", "test_patch", test=True)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is None
         assert state_run["comment"] == "The patch would be applied"
 
@@ -1061,11 +1064,11 @@ def test_patch_test_mode(
         # exit with a True rather than a None result if test=True is used on an
         # already-applied patch.
         ret = salt_call_cli.run("state.apply", "test_patch")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch successfully applied"
 
@@ -1074,11 +1077,11 @@ def test_patch_test_mode(
         # the same as if we try to run this state on an already-patched file
         # *without* test=True.
         ret = salt_call_cli.run("state.apply", "test_patch", test=True)
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
         assert state_run["comment"] == "Patch was already applied"
 
@@ -1091,11 +1094,11 @@ def test_patch_test_mode(
         # case we should return a False result because we should already know
         # by this point that the patch will not apply cleanly.
         ret = salt_call_cli.run("state.apply", "test_patch", test=True)
-        assert ret.exitcode == 1
-        assert ret.json
+        assert ret.returncode == 1
+        assert ret.data
 
         # Check to make sure the patch was applied okay
-        state_run = next(iter(ret.json.values()))
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is False
         assert "Patch would not apply cleanly" in state_run["comment"]
 
@@ -1134,9 +1137,9 @@ def test_recurse(
                 test_tempdir.joinpath(_dir, str(_file)).touch()
 
         ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
 
         # Check to make sure the directories and files were created
@@ -1186,9 +1189,9 @@ def test_recurse_keep_symlinks_in_fileserver_root(
         os.chdir(str(cwd))
 
         ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
 
         # Check to make sure the directories and files were created
@@ -1243,9 +1246,9 @@ def test_recurse_keep_symlinks_outside_fileserver_root(
         os.chdir(str(cwd))
 
         ret = salt_cli_secondary_wrapper("state.apply", sls_name)
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
         assert state_run["result"] is True
 
         # Check to make sure the directories and files were created
@@ -1255,3 +1258,44 @@ def test_recurse_keep_symlinks_outside_fileserver_root(
                 assert target_path.joinpath(_dir, str(_file)).is_file()
 
         assert target_path.joinpath("test4").is_symlink()
+
+
+def test_issue_62117(
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
+):
+    name = "test_jinja/issue-62117"
+
+    yaml_contents = "{%- set grains = grains.get('os', '') %}"
+
+    jinja_contents = '{%- import_yaml "./issue-62117.yaml" as grains %}'
+
+    sls_contents = """
+    {%- from "./issue-62117.jinja" import grains with context %}
+
+    test_jinja/issue-62117/cmd.run:
+      cmd.run:
+        - name: pwd
+    """
+
+    yaml_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.yaml".format(name), yaml_contents
+    )
+
+    jinja_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.jinja".format(name), jinja_contents
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(name), sls_contents
+    )
+
+    with yaml_tempfile, jinja_tempfile, sls_tempfile:
+        ret = salt_call_cli.run("--local", "state.apply", name.replace("/", "."))
+        assert ret.returncode == 0
+        assert ret.data
+        state_run = next(iter(ret.data.values()))
+        assert state_run["result"] is True

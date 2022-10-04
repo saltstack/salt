@@ -1,1 +1,0 @@
-Fixed bug where deserialization in script engine would throw an error after all output was read.

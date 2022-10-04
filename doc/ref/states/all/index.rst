@@ -77,6 +77,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     cryptdev
     csf
@@ -277,6 +278,7 @@ state modules
     rdp
     redismod
     reg
+    restconf
     rsync
     rvm
     salt_proxy
@@ -334,6 +336,7 @@ state modules
     win_pki
     win_powercfg
     win_servermanager
+    win_shortcut
     win_smtp_server
     win_snmp
     win_system

@@ -137,7 +137,7 @@ class CsvDB:
         return self._tables.keys()
 
     def _load_table(self, table_name):
-        with gzip.open(os.path.join(self.db_path, table_name), "rb") as table:
+        with gzip.open(os.path.join(self.db_path, table_name), "rt") as table:
             return OrderedDict(
                 [tuple(elm.split(":")) for elm in next(csv.reader(table))]
             )
@@ -184,7 +184,7 @@ class CsvDB:
         """
         get_type = lambda item: str(type(item)).split("'")[1]
         if not os.path.exists(os.path.join(self.db_path, obj._TABLE)):
-            with gzip.open(os.path.join(self.db_path, obj._TABLE), "wb") as table_file:
+            with gzip.open(os.path.join(self.db_path, obj._TABLE), "wt") as table_file:
                 csv.writer(table_file).writerow(
                     [
                         "{col}:{type}".format(col=elm[0], type=get_type(elm[1]))
@@ -212,7 +212,7 @@ class CsvDB:
             db_obj = self.get(obj.__class__, eq=fields)
             if db_obj and distinct:
                 raise Exception("Object already in the database.")
-        with gzip.open(os.path.join(self.db_path, obj._TABLE), "a") as table:
+        with gzip.open(os.path.join(self.db_path, obj._TABLE), "at") as table:
             csv.writer(table).writerow(self._validate_object(obj))
 
     def update(self, obj, matches=None, mt=None, lt=None, eq=None):
@@ -318,7 +318,7 @@ class CsvDB:
         :return:
         """
         objects = []
-        with gzip.open(os.path.join(self.db_path, obj._TABLE), "rb") as table:
+        with gzip.open(os.path.join(self.db_path, obj._TABLE), "rt") as table:
             header = None
             for data in csv.reader(table):
                 if not header:

@@ -109,13 +109,7 @@ from salt.exceptions import (
 
 try:
     # pylint: disable=no-name-in-module
-    from oneandone.client import (
-        OneAndOneService,
-        Server,
-        Hdd,
-        BlockStorage,
-        SshKey,
-    )
+    from oneandone.client import BlockStorage, Hdd, OneAndOneService, Server, SshKey
 
     # pylint: enable=no-name-in-module
 

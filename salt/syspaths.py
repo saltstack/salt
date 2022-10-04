@@ -40,6 +40,7 @@ EXPECTED_VARIABLES = (
     "BASE_PILLAR_ROOTS_DIR",
     "BASE_THORIUM_ROOTS_DIR",
     "BASE_MASTER_ROOTS_DIR",
+    "LIB_STATE_DIR",
     "LOGS_DIR",
     "PIDFILE_DIR",
     "SPM_PARENT_PATH",
@@ -102,7 +103,7 @@ def _get_windows_root_dir():
     if root_dir["success"]:
         # Make sure vdata contains something
         if root_dir["vdata"]:
-            return root_dir["vdata"]
+            return os.path.expandvars(root_dir["vdata"])
 
     # If this key does not exist, then salt was not installed using the
     # new method installer. Could be pip or setup.py or an older version of the
@@ -110,7 +111,7 @@ def _get_windows_root_dir():
     log.debug("Failed to get ROOT_DIR from registry. %s", root_dir["comment"])
     # Check for C:\salt\conf
     old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
-    dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "salt")
+    dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "Salt")
     if os.path.isdir(old_root):
         # If the old config location is present use it
         log.debug("ROOT_DIR: %s", os.path.dirname(old_root))
@@ -193,6 +194,10 @@ BASE_MASTER_ROOTS_DIR = __generated_syspaths.BASE_MASTER_ROOTS_DIR
 if BASE_MASTER_ROOTS_DIR is None:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, "salt-master")
 
+LIB_STATE_DIR = __generated_syspaths.LIB_STATE_DIR
+if LIB_STATE_DIR is None:
+    LIB_STATE_DIR = CONFIG_DIR
+
 LOGS_DIR = __generated_syspaths.LOGS_DIR
 if LOGS_DIR is None:
     LOGS_DIR = os.path.join(ROOT_DIR, "var", "log", "salt")
@@ -236,6 +241,7 @@ __all__ = [
     "BASE_PILLAR_ROOTS_DIR",
     "BASE_MASTER_ROOTS_DIR",
     "BASE_THORIUM_ROOTS_DIR",
+    "LIB_STATE_DIR",
     "LOGS_DIR",
     "PIDFILE_DIR",
     "INSTALL_DIR",
