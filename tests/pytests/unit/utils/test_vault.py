@@ -3364,6 +3364,17 @@ def test_parse_config_ensures_necessary_values(config, expected):
         vault.parse_config(config)
 
 
+def test_parse_config_respects_verify_default():
+    """
+    Ensure "default" results in the OS-dependent default trust store.
+    """
+    testval = "/etc/ssl/certs/ca-certificates.crt"
+    with patch("salt.utils.http.get_ca_bundle", autospec=True) as ca:
+        ca.return_value = testval
+        ret = vault.parse_config({"server": {"verify": "default"}}, validate=False)
+        assert ret["server"]["verify"] == testval
+
+
 @pytest.mark.parametrize(
     "secret,config,expected",
     [

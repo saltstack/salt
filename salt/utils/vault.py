@@ -22,6 +22,7 @@ import salt.crypt
 import salt.exceptions
 import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.http
 import salt.utils.json
 import salt.utils.versions
 from salt.defaults import NOT_SET
@@ -409,7 +410,13 @@ def _get_connection_config(cbank, opts, context, force_local=False):
         issue_params=parse_config(opts.get("vault", {}), validate=False)["issue_params"]
         or None,
     )
-    config = parse_config(config)
+    config = parse_config(config, opts=opts)
+    if config["server"]["verify"] is None:
+        # make sure local verify settings are respected in case the master did not
+        # send them
+        config["server"]["verify"] = parse_config(
+            opts.get("vault", {}), validate=False
+        )["server"]["verify"]
     # do not couple token cache with configuration cache
     embedded_token = config["auth"].pop("token", None)
     config = {
@@ -423,7 +430,7 @@ def _get_connection_config(cbank, opts, context, force_local=False):
 
 def _use_local_config(opts):
     log.debug("Using Vault connection details from local config.")
-    config = parse_config(opts.get("vault", {}))
+    config = parse_config(opts.get("vault", {}), opts=opts)
     embedded_token = config["auth"].pop("token", None)
     return {
         "auth": config["auth"],
@@ -723,7 +730,7 @@ def _query_master(
     )
 
 
-def parse_config(config, validate=True):
+def parse_config(config, validate=True, opts=None):
     """
     Returns a vault configuration dictionary that has all
     keys with defaults. Checks if required data is available.
@@ -817,6 +824,8 @@ def parse_config(config, validate=True):
             merged["issue"]["allow_minion_override_params"] = merged["auth"][
                 "allow_minion_override"
             ]
+        if merged["server"]["verify"] == "default":
+            merged["server"]["verify"] = salt.utils.http.get_ca_bundle(opts)
         if not validate:
             return merged
         if merged["auth"]["method"] == "approle":

@@ -537,7 +537,7 @@ refresh_pillar
 Configures Vault server details.
 
 url
-    Url to your Vault installation. Required.
+    URL to your Vault installation. Required.
 
 verify
     For details please see
@@ -545,10 +545,15 @@ verify
 
     .. versionadded:: 2018.3.0
 
+    .. versionchanged:: 3006
+
+        Setting this value to ``default`` will autodiscover the platform default
+        CA bundle using ``salt.utils.http.get_ca_bundle``.
+
 namespace
     Optional Vault namespace. Used with Vault Enterprise.
 
-    For detail please see:
+    For details please see:
     https://www.vaultproject.io/docs/enterprise/namespaces
 
     .. versionadded:: 3004
