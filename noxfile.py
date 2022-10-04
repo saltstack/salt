@@ -1047,8 +1047,7 @@ def _ci_test(session, transport):
             runtests_log_filename = "runtests"
 
     rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
-
-    track_code_coverage = os.environ.get("CI_TRACK_COVERAGE", "1") == "1"
+    track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
 
     common_pytest_args = [
         "--color=yes",

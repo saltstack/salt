@@ -184,6 +184,14 @@ def rsync(ctx: Context, name: str):
                 "--print-tests-selection",
             ],
         },
+        "skip_code_coverage": {
+            "help": "Skip tracking code coverage",
+            "action": "store_true",
+            "flags": [
+                "--scc",
+                "--skip-code-coverage",
+            ],
+        },
     }
 )
 def test(
@@ -194,6 +202,7 @@ def test(
     rerun_failures: bool = False,
     skip_requirements_install: bool = False,
     print_tests_selection: bool = False,
+    skip_code_coverage: bool = False,
 ):
     """
     Run test in the VM.
@@ -204,6 +213,10 @@ def test(
         env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
         env["PRINT_TEST_SELECTION"] = "1"
+    if skip_code_coverage:
+        env["SKIP_CODE_COVERAGE"] = "1"
+    else:
+        env["SKIP_CODE_COVERAGE"] = "0"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
