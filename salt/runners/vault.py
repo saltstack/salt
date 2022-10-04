@@ -698,6 +698,26 @@ def cleanup_auth():
     return {"deleted": ret}
 
 
+def clear_cache():
+    """
+    Clears master cache of Vault-specific data. This can include:
+    - AppRole metadata
+    - rendered policies
+    - cached authentication credentials for impersonated minions
+    - cached KV metadata for impersonated minions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run vault.clear_cache
+    """
+    cache = salt.cache.factory(__opts__)
+    cache.flush("vault")
+    for minion in cache.list("minions"):
+        cache.flush(f"minions/{minion}/vault")
+
+
 def _config(key=None):
     ckey = "vault_master_config"
     if ckey not in __context__:
@@ -913,6 +933,8 @@ def _parse_issue_params(params, issue_type=None):
 def _manage_approle(minion_id, issue_params):
     endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
     payload = _parse_issue_params(issue_params)
+    # When the entity is managed during the same run, this can result in a duplicate
+    # pillar refresh. Potential for optimization.
     payload["token_policies"] = _get_policies(minion_id, refresh_pillar=True)
     client = _get_master_client()
     log.debug(f"Creating/updating AppRole for minion {minion_id}.")
@@ -1042,8 +1064,12 @@ def _fetch_entity_by_name(minion_id):
 
 def _manage_entity(minion_id):
     endpoint = f"identity/entity/name/salt_minion_{minion_id}"
+    # When the approle is managed during the same run, this can result in a duplicate
+    # pillar refresh. Potential for optimization.
     payload = {
-        "metadata": _get_metadata(minion_id, _config("metadata:entity"), True),
+        "metadata": _get_metadata(
+            minion_id, _config("metadata:entity"), refresh_pillar=True
+        ),
     }
     client = _get_master_client()
     client.post(endpoint, payload=payload)
