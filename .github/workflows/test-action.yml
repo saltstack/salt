@@ -132,6 +132,8 @@ jobs:
 
       - name: Start VM
         id: spin-up-vm
+        env:
+          TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
           tools vm create ${{ inputs.distro-slug }}
 
