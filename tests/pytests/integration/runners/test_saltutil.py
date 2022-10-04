@@ -76,7 +76,7 @@ def test_sync(
     """
     Ensure modules are synced when various sync functions are called
     """
-    module_name = "hello"
+    module_name = "hello_sync_{}".format(module_type)
     module_contents = """
 def __virtual__():
     return "hello"
@@ -102,7 +102,7 @@ def _write_module_dir_and_file(module_type, salt_minion, salt_master):
     """
     Write out dummy module to appropriate module location
     """
-    module_name = "hello"
+    module_name = "hello_sync_all"
     module_contents = """
 def __virtual__():
     return "hello"
