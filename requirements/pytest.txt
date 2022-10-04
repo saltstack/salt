@@ -2,11 +2,12 @@ mock >= 3.0.0
 # PyTest
 pytest >= 6.1.0; python_version < "3.6"
 pytest >= 7.0.1; python_version >= "3.6"
-pytest-salt-factories >= 1.0.0rc16; sys_platform == 'win32'
-pytest-salt-factories[docker] >= 1.0.0rc16; sys_platform != 'win32'
+pytest-salt-factories >= 1.0.0rc20; sys_platform == 'win32'
+pytest-salt-factories[docker] >= 1.0.0rc20; sys_platform != 'win32'
 pytest-tempdir >= 2019.10.12
 pytest-helpers-namespace >= 2019.1.8
 pytest-subtests
 pytest-timeout
 pytest-httpserver
+pytest-custom-exit-code >= 0.3
 flaky

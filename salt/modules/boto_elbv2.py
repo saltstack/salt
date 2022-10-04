@@ -49,7 +49,6 @@ try:
     import botocore
 
     # pylint: enable=unused-import
-
     # TODO Version check using salt.utils.versions
     from botocore.exceptions import ClientError
 

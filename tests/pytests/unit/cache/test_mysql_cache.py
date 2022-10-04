@@ -6,6 +6,7 @@ unit tests for the mysql_cache cache
 import logging
 
 import pytest
+
 import salt.cache.mysql_cache as mysql_cache
 import salt.payload
 import salt.utils.files

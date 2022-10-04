@@ -42,6 +42,7 @@ class ClusterShellTestCase(TestCase):
                 # Reimports are necessary to re-init the namespace.
                 # pylint: disable=unused-import
                 import socket
+
                 from ClusterShell.NodeSet import NodeSet
 
                 # pylint: enable=unused-import

@@ -7,6 +7,7 @@ import os
 import tempfile
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.saltmod as saltmod

@@ -3,6 +3,7 @@ import threading
 import time
 
 import pytest
+
 import salt.auth
 import salt.ext.tornado.escape
 import salt.ext.tornado.web
