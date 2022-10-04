@@ -775,7 +775,7 @@ def parse_config(config, validate=True, opts=None):
             "entity": {
                 "minion-id": "{minion}",
             },
-            "token": {
+            "secret": {
                 "saltstack-jid": "{jid}",
                 "saltstack-minion": "{minion}",
                 "saltstack-user": "{user}",

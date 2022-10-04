@@ -18,6 +18,7 @@ import salt.crypt
 import salt.exceptions
 import salt.pillar
 import salt.utils.data
+import salt.utils.json
 import salt.utils.vault as vault
 import salt.utils.versions
 from salt.defaults import NOT_SET
@@ -171,7 +172,7 @@ def _generate_token(minion_id, issue_params, wrap):
     if not payload["policies"]:
         raise SaltRunnerError("No policies matched minion.")
 
-    payload["meta"] = _get_metadata(minion_id, _config("metadata:token"))
+    payload["meta"] = _get_metadata(minion_id, _config("metadata:secret"))
     client = _get_master_client()
     log.trace("Sending token creation request to Vault.")
     res = client.post(endpoint, payload=payload, wrap=wrap)
@@ -1005,11 +1006,16 @@ def _lookup_role_id(minion_id, wrap):
 
 
 def _get_secret_id(minion_id, wrap, meta_info=False):
+    payload = {
+        "meta": salt.utils.json.dumps(
+            _get_metadata(minion_id, _config("metadata:secret"))
+        )
+    }
     client = _get_master_client()
     endpoint = "auth/{}/role/{}/secret-id".format(
         _config("issue:approle:mount"), minion_id
     )
-    response = client.post(endpoint, wrap=wrap)
+    response = client.post(endpoint, payload=payload, wrap=wrap)
     if wrap:
         # wrapped responses are always VaultWrappedResponse objects
         secret_id = response.serialize_for_minion()

@@ -213,7 +213,7 @@ All possible master configuration options with defaults:
       metadata:
         entity:
           minion-id: '{minion}'
-        token:
+        secret:
           saltstack-jid: '{jid}'
           saltstack-minion: '{minion}'
           saltstack-user: '{user}'
@@ -419,7 +419,7 @@ wrap
 ~~~~~~~~~~~~
 .. versionadded:: 3006
 
-Configures metadata for the issued secrets. Values have to be strings and can
+Configures metadata for the issued entities/secrets. Values have to be strings and can
 be templated with the following variables:
 
 - ``{jid}`` Salt job ID that issued the secret.
@@ -437,8 +437,9 @@ entity
     Configures the metadata associated with the minion entity inside Vault.
     Entities are only created when issuing AppRoles to minions.
 
-token
-    Configures the metadata associated with issued tokens.
+secret
+    Configures the metadata associated with issued tokens/secret IDs. They
+    are logged in plaintext to the Vault audit log.
 
 ``policies``
 ~~~~~~~~~~~~

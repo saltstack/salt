@@ -3,7 +3,7 @@ import pytest
 import salt.exceptions
 import salt.runners.vault as vault
 import salt.utils.vault as vaultutil
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import ANY, MagicMock, Mock, patch
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def default_config():
             "entity": {
                 "minion-id": "{minion}",
             },
-            "token": {
+            "secret": {
                 "saltstack-jid": "{jid}",
                 "saltstack-minion": "{minion}",
                 "saltstack-user": "{user}",
@@ -259,7 +259,7 @@ def policies_default():
 
 
 @pytest.fixture()
-def metadata_token_default():
+def metadata_secret_default():
     return {
         "saltstack-jid": "<no jid set>",
         "saltstack-minion": "test-minion",
@@ -358,7 +358,7 @@ def policies(request, policies_default):
 
 
 @pytest.fixture()
-def metadata(request, metadata_entity_default, metadata_token_default):
+def metadata(request, metadata_entity_default, metadata_secret_default):
     def _get_metadata(minion_id, metadata_patterns, *args, **kwargs):
         nonlocal request
         if getattr(request, "param", None) is not None:
@@ -366,8 +366,8 @@ def metadata(request, metadata_entity_default, metadata_token_default):
         if "saltstack-jid" not in metadata_patterns:
             nonlocal metadata_entity_default
             return metadata_entity_default
-        nonlocal metadata_token_default
-        return metadata_token_default
+        nonlocal metadata_secret_default
+        return metadata_secret_default
 
     with patch("salt.runners.vault._get_metadata", autospec=True) as get_metadata:
         get_metadata.side_effect = _get_metadata
@@ -394,7 +394,7 @@ def test_generate_token(
     policies_default,
     token_serialized,
     wrapped_serialized,
-    metadata_token_default,
+    metadata_secret_default,
     metadata,
 ):
     """
@@ -411,7 +411,7 @@ def test_generate_token(
         payload["explicit_max_ttl"] = config("issue:token:params:ttl")
     if config("issue:token:params:uses"):
         payload["num_uses"] = config("issue:token:params:uses")
-    payload["meta"] = metadata_token_default
+    payload["meta"] = metadata_secret_default
     payload["policies"] = policies_default
     if role_name:
         endpoint += f"/{role_name}"
@@ -1401,7 +1401,7 @@ def test_get_secret_id(config, client, wrapped_response, secret_id_response, wra
     else:
         assert res == vaultutil.VaultAppRoleSecretId(**secret_id_response["data"])
     client.post.assert_called_once_with(
-        "auth/salt-minions/role/test-minion/secret-id", wrap=wrap
+        "auth/salt-minions/role/test-minion/secret-id", payload=ANY, wrap=wrap
     )
 
 
