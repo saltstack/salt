@@ -5,6 +5,7 @@ to the VM and to run commands on the VM.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 import pathlib
@@ -198,16 +199,16 @@ def test(
     Run test in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    env = []
+    env = {}
     if rerun_failures:
-        env.append("RERUN_FAILURES=1")
+        env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
-        env.append("PRINT_TEST_SELECTION=1")
+        env["PRINT_TEST_SELECTION"] = "1"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
     ):
-        env.append("SKIP_REQUIREMENTS_INSTALL=1")
+        env["SKIP_REQUIREMENTS_INSTALL"] = "1"
     vm.run_nox(nox_session=nox_session, session_args=nox_session_args, env=env)
 
 
@@ -725,6 +726,26 @@ class VM:
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
 
+    def write_and_upload_dot_env(self, env: dict[str, str]):
+        if not env:
+            return
+        write_env = {k: str(v) for (k, v) in env.items()}
+        write_env_filename = ".ci-env"
+        write_env_filepath = REPO_ROOT / ".ci-env"
+        write_env_filepath.write_text(json.dumps(write_env))
+
+        # Local path
+        source = str(write_env_filepath)
+        # Remote repo path
+        remote_path = self.upload_path.joinpath(write_env_filename).as_posix()
+        if self.is_windows:
+            for drive in ("c:", "C:"):
+                remote_path = remote_path.replace(drive, "/cygdrive/c")
+        destination = f"{self.name}:{remote_path}"
+        description = f"Uploading {write_env_filename} ..."
+        self.rsync(source, destination, description)
+        write_env_filepath.unlink()
+
     def run(
         self,
         command: list[str],
@@ -772,7 +793,7 @@ class VM:
         nox_session: str,
         session_args: list[str] = None,
         nox_args: list[str] = None,
-        env: list[str] = None,
+        env: dict[str, str] = None,
     ):
         cmd = [
             "nox",
@@ -787,16 +808,17 @@ class VM:
         if session_args:
             cmd += ["--"] + session_args
         if env is None:
-            env = []
+            env = {}
         if "CI" in os.environ:
-            env.append(f"CI={os.environ['CI']}")
+            env["CI"] = os.environ["CI"]
+        env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
+        if env:
+            self.write_and_upload_dot_env(env)
         if self.is_windows is False:
             sudo = True
         else:
             sudo = False
-        ret = self.run(
-            cmd, sudo=sudo, check=False, capture=False, pseudo_terminal=True, env=env
-        )
+        ret = self.run(cmd, sudo=sudo, check=False, capture=False, pseudo_terminal=True)
         self.ctx.exit(ret.returncode)
 
     def combine_coverage(self):
@@ -897,7 +919,7 @@ class VM:
         return self.run_nox(
             nox_session,
             nox_args=["--install-only"],
-            env=["PRINT_TEST_SELECTION=0", "PRINT_SYSTEM_INFO=0"],
+            env={"PRINT_TEST_SELECTION": "0", "PRINT_SYSTEM_INFO": "0"},
         )
 
     def __repr__(self):
