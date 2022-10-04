@@ -8,6 +8,7 @@ Nox configuration script
 
 
 import datetime
+import json
 import os
 import pathlib
 import sys
@@ -24,6 +25,17 @@ if __name__ == "__main__":
 
 import nox  # isort:skip
 from nox.command import CommandFailed  # isort:skip
+
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent
+ENV_FILE = REPO_ROOT / ".ci-env"
+if ENV_FILE.exists():
+    print("Found .ci-env file. Updating environment...", flush=True)
+    for key, value in json.loads(ENV_FILE.read_text()).items():
+        print(f"  {key}={value}", flush=True)
+        os.environ[key] = value
+    print("Deleting .ci-env file", flush=True)
+    ENV_FILE.unlink()
 
 # Be verbose when runing under a CI context
 CI_RUN = (
@@ -1044,7 +1056,7 @@ def _ci_test(session, transport):
         "--ssh-tests",
         "--sys-stats",
         "--run-destructive",
-        "--output-columns=120",
+        f"--output-columns={os.environ.get('OUTPUT_COLUMNS') or 120}",
     ]
     try:
         pytest_args = (
