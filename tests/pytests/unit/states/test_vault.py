@@ -24,8 +24,13 @@ def policy_write():
         yield write
 
 
+@pytest.mark.usefixtures("policy_fetch")
 @pytest.mark.parametrize("test", [False, True])
-def test_policy_present_no_changes(policy_fetch, test):
+def test_policy_present_no_changes(test):
+    """
+    Test that when a policy is present as requested, no changes
+    are reported for success, regardless of opts["test"].
+    """
     with patch.dict(vault.__opts__, {"test": test}):
         res = vault.policy_present("test-policy", "test-rules")
     assert res["result"]
@@ -34,6 +39,10 @@ def test_policy_present_no_changes(policy_fetch, test):
 
 @pytest.mark.parametrize("test", [False, True])
 def test_policy_present_create(policy_fetch, policy_write, test):
+    """
+    Test that when a policy does not exist, it will be created.
+    The function should respect opts["test"].
+    """
     policy_fetch.return_value = None
     with patch.dict(vault.__opts__, {"test": test}):
         res = vault.policy_present("test-policy", "test-rules")
@@ -48,8 +57,13 @@ def test_policy_present_create(policy_fetch, policy_write, test):
         policy_write.assert_called_once_with("test-policy", "test-rules")
 
 
+@pytest.mark.usefixtures("policy_fetch")
 @pytest.mark.parametrize("test", [False, True])
-def test_policy_present_changes(policy_fetch, policy_write, test):
+def test_policy_present_changes(policy_write, test):
+    """
+    Test that when a policy exists, but the rules need to be updated,
+    it is detected and respects the value of opts["test"].
+    """
     with patch.dict(vault.__opts__, {"test": test}):
         res = vault.policy_present("test-policy", "new-test-rules")
     assert res["changes"]
@@ -65,6 +79,10 @@ def test_policy_present_changes(policy_fetch, policy_write, test):
 
 @pytest.mark.parametrize("test", [False, True])
 def test_policy_absent_no_changes(policy_fetch, test):
+    """
+    Test that when a policy is absent as requested, no changes
+    are reported for success, regardless of opts["test"].
+    """
     policy_fetch.return_value = None
     with patch.dict(vault.__opts__, {"test": test}):
         res = vault.policy_absent("test-policy")
@@ -72,8 +90,13 @@ def test_policy_absent_no_changes(policy_fetch, test):
     assert not res["changes"]
 
 
+@pytest.mark.usefixtures("policy_fetch")
 @pytest.mark.parametrize("test", [False, True])
-def test_policy_absent_changes(policy_fetch, test):
+def test_policy_absent_changes(test):
+    """
+    Test that when a policy exists, it will be deleted.
+    The function should respect opts["test"].
+    """
     delete = Mock(spec=vaultexe.policy_delete)
     with patch.dict(vault.__salt__, {"vault.policy_delete": delete}):
         with patch.dict(vault.__opts__, {"test": test}):

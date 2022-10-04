@@ -170,10 +170,7 @@ def existing_secret(vault, vault_container_version):
 @pytest.fixture
 def existing_secret_version(existing_secret, vault, vault_container_version):
     if vault_container_version == "0.9.6":
-        pytest.skip("Test not applicable to vault=={}".format(vault_container_version))
-    # ret = vault.write_secret("secret/my/secret_versions", user="foo", password="bar")
-    # assert ret
-    # assert ret["version"] == 1
+        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.write_secret("secret/my/secret", user="foo", password="hunter1")
     assert ret
     assert ret["version"] == 2
@@ -191,7 +188,7 @@ def test_delete_secret(vault):
 @pytest.mark.usefixtures("existing_secret_version")
 def test_delete_secret_versions(vault, vault_container_version):
     if vault_container_version == "0.9.6":
-        pytest.skip("Test not applicable to vault=={}".format(vault_container_version))
+        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.delete_secret("secret/my/secret", 1)
     assert ret is True
     ret = vault.read_secret("secret/my/secret")
@@ -214,7 +211,7 @@ def test_list_secrets(vault):
 @pytest.mark.usefixtures("existing_secret")
 def test_destroy_secret_kv2(vault, vault_container_version):
     if vault_container_version == "0.9.6":
-        pytest.skip("Test not applicable to vault=={}".format(vault_container_version))
+        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.destroy_secret("secret/my/secret", "1")
     assert ret is True
 
@@ -222,7 +219,7 @@ def test_destroy_secret_kv2(vault, vault_container_version):
 @pytest.mark.usefixtures("existing_secret")
 def test_patch_secret(vault, vault_container_version):
     if vault_container_version != "latest":
-        pytest.skip("Test not applicable to vault=={}".format(vault_container_version))
+        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.patch_secret("secret/my/secret", password="baz")
     assert ret
     expected_write = {"destroyed": False, "deletion_time": ""}

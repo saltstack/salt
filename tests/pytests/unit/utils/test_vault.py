@@ -733,6 +733,10 @@ def opts_runtype(request):
     "exception", ["VaultAuthExpired", "VaultPermissionDeniedError"]
 )
 def test_kv_wrapper_handles_auth_exceptions(wrapper, param, result, exception):
+    """
+    Test that *_kv wrappers retry with a new client if the authentication might
+    be outdated.
+    """
     func = getattr(vault, wrapper)
     exc = getattr(vault, exception)
     args = ["secret/some/path"]
@@ -955,14 +959,13 @@ class TestBuildAuthdClient:
             else:
                 fetch_secret_id.assert_called_once()
 
+    @pytest.mark.usefixtures("uncached")
     @pytest.mark.parametrize(
         "test_remote_config",
         ["token", "approle", "approle_no_secretid", "approle_wrapped_roleid"],
         indirect=True,
     )
-    def test_build_authd_client_uncached(
-        self, test_remote_config, conn_config, uncached
-    ):
+    def test_build_authd_client_uncached(self, test_remote_config, conn_config):
         """
         Ensure requested credentials are treated correctly.
         """
@@ -1704,7 +1707,7 @@ class TestQueryMaster:
     @pytest.mark.parametrize("misc_data", ["nested:value", "nested:num_uses"])
     @pytest.mark.parametrize("key", ["auth", "data"])
     def test_query_master_merges_misc_data_recursively(
-        self, opts, publish_runner, saltutil_runner, secret_id_response, misc_data, key
+        self, opts, publish_runner, saltutil_runner, misc_data, key
     ):
         """
         Ensure that "misc_data" is merged recursively into "data"/"auth" only if
@@ -1866,9 +1869,8 @@ def test_vault_client_request_hydrates_wrapped_response(
     assert isinstance(res, vault.VaultWrappedResponse)
 
 
-def test_vault_client_request_returns_true_when_no_data_is_reported(
-    req_success, client
-):
+@pytest.mark.usefixtures("req_success")
+def test_vault_client_request_returns_true_when_no_data_is_reported(client):
     """
     HTTP 204 indicates success with no data returned
     """
@@ -1941,7 +1943,7 @@ def test_vault_client_wrap_info_only_data(wrapped_role_id_lookup_response, clien
     "req_failed,expected", [(502, vault.VaultServerError)], indirect=["req_failed"]
 )
 def test_vault_client_wrap_info_should_fail_with_sensible_response(
-    req_failed, expected, client, req
+    req_failed, expected, client
 ):
     """
     wrap_info should return sensible Exceptions, not KeyError etc
@@ -2001,6 +2003,7 @@ def test_vault_client_unwrap_should_raise_appropriate_errors(
         tgt("test-wrapping-token")
 
 
+@pytest.mark.usefixtures("req_unwrapping")
 @pytest.mark.parametrize(
     "path",
     [
@@ -2010,7 +2013,7 @@ def test_vault_client_unwrap_should_raise_appropriate_errors(
     ],
 )
 def test_vault_client_unwrap_should_match_check_expected_creation_path(
-    path, role_id_response, req_unwrapping, client
+    path, role_id_response, client
 ):
     """
     Expected creation paths should be accepted as strings and list of strings,
@@ -2020,6 +2023,7 @@ def test_vault_client_unwrap_should_match_check_expected_creation_path(
     assert res == role_id_response
 
 
+@pytest.mark.usefixtures("req_unwrapping")
 @pytest.mark.parametrize(
     "path",
     [
@@ -2028,9 +2032,7 @@ def test_vault_client_unwrap_should_match_check_expected_creation_path(
         ["incorrect/path", "[^a]+", "auth/approle/role/[^/]/role-id"],
     ],
 )
-def test_vault_client_unwrap_should_fail_on_unexpected_creation_path(
-    path, req_unwrapping, client
-):
+def test_vault_client_unwrap_should_fail_on_unexpected_creation_path(path, client):
     """
     When none of the patterns match, a (serious) exception should be raised
     """
@@ -2080,10 +2082,9 @@ def test_vault_client_token_lookup_uses_accessor(client, req_any):
 # VaultClient only
 
 
+@pytest.mark.usefixtures("req")
 @pytest.mark.parametrize("client", [None], indirect=["client"])
-def test_vault_client_token_lookup_requires_token_for_unauthenticated_client(
-    client, req
-):
+def test_vault_client_token_lookup_requires_token_for_unauthenticated_client(client):
     with pytest.raises(vault.VaultInvocationError):
         client.token_lookup()
 
@@ -2091,6 +2092,7 @@ def test_vault_client_token_lookup_requires_token_for_unauthenticated_client(
 # AuthenticatedVaultClient only
 
 
+@pytest.mark.usefixtures("req_any")
 @pytest.mark.parametrize("client", ["valid_token"], indirect=True)
 @pytest.mark.parametrize(
     "endpoint,use",
@@ -2101,7 +2103,7 @@ def test_vault_client_token_lookup_requires_token_for_unauthenticated_client(
     ],
 )
 def test_vault_client_request_raw_increases_use_count_when_necessary_depending_on_path(
-    endpoint, use, client, req_any
+    endpoint, use, client
 ):
     """
     When a request is issued to an endpoint that consumes a use, ensure it is passed
@@ -2523,6 +2525,10 @@ class TestAuthMethods:
             yield client
 
     def test_token_auth_uninitialized(self, uncached):
+        """
+        Test that an exception is raised when a token is requested
+        and the authentication container was not passed a valid token.
+        """
         auth = vault.VaultTokenAuth(cache=uncached)
         uncached.get.assert_called_once()
         assert auth.is_valid() is False
@@ -2532,11 +2538,18 @@ class TestAuthMethods:
             auth.get_token()
 
     def test_token_auth_cached(self, cached_token, token):
+        """
+        Test that tokens are read from cache.
+        """
         auth = vault.VaultTokenAuth(cache=cached_token)
         assert auth.is_valid()
         assert auth.get_token() == token
 
     def test_token_auth_invalid_token(self, invalid_token):
+        """
+        Test that an exception is raised when a token is requested
+        and the container's token is invalid.
+        """
         auth = vault.VaultTokenAuth(token=invalid_token)
         assert auth.is_valid() is False
         assert auth.is_renewable() is False
@@ -2544,6 +2557,10 @@ class TestAuthMethods:
             auth.get_token()
 
     def test_token_auth_unrenewable_token(self, token_unrenewable):
+        """
+        Test that it is reported correctly by the container
+        when a token is not renewable.
+        """
         auth = vault.VaultTokenAuth(token=token_unrenewable)
         assert auth.is_valid() is True
         assert auth.is_renewable() is False
@@ -2688,6 +2705,22 @@ class TestAuthMethods:
         else:
             uncached.store.assert_not_called()
 
+    def test_approle_auth_used_locally_configured(
+        self, token_store_empty_first, approle, client, uncached, token
+    ):
+        """
+        Ensure that locally configured secret IDs are not cached.
+        """
+        approle.secret_id = vault.LocalVaultAppRoleSecretId(
+            **approle.secret_id.to_dict()
+        )
+        auth = vault.VaultAppRoleAuth(
+            approle, client, cache=uncached, token_store=token_store_empty_first
+        )
+        res = auth.get_token()
+        assert res == token
+        uncached.store.assert_not_called()
+
 
 def test_approle_allows_no_secret_id():
     """
@@ -2749,6 +2782,7 @@ class TestVaultCache:
             "cache": {
                 "backend": request.param,
                 "config": 3600,
+                "kv_metadata": "connection",
                 "secret": "ttl",
             }
         }
@@ -2802,22 +2836,32 @@ class TestVaultCache:
         return cache
 
     def test_get_uncached(self, config, uncached, cbank, ckey):
+        """
+        Ensure that unavailable cached data is reported as None.
+        """
         cache = vault.VaultCache(config, {}, {}, cbank, ckey)
         res = cache.get()
         assert res is None
         if config["cache"]["backend"] != "session":
             uncached.contains.assert_called_once_with(cbank, ckey)
 
+    @pytest.mark.parametrize("config", ["session"], indirect=True)
     def test_get_cached(self, config, context, cached, cbank, ckey, data):
+        """
+        Ensure that cached data in __context__ is respected, regardless
+        of cache backend.
+        """
         cache = vault.VaultCache(config, {}, context, cbank, ckey)
         res = cache.get()
         assert res == data
         cached.fetch.assert_not_called()
 
-    def test_get_cached_not_outdated(self, config, context, cached, cbank, ckey, data):
-        if config["cache"]["backend"] != "session":
-            context = {}
-        cache = vault.VaultCache(config, {}, context, cbank, ckey, ttl=3600)
+    @pytest.mark.parametrize("config", ["other"], indirect=True)
+    def test_get_cached_not_outdated(self, config, cached, cbank, ckey, data):
+        """
+        Ensure that cached data that is still valid is returned.
+        """
+        cache = vault.VaultCache(config, {}, {}, cbank, ckey, ttl=3600)
         res = cache.get()
         assert res == data
         if config["cache"]["backend"] == "session":
@@ -2827,7 +2871,12 @@ class TestVaultCache:
             cached.updated.assert_called_once_with(cbank, ckey)
             cached.fetch.assert_called_once_with(cbank, ckey)
 
-    def test_get_cached_outdated(self, config, cached_outdated, cbank, ckey, data):
+    @pytest.mark.parametrize("config", ["other"], indirect=True)
+    def test_get_cached_outdated(self, config, cached_outdated, cbank, ckey):
+        """
+        Ensure that cached data that is not valid anymore is flushed
+        and None is returned.
+        """
         cache = vault.VaultCache(config, {}, {}, cbank, ckey, ttl=1)
         res = cache.get()
         assert res is None
@@ -2837,20 +2886,26 @@ class TestVaultCache:
         cached_outdated.fetch.assert_not_called()
 
     def test_flush(self, config, context, cached, cbank, ckey):
+        """
+        Ensure that flushing clears the context key only and, if
+        a cache backend is in use, it is also cleared.
+        """
         cache = vault.VaultCache(config, {}, context, cbank, ckey)
         cache.flush()
-        if config["cache"]["backend"] == "session":
-            assert context == {cbank: {}}
-        else:
+        assert context == {cbank: {}}
+        if config["cache"]["backend"] != "session":
             cached.flush.assert_called_once_with(cbank, ckey)
 
     @pytest.mark.parametrize("context", [{}, {"vault/connection": {}}])
     def test_store(self, config, context, uncached, cbank, ckey, data):
+        """
+        Ensure that storing data in cache always updates the context
+        and, if a cache backend is in use, it is also stored there.
+        """
         cache = vault.VaultCache(config, {}, context, cbank, ckey)
         cache.store(data)
-        if config["cache"]["backend"] == "session":
-            assert context == {cbank: {ckey: data}}
-        else:
+        assert context == {cbank: {ckey: data}}
+        if config["cache"]["backend"] != "session":
             uncached.store.assert_called_once_with(cbank, ckey, data)
 
 
@@ -2922,7 +2977,8 @@ class TestVaultConfigCache:
         cache_factory.return_value = cache
         return cache
 
-    def test_get_config_cache_uncached(self, uncached, cbank, ckey):
+    @pytest.mark.usefixtures("uncached")
+    def test_get_config_cache_uncached(self, cbank, ckey):
         """
         Ensure an uninitialized instance is returned when there is no cache
         """
@@ -2968,7 +3024,8 @@ class TestVaultConfigCache:
             if config is not None and config["cache"]["backend"] != "session":
                 flush.assert_called_once()
 
-    def test_exists(self, config, cached, context, cbank, ckey, data):
+    @pytest.mark.usefixtures("cached")
+    def test_exists(self, config, context, cbank, ckey):
         """
         Ensure exists always evaluates to false when uninitialized
         """
@@ -3018,7 +3075,8 @@ class TestVaultConfigCache:
             assert cache.cache is None
             assert cache.config is None
 
-    def test_store(self, uncached, data, cbank, ckey):
+    @pytest.mark.usefixtures("uncached")
+    def test_store(self, data, cbank, ckey):
         """
         Ensure storing config in cache also reloads the instance
         """
@@ -3064,12 +3122,20 @@ class TestVaultAuthCache:
             cached.return_value = token_auth["auth"]
             yield flush
 
-    def test_get_uncached(self, config, uncached):
+    @pytest.mark.usefixtures("uncached")
+    def test_get_uncached(self, config):
+        """
+        Ensure that unavailable cached data is reported as None.
+        """
         cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
         res = cache.get()
         assert res is None
 
-    def test_get_cached(self, config, cached, token_auth):
+    @pytest.mark.usefixtures("cached")
+    def test_get_cached(self, config, token_auth):
+        """
+        Ensure that cached data that is still valid is returned.
+        """
         cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
         with patch.object(cache, "exists", MagicMock(return_value=True)):
             res = cache.get()
@@ -3077,12 +3143,20 @@ class TestVaultAuthCache:
         assert res == vault.VaultToken(**token_auth["auth"])
 
     def test_get_cached_invalid(self, config, cached_invalid_flush):
+        """
+        Ensure that cached data that is not valid anymore is flushed
+        and None is returned.
+        """
         cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
         res = cache.get()
         assert res is None
         cached_invalid_flush.assert_called_once()
 
     def test_store(self, config, token_auth):
+        """
+        Ensure that storing authentication data sends a dictionary
+        representation to the store implementation of the parent class.
+        """
         token = vault.VaultToken(**token_auth["auth"])
         cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
         with patch("salt.utils.vault.VaultCache.store") as store:
@@ -3160,38 +3234,64 @@ class TestKVV1:
 
     @pytest.mark.parametrize("include_metadata", [False, True])
     def test_vault_kv_read(self, kvv1, include_metadata):
+        """
+        Ensure that VaultKV.read works for KV v1 and does not fail if
+        metadata is requested, which is invalid for KV v1.
+        """
         res = kvv1.read(self.path, include_metadata=include_metadata)
         kvv1.client.get.assert_called_once_with(self.path)
         assert res == {"foo": "bar"}
 
     def test_vault_kv_write(self, kvv1):
+        """
+        Ensure that VaultKV.write works for KV v1.
+        """
         data = {"bar": "baz"}
         kvv1.write(self.path, data)
         kvv1.client.post.assert_called_once_with(self.path, payload=data)
 
     def test_vault_kv_patch(self, kvv1):
+        """
+        Ensure that VaultKV.patch fails for KV v1. This action was introduced
+        in KV v2. It could be simulated in Python though.
+        """
         with pytest.raises(vault.VaultInvocationError):
             kvv1.patch(self.path, {"bar": "baz"})
 
     def test_vault_kv_delete(self, kvv1):
+        """
+        Ensure that VaultKV.delete works for KV v1.
+        """
         kvv1.delete(self.path)
         kvv1.client.request.assert_called_once_with("DELETE", self.path, payload=None)
 
     def test_vault_kv_delete_versions(self, kvv1):
+        """
+        Ensure that VaultKV.delete with versions raises an exception for KV v1.
+        """
         with pytest.raises(
             vault.VaultInvocationError, match="Versioning support requires kv-v2.*"
         ):
             kvv1.delete(self.path, versions=[1, 2, 3, 4])
 
     def test_vault_kv_destroy(self, kvv1):
+        """
+        Ensure that VaultKV.destroy raises an exception for KV v1.
+        """
         with pytest.raises(vault.VaultInvocationError):
             kvv1.destroy(self.path, [1, 2, 3, 4])
 
     def test_vault_kv_nuke(self, kvv1):
+        """
+        Ensure that VaultKV.nuke raises an exception for KV v1.
+        """
         with pytest.raises(vault.VaultInvocationError):
             kvv1.nuke(self.path)
 
     def test_vault_kv_list(self, kvv1):
+        """
+        Ensure that VaultKV.list works for KV v1 and only returns keys.
+        """
         res = kvv1.list(self.path)
         kvv1.client.list.assert_called_once_with(self.path)
         assert res == ["foo"]
@@ -3252,6 +3352,10 @@ class TestKVV2:
 
     @pytest.mark.parametrize("include_metadata", [False, True])
     def test_vault_kv_read(self, kvv2, include_metadata, kvv2_response):
+        """
+        Ensure that VaultKV.read works for KV v2 and returns metadata
+        if requested.
+        """
         res = kvv2.read(self.path, include_metadata=include_metadata)
         kvv2.client.get.assert_called_once_with(self.paths["data"])
         if include_metadata:
@@ -3260,6 +3364,9 @@ class TestKVV2:
             assert res == kvv2_response["data"]["data"]
 
     def test_vault_kv_write(self, kvv2):
+        """
+        Ensure that VaultKV.write works for KV v2.
+        """
         data = {"bar": "baz"}
         kvv2.write(self.path, data)
         kvv2.client.post.assert_called_once_with(
@@ -3267,6 +3374,9 @@ class TestKVV2:
         )
 
     def test_vault_kv_patch(self, kvv2):
+        """
+        Ensure that VaultKV.patch works for KV v2.
+        """
         data = {"bar": "baz"}
         kvv2.patch(self.path, data)
         kvv2.client.patch.assert_called_once_with(
@@ -3276,6 +3386,9 @@ class TestKVV2:
         )
 
     def test_vault_kv_delete(self, kvv2):
+        """
+        Ensure that VaultKV.delete works for KV v2.
+        """
         kvv2.delete(self.path)
         kvv2.client.request.assert_called_once_with(
             "DELETE", self.paths["data"], payload=None
@@ -3285,6 +3398,9 @@ class TestKVV2:
         "versions", [[1, 2], [2], 2, ["1", "2"], ["2"], "2", [1, "2"]]
     )
     def test_vault_kv_delete_versions(self, kvv2, versions):
+        """
+        Ensure that VaultKV.delete with versions works for KV v2.
+        """
         if isinstance(versions, list):
             expected = [int(x) for x in versions]
         else:
@@ -3298,6 +3414,9 @@ class TestKVV2:
         "versions", [[1, 2], [2], 2, ["1", "2"], ["2"], "2", [1, "2"]]
     )
     def test_vault_kv_destroy(self, kvv2, versions):
+        """
+        Ensure that VaultKV.destroy works for KV v2.
+        """
         if isinstance(versions, list):
             expected = [int(x) for x in versions]
         else:
@@ -3308,10 +3427,16 @@ class TestKVV2:
         )
 
     def test_vault_kv_nuke(self, kvv2):
+        """
+        Ensure that VaultKV.nuke works for KV v2.
+        """
         kvv2.nuke(self.path)
         kvv2.client.delete.assert_called_once_with(self.paths["metadata"])
 
     def test_vault_kv_list(self, kvv2):
+        """
+        Ensure that VaultKV.list works for KV v2 and only returns keys.
+        """
         res = kvv2.list(self.path)
         kvv2.client.list.assert_called_once_with(self.paths["metadata"])
         assert res == ["foo"]

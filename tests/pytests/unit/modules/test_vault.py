@@ -132,8 +132,9 @@ def test_read_secret(read_kv, key, expected):
     assert res == expected
 
 
+@pytest.mark.usefixtures("read_kv_not_found", "list_kv_not_found")
 @pytest.mark.parametrize("func", ["read_secret", "list_secrets"])
-def test_read_list_secret_with_default(func, read_kv_not_found, list_kv_not_found):
+def test_read_list_secret_with_default(func):
     """
     Ensure read_secret and list_secrets with defaults set return those
     if the path was not found.
@@ -143,8 +144,9 @@ def test_read_list_secret_with_default(func, read_kv_not_found, list_kv_not_foun
     assert res == ["f"]
 
 
+@pytest.mark.usefixtures("read_kv_not_found", "list_kv_not_found")
 @pytest.mark.parametrize("func", ["read_secret", "list_secrets"])
-def test_read_list_secret_without_default(func, read_kv_not_found, list_kv_not_found):
+def test_read_list_secret_without_default(func):
     """
     Ensure read_secret and list_secrets without defaults set raise
     a CommandExecutionError when the path is not found.
@@ -156,6 +158,7 @@ def test_read_list_secret_without_default(func, read_kv_not_found, list_kv_not_f
         tgt("some/path")
 
 
+@pytest.mark.usefixtures("list_kv")
 @pytest.mark.parametrize(
     "keys_only,expected",
     [
@@ -163,7 +166,7 @@ def test_read_list_secret_without_default(func, read_kv_not_found, list_kv_not_f
         (True, ["foo"]),
     ],
 )
-def test_list_secrets(list_kv, keys_only, expected):
+def test_list_secrets(keys_only, expected):
     """
     Ensure list_secrets works as expected. keys_only=False is default to
     stay backwards-compatible. There should not be a reason to have the
@@ -183,7 +186,8 @@ def test_write_secret(data, write_kv):
     write_kv.assert_called_once_with(path, data, opts=ANY, context=ANY)
 
 
-def test_write_secret_err(data, write_kv_err, caplog):
+@pytest.mark.usefixtures("write_kv_err")
+def test_write_secret_err(data, caplog):
     """
     Ensure write_secret handles exceptions as expected
     """
@@ -206,7 +210,8 @@ def test_write_raw(data, write_kv):
     write_kv.assert_called_once_with(path, data, opts=ANY, context=ANY)
 
 
-def test_write_raw_err(data, write_kv_err, caplog):
+@pytest.mark.usefixtures("write_kv_err")
+def test_write_raw_err(data, caplog):
     """
     Ensure write_raw handles exceptions as expected
     """
@@ -229,7 +234,8 @@ def test_patch_secret(data, patch_kv):
     patch_kv.assert_called_once_with(path, data, opts=ANY, context=ANY)
 
 
-def test_patch_secret_err(data, patch_kv_err, caplog):
+@pytest.mark.usefixtures("patch_kv_err")
+def test_patch_secret_err(data, caplog):
     """
     Ensure patch_secret handles exceptions as expected
     """
@@ -255,8 +261,9 @@ def test_delete_secret(delete_kv, args):
     )
 
 
+@pytest.mark.usefixtures("delete_kv_err")
 @pytest.mark.parametrize("args", [[], [1, 2]])
-def test_delete_secret_err(delete_kv_err, args, caplog):
+def test_delete_secret_err(args, caplog):
     """
     Ensure delete_secret handles exceptions as expected
     """
@@ -280,7 +287,8 @@ def test_destroy_secret(destroy_kv, args):
     destroy_kv.assert_called_once_with(path, args, opts=ANY, context=ANY)
 
 
-def test_destroy_secret_requires_version(destroy_kv):
+@pytest.mark.usefixtures("destroy_kv")
+def test_destroy_secret_requires_version():
     """
     Ensure destroy_secret requires at least one version
     """
@@ -290,8 +298,9 @@ def test_destroy_secret_requires_version(destroy_kv):
         vault.destroy_secret("secret/some/path")
 
 
+@pytest.mark.usefixtures("destroy_kv_err")
 @pytest.mark.parametrize("args", [[1], [1, 2]])
-def test_destroy_secret_err(destroy_kv_err, caplog, args):
+def test_destroy_secret_err(caplog, args):
     """
     Ensure destroy_secret handles exceptions as expected
     """

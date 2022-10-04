@@ -382,6 +382,7 @@ def validate_signature():
         yield validate
 
 
+@pytest.mark.usefixtures("policies", "metadata")
 @pytest.mark.parametrize(
     "config",
     [{}, {"issue:token:role_name": "test-role"}, {"issue:wrap": False}],
@@ -390,12 +391,10 @@ def validate_signature():
 def test_generate_token(
     client_token,
     config,
-    policies,
     policies_default,
     token_serialized,
     wrapped_serialized,
     metadata_secret_default,
-    metadata,
 ):
     """
     Ensure _generate_token calls the API as expected
@@ -425,8 +424,9 @@ def test_generate_token(
     assert res_num_uses == 1
 
 
+@pytest.mark.usefixtures("config")
 @pytest.mark.parametrize("policies", [[]], indirect=True)
-def test_generate_token_no_policies_denied(config, policies):
+def test_generate_token_no_policies_denied(policies):
     """
     Ensure generated tokens need at least one attached policy
     """
@@ -511,8 +511,9 @@ def test_generate_new_token(
         )
 
 
+@pytest.mark.usefixtures("validate_signature")
 @pytest.mark.parametrize("config", [{"issue:type": "approle"}], indirect=True)
-def test_generate_new_token_refuses_if_not_configured(config, validate_signature):
+def test_generate_new_token_refuses_if_not_configured(config):
     """
     Ensure generate_new_token only issues tokens if configured to issue them
     """
@@ -590,7 +591,7 @@ def test_get_config_token(
     [None, {"ttl": 120, "uses": 3}, {"secret_id_num_uses": 2, "secret_id_ttl": 120}],
 )
 def test_get_config_approle(
-    config, validate_signature, token_serialized, wrapped_serialized, issue_params
+    config, validate_signature, wrapped_serialized, issue_params
 ):
     """
     Ensure get_config returns data in the expected format when configured for AppRole auth
@@ -637,6 +638,10 @@ def test_get_config_approle(
 )
 @pytest.mark.usefixtures("validate_signature")
 def test_get_config_verify_default(config, wrapped_serialized):
+    """
+    Test that get_config function does not return the parsed configuration value
+    from the master configuration, but "default", which is rendered on the minion.
+    """
     with patch("salt.runners.vault._generate_token", autospec=True) as gen:
         gen.return_value = (wrapped_serialized, 1)
         with patch.dict(vault.__opts__, {"vault": {"server": {"verify": "default"}}}):
@@ -679,8 +684,9 @@ def test_get_role_id(config, validate_signature, wrapped_serialized, issue_param
         )
 
 
+@pytest.mark.usefixtures("validate_signature")
 @pytest.mark.parametrize("config", [{"issue:type": "token"}], indirect=True)
-def test_get_role_id_refuses_if_not_configured(config, validate_signature):
+def test_get_role_id_refuses_if_not_configured(config):
     """
     Ensure get_role_id returns an error if not configured to issue AppRoles
     """
@@ -853,10 +859,9 @@ def test_generate_secret_id(
         matcher.assert_called_once()
 
 
+@pytest.mark.usefixtures("validate_signature")
 @pytest.mark.parametrize("config", [{"issue:type": "approle"}], indirect=True)
-def test_generate_secret_id_nonexistent_approle(
-    config, validate_signature, wrapped_serialized, approle_meta, secret_id_serialized
-):
+def test_generate_secret_id_nonexistent_approle(config):
     """
     Ensure generate_secret_id fails and prompts the minion to refresh cache if
     no associated AppRole could be found.
@@ -871,8 +876,9 @@ def test_generate_secret_id_nonexistent_approle(
         assert res["expire_cache"]
 
 
+@pytest.mark.usefixtures("validate_signature")
 @pytest.mark.parametrize("config", [{"issue:type": "token"}], indirect=True)
-def test_get_secret_id_refuses_if_not_configured(config, validate_signature):
+def test_get_secret_id_refuses_if_not_configured(config):
     """
     Ensure get_secret_id returns an error if not configured to issue AppRoles
     """
@@ -883,7 +889,7 @@ def test_get_secret_id_refuses_if_not_configured(config, validate_signature):
 
 @pytest.mark.parametrize("config", [{"issue:type": "approle"}], indirect=True)
 def test_generate_secret_id_updates_params(
-    config, validate_signature, wrapped_serialized, approle_meta, secret_id_serialized
+    config, validate_signature, wrapped_serialized, approle_meta
 ):
     """
     Ensure generate_secret_id returns data in the expected format
@@ -1303,7 +1309,8 @@ def test_parse_issue_params_does_not_allow_bind_secret_id_override(
     assert res.get("bind_secret_id", False) == expected
 
 
-def test_manage_approle(config, client, policies, policies_default):
+@pytest.mark.usefixtures("config", "policies")
+def test_manage_approle(client, policies_default):
     """
     Ensure _manage_approle calls the API as expected.
     """
@@ -1318,7 +1325,8 @@ def test_manage_approle(config, client, policies, policies_default):
     )
 
 
-def test_delete_approle(config, client):
+@pytest.mark.usefixtures("config")
+def test_delete_approle(client):
     """
     Ensure _delete_approle calls the API as expected.
     """
@@ -1326,7 +1334,8 @@ def test_delete_approle(config, client):
     client.delete.assert_called_once_with("auth/salt-minions/role/test-minion")
 
 
-def test_lookup_approle(config, client, approle_meta):
+@pytest.mark.usefixtures("config")
+def test_lookup_approle(client, approle_meta):
     """
     Ensure _lookup_approle calls the API as expected.
     """
@@ -1336,7 +1345,8 @@ def test_lookup_approle(config, client, approle_meta):
     client.get.assert_called_once_with("auth/salt-minions/role/test-minion")
 
 
-def test_lookup_approle_nonexistent(config, client):
+@pytest.mark.usefixtures("config")
+def test_lookup_approle_nonexistent(client):
     """
     Ensure _lookup_approle catches VaultNotFoundErrors and returns False.
     """
@@ -1345,8 +1355,9 @@ def test_lookup_approle_nonexistent(config, client):
     assert res is False
 
 
+@pytest.mark.usefixtures("config")
 @pytest.mark.parametrize("wrap", ["30s", False])
-def test_lookup_role_id(config, client, wrapped_response, wrap):
+def test_lookup_role_id(client, wrapped_response, wrap):
     """
     Ensure _lookup_role_id calls the API as expected.
     """
@@ -1368,7 +1379,8 @@ def test_lookup_role_id(config, client, wrapped_response, wrap):
     )
 
 
-def test_lookup_role_id_nonexistent(config, client):
+@pytest.mark.usefixtures("config")
+def test_lookup_role_id_nonexistent(client):
     """
     Ensure _lookup_role_id catches VaultNotFoundErrors and returns False.
     """
@@ -1377,8 +1389,9 @@ def test_lookup_role_id_nonexistent(config, client):
     assert res is False
 
 
+@pytest.mark.usefixtures("config")
 @pytest.mark.parametrize("wrap", ["30s", False])
-def test_get_secret_id(config, client, wrapped_response, secret_id_response, wrap):
+def test_get_secret_id(client, wrapped_response, secret_id_response, wrap):
     """
     Ensure _get_secret_id calls the API as expected.
     """
@@ -1405,9 +1418,9 @@ def test_get_secret_id(config, client, wrapped_response, secret_id_response, wra
     )
 
 
+@pytest.mark.usefixtures("config")
 @pytest.mark.parametrize("wrap", ["30s", False])
 def test_get_secret_id_meta_info(
-    config,
     client,
     wrapped_response,
     secret_id_response,
@@ -1456,7 +1469,8 @@ def test_lookup_mount_accessor(client):
     client.get.assert_called_once_with("sys/auth/salt-minions")
 
 
-def test_lookup_entity_by_alias(client, config, entity_lookup_response):
+@pytest.mark.usefixtures("config")
+def test_lookup_entity_by_alias(client, entity_lookup_response):
     """
     Ensure _lookup_entity_by_alias calls the API as expected.
     """
@@ -1473,7 +1487,8 @@ def test_lookup_entity_by_alias(client, config, entity_lookup_response):
         client.post.assert_called_once_with("identity/lookup/entity", payload=payload)
 
 
-def test_lookup_entity_by_alias_failed(client, config):
+@pytest.mark.usefixtures("config")
+def test_lookup_entity_by_alias_failed(client):
     """
     Ensure _lookup_entity_by_alias returns False if the lookup fails.
     """
@@ -1485,7 +1500,8 @@ def test_lookup_entity_by_alias_failed(client, config):
         assert res is False
 
 
-def test_fetch_entity_by_name(client, config, entity_fetch_response):
+@pytest.mark.usefixtures("config")
+def test_fetch_entity_by_name(client, entity_fetch_response):
     """
     Ensure _fetch_entity_by_name calls the API as expected.
     """
@@ -1495,7 +1511,8 @@ def test_fetch_entity_by_name(client, config, entity_fetch_response):
     client.get.assert_called_once_with("identity/entity/name/salt_minion_test-minion")
 
 
-def test_fetch_entity_by_name_failed(client, config):
+@pytest.mark.usefixtures("config")
+def test_fetch_entity_by_name_failed(client):
     """
     Ensure _fetch_entity_by_name returns False if the lookup fails.
     """
@@ -1504,7 +1521,8 @@ def test_fetch_entity_by_name_failed(client, config):
     assert res is False
 
 
-def test_manage_entity(client, config, metadata, metadata_entity_default):
+@pytest.mark.usefixtures("config")
+def test_manage_entity(client, metadata, metadata_entity_default):
     """
     Ensure _manage_entity calls the API as expected.
     """
@@ -1515,7 +1533,8 @@ def test_manage_entity(client, config, metadata, metadata_entity_default):
     )
 
 
-def test_delete_entity(client, config):
+@pytest.mark.usefixtures("config")
+def test_delete_entity(client):
     """
     Ensure _delete_entity calls the API as expected.
     """
@@ -1523,6 +1542,7 @@ def test_delete_entity(client, config):
     client.delete.assert_called_with("identity/entity/name/salt_minion_test-minion")
 
 
+@pytest.mark.usefixtures("config")
 @pytest.mark.parametrize(
     "aliases",
     [
@@ -1533,7 +1553,7 @@ def test_delete_entity(client, config):
         ],
     ],
 )
-def test_manage_entity_alias(client, config, aliases, entity_fetch_response):
+def test_manage_entity_alias(client, aliases, entity_fetch_response):
     """
     Ensure _manage_entity_alias calls the API as expected.
     """
@@ -1557,7 +1577,8 @@ def test_manage_entity_alias(client, config, aliases, entity_fetch_response):
         client.post.assert_called_with("identity/entity-alias", payload=payload)
 
 
-def test_manage_entity_alias_raises_errors(client, config):
+@pytest.mark.usefixtures("config", "client")
+def test_manage_entity_alias_raises_errors():
     """
     Ensure _manage_entity_alias raises exceptions.
     """

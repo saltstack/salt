@@ -64,7 +64,8 @@ def test_ext_pillar(read_kv, data):
     assert ext_pillar == data
 
 
-def test_ext_pillar_not_found(read_kv_not_found, caplog):
+@pytest.mark.usefixtures("read_kv_not_found")
+def test_ext_pillar_not_found(caplog):
     """
     Test that HTTP 404 is handled correctly
     """
@@ -74,7 +75,8 @@ def test_ext_pillar_not_found(read_kv_not_found, caplog):
         assert "Vault secret not found for: secret/path" in caplog.messages
 
 
-def test_ext_pillar_nesting_key(read_kv, data):
+@pytest.mark.usefixtures("read_kv")
+def test_ext_pillar_nesting_key(data):
     """
     Test that nesting_key is honored as expected
     """
@@ -150,7 +152,8 @@ def test_ext_pillar_disabled_during_pillar_rendering(read_kv):
     read_kv.assert_not_called()
 
 
-def test_invalid_config(read_kv, caplog):
+@pytest.mark.usefixtures("read_kv")
+def test_invalid_config(caplog):
     """
     Ensure an empty dict is returned and an error is logged in case
     the config does not contain path=<...>

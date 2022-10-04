@@ -285,11 +285,11 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         )
         assert ret.data == ["salt_minion", f"salt_minion_{pillar_salt_minion.id}"]
 
+    @pytest.mark.usefixtures("pillar_exe_loop")
     def test_policy_compilation_prevents_loop_for_execution_module(
         self,
         pillar_salt_run_cli,
         pillar_salt_minion,
-        pillar_exe_loop,
     ):
         """
         Test that the runner prevents a recursive cycle from happening
@@ -306,11 +306,11 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         assert "Pillar render error: Rendering SLS 'exe_loop' failed" in ret.stderr
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
 
+    @pytest.mark.usefixtures("pillar_sdb_loop")
     def test_policy_compilation_prevents_loop_for_sdb_module(
         self,
         pillar_salt_run_cli,
         pillar_salt_minion,
-        pillar_sdb_loop,
     ):
         """
         Test that the runner prevents a recursive cycle from happening

@@ -70,7 +70,8 @@ def test_set(write_kv, key, exp_path, data):
     )
 
 
-def test_set_err(write_kv_err):
+@pytest.mark.usefixtures("write_kv_err")
+def test_set_err():
     """
     Test that salt.sdb.vault.set_ raises CommandExecutionError from other exceptions
     """
@@ -95,7 +96,8 @@ def test_get(read_kv, key, exp_path):
     read_kv.assert_called_once_with(f"sdb://myvault/{exp_path}", opts=ANY, context=ANY)
 
 
-def test_get_missing_key(read_kv):
+@pytest.mark.usefixtures("read_kv")
+def test_get_missing_key():
     """
     Test that salt.sdb.vault.get returns None if vault does not have the key
     but does have the entry.
@@ -104,7 +106,8 @@ def test_get_missing_key(read_kv):
     assert res is None
 
 
-def test_get_missing(read_kv_not_found):
+@pytest.mark.usefixtures("read_kv_not_found")
+def test_get_missing():
     """
     Test that salt.sdb.vault.get returns None if vault does have the entry.
     """
@@ -125,7 +128,8 @@ def test_get_whole_dataset(read_kv_not_found_once, data):
     assert read_kv_not_found_once.call_count == 2
 
 
-def test_get_err(read_kv_err):
+@pytest.mark.usefixtures("read_kv_err")
+def test_get_err():
     """
     Test that salt.sdb.vault.get raises CommandExecutionError from other exceptions
     """
