@@ -152,13 +152,13 @@ jobs:
             --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Combine Coverage Reports
-        if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'cancelled' && steps.run-tests.conclusion != 'skipped'
+        if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'skipped'
         run: |
           tools vm combine-coverage ${{ inputs.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'cancelled' && steps.run-tests.conclusion != 'skipped'
+        if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'skipped'
         run: |
           tools vm download-artifacts ${{ inputs.distro-slug }}
           tree -a artifacts
