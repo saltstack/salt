@@ -739,6 +739,10 @@ class VM:
             "--exclude",
             "*.py~",
         ]
+        if self.is_windows:
+            # Symlinks aren't handled properly on windows, just replace the
+            # symlink with a copy of what's getting symlinked.
+            rsync_flags.append("--copy-links")
         # Local repo path
         source = f"{REPO_ROOT}{os.path.sep}"
         # Remote repo path
