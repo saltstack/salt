@@ -6,11 +6,11 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-
 import datetime
 import json
 import os
 import pathlib
+import sqlite3
 import sys
 import tempfile
 
@@ -455,6 +455,18 @@ def _report_coverage(session):
         # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
         # exception
         pass
+
+    if not IS_WINDOWS:
+        # The coverage file might have come from a windows machine, fix paths
+        with sqlite3.connect(COVERAGE_FILE) as db:
+            res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
+            if res.fetchone():
+                session_warn(
+                    session,
+                    "Replacing backwards slashes with forward slashes on file "
+                    "paths in the coverage database",
+                )
+                db.execute(r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');")
 
     if report_section == "salt":
         json_coverage_file = (
