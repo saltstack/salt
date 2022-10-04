@@ -602,9 +602,14 @@ The path to the minion's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/minion``
+Default: ``<LIB_STATE_DIR>/pki/minion``
 
 The directory used to store the minion's public and private keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -933,6 +938,24 @@ A value of 10 minutes is a reasonable default.
 .. code-block:: yaml
 
     grains_refresh_every: 0
+
+.. conf_minion:: grains_refresh_pre_exec
+
+``grains_refresh_pre_exec``
+---------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+The ``grains_refresh_pre_exec`` setting allows for a minion to check its grains
+prior to the execution of any operation to see if they have changed and, if
+so, to inform the master of the new grains. This operation is moderately
+expensive, therefore care should be taken before enabling this behavior.
+
+.. code-block:: yaml
+
+    grains_refresh_pre_exec: True
 
 .. conf_minion:: metadata_server_grains
 

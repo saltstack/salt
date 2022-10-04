@@ -1,0 +1,1 @@
+Use VENV_PIP_TARGET environment variable as a default target for pip if present.

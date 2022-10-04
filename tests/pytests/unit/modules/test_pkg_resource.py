@@ -3,10 +3,11 @@
 """
 
 import pytest
+import yaml
+
 import salt.modules.pkg_resource as pkg_resource
 import salt.utils.data
 import salt.utils.yaml
-import yaml
 from tests.support.mock import MagicMock, patch
 
 

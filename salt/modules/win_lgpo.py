@@ -5956,9 +5956,9 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                 "multiTextBox",
             ]:
                 if result.text:
-                    return result.text.rstrip().rstrip(":")
+                    return result.text.rstrip().rstrip(":").strip()
                 else:
-                    return alternate_label.rstrip(":")
+                    return alternate_label.rstrip(":").strip()
     return None
 
 
@@ -6916,7 +6916,7 @@ def _checkAllAdmxPolicies(
 
                             if etree.QName(child_item).localname == "boolean":
                                 # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                                if child_item:
+                                if child_item is not None:
                                     if (
                                         TRUE_VALUE_XPATH(child_item)
                                         and this_element_name not in configured_elements
@@ -8427,7 +8427,27 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
             policy_aliases.append("\\".join(full_path_list))
             return True, the_policy, policy_aliases, None
         else:
-            msg = 'ADMX policy name/id "{}" is used in multiple ADMX files'
+            policy_aliases = []
+            for the_policy in admx_search_results:
+                policy_display_name = _getFullPolicyName(
+                    policy_item=the_policy,
+                    policy_name=the_policy.attrib["name"],
+                    return_full_policy_names=True,
+                    adml_language=adml_language,
+                )
+                full_path_list = _build_parent_list(
+                    policy_definition=the_policy,
+                    return_full_policy_names=True,
+                    adml_language=adml_language,
+                )
+                full_path_list.append(policy_display_name)
+                policy_aliases.append("\\".join(full_path_list))
+            policies = "\n - ".join(policy_aliases)
+            msg = (
+                'ADMX policy name/id "{}" is used in multiple ADMX files.\n'
+                "Try one of the following names:\n"
+                " - {}".format(policy_name, policies)
+            )
             return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(
@@ -9313,7 +9333,7 @@ def _get_policy_adm_setting(
                     )
                     if etree.QName(child_item).localname == "boolean":
                         # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                        if child_item:
+                        if child_item is not None:
                             if (
                                 TRUE_VALUE_XPATH(child_item)
                                 and this_element_name not in configured_elements
@@ -9705,7 +9725,7 @@ def _get_policy_adm_setting(
                         full_name
                     ] = policy_item
             # go back and remove any "unpathed" policies that need a full path
-            for path_needed in unpathed_dict[policy_namespace]:
+            for path_needed in unpathed_dict.get(policy_namespace, {}):
                 # remove the item with the same full name and re-add it w/a path'd version
                 full_path_list = hierarchy[policy_namespace][
                     unpathed_dict[policy_namespace][path_needed]

@@ -62,14 +62,22 @@ def __virtual__():
             " grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
     return (
         False,
         "The rpm execution module failed to load: only available on redhat/suse type"
-        " systems or amazon, xcp or xenserver.",
+        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx or openeuler.",
     )
 
 
