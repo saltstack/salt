@@ -516,7 +516,18 @@ class VM:
                 ref = f"tag-{ref.split('/')[-1]}"
             else:
                 ref = ref.split("/")[-1]
-            name = f"{self.name} - {repo} - {ref} - {job} - {actor}"
+            tests_chunk = os.environ.get("TESTS_CHUNK")
+            if tests_chunk is None:
+                tests_chunk = ""
+            else:
+                tags.append(
+                    {
+                        "Key": "TESTS_CHUNK",
+                        "Value": tests_chunk,
+                    }
+                )
+                tests_chunk = f" - {tests_chunk}"
+            name = f"{self.name} - {repo} - {ref} - {job}{tests_chunk} - {actor}"
             for key in os.environ:
                 if not key.startswith("GITHUB_"):
                     continue
