@@ -431,7 +431,8 @@ be templated with the following variables:
 .. note::
 
     Values have to be strings, hence templated variables that resolve to lists
-    will be concatenated to an alphabetically sorted comma-separated list.
+    will be concatenated to a lexicographically sorted comma-separated list
+    (Python ``list.sort()``).
 
 entity
     Configures the metadata associated with the minion entity inside Vault.

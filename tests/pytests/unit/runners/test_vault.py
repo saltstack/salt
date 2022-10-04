@@ -1077,8 +1077,9 @@ def test_get_metadata(metadata_patterns, expected, pillar):
 
 def test_get_metadata_list():
     """
-    Test that lists are concatenated to a comma-separated list string
-    since the API does not allow composite metadata values
+    Test that lists are concatenated to an alphabetically sorted
+    comma-separated list string since the API does not allow
+    composite metadata values
     """
     with patch("salt.utils.minions.get_minion_data", autospec=True) as get_minion_data:
         get_minion_data.return_value = (None, None, None)
@@ -1089,7 +1090,7 @@ def test_get_metadata_list():
                 {"salt_role": "salt_role_{pillar[roles]}"},
                 refresh_pillar=False,
             )
-            assert res == {"salt_role": "salt_role_foo,salt_role_bar"}
+            assert res == {"salt_role": "salt_role_bar,salt_role_foo"}
 
 
 @pytest.mark.parametrize(

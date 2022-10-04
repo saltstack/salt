@@ -881,6 +881,10 @@ def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
                 pattern,
                 minion_id,
             )
+        # Since composite values are disallowed for metadata,
+        # at least ensure the order of the comma-separated string
+        # is predictable
+        metadata[key].sort()
 
     log.debug("%s metadata: %s", minion_id, metadata)
     return {k: ",".join(v) for k, v in metadata.items()}
