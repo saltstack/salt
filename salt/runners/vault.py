@@ -122,7 +122,9 @@ def generate_new_token(
         Requires "allow_minion_override_params" master configuration setting to be effective.
     """
     log.debug(
-        f"Token generation request for {minion_id} (impersonated by master: {impersonated_by_master})",
+        "Token generation request for %s (impersonated by master: %s)",
+        minion_id,
+        impersonated_by_master,
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
@@ -208,7 +210,9 @@ def get_config(minion_id, signature, impersonated_by_master=False, issue_params=
         config set in order to apply.
     """
     log.debug(
-        f"Config request for {minion_id} (impersonated by master: {impersonated_by_master})",
+        "Config request for %s (impersonated by master: %s)",
+        minion_id,
+        impersonated_by_master,
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
@@ -272,7 +276,9 @@ def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params
         Requires "allow_minion_override_params" master configuration setting to be effective.
     """
     log.debug(
-        f"role-id request for {minion_id} (impersonated by master: {impersonated_by_master})",
+        "role-id request for %s (impersonated by master: %s)",
+        minion_id,
+        impersonated_by_master,
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
 
@@ -303,7 +309,7 @@ def _get_role_id(minion_id, issue_params, wrap):
         # This means the role has to be created/updated first
         # create/update AppRole with role name <minion_id>
         # token_policies are set on the AppRole
-        log.debug(f"Managing AppRole for {minion_id}.")
+        log.debug("Managing AppRole for %s.", minion_id)
         _manage_approle(minion_id, issue_params)
 
     role_id = _lookup_role_id(minion_id, wrap=wrap)
@@ -364,7 +370,9 @@ def generate_secret_id(
         Requires "allow_minion_override_params" master configuration setting to be effective.
     """
     log.debug(
-        f"secret-id generation request for {minion_id} (impersonated by master: {impersonated_by_master})",
+        "secret-id generation request for %s (impersonated by master: %s)",
+        minion_id,
+        impersonated_by_master,
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
     try:
@@ -609,7 +617,7 @@ def sync_entities(minions=None, up=False, down=False):
         entity = _lookup_entity_by_alias(minion)
         if not entity or not entity["name"] == f"salt_minion_{minion}":
             log.info(
-                f"Fixing association of minion AppRole to minion entity for {minion}."
+                "Fixing association of minion AppRole to minion entity for %s.", minion
             )
             _manage_entity_alias(minion)
     return True
@@ -874,7 +882,7 @@ def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
                 minion_id,
             )
 
-    log.debug(f"{minion_id} metadata: {metadata}")
+    log.debug("%s metadata: %s", minion_id, metadata)
     return {k: ",".join(v) for k, v in metadata.items()}
 
 
@@ -938,14 +946,14 @@ def _manage_approle(minion_id, issue_params):
     # pillar refresh. Potential for optimization.
     payload["token_policies"] = _get_policies(minion_id, refresh_pillar=True)
     client = _get_master_client()
-    log.debug(f"Creating/updating AppRole for minion {minion_id}.")
+    log.debug("Creating/updating AppRole for minion %s.", minion_id)
     return client.post(endpoint, payload=payload)
 
 
 def _delete_approle(minion_id):
     endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
     client = _get_master_client()
-    log.debug(f"Deleting approle for minion {minion_id}.")
+    log.debug("Deleting approle for minion %s.", minion_id)
     return client.delete(endpoint)
 
 
@@ -1034,7 +1042,7 @@ def _get_secret_id(minion_id, wrap, meta_info=False):
 
 
 def _lookup_mount_accessor(mount):
-    log.debug(f"Looking up mount accessor ID for mount {mount}.")
+    log.debug("Looking up mount accessor ID for mount %s.", mount)
     endpoint = f"sys/auth/{mount}"
     client = _get_master_client()
     return client.get(endpoint)["accessor"]
@@ -1088,7 +1096,7 @@ def _delete_entity(minion_id):
 
 
 def _manage_entity_alias(minion_id):
-    log.debug(f"Creating entity alias for minion {minion_id}.")
+    log.debug("Creating entity alias for minion %s.", minion_id)
     minion_mount_accessor = _lookup_mount_accessor(_config("issue:approle:mount"))
     role_id = _lookup_role_id(minion_id, wrap=False)
     entity = _fetch_entity_by_name(minion_id)

@@ -587,7 +587,8 @@ def _query_master(
             nonlocal func
             log.error(
                 "Failed to get Vault connection from master! No result returned - "
-                f"does the peer runner publish configuration include {func}?"
+                "does the peer runner publish configuration include `%s`?",
+                func,
             )
             # Expire configuration in case this is the result of an auth method change.
             raise VaultConfigExpired(
@@ -685,7 +686,7 @@ def _query_master(
         return result
 
     global __salt__  # pylint: disable=global-statement
-    if __salt__ == {}:
+    if not __salt__:
         __salt__ = salt.loader.minion_mods(opts)
 
     minion_id = opts["grains"]["id"]
@@ -696,7 +697,9 @@ def _query_master(
     if opts.get("__role", "minion") == "minion":
         private_key = f"{pki_dir}/minion.pem"
         log.debug(
-            f"Running on minion, signing request `vault.{func}` with key {private_key}",
+            "Running on minion, signing request `vault.%s` with key %s",
+            func,
+            private_key,
         )
         signature = base64.b64encode(salt.crypt.sign_message(private_key, minion_id))
         arg = [
@@ -711,8 +714,10 @@ def _query_master(
     else:
         private_key = f"{pki_dir}/master.pem"
         log.debug(
-            f"Running on master, signing request `vault.{func}` for {minion_id} "
-            f"with key {private_key}",
+            "Running on master, signing request `vault.%s` for %s with key %s",
+            func,
+            minion_id,
+            private_key,
         )
         signature = base64.b64encode(salt.crypt.sign_message(private_key, minion_id))
         result = __salt__["saltutil.runner"](

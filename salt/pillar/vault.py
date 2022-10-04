@@ -157,13 +157,6 @@ from salt.exceptions import SaltException
 log = logging.getLogger(__name__)
 
 
-def __virtual__():
-    """
-    This module has no external dependencies
-    """
-    return True
-
-
 def ext_pillar(
     minion_id,  # pylint: disable=W0613
     pillar,  # pylint: disable=W0613
@@ -204,7 +197,7 @@ def ext_pillar(
                 strategy=merge_strategy,
                 merge_lists=merge_lists,
             )
-        except SaltException as err:
+        except SaltException:
             log.info("Vault secret not found for: %s", path)
 
     if nesting_key:
@@ -225,5 +218,5 @@ def _get_paths(path_pattern, minion_id, pillar):
     except KeyError:
         log.warning("Could not resolve pillar path pattern %s", path_pattern)
 
-    log.debug(f"{minion_id} vault pillar paths: {paths}")
+    log.debug("%s vault pillar paths: %s", minion_id, paths)
     return paths
