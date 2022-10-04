@@ -488,7 +488,7 @@ def show_policies(minion_id, refresh_pillar=NOT_SET, expire=None):
     return _get_policies_cached(minion_id, refresh_pillar=refresh_pillar, expire=expire)
 
 
-def sync_approles(minions=None, up=False, down=False, issue_params=None):
+def sync_approles(minions=None, up=False, down=False):
     """
     Sync minion AppRole parameters with current settings, including associated
     token policies.
@@ -496,6 +496,8 @@ def sync_approles(minions=None, up=False, down=False, issue_params=None):
     .. note::
         Only updates existing AppRoles. They are issued during the first request
         for one by the minion.
+        Running this will reset minion overrides, which are reapplied automatically
+        during the next request for authentication details.
 
     If no parameter is specified, will try to sync AppRoles for all known minions.
 
@@ -504,7 +506,7 @@ def sync_approles(minions=None, up=False, down=False, issue_params=None):
     .. code-block:: bash
 
         salt-run vault.sync_approles
-        salt-run vault.sync_approles ecorp issue_params="{ttl: 0, num_uses: 1337}"
+        salt-run vault.sync_approles ecorp
 
     minions
         (List of) ID(s) of the minion(s) to update the AppRole for.
@@ -517,11 +519,6 @@ def sync_approles(minions=None, up=False, down=False, issue_params=None):
     down
         Find all minions that are down and update their AppRoles.
         Defaults to False.
-
-    issue_params
-        Overrides for AppRole parameters. See ``issue:approle:params`` and
-        ``issue:allow_minion_override_params`` (the latter for the description
-        only since the runner works on the master-side).
     """
     if "approle" != _config("issue:type"):
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
@@ -538,7 +535,7 @@ def sync_approles(minions=None, up=False, down=False, issue_params=None):
         minions = _list_all_known_minions()
 
     for minion in set(minions) & set(list_approles()):
-        _manage_approle(minion, issue_params, params_from_master=True)
+        _manage_approle(minion, issue_params=None)
     return True
 
 
@@ -860,11 +857,8 @@ def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
     return {k: ",".join(v) for k, v in metadata.items()}
 
 
-def _parse_issue_params(params, issue_type=None, params_from_master=False):
-    if (
-        not (_config("issue:allow_minion_override_params") and not params_from_master)
-        or params is None
-    ):
+def _parse_issue_params(params, issue_type=None):
+    if not _config("issue:allow_minion_override_params") or params is None:
         params = {}
 
     no_override_params = [
@@ -916,9 +910,9 @@ def _parse_issue_params(params, issue_type=None, params_from_master=False):
     return ret
 
 
-def _manage_approle(minion_id, issue_params, params_from_master=False):
+def _manage_approle(minion_id, issue_params):
     endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
-    payload = _parse_issue_params(issue_params, params_from_master=params_from_master)
+    payload = _parse_issue_params(issue_params)
     payload["token_policies"] = _get_policies(minion_id, refresh_pillar=True)
     client = _get_master_client()
     log.debug(f"Creating/updating AppRole for minion {minion_id}.")
