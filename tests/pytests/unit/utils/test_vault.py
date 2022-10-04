@@ -1622,6 +1622,80 @@ class TestQueryMaster:
             old_unwrap_client.unwrap.assert_not_called()
             unwrap_client.unwrap.assert_called_once()
 
+    def test_query_master_verify_default_does_not_interfere_with_expected_server(
+        self,
+        opts,
+        publish_runner,
+        saltutil_runner,
+        caplog,
+    ):
+        """
+        Ensure that verify=default is rendered before checking if there is a config
+        mismatch.
+        """
+        publish_runner.return_value = saltutil_runner.return_value = {
+            "server": {
+                "url": "http://127.0.0.1:8200",
+                "verify": "default",
+                "namespace": None,
+            },
+            "data": {"foo": "bar"},
+        }
+        expected_server = {
+            "url": "http://127.0.0.1:8200",
+            "verify": "/etc/ssl/certs.pem",
+            "namespace": None,
+        }
+
+        with patch("salt.utils.http.get_ca_bundle") as ca:
+            ca.return_value = "/etc/ssl/certs.pem"
+            ret = vault._query_master("func", opts, expected_server=expected_server)
+            assert ret == publish_runner.return_value
+            assert (
+                "Mismatch of cached and reported server data detected"
+                not in caplog.text
+            )
+
+    def test_query_master_verify_default_does_not_interfere_with_unwrap_client_config(
+        self,
+        opts,
+        publish_runner,
+        saltutil_runner,
+        wrapped_role_id_response,
+        role_id_response,
+        unwrap_client,
+        caplog,
+    ):
+        """
+        Ensure that verify=default is rendered before checking if there is a config
+        mismatch.
+        """
+        publish_runner.return_value = saltutil_runner.return_value = {
+            "server": {
+                "url": "http://127.0.0.1:8200",
+                "verify": "default",
+                "namespace": None,
+            },
+            "wrap_info": wrapped_role_id_response["wrap_info"],
+        }
+        expected_server = {
+            "url": "http://127.0.0.1:8200",
+            "verify": "/etc/ssl/certs.pem",
+            "namespace": None,
+        }
+        unwrap_client = Mock(spec=vault.VaultClient)
+        unwrap_client.get_config.return_value = expected_server
+        unwrap_client.unwrap.return_value = role_id_response
+        with patch("salt.utils.http.get_ca_bundle") as ca:
+            ca.return_value = "/etc/ssl/certs.pem"
+            with patch("salt.utils.vault.VaultClient") as vc:
+                ret = vault._query_master("func", opts, unwrap_client=unwrap_client)
+                vc.assert_not_called()
+                assert ret == {
+                    "data": role_id_response["data"],
+                    "server": expected_server,
+                }
+
     @pytest.mark.parametrize(
         "unwrap_client,key",
         [

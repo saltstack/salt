@@ -616,7 +616,13 @@ def _query_master(
             log.info("Master requested Vault config expiration.")
             config_expired = True
 
-        if expected_server is not None and result.get("server", {}) != expected_server:
+        reported_server = parse_config(result.get("server", {}), validate=False)[
+            "server"
+        ]
+        if "server" in result:
+            result.update({"server": reported_server})
+
+        if expected_server is not None and result.get("server") != expected_server:
             log.info(
                 "Mismatch of cached and reported server data detected. Invalidating cache."
             )
@@ -629,9 +635,8 @@ def _query_master(
         misc_data = result.get("misc_data", {})
 
         if result.get("wrap_info") or result.get("wrap_info_nested"):
-            if (
-                unwrap_client is not None
-                and unwrap_client.get_config() != result["server"]
+            if unwrap_client is not None and unwrap_client.get_config() != result.get(
+                "server"
             ):
                 unwrap_client = None
                 # make sure to fetch wrapped data anyways for security reasons
