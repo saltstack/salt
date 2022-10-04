@@ -1,5 +1,4 @@
 # This is a compilation of requirements installed on salt-jenkins git.salt state run
-apache-libcloud==2.0.0
 boto3
 boto>=2.46.0
 cffi

@@ -290,43 +290,6 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 os.unlink(this_minion_key)
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
-    def test_issue_7754(self):
-        old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        os.chdir(config_dir)
-
-        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
-            minion_config = salt.utils.yaml.safe_load(fh_)
-            minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=60,
-            catch_stderr=True,
-            with_retcode=True
-        )
-        try:
-            self.assertIn('local:', ret[0])
-            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
-            # We now fail when we're unable to properly set the syslog logger
-            self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
-        finally:
-            self.chdir(old_cwd)
-            if os.path.isdir(config_dir):
-                shutil.rmtree(config_dir)
-
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_syslog_file_not_found(self):
         '''
         test when log_file is set to a syslog file that does not exist

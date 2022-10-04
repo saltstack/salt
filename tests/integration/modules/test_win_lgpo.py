@@ -102,11 +102,12 @@ class WinLgpoTest(ModuleCase):
                     re.IGNORECASE | re.MULTILINE)
             self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in secedit output'.format(policy_name, expected_regex))
 
-    def _testComputerAdmxPolicy(self,
-                                policy_name,
-                                policy_config,
-                                expected_regexes,
-                                assert_true=True):
+    def _testAdmxPolicy(self,
+                        policy_name,
+                        policy_config,
+                        expected_regexes,
+                        assert_true=True,
+                        policy_class='Machine'):
         '''
         Takes a ADMX policy name and config and validates that the expected
         output is returned from lgpo looking at the Registry.pol file
@@ -119,14 +120,24 @@ class WinLgpoTest(ModuleCase):
             the expected regexes to be found in the lgpo parse output
         assert_true
             set to false if expecting the module run to fail
+        policy_class
+            the policy class this policy belongs to, either Machine or User
         '''
-        ret = self.run_function('lgpo.set_computer_policy',
+        lgpo_function = 'set_computer_policy'
+        lgpo_class = '/m'
+        lgpo_folder = 'Machine'
+        if policy_class.lower() == 'user':
+            lgpo_function = 'set_user_policy'
+            lgpo_class = '/u'
+            lgpo_folder = 'User'
+
+        ret = self.run_function('lgpo.{0}'.format(lgpo_function),
                                 (policy_name, policy_config))
         log.debug('lgpo set_computer_policy ret == %s', ret)
         cmd = ['lgpo.exe',
                '/parse',
-               '/m',
-               r'c:\Windows\System32\GroupPolicy\Machine\Registry.pol']
+               lgpo_class,
+               r'c:\Windows\System32\GroupPolicy\{}\Registry.pol'.format(lgpo_folder)]
         if assert_true:
             self.assertTrue(ret)
             lgpo_output = self.run_function('cmd.run', (), cmd=' '.join(cmd))
@@ -179,46 +190,87 @@ class WinLgpoTest(ModuleCase):
             log.debug('ret from archive.unzip == %s', ret)
 
     @destructiveTest
+    def test_set_user_policy_point_and_print_restrictions(self):
+        '''
+        Test setting/unsetting/changing the PointAndPrint_Restrictions user policy
+        '''
+        # Disable Point and Print Restrictions
+        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
+                             'Disabled',
+                             [
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:0',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DELETE',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*DELETE',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DELETE',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DELETE',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DELETE',
+                             ],
+                             policy_class='User')
+        # Enable Point and Print Restrictions
+        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
+                             {
+                                 'Users can only point and print to these servers': True,
+                                 'Enter fully qualified server names separated by semicolons': 'fakeserver1;fakeserver2',
+                                 'Users can only point and print to machines in their forest': True,
+                                 'Security Prompts: When installing drivers for a new connection': 'Show warning and elevation prompt',
+                                 'When updating drivers for an existing connection': 'Do not show warning or elevation prompt',
+                             },
+                             [
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:1',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:1',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*SZ:fakeserver1;fakeserver2',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DWORD:1',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DWORD:0',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DWORD:2',
+                             ],
+                             policy_class='User')
+        # set Point and Print Restrictions to 'Not Configured'
+        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
+                             'Not Configured',
+                             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\user\\registry.pol[\s]*; PARSING COMPLETED.'],
+                             policy_class='User')
+
+    @destructiveTest
     def test_set_computer_policy_NTP_Client(self):
         '''
         Test setting/unsetting/changing NTP Client policies
         '''
         # Disable Configure NTP Client
-        self._testComputerAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
-                                     'Disabled',
-                                     [
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*NtpServer[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*Type[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*CrossSiteSyncFlags[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMinutes[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMaxTimes[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*SpecialPollInterval[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DELETE'
-                                     ])
+        self._testAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
+                             'Disabled',
+                             [
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*NtpServer[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*Type[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*CrossSiteSyncFlags[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMinutes[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMaxTimes[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*SpecialPollInterval[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DELETE'
+                             ])
         # Enable Configure NTP Client
-        self._testComputerAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
-                                     {
-                                         'NtpServer': 'time.windows.com,0x9',
-                                         'Type': 'NT5DS',
-                                         'CrossSiteSyncFlags': 2,
-                                         'ResolvePeerBackoffMinutes': 15,
-                                         'ResolvePeerBackoffMaxTimes': 7,
-                                         'W32TIME_SpecialPollInterval': 3600,
-                                         'W32TIME_NtpClientEventLogFlags': 0
-                                     },
-                                     [
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*NtpServer[\s]*SZ:time.windows.com,0x9',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*Type[\s]*SZ:NT5DS',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*CrossSiteSyncFlags[\s]*DWORD:2',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMinutes[\s]*DWORD:15',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMaxTimes[\s]*DWORD:7',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*SpecialPollInterval[\s]*DWORD:3600',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DWORD:0',
-                                     ])
+        self._testAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
+                             {
+                                 'NtpServer': 'time.windows.com,0x9',
+                                 'Type': 'NT5DS',
+                                 'CrossSiteSyncFlags': 2,
+                                 'ResolvePeerBackoffMinutes': 15,
+                                 'ResolvePeerBackoffMaxTimes': 7,
+                                 'W32TIME_SpecialPollInterval': 3600,
+                                 'W32TIME_NtpClientEventLogFlags': 0
+                             },
+                             [
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*NtpServer[\s]*SZ:time.windows.com,0x9',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*Type[\s]*SZ:NT5DS',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*CrossSiteSyncFlags[\s]*DWORD:2',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMinutes[\s]*DWORD:15',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMaxTimes[\s]*DWORD:7',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*SpecialPollInterval[\s]*DWORD:3600',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DWORD:0',
+                             ])
         # set Configure NTP Client to 'Not Configured'
-        self._testComputerAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
-                                     'Not Configured',
-                                     [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+        self._testAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
+                             'Not Configured',
+                             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
     def test_set_computer_policy_RA_Unsolicit(self):
@@ -228,44 +280,44 @@ class WinLgpoTest(ModuleCase):
 
         # Disable RA_Unsolicit
         log.debug('Attempting to disable RA_Unsolicit')
-        self._testComputerAdmxPolicy('RA_Unsolicit',
-                                     'Disabled',
-                                     [
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:0',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DELETE',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*\*[\s]*DELETEALLVALUES',
-                                     ])
+        self._testAdmxPolicy('RA_Unsolicit',
+                             'Disabled',
+                             [
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:0',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DELETE',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*\*[\s]*DELETEALLVALUES',
+                             ])
         # configure RA_Unsolicit
         log.debug('Attempting to configure RA_Unsolicit')
-        self._testComputerAdmxPolicy('RA_Unsolicit',
-                                     {
-                                         'Configure Offer Remote Access': 'Enabled',
-                                         'Permit remote control of this computer': 'Allow helpers to remotely control the computer',
-                                         'Helpers': ['administrators', 'user1']
-                                     },
-                                     [
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
-                                     ])
+        self._testAdmxPolicy('RA_Unsolicit',
+                             {
+                                 'Configure Offer Remote Access': 'Enabled',
+                                 'Permit remote control of this computer': 'Allow helpers to remotely control the computer',
+                                 'Helpers': ['administrators', 'user1']
+                             },
+                             [
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
+                             ])
         # Not Configure RA_Unsolicit
         log.debug('Attempting to set RA_Unsolicit to Not Configured')
-        self._testComputerAdmxPolicy('RA_Unsolicit',
-                                     'Not Configured',
-                                     [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+        self._testAdmxPolicy('RA_Unsolicit',
+                             'Not Configured',
+                             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
     def test_set_computer_policy_Pol_HardenedPaths(self):
         # Disable Pol_HardenedPaths
         log.debug('Attempting to disable Pol_HardenedPaths')
-        self._testComputerAdmxPolicy(
+        self._testAdmxPolicy(
             'Pol_HardenedPaths',
             'Disabled',
             [r'Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\*[\s]*DELETEALLVALUES'])
         # Configure Pol_HardenedPaths
         log.debug('Attempting to configure Pol_HardenedPaths')
-        self._testComputerAdmxPolicy(
+        self._testAdmxPolicy(
             'Pol_HardenedPaths',
             {
                 'Hardened UNC Paths': {
@@ -279,7 +331,7 @@ class WinLgpoTest(ModuleCase):
             ])
         # Not Configure Pol_HardenedPaths
         log.debug('Attempting to set Pol_HardenedPaths to Not Configured')
-        self._testComputerAdmxPolicy(
+        self._testAdmxPolicy(
             'Pol_HardenedPaths',
             'Not Configured',
             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
@@ -323,9 +375,9 @@ class WinLgpoTest(ModuleCase):
                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
             ]
             # test as False
-            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
-                                         the_policy,
-                                         the_policy_check)
+            self._testAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                                 the_policy,
+                                 the_policy_check)
             # configure as True for "enable Automatic Updates" test below
             the_policy = {
                 'Configure automatic updating': '4 - Auto download and schedule the install',
@@ -342,25 +394,25 @@ class WinLgpoTest(ModuleCase):
             ]
 
         # enable Automatic Updates
-        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
-                                     the_policy,
-                                     the_policy_check)
+        self._testAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                             the_policy,
+                             the_policy_check)
 
         # disable Configure Automatic Updates
-        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
-                                     'Disabled',
-                                     [
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:1',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DELETE'
-                                 ])
+        self._testAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                             'Disabled',
+                             [
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:1',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DELETE'
+                             ])
         # set Configure Automatic Updates to 'Not Configured'
-        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
-                                     'Not Configured',
-                                     [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+        self._testAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                             'Not Configured',
+                             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
     def test_set_computer_policy_ClipboardRedirection(self):
@@ -368,15 +420,15 @@ class WinLgpoTest(ModuleCase):
         Test setting/unsetting/changing ClipboardRedirection policy
         '''
         # Enable/Disable/Not Configured "Do not allow Clipboard redirection"
-        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
-                                     'Enabled',
-                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:1'])
-        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
-                                     'Disabled',
-                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0'])
-        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
-                                     'Not Configured',
-                                     [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+        self._testAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+                             'Enabled',
+                             [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:1'])
+        self._testAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+                             'Disabled',
+                             [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0'])
+        self._testAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+                             'Not Configured',
+                             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
     def test_set_computer_policy_PasswordComplexity(self):
@@ -427,40 +479,40 @@ class WinLgpoTest(ModuleCase):
         Tests setting several ADMX policies in succession and validating the configuration w/lgop
         '''
         # set one policy
-        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
-                                     'Disabled',
-                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0'])
+        self._testAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+                             'Disabled',
+                             [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0'])
 
         # set another policy and make sure both this policy and the previous are okay
-        self._testComputerAdmxPolicy('RA_Unsolicit',
-                                     {
-                                         'Configure Offer Remote Access': 'Enabled',
-                                         'Permit remote control of this computer': 'Allow helpers to remotely control the computer',
-                                         'Helpers': ['administrators', 'user1']
-                                     },
-                                     [
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
-                                     ])
+        self._testAdmxPolicy('RA_Unsolicit',
+                             {
+                                 'Configure Offer Remote Access': 'Enabled',
+                                 'Permit remote control of this computer': 'Allow helpers to remotely control the computer',
+                                 'Helpers': ['administrators', 'user1']
+                             },
+                             [
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
+                             ])
         # Configure Automatic Updates and validate everything is still okay
-        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
-                                     'Disabled',
-                                     [
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1',
-                                         r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:1',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DELETE',
-                                         r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DELETE'
-                                     ])
+        self._testAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                             'Disabled',
+                             [
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1',
+                                 r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:1',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DELETE',
+                                 r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DELETE'
+                             ])
 
     @destructiveTest
     def test_set_computer_policy_DisableDomainCreds(self):
@@ -511,34 +563,34 @@ class WinLgpoTest(ModuleCase):
         if self.osrelease not in valid_osreleases:
             self.skipTest('DisableUXWUAccess policy is only applicable if the osrelease grain is {0}'.format(' or '.join(valid_osreleases)))
         else:
-            self._testComputerAdmxPolicy(r'DisableUXWUAccess',
-                                         'Enabled',
-                                         [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetDisableUXWUAccess[\s]*DWORD:1'])
-            self._testComputerAdmxPolicy(r'Remove access to use all Windows Update features',
-                                         'Disabled',
-                                         [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetDisableUXWUAccess[\s]*DWORD:0'])
-            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Remove access to use all Windows Update features',
-                                         'Not Configured',
-                                         [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+            self._testAdmxPolicy(r'DisableUXWUAccess',
+                                 'Enabled',
+                                 [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetDisableUXWUAccess[\s]*DWORD:1'])
+            self._testAdmxPolicy(r'Remove access to use all Windows Update features',
+                                 'Disabled',
+                                 [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetDisableUXWUAccess[\s]*DWORD:0'])
+            self._testAdmxPolicy(r'Windows Components\Windows Update\Remove access to use all Windows Update features',
+                                 'Not Configured',
+                                 [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
     def test_set_computer_policy_Access_data_sources_across_domains(self):
         '''
         Tests that a policy that has multiple names
         '''
-        self._testComputerAdmxPolicy(r'Access data sources across domains',
-                                     'Enabled',
-                                     [],
-                                     assert_true=False)
-        self._testComputerAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
-                                     {'Access data sources across domains': 'Prompt'},
-                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:1'])
-        self._testComputerAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
-                                     {'Access data sources across domains': 'Enable'},
-                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:0'])
-        self._testComputerAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
-                                     'Disabled',
-                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DELETE'])
+        self._testAdmxPolicy(r'Access data sources across domains',
+                             'Enabled',
+                             [],
+                             assert_true=False)
+        self._testAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
+                             {'Access data sources across domains': 'Prompt'},
+                             [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:1'])
+        self._testAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
+                             {'Access data sources across domains': 'Enable'},
+                             [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:0'])
+        self._testAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
+                             'Disabled',
+                             [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DELETE'])
 
     @destructiveTest
     def test_set_computer_policy_ActiveHours(self):
@@ -557,30 +609,30 @@ class WinLgpoTest(ModuleCase):
         if self.osrelease not in valid_osreleases:
             self.skipTest('ActiveHours policy is only applicable if the osrelease grain is {0}'.format(' or '.join(valid_osreleases)))
         else:
-            self._testComputerAdmxPolicy(r'ActiveHours',
-                                         {'ActiveHoursStartTime': '8 AM', 'ActiveHoursEndTime': '7 PM'},
-                                         [
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:1',
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DWORD:8',
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DWORD:19'
-                                         ])
-            self._testComputerAdmxPolicy(r'ActiveHours',
-                                         {'ActiveHoursStartTime': '5 AM', 'ActiveHoursEndTime': '10 PM'},
-                                         [
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:1',
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DWORD:5',
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DWORD:22'
-                                         ])
-            self._testComputerAdmxPolicy('Turn off auto-restart for updates during active hours',
-                                         'Disabled',
-                                         [
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:0',
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DELETE',
-                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DELETE'
-                                         ])
-            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Turn off auto-restart for updates during active hours',
-                                         'Not Configured',
-                                         [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+            self._testAdmxPolicy(r'ActiveHours',
+                                 {'ActiveHoursStartTime': '8 AM', 'ActiveHoursEndTime': '7 PM'},
+                                 [
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:1',
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DWORD:8',
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DWORD:19'
+                                 ])
+            self._testAdmxPolicy(r'ActiveHours',
+                                 {'ActiveHoursStartTime': '5 AM', 'ActiveHoursEndTime': '10 PM'},
+                                 [
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:1',
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DWORD:5',
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DWORD:22'
+                                 ])
+            self._testAdmxPolicy('Turn off auto-restart for updates during active hours',
+                                 'Disabled',
+                                 [
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:0',
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DELETE',
+                                    r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DELETE'
+                                 ])
+            self._testAdmxPolicy(r'Windows Components\Windows Update\Turn off auto-restart for updates during active hours',
+                                 'Not Configured',
+                                 [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     def tearDown(self):
         '''

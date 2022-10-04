@@ -52,7 +52,7 @@ except ImportError:
         return port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
@@ -206,10 +206,23 @@ def flaky(caller=None, condition=True):
     def wrap(cls):
         for attempt in range(0, 4):
             try:
+                if attempt > 0:
+                    # Run through setUp again
+                    # We only run it after the first iteration(>0) because the regular
+                    # test runner will have already ran setUp the first time
+                    setup = getattr(cls, 'setUp', None)
+                    if callable(setup):
+                        setup()
                 return caller(cls)
+            except SkipTest as exc:
+                cls.skipTest(exc.args[0])
             except Exception as exc:
                 if attempt >= 3:
                     six.reraise(*sys.exc_info())
+                # Run through tearDown again
+                teardown = getattr(cls, 'tearDown', None)
+                if callable(teardown):
+                    teardown()
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',

@@ -12,13 +12,22 @@ import time
 
 # Import Salt libs
 import salt.utils.http
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def query(url, **kwargs):
     '''
+    .. versionadded:: 2015.5.0
+
     Query a resource, and decode the return data
 
-    .. versionadded:: 2015.5.0
+    raise_error : True
+        If ``False``, and if a connection cannot be made, the error will be
+        suppressed and the body of the return will simply be ``None``.
+
 
     CLI Example:
 
@@ -35,7 +44,10 @@ def query(url, **kwargs):
         opts.update(kwargs['opts'])
         del kwargs['opts']
 
-    return salt.utils.http.query(url=url, opts=opts, **kwargs)
+    try:
+        return salt.utils.http.query(url=url, opts=opts, **kwargs)
+    except Exception as exc:
+        raise CommandExecutionError(six.text_type(exc))
 
 
 def wait_for_successful_query(url, wait_for=300, **kwargs):

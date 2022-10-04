@@ -23,6 +23,7 @@ import time
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -722,8 +723,7 @@ def import_key(text=None,
     if filename:
         try:
             with salt.utils.files.flopen(filename, 'rb') as _fp:
-                lines = _fp.readlines()
-                text = ''.join(lines)
+                text = salt.utils.stringutils.to_unicode(_fp.read())
         except IOError:
             raise SaltInvocationError('filename does not exist.')
 
@@ -1009,21 +1009,22 @@ def sign(user=None,
 
     gnupg_version = _LooseVersion(gnupg.__version__)
     if text:
-        if gnupg_version >= '1.3.1':
+        if gnupg_version >= _LooseVersion('1.3.1'):
             signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
         else:
             signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
     elif filename:
         with salt.utils.files.flopen(filename, 'rb') as _fp:
-            if gnupg_version >= '1.3.1':
+            if gnupg_version >= _LooseVersion('1.3.1'):
                 signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
             else:
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
-            with salt.utils.files.flopen(output, 'w') as fout:
-                fout.write(signed_data.data)
+            with salt.utils.files.flopen(output, 'wb') as fout:
+                fout.write(salt.utils.stringutils.to_bytes(signed_data.data))
     else:
         raise SaltInvocationError('filename or text must be passed.')
+
     return signed_data.data
 
 
@@ -1168,7 +1169,7 @@ def encrypt(user=None,
             # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
             with salt.utils.files.flopen(filename, 'rb') as _fp:
-                _contents = _fp.read()
+                _contents = salt.utils.stringutils.to_unicode(_fp.read())
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
             # This version allows encrypting the file stream

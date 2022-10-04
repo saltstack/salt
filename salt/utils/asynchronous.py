@@ -76,6 +76,7 @@ class SyncWrapper(object):
         self.io_loop.start()
         return future.result()
 
+    # pylint: disable=W1701
     def __del__(self):
         '''
         On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
@@ -92,3 +93,4 @@ class SyncWrapper(object):
         elif hasattr(self, 'io_loop'):
             self.io_loop.close()
             del self.io_loop
+    # pylint: enable=W1701

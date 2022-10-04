@@ -104,6 +104,8 @@ def __decompressContent(coding, pgctnt):
     Currently supports identity/none, deflate, and gzip, which should
     cover 99%+ of the content on the internet.
     '''
+    if not pgctnt:
+        return pgctnt
 
     log.trace("Decompressing %s byte content with compression type: %s", len(pgctnt), coding)
 
@@ -121,9 +123,6 @@ def __decompressContent(coding, pgctnt):
         raise ValueError("Brotli compression is not currently supported")
     elif coding == "compress":
         raise ValueError("LZW compression is not currently supported")
-
-    elif coding == 'identity':
-        pass
 
     log.trace("Content size after decompression: %s", len(pgctnt))
     return pgctnt
@@ -465,7 +464,7 @@ def query(url,
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
         if six.PY3 and isinstance(result_text, bytes):
-            result_text = result.body.decode('utf-8')
+            result_text = result_text.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
