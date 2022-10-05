@@ -6,6 +6,7 @@
 import types
 
 import pytest
+
 import salt.modules.win_dns_client as win_dns_client
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, Mock, patch
