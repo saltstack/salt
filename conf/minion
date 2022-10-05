@@ -370,6 +370,12 @@
 # If the value is set to zero, this check is disabled.
 #grains_refresh_every: 1
 
+# The grains_refresh_pre_exec setting allows for a minion to check its grains
+# prior to the execution of any operation to see if they have changed and, if
+# so, to inform the master of the new grains. This operation is moderately
+# expensive, therefore care should be taken before enabling this behavior.
+#grains_refresh_pre_exec: False
+
 # Cache grains on the minion. Default is False.
 #grains_cache: False
 

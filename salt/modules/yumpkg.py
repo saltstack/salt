@@ -172,11 +172,11 @@ def _yum():
             if _check(os.path.join(dir, "dnf")):
                 context[contextkey] = "dnf"
                 break
-            elif _check(os.path.join(dir, "yum")):
-                context[contextkey] = "yum"
-                break
             elif _check(os.path.join(dir, "tdnf")):
                 context[contextkey] = "tdnf"
+                break
+            elif _check(os.path.join(dir, "yum")):
+                context[contextkey] = "yum"
                 break
     return context.get(contextkey)
 
@@ -346,7 +346,7 @@ def _get_options(**kwargs):
     return ret
 
 
-def _get_yum_config():
+def _get_yum_config(strict_parser=True):
     """
     Returns a dict representing the yum config options and values.
 
@@ -398,7 +398,7 @@ def _get_yum_config():
                 "No suitable yum config file found in: {}".format(paths)
             )
 
-        cp = configparser.ConfigParser()
+        cp = configparser.ConfigParser(strict=strict_parser)
         try:
             cp.read(fn)
         except OSError as exc:
@@ -419,17 +419,17 @@ def _get_yum_config():
     return conf
 
 
-def _get_yum_config_value(name):
+def _get_yum_config_value(name, strict_config=True):
     """
     Look for a specific config variable and return its value
     """
-    conf = _get_yum_config()
+    conf = _get_yum_config(strict_config)
     if name in conf.keys():
         return conf.get(name)
     return None
 
 
-def _normalize_basedir(basedir=None):
+def _normalize_basedir(basedir=None, strict_config=True):
     """
     Takes a basedir argument as a string or a list. If the string or list is
     empty, then look up the default from the 'reposdir' option in the yum
@@ -446,7 +446,7 @@ def _normalize_basedir(basedir=None):
 
     # nothing specified, so use the reposdir option as the default
     if not basedir:
-        basedir = _get_yum_config_value("reposdir")
+        basedir = _get_yum_config_value("reposdir", strict_config)
 
     if not isinstance(basedir, list) or not basedir:
         raise SaltInvocationError("Could not determine any repo directories")
@@ -933,7 +933,7 @@ def list_repo_pkgs(*args, **kwargs):
     else:
         repos = [
             repo_name
-            for repo_name, repo_info in list_repos().items()
+            for repo_name, repo_info in list_repos(**kwargs).items()
             if repo_name in enablerepo
             or (
                 repo_name not in disablerepo
@@ -995,7 +995,16 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out["stdout"], strict=True)
     else:
         for repo in repos:
-            cmd = ["--quiet", "--showduplicates", "repository-packages", repo, "list"]
+            if _yum() == "tdnf":
+                cmd = ["--quiet", "--enablerepo={}".format(repo), "list"]
+            else:
+                cmd = [
+                    "--quiet",
+                    "--showduplicates",
+                    "repository-packages",
+                    repo,
+                    "list",
+                ]
             if cacheonly:
                 cmd.append("-C")
             # Can't concatenate because args is a tuple, using list.extend()
@@ -1439,6 +1448,8 @@ def install(
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     """
+    if "version" in kwargs:
+        kwargs["version"] = str(kwargs["version"])
     options = _get_options(**kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1454,8 +1465,6 @@ def install(
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-
-    version_num = kwargs.get("version")
 
     diff_attr = kwargs.get("diff_attr")
     old = (
@@ -2760,16 +2769,20 @@ def list_repos(basedir=None, **kwargs):
     """
     Lists all repos in <basedir> (default: all dirs in `reposdir` yum option).
 
+    Strict parsing of configuration files is the default, this can be disabled
+    using the  ``strict_config`` keyword argument set to False
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_repos
         salt '*' pkg.list_repos basedir=/path/to/dir
-        salt '*' pkg.list_repos basedir=/path/to/dir,/path/to/another/dir
+        salt '*' pkg.list_repos basedir=/path/to/dir,/path/to/another/dir strict_config=False
     """
 
-    basedirs = _normalize_basedir(basedir)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
     repos = {}
     log.debug("Searching for repos in %s", basedirs)
     for bdir in basedirs:
@@ -2779,7 +2792,7 @@ def list_repos(basedir=None, **kwargs):
             repopath = "{}/{}".format(bdir, repofile)
             if not repofile.endswith(".repo"):
                 continue
-            filerepos = _parse_repo_file(repopath)[1]
+            filerepos = _parse_repo_file(repopath, strict_parser)[1]
             for reponame in filerepos:
                 repo = filerepos[reponame]
                 repo["file"] = repopath
@@ -2800,7 +2813,7 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.get_repo myrepo basedir=/path/to/dir
         salt '*' pkg.get_repo myrepo basedir=/path/to/dir,/path/to/another/dir
     """
-    repos = list_repos(basedir)
+    repos = list_repos(basedir, **kwargs)
 
     if repo.startswith("copr:"):
         repo = _get_copr_repo(repo)
@@ -2813,7 +2826,8 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     if repofile:
         # Return just one repo
-        filerepos = _parse_repo_file(repofile)[1]
+        strict_parser = kwargs.get("strict_config", True)
+        filerepos = _parse_repo_file(repofile, strict_parser)[1]
         return filerepos[repo]
     return {}
 
@@ -2826,12 +2840,15 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     If the .repo file in which the repo exists does not contain any other repo
     configuration, the file itself will be deleted.
 
+    Strict parsing of configuration files is the default, this can be disabled
+    using the  ``strict_config`` keyword argument set to False
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.del_repo myrepo
-        salt '*' pkg.del_repo myrepo basedir=/path/to/dir
+        salt '*' pkg.del_repo myrepo basedir=/path/to/dir strict_config=False
         salt '*' pkg.del_repo myrepo basedir=/path/to/dir,/path/to/another/dir
     """
 
@@ -2839,8 +2856,9 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         repo = _get_copr_repo(repo)
 
     # this is so we know which dirs are searched for our error messages below
-    basedirs = _normalize_basedir(basedir)
-    repos = list_repos(basedirs)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
+    repos = list_repos(basedirs, **kwargs)
 
     if repo not in repos:
         return "Error: the {} repo does not exist in {}".format(repo, basedirs)
@@ -2865,7 +2883,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         return "File {} containing repo {} has been removed".format(repofile, repo)
 
     # There must be other repos in this file, write the file with them
-    header, filerepos = _parse_repo_file(repofile)
+    header, filerepos = _parse_repo_file(repofile, strict_parser)
     content = header
     for stanza in filerepos.keys():
         if stanza == repo:
@@ -2910,12 +2928,15 @@ def mod_repo(repo, basedir=None, **kwargs):
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
     baseurl can only be deleted if a mirrorlist is specified (or vice versa).
 
+    Strict parsing of configuration files is the default, this can be disabled
+    using the  ``strict_config`` keyword argument set to False
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
-        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
         salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
     """
     # Filter out '__pub' arguments, as well as saltenv
@@ -2955,9 +2976,9 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Give the user the ability to change the basedir
     repos = {}
-    basedirs = _normalize_basedir(basedir)
-    repos = list_repos(basedirs)
-
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
+    repos = list_repos(basedirs, **kwargs)
     repofile = ""
     header = ""
     filerepos = {}
@@ -2998,9 +3019,9 @@ def mod_repo(repo, basedir=None, **kwargs):
                     )
                 )
             # Repo has been added, update repos list
-            repos = list_repos(basedirs)
+            repos = list_repos(basedirs, **kwargs)
             repofile = repos[repo]["file"]
-            header, filerepos = _parse_repo_file(repofile)
+            header, filerepos = _parse_repo_file(repofile, strict_parser)
         else:
             repofile = "{}/{}.repo".format(newdir, repo)
 
@@ -3019,7 +3040,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     else:
         # The repo does exist, open its file
         repofile = repos[repo]["file"]
-        header, filerepos = _parse_repo_file(repofile)
+        header, filerepos = _parse_repo_file(repofile, strict_parser)
 
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if "baseurl" in todelete:
@@ -3064,11 +3085,11 @@ def mod_repo(repo, basedir=None, **kwargs):
     return {repofile: filerepos}
 
 
-def _parse_repo_file(filename):
+def _parse_repo_file(filename, strict_config=True):
     """
     Turn a single repo file into a dict
     """
-    parsed = configparser.ConfigParser()
+    parsed = configparser.ConfigParser(strict=strict_config)
     config = {}
 
     try:

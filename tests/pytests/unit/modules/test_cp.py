@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.channel.client
 import salt.modules.cp as cp
 import salt.utils.files
@@ -15,7 +16,7 @@ from tests.support.mock import MagicMock, Mock, mock_open, patch
 
 @pytest.fixture()
 def configure_loader_modules():
-    return {cp: {}}
+    return {cp: {"__opts__": {"saltenv": None}}}
 
 
 def test__render_filenames_undefined_template():
@@ -69,6 +70,10 @@ def test__render_filenames_success():
     with patch.dict(templates.TEMPLATE_REGISTRY, {"jinja": mock_jinja}):
         with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
             assert cp._render_filenames(path, dest, saltenv, template) == ret
+            # saltenv=None should default to "base" when not set in config
+            assert (
+                cp._render_filenames(path, dest, saltenv=None, template=template) == ret
+            )
 
 
 def test_get_file_not_found():

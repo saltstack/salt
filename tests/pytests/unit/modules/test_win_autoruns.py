@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.win_autoruns as win_autoruns
 from tests.support.mock import MagicMock, patch
 

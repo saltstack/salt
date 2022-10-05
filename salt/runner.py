@@ -38,12 +38,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     client = "runner"
     tag_prefix = "run"
 
-    def __init__(self, opts, context=None):
-        self.opts = opts
-        if context is None:
-            context = {}
-        self.context = context
-
     @property
     def functions(self):
         if not hasattr(self, "_functions"):
@@ -120,7 +114,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
         .. code-block:: python
 
-            runner.eauth_async({
+            runner.cmd_async({
                 'fun': 'jobs.list_jobs',
                 'username': 'saltdev',
                 'password': 'saltdev',
@@ -140,7 +134,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
         .. code-block:: python
 
-            runner.eauth_sync({
+            runner.cmd_sync({
                 'fun': 'jobs.list_jobs',
                 'username': 'saltdev',
                 'password': 'saltdev',
@@ -163,6 +157,31 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     ):  # pylint: disable=useless-super-delegation
         """
         Execute a function
+
+        .. code-block:: python
+
+            >>> opts = salt.config.master_config('/etc/salt/master')
+            >>> runner = salt.runner.RunnerClient(opts)
+            >>> runner.cmd('jobs.list_jobs', [])
+            {
+                '20131219215650131543': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:56:50.131543',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+                '20131219215921857715': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:59:21.857715',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+            }
+
         """
         return super().cmd(fun, arg, pub_data, kwarg, print_event, full_return)
 
@@ -279,11 +298,13 @@ class Runner(RunnerClient):
                     display_output(ret, outputter, self.opts)
                 else:
                     ret = self._proc_function(
-                        self.opts["fun"],
-                        low,
-                        user,
-                        async_pub["tag"],
-                        async_pub["jid"],
+                        instance=self,
+                        opts=self.opts,
+                        fun=self.opts["fun"],
+                        low=low,
+                        user=user,
+                        tag=async_pub["tag"],
+                        jid=async_pub["jid"],
                         daemonize=False,
                     )
             except salt.exceptions.SaltException as exc:
