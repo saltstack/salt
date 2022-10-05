@@ -324,6 +324,16 @@ def is_ipv6(ip_addr):
         return False
 
 
+def is_loopback(ip_addr):
+    """
+    Returns a bool telling if the value passed to it is a loopback address
+    """
+    try:
+        return ipaddress.ip_address(ip_addr).is_loopback
+    except ValueError:
+        return False
+
+
 def is_subnet(cidr):
     """
     Returns a bool telling if the passed string is an IPv4 or IPv6 subnet
@@ -1918,11 +1928,11 @@ def _openbsd_remotes_on(port, which_end):
         data = subprocess.check_output(
             ["netstat", "-nf", "inet"]
         )  # pylint: disable=minimum-python-version
-    except subprocess.CalledProcessError:
-        log.error("Failed netstat")
+    except subprocess.CalledProcessError as exc:
+        log.error('Failed "netstat" with returncode = %s', exc.returncode)
         raise
 
-    lines = data.split("\n")
+    lines = salt.utils.stringutils.to_str(data).split("\n")
     for line in lines:
         if "ESTABLISHED" not in line:
             continue

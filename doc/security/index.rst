@@ -143,11 +143,16 @@ quickly and safely as is possible.
 4.  Packagers are notified via the `salt-packagers`_ mailing list that an issue
     was reported and resolved, and that an announcement is incoming.
 
-5.  A new release is created and pushed to all affected repositories. The
+5.  A pre-announcement is sent out to the `salt-announce`_ mailing list approximately
+    a week before the CVE release. This announcement does not include details
+    of the vulnerability. The pre-announcement will include the date the release
+    will occur and the vulnerability rating.
+
+6.  A new release is created and pushed to all affected repositories. The
     release documentation provides a full description of the issue, plus any
     upgrade instructions or other relevant details.
 
-6.  An announcement is made to the `salt-users`_ and `salt-announce`_ mailing
+7.  An announcement is made to the `salt-users`_ and `salt-announce`_ mailing
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 

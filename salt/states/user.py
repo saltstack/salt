@@ -440,7 +440,7 @@ def present(
         home directory will be a unc path. Otherwise the home directory will be
         mapped to the specified drive. Must be a letter followed by a colon.
         Because of the colon, the value must be surrounded by single quotes. ie:
-        - win_homedrive: 'U:
+        ``- win_homedrive: 'U:'``
 
         .. versionchanged:: 2015.8.0
 
