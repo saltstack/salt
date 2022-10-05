@@ -56,8 +56,8 @@ log = logging.getLogger(__name__)
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
+    import MySQLdb.cursors
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -65,8 +65,8 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
+        import MySQLdb.cursors
     except ImportError:
         MySQLdb = None
 
@@ -133,8 +133,8 @@ class MySQLExtPillar(SqlBaseExtPillar):
 
     def extract_queries(self, args, kwargs):  # pylint: disable=useless-super-delegation
         """
-            This function normalizes the config block into a set of queries we
-            can use.  The return is a list of consistently laid out dicts.
+        This function normalizes the config block into a set of queries we
+        can use.  The return is a list of consistently laid out dicts.
         """
         return super().extract_queries(args, kwargs)
 

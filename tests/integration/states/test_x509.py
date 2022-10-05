@@ -6,6 +6,7 @@ import pprint
 import textwrap
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
@@ -184,8 +185,10 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[first_key]["changes"]
         assert "New" in ret[first_key]["changes"]["Certificate"]
         # check whether the second defined cert is considered to match the first one
-        second_key = "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
-            RUNTIME_VARS.TMP
+        second_key = (
+            "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+                RUNTIME_VARS.TMP
+            )
         )
         assert second_key in ret
         assert "changes" in ret[second_key]
@@ -485,7 +488,8 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             },
         )
         self.assertEqual(
-            "Certificate needs renewal: 29 days remaining but it needs to be at least 90",
+            "Certificate needs renewal: 29 days remaining but it needs to be at"
+            " least 90",
             second_run[key]["changes"]["Status"]["Old"],
         )
         expiry = datetime.datetime.strptime(

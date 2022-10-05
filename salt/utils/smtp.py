@@ -83,13 +83,13 @@ def send(kwargs, opts):
             config["smtp.content"] = str(encrypted_data)
         else:
             log.error("SMTP: Encryption failed, only an error message will be sent")
-            config["smtp.content"] = (
-                "Encryption failed, the return data was not sent." "\r\n\r\n{}\r\n{}"
-            ).format(encrypted_data.status, encrypted_data.stderr)
+            config[
+                "smtp.content"
+            ] = "Encryption failed, the return data was not sent.\r\n\r\n{}\r\n{}".format(
+                encrypted_data.status, encrypted_data.stderr
+            )
 
-    message = (
-        "From: {}\r\n" "To: {}\r\n" "Date: {}\r\n" "Subject: {}\r\n" "\r\n" "{}"
-    ).format(
+    message = "From: {}\r\nTo: {}\r\nDate: {}\r\nSubject: {}\r\n\r\n{}".format(
         config["smtp.from"],
         config["smtp.to"],
         formatdate(localtime=True),

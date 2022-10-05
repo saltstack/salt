@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **49**
 - Total PR References: **130**
 
-- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `MTecknology`_, `The-Loeki`_, `UtahDave`_, `anlutro`_, `arthru`_, `axmetishe`_, `bailsman`_, `bobrik`_, `cachedout`_, `clinta`_, `corywright`_, `cro`_, `dmaziuk`_, `dmitrievav`_, `dmurphy18`_, `eliasp`_, `eradman`_, `ezh`_, `gtmanfred`_, `hu-dabao`_, `hujunya`_, `isbm`_, `jak3kaj`_, `janhorstmann`_, `joe-niland`_, `kevinanderson1`_, `kstreee`_, `l2ol33rt`_, `lomeroe`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_, `morganwillcock`_, `nasenbaer13`_, `nicholasmhughes`_, `rallytime`_, `sakateka`_, `sergeizv`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `toanju`_, `twangboy`_, `vutny`_)
+- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `MTecknology`_, `The-Loeki`_, `UtahDave`_,
+  `anlutro`_, `arthru`_, `axmetishe`_, `bailsman`_, `bobrik`_, `cachedout`_, `clinta`_,
+  `corywright`_, `cro`_, `dmaziuk`_, `dmitrievav`_, `dmurphy18`_, `eliasp`_, `eradman`_, `ezh`_,
+  `gtmanfred`_, `hu-dabao`_, `hujunya`_, `isbm`_, `jak3kaj`_, `janhorstmann`_, `joe-niland`_,
+  `kevinanderson1`_, `kstreee`_, `l2ol33rt`_, `lomeroe`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_,
+  `morganwillcock`_, `nasenbaer13`_, `nicholasmhughes`_, `rallytime`_, `sakateka`_, `sergeizv`_,
+  `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `toanju`_, `twangboy`_, `vutny`_)
 
 
 Changelog for v2016.11.2..v2016.11.3
@@ -355,7 +361,7 @@ Changelog for v2016.11.2..v2016.11.3
 
   * 52440416ca Merge pull request `#39221`_ from lvg01/fix-bug-39220
 
-    * e8a41d6341 Removes to early content stripping (stripping is allready done when needed with ident:true), fixes `#39220`_
+    * e8a41d6341 Removes to early content stripping (stripping is already done when needed with ident:true), fixes `#39220`_
 
     * a4b169e0bd Fixed wrong logic, fixes `#39220`_
 
@@ -441,7 +447,7 @@ Changelog for v2016.11.2..v2016.11.3
 
       * 624f25b78d Fix for `#38697`_
 
-* **ISSUE** `#39269`_: (`alexharrington`_) Remount forced with lizardfs fuse filesystem due to device missmatch (refs: `#39276`_)
+* **ISSUE** `#39269`_: (`alexharrington`_) Remount forced with lizardfs fuse filesystem due to device mismatch (refs: `#39276`_)
 
 * **ISSUE** `#39106`_: (`carsten-AEI`_) CVMFS fuse mount gets remounted every time (refs: `#39276`_)
 
@@ -672,7 +678,7 @@ Changelog for v2016.11.2..v2016.11.3
 
       * 97521b3468 Second attempt to fix prepending of root_dir to paths
 
-    * 6ffeda3ee5 Clarify ipv6 option for minion and inteface for master, closes `#39118`_ (`#39131`_)
+    * 6ffeda3ee5 Clarify ipv6 option for minion and interface for master, closes `#39118`_ (`#39131`_)
 
     * 646b9ea4e5 Don't abort pillar.get with merge=True if default is None (`#39116`_)
 
@@ -1111,7 +1117,7 @@ Changelog for v2016.11.2..v2016.11.3
 
       * fbc4d2a2c4 reactor: ensure glob_ref is a string
 
-      * 2e443d79a3 cp.cache_file: add note re: return for nonexistant salt:// path
+      * 2e443d79a3 cp.cache_file: add note re: return for nonexistent salt:// path
 
     * e9ebec4d80 Merge pull request `#38890`_ from cro/vmware_reset_vm_20163
 

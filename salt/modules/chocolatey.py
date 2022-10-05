@@ -10,9 +10,10 @@ import os
 import re
 import tempfile
 
+from requests.structures import CaseInsensitiveDict
+
 import salt.utils.data
 import salt.utils.platform
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -44,8 +45,7 @@ def __virtual__():
     if __grains__["osrelease"] in ("XP", "2003Server"):
         return (
             False,
-            "Cannot load module chocolatey: Chocolatey requires "
-            "Windows Vista or later",
+            "Cannot load module chocolatey: Chocolatey requires Windows Vista or later",
         )
 
     return __virtualname__
@@ -248,7 +248,7 @@ def bootstrap(force=False, source=None):
                 log.debug("Downloading PowerShell...")
                 __salt__["cp.get_url"](path=url, dest=dest)
             except MinionError:
-                err = "Failed to download PowerShell KB for {}" "".format(
+                err = "Failed to download PowerShell KB for {}".format(
                     __grains__["osrelease"]
                 )
                 if source:
@@ -335,7 +335,7 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation " "script: {}".format(script)
+            "Failed to find Chocolatey installation script: {}".format(script)
         )
 
     # Run the Chocolatey bootstrap

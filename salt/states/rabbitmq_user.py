@@ -91,9 +91,9 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
     name
         User name
     password
-        User's password, if one needs to be set
+        The user's password
     force
-        If user exists, forcibly change the password
+        If force is ``True``, the password will be automatically updated without extra password change check.
     tags
         Optional list of tags for the user
     perms
@@ -121,10 +121,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
 
     if user and not any((force, perms, tags, passwd_reqs_update)):
         log.debug(
-            (
-                "RabbitMQ user '%s' exists, password is up to"
-                " date and force is not set."
-            ),
+            "RabbitMQ user '%s' exists, password is up to date and force is not set.",
             name,
         )
         ret["comment"] = "User '{}' is already present.".format(name)

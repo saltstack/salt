@@ -4,10 +4,15 @@
 """
 
 import datetime
+import logging
+import shutil
+import subprocess
 import time
 import types
 
+import psutil
 import pytest
+
 import salt.modules.gpg as gpg
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
@@ -16,7 +21,11 @@ pytest.importorskip("gnupg")
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
+    pytest.mark.requires_random_entropy,
 ]
+
+log = logging.getLogger(__name__)
+
 
 GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
 GPG_TEST_KEY_ID = "7416F045"
@@ -153,11 +162,43 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
     root.mkdir(mode=0o0700)
+    root.joinpath(".gnupg").mkdir(mode=0o0700)
     pub = root / "gpgfile.pub"
     pub.write_text(GPG_TEST_PUB_KEY)
     priv = root / "gpgfile.priv"
     priv.write_text(GPG_TEST_PRIV_KEY)
-    return types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    try:
+        yield types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    finally:
+        # Make sure we don't leave any gpg-agent's running behind
+        gpg_connect_agent = shutil.which("gpg-connect-agent")
+        if gpg_connect_agent:
+            gnupghome = root / ".gnupg"
+            if not gnupghome.is_dir():
+                gnupghome = root
+            try:
+                subprocess.run(
+                    [gpg_connect_agent, "killagent", "/bye"],
+                    env={"GNUPGHOME": str(gnupghome)},
+                    shell=False,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                # This is likely CentOS 7 or Amazon Linux 2
+                pass
+
+        # If the above errored or was not enough, as a last resort, let's check
+        # the running processes.
+        for proc in psutil.process_iter():
+            try:
+                if "gpg-agent" in proc.name():
+                    for arg in proc.cmdline():
+                        if str(root) in arg:
+                            proc.terminate()
+            except Exception:  # pylint: disable=broad-except
+                pass
 
 
 @pytest.fixture
@@ -202,7 +243,29 @@ def test_list_keys():
             "trust": "-",
             "type": "pub",
             "uids": ["GPG Person <person@example.com>"],
-        }
+        },
+        {
+            "dummy": "",
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "expires": "2011188692",
+            "sigs": [],
+            "subkeys": [
+                [
+                    "yyyyyyyyyyyyyyyy",
+                    "e",
+                    "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+                ]
+            ],
+            "length": "4096",
+            "ownertrust": "-",
+            "sig": "",
+            "algo": "1",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "date": "1506612692",
+            "trust": "r",
+            "type": "pub",
+            "uids": ["GPG Person <person@example.com>"],
+        },
     ]
 
     _expected_result = [
@@ -215,7 +278,17 @@ def test_list_keys():
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             "trust": "Unknown",
-        }
+        },
+        {
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "uids": ["GPG Person <person@example.com>"],
+            "created": "2017-09-28",
+            "expires": "2033-09-24",
+            "keyLength": "4096",
+            "ownerTrust": "Unknown",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "trust": "Revoked",
+        },
     ]
 
     mock_opt = MagicMock(return_value="root")
@@ -326,7 +399,10 @@ def test_delete_key_without_passphrase(gpghome):
 
     _expected_result = {
         "res": True,
-        "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        "message": (
+            "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic"
+            " key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted"
+        ),
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -450,7 +526,10 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
 
     _expected_result = {
         "res": True,
-        "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        "message": (
+            "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic"
+            " key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted"
+        ),
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -502,7 +581,9 @@ def test_export_key_without_passphrase(gpghome):
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx")
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
-                    ["xxxxxxxxxxxxxxxx"], False, expect_passphrase=False,
+                    ["xxxxxxxxxxxxxxxx"],
+                    False,
+                    expect_passphrase=False,
                 )
 
 
@@ -609,7 +690,9 @@ def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
-                    ["xxxxxxxxxxxxxxxx"], False, passphrase=GPG_TEST_KEY_PASSPHRASE,
+                    ["xxxxxxxxxxxxxxxx"],
+                    False,
+                    passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
 
 

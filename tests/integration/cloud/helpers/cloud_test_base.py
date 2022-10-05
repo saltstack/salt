@@ -9,11 +9,12 @@ import shutil
 from time import sleep
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 from salt.config import cloud_config, cloud_providers_config
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
-from tests.support.helpers import random_string
 from tests.support.paths import FILES
 from tests.support.runtests import RUNTIME_VARS
 
@@ -274,9 +275,8 @@ class CloudTest(ShellCase):
                     self.assertDestroyInstance(instance_name)
                     return (
                         False,
-                        'The instance "{}" was deleted during the tearDown, not the test.'.format(
-                            instance_name
-                        ),
+                        'The instance "{}" was deleted during the tearDown, not the'
+                        " test.".format(instance_name),
                     )
                 except AssertionError as e:
                     log.error(

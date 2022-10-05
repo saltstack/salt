@@ -615,7 +615,10 @@ class SSDPClientTestCase(TestCase, Mocks):
         """
 
         _socket = MagicMock()
-        error = "We only support a 1200 bps connection. Routing timestamp problems on neural net."
+        error = (
+            "We only support a 1200 bps connection. Routing timestamp problems on"
+            " neural net."
+        )
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         fake_resource = SSDPClientTestCase.Resource()
         fake_resource.pool = [

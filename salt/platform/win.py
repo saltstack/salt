@@ -212,7 +212,7 @@ class LARGE_INTEGER(wintypes.LARGE_INTEGER):
 
     @classmethod
     def from_time(cls, t):
-        time100ns = int(t * 10 ** 7)
+        time100ns = int(t * 10**7)
         return cls(time100ns + cls._unix_epoch)
 
 
@@ -786,13 +786,17 @@ _win(ntdll.NtAllocateLocallyUniqueId, NTSTATUS, LPLUID)  # _Out_ LUID
 
 # https://msdn.microsoft.com/en-us/library/aa378279
 _win(
-    secur32.LsaFreeReturnBuffer, NTSTATUS, wintypes.LPVOID,
+    secur32.LsaFreeReturnBuffer,
+    NTSTATUS,
+    wintypes.LPVOID,
 )  # _In_ Buffer
 
 
 # https://msdn.microsoft.com/en-us/library/aa378265
 _win(
-    secur32.LsaConnectUntrusted, NTSTATUS, LPHANDLE,
+    secur32.LsaConnectUntrusted,
+    NTSTATUS,
+    LPHANDLE,
 )  # _Out_ LsaHandle
 
 

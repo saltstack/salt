@@ -31,7 +31,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The cloud execution module cannot be loaded: only available on non-Windows systems.",
+        "The cloud execution module cannot be loaded: only available on non-Windows"
+        " systems.",
     )
 
 

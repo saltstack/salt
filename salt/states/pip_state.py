@@ -69,7 +69,11 @@ def pip_has_internal_exceptions_mod(ver):
     """
     True when the pip version has the `pip._internal.exceptions` module
     """
-    return salt.utils.versions.compare(ver1=ver, oper=">=", ver2="10.0",)
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper=">=",
+        ver2="10.0",
+    )
 
 
 def pip_has_exceptions_mod(ver):
@@ -99,9 +103,9 @@ if HAS_PIP is True:
 
         purge_pip.__pip_ver__ = pip.__version__
     if salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="10.0"):
-        from pip._internal.exceptions import (
+        from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
             InstallationError,
-        )  # pylint: disable=E0611,E0401
+        )
     elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="1.0"):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
@@ -313,12 +317,12 @@ def _check_if_installed(
                 extra_index_url=extra_index_url,
             )
             desired_version = ""
-            if any(version_spec):
+            if any(version_spec) and available_versions:
                 for version in reversed(available_versions):
                     if _fulfills_version_spec(version, version_spec):
                         desired_version = version
                         break
-            else:
+            elif available_versions:
                 desired_version = available_versions[-1]
             if not desired_version:
                 ret["result"] = True
@@ -695,6 +699,20 @@ def installed(
 
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
+
+    If you are using onedir packages and you need to install python packages into
+    the system python environment, you must provide the pip_bin or
+    bin_env to the pip state module.
+
+
+    .. code-block:: yaml
+
+        lib-foo:
+          pip.installed:
+            - pip_bin: /usr/bin/pip3
+        lib-bar:
+          pip.installed:
+            - bin_env: /usr/bin/python3
     """
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -727,7 +745,7 @@ def installed(
     try:
         cur_version = __salt__["pip.version"](bin_env)
     except (CommandNotFoundError, CommandExecutionError) as err:
-        ret["result"] = None
+        ret["result"] = False
         ret["comment"] = "Error installing '{}': {}".format(name, err)
         return ret
     # Check that the pip binary supports the 'use_wheel' option
@@ -745,8 +763,8 @@ def installed(
             ret["comment"] = (
                 "The 'use_wheel' option is only supported in "
                 "pip between {} and {}. The version of pip detected "
-                "was {}."
-            ).format(min_version, max_version, cur_version)
+                "was {}.".format(min_version, max_version, cur_version)
+            )
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
@@ -764,8 +782,8 @@ def installed(
             ret["comment"] = (
                 "The 'no_use_wheel' option is only supported in "
                 "pip between {} and {}. The version of pip detected "
-                "was {}."
-            ).format(min_version, max_version, cur_version)
+                "was {}.".format(min_version, max_version, cur_version)
+            )
             return ret
 
     # Check that the pip binary supports the 'no_binary' option
@@ -779,8 +797,8 @@ def installed(
             ret["comment"] = (
                 "The 'no_binary' option is only supported in "
                 "pip {} and newer. The version of pip detected "
-                "was {}."
-            ).format(min_version, cur_version)
+                "was {}.".format(min_version, cur_version)
+            )
             return ret
 
     # Get the packages parsed name and version from the pip library.
@@ -983,16 +1001,18 @@ def installed(
                         ret["changes"]["requirements"] = True
                 if ret["changes"].get("requirements"):
                     comments.append(
-                        "Successfully processed requirements file "
-                        "{}.".format(requirements)
+                        "Successfully processed requirements file {}.".format(
+                            requirements
+                        )
                     )
                 else:
                     comments.append("Requirements were already installed.")
 
             if editable:
                 comments.append(
-                    "Package successfully installed from VCS "
-                    "checkout {}.".format(editable)
+                    "Package successfully installed from VCS checkout {}.".format(
+                        editable
+                    )
                 )
                 ret["changes"]["editable"] = True
             ret["comment"] = " ".join(comments)

@@ -46,6 +46,11 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": comt})
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
+                mock_host_ips.return_value = ["127.0.1.1"]
+                comt = "Peering with localhost is not needed"
+                ret.update({"comment": comt})
+                self.assertDictEqual(glusterfs.peered(name), ret)
+
                 mock_host_ips.return_value = ["2001:db8::1"]
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
@@ -338,8 +343,10 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"result": True})
             ret.update(
                 {
-                    "comment": "Glusterfs cluster.op-version for {} already set to {}".format(
-                        name, current
+                    "comment": (
+                        "Glusterfs cluster.op-version for {} already set to {}".format(
+                            name, current
+                        )
                     )
                 }
             )
@@ -350,8 +357,9 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"result": None})
                 ret.update(
                     {
-                        "comment": "An attempt would be made to set the cluster.op-version for {} to {}.".format(
-                            name, new
+                        "comment": (
+                            "An attempt would be made to set the cluster.op-version for"
+                            " {} to {}.".format(name, new)
                         )
                     }
                 )
@@ -409,8 +417,9 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"result": True})
             ret.update(
                 {
-                    "comment": "The cluster.op-version is already set to the cluster.max-op-version of {}".format(
-                        current
+                    "comment": (
+                        "The cluster.op-version is already set to the"
+                        " cluster.max-op-version of {}".format(current)
                     )
                 }
             )
@@ -421,8 +430,9 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"result": None})
                 ret.update(
                     {
-                        "comment": "An attempt would be made to set the cluster.op-version to {}.".format(
-                            new
+                        "comment": (
+                            "An attempt would be made to set the cluster.op-version"
+                            " to {}.".format(new)
                         )
                     }
                 )

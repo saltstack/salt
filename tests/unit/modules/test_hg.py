@@ -82,7 +82,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
             hg.__salt__,
             {
                 "cmd.run_stdout": MagicMock(
-                    return_value=("A added 0\n" "A added 1\n" "M modified")
+                    return_value="A added 0\nA added 1\nM modified"
                 )
             },
         ):

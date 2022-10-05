@@ -23,13 +23,22 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__prepare_cmd_commands(self):
         self.assertEqual(
-            helm._prepare_cmd(commands=["com1", "com2"]), ("helm", "com1", "com2",)
+            helm._prepare_cmd(commands=["com1", "com2"]),
+            (
+                "helm",
+                "com1",
+                "com2",
+            ),
         )
 
     def test__prepare_cmd_flags(self):
         self.assertEqual(
             helm._prepare_cmd(flags=["flag1", "--flag2"]),
-            ("helm", "--flag1", "--flag2",),
+            (
+                "helm",
+                "--flag1",
+                "--flag2",
+            ),
         )
 
     def test__prepare_cmd_kvflags(self):

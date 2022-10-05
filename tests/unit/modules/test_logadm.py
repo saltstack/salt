@@ -55,8 +55,7 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
                 logadm.remove("name"),
                 {
                     "Output": "stderr",
-                    "Error": "Failure in removing log. Possibly\
- already removed?",
+                    "Error": "Failure in removing log. Possibly already removed?",
                 },
             )
 

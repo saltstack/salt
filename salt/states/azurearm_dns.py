@@ -3,6 +3,12 @@ Azure (ARM) DNS State Module
 
 .. versionadded:: 3000
 
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
 :maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
@@ -111,6 +117,9 @@ Optional provider parameters:
 
 """
 import logging
+from functools import wraps
+
+import salt.utils.azurearm
 
 __virtualname__ = "azurearm_dns"
 
@@ -126,6 +135,28 @@ def __virtual__():
     return (False, "azurearm_dns module could not be loaded")
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def zone_present(
     name,
     resource_group,
@@ -230,16 +261,17 @@ def zone_present(
                 if registration_virtual_networks and not isinstance(
                     registration_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "registration_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "registration_virtual_networks must be supplied as a list of"
+                        " VNET ID paths!"
+                    )
                     return ret
                 reg_vnets = zone.get("registration_virtual_networks", [])
                 remote_reg_vnets = sorted(
-                    [vnet["id"].lower() for vnet in reg_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in reg_vnets if "id" in vnet
                 )
                 local_reg_vnets = sorted(
-                    [vnet.lower() for vnet in registration_virtual_networks or []]
+                    vnet.lower() for vnet in registration_virtual_networks or []
                 )
                 if local_reg_vnets != remote_reg_vnets:
                     ret["changes"]["registration_virtual_networks"] = {
@@ -251,16 +283,17 @@ def zone_present(
                 if resolution_virtual_networks and not isinstance(
                     resolution_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "resolution_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "resolution_virtual_networks must be supplied as a list of VNET"
+                        " ID paths!"
+                    )
                     return ret
                 res_vnets = zone.get("resolution_virtual_networks", [])
                 remote_res_vnets = sorted(
-                    [vnet["id"].lower() for vnet in res_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in res_vnets if "id" in vnet
                 )
                 local_res_vnets = sorted(
-                    [vnet.lower() for vnet in resolution_virtual_networks or []]
+                    vnet.lower() for vnet in resolution_virtual_networks or []
                 )
                 if local_res_vnets != remote_res_vnets:
                     ret["changes"]["resolution_virtual_networks"] = {
@@ -324,6 +357,7 @@ def zone_present(
     return ret
 
 
+@_deprecation_message
 def zone_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000
@@ -380,6 +414,7 @@ def zone_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def record_set_present(
     name,
     zone_name,
@@ -575,15 +610,14 @@ def record_set_present(
                             ret["changes"] = {"new": {record_str: record}}
                 elif record_str[-1] == "s":
                     if not isinstance(record, list):
-                        ret[
-                            "comment"
-                        ] = "{} record information must be specified as a list of dictionaries!".format(
-                            record_str
+                        ret["comment"] = (
+                            "{} record information must be specified as a list of"
+                            " dictionaries!".format(record_str)
                         )
                         return ret
-                    local, remote = [
+                    local, remote = (
                         sorted(config) for config in (record, rec_set[record_str])
-                    ]
+                    )
                     for val in local:
                         for key in val:
                             local_val = val[key]
@@ -666,6 +700,7 @@ def record_set_present(
     return ret
 
 
+@_deprecation_message
 def record_set_absent(name, zone_name, resource_group, connection_auth=None):
     """
     .. versionadded:: 3000

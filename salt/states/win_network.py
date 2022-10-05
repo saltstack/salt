@@ -114,8 +114,7 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     if ip_proto == "dhcp":
         if ip_addrs is not None:
             errors.append(
-                "The ip_addrs param cannot be set if unless ip_proto is set "
-                "to 'static'"
+                "The ip_addrs param cannot be set if unless ip_proto is set to 'static'"
             )
         if gateway is not None:
             errors.append(
@@ -130,8 +129,9 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             bad_ips = [x for x in ip_addrs if not salt.utils.validate.net.ipv4_addr(x)]
             if bad_ips:
                 errors.append(
-                    "The following static IPs are invalid: "
-                    "{}".format(", ".join(bad_ips))
+                    "The following static IPs are invalid: {}".format(
+                        ", ".join(bad_ips)
+                    )
                 )
 
             # Validate default gateway
@@ -312,18 +312,18 @@ def managed(
             else:
                 if not __salt__["ip.enable"](name):
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Failed to enable interface '{}' to "
-                        "make changes".format(name)
-                    )
+                    ret[
+                        "comment"
+                    ] = "Failed to enable interface '{}' to make changes".format(name)
                     return ret
 
         errors = _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway)
         if errors:
             ret["result"] = False
-            ret["comment"] = (
-                "The following SLS configuration errors were "
-                "detected:\n- {}".format("\n- ".join(errors))
+            ret[
+                "comment"
+            ] = "The following SLS configuration errors were detected:\n- {}".format(
+                "\n- ".join(errors)
             )
             return ret
 
@@ -382,9 +382,10 @@ def managed(
                         )
 
             ret["result"] = None
-            ret["comment"] = (
-                "The following changes will be made to "
-                "interface '{}':\n- {}".format(name, "\n- ".join(comments))
+            ret[
+                "comment"
+            ] = "The following changes will be made to interface '{}':\n- {}".format(
+                name, "\n- ".join(comments)
             )
             return ret
 

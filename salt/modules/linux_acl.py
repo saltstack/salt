@@ -20,7 +20,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The linux_acl execution module cannot be loaded: the getfacl binary is not in the path.",
+        "The linux_acl execution module cannot be loaded: the getfacl binary is not in"
+        " the path.",
     )
 
 
@@ -227,9 +228,8 @@ def modfacl(acl_type, acl_name="", perms="", *args, **kwargs):
 
     cmd = "setfacl"
     if recursive:
-        cmd += (
-            " -R"  # -R must come first as -m needs the acl_* arguments that come later
-        )
+        # -R must come first as -m needs the acl_* arguments that come later
+        cmd += " -R"
 
     cmd += " -m"
 

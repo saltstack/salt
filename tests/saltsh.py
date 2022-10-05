@@ -31,6 +31,7 @@ import sys
 from code import InteractiveConsole
 
 import jinja2
+
 import salt.client
 import salt.config
 import salt.loader
@@ -81,7 +82,10 @@ def get_salt_vars():
 
     if __opts__["file_client"] == "local":
         __pillar__ = salt.pillar.get_pillar(
-            __opts__, __grains__, __opts__.get("id"), __opts__.get("saltenv"),
+            __opts__,
+            __grains__,
+            __opts__.get("id"),
+            __opts__.get("saltenv"),
         ).compile_pillar()
     else:
         __pillar__ = {}

@@ -51,7 +51,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "__id__": "vim present",
             },
             "git_|-salt vim plugin updated_|-https://github.com/saltstack/salt-vim.git_|-latest": {
-                "comment": "https://github.com/saltstack/salt-vim.git cloned to /Users/cdalvaro/.vim/pack/git-plugins/start/salt",
+                "comment": (
+                    "https://github.com/saltstack/salt-vim.git cloned to"
+                    " /Users/cdalvaro/.vim/pack/git-plugins/start/salt"
+                ),
                 "name": "https://github.com/saltstack/salt-vim.git",
                 "start_time": "11:00:01.892757",
                 "result": True,
@@ -59,7 +62,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "__run_num__": 6,
                 "__sls__": "config.vim",
                 "changes": {
-                    "new": "https://github.com/saltstack/salt-vim.git => /Users/cdalvaro/.vim/pack/git-plugins/start/salt",
+                    "new": (
+                        "https://github.com/saltstack/salt-vim.git =>"
+                        " /Users/cdalvaro/.vim/pack/git-plugins/start/salt"
+                    ),
                     "revision": {
                         "new": "6ca9e3500cc39dd417b411435d58a1b720b331cc",
                         "old": None,
@@ -68,7 +74,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "__id__": "salt vim plugin updated",
             },
             "pkg_|-macvim present_|-caskroom/cask/macvim_|-installed": {
-                "comment": "The following packages failed to install/update: caskroom/cask/macvim",
+                "comment": (
+                    "The following packages failed to install/update:"
+                    " caskroom/cask/macvim"
+                ),
                 "name": "caskroom/cask/macvim",
                 "start_time": "10:59:38.111119",
                 "result": False,
@@ -86,12 +95,81 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         "out": "highstate",
     }
 
+    _EVNT_RET = [
+        {
+            "data": {
+                "fun_args": ["config.vim"],
+                "jid": "20181227105933129338",
+                "return": {
+                    "file_|-vim files present_|-/Users/cdalvaro/_|-recurse": {
+                        "comment": "The directory /Users/cdalvaro/ is in the correct state",
+                        "changes": {},
+                        "name": "/Users/cdalvaro/",
+                        "start_time": "10:59:52.252830",
+                        "result": True,
+                        "duration": 373.25,
+                        "__run_num__": 3,
+                        "__sls__": "config.vim",
+                        "__id__": "vim files present",
+                    },
+                    "pkg_|-vim present_|-v ju im_|-installed": {
+                        "comment": "All specified packages are already installed",
+                        "name": "vim",
+                        "start_time": "10:59:36.830591",
+                        "result": True,
+                        "duration": 1280.127,
+                        "__run_num__": 0,
+                        "__sls__": "config.vim",
+                        "changes": {},
+                        "__id__": "vim present",
+                    },
+                    "git_|-salt vim plugin updated_|-https://github.com/saltstack/salt-vim.git_|-latest": {
+                        "comment": "https://github.com/saltstack/salt-vim.git cloned to /Users/cdalvaro/.vim/pack/git-plugins/start/salt",
+                        "name": "https://github.com/saltstack/salt-vim.git",
+                        "start_time": "11:00:01.892757",
+                        "result": True,
+                        "duration": 11243.445,
+                        "__run_num__": 6,
+                        "__sls__": "config.vim",
+                        "changes": {
+                            "new": "https://github.com/saltstack/salt-vim.git => /Users/cdalvaro/.vim/pack/git-plugins/start/salt",
+                            "revision": {
+                                "new": "6ca9e3500cc39dd417b411435d58a1b720b331cc",
+                                "old": None,
+                            },
+                        },
+                        "__id__": "salt vim plugin updated",
+                    },
+                    "pkg_|-macvim present_|-caskroom/cask/macvim_|-installed": {
+                        "comment": "The following packages failed to install/update: caskroom/cask/macvim",
+                        "name": "caskroom/cask/macvim",
+                        "start_time": "10:59:38.111119",
+                        "result": False,
+                        "duration": 14135.45,
+                        "__run_num__": 1,
+                        "__sls__": "config.vim",
+                        "changes": {},
+                        "__id__": "macvim present",
+                    },
+                },
+                "retcode": 2,
+                "success": True,
+                "fun": "state.apply",
+                "id": _MINION_NAME,
+                "out": "highstate",
+            }
+        }
+    ]
+
     _EXPECTED_PAYLOAD = {
         "attachments": [
             {
                 "title": "Success: False",
                 "color": "#272727",
-                "text": "Function: state.apply\nFunction Args: ['config.vim']\nJID: 20181227105933129338\nTotal: 4\nDuration: 27.03 secs",
+                "text": (
+                    "Function: state.apply\nFunction Args: ['config.vim']\nJID:"
+                    " 20181227105933129338\nTotal: 4\nDuration: 27.03 secs"
+                ),
                 "author_link": "{}".format(_MINION_NAME),
                 "author_name": "{}".format(_MINION_NAME),
                 "fallback": "{} | Failed".format(_MINION_NAME),
@@ -145,6 +223,14 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         query_ret = {"body": "ok", "status": 200}
         with patch("salt.utils.http.query", return_value=query_ret):
             self.assertTrue(slack_webhook.returner(self._RET))
+
+    def test_event_return(self):
+        """
+        Test to see if the Slack Webhook event_return sends a message
+        """
+        query_ret = {"body": "ok", "status": 200}
+        with patch("salt.utils.http.query", return_value=query_ret):
+            self.assertTrue(slack_webhook.event_return(self._EVNT_RET))
 
     def test_generate_payload_for_state_apply(self):
         """

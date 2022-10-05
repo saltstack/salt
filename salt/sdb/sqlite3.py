@@ -106,8 +106,8 @@ def _connect(profile):
             for sql in stmts:
                 cur.execute(sql)
         elif profile.get("create_table", True):
-            cur.execute(("CREATE TABLE {} (key text, value blob)").format(table))
-            cur.execute(("CREATE UNIQUE INDEX {} ON {} (key)").format(idx, table))
+            cur.execute("CREATE TABLE {} (key text, value blob)".format(table))
+            cur.execute("CREATE UNIQUE INDEX {} ON {} (key)".format(idx, table))
     except sqlite3.OperationalError:
         pass
 
@@ -123,7 +123,8 @@ def set_(key, value, profile=None):
     conn, cur, table = _connect(profile)
     value = memoryview(salt.utils.msgpack.packb(value))
     q = profile.get(
-        "set_query", ("INSERT OR REPLACE INTO {} VALUES (:key, :value)").format(table),
+        "set_query",
+        "INSERT OR REPLACE INTO {} VALUES (:key, :value)".format(table),
     )
     conn.execute(q, {"key": key, "value": value})
     conn.commit()
@@ -137,9 +138,9 @@ def get(key, profile=None):
     if not profile:
         return None
     _, cur, table = _connect(profile)
-    q = profile.get("get_query", ("SELECT value FROM {} WHERE key=:key".format(table)))
+    q = profile.get("get_query", "SELECT value FROM {} WHERE key=:key".format(table))
     res = cur.execute(q, {"key": key})
     res = res.fetchone()
     if not res:
         return None
-    return salt.utils.msgpack.unpackb(res[0])
+    return salt.utils.msgpack.unpackb(res[0], raw=False)

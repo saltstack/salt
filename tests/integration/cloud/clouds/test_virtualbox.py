@@ -109,9 +109,9 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         if base_box_name != BASE_BOX_NAME:
             self.skipTest(
-                "Profile {} does not have a base box to clone from. Check {}.conf files "
-                "in tests/integration/files/conf/cloud.profiles.d/ to run these tests."
-                'And add a "clone_from: {}" to the profile'.format(
+                "Profile {} does not have a base box to clone from. Check {}.conf files"
+                " in tests/integration/files/conf/cloud.profiles.d/ to run these"
+                ' tests.And add a "clone_from: {}" to the profile'.format(
                     PROFILE_NAME, PROVIDER_NAME, BASE_BOX_NAME
                 )
             )
@@ -270,9 +270,9 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
         if base_box_name != BOOTABLE_BASE_BOX_NAME:
             self.skipTest(
-                "Profile {} does not have a base box to clone from. Check {}.conf files "
-                "in tests/integration/files/conf/cloud.profiles.d/ to run these tests."
-                'And add a "clone_from: {}" to the profile'.format(
+                "Profile {} does not have a base box to clone from. Check {}.conf files"
+                " in tests/integration/files/conf/cloud.profiles.d/ to run these"
+                ' tests.And add a "clone_from: {}" to the profile'.format(
                     PROFILE_NAME, PROVIDER_NAME, BOOTABLE_BASE_BOX_NAME
                 )
             )

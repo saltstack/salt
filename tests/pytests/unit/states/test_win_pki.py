@@ -6,6 +6,7 @@
 """
 
 import pytest
+
 import salt.states.win_pki as win_pki
 from tests.support.mock import MagicMock, patch
 
@@ -59,7 +60,7 @@ def test_import_cert():
             assert win_pki.import_cert(**kwargs) == ret
         with patch.dict(win_pki.__opts__, {"test": True}):
             ret["comment"] = (
-                "Certificate '{}' will be imported into store:" " {}"
+                "Certificate '{}' will be imported into store: {}"
             ).format(THUMBPRINT, STORE_PATH)
             ret["result"] = None
             assert win_pki.import_cert(**kwargs) == ret
@@ -87,8 +88,8 @@ def test_remove_cert():
         with patch.dict(win_pki.__opts__, {"test": False}):
             assert win_pki.remove_cert(**kwargs) == ret
         with patch.dict(win_pki.__opts__, {"test": True}):
-            ret["comment"] = (
-                "Certificate '{}' will be removed from store:" " {}"
-            ).format(kwargs["thumbprint"], STORE_PATH)
+            ret["comment"] = ("Certificate '{}' will be removed from store: {}").format(
+                kwargs["thumbprint"], STORE_PATH
+            )
             ret["result"] = None
             assert win_pki.remove_cert(**kwargs) == ret

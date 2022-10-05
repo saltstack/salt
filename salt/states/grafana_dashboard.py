@@ -41,6 +41,7 @@ allowing users to manage their own custom rows.
 import copy
 
 import requests
+
 import salt.utils.json
 from salt.utils.dictdiffer import DictDiffer
 
@@ -135,7 +136,7 @@ def present(
             ret["changes"]["new"] = "Dashboard {} created.".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = ("Failed to create dashboard {}, response={}").format(
+            ret["comment"] = "Failed to create dashboard {}, response={}".format(
                 name, response
             )
         return ret
@@ -179,7 +180,7 @@ def present(
             )
         else:
             ret["result"] = False
-            ret["comment"] = ("Failed to update dashboard {}, response={}").format(
+            ret["comment"] = "Failed to update dashboard {}, response={}".format(
                 name, response
             )
         return ret

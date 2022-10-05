@@ -39,7 +39,8 @@ def __virtual__():
     else:
         return (
             False,
-            "The mongodb execution module cannot be loaded: the pymongo library is not available.",
+            "The mongodb execution module cannot be loaded: the pymongo library is not"
+            " available.",
         )
 
 

@@ -44,8 +44,9 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
         with patch.dict(rvm.__salt__, {"cmd.run_all": mock}):
             rvm.install()
             curl_cmd = (
-                "curl -Ls https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer "
-                "| bash -s stable"
+                "curl -Ls"
+                " https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer"
+                " | bash -s stable"
             )
             mock.assert_called_once_with(curl_cmd, runas=None, python_shell=True)
 

@@ -274,9 +274,9 @@ def only(name, hostnames):
 
     ret["result"] = __salt__["hosts.set_host"](name, new)
     if not ret["result"]:
-        ret["comment"] = (
-            "hosts.set_host failed to change {0}" + ' from "{1}" to "{2}"'
-        ).format(name, old, new)
+        ret["comment"] = 'hosts.set_host failed to change {} from "{}" to "{}"'.format(
+            name, old, new
+        )
         return ret
 
     ret["comment"] = 'successfully changed {} from "{}" to "{}"'.format(name, old, new)

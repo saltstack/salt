@@ -16,8 +16,6 @@ This external Pillar source can be configured in the master config file as such:
    ext_pillar:
      - hg: ssh://hg@example.co/user/repo
 """
-
-
 import copy
 import hashlib
 import logging
@@ -31,13 +29,9 @@ try:
 except ImportError:
     hglib = None
 
-
-__virtualname__ = "hg"
 log = logging.getLogger(__name__)
 
-
-# The default option values
-__opts__ = {}
+__virtualname__ = "hg"
 
 
 def __virtual__():
@@ -93,7 +87,7 @@ class Repo:
     """
 
     def __init__(self, repo_uri):
-        """ Initialize a hg repo (or open it if it already exists) """
+        """Initialize a hg repo (or open it if it already exists)"""
         self.repo_uri = repo_uri
         cachedir = os.path.join(__opts__["cachedir"], "hg_pillar")
         hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))

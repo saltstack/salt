@@ -35,7 +35,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         result = network.__virtual__()
         expected = (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead.",
+            "The network execution module cannot be loaded on Windows: use win_network"
+            " instead.",
         )
         self.assertEqual(result, expected)
 
@@ -657,7 +658,9 @@ nat should ignore this
                 self.assertEqual(ret, expected)
 
         mock_iproute = MagicMock(
-            return_value="8.8.8.8 via 10.10.10.1 dev eth0.1 src 10.10.10.10 uid 0\ncache"
+            return_value=(
+                "8.8.8.8 via 10.10.10.1 dev eth0.1 src 10.10.10.10 uid 0\ncache"
+            )
         )
         with patch.dict(network.__grains__, {"kernel": "Linux"}):
             with patch.dict(network.__salt__, {"cmd.run": mock_iproute}):
@@ -671,7 +674,9 @@ nat should ignore this
                 self.assertEqual(ret, expected)
 
         mock_iproute = MagicMock(
-            return_value="8.8.8.8 via 10.10.10.1 dev eth0:1 src 10.10.10.10 uid 0\ncache"
+            return_value=(
+                "8.8.8.8 via 10.10.10.1 dev eth0:1 src 10.10.10.10 uid 0\ncache"
+            )
         )
         with patch.dict(network.__grains__, {"kernel": "Linux"}):
             with patch.dict(network.__salt__, {"cmd.run": mock_iproute}):
@@ -685,7 +690,9 @@ nat should ignore this
                 self.assertEqual(ret, expected)
 
         mock_iproute = MagicMock(
-            return_value="8.8.8.8 via 10.10.10.1 dev lan-br0 src 10.10.10.10 uid 0\ncache"
+            return_value=(
+                "8.8.8.8 via 10.10.10.1 dev lan-br0 src 10.10.10.10 uid 0\ncache"
+            )
         )
         with patch.dict(network.__grains__, {"kernel": "Linux"}):
             with patch.dict(network.__salt__, {"cmd.run": mock_iproute}):

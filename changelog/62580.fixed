@@ -1,0 +1,1 @@
+Fixed missing parameters when cloning a VM with the proxmox salt-cloud driver

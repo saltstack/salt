@@ -12,6 +12,7 @@ Time sync do the following:
 import datetime
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
@@ -72,8 +73,7 @@ class MacTimezoneModuleTest(ModuleCase):
         # Test bad date format
         self.assertEqual(
             self.run_function("timezone.set_date", ["13/12/2014"]),
-            "ERROR executing 'timezone.set_date': "
-            "Invalid Date/Time Format: 13/12/2014",
+            "ERROR executing 'timezone.set_date': Invalid Date/Time Format: 13/12/2014",
         )
 
     @pytest.mark.slow_test
@@ -101,7 +101,7 @@ class MacTimezoneModuleTest(ModuleCase):
         # Test bad time format
         self.assertEqual(
             self.run_function("timezone.set_time", ["3:71"]),
-            "ERROR executing 'timezone.set_time': " "Invalid Date/Time Format: 3:71",
+            "ERROR executing 'timezone.set_time': Invalid Date/Time Format: 3:71",
         )
 
     @skipIf(
@@ -121,7 +121,7 @@ class MacTimezoneModuleTest(ModuleCase):
         # Test bad time zone
         self.assertEqual(
             self.run_function("timezone.set_zone", ["spongebob"]),
-            "ERROR executing 'timezone.set_zone': " "Invalid Timezone: spongebob",
+            "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob",
         )
 
     @skipIf(

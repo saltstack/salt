@@ -535,7 +535,7 @@ def migrate(name, target=""):
         try:
             client.cmd(target, "virt.seed_non_shared_migrate", [disks, True])
             jid = client.cmd_async(
-                origin_host, "virt.migrate_non_shared", [name, target]
+                origin_host, "virt.migrate", [name, target], copy_storage=all
             )
         except SaltClientError as client_error:
             return "Virtual machine {} could not be migrated: {}".format(
@@ -546,6 +546,6 @@ def migrate(name, target=""):
             "The migration of virtual machine {} to host {} has begun, "
             "and can be tracked via jid {}. The ``salt-run virt.query`` "
             "runner can also be used, the target VM will be shown as paused "
-            "until the migration is complete."
-        ).format(name, target, jid)
+            "until the migration is complete.".format(name, target, jid)
+        )
         __jid_event__.fire_event({"message": msg}, "progress")

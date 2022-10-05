@@ -105,9 +105,7 @@ def atq(tag=None):
                 timestr = " ".join(tmp[1:5])
                 job = tmp[6]
                 specs = (
-                    datetime.datetime(
-                        *(time.strptime(timestr, "%b %d, %Y " "%H:%M")[0:5])
-                    )
+                    datetime.datetime(*(time.strptime(timestr, "%b %d, %Y %H:%M")[0:5]))
                     .isoformat()
                     .split("T")
                 )
@@ -215,7 +213,12 @@ def atrm(*args):
             ret = {"jobs": {"removed": opts, "tag": None}}
     else:
         opts = list(
-            list(map(str, [i["job"] for i in atq()["jobs"] if str(i["job"]) in args],))
+            list(
+                map(
+                    str,
+                    [i["job"] for i in atq()["jobs"] if str(i["job"]) in args],
+                )
+            )
         )
         ret = {"jobs": {"removed": opts, "tag": None}}
 

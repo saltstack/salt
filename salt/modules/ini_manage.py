@@ -421,8 +421,7 @@ class _Ini(_Section):
             except OSError as exc:
                 if __opts__["test"] is False:
                     raise CommandExecutionError(
-                        "Unable to open file '{}'. "
-                        "Exception: {}".format(self.name, exc)
+                        "Unable to open file '{}'. Exception: {}".format(self.name, exc)
                     )
         if not inicontents:
             return
@@ -454,7 +453,7 @@ class _Ini(_Section):
                 outfile.writelines(salt.utils.data.encode(ini_gen_list))
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to write file '{}'. " "Exception: {}".format(self.name, exc)
+                "Unable to write file '{}'. Exception: {}".format(self.name, exc)
             )
 
     @staticmethod

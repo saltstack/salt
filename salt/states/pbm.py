@@ -124,10 +124,8 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions "
+            "of Python and pyVmomi present. See Issue #29537.",
         )
     return True
 
@@ -176,8 +174,7 @@ def default_vsan_policy_configured(name, policy):
         if policy.get("subprofiles"):
             if len(policy["subprofiles"]) > 1:
                 raise ArgumentValueError(
-                    "Multiple sub_profiles ({0}) are not "
-                    "supported in the input policy"
+                    "Multiple sub_profiles ({0}) are not supported in the input policy"
                 )
             subprofile = policy["subprofiles"][0]
             current_subprofile = current_policy["subprofiles"][0]
@@ -352,8 +349,9 @@ def storage_policies_configured(name, policies):
                         policy["name"], policy, service_instance=si
                     )
                     comments.append(
-                        "Created storage policy '{}' on "
-                        "vCenter '{}'".format(policy["name"], vcenter)
+                        "Created storage policy '{}' on vCenter '{}'".format(
+                            policy["name"], vcenter
+                        )
                     )
                     changes.append({"new": policy, "old": None})
                 log.trace(comments[-1])
@@ -432,9 +430,9 @@ def storage_policies_configured(name, policies):
                         service_instance=si,
                     )
                     comments.append(
-                        "Updated the storage policy '{}'"
-                        "in vCenter '{}'"
-                        "".format(policy["name"], vcenter)
+                        "Updated the storage policy '{}' in vCenter '{}'".format(
+                            policy["name"], vcenter
+                        )
                     )
                 log.info(comments[-1])
 
@@ -461,8 +459,9 @@ def storage_policies_configured(name, policies):
             else:
                 # No diffs found - no updates required
                 comments.append(
-                    "Storage policy '{}' is up to date. "
-                    "Nothing to be done.".format(policy["name"])
+                    "Storage policy '{}' is up to date. Nothing to be done.".format(
+                        policy["name"]
+                    )
                 )
         __salt__["vsphere.disconnect"](si)
     except CommandExecutionError as exc:

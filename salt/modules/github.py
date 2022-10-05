@@ -39,8 +39,8 @@ HAS_LIBS = False
 try:
     # pylint: disable=no-name-in-module
     import github
-    import github.PaginatedList
     import github.NamedUser
+    import github.PaginatedList
     from github.GithubException import UnknownObjectException
 
     # pylint: enable=no-name-in-module
@@ -87,8 +87,9 @@ def _get_config_value(profile, config_name):
     config_value = config.get(config_name)
     if config_value is None:
         raise CommandExecutionError(
-            "The '{}' parameter was not found in the '{}' "
-            "profile.".format(config_name, profile)
+            "The '{}' parameter was not found in the '{}' profile.".format(
+                config_name, profile
+            )
         )
 
     return config_value

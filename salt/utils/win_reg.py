@@ -35,9 +35,9 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
-    import win32gui
     import win32api
     import win32con
+    import win32gui
 
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -554,7 +554,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                 ret["vdata"] = "(value not set)"
                 ret["vtype"] = "REG_SZ"
             elif exc.winerror == 2:
-                msg = "Cannot find {} in {}\\{}" "".format(
+                msg = "Cannot find {} in {}\\{}".format(
                     local_vname, local_hive, local_key
                 )
                 log.trace(exc)

@@ -118,10 +118,9 @@ def present(name, passwd, admin=False, grants=None, **client_args):
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = (
-                    "User {} will be updated with the "
-                    "following changes:".format(name)
-                )
+                ret[
+                    "comment"
+                ] = "User {} will be updated with the following changes:".format(name)
                 for k, v in ret["changes"].items():
                     ret["comment"] += "\n{} => {}".format(k, v)
                 ret["changes"] = {}

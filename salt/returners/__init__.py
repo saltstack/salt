@@ -71,7 +71,15 @@ def get_returner_options(virtualname=None, ret=None, attrs=None, **kwargs):
     cfg = __salt__.get("config.option", __opts__)
 
     # browse the config for relevant options, store them in a dict
-    _options = dict(_options_browser(cfg, ret_config, defaults, virtualname, attrs,))
+    _options = dict(
+        _options_browser(
+            cfg,
+            ret_config,
+            defaults,
+            virtualname,
+            attrs,
+        )
+    )
 
     # override some values with relevant profile options
     _options.update(
@@ -128,7 +136,11 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     # Using ret_config to override the default configuration key
     ret_cfg = cfg("{}.{}".format(ret_config, virtualname), {})
 
-    override_default_cfg_key = "{}.{}.{}".format(ret_config, virtualname, attr_name,)
+    override_default_cfg_key = "{}.{}.{}".format(
+        ret_config,
+        virtualname,
+        attr_name,
+    )
     override_cfg_default = cfg(override_default_cfg_key)
 
     # Look for the configuration item in the override location

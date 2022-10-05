@@ -104,9 +104,11 @@ def import_cert(
                 cert_props["thumbprint"], store_path
             )
         else:
-            ret["comment"] = (
-                "Certificate '{}' unable to be imported into store: {}"
-            ).format(cert_props["thumbprint"], store_path)
+            ret[
+                "comment"
+            ] = "Certificate '{}' unable to be imported into store: {}".format(
+                cert_props["thumbprint"], store_path
+            )
     return ret
 
 

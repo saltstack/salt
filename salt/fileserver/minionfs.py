@@ -77,8 +77,7 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
         return fnd
     if os.path.basename(path) == "top.sls":
         log.debug(
-            "minionfs will NOT serve top.sls "
-            "for security reasons (path requested: %s)",
+            "minionfs will NOT serve top.sls for security reasons (path requested: %s)",
             path,
         )
         return fnd
@@ -196,8 +195,7 @@ def file_hash(load, fnd):
                     )
                 except ValueError:
                     log.debug(
-                        "Fileserver attempted to read incomplete cache file. "
-                        "Retrying."
+                        "Fileserver attempted to read incomplete cache file. Retrying."
                     )
                     file_hash(load, fnd)
                     return ret
@@ -207,9 +205,7 @@ def file_hash(load, fnd):
                     return ret
         # Can't use Python select() because we need Windows support
         except os.error:
-            log.debug(
-                "Fileserver encountered lock when reading cache file. " "Retrying."
-            )
+            log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             file_hash(load, fnd)
             return ret
 

@@ -48,7 +48,7 @@ Tested on:
 """
 
 # TODO: look at event descriptions here:
-#       https://docs.saltstack.com/en/latest/topics/cloud/reactor.html
+#       https://docs.saltproject.io/en/latest/topics/cloud/reactor.html
 # TODO: support reboot? salt-cloud -a reboot vm1 vm2 vm2
 # TODO: by using metadata tags in the libvirt XML we could make provider only
 #       manage domains that we actually created
@@ -176,7 +176,7 @@ def list_nodes(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called " "with -f or --function."
+            "The list_nodes function must be called with -f or --function."
         )
 
     providers = __opts__.get("providers", {})
@@ -212,7 +212,7 @@ def list_nodes_full(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called " "with -f or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     return list_nodes(call)
@@ -224,7 +224,7 @@ def list_nodes_select(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_select function must be called " "with -f or --function."
+            "The list_nodes_select function must be called with -f or --function."
         )
 
     selection = __opts__.get("query.selection")
@@ -233,7 +233,11 @@ def list_nodes_select(call=None):
         raise SaltCloudSystemExit("query.selection not found in /etc/salt/cloud")
 
     # TODO: somewhat doubt the implementation of cloud.list_nodes_select
-    return salt.utils.cloud.list_nodes_select(list_nodes_full(), selection, call,)
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(),
+        selection,
+        call,
+    )
 
 
 def to_ip_addr_type(addr_type):
@@ -594,7 +598,7 @@ def destroy(name, call=None):
 
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     found = []

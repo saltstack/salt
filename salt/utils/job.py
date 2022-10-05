@@ -140,7 +140,7 @@ def store_job(opts, load, event=None, mminion=None):
         mminion.returners[fstr](load)
     except Exception:  # pylint: disable=broad-except
         log.critical(
-            "The specified '%s' returner threw a stack trace", job_cache, exc_info=True,
+            "The specified '%s' returner threw a stack trace", job_cache, exc_info=True
         )
 
     if opts.get("job_cache_store_endtime") and updateetfstr in mminion.returners:

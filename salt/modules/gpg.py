@@ -35,6 +35,7 @@ LETTER_TRUST_DICT = {
     "f": "Fully Trusted",
     "m": "Marginally Trusted",
     "u": "Ultimately Trusted",
+    "r": "Revoked",
     "-": "Unknown",
 }
 
@@ -97,7 +98,8 @@ def __virtual__():
         if HAS_GPG_BINDINGS
         else (
             False,
-            "The gpg execution module cannot be loaded; the gnupg python module is not installed.",
+            "The gpg execution module cannot be loaded; the gnupg python module is not"
+            " installed.",
         )
     )
 
@@ -532,7 +534,7 @@ def delete_key(
         Whether to use a passphrase with the signing key. Passphrase is received
         from Pillar.
 
-        .. versionadded: 3003
+        .. versionadded:: 3003
 
     CLI Example:
 
@@ -829,7 +831,7 @@ def export_key(
         Whether to use a passphrase with the signing key. Passphrase is received
         from Pillar.
 
-        .. versionadded: 3003
+        .. versionadded:: 3003
 
     CLI Example:
 

@@ -63,7 +63,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The pw_user execution module cannot be loaded: the pwd python module is not available or the system is not FreeBSD.",
+        "The pw_user execution module cannot be loaded: the pwd python module is not"
+        " available or the system is not FreeBSD.",
     )
 
 
@@ -196,7 +197,7 @@ def delete(name, remove=False, force=False):
     """
     if salt.utils.data.is_true(force):
         log.error(
-            "pw userdel does not support force-deleting user while " "user is logged in"
+            "pw userdel does not support force-deleting user while user is logged in"
         )
     cmd = ["pw", "userdel"]
     if remove:
@@ -502,7 +503,7 @@ def list_users():
 
         salt '*' user.list_users
     """
-    return sorted([user.pw_name for user in pwd.getpwall()])
+    return sorted(user.pw_name for user in pwd.getpwall())
 
 
 def rename(name, new_name):

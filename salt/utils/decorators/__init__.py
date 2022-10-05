@@ -20,7 +20,6 @@ from salt.exceptions import (
     SaltConfigurationError,
     SaltInvocationError,
 )
-from salt.log import LOG_LEVELS
 
 IS_WINDOWS = False
 if getattr(sys, "getwindowsversion", False):
@@ -709,8 +708,8 @@ class _WithDeprecated(_DeprecationDecorator):
                         )
                     else:
                         msg.append(
-                            'The function "{f_name}" is using its deprecated version and will '
-                            'expire in version "{version_name}".'.format(
+                            'The function "{f_name}" is using its deprecated version'
+                            ' and will expire in version "{version_name}".'.format(
                                 f_name=func_path, version_name=self._exp_version_name
                             )
                         )
@@ -720,12 +719,13 @@ class _WithDeprecated(_DeprecationDecorator):
                     if "_" + self._orig_f_name == self._function.__name__:
                         msg = [
                             msg_patt.format(f_name=self._orig_f_name),
-                            "Please turn off its deprecated version in the configuration",
+                            "Please turn off its deprecated version in the"
+                            " configuration",
                         ]
                     else:
                         msg = [
-                            'Although function "{f_name}" is called, an alias "{f_alias}" '
-                            "is configured as its deprecated version.".format(
+                            'Although function "{f_name}" is called, an alias'
+                            ' "{f_alias}" is configured as its deprecated version.'.format(
                                 f_name=self._orig_f_name,
                                 f_alias=self._with_name or self._orig_f_name,
                             ),

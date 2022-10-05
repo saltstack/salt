@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.mac_keychain as keychain
 from tests.support.mock import MagicMock, call, patch
 
@@ -241,7 +242,9 @@ def test_install_cert_salt_fileserver():
         list_mock.assert_called_once_with("/Library/Keychains/System.keychain")
         friendly_mock.assert_called_once_with("/tmp/path/to/cert.p12", "passw0rd")
         install_mock.assert_called_once_with(
-            "/tmp/path/to/cert.p12", "passw0rd", "/Library/Keychains/System.keychain",
+            "/tmp/path/to/cert.p12",
+            "passw0rd",
+            "/Library/Keychains/System.keychain",
         )
         assert out == expected
 
@@ -253,7 +256,9 @@ def test_installed_cert_hash_different():
     """
     expected = {
         "changes": {"installed": "Friendly Name", "uninstalled": "Friendly Name"},
-        "comment": "Found a certificate with the same name but different hash, removing it.\n",
+        "comment": (
+            "Found a certificate with the same name but different hash, removing it.\n"
+        ),
         "name": "/path/to/cert.p12",
         "result": True,
     }

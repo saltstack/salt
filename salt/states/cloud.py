@@ -114,21 +114,24 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
     if info and "Error" not in info:
         ret["changes"] = info
         ret["result"] = True
-        ret["comment"] = (
-            "Created instance {} using provider {} and the following options: {}"
-        ).format(name, cloud_provider, pprint.pformat(kwargs))
+        ret[
+            "comment"
+        ] = "Created instance {} using provider {} and the following options: {}".format(
+            name, cloud_provider, pprint.pformat(kwargs)
+        )
     elif info and "Error" in info:
         ret["result"] = False
         ret["comment"] = "Failed to create instance {} using profile {}: {}".format(
-            name, profile, info["Error"],
+            name,
+            profile,
+            info["Error"],
         )
     else:
         ret["result"] = False
         ret["comment"] = (
-            "Failed to create instance {}"
-            " using profile {},"
-            " please check your configuration"
-        ).format(name, profile)
+            "Failed to create instance {} using profile {}, "
+            "please check your configuration".format(name, profile)
+        )
     return ret
 
 
@@ -184,8 +187,9 @@ def absent(name, onlyif=None, unless=None):
         ret["comment"] = "Destroyed instance {}".format(name)
     elif "Error" in info:
         ret["result"] = False
-        ret["comment"] = ("Failed to destroy instance {}: {}").format(
-            name, info["Error"],
+        ret["comment"] = "Failed to destroy instance {}: {}".format(
+            name,
+            info["Error"],
         )
     else:
         ret["result"] = False
@@ -261,7 +265,10 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
     if info and not error:
         node_info = info.get(name)
         ret["result"] = True
-        default_msg = "Created instance {} using profile {}".format(name, profile,)
+        default_msg = "Created instance {} using profile {}".format(
+            name,
+            profile,
+        )
         # some providers support changes
         if "changes" in node_info:
             ret["changes"] = node_info["changes"]
@@ -271,13 +278,16 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
             ret["comment"] = default_msg
     elif error:
         ret["result"] = False
-        ret["comment"] = ("Failed to create instance {} using profile {}: {}").format(
-            name, profile, "{}\n{}\n".format(main_error, name_error).strip(),
+        ret["comment"] = "Failed to create instance {} using profile {}: {}".format(
+            name,
+            profile,
+            "{}\n{}\n".format(main_error, name_error).strip(),
         )
     else:
         ret["result"] = False
         ret["comment"] = "Failed to create instance {} using profile {}".format(
-            name, profile,
+            name,
+            profile,
         )
     return ret
 
@@ -413,9 +423,9 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
 
     if name in volumes and not volumes[name]["attachments"]:
         volume = volumes[name]
-        ret["comment"] = (
-            "Volume {name} is not currently attached to anything."
-        ).format(**volumes[name])
+        ret["comment"] = "Volume {name} is not currently attached to anything.".format(
+            **volumes[name]
+        )
         ret["result"] = True
         return ret
     elif name not in volumes:

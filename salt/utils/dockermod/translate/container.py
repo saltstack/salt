@@ -137,8 +137,7 @@ def binds(val, **kwargs):  # pylint: disable=unused-argument
                 val = helpers.split(val)
             except AttributeError:
                 raise SaltInvocationError(
-                    "'{}' is not a dictionary or list of bind "
-                    "definitions".format(val)
+                    "'{}' is not a dictionary or list of bind definitions".format(val)
                 )
     return val
 
@@ -158,8 +157,7 @@ def blkio_weight_device(val, **kwargs):  # pylint: disable=unused-argument
             item["Weight"] = int(item["Weight"])
         except (TypeError, ValueError):
             raise SaltInvocationError(
-                "Weight '{Weight}' for path '{Path}' is not an "
-                "integer".format(**item)
+                "Weight '{Weight}' for path '{Path}' is not an integer".format(**item)
             )
     return val
 
@@ -390,13 +388,15 @@ def port_bindings(val, **kwargs):
             elif num_bind_parts == 2:
                 if bind_parts[0] == "":
                     raise SaltInvocationError(
-                        "Empty host port in port binding definition "
-                        "'{}'".format(binding)
+                        "Empty host port in port binding definition '{}'".format(
+                            binding
+                        )
                     )
                 if bind_parts[1] == "":
                     raise SaltInvocationError(
-                        "Empty container port in port binding definition "
-                        "'{}'".format(binding)
+                        "Empty container port in port binding definition '{}'".format(
+                            binding
+                        )
                     )
                 container_port, _, proto = bind_parts[1].partition("/")
                 try:

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.platform
 
 from . import normalize_ret
@@ -25,12 +26,10 @@ def test_watch_in(state, state_tree):
     watch = "test_|-watch_states_|-watch_states_|-succeed_without_changes"
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret[changes]["__run_num__"] == 0
-        assert (
-            ret[changes]["changes"]["testing"]["new"] == "Something pretended to change"
-        )
-        assert ret[watch]["__run_num__"] == 2
-        assert ret[watch]["comment"] == "Watch statement fired."
+        assert ret[changes].full_return["__run_num__"] == 0
+        assert ret[changes].changes["testing"]["new"] == "Something pretended to change"
+        assert ret[watch].full_return["__run_num__"] == 2
+        assert ret[watch].comment == "Watch statement fired."
 
 
 def test_watch_in_failure(state, state_tree):
@@ -50,9 +49,9 @@ def test_watch_in_failure(state, state_tree):
     watch = "test_|-watch_states_|-watch_states_|-succeed_without_changes"
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret[fail]["result"] is False
+        assert ret[fail].result is False
         assert (
-            ret[watch]["comment"]
+            ret[watch].comment
             == "One or more requisite failed: requisite.return_changes"
         )
 
@@ -165,9 +164,7 @@ def test_requisites_watch_any(state, state_tree):
     }
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret)
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_return_non_empty_state_type()
+        result = normalize_ret(ret.raw)
         assert result == expected_result
 
 
@@ -195,7 +192,7 @@ def test_requisites_watch_any_fail(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert "One or more requisite failed" in ret["cmd_|-A_|-true_|-wait"]["comment"]
+        assert "One or more requisite failed" in ret["cmd_|-A_|-true_|-wait"].comment
 
 
 def test_issue_30820_requisite_in_match_by_name(state, state_tree):
@@ -218,4 +215,4 @@ def test_issue_30820_requisite_in_match_by_name(state, state_tree):
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert bar_state in ret
-        assert ret[bar_state]["comment"] == 'Command "echo bar" run'
+        assert ret[bar_state].comment == 'Command "echo bar" run'

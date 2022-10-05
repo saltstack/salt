@@ -16,18 +16,16 @@ from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 # pylint: disable=W0611
 try:
     import libcloud
-    from libcloud.compute.types import Provider, NodeState
-    from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment
+    from libcloud.compute.providers import get_driver
+    from libcloud.compute.types import NodeState, Provider
 
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple(
-        [
-            int(part)
-            for part in libcloud.__version__.replace("-", ".")
-            .replace("rc", ".")
-            .split(".")[:3]
-        ]
+        int(part)
+        for part in libcloud.__version__.replace("-", ".")
+        .replace("rc", ".")
+        .split(".")[:3]
     )
 
 except ImportError:
@@ -57,8 +55,10 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     if LIBCLOUD_VERSION_INFO >= reqver:
         return libcloud.__version__
 
-    errormsg = "Your version of libcloud is {}. salt-cloud requires >= libcloud {}".format(
-        libcloud.__version__, ".".join([str(num) for num in reqver])
+    errormsg = (
+        "Your version of libcloud is {}. salt-cloud requires >= libcloud {}".format(
+            libcloud.__version__, ".".join([str(num) for num in reqver])
+        )
     )
     if why:
         errormsg += " for {}".format(why)
@@ -219,7 +219,10 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(size.id), str(size.name),):
+        if vm_size and str(vm_size) in (
+            str(size.id),
+            str(size.name),
+        ):
             return size
     raise SaltCloudNotFound(
         "The specified size, '{}', could not be found.".format(vm_size)
@@ -248,7 +251,7 @@ def destroy(name, conn=None, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
@@ -336,7 +339,7 @@ def reboot(name, conn=None):
         __utils__["cloud.fire_event"](
             "event",
             "{} has been rebooted".format(name),
-            "salt-cloud" "salt/cloud/{}/rebooting".format(name),
+            "salt/cloud/{}/rebooting".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -409,7 +412,9 @@ def list_nodes_select(conn=None, call=None):
         conn = get_conn()  # pylint: disable=E0602
 
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(conn, "function"), __opts__["query.selection"], call,
+        list_nodes_full(conn, "function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

@@ -62,7 +62,7 @@ from saltstack.com:
 
 * `SaltStack Download Area`__
 
-.. __: https://repo.saltstack.com/windows/
+.. __: https://repo.saltproject.io/windows/
 
 .. _new-pywinrm:
 

@@ -14,6 +14,7 @@ import errno
 import fnmatch
 import functools
 import inspect
+import io
 import json
 import logging
 import os
@@ -33,6 +34,10 @@ from contextlib import contextmanager
 
 import attr
 import pytest
+from pytestshellutils.exceptions import ProcessFailed
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import ProcessResult
+
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.utils.files
@@ -40,53 +45,49 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from saltfactories.exceptions import FactoryFailure as ProcessFailed
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
 from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
-
-HAS_SYMLINKS = None
-
 
 PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
 )
-PRE_PYTEST_SKIP = pytest.mark.skipif(
-    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
 ON_PY35 = sys.version_info < (3, 6)
 
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
+
+@functools.lru_cache(maxsize=1, typed=False)
 def no_symlinks():
     """
     Check if git is installed and has symlinks enabled in the configuration.
     """
-    global HAS_SYMLINKS
-    if HAS_SYMLINKS is not None:
-        return not HAS_SYMLINKS
-    output = ""
     try:
-        output = subprocess.Popen(
+        ret = subprocess.run(
             ["git", "config", "--get", "core.symlinks"],
-            cwd=RUNTIME_VARS.TMP,
+            shell=False,
+            universal_newlines=True,
+            cwd=RUNTIME_VARS.CODE_DIR,
             stdout=subprocess.PIPE,
-        ).communicate()[0]
+            check=False,
+        )
+        if ret.returncode == 0 and ret.stdout.strip() == "true":
+            return False
+        return True
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-    except subprocess.CalledProcessError:
-        # git returned non-zero status
-        pass
-    HAS_SYMLINKS = False
-    if output.strip() == "true":
-        HAS_SYMLINKS = True
-    return not HAS_SYMLINKS
+    return True
 
 
 def destructiveTest(caller):
@@ -104,8 +105,8 @@ def destructiveTest(caller):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@destructiveTest`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.destructive_test`.",
+        "Please stop using `@destructiveTest`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.destructive_test`.",
         stacklevel=3,
     )
     setattr(caller, "__destructive_test__", True)
@@ -142,8 +143,8 @@ def expensiveTest(caller):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.expensive_test`.",
+        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead"
+        " use `@pytest.mark.expensive_test`.",
         stacklevel=3,
     )
     setattr(caller, "__expensive_test__", True)
@@ -263,7 +264,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
                     teardown()
-                backoff_time = attempt ** 2
+                backoff_time = attempt**2
                 log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
         return cls
@@ -496,7 +497,7 @@ class ForceImportErrorOn:
     def patch_import_function(self):
         self.patcher.start()
 
-    def restore_import_funtion(self):
+    def restore_import_function(self):
         self.patcher.stop()
 
     def __fake_import__(
@@ -525,7 +526,7 @@ class ForceImportErrorOn:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.restore_import_funtion()
+        self.restore_import_function()
 
 
 class MockWraps:
@@ -578,8 +579,8 @@ def requires_network(only_local_network=False):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_network`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_network`.",
+        "Please stop using `@requires_network`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_network`.",
         stacklevel=3,
     )
 
@@ -739,7 +740,7 @@ def with_system_user(
                     return func(cls, username)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -833,7 +834,7 @@ def with_system_group(group, on_existing="delete", delete=True):
                     return func(cls, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -957,7 +958,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     return func(cls, username, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -1181,8 +1182,8 @@ def requires_salt_states(*names):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_salt_states`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_salt_states`.",
+        "Please stop using `@requires_salt_states`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_states`.",
         stacklevel=3,
     )
     not_available = _check_required_sminion_attributes("states", *names)
@@ -1199,8 +1200,8 @@ def requires_salt_modules(*names):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_salt_modules`.",
+        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_modules`.",
         stacklevel=3,
     )
     not_available = _check_required_sminion_attributes("functions", *names)
@@ -1212,8 +1213,8 @@ def requires_salt_modules(*names):
 def skip_if_binaries_missing(*binaries, **kwargs):
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.skip_if_binaries_missing`.",
+        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date},"
+        " and instead use `@pytest.mark.skip_if_binaries_missing`.",
         stacklevel=3,
     )
     import salt.utils.path
@@ -1248,8 +1249,8 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 def skip_if_not_root(func):
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.skip_if_not_root`.",
+        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.skip_if_not_root`.",
         stacklevel=3,
     )
     setattr(func, "__skip_if_not_root__", True)
@@ -1388,8 +1389,10 @@ def generate_random_name(prefix, size=6):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
-        "'generate_random_name' will be removed after {{date}}".format(prefix),
+        "Please replace your call 'generate_random_name({0})' with 'random_string({0},"
+        " lowercase=False)' as 'generate_random_name' will be removed after {{date}}".format(
+            prefix
+        ),
         stacklevel=3,
     )
     return random_string(prefix, size=size, lowercase=False)
@@ -1511,8 +1514,9 @@ class Webserver:
         if self.web_root is None:
             raise RuntimeError("Webserver instance has not been started")
         err_msg = (
-            "invalid path, must be either a relative path or a path "
-            "within {}".format(self.root)
+            "invalid path, must be either a relative path or a path within {}".format(
+                self.root
+            )
         )
         try:
             relpath = (
@@ -1529,7 +1533,7 @@ class Webserver:
         Starts the webserver
         """
         if self.port is None:
-            self.port = get_unused_localhost_port()
+            self.port = ports.get_unused_localhost_port()
 
         self.web_root = "http{}://127.0.0.1:{}".format(
             "s" if self.ssl_opts else "", self.port
@@ -1556,6 +1560,13 @@ class Webserver:
         """
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stop()
 
 
 class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
@@ -1660,6 +1671,10 @@ class VirtualEnv:
     venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
+    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
+    setuptools_requirement = attr.ib(
+        default="setuptools!=50.*,!=51.*,!=52.*", repr=False
+    )
     environ = attr.ib(init=False, repr=False)
     venv_python = attr.ib(init=False, repr=False)
     venv_bin_dir = attr.ib(init=False, repr=False)
@@ -1699,16 +1714,25 @@ class VirtualEnv:
     def install(self, *args, **kwargs):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
 
+    def uninstall(self, *args, **kwargs):
+        return self.run(
+            self.venv_python, "-m", "pip", "uninstall", "-y", *args, **kwargs
+        )
+
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
-        kwargs.setdefault("cwd", str(self.venv_dir))
+        kwargs.setdefault("cwd", tempfile.gettempdir())
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        kwargs.setdefault("env", self.environ)
-        proc = subprocess.run(args, check=False, **kwargs)
+        env = kwargs.pop("env", None)
+        if env:
+            env = self.environ.copy().update(env)
+        else:
+            env = self.environ
+        proc = subprocess.run(args, check=False, env=env, **kwargs)
         ret = ProcessResult(
-            exitcode=proc.returncode,
+            returncode=proc.returncode,
             stdout=proc.stdout,
             stderr=proc.stderr,
             cmdline=proc.args,
@@ -1719,11 +1743,7 @@ class VirtualEnv:
                 proc.check_returncode()
             except subprocess.CalledProcessError:
                 raise ProcessFailed(
-                    "Command failed return code check",
-                    cmdline=proc.args,
-                    stdout=proc.stdout,
-                    stderr=proc.stderr,
-                    exitcode=proc.returncode,
+                    "Command failed return code check", process_result=proc
                 )
         return ret
 
@@ -1761,14 +1781,16 @@ class VirtualEnv:
         except AttributeError:
             return sys.executable
 
-    def run_code(self, code_string, **kwargs):
+    def run_code(self, code_string, python=None, **kwargs):
         if code_string.startswith("\n"):
             code_string = code_string[1:]
         code_string = textwrap.dedent(code_string).rstrip()
         log.debug(
             "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
         )
-        return self.run(str(self.venv_python), "-c", code_string, **kwargs)
+        if python is None:
+            python = str(self.venv_python)
+        return self.run(python, "-c", code_string, **kwargs)
 
     def get_installed_packages(self):
         data = {}
@@ -1778,13 +1800,18 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        sminion = create_sminion()
-        sminion.functions.virtualenv.create(
-            str(self.venv_dir),
-            python=self.get_real_python(),
-            system_site_packages=self.system_site_packages,
-        )
-        self.install("-U", "pip", "setuptools!=50.*,!=51.*,!=52.*")
+        virtualenv = shutil.which("virtualenv")
+        if not virtualenv:
+            pytest.fail("'virtualenv' binary not found")
+        cmd = [
+            virtualenv,
+            "--python={}".format(self.get_real_python()),
+        ]
+        if self.system_site_packages:
+            cmd.append("--system-site-packages")
+        cmd.append(str(self.venv_dir))
+        self.run(*cmd, cwd=str(self.venv_dir.parent))
+        self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
 
@@ -1792,13 +1819,19 @@ class VirtualEnv:
 class SaltVirtualEnv(VirtualEnv):
     """
     This is a VirtualEnv implementation which has this salt checkout installed in it
+    using static requirements
     """
-
-    system_site_packages = attr.ib(init=False, default=True)
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
-        self.install("--no-use-pep517", RUNTIME_VARS.CODE_DIR)
+        self.install(RUNTIME_VARS.CODE_DIR)
+
+    def install(self, *args, **kwargs):
+        env = self.environ.copy()
+        env.update(kwargs.pop("env", None) or {})
+        env["USE_STATIC_REQUIREMENTS"] = "1"
+        kwargs["env"] = env
+        return super().install(*args, **kwargs)
 
 
 @contextmanager
@@ -1850,3 +1883,85 @@ def get_virtualenv_binary_path():
         # We're not running inside a virtualenv
         virtualenv_binary = None
     return virtualenv_binary
+
+
+class CaptureOutput:
+    def __init__(self, capture_stdout=True, capture_stderr=True):
+        if capture_stdout:
+            self._stdout = io.StringIO()
+        else:
+            self._stdout = None
+        if capture_stderr:
+            self._stderr = io.StringIO()
+        else:
+            self._stderr = None
+        self._original_stdout = None
+        self._original_stderr = None
+
+    def __enter__(self):
+        if self._stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = self._stdout
+        if self._stderr:
+            self._original_stderr = sys.stderr
+            sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        if self._stdout:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+        if self._stderr:
+            sys.stderr = self._original_stderr
+            self._original_stderr = None
+
+    @property
+    def stdout(self):
+        if self._stdout is None:
+            return
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        if self._stderr is None:
+            return
+        self._stderr.seek(0)
+        return self._stderr.read()
+
+
+class Keys:
+    """
+    Temporary ssh key pair
+    """
+
+    def __init__(self, tmp_path_factory):
+        """
+        tmp_path_factory is the session scoped pytest fixture of the same name
+        """
+        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
+        self.priv_path = priv_path
+
+    def generate(self):
+        subprocess.run(
+            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
+        )
+
+    @property
+    def pub_path(self):
+        return self.priv_path.with_name("{}.pub".format(self.priv_path.name))
+
+    @property
+    def pub(self):
+        return self.pub_path.read_text()
+
+    @property
+    def priv(self):
+        return self.priv_path.read_text()
+
+    def __enter__(self):
+        self.generate()
+        return self
+
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)

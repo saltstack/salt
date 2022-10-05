@@ -295,8 +295,9 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                     if LooseVersion(OpenSSL.__version__) == LooseVersion("0.14"):
                         log.exception(err)
                         self.skipTest(
-                            "Encountered a package conflict. OpenSSL version 0.14 cannot be used with "
-                            'the "junos-eznc" pip package on this test. Skipping.'
+                            "Encountered a package conflict. OpenSSL version 0.14"
+                            ' cannot be used with the "junos-eznc" pip package on this'
+                            " test. Skipping."
                         )
                     result = {}
 

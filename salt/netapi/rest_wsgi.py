@@ -236,9 +236,7 @@ def dispatch(environ):
     method = environ["REQUEST_METHOD"].upper()
 
     if method == "GET":
-        return (
-            "They found me. I don't know how, but they found me. " "Run for it, Marty!"
-        )
+        return "They found me. I don't know how, but they found me. Run for it, Marty!"
     elif method == "POST":
         data = get_json(environ)
         return run_chunk(environ, data)

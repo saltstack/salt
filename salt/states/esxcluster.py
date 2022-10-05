@@ -82,7 +82,8 @@ def __virtual__():
 
         return (
             False,
-            "State module did not load: Incompatible versions of Python and pyVmomi present. See Issue #29537.",
+            "State module did not load: Incompatible versions of Python and pyVmomi"
+            " present. See Issue #29537.",
         )
     return True
 
@@ -505,9 +506,8 @@ def licenses_configured(name, licenses=None):
             if existing_license["capacity"] <= existing_license["used"]:
                 # License is already fully used
                 comments.append(
-                    "Cannot assign license '{}' to cluster '{}'. No free capacity available.".format(
-                        license_name, display_name
-                    )
+                    "Cannot assign license '{}' to cluster '{}'. No free capacity"
+                    " available.".format(license_name, display_name)
                 )
                 log.error(comments[-1])
                 has_errors = True

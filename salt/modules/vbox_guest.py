@@ -23,7 +23,8 @@ def __virtual__():
     if __grains__.get("kernel", "") not in ("Linux",):
         return (
             False,
-            "The vbox_guest execution module failed to load: only available on Linux systems.",
+            "The vbox_guest execution module failed to load: only available on Linux"
+            " systems.",
         )
     return __virtualname__
 
@@ -330,7 +331,7 @@ def grant_access_to_shared_folders_to(name, users=None):
                     "".format(_shared_folders_group)
                 )
         else:
-            return "Cannot replace members of the '{}' group." "".format(
+            return "Cannot replace members of the '{}' group.".format(
                 _shared_folders_group
             )
 

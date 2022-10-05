@@ -170,7 +170,7 @@ def _text(username, password, **kwargs):
                 this_username = fields[username_field]
             except IndexError:
                 log.error(
-                    "salt.auth.file: username field (%s) does not exist " "in file %s",
+                    "salt.auth.file: username field (%s) does not exist in file %s",
                     username_field,
                     filename,
                 )
@@ -179,7 +179,7 @@ def _text(username, password, **kwargs):
                 this_password = fields[password_field]
             except IndexError:
                 log.error(
-                    "salt.auth.file: password field (%s) does not exist " "in file %s",
+                    "salt.auth.file: password field (%s) does not exist in file %s",
                     password_field,
                     filename,
                 )
@@ -252,7 +252,7 @@ def _htfile(username, password, **kwargs):
         kwargs["passlib_version"] = passlib.__version__
     except ImportError:
         log.error(
-            "salt.auth.file: The python-passlib library is required " "for %s filetype",
+            "salt.auth.file: The python-passlib library is required for %s filetype",
             filetype,
         )
         return False

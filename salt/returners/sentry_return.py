@@ -63,8 +63,7 @@ def __virtual__():
     if not has_raven:
         return (
             False,
-            "Could not import sentry returner; "
-            "raven python client is not installed.",
+            "Could not import sentry returner; raven python client is not installed.",
         )
     return __virtualname__
 
@@ -113,11 +112,9 @@ def _get_message(ret):
         if isinstance(kwargs, dict):
             kwarg_string = " ".join(
                 sorted(
-                    [
-                        "{}={}".format(k, v)
-                        for k, v in kwargs.items()
-                        if not k.startswith("_")
-                    ]
+                    "{}={}".format(k, v)
+                    for k, v in kwargs.items()
+                    if not k.startswith("_")
                 )
             )
     return "salt func: {fun} {argstr} {kwargstr}".format(

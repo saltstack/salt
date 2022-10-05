@@ -171,7 +171,8 @@ def create_event(message_type=None, routing_key="everybody", **kwargs):
         "RECOVERY",
     ]:
         raise SaltInvocationError(
-            '"message_type" must be INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, or RECOVERY.'
+            '"message_type" must be INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, or'
+            " RECOVERY."
         )
 
     data["message_type"] = message_type

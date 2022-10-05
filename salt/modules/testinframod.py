@@ -79,28 +79,32 @@ def _get_method_result(module_, module_instance, method_name, method_arg=None):
             method_obj = getattr(module_instance, method_name)
         except AttributeError:
             raise InvalidArgumentError(
-                "The {} module does not have any "
-                "property or method named {}".format(module_, method_name)
+                "The {} module does not have any property or method named {}".format(
+                    module_, method_name
+                )
             )
     if isinstance(method_obj, property):
         return method_obj.fget(module_instance)
     elif isinstance(method_obj, (types.MethodType, types.FunctionType)):
         if not method_arg:
             raise InvalidArgumentError(
-                "{} is a method of the {} module. An "
-                "argument dict is required.".format(method_name, module_)
+                "{} is a method of the {} module. An argument dict is required.".format(
+                    method_name, module_
+                )
             )
         try:
             return getattr(module_instance, method_name)(method_arg["parameter"])
         except KeyError:
             raise InvalidArgumentError(
-                "The argument dict supplied has no "
-                'key named "parameter": {}'.format(method_arg)
+                'The argument dict supplied has no key named "parameter": {}'.format(
+                    method_arg
+                )
             )
         except AttributeError:
             raise InvalidArgumentError(
-                "The {} module does not have any "
-                "property or method named {}".format(module_, method_name)
+                "The {} module does not have any property or method named {}".format(
+                    module_, method_name
+                )
             )
     else:
         return method_obj
@@ -133,8 +137,9 @@ def _apply_assertion(expected, result):
                 comparison = re.search
             else:
                 raise InvalidArgumentError(
-                    "Comparison {} is not a valid "
-                    "selection.".format(expected.get("comparison"))
+                    "Comparison {} is not a valid selection.".format(
+                        expected.get("comparison")
+                    )
                 )
         except KeyError:
             log.exception(
@@ -206,7 +211,7 @@ def _copy_function(module_name, name=None):
             log.debug("Retrieved module is %s", mod.__dict__)
         except NotImplementedError:
             log.exception(
-                "The %s module is not supported for this backend and/or " "platform.",
+                "The %s module is not supported for this backend and/or platform.",
                 module_name,
             )
             success = False

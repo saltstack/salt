@@ -8,7 +8,9 @@ import os
 HAS_GENTOOLKIT = False
 
 try:
-    from gentoolkit.eclean import search, clean, cli, exclude as excludemod
+    from gentoolkit.eclean import clean, cli
+    from gentoolkit.eclean import exclude as excludemod
+    from gentoolkit.eclean import search
 
     HAS_GENTOOLKIT = True
 except ImportError:
@@ -26,8 +28,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The gentoolkitmod execution module cannot be loaded: "
-        "either the system is not Gentoo or the gentoolkit.eclean python module not available",
+        "The gentoolkitmod execution module cannot be loaded: either the system is not"
+        " Gentoo or the gentoolkit.eclean python module not available",
     )
 
 

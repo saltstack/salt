@@ -18,7 +18,8 @@ RESULT_CODES = [
     "Host {0} is already part of another cluster",
     "Volume on {0} conflicts with existing volumes",
     "UUID of {0} is the same as local uuid",
-    '{0} responded with "unknown peer". This could happen if {0} doesn\'t have localhost defined',
+    '{0} responded with "unknown peer". This could happen if {0} doesn\'t have'
+    " localhost defined",
     "Failed to add peer. Information on {0}'s logs",
     "Cluster quorum is not met. Changing peers is not allowed.",
     "Failed to update list of missed snapshots from {0}",
@@ -72,7 +73,9 @@ def peered(name):
         # it from the user.
         this_ips = set(salt.utils.network.ip_addrs())
         this_ips.update(salt.utils.network.ip_addrs6())
-        if this_ips.intersection(name_ips):
+        if any(
+            salt.utils.network.is_loopback(addr) for addr in name_ips
+        ) or this_ips.intersection(name_ips):
             ret["result"] = True
             ret["comment"] = "Peering with localhost is not needed"
             return ret

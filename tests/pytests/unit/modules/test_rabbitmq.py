@@ -6,6 +6,7 @@
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
@@ -26,7 +27,10 @@ def test_list_users_rabbitmq2():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": "Listing users ...\nguest\t[administrator, user]\njustAnAdmin\t[administrator]\n",
+            "stdout": (
+                "Listing users ...\nguest\t[administrator,"
+                " user]\njustAnAdmin\t[administrator]\n"
+            ),
             "stderr": "",
         }
     )
@@ -63,7 +67,8 @@ def test_list_users_with_warning_rabbitmq2():
     """
     rtn_stdout = "\n".join(
         [
-            "WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf",
+            "WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to"
+            " /etc/rabbitmq/rabbitmq-env.conf",
             "Listing users ...",
             "guest\t[administrator, user]\n",
         ]
@@ -82,7 +87,8 @@ def test_list_users_with_warning_rabbitmq3():
     """
     rtn_stdout = "\n".join(
         [
-            "WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf",
+            "WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to"
+            " /etc/rabbitmq/rabbitmq-env.conf",
             "Listing users ...",
             "guest\t[administrator user]\n",
         ]
@@ -112,7 +118,8 @@ def test_list_vhosts_with_warning():
     """
     rtn_stdout = "\n".join(
         [
-            "WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf",
+            "WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to"
+            " /etc/rabbitmq/rabbitmq-env.conf",
             "Listing users ...",
             "/",
             "saltstack",
@@ -135,7 +142,7 @@ def test_user_exists():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": "Listing users ...\n" "saltstack\t[administrator]\n...done",
+            "stdout": "Listing users ...\nsaltstack\t[administrator]\n...done",
             "stderr": "",
         }
     )
@@ -151,7 +158,7 @@ def test_user_exists_negative():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": "Listing users ...\n" "saltstack\t[administrator]\n...done",
+            "stdout": "Listing users ...\nsaltstack\t[administrator]\n...done",
             "stderr": "",
         }
     )
@@ -207,7 +214,9 @@ def test_add_user():
     mock_run = MagicMock(return_value="Error")
     with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
         with patch.object(
-            rabbitmq, "clear_password", return_value={"Error": "Error", "retcode": 1},
+            rabbitmq,
+            "clear_password",
+            return_value={"Error": "Error", "retcode": 1},
         ):
             pytest.raises(CommandExecutionError, rabbitmq.add_user, "saltstack")
 
@@ -330,7 +339,9 @@ def test_list_permissions():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": '[{"user":"myuser","configure":"saltstack","write":".*","read":"1"}]',
+            "stdout": (
+                '[{"user":"myuser","configure":"saltstack","write":".*","read":"1"}]'
+            ),
             "stderr": "",
         }
     )
@@ -712,9 +723,11 @@ def test_list_upstreams():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": 'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
-            ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
-            'password@remote.fqdn"}',
+            "stdout": (
+                'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
+                ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
+                'password@remote.fqdn"}'
+            ),
             "stderr": "",
         }
     )
@@ -740,9 +753,11 @@ def test_upstream_exists():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": 'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
-            ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
-            'password@remote.fqdn"}',
+            "stdout": (
+                'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
+                ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
+                'password@remote.fqdn"}'
+            ),
             "stderr": "",
         }
     )
@@ -758,9 +773,11 @@ def test_upstream_exists_negative():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": 'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
-            ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
-            'password@remote.fqdn"}',
+            "stdout": (
+                'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
+                ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
+                'password@remote.fqdn"}'
+            ),
             "stderr": "",
         }
     )

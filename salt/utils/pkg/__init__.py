@@ -6,6 +6,7 @@ import errno
 import logging
 import os
 import re
+import sys
 
 import salt.utils.data
 import salt.utils.files
@@ -92,3 +93,12 @@ def match_version(desired, available, cmp_func=None, ignore_epoch=False):
         ):
             return candidate
     return None
+
+
+def check_bundled():
+    """
+    Gather run-time information to indicate if we are running from source or bundled.
+    """
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return True
+    return False

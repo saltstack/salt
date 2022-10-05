@@ -61,8 +61,8 @@ def _get_conn():
 
 
 def _delivery_report(err, msg):
-    """ Called once for each message produced to indicate delivery result.
-        Triggered by poll() or flush(). """
+    """Called once for each message produced to indicate delivery result.
+    Triggered by poll() or flush()."""
     if err is not None:
         log.error("Message delivery failed: %s", err)
     else:

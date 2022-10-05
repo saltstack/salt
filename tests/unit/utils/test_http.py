@@ -6,8 +6,9 @@ import socket
 from contextlib import closing
 
 import pytest
-import salt.utils.http as http
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -187,7 +188,10 @@ class HTTPPostTestCase(TestCase):
         """
         Test handling of a multipart/form-data POST using the requests backend
         """
-        match_this = '{0}\r\nContent-Disposition: form-data; name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        match_this = (
+            "{0}\r\nContent-Disposition: form-data;"
+            ' name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        )
         ret = http.query(
             self.post_web_root,
             method="POST",

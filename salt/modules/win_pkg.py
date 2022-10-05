@@ -167,7 +167,9 @@ def latest_version(*names, **kwargs):
             # check, whether latest available version
             # is newer than latest installed version
             if compare_versions(
-                ver1=str(latest_available), oper=">", ver2=str(latest_installed),
+                ver1=str(latest_available),
+                oper=">",
+                ver2=str(latest_installed),
             ):
                 log.debug(
                     "Upgrade of %s from %s to %s is available",
@@ -541,13 +543,34 @@ def _get_reg_software(include_components=True, include_updates=True):
 
     def skip_uninstall_string(hive, key, sub_key, use_32bit_registry):
         """
-        'UninstallString' must be present, because it stores the command line
+        `UninstallString` must be present, because it stores the command line
         that gets executed by Add/Remove programs, when the user tries to
-        uninstall a program.
+        uninstall a program. Skip those, unless `NoRemove` contains a non-zero
+        value in which case there is no `UninstallString` value.
+
+        We want to display these in case we're trying to install software that
+        will set the `NoRemove` option.
 
         Returns:
             bool: True if the package needs to be skipped, otherwise False
         """
+        # https://docs.microsoft.com/en-us/windows/win32/msi/arpnoremove
+        if __utils__["reg.value_exists"](
+            hive=hive,
+            key="{}\\{}".format(key, sub_key),
+            vname="NoRemove",
+            use_32bit_registry=use_32bit_registry,
+        ):
+            if (
+                __utils__["reg.read_value"](
+                    hive=hive,
+                    key="{}\\{}".format(key, sub_key),
+                    vname="NoRemove",
+                    use_32bit_registry=use_32bit_registry,
+                )["vdata"]
+                > 0
+            ):
+                return False
         if not __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
@@ -973,8 +996,7 @@ def refresh_db(**kwargs):
     repo_details = _get_repo_details(saltenv)
 
     log.debug(
-        "Refreshing pkg metadata db for saltenv '%s' (age of existing "
-        "metadata is %s)",
+        "Refreshing pkg metadata db for saltenv '%s' (age of existing metadata is %s)",
         saltenv,
         datetime.timedelta(seconds=repo_details.winrepo_age),
     )
@@ -1053,8 +1075,9 @@ def _get_repo_details(saltenv):
         ):
 
             raise CommandExecutionError(
-                "Attempting to delete files from a possibly unsafe location: "
-                "{}".format(local_dest)
+                "Attempting to delete files from a possibly unsafe location: {}".format(
+                    local_dest
+                )
             )
 
         __context__[contextkey] = (winrepo_source_dir, local_dest, winrepo_file)
@@ -1157,10 +1180,9 @@ def genrepo(**kwargs):
                     ret,
                     successful_verbose,
                 )
-    serial = salt.payload.Serial(__opts__)
 
     with salt.utils.files.fopen(repo_details.winrepo_file, "wb") as repo_cache:
-        repo_cache.write(serial.dumps(ret))
+        repo_cache.write(salt.payload.dumps(ret))
     # For some reason we can not save ret into __context__['winrepo.data'] as this breaks due to utf8 issues
     successful_count = len(successful_verbose)
     error_count = len(ret["errors"])
@@ -1234,15 +1256,15 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
                 # Ensure version is a string/unicode
                 if not isinstance(version_str, str):
                     log.error(
-                        "package '%s' within '%s', version number %s' "
-                        "is not a string",
+                        "package '%s' within '%s', version number %s' is not a string",
                         pkgname,
                         short_path_name,
                         version_str,
                     )
                     errors.append(
-                        "package '{}', version number {} "
-                        "is not a string".format(pkgname, version_str)
+                        "package '{}', version number {} is not a string".format(
+                            pkgname, version_str
+                        )
                     )
                     continue
                 # Ensure version contains a dict
@@ -1284,8 +1306,8 @@ def _get_source_sum(source_hash, file_path, saltenv):
     schemes = ("salt", "http", "https", "ftp", "swift", "s3", "file")
     invalid_hash_msg = (
         "Source hash '{}' format is invalid. It must be in "
-        "the format <hash type>=<hash>"
-    ).format(source_hash)
+        "the format <hash type>=<hash>".format(source_hash)
+    )
     source_hash = str(source_hash)
     source_hash_scheme = urllib.parse.urlparse(source_hash).scheme
 
@@ -1310,12 +1332,12 @@ def _get_source_sum(source_hash, file_path, saltenv):
         items = source_hash.split("=", 1)
 
         if len(items) != 2:
-            invalid_hash_msg = "{}, or it must be a supported protocol" ": {}".format(
+            invalid_hash_msg = "{}, or it must be a supported protocol: {}".format(
                 invalid_hash_msg, ", ".join(schemes)
             )
             raise SaltInvocationError(invalid_hash_msg)
 
-        ret["hash_type"], ret["hsum"] = [item.strip().lower() for item in items]
+        ret["hash_type"], ret["hsum"] = (item.strip().lower() for item in items)
 
     return ret
 
@@ -1331,8 +1353,7 @@ def _get_msiexec(use_msiexec):
             return True, use_msiexec
         else:
             log.warning(
-                "msiexec path '%s' not found. Using system registered "
-                "msiexec instead",
+                "msiexec path '%s' not found. Using system registered msiexec instead",
                 use_msiexec,
             )
             use_msiexec = True
@@ -2032,7 +2053,8 @@ def remove(name=None, pkgs=None, **kwargs):
             # If still no uninstaller found, fail
             if not uninstaller:
                 log.error(
-                    "No installer or uninstaller configured for package %s", pkgname,
+                    "No installer or uninstaller configured for package %s",
+                    pkgname,
                 )
                 ret[pkgname] = {"no uninstaller defined": target}
                 continue
@@ -2288,10 +2310,11 @@ def get_repo_data(saltenv="base"):
         log.trace("get_repo_data called reading from disk")
 
     try:
-        serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(repo_details.winrepo_file, "rb") as repofile:
             try:
-                repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
+                repodata = salt.utils.data.decode(
+                    salt.payload.loads(repofile.read()) or {}
+                )
                 __context__["winrepo.data"] = repodata
                 return repodata
             except Exception as exc:  # pylint: disable=broad-except

@@ -683,7 +683,9 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
                     "Device": 'pci 0x7000 "82371SB PIIX3 ISA [Natoma/Triton II]"',
                     "SubVendor": 'pci 0x1af4 "Red Hat, Inc."',
                     "SubDevice": 'pci 0x1100 "Qemu virtual machine"',
-                    "Module Alias": "pci:v00008086d00007000sv00001AF4sd00001100bc06sc01i00",
+                    "Module Alias": (
+                        "pci:v00008086d00007000sv00001AF4sd00001100bc06sc01i00"
+                    ),
                     "Config Status": {
                         "cfg": "new",
                         "avail": "yes",
@@ -704,7 +706,9 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
                     "SubVendor": 'pci 0x1af4 "Red Hat, Inc."',
                     "SubDevice": 'pci 0x1100 "Qemu virtual machine"',
                     "Revision": "0x02",
-                    "Module Alias": "pci:v00008086d00001237sv00001AF4sd00001100bc06sc00i00",
+                    "Module Alias": (
+                        "pci:v00008086d00001237sv00001AF4sd00001100bc06sc00i00"
+                    ),
                     "Config Status": {
                         "cfg": "new",
                         "avail": "yes",
@@ -728,7 +732,9 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
                     "Driver": ["piix4_smbus"],
                     "Driver Modules": ["i2c_piix4"],
                     "IRQ": "9 (no events)",
-                    "Module Alias": "pci:v00008086d00007113sv00001AF4sd00001100bc06sc80i00",
+                    "Module Alias": (
+                        "pci:v00008086d00007113sv00001AF4sd00001100bc06sc80i00"
+                    ),
                     "Driver Info #0": {
                         "Driver Status": "i2c_piix4 is active",
                         "Driver Activation Cmd": "modprobe i2c_piix4",
@@ -792,7 +798,9 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
                         "0xfeb80000-0xfebbffff (ro,non-prefetchable,disabled)",
                     ],
                     "IRQ": "11 (no events)",
-                    "Module Alias": "pci:v00001AF4d00001000sv00001AF4sd00000001bc02sc00i00",
+                    "Module Alias": (
+                        "pci:v00001AF4d00001000sv00001AF4sd00000001bc02sc00i00"
+                    ),
                     "Config Status": {
                         "cfg": "new",
                         "avail": "yes",
@@ -841,7 +849,10 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
             devinfo._hwinfo_parse_full(hwinfo),
             {
                 "17": {
-                    "PCI 01.1": "0101 IDE interface (ISA Compatibility mode-only controller, supports bus mts bus mastering)",
+                    "PCI 01.1": (
+                        "0101 IDE interface (ISA Compatibility mode-only controller,"
+                        " supports bus mts bus mastering)"
+                    ),
                     "Note": "Created at pci.386",
                     "Unique ID": "mnDB.3sKqaxiizg6",
                     "SysFS ID": "/devices/pci0000:00/0000:00:01.1",
@@ -861,7 +872,9 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
                         "0x376 (rw)",
                         "0xc020-0xc02f (rw)",
                     ],
-                    "Module Alias": "pci:v00008086d00007010sv00001AF4sd00001100bc01sc01i80",
+                    "Module Alias": (
+                        "pci:v00008086d00007010sv00001AF4sd00001100bc01sc01i80"
+                    ),
                     "Driver Info #0": {
                         "Driver Status": "ata_piix is active",
                         "Driver Activation Cmd": "modprobe ata_piix",
@@ -934,7 +947,9 @@ class DevinfoTestCase(TestCase, LoaderModuleMockMixin):
                         "0xfebd0000-0xfebd0fff (rw,non-prefetchable)",
                         "0x000c0000-0x000dffff (rw,non-prefetchable,disabled)",
                     ],
-                    "Module Alias": "pci:v00001234d00001111sv00001AF4sd00001100bc03sc00i00",
+                    "Module Alias": (
+                        "pci:v00001234d00001111sv00001AF4sd00001100bc03sc00i00"
+                    ),
                     "Driver Info #0": {
                         "Driver Status": "bochs_drm is active",
                         "Driver Activation Cmd": "modprobe bochs_drm",

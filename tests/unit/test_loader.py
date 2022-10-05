@@ -5,7 +5,6 @@
     Test Salt's loader
 """
 
-
 import collections
 import compileall
 import copy
@@ -19,6 +18,7 @@ import tempfile
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.loader.context
@@ -125,7 +125,7 @@ class LazyLoaderTest(TestCase):
         # results in a KeyError, the decorator is broken.
         self.assertTrue(
             isinstance(
-                self.loader[self.module_name + ".loaded"], salt.loader.lazy.LoadedFunc,
+                self.loader[self.module_name + ".loaded"], salt.loader.lazy.LoadedFunc
             )
         )
         # Make sure depends correctly kept a function from loading
@@ -405,7 +405,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     @pytest.mark.slow_test
     def test_virtual(self):
         self.assertTrue(
-            isinstance(self.loader["test_virtual.ping"], salt.loader.lazy.LoadedFunc,)
+            isinstance(self.loader["test_virtual.ping"], salt.loader.lazy.LoadedFunc)
         )
 
 
@@ -1365,7 +1365,7 @@ class LoaderGlobalsTest(ModuleCase):
         global_vars = {}
         for val in mod_dict.values():
             # only find salty globals
-            if val.__module__.startswith("salt.loaded"):
+            if val.__module__.startswith(salt.loader.lazy.LOADED_BASE_NAME):
                 if hasattr(val, "__globals__"):
                     if hasattr(val, "__wrapped__") or "__wrapped__" in val.__globals__:
                         global_vars[val.__module__] = sys.modules[
