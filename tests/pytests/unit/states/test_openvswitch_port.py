@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.openvswitch_port as openvswitch_port
 from tests.support.mock import MagicMock, patch
 

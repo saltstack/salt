@@ -429,7 +429,7 @@ def list_(
             # the common_prefix logic handles scenarios where the TLD
             # isn't listed as an archive member on its own
             common_prefix = os.path.commonprefix(ret["dirs"])
-            if common_prefix:
+            if "/" in common_prefix:
                 common_prefix = common_prefix.split("/")[0] + "/"
                 if common_prefix not in top_level_dirs:
                     top_level_dirs.append(common_prefix)

@@ -248,7 +248,9 @@ def copr_pkgrepo_with_comments_name(pkgrepo, grains):
         grains["osfinger"] in ("CentOS Linux-7", "Amazon Linux-2")
         or grains["os"] == "VMware Photon OS"
     ):
-        pytest.skip("copr plugin not installed on Centos 7 CI")
+        pytest.skip("copr plugin not installed on {} CI".format(grains["osfinger"]))
+    if grains["os"] in ("CentOS Stream", "AlmaLinux") and grains["osmajorrelease"] == 9:
+        pytest.skip("No repo for {} in test COPR yet".format(grains["osfinger"]))
     pkgrepo_name = "hello-copr"
     try:
         yield pkgrepo_name

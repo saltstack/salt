@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.win_ntp as win_ntp
 from tests.support.mock import MagicMock, patch
 

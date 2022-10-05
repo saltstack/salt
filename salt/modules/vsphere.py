@@ -233,15 +233,9 @@ except ImportError:
 
 try:
     # pylint: disable=no-name-in-module
-    from pyVmomi import (
-        vim,
-        vmodl,
-        pbm,
-        VmomiSupport,
-    )
+    from pyVmomi import VmomiSupport, pbm, vim, vmodl
 
     # pylint: enable=no-name-in-module
-
     # We check the supported vim versions to infer the pyVmomi version
     if (
         "vim25/6.0" in VmomiSupport.versionMap
@@ -260,10 +254,13 @@ except ImportError:
 # vSphere SDK Automation
 # pylint: disable=unused-import
 try:
-    from com.vmware.cis.tagging_client import Category, CategoryModel
-    from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
-    from com.vmware.vcenter_client import Cluster
-    from com.vmware.vapi.std_client import DynamicID
+    from com.vmware.cis.tagging_client import (
+        Category,
+        CategoryModel,
+        Tag,
+        TagAssociation,
+        TagModel,
+    )
 
     # Error Handling
     from com.vmware.vapi.std.errors_client import (
@@ -273,6 +270,8 @@ try:
         Unauthenticated,
         Unauthorized,
     )
+    from com.vmware.vapi.std_client import DynamicID
+    from com.vmware.vcenter_client import Cluster
 
     vsphere_errors = (
         AlreadyExists,
@@ -1510,9 +1509,11 @@ def reset_syslog_config(
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed, per host.
 
-    CLI Example:
+    .. note::
 
-    ``syslog_config`` can be passed as a quoted, comma-separated string, e.g.
+        ``syslog_config`` can be passed as a quoted, comma-separated string. See CLI Example for details.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -4541,6 +4542,8 @@ def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
         List of DVS names to look for. If None, all DVSs are returned.
         Default value is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_dvss
@@ -4751,6 +4754,8 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.create_dvs dvs dict=$dvs_dict dvs_name=dvs_name
@@ -4825,6 +4830,8 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5051,9 +5058,11 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
-        salt '*' vsphere.list_dvporgroups
+        salt '*' vsphere.list_dvportgroups
 
         salt '*' vsphere.list_dvportgroups dvs=dvs1
 
@@ -5098,6 +5107,8 @@ def list_uplink_dvportgroup(dvs, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5324,6 +5335,8 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.create_dvportgroup portgroup_dict=<dict>
@@ -5373,6 +5386,8 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5445,6 +5460,8 @@ def remove_dvportgroup(portgroup, dvs, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5523,11 +5540,13 @@ def list_storage_policies(policy_names=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_storage_policies
 
-        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+        salt '*' vsphere.list_storage_policies policy_names=[policy_name]
     """
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     if not policy_names:
@@ -5550,11 +5569,11 @@ def list_default_vsan_policy(service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
-        salt '*' vsphere.list_storage_policies
-
-        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+        salt '*' vsphere.list_default_vsan_policy
     """
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(
@@ -5591,6 +5610,8 @@ def list_capability_definitions(service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5676,6 +5697,8 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.create_storage_policy policy_name='policy name'
@@ -5716,6 +5739,8 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.update_storage_policy policy='policy name'
@@ -5753,6 +5778,8 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5795,6 +5822,8 @@ def assign_default_storage_policy_to_datastore(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5842,6 +5871,8 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_datacenters_via_proxy
@@ -5880,6 +5911,8 @@ def create_datacenter(datacenter_name, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -5997,6 +6030,8 @@ def list_cluster(datacenter=None, cluster=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6180,6 +6215,8 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         # esxdatacenter proxy
@@ -6274,6 +6311,8 @@ def update_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6396,6 +6435,8 @@ def list_datastores_via_proxy(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_datastores_via_proxy
@@ -6495,6 +6536,8 @@ def create_vmfs_datastore(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.create_vmfs_datastore datastore_name=ds1 disk_id=
@@ -6546,6 +6589,8 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.rename_datastore old_name new_name
@@ -6579,6 +6624,8 @@ def remove_datastore(datastore, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.remove_datastore ds_name
@@ -6610,6 +6657,8 @@ def list_licenses(service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6651,6 +6700,8 @@ def add_license(key, description, safety_checks=True, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -6742,6 +6793,8 @@ def list_assigned_licenses(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_assigned_licenses
@@ -6806,10 +6859,12 @@ def assign_license(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
-        salt '*' vsphere.assign_license license_key=00000:00000
-            license name=test entity={type:cluster,datacenter:dc,cluster:cl}
+        salt '*' vsphere.assign_license license_key=AAAAA-11111-AAAAA-11111-AAAAA
+            license_name=test entity={type:cluster,datacenter:dc,cluster:cl}
     """
     log.trace("Assigning license %s to entity %s", license_key, entity)
     _validate_entity(entity)
@@ -6902,6 +6957,8 @@ def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_disks
@@ -6963,6 +7020,8 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.erase_disk_partitions scsi_address='vmhaba0:C0:T0:L0'
@@ -7020,6 +7079,8 @@ def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None)
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7095,6 +7156,8 @@ def list_diskgroups(cache_disk_ids=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.list_diskgroups
@@ -7144,6 +7207,8 @@ def create_diskgroup(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7214,6 +7279,8 @@ def add_capacity_to_diskgroup(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7295,6 +7362,8 @@ def remove_capacity_from_diskgroup(
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.remove_capacity_from_diskgroup
@@ -7363,6 +7432,8 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=No
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.remove_diskgroup cache_disk_id='naa.000000000000001'
@@ -7396,6 +7467,8 @@ def get_host_cache(service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -7443,6 +7516,8 @@ def configure_host_cache(
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -11385,6 +11460,8 @@ def power_on_vm(name, datacenter=None, service_instance=None):
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.power_on_vm name=my_vm
@@ -11425,6 +11502,8 @@ def power_off_vm(name, datacenter=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -11513,6 +11592,8 @@ def delete_vm(name, datacenter, placement=None, power_off=False, service_instanc
     service_instance
         vCenter service instance for connection and configuration
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' vsphere.delete_vm name=my_vm datacenter=my_datacenter
@@ -11558,6 +11639,8 @@ def unregister_vm(
 
     service_instance
         vCenter service instance for connection and configuration
+
+    CLI Example:
 
     .. code-block:: bash
 

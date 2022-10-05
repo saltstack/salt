@@ -24,6 +24,40 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 log = logging.getLogger(__name__)
 
 
+def sorted_permissions(perms):
+    """
+    Return a sorted list of the passed in permissions, de-duplicating in the process
+    """
+    _str_perms = []
+    _non_str_perms = []
+    for entry in perms:
+        if isinstance(entry, str):
+            if entry in _str_perms:
+                continue
+            _str_perms.append(entry)
+            continue
+        if entry in _non_str_perms:
+            continue
+        _non_str_perms.append(entry)
+    return sorted(_str_perms) + sorted(_non_str_perms, key=repr)
+
+
+def sum_permissions(token, eauth):
+    """
+    Returns the sum of '*', user-specific and group specific permissions
+    """
+    perms = eauth.get(token["name"], [])
+    perms.extend(eauth.get("*", []))
+
+    if "groups" in token and token["groups"]:
+        user_groups = set(token["groups"])
+        eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
+
+        for group in user_groups & eauth_groups:
+            perms.extend(eauth["{}%".format(group)])
+    return perms
+
+
 class NetapiClient:
     """
     Provide a uniform method of accessing the various client interfaces in Salt
