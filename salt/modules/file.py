@@ -4236,7 +4236,7 @@ def rmdir(path, recurse=False, verbose=False, older_than=None):
         return ret
 
 
-def remove(path):
+def remove(path, **kwargs):
     """
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.

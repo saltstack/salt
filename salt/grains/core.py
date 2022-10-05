@@ -42,6 +42,53 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import _clear_interfaces, _get_interfaces
 
+try:
+    # pylint: disable=no-name-in-module
+    from platform import freedesktop_os_release as _freedesktop_os_release
+
+except ImportError:  # Define freedesktop_os_release for Python < 3.10
+
+    def _parse_os_release(*os_release_files):
+        """
+        Parse os-release and return a parameter dictionary
+
+        This function will behave identical to
+        platform.freedesktop_os_release() from Python >= 3.10, if
+        called with ("/etc/os-release", "/usr/lib/os-release").
+
+        See http://www.freedesktop.org/software/systemd/man/os-release.html
+        for specification of the file format.
+        """
+        # These fields are mandatory fields with well-known defaults
+        # in practice all Linux distributions override NAME, ID, and PRETTY_NAME.
+        ret = {"NAME": "Linux", "ID": "linux", "PRETTY_NAME": "Linux"}
+
+        errno = None
+        for filename in os_release_files:
+            try:
+                with salt.utils.files.fopen(filename) as ifile:
+                    regex = re.compile("^([\\w]+)=(?:'|\")?(.*?)(?:'|\")?$")
+                    for line in ifile:
+                        match = regex.match(line.strip())
+                        if match:
+                            # Shell special characters ("$", quotes, backslash,
+                            # backtick) are escaped with backslashes
+                            ret[match.group(1)] = re.sub(
+                                r'\\([$"\'\\`])', r"\1", match.group(2)
+                            )
+                break
+            except OSError as error:
+                errno = error.errno
+        else:
+            raise OSError(
+                errno, "Unable to read files {}".format(", ".join(os_release_files))
+            )
+
+        return ret
+
+    def _freedesktop_os_release():
+        return _parse_os_release("/etc/os-release", "/usr/lib/os-release")
+
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
 def _linux_distribution():
@@ -1740,6 +1787,7 @@ _OS_FAMILY_MAP = {
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
     "Antergos": "Arch",
+    "EndeavourOS": "Arch",
     "ALT": "RedHat",
     "Trisquel": "Debian",
     "GCEL": "Debian",
@@ -1821,33 +1869,6 @@ def _parse_lsb_release():
                     ret["lsb_{}".format(key.lower())] = value.rstrip()
     except OSError as exc:
         log.trace("Failed to parse /etc/lsb-release: %s", exc)
-    return ret
-
-
-def _parse_os_release(*os_release_files):
-    """
-    Parse os-release and return a parameter dictionary
-
-    See http://www.freedesktop.org/software/systemd/man/os-release.html
-    for specification of the file format.
-    """
-    ret = {}
-    for filename in os_release_files:
-        try:
-            with salt.utils.files.fopen(filename) as ifile:
-                regex = re.compile("^([\\w]+)=(?:'|\")?(.*?)(?:'|\")?$")
-                for line in ifile:
-                    match = regex.match(line.strip())
-                    if match:
-                        # Shell special characters ("$", quotes, backslash,
-                        # backtick) are escaped with backslashes
-                        ret[match.group(1)] = re.sub(
-                            r'\\([$"\'\\`])', r"\1", match.group(2)
-                        )
-            break
-        except OSError:
-            pass
-
     return ret
 
 
@@ -2021,7 +2042,10 @@ def _linux_distribution_data():
             grains["osfullname"] = "Antergos Linux"
         elif "lsb_distrib_id" not in grains:
             log.trace("Failed to get lsb_distrib_id, trying to parse os-release")
-            os_release = _parse_os_release("/etc/os-release", "/usr/lib/os-release")
+            try:
+                os_release = _freedesktop_os_release()
+            except OSError:
+                os_release = {}
             if os_release:
                 if "NAME" in os_release:
                     grains["lsb_distrib_id"] = os_release["NAME"].strip()
@@ -2235,7 +2259,7 @@ def _osrelease_data(os, osfullname, osrelease):
         os_name = osfullname
     grains["osfinger"] = "{}-{}".format(
         os_name,
-        osrelease if os_name in ("Ubuntu",) else grains["osrelease_info"][0],
+        osrelease if os in ("Ubuntu", "Pop") else grains["osrelease_info"][0],
     )
 
     return grains
