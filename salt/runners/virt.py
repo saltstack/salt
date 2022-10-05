@@ -535,7 +535,7 @@ def migrate(name, target=""):
         try:
             client.cmd(target, "virt.seed_non_shared_migrate", [disks, True])
             jid = client.cmd_async(
-                origin_host, "virt.migrate_non_shared", [name, target]
+                origin_host, "virt.migrate", [name, target], copy_storage=all
             )
         except SaltClientError as client_error:
             return "Virtual machine {} could not be migrated: {}".format(

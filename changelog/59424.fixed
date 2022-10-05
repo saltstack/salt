@@ -1,1 +1,0 @@
-Fix win_servermanager.install so it will reboot when restart=True is passed

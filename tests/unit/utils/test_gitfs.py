@@ -31,6 +31,15 @@ if HAS_PYGIT2:
     import pygit2
 
 
+def _clear_instance_map():
+    try:
+        del salt.utils.gitfs.GitFS.instance_map[
+            salt.ext.tornado.ioloop.IOLoop.current()
+        ]
+    except KeyError:
+        pass
+
+
 class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         class MockedProvider(
@@ -83,6 +92,12 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
             per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
             git_providers=git_providers,
         )
+
+    @classmethod
+    def setUpClass(cls):
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        _clear_instance_map()
 
     def tearDown(self):
         # Providers are preserved with GitFS's instance_map

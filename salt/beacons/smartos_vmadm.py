@@ -19,6 +19,8 @@ Beacon that fires events on vm state changes
 """
 import logging
 
+import salt.utils.beacons
+
 __virtualname__ = "vmadm"
 
 VMADM_STATE = {
@@ -36,12 +38,9 @@ def __virtual__():
     if "vmadm.list" in __salt__:
         return True
     else:
-        return (
-            False,
-            "{} beacon can only be loaded on SmartOS compute nodes".format(
-                __virtualname__
-            ),
-        )
+        err_msg = "Only available on SmartOS compute nodes."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
@@ -74,10 +73,9 @@ def beacon(config):
     if VMADM_STATE["first_run"]:
         log.info("Applying configuration for vmadm beacon")
 
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "startup_create_event" not in _config or not _config["startup_create_event"]:
+        if "startup_create_event" not in config or not config["startup_create_event"]:
             VMADM_STATE["vms"] = current_vms
 
     # NOTE: create events

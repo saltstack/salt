@@ -5,6 +5,7 @@ Tests for the spm info utility
 import shutil
 
 import pytest
+
 from tests.support.case import SPMCase
 
 

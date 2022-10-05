@@ -6,6 +6,7 @@ import os
 import pprint
 
 import pytest
+
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
@@ -33,7 +34,6 @@ def test_man_pages(virtualenv, src_dir):
             "salt-api Command",
             "Start interfaces used to remotely connect",
         ],
-        "salt-unity.1": ["salt-unity Command", "unified invocation wrapper"],
         "salt-syndic.1": ["salt-syndic Documentation", "Salt syndic daemon"],
         "salt-ssh.1": ["salt-ssh Documentation", "executed using only SSH"],
         "salt-run.1": ["salt-run Documentation", "frontend command for executing"],

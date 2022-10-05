@@ -444,10 +444,11 @@ def wait(
         interactively to the console and the logs.
         This is experimental.
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -594,10 +595,11 @@ def wait_script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -643,6 +645,17 @@ def run(
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
 
+    .. note::
+
+       The ``**kwargs`` of ``cmd.run`` are passed down to one of the following
+       exec modules:
+
+       * ``cmdmod.run_all``: If used with default ``runas``
+       * ``cmdmod.run_chroot``: If used with non-``root`` value for ``runas``
+
+       For more information on what args are available for either of these,
+       refer to the :ref:`cmdmod documentation <cmdmod-module>`.
+
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -656,7 +669,7 @@ def run(
         will run inside a chroot
 
     runas
-        The user name to run the command as
+        The user name (or uid) to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -764,10 +777,11 @@ def run(
 
         .. versionadded:: 2016.3.6
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
@@ -1063,10 +1077,11 @@ def script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will allow a list of
-        non-zero return codes that should be considered a success.  If the
-        return code returned from the run matches any in the provided list,
-        the return code will be overridden with zero.
+    success_retcodes
+        This parameter allows you to specify a list of non-zero return codes
+        that should be considered as successful. If the return code from the
+        command matches any in the list, the state will have a ``True`` result
+        instead of ``False``.
 
       .. versionadded:: 2019.2.0
 
