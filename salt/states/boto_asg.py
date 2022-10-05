@@ -436,7 +436,7 @@ def present(
     """
     if vpc_zone_identifier and subnet_names:
         raise SaltInvocationError(
-            "vpc_zone_identifier and subnet_names are " "mutually exclusive options."
+            "vpc_zone_identifier and subnet_names are mutually exclusive options."
         )
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if subnet_names:

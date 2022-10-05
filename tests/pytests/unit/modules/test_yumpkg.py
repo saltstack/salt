@@ -17,6 +17,26 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def configure_loader_modules():
+    def _add_data(data, key, value):
+        data.setdefault(key, []).append(value)
+
+    return {
+        yumpkg: {
+            "__context__": {"yum_bin": "yum"},
+            "__grains__": {
+                "osarch": "x86_64",
+                "os": "CentOS",
+                "os_family": "RedHat",
+                "osmajorrelease": 7,
+            },
+            "__salt__": {"pkg_resource.add_pkg": _add_data},
+        },
+        pkg_resource: {},
+    }
+
+
 @pytest.fixture(scope="module")
 def list_repos_var():
 
@@ -54,21 +74,26 @@ def list_repos_var():
     }
 
 
-@pytest.fixture
-def configure_loader_modules():
-
-    return {
-        yumpkg: {
-            "__context__": {"yum_bin": "yum"},
-            "__grains__": {
-                "osarch": "x86_64",
-                "os": "CentOS",
-                "os_family": "RedHat",
-                "osmajorrelease": 7,
-            },
+@pytest.fixture(
+    ids=["yum", "dnf"],
+    params=[
+        {
+            "context": {"yum_bin": "yum"},
+            "grains": {"os": "CentOS", "osrelease": 7},
+            "cmd": ["yum", "-y"],
         },
-        pkg_resource: {},
-    }
+        {
+            "context": {"yum_bin": "dnf"},
+            "grains": {"os": "Fedora", "osrelease": 27},
+            "cmd": ["dnf", "-y", "--best", "--allowerasing"],
+        },
+    ],
+)
+def yum_and_dnf(request):
+    with patch.dict(yumpkg.__context__, request.param["context"]), patch.dict(
+        yumpkg.__grains__, request.param["grains"]
+    ), patch.dict(pkg_resource.__grains__, request.param["grains"]):
+        yield request.param["cmd"]
 
 
 def test_list_pkgs():
@@ -97,9 +122,11 @@ def test_list_pkgs():
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -151,9 +178,11 @@ def test_list_pkgs_no_context():
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -196,9 +225,11 @@ def test_list_pkgs_with_attr():
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -322,9 +353,11 @@ def test_list_pkgs_with_attr_multiple_versions():
         "virt-what_|-(none)_|-1.10_|-2.el7_|-x86_64_|-(none)_|-1387838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -379,11 +412,16 @@ def test_list_patches():
     :return:
     """
     yum_out = [
-        "i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch",
-        "  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64",
-        "i my-fake-patch-not-installed-1234 recommended    suseRegisterInfo-3.1.1-18.2.x86_64",
-        "i my-fake-patch-installed-1234 recommended        my-package-one-1.1-0.1.x86_64",
-        "i my-fake-patch-installed-1234 recommended        my-package-two-1.1-0.1.x86_64",
+        "i my-fake-patch-not-installed-1234 recommended   "
+        " spacewalk-usix-2.7.5.2-2.2.noarch",
+        "  my-fake-patch-not-installed-1234 recommended   "
+        " spacewalksd-5.0.26.2-21.2.x86_64",
+        "i my-fake-patch-not-installed-1234 recommended   "
+        " suseRegisterInfo-3.1.1-18.2.x86_64",
+        "i my-fake-patch-installed-1234 recommended       "
+        " my-package-one-1.1-0.1.x86_64",
+        "i my-fake-patch-installed-1234 recommended       "
+        " my-package-two-1.1-0.1.x86_64",
     ]
 
     expected_patches = {
@@ -823,7 +861,10 @@ def test_refresh_db_with_options():
             {"cmd.run_all": yum_call, "config.get": MagicMock(return_value=False)},
         ):
             yumpkg.refresh_db(
-                check_update=True, enablerepo="good", disablerepo="bad", branch="foo",
+                check_update=True,
+                enablerepo="good",
+                disablerepo="bad",
+                branch="foo",
             )
             assert yum_call.call_count == 2
             yum_call.assert_any_call(
@@ -893,7 +934,10 @@ def test_refresh_db_with_options():
             {"cmd.run_all": yum_call, "config.get": MagicMock(return_value=False)},
         ):
             yumpkg.refresh_db(
-                check_update=False, enablerepo="good", disablerepo="bad", branch="foo",
+                check_update=False,
+                enablerepo="good",
+                disablerepo="bad",
+                branch="foo",
             )
             assert yum_call.call_count == 1
             yum_call.assert_called_once_with(
@@ -1212,6 +1256,43 @@ def test_install_error_reporting():
         assert exc_info.value.info == expected, exc_info.value.info
 
 
+def test_remove_not_installed():
+    """
+    Tests that no exception raised on removing not installed package
+    """
+    name = "foo"
+    list_pkgs_mock = MagicMock(return_value={})
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name: None}, "repository")
+        ),
+    }
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock):
+
+        # Test yum
+        with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}
+        ):
+            yumpkg.remove(name)
+            cmd_mock.assert_not_called()
+
+        # Test dnf
+        yumpkg.__context__.pop("yum_bin")
+        cmd_mock.reset_mock()
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}
+        ):
+            yumpkg.remove(name)
+            cmd_mock.assert_not_called()
+
+
 def test_upgrade_with_options():
     with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
         "salt.utils.systemd.has_scope", MagicMock(return_value=False)
@@ -1290,7 +1371,9 @@ def test_info_installed_with_all_versions():
             {
                 "build_date": "2015-07-09T10:55:19Z",
                 "vendor": "openSUSE Build Service",
-                "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                "description": (
+                    "This is the Virgo dummy package used for testing SUSE Manager"
+                ),
                 "license": "GPL-2.0",
                 "build_host": "sheep05",
                 "url": "http://www.suse.com",
@@ -1301,7 +1384,9 @@ def test_info_installed_with_all_versions():
                 "install_date_time_t": 1456241517,
                 "summary": "Virgo dummy package",
                 "version": "1.0",
-                "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                "signature": (
+                    "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                ),
                 "release": "1.1",
                 "group": "Applications/System",
                 "arch": "i686",
@@ -1310,7 +1395,9 @@ def test_info_installed_with_all_versions():
             {
                 "build_date": "2015-07-09T10:15:19Z",
                 "vendor": "openSUSE Build Service",
-                "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                "description": (
+                    "This is the Virgo dummy package used for testing SUSE Manager"
+                ),
                 "license": "GPL-2.0",
                 "build_host": "sheep05",
                 "url": "http://www.suse.com",
@@ -1321,7 +1408,9 @@ def test_info_installed_with_all_versions():
                 "install_date_time_t": 14562415127,
                 "summary": "Virgo dummy package",
                 "version": "1.0",
-                "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                "signature": (
+                    "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                ),
                 "release": "1.1",
                 "group": "Applications/System",
                 "arch": "x86_64",
@@ -1343,7 +1432,9 @@ def test_info_installed_with_all_versions():
                 "install_date_time_t": 1456241495,
                 "summary": "Secure Sockets and Transport Layer Security",
                 "version": "1.0.1i",
-                "signature": "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82",
+                "signature": (
+                    "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82"
+                ),
                 "release": "34.1",
                 "group": "Productivity/Networking/Security",
                 "packager": "https://www.suse.com/",
@@ -1520,7 +1611,9 @@ def test_group_info():
     expected = {
         "conditional": [],
         "default": ["qgnomeplatform", "xdg-desktop-portal-gtk"],
-        "description": "GNOME is a highly intuitive and user friendly desktop environment.",
+        "description": (
+            "GNOME is a highly intuitive and user friendly desktop environment."
+        ),
         "group": "GNOME",
         "id": "gnome-desktop",
         "mandatory": [
@@ -1785,7 +1878,10 @@ def test_get_repo_with_existent_repo(list_repos_var):
         yumpkg, "list_repos", autospec=True, return_value=list_repos_var
     )
     patch_parse_repo_file = patch.object(
-        yumpkg, "_parse_repo_file", autospec=True, return_value=parse_repo_file_return,
+        yumpkg,
+        "_parse_repo_file",
+        autospec=True,
+        return_value=parse_repo_file_return,
     )
 
     with patch_list_repos, patch_parse_repo_file:
@@ -1954,3 +2050,63 @@ def test_services_need_restart_requires_dnf():
     """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
     with patch("salt.modules.yumpkg._yum", Mock(return_value="yum")):
         pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+
+
+def test_61003_pkg_should_not_fail_when_target_not_in_old_pkgs():
+    patch_list_pkgs = patch(
+        "salt.modules.yumpkg.list_pkgs", return_value={}, autospec=True
+    )
+    patch_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "pkg_resource.parse_targets": Mock(
+                return_value=[
+                    {
+                        "fnord-this-is-not-actually-a-package": "fnord-this-is-not-actually-a-package-1.2.3"
+                    }
+                ]
+            )
+        },
+    )
+    with patch_list_pkgs, patch_salt:
+        # During the 3004rc1 we discoverd that if list_pkgs was missing
+        # packages that were returned by parse_targets that yumpkg.remove would
+        # catch on fire.  This ensures that won't go undetected again.
+        yumpkg.remove()
+
+
+@pytest.mark.parametrize(
+    "new,full_pkg_string",
+    (
+        (42, "fnord-42"),
+        (12, "fnord-12"),
+        ("42:1.2.3", "fnord-1.2.3"),
+    ),
+)
+def test_59705_version_as_accidental_float_should_become_text(
+    new, full_pkg_string, yum_and_dnf
+):
+    name = "fnord"
+    expected_cmd = yum_and_dnf + ["install", full_pkg_string]
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+
+    def fake_parse(*args, **kwargs):
+        return {name: kwargs["version"]}, "repository"
+
+    patch_yum_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "cmd.run": MagicMock(return_value=""),
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": fake_parse,
+            "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
+        },
+    )
+    patch_systemd = patch("salt.utils.systemd.has_scope", MagicMock(return_value=False))
+    with patch_systemd, patch_yum_salt:
+        yumpkg.install("fnord", version=new)
+        call = cmd_mock.mock_calls[0][1][0]
+        assert call == expected_cmd

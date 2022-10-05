@@ -12,9 +12,9 @@ from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=unused-import
 try:
-    import win32com
     import pythoncom
     import pywintypes
+    import win32com
 
     PYWINTYPES_ERROR = pywintypes.com_error(
         -1234, "Exception occurred.", (0, None, "C", None, 0, -2147352567), None
@@ -53,7 +53,8 @@ class MockGroupObj:
 
 @skipIf(
     not HAS_WIN_LIBS,
-    "win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed",
+    "win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are"
+    " installed",
 )
 class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -256,7 +257,10 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             with TstSuiteLoggingHandler() as handler:
                 self.assertFalse(win_groupadd.adduser("foo", "username"))
-                expected = "ERROR:Failed to add HOST\\username to group foo. An unknown directory object was requested"
+                expected = (
+                    "ERROR:Failed to add HOST\\username to group foo. An unknown"
+                    " directory object was requested"
+                )
                 self.assertIn(expected, handler.messages)
 
     def test_adduser_group_does_not_exist(self):

@@ -90,9 +90,8 @@ def _query(url, solr_url="http://localhost:8983/solr/", **kwargs):
     if "error" in query_result:
         if query_result["status"] == 404:
             raise SaltInvocationError(
-                "Got a 404 when trying to contact solr at {solr_url}{url}. Please check your solr URL.".format(
-                    solr_url=solr_url, url=url
-                )
+                "Got a 404 when trying to contact solr at {solr_url}{url}. Please check"
+                " your solr URL.".format(solr_url=solr_url, url=url)
             )
         else:
             raise SaltInvocationError(
@@ -191,7 +190,7 @@ def _validate_collection_options(options):
                 )
 
             options_string = (
-                options_string + "&" + option_name + "=" + (", ".join(option_value))
+                options_string + "&" + option_name + "=" + ", ".join(option_value)
             )
 
         elif option_name in DICT_OPTIONS_LIST:

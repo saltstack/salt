@@ -3,6 +3,7 @@ import sys
 import warnings
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.versions
 import salt.version
@@ -91,7 +92,13 @@ def test_compare():
 
 
 @pytest.mark.parametrize(
-    "version", ("Chlorine", 3007, (3007, 0), salt.version.SaltVersionsInfo.CHLORINE,)
+    "version",
+    (
+        "Chlorine",
+        3007,
+        (3007, 0),
+        salt.version.SaltVersionsInfo.CHLORINE,
+    ),
 )
 def test_warn_until_good_version_argument(version):
     with pytest.raises(
@@ -99,7 +106,7 @@ def test_warn_until_good_version_argument(version):
         match=(
             r"The warning triggered on filename \'(.*)test_versions.py\', "
             r"line number ([\d]+), is supposed to be shown until version "
-            r"3007 is released. Current version is now 3009. "
+            r"3007.0 \(Chlorine\) is released. Current version is now 3009.0 \(Potassium\). "
             r"Please remove the warning."
         ),
     ):
@@ -192,7 +199,7 @@ def test_warn_until_warning_raised(subtests):
                 r"([\d.]+). Please remove the warning."
             ),
         ):
-            raise_named_version_warning(_version_info_=(sys.maxsize, 16, 0,))
+            raise_named_version_warning(_version_info_=(sys.maxsize, 16, 0))
 
     with subtests.test(
         "Even though we're calling warn_until, we pass _dont_call_warnings "
@@ -222,7 +229,7 @@ def test_warn_until_warning_raised(subtests):
                 "Hydrogen",
                 "Foo",
                 _dont_call_warnings=True,
-                _version_info_=(sys.maxsize, 16, 0,),
+                _version_info_=(sys.maxsize, 16, 0),
             )
 
     with subtests.test("version on the deprecation message gets properly formatted"):

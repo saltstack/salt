@@ -8,6 +8,7 @@ import re
 import sys
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.version
@@ -121,11 +122,13 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
     # Let's create the testing virtualenv
     with virtualenv as venv:
         ret = venv.run(
-            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+            venv.venv_python,
+            "-c",
+            "import setuptools; print(setuptools.__version__)",
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.skip(
                 "Setuptools version, {}, does not include the easy_install module".format(
                     setuptools_version
@@ -165,11 +168,13 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         # Looks like, at least on windows, setuptools also get's downloaded as a salt dependency.
         # Let's check and see if this newly installed version also has easy_install
         ret = venv.run(
-            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+            venv.venv_python,
+            "-c",
+            "import setuptools; print(setuptools.__version__)",
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.skip(
                 "Setuptools version, {}, does not include the easy_install module".format(
                     setuptools_version

@@ -49,7 +49,6 @@ def _walk_through(job_dir):
     """
     Walk though the jid dir and look for jobs
     """
-    serial = salt.payload.Serial(__opts__)
 
     for top in os.listdir(job_dir):
         t_path = os.path.join(job_dir, top)
@@ -65,7 +64,7 @@ def _walk_through(job_dir):
 
             with salt.utils.files.fopen(load_path, "rb") as rfh:
                 try:
-                    job = serial.load(rfh)
+                    job = salt.payload.load(rfh)
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to deserialize %s", load_path)
                     continue
@@ -129,7 +128,6 @@ def returner(load):
     """
     Return data to the local job cache
     """
-    serial = salt.payload.Serial(__opts__)
 
     # if a minion is returning a standalone job, get a jobid
     if load["jid"] == "req":
@@ -161,7 +159,7 @@ def returner(load):
             return False
         raise
 
-    serial.dump(
+    salt.payload.dump(
         {key: load[key] for key in ["return", "retcode", "success"] if key in load},
         # Use atomic open here to avoid the file being read before it's
         # completely written to. Refs #1935
@@ -169,7 +167,7 @@ def returner(load):
     )
 
     if "out" in load:
-        serial.dump(
+        salt.payload.dump(
             load["out"],
             # Use atomic open here to avoid the file being read before
             # it's completely written to. Refs #1935
@@ -194,8 +192,6 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
 
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__["hash_type"])
 
-    serial = salt.payload.Serial(__opts__)
-
     # Save the invocation information
     try:
         if not os.path.exists(jid_dir):
@@ -209,7 +205,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
             raise
     try:
         with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), "w+b") as wfh:
-            serial.dump(clear_load, wfh)
+            salt.payload.dump(clear_load, wfh)
     except OSError as exc:
         log.warning("Could not write job invocation cache file: %s", exc)
         time.sleep(0.1)
@@ -243,7 +239,6 @@ def save_minions(jid, minions, syndic_id=None):
         " from syndic master '{}'".format(syndic_id) if syndic_id else "",
         minions,
     )
-    serial = salt.payload.Serial(__opts__)
 
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__["hash_type"])
 
@@ -270,7 +265,7 @@ def save_minions(jid, minions, syndic_id=None):
             except OSError:
                 pass
         with salt.utils.files.fopen(minions_path, "w+b") as wfh:
-            serial.dump(minions, wfh)
+            salt.payload.dump(minions, wfh)
     except OSError as exc:
         log.error(
             "Failed to write minion list %s to job cache file %s: %s",
@@ -288,14 +283,13 @@ def get_load(jid):
     load_fn = os.path.join(jid_dir, LOAD_P)
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
-    serial = salt.payload.Serial(__opts__)
     ret = {}
     load_p = os.path.join(jid_dir, LOAD_P)
     num_tries = 5
     for index in range(1, num_tries + 1):
         with salt.utils.files.fopen(load_p, "rb") as rfh:
             try:
-                ret = serial.load(rfh)
+                ret = salt.payload.load(rfh)
                 break
             except Exception as exc:  # pylint: disable=broad-except
                 if index == num_tries:
@@ -312,7 +306,7 @@ def get_load(jid):
         log.debug("Reading minion list from %s", minions_path)
         try:
             with salt.utils.files.fopen(minions_path, "rb") as rfh:
-                all_minions.update(serial.load(rfh))
+                all_minions.update(salt.payload.load(rfh))
         except OSError as exc:
             salt.utils.files.process_read_exception(exc, minions_path)
 
@@ -327,7 +321,6 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     """
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__["hash_type"])
-    serial = salt.payload.Serial(__opts__)
 
     ret = {}
     # Check to see if the jid is real, if not return the empty dict
@@ -344,7 +337,7 @@ def get_jid(jid):
             while fn_ not in ret:
                 try:
                     with salt.utils.files.fopen(retp, "rb") as rfh:
-                        ret_data = serial.load(rfh)
+                        ret_data = salt.payload.load(rfh)
                     if not isinstance(ret_data, dict) or "return" not in ret_data:
                         # Convert the old format in which return.p contains the only return data to
                         # the new that is dict containing 'return' and optionally 'retcode' and
@@ -353,7 +346,7 @@ def get_jid(jid):
                     ret[fn_] = ret_data
                     if os.path.isfile(outp):
                         with salt.utils.files.fopen(outp, "rb") as rfh:
-                            ret[fn_]["out"] = serial.load(rfh)
+                            ret[fn_]["out"] = salt.payload.load(rfh)
                 except Exception as exc:  # pylint: disable=broad-except
                     if "Permission denied:" in str(exc):
                         raise

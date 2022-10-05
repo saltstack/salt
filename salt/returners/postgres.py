@@ -247,7 +247,8 @@ def returner(ret):
             )
     except salt.exceptions.SaltMasterError:
         log.critical(
-            "Could not store return with postgres returner. PostgreSQL server unavailable."
+            "Could not store return with postgres returner. PostgreSQL server"
+            " unavailable."
         )
 
 

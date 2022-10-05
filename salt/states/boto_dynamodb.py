@@ -632,7 +632,12 @@ def _update_global_secondary_indexes(
         changes_old.setdefault("global_indexes", {})
         changes_new.setdefault("global_indexes", {})
         success = __salt__["boto_dynamodb.update_global_secondary_index"](
-            name, index_updates, region=region, key=key, keyid=keyid, profile=profile,
+            name,
+            index_updates,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
         )
 
         if success:

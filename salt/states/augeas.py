@@ -99,8 +99,9 @@ def _check_filepath(changes):
             log.error(err)
             if "error" not in locals():
                 error = (
-                    "Invalid formatted command, "
-                    "see debug log for details: {}".format(change_)
+                    "Invalid formatted command, see debug log for details: {}".format(
+                        change_
+                    )
                 )
             else:
                 error = str(err)

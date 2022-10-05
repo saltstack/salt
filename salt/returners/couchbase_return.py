@@ -137,10 +137,16 @@ def _verify_views():
     ddoc = {
         "views": {
             "jids": {
-                "map": "function (doc, meta) { if (meta.id.indexOf('/') === -1 && doc.load){ emit(meta.id, null) } }"
+                "map": (
+                    "function (doc, meta) { if (meta.id.indexOf('/') === -1 &&"
+                    " doc.load){ emit(meta.id, null) } }"
+                )
             },
             "jid_returns": {
-                "map": "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts = meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"
+                "map": (
+                    "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts ="
+                    " meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"
+                )
             },
         }
     }
@@ -181,7 +187,9 @@ def prep_jid(nocache=False, passed_jid=None):
 
     try:
         cb_.add(
-            str(jid), {"nocache": nocache}, ttl=_get_ttl(),
+            str(jid),
+            {"nocache": nocache},
+            ttl=_get_ttl(),
         )
     except couchbase.exceptions.KeyExistsError:
         # TODO: some sort of sleep or something? Spinning is generally bad practice
@@ -202,7 +210,9 @@ def returner(load):
         ret_doc = {"return": load["return"], "full_ret": salt.utils.json.dumps(load)}
 
         cb_.add(
-            hn_key, ret_doc, ttl=_get_ttl(),
+            hn_key,
+            ret_doc,
+            ttl=_get_ttl(),
         )
     except couchbase.exceptions.KeyExistsError:
         log.error(

@@ -201,14 +201,10 @@ def install(path, user, admin_user, admin_password, admin_email, title, url):
             dwallace@example.com "Daniel's Awesome Blog" https://blog.dwallace.com
     """
     retcode = __salt__["cmd.retcode"](
-        (
-            "wp --path={} core install "
-            '--title="{}" '
-            "--admin_user={} "
-            "--admin_password='{}' "
-            "--admin_email={} "
-            "--url={}"
-        ).format(path, title, admin_user, admin_password, admin_email, url),
+        'wp --path={} core install --title="{}" --admin_user={} '
+        "--admin_password='{}' --admin_email={} --url={}".format(
+            path, title, admin_user, admin_password, admin_email, url
+        ),
         runas=user,
     )
 

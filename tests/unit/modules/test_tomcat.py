@@ -47,7 +47,8 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
                 except TypeError as type_error:
                     if (
                         type_error.args[0]
-                        == "startswith first arg must be bytes or a tuple of bytes, not str"
+                        == "startswith first arg must be bytes or a tuple of bytes,"
+                        " not str"
                     ):
                         self.fail("Got back a byte string, should've been a string")
                     else:

@@ -204,10 +204,9 @@ def alias_present(name, index, definition=None):
                         name, index
                     )
                 else:
-                    ret[
-                        "comment"
-                    ] = "Alias {} for index {} exists with wrong configuration and will be overridden".format(
-                        name, index
+                    ret["comment"] = (
+                        "Alias {} for index {} exists with wrong configuration and will"
+                        " be overridden".format(name, index)
                     )
 
                 ret["result"] = None
@@ -470,10 +469,9 @@ def pipeline_present(name, definition):
                         "comment"
                     ] = "Pipeline {} does not exist and will be created".format(name)
                 else:
-                    ret[
-                        "comment"
-                    ] = "Pipeline {} exists with wrong configuration and will be overridden".format(
-                        name
+                    ret["comment"] = (
+                        "Pipeline {} exists with wrong configuration and will be"
+                        " overridden".format(name)
                     )
 
                 ret["result"] = None
@@ -583,10 +581,9 @@ def search_template_present(name, definition):
                         name
                     )
                 else:
-                    ret[
-                        "comment"
-                    ] = "Search template {} exists with wrong configuration and will be overridden".format(
-                        name
+                    ret["comment"] = (
+                        "Search template {} exists with wrong configuration and will be"
+                        " overridden".format(name)
                     )
 
                 ret["result"] = None

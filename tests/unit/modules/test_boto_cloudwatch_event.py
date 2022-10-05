@@ -13,8 +13,8 @@ from tests.support.unit import TestCase, skipIf
 try:
     import boto
     import boto3
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
+    from botocore.exceptions import ClientError
 
     HAS_BOTO = True
 except ImportError:
@@ -71,8 +71,12 @@ if _has_required_boto():
         ScheduleExpression=rule_sched,
         State="ENABLED",
     )
-    create_rule_ret = dict(Name=rule_name,)
-    target_ret = dict(Id="target1",)
+    create_rule_ret = dict(
+        Name=rule_name,
+    )
+    target_ret = dict(
+        Id="target1",
+    )
 
 
 class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):

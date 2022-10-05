@@ -2,6 +2,7 @@ import subprocess
 import types
 
 import pytest
+
 import salt.client.ssh.shell as shell
 
 
@@ -23,6 +24,7 @@ def test_ssh_shell_key_gen(keys):
     assert keys.pub_key.exists()
     # verify there is not a passphrase set on key
     ret = subprocess.check_output(
-        ["ssh-keygen", "-f", str(keys.priv_key), "-y"], timeout=30,
+        ["ssh-keygen", "-f", str(keys.priv_key), "-y"],
+        timeout=30,
     )
     assert ret.decode().startswith("ssh-rsa")

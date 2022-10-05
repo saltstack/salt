@@ -217,7 +217,7 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
         raise CommandExecutionError("Key '{}' does not exist".format(key))
     elif not isinstance(cur, int):
         raise CommandExecutionError(
-            "Value for key '{}' must be an integer to be " "incremented".format(key)
+            "Value for key '{}' must be an integer to be incremented".format(key)
         )
 
     try:
@@ -248,7 +248,7 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
         raise CommandExecutionError("Key '{}' does not exist".format(key))
     elif not isinstance(cur, int):
         raise CommandExecutionError(
-            "Value for key '{}' must be an integer to be " "decremented".format(key)
+            "Value for key '{}' must be an integer to be decremented".format(key)
         )
 
     try:

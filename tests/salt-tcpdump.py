@@ -66,7 +66,7 @@ class ArgParser:
             default="eth0",
             dest="iface",
             required=False,
-            help=("the interface to dump the" "master runs on(default:eth0)"),
+            help="The interface to dump the master runs on(default:eth0)",
         )
 
         self.main_parser.add_argument(
@@ -75,7 +75,7 @@ class ArgParser:
             default=5,
             dest="ival",
             required=False,
-            help=("interval for printing stats " "(default:5)"),
+            help="Interval for printing stats (default:5)",
         )
 
         self.main_parser.add_argument(
@@ -86,7 +86,7 @@ class ArgParser:
             nargs="?",
             dest="only_ip",
             required=False,
-            help=("print unique IPs making new " "connections with SYN set"),
+            help="Print unique IPs making new connections with SYN set",
         )
 
     def parse_args(self):
@@ -375,13 +375,15 @@ def main():
 
     if args["only_ip"]:
         print(
-            "IPs making new connections "
-            "(ports:{}, interval:{})".format(ports, args["ival"])
+            "IPs making new connections (ports:{}, interval:{})".format(
+                ports, args["ival"]
+            )
         )
     else:
         print(
-            "Salt-Master Network Status "
-            "(ports:{}, interval:{})".format(ports, args["ival"])
+            "Salt-Master Network Status (ports:{}, interval:{})".format(
+                ports, args["ival"]
+            )
         )
     try:
         while 1:

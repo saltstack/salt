@@ -562,7 +562,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse("slots" in root.find("maxMemory").keys())
         self.assert_equal_unit(root.find("memtune/hard_limit"), 1024 * 1024)
         self.assert_equal_unit(root.find("memtune/soft_limit"), 512 * 1024)
-        self.assert_equal_unit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
+        self.assert_equal_unit(root.find("memtune/swap_hard_limit"), 1024**2)
         self.assert_equal_unit(root.find("memtune/min_guarantee"), 256 * 1024)
         self.assertEqual(
             [
@@ -705,7 +705,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         cell0 = root.find("cpu/numa/cell[@id='0']")
         self.assertEqual(cell0.get("cpus"), "0-3")
         self.assertIsNone(cell0.get("unit"))
-        self.assertEqual(cell0.get("memory"), str(1024 ** 2))
+        self.assertEqual(cell0.get("memory"), str(1024**2))
         self.assertEqual(cell0.get("discard"), "yes")
         self.assertEqual(
             {d.get("id"): d.get("value") for d in cell0.findall("distances/sibling")},
@@ -715,7 +715,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         cell1 = root.find("cpu/numa/cell[@id='1']")
         self.assertEqual(cell1.get("cpus"), "4-7")
         self.assertIsNone(cell0.get("unit"))
-        self.assertEqual(cell1.get("memory"), str(2 * 1024 ** 2))
+        self.assertEqual(cell1.get("memory"), str(2 * 1024**2))
         self.assertFalse("discard" in cell1.keys())
         self.assertEqual(
             {d.get("id"): d.get("value") for d in cell1.findall("distances/sibling")},
@@ -787,13 +787,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "1-4,^2",
         )
         self.assertEqual(
-            root.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"), "0,1",
+            root.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"),
+            "0,1",
         )
         self.assertEqual(
-            root.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"), "2,3",
+            root.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,3",
         )
         self.assertEqual(
-            root.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"), "0,4",
+            root.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"),
+            "0,4",
         )
         self.assertEqual(
             root.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1-3"
@@ -1068,7 +1071,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib["type"], "kvm")
@@ -1101,7 +1112,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "vmware", [], "hello")
         nicp = virt._nic_profile("default", "vmware")
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "vmware",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib["type"], "vmware")
@@ -1150,7 +1169,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             nicp = virt._nic_profile("noeffect", "vmware")
             xml_data = virt._gen_xml(
-                self.mock_conn, "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
+                self.mock_conn,
+                "hello",
+                1,
+                512,
+                diskp,
+                nicp,
+                "vmware",
+                "hvm",
+                "x86_64",
             )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "vmware")
@@ -1183,7 +1210,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp = virt._disk_profile(self.mock_conn, "noeffect", "kvm", [], "hello")
             nicp = virt._nic_profile("noeffect", "kvm")
             xml_data = virt._gen_xml(
-                self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+                self.mock_conn,
+                "hello",
+                1,
+                512,
+                diskp,
+                nicp,
+                "kvm",
+                "hvm",
+                "x86_64",
             )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "kvm")
@@ -1247,7 +1282,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
 
             self.assertEqual(len(diskp), 1)
-            self.assertEqual(diskp[0]["source_file"], ("/path/to/my/image.qcow2"))
+            self.assertEqual(diskp[0]["source_file"], "/path/to/my/image.qcow2")
 
     def test_disk_profile_cdrom_default(self):
         """
@@ -1300,7 +1335,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb1"))
+        self.assertEqual(diskp[0]["filename"], "vdb1")
 
         # Append to the end case
         self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
@@ -1314,7 +1349,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb3"))
+        self.assertEqual(diskp[0]["filename"], "vdb3")
 
         # Hole in the middle case
         self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
@@ -1328,7 +1363,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb2"))
+        self.assertEqual(diskp[0]["filename"], "vdb2")
 
         # Reuse existing volume case
         diskp = virt._disk_profile(
@@ -1338,7 +1373,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb", "source_file": "vdb1"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb1"))
+        self.assertEqual(diskp[0]["filename"], "vdb1")
 
     def test_gen_xml_volume(self):
         """
@@ -1366,7 +1401,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         nicp = virt._nic_profile(None, "kvm")
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[0]
@@ -1415,7 +1458,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "test-vm",
         )
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[0]
@@ -1475,7 +1526,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "test-vm",
         )
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         self.assertDictEqual(
@@ -1523,7 +1582,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "test-vm",
         )
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[0]
@@ -1553,7 +1620,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "hello",
         )
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, [], "xen", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            [],
+            "xen",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[0]
@@ -1585,7 +1660,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "hello",
             )
             xml_data = virt._gen_xml(
-                self.mock_conn, "hello", 1, 512, diskp, [], "xen", "hvm", "x86_64",
+                self.mock_conn,
+                "hello",
+                1,
+                512,
+                diskp,
+                [],
+                "xen",
+                "hvm",
+                "x86_64",
             )
             root = ET.fromstring(xml_data)
             disk = root.findall(".//disk")[0]
@@ -1614,7 +1697,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "name": "remote",
                     "device": "cdrom",
-                    "source_file": "http://myhost:8080/url/to/image?query=foo&filter=bar",
+                    "source_file": (
+                        "http://myhost:8080/url/to/image?query=foo&filter=bar"
+                    ),
                     "model": "ide",
                 },
             ],
@@ -1622,7 +1707,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         nicp = virt._nic_profile(None, "kvm")
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[1]
@@ -1651,7 +1744,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "vmware", [], "hello")
         nicp = virt._nic_profile("default", "vmware")
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "vmware",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         controllers = root.findall(".//devices/controller")
@@ -1666,7 +1767,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
-            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
         )
         root = ET.fromstring(xml_data)
         controllers = root.findall(".//devices/controller")
@@ -1953,7 +2062,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(virt.__dict__, {"CACHE_DIR": cache_dir}):
                     with patch(
-                        "urllib.request.urlopen", MagicMock(return_value=mock_response),
+                        "urllib.request.urlopen",
+                        MagicMock(return_value=mock_response),
                     ):
                         with patch(
                             "salt.utils.files.fopen", return_value=mock_response
@@ -1964,8 +2074,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             boot = {
                                 "kernel": "https://www.example.com/download/vmlinuz",
                                 "initrd": "",
-                                "cmdline": "console=ttyS0 "
-                                "ks=http://example.com/f8-i386/os/",
+                                "cmdline": (
+                                    "console=ttyS0 ks=http://example.com/f8-i386/os/"
+                                ),
                             }
 
                             retval = virt.init(
@@ -2090,7 +2201,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             for call in create_calls
                         ]
                         self.assertEqual(
-                            ["test vm_system", "test vm_test"], vol_names,
+                            ["test vm_system", "test vm_test"],
+                            vol_names,
                         )
 
                         stream_mock.sendAll.assert_called_once()
@@ -3141,10 +3253,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"],
-            str(512 * 1024 ** 2),
+            str(512 * 1024**2),
         )
         self.assertEqual(
-            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes",
+            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"),
+            "bytes",
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='0']").attrib["discard"], "yes"
@@ -3179,10 +3292,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
-            str(int(2 * 1024 ** 3)),
+            str(int(2 * 1024**3)),
         )
         self.assertEqual(
-            setxml.find("./cpu/numa/cell/[@id='1']").get("unit"), "bytes",
+            setxml.find("./cpu/numa/cell/[@id='1']").get("unit"),
+            "bytes",
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
@@ -3246,10 +3360,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"],
-            str(512 * 1024 ** 2),
+            str(512 * 1024**2),
         )
         self.assertEqual(
-            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes",
+            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"),
+            "bytes",
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='0']").attrib.get("discard"), "no"
@@ -3281,7 +3396,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
-            str(int(2 * 1024 ** 3)),
+            str(int(2 * 1024**3)),
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
@@ -3314,7 +3429,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
-            str(int(1024 ** 3 * 2)),
+            str(int(1024**3 * 2)),
         )
         self.assertEqual(
             setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
@@ -3338,7 +3453,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "25",
         )
         self.assertEqual(
-            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"), None,
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"),
+            None,
         )
 
     def test_update_memtune_params(self):
@@ -3390,7 +3506,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.update("vm_with_memtune_param", mem=memtune_new_val),
         )
         self.assertEqual(
-            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024 ** 2)
+            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2)
         )
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
@@ -3402,21 +3518,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             setxml.find("memtune").find("swap_hard_limit").text,
-            str(int(2.5 * 1024 ** 2)),
+            str(int(2.5 * 1024**2)),
         )
         self.assertEqual(
-            setxml.find("memtune").find("swap_hard_limit").get("unit"), "KiB",
+            setxml.find("memtune").find("swap_hard_limit").get("unit"),
+            "KiB",
         )
         self.assertEqual(
-            setxml.find("memtune").find("min_guarantee").text, str(1 * 1024 ** 3)
+            setxml.find("memtune").find("min_guarantee").text, str(1 * 1024**3)
         )
         self.assertEqual(
             setxml.find("memtune").find("min_guarantee").attrib.get("unit"), "bytes"
         )
-        self.assertEqual(setxml.find("maxMemory").text, str(3096 * 1024 ** 2))
+        self.assertEqual(setxml.find("maxMemory").text, str(3096 * 1024**2))
         self.assertEqual(setxml.find("maxMemory").attrib.get("slots"), "10")
-        self.assertEqual(setxml.find("currentMemory").text, str(int(2.5 * 1024 ** 3)))
-        self.assertEqual(setxml.find("memory").text, str(int(0.7 * 1024 ** 3)))
+        self.assertEqual(setxml.find("currentMemory").text, str(int(2.5 * 1024**3)))
+        self.assertEqual(setxml.find("memory").text, str(int(0.7 * 1024**3)))
 
         max_slot_reverse = {
             "slots": "10",
@@ -3431,7 +3548,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.update("vm_with_memtune_param", mem=max_slot_reverse),
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
-        self.assertEqual(setxml.find("maxMemory").text, str(3096 * 1024 ** 2))
+        self.assertEqual(setxml.find("maxMemory").text, str(3096 * 1024**2))
         self.assertEqual(setxml.find("maxMemory").get("unit"), "bytes")
         self.assertEqual(setxml.find("maxMemory").attrib.get("slots"), "10")
 
@@ -3457,7 +3574,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.update("vm_with_memtune_param", mem=max_swap_none),
         )
         self.assertEqual(
-            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024 ** 2)
+            domain_mock.setMemoryFlags.call_args[0][0], int(2.5 * 1024**2)
         )
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
@@ -3469,14 +3586,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(setxml.find("memtune").find("swap_hard_limit"), None)
         self.assertEqual(
-            setxml.find("memtune").find("min_guarantee").text, str(1 * 1024 ** 3)
+            setxml.find("memtune").find("min_guarantee").text, str(1 * 1024**3)
         )
         self.assertEqual(
             setxml.find("memtune").find("min_guarantee").attrib.get("unit"), "bytes"
         )
         self.assertEqual(setxml.find("maxMemory").text, None)
-        self.assertEqual(setxml.find("currentMemory").text, str(int(2.5 * 1024 ** 3)))
-        self.assertEqual(setxml.find("memory").text, str(int(0.7 * 1024 ** 3)))
+        self.assertEqual(setxml.find("currentMemory").text, str(int(2.5 * 1024**3)))
+        self.assertEqual(setxml.find("memory").text, str(int(0.7 * 1024**3)))
 
         memtune_none = {
             "soft_limit": None,
@@ -3515,8 +3632,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("maxMemory"), None)
-        self.assertEqual(setxml.find("currentMemory").text, str(int(1 * 1024 ** 2)))
-        self.assertEqual(setxml.find("memory").text, str(int(1 * 1024 ** 2)))
+        self.assertEqual(setxml.find("currentMemory").text, str(int(1 * 1024**2)))
+        self.assertEqual(setxml.find("memory").text, str(int(1 * 1024**2)))
 
     def test_update_exist_memorybacking_params(self):
         """
@@ -3581,8 +3698,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 for p in setxml.findall("memoryBacking/hugepages/page")
             },
             {
-                "1,2,4": {"size": str(1024 ** 3), "unit": "bytes"},
-                "3": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+                "1,2,4": {"size": str(1024**3), "unit": "bytes"},
+                "3": {"size": str(2 * 1024**3), "unit": "bytes"},
             },
         )
         self.assertEqual(setxml.find("./memoryBacking/nosharepages"), None)
@@ -5074,7 +5191,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "44454c4c-3400-105a-8033-b3c04f4b344a", caps["host"]["host"]["uuid"]
         )
         self.assertEqual(
-            {"qemu", "kvm"}, {domainCaps["domain"] for domainCaps in caps["domains"]},
+            {"qemu", "kvm"},
+            {domainCaps["domain"] for domainCaps in caps["domains"]},
         )
 
         self.assertEqual(

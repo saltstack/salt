@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.lvm as lvm
 from salt.exceptions import ArgumentValueError
 from tests.support.mock import MagicMock, patch
@@ -230,7 +231,11 @@ def test_lv_present_with_invalid_suffixes(lv02):
         with patch.dict(lvm.__opts__, {"test": True}):
             for size in sizes_list:
                 pytest.raises(
-                    ArgumentValueError, lvm.lv_present, name, vgname=vgname, size=size,
+                    ArgumentValueError,
+                    lvm.lv_present,
+                    name,
+                    vgname=vgname,
+                    size=size,
                 )
 
 

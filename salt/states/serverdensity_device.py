@@ -177,9 +177,10 @@ def monitored(
 
     if device_in_sd and sd_agent_installed:
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "Such server name already exists in this Server Density account. And sd-agent is installed"
+        ret["comment"] = (
+            "Such server name already exists in this Server Density account. And"
+            " sd-agent is installed"
+        )
         ret["changes"] = {}
         return ret
 
@@ -198,9 +199,10 @@ def monitored(
         ret["comment"] = "Device was already in Server Density db."
     else:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Failed to create device in Server Density DB and this device does not exist in db either."
+        ret["comment"] = (
+            "Failed to create device in Server Density DB and this device does not"
+            " exist in db either."
+        )
         ret["changes"] = {}
         if __opts__["test"]:
             ret["result"] = None
@@ -211,9 +213,10 @@ def monitored(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret[
-            "comment"
-        ] = "Server Density agent is set to be installed and device created in the Server Density DB"
+        ret["comment"] = (
+            "Server Density agent is set to be installed and device created in the"
+            " Server Density DB"
+        )
         return ret
 
     installed_agent = __salt__["serverdensity_device.install_agent"](

@@ -26,7 +26,8 @@ class BotoSNSTest(ModuleCase):
             boto.connect_iam()
         except boto.exception.NoAuthHandlerFound:
             self.skipTest(
-                "Please setup boto AWS credentials before running boto integration tests."
+                "Please setup boto AWS credentials before running boto integration"
+                " tests."
             )
         # The name of the topic you want to create.
         # Constraints: Topic names must be made up of only uppercase and

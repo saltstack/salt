@@ -50,8 +50,8 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=unused-import
 try:
-    import botocore
     import boto3
+    import botocore
     import jmespath
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -415,8 +415,8 @@ def unsubscribe(SubscriptionArn, region=None, key=None, keyid=None, profile=None
         # Note that anything left in PendingConfirmation will be auto-deleted by AWS after 30 days
         # anyway, so this isn't as ugly a hack as it might seem at first...
         log.info(
-            "Invalid subscription ARN `%s` passed - likely a PendingConfirmaton or such.  "
-            "Skipping unsubscribe attempt as it would almost certainly fail...",
+            "Invalid subscription ARN `%s` passed - likely a PendingConfirmaton or"
+            " such.  Skipping unsubscribe attempt as it would almost certainly fail...",
             SubscriptionArn,
         )
         return True

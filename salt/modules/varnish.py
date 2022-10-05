@@ -28,7 +28,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The varnish execution module failed to load: either varnishd or varnishadm is not in the path.",
+        "The varnish execution module failed to load: either varnishd or varnishadm is"
+        " not in the path.",
     )
 
 

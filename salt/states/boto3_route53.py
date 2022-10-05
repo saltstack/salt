@@ -641,7 +641,7 @@ def rr_present(
 
     if Type is None:
         raise SaltInvocationError(
-            "'Type' is a required parameter when adding or updating" "resource records."
+            "'Type' is a required parameter when adding or updating resource records."
         )
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 

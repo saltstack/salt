@@ -28,7 +28,7 @@ from tests.support.unit import TestCase, skipIf
 
 def stdout_fileno_available():
     """
-        Tests if sys.stdout.fileno is available in this testing environment
+    Tests if sys.stdout.fileno is available in this testing environment
     """
     try:
         sys.stdout.fileno()
@@ -39,11 +39,11 @@ def stdout_fileno_available():
 
 def fixStdOutErrFileNoIfNeeded(func):
     """
-        Decorator that sets stdout and stderr to their original objects if
-        sys.stdout.fileno() doesn't work and restores them after running the
-        decorated function. This doesn't check if the original objects actually
-        work. If they don't then the test environment is too broken to test
-        the VT.
+    Decorator that sets stdout and stderr to their original objects if
+    sys.stdout.fileno() doesn't work and restores them after running the
+    decorated function. This doesn't check if the original objects actually
+    work. If they don't then the test environment is too broken to test
+    the VT.
     """
 
     @functools.wraps(func)
@@ -64,31 +64,41 @@ def fixStdOutErrFileNoIfNeeded(func):
 
 class VTTestCase(TestCase):
     @skipIf(
-        True,
-        "Disabled until we can figure out why this fails when whole test suite runs.",
+        salt.utils.platform.is_windows(),
+        "Skip on Windows because this feature is not supported",
     )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
-        if not sys.stdin.isatty():
-            self.skipTest("Not attached to a TTY. The test would fail.")
         cols = random.choice(range(80, 250))
         terminal = salt.utils.vt.Terminal(
-            'echo "Foo!"',
+            "stty size",
             shell=True,
             cols=cols,
             rows=24,
             stream_stdout=False,
             stream_stderr=False,
         )
-        # First the assertion
         self.assertEqual(terminal.getwinsize(), (24, cols))
-        # Then wait for the terminal child to exit
-        terminal.wait()
+        buffer_o = buffer_e = ""
+        while terminal.has_unread_data:
+            stdout, stderr = terminal.recv()
+            if stdout:
+                buffer_o += stdout
+            if stderr:
+                buffer_e += stderr
+        assert buffer_o.strip() == "24 {}".format(cols)
+        try:
+            # Then wait for the terminal child to exit, this will raise an
+            # exception if the process has already exited.
+            terminal.wait()
+        except salt.utils.vt.TerminalException:
+            pass
         terminal.close()
 
     @skipIf(
         True,
-        "Disabled until we can find out why this kills the tests suite with an exit code of 134",
+        "Disabled until we can find out why this kills the tests suite with an exit"
+        " code of 134",
     )
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
@@ -267,8 +277,8 @@ class VTTestCase(TestCase):
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_unicode(self):
         """
-            Tests that the vt correctly handles multibyte characters that are
-            split between blocks of transmitted data.
+        Tests that the vt correctly handles multibyte characters that are
+        split between blocks of transmitted data.
         """
         block_size = 1024
         encoding = "utf-8"
@@ -283,6 +293,8 @@ class VTTestCase(TestCase):
             (
                 "import sys",
                 "import os",
+                "import warnings",
+                "warnings.simplefilter('ignore')",
                 "import tests.unit.utils.test_vt as test_vt",
                 (
                     "os.write(sys.stdout.fileno(), "
@@ -298,10 +310,13 @@ class VTTestCase(TestCase):
                 ),
             )
         )
+        env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         term = salt.utils.vt.Terminal(
             args=[sys.executable, "-c", '"' + python_command + '"'],
             shell=True,
             cwd=CODE_DIR,
+            env=env,
             stream_stdout=False,
             stream_stderr=False,
             force_receive_encoding=encoding,
@@ -334,9 +349,9 @@ class VTTestCase(TestCase):
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_shiftjis(self):
         """
-            Tests that the vt correctly handles multibyte characters that are
-            split between blocks of transmitted data.
-            Uses shift-jis encoding to make sure code doesn't assume unicode.
+        Tests that the vt correctly handles multibyte characters that are
+        split between blocks of transmitted data.
+        Uses shift-jis encoding to make sure code doesn't assume unicode.
         """
         block_size = 1024
         encoding = "shift-jis"
@@ -349,6 +364,8 @@ class VTTestCase(TestCase):
             (
                 "import sys",
                 "import os",
+                "import warnings",
+                "warnings.simplefilter('ignore')",
                 "import tests.unit.utils.test_vt as test_vt",
                 (
                     "os.write(sys.stdout.fileno(), "
@@ -364,10 +381,13 @@ class VTTestCase(TestCase):
                 ),
             )
         )
+        env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         term = salt.utils.vt.Terminal(
             args=[sys.executable, "-c", '"' + python_command + '"'],
             shell=True,
             cwd=CODE_DIR,
+            env=env,
             stream_stdout=False,
             stream_stderr=False,
             force_receive_encoding=encoding,

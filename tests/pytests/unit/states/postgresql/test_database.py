@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.postgres_database as postgres_database
 from tests.support.mock import MagicMock, patch
 

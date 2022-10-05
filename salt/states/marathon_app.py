@@ -49,7 +49,9 @@ def config(name, config):
     if existing_config:
         update_config = copy.deepcopy(existing_config)
         salt.utils.configcomparer.compare_and_update_config(
-            config, update_config, ret["changes"],
+            config,
+            update_config,
+            ret["changes"],
         )
     else:
         # the app is not configured--we need to create it from scratch
@@ -71,7 +73,8 @@ def config(name, config):
         if "exception" in update_result:
             ret["result"] = False
             ret["comment"] = "Failed to update app config for {}: {}".format(
-                name, update_result["exception"],
+                name,
+                update_result["exception"],
             )
             return ret
         else:

@@ -257,24 +257,28 @@ def absent(
         else:
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] = (
-                    "Unable to revoke grant {} on {} for "
-                    "{}@{} ({})".format(grant, database, user, host, err)
+                ret[
+                    "comment"
+                ] = "Unable to revoke grant {} on {} for {}@{} ({})".format(
+                    grant, database, user, host, err
                 )
                 ret["result"] = False
                 return ret
     else:
         err = _get_mysql_error()
         if err is not None:
-            ret["comment"] = (
-                "Unable to determine if grant {} on {} for "
-                "{}@{} exists ({})".format(grant, database, user, host, err)
+            ret[
+                "comment"
+            ] = "Unable to determine if grant {} on {} for {}@{} exists ({})".format(
+                grant, database, user, host, err
             )
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = (
-        "Grant {} on {} to {}@{} is not present, so it cannot be revoked"
-    ).format(grant, database, user, host)
+    ret[
+        "comment"
+    ] = "Grant {} on {} to {}@{} is not present, so it cannot be revoked".format(
+        grant, database, user, host
+    )
     return ret

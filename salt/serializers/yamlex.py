@@ -107,12 +107,13 @@ import datetime
 import logging
 
 import yaml
-from salt.serializers import DeserializationError, SerializationError
-from salt.utils.aggregation import Map, Sequence, aggregate
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 from yaml.scanner import ScannerError
+
+from salt.serializers import DeserializationError, SerializationError
+from salt.utils.aggregation import Map, Sequence, aggregate
+from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 
@@ -132,7 +133,7 @@ except AttributeError:
     BaseDumper = yaml.SafeDumper
 
 ERROR_MAP = {
-    ("found character '\\t' " "that cannot start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 
@@ -230,10 +231,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             try:
                 hash(key)
             except TypeError:
-                err = (
-                    "While constructing a mapping {} found unacceptable key {}"
-                ).format(node.start_mark, key_node.start_mark)
-                raise ConstructorError(err)
+                raise ConstructorError(
+                    "While constructing a mapping {} found unacceptable key {}".format(
+                        node.start_mark, key_node.start_mark
+                    )
+                )
             value = self.construct_object(value_node, deep=False)
             if key in sls_map and not reset:
                 value = merge_recursive(sls_map[key], value)

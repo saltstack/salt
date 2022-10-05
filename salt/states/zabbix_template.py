@@ -676,7 +676,8 @@ def present(name, params, static_host_list=True, **kwargs):
 
     defined_obj = __salt__["zabbix.substitute_params"](template_definition, **kwargs)
     log.info(
-        "SUBSTITUTED template_definition: %s", str(json.dumps(defined_obj, indent=4)),
+        "SUBSTITUTED template_definition: %s",
+        str(json.dumps(defined_obj, indent=4)),
     )
 
     tmpl_get = __salt__["zabbix.run_query"](
@@ -740,7 +741,8 @@ def present(name, params, static_host_list=True, **kwargs):
             diff_params["new"][zabbix_id_mapper["template"]] = template_id
             diff_params["old"][zabbix_id_mapper["template"]] = template_id
             log.info(
-                "TEMPLATE: update params: %s", str(json.dumps(diff_params, indent=4)),
+                "TEMPLATE: update params: %s",
+                str(json.dumps(diff_params, indent=4)),
             )
 
             CHANGE_STACK.append(
@@ -771,7 +773,8 @@ def present(name, params, static_host_list=True, **kwargs):
     log.info("\n\ntemplate_components: %s", json.dumps(template_components, indent=4))
     log.info("\n\ndiscovery_components: %s", json.dumps(discovery_components, indent=4))
     log.info(
-        "\n\nCurrent CHANGE_STACK: %s", str(json.dumps(CHANGE_STACK, indent=4)),
+        "\n\nCurrent CHANGE_STACK: %s",
+        str(json.dumps(CHANGE_STACK, indent=4)),
     )
 
     if existing_obj or not dry_run:
@@ -808,7 +811,8 @@ def present(name, params, static_host_list=True, **kwargs):
             )
 
         log.info(
-            "\n\nCurrent CHANGE_STACK: %s", str(json.dumps(CHANGE_STACK, indent=4)),
+            "\n\nCurrent CHANGE_STACK: %s",
+            str(json.dumps(CHANGE_STACK, indent=4)),
         )
 
         for d_rule_component in discovery_components:
@@ -826,7 +830,8 @@ def present(name, params, static_host_list=True, **kwargs):
 
             for proto_name in DISCOVERYRULE_COMPONENT_ORDER:
                 log.info(
-                    "\n\n\n\n\nPROTOTYPE_NAME: %s\n\n", str(json.dumps(proto_name)),
+                    "\n\n\n\n\nPROTOTYPE_NAME: %s\n\n",
+                    str(json.dumps(proto_name)),
                 )
                 existing_p_list = _get_existing_template_c_list(
                     proto_name, parent_id, **kwargs
@@ -856,7 +861,8 @@ def present(name, params, static_host_list=True, **kwargs):
                 )
 
     log.info(
-        "\n\nCurrent CHANGE_STACK: %s", str(json.dumps(CHANGE_STACK, indent=4)),
+        "\n\nCurrent CHANGE_STACK: %s",
+        str(json.dumps(CHANGE_STACK, indent=4)),
     )
 
     if not CHANGE_STACK:
@@ -882,8 +888,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" does not exist.'.format(name),
-                        "new": 'Zabbix Template "{}" would be created '
-                        "according definition.".format(name),
+                        "new": (
+                            'Zabbix Template "{}" would be created '
+                            "according definition.".format(name)
+                        ),
                     }
                 }
             else:
@@ -891,8 +899,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" did not exist.'.format(name),
-                        "new": 'Zabbix Template "{}" created according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Template "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -903,8 +913,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" differs.'.format(name),
-                        "new": 'Zabbix Template "{}" would be updated '
-                        "according definition.".format(name),
+                        "new": (
+                            'Zabbix Template "{}" would be updated '
+                            "according definition.".format(name)
+                        ),
                     }
                 }
             else:
@@ -912,8 +924,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" differed.'.format(name),
-                        "new": 'Zabbix Template "{}" updated according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Template "{}" updated according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }

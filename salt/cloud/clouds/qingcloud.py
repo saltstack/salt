@@ -339,7 +339,7 @@ def show_image(kwargs, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The show_images function must be called with " "-f or --function"
+            "The show_images function must be called with -f or --function"
         )
 
     if not isinstance(kwargs, dict):
@@ -596,7 +596,9 @@ def list_nodes_select(call=None):
         salt-cloud -S my-qingcloud
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -867,7 +869,7 @@ def destroy(instance_id, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     instance_data = show_instance(instance_id, call="action")

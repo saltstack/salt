@@ -19,7 +19,8 @@ def __virtual__():
         return cmd
     return (
         False,
-        "The uwsgi execution module failed to load: the uwsgi binary is not in the path.",
+        "The uwsgi execution module failed to load: the uwsgi binary is not in the"
+        " path.",
     )
 
 

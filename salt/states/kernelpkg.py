@@ -81,9 +81,9 @@ def latest_installed(name, **kwargs):  # pylint: disable=unused-argument
 
     if upgrade in installed:
         ret["result"] = True
-        ret["comment"] = (
-            "The latest kernel package is already installed: " "{}"
-        ).format(upgrade)
+        ret["comment"] = "The latest kernel package is already installed: {}".format(
+            upgrade
+        )
         ret["changes"] = {}
 
     else:
@@ -91,17 +91,17 @@ def latest_installed(name, **kwargs):  # pylint: disable=unused-argument
         if __opts__["test"]:
             ret["result"] = None
             ret["changes"] = {}
-            ret["comment"] = (
-                "The latest kernel package will be installed: " "{}"
-            ).format(upgrade)
+            ret["comment"] = "The latest kernel package will be installed: {}".format(
+                upgrade
+            )
 
         else:
             result = __salt__["kernelpkg.upgrade"]()
             ret["result"] = True
             ret["changes"] = result["upgrades"]
-            ret["comment"] = (
-                "The latest kernel package has been installed, " "but not activated."
-            )
+            ret[
+                "comment"
+            ] = "The latest kernel package has been installed, but not activated."
 
     return ret
 
@@ -143,7 +143,7 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
 
     if __salt__["kernelpkg.needs_reboot"]():
 
-        ret["comment"] = ("The system will be booted to activate " "kernel: {}").format(
+        ret["comment"] = "The system will be booted to activate kernel: {}".format(
             latest
         )
 
@@ -158,9 +158,9 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
 
     else:
         ret["result"] = True
-        ret["comment"] = (
-            "The latest installed kernel package " "is active: {}"
-        ).format(active)
+        ret["comment"] = "The latest installed kernel package is active: {}".format(
+            active
+        )
         ret["changes"] = {}
 
     return ret
@@ -208,7 +208,8 @@ def mod_watch(name, sfun, **kwargs):
         return {
             "name": name,
             "changes": {},
-            "comment": "kernelpkg.{} does not work with the watch "
-            "requisite.".format(sfun),
+            "comment": "kernelpkg.{} does not work with the watch requisite.".format(
+                sfun
+            ),
             "result": False,
         }

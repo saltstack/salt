@@ -49,7 +49,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The mssql execution module cannot be loaded: the pymssql python library is not available.",
+        "The mssql execution module cannot be loaded: the pymssql python library is not"
+        " available.",
     )
 
 

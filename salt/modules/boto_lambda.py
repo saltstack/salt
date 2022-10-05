@@ -96,10 +96,10 @@ try:
     # pylint: disable=unused-import
     import boto
     import boto3
+    from botocore import __version__ as found_botocore_version
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
-    from botocore import __version__ as found_botocore_version
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -322,7 +322,8 @@ def create_function(
                     == "InvalidParameterValueException"
                 ):
                     log.info(
-                        "Function not created but IAM role may not have propagated, will retry"
+                        "Function not created but IAM role may not have propagated,"
+                        " will retry"
                     )
                     # exponential backoff
                     time.sleep(
@@ -492,7 +493,8 @@ def update_function_config(
                     == "InvalidParameterValueException"
                 ):
                     log.info(
-                        "Function not updated but IAM role may not have propagated, will retry"
+                        "Function not updated but IAM role may not have propagated,"
+                        " will retry"
                     )
                     # exponential backoff
                     time.sleep(

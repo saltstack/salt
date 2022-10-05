@@ -198,11 +198,11 @@ def set(name, data, **kwargs):
         if current is not None and [key, args["type"], str(args["value"])] in current:
             if ret["comment"] == "":
                 ret["comment"] = "Unchanged answers: "
-            ret["comment"] += ("{} ").format(key)
+            ret["comment"] += "{} ".format(key)
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["changes"][key] = ("New value: {}").format(args["value"])
+                ret["changes"][key] = "New value: {}".format(args["value"])
             else:
                 if __salt__["debconf.set"](name, key, args["type"], args["value"]):
                     if args["type"] == "password":
