@@ -27,9 +27,13 @@ except ImportError:
 
 
 def __virtual__():
+
     if HAS_LINT:
-        version = salt.utils.yamllint.version()
-        version_cmp = salt.utils.versions.version_cmp(version, "1.20.0")
+        if salt.utils.yamllint.has_yamllint():
+            version = salt.utils.yamllint.version()
+            version_cmp = salt.utils.versions.version_cmp(version, "1.20.0")
+        else:
+            return (False, "yamllint not installed")
         if version_cmp >= 0:
             return __virtualname__
         else:

@@ -9,7 +9,7 @@ import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
 import salt.serializers.plist as plist
 import salt.serializers.python as python
-import salt.serializers.toml as toml
+import salt.serializers.tomlmod as tomlmod
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
 from salt.serializers import SerializationError
@@ -359,13 +359,13 @@ def test_configparser():
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(toml.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
+@pytest.mark.skipif(tomlmod.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
 def test_serialize_toml():
     data = {"foo": "bar"}
-    serialized = toml.serialize(data)
+    serialized = tomlmod.serialize(data)
     assert serialized == 'foo = "bar"\n', serialized
 
-    deserialized = toml.deserialize(serialized)
+    deserialized = tomlmod.deserialize(serialized)
     assert deserialized == data, deserialized
 
 
