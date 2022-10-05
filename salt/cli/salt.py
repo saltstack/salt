@@ -1,8 +1,11 @@
+# isort:skip_file
+
 import os
 import sys
 
+sys.modules["pkg_resources"] = None
+
 import salt.defaults.exitcodes
-import salt.log
 import salt.utils.parsers
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -15,9 +18,6 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.utils.args import yamlify_arg
-from salt.utils.verify import verify_log
-
-sys.modules["pkg_resources"] = None
 
 
 class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
@@ -32,11 +32,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         import salt.client
 
         self.parse_args()
-
-        if self.config["log_level"] not in ("quiet",):
-            # Setup file logging!
-            self.setup_logfile_logger()
-            verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors

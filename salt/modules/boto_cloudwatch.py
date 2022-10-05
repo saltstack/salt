@@ -45,16 +45,17 @@ Connection module for Amazon CloudWatch
 
 import logging
 
+import yaml  # pylint: disable=blacklisted-import
+
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-import yaml  # pylint: disable=blacklisted-import
 
 try:
     import boto
     import boto.ec2.cloudwatch
-    import boto.ec2.cloudwatch.listelement
     import boto.ec2.cloudwatch.dimension
+    import boto.ec2.cloudwatch.listelement
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     HAS_BOTO = True

@@ -8,8 +8,9 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
+    import libnacl.secret  # pylint: disable=unused-import
+
     import salt.utils.nacl as nacl
 
     HAS_LIBNACL = True

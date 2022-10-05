@@ -543,7 +543,7 @@ class LinodeAPIv4(LinodeAPI):
 
                 if status_code == 429:
                     log.debug(
-                        "recieved rate limit; retrying in %d seconds", ratelimit_sleep
+                        "received rate limit; retrying in %d seconds", ratelimit_sleep
                     )
                     time.sleep(ratelimit_sleep)
                     continue

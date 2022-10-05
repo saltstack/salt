@@ -1,0 +1,1 @@
+Include sync_roster when sync_all is called.

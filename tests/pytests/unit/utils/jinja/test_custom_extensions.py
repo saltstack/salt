@@ -6,20 +6,21 @@ import ast
 import itertools
 import os
 import pprint
-import random
 import re
 
 import pytest
+from jinja2 import DictLoader, Environment, exceptions
+
 import salt.config
 import salt.loader
 
 # dateutils is needed so that the strftime jinja filter is loaded
+import salt.modules.match as match
 import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
-from jinja2 import DictLoader, Environment, exceptions
 from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
@@ -54,6 +55,11 @@ def minion_opts(tmp_path):
         }
     )
     return _opts
+
+
+@pytest.fixture()
+def configure_loader_modules(minion_opts):
+    return {match: {"__opts__": minion_opts}}
 
 
 @pytest.fixture
@@ -752,7 +758,7 @@ def test_network_size(minion_opts, local_salt):
 
 @pytest.mark.requires_network
 @pytest.mark.parametrize("backend", ["requests", "tornado", "urllib2"])
-def test_http_query(minion_opts, local_salt, backend):
+def test_http_query(minion_opts, local_salt, backend, httpserver):
     """
     Test the `http_query` Jinja filter.
     """
@@ -762,8 +768,19 @@ def test_http_query(minion_opts, local_salt, backend):
         "http://google.com",
         "http://duckduckgo.com",
     )
+    response = {
+        "backend": backend,
+        "body": "Hey, this isn't http://google.com!",
+    }
+    httpserver.expect_request("/{}".format(backend)).respond_with_data(
+        salt.utils.json.dumps(response), content_type="text/plain"
+    )
     rendered = render_jinja_tmpl(
-        "{{ '" + random.choice(urls) + "' | http_query(backend='" + backend + "') }}",
+        "{{ '"
+        + httpserver.url_for("/{}".format(backend))
+        + "' | http_query(backend='"
+        + backend
+        + "') }}",
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert isinstance(rendered, str), "Failed with rendered template: {}".format(
@@ -1201,3 +1218,40 @@ def test_zip_longest(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "Ax By C- D- "
+
+
+def test_random_sample(minion_opts, local_salt):
+    """
+    Test the `random_sample` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ['one', 'two', 'three', 'four'] | random_sample(2, seed='static') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "['four', 'two']"
+
+
+def test_random_shuffle(minion_opts, local_salt):
+    """
+    Test the `random_shuffle` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ['one', 'two', 'three', 'four'] | random_shuffle(seed='static') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "['four', 'two', 'three', 'one']"
+
+
+def test_ifelse(minion_opts, local_salt):
+    """
+    Test the `ifelse` Jinja global function.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ifelse('default') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='foo03') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='bar03') }}\n"
+        "{{ ifelse(False, 'fooval', True, 'barval', 'default', minion_id='foo03') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='baz03') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == ("default\n" "fooval\n" "barval\n" "barval\n" "default")

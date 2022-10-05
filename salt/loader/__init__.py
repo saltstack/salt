@@ -56,7 +56,7 @@ SALT_INTERNAL_LOADERS_PATHS = (
     str(SALT_BASE_PATH / "executors"),
     str(SALT_BASE_PATH / "fileserver"),
     str(SALT_BASE_PATH / "grains"),
-    str(SALT_BASE_PATH / "log" / "handlers"),
+    str(SALT_BASE_PATH / "log_handlers"),
     str(SALT_BASE_PATH / "matchers"),
     str(SALT_BASE_PATH / "metaproxy"),
     str(SALT_BASE_PATH / "modules"),
@@ -92,6 +92,7 @@ def static_loader(
     ext_type_dirs=None,
     base_path=None,
     filter_name=None,
+    loaded_base_name=None,
 ):
     funcs = LazyLoader(
         _module_dirs(
@@ -106,6 +107,7 @@ def static_loader(
         opts,
         tag=tag,
         pack=pack,
+        loaded_base_name=loaded_base_name,
     )
     ret = {}
     funcs._load_all()
@@ -129,7 +131,10 @@ def _module_dirs(
     if tag is None:
         tag = ext_type
     sys_types = os.path.join(base_path or str(SALT_BASE_PATH), int_type or ext_type)
-    ext_types = os.path.join(opts["extension_modules"], ext_type)
+    return_types = [sys_types]
+    if opts.get("extension_modules"):
+        ext_types = os.path.join(opts["extension_modules"], ext_type)
+        return_types.insert(0, ext_types)
 
     if not sys_types.startswith(SALT_INTERNAL_LOADERS_PATHS):
         raise RuntimeError(
@@ -245,7 +250,7 @@ def _module_dirs(
         if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
 
-    return cli_module_dirs + ext_type_types + [ext_types, sys_types]
+    return cli_module_dirs + ext_type_types + return_types
 
 
 def minion_mods(
@@ -277,9 +282,13 @@ def minion_mods(
 
     :param list whitelist: A list of modules which should be whitelisted.
     :param bool initial_load: Deprecated flag! Unused.
-    :param str loaded_base_name: A string marker for the loaded base name.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     :param bool notify: Flag indicating that an event should be fired upon
                         completion of module loading.
+
+
+    Example:
 
     .. code-block:: python
 
@@ -340,9 +349,18 @@ def minion_mods(
     return ret
 
 
-def raw_mod(opts, name, functions, mod="modules"):
+def raw_mod(opts, name, functions, mod="modules", loaded_base_name=None):
     """
     Returns a single module loaded raw and bypassing the __virtual__ function
+
+    :param dict opts: The Salt options dictionary
+    :param str name: The name of the module to load
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param str mod: The extension type.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
+
+    Example:
 
     .. code-block:: python
 
@@ -359,6 +377,7 @@ def raw_mod(opts, name, functions, mod="modules"):
         tag="rawmodule",
         virtual_enable=False,
         pack={"__salt__": functions},
+        loaded_base_name=loaded_base_name,
     )
     # if we don't have the module, return an empty dict
     if name not in loader.file_mapping:
@@ -373,6 +392,10 @@ def raw_mod(opts, name, functions, mod="modules"):
 def metaproxy(opts, loaded_base_name=None):
     """
     Return functions used in the meta proxy
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "metaproxy"),
@@ -382,16 +405,33 @@ def metaproxy(opts, loaded_base_name=None):
     )
 
 
-def matchers(opts):
+def matchers(opts, loaded_base_name=None):
     """
     Return the matcher services plugins
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
-    return LazyLoader(_module_dirs(opts, "matchers"), opts, tag="matchers")
+    return LazyLoader(
+        _module_dirs(opts, "matchers"),
+        opts,
+        tag="matchers",
+        loaded_base_name=loaded_base_name,
+    )
 
 
-def engines(opts, functions, runners, utils, proxy=None):
+def engines(opts, functions, runners, utils, proxy=None, loaded_base_name=None):
     """
-    Return the master services plugins
+    Return the engines plugins
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
+    :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     pack = {
         "__salt__": functions,
@@ -405,6 +445,7 @@ def engines(opts, functions, runners, utils, proxy=None):
         tag="engines",
         pack=pack,
         extra_module_dirs=utils.module_dirs if utils else None,
+        loaded_base_name=loaded_base_name,
     )
 
 
@@ -416,9 +457,19 @@ def proxy(
     utils=None,
     context=None,
     pack_self="__proxy__",
+    loaded_base_name=None,
 ):
     """
     Returns the proxy module for this salt-proxy-minion
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param LazyLoader returners: A LazyLoader instance returned from ``returners``.
+    :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "proxy"),
@@ -432,12 +483,24 @@ def proxy(
         },
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self=pack_self,
+        loaded_base_name=loaded_base_name,
     )
 
 
-def returners(opts, functions, whitelist=None, context=None, proxy=None):
+def returners(
+    opts, functions, whitelist=None, context=None, proxy=None, loaded_base_name=None
+):
     """
     Returns the returner modules
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "returners", "returner"),
@@ -445,12 +508,28 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
         tag="returner",
         whitelist=whitelist,
         pack={"__salt__": functions, "__context__": context, "__proxy__": proxy or {}},
+        loaded_base_name=loaded_base_name,
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=None, pack_self=None):
+def utils(
+    opts,
+    whitelist=None,
+    context=None,
+    proxy=None,
+    pack_self=None,
+    loaded_base_name=None,
+):
     """
     Returns the utility modules
+
+    :param dict opts: The Salt options dictionary
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "utils", ext_type_dirs="utils_dirs", load_extensions=False),
@@ -459,12 +538,21 @@ def utils(opts, whitelist=None, context=None, proxy=None, pack_self=None):
         whitelist=whitelist,
         pack={"__context__": context, "__proxy__": proxy or {}},
         pack_self=pack_self,
+        loaded_base_name=loaded_base_name,
+        _only_pack_properly_namespaced_functions=False,
     )
 
 
-def pillars(opts, functions, context=None):
+def pillars(opts, functions, context=None, loaded_base_name=None):
     """
     Returns the pillars modules
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     _utils = utils(opts)
     ret = LazyLoader(
@@ -474,13 +562,18 @@ def pillars(opts, functions, context=None):
         pack={"__salt__": functions, "__context__": context, "__utils__": _utils},
         extra_module_dirs=_utils.module_dirs,
         pack_self="__ext_pillar__",
+        loaded_base_name=loaded_base_name,
     )
     return FilterDictWrapper(ret, ".ext_pillar")
 
 
-def tops(opts):
+def tops(opts, loaded_base_name=None):
     """
     Returns the tops modules
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     if "master_tops" not in opts:
         return {}
@@ -490,13 +583,21 @@ def tops(opts):
         opts,
         tag="top",
         whitelist=whitelist,
+        loaded_base_name=loaded_base_name,
     )
     return FilterDictWrapper(ret, ".top")
 
 
-def wheels(opts, whitelist=None, context=None):
+def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
     """
     Returns the wheels modules
+
+    :param dict opts: The Salt options dictionary
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     if context is None:
         context = {}
@@ -506,20 +607,24 @@ def wheels(opts, whitelist=None, context=None):
         tag="wheel",
         whitelist=whitelist,
         pack={"__context__": context},
+        loaded_base_name=loaded_base_name,
     )
 
 
-def outputters(opts):
+def outputters(opts, loaded_base_name=None):
     """
     Returns the outputters modules
 
     :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     :returns: LazyLoader instance, with only outputters present in the keyspace
     """
     ret = LazyLoader(
         _module_dirs(opts, "output", ext_type_dirs="outputter_dirs"),
         opts,
         tag="output",
+        loaded_base_name=loaded_base_name,
     )
     wrapped_ret = FilterDictWrapper(ret, ".output")
     # TODO: this name seems terrible... __salt__ should always be execution mods
@@ -527,37 +632,48 @@ def outputters(opts):
     return wrapped_ret
 
 
-def serializers(opts):
+def serializers(opts, loaded_base_name=None):
     """
     Returns the serializers modules
     :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     :returns: LazyLoader instance, with only serializers present in the keyspace
     """
     return LazyLoader(
         _module_dirs(opts, "serializers"),
         opts,
         tag="serializers",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def eauth_tokens(opts):
+def eauth_tokens(opts, loaded_base_name=None):
     """
     Returns the tokens modules
     :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     :returns: LazyLoader instance, with only token backends present in the keyspace
     """
     return LazyLoader(
         _module_dirs(opts, "tokens"),
         opts,
         tag="tokens",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def auth(opts, whitelist=None):
+def auth(opts, whitelist=None, loaded_base_name=None):
     """
     Returns the auth modules
 
     :param dict opts: The Salt options dictionary
+
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     :returns: LazyLoader
     """
     return LazyLoader(
@@ -566,12 +682,18 @@ def auth(opts, whitelist=None):
         tag="auth",
         whitelist=whitelist,
         pack={"__salt__": minion_mods(opts)},
+        loaded_base_name=loaded_base_name,
     )
 
 
-def fileserver(opts, backends):
+def fileserver(opts, backends, loaded_base_name=None):
     """
     Returns the file server modules
+
+    :param dict opts: The Salt options dictionary
+    :param list backends: List of backends to load.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     _utils = utils(opts)
 
@@ -599,12 +721,20 @@ def fileserver(opts, backends):
         whitelist=backends,
         pack={"__utils__": _utils},
         extra_module_dirs=_utils.module_dirs,
+        loaded_base_name=loaded_base_name,
     )
 
 
-def roster(opts, runner=None, utils=None, whitelist=None):
+def roster(opts, runner=None, utils=None, whitelist=None, loaded_base_name=None):
     """
     Returns the roster modules
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader runner: A LazyLoader instance returned from ``runner``.
+    :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "roster"),
@@ -613,28 +743,56 @@ def roster(opts, runner=None, utils=None, whitelist=None):
         whitelist=whitelist,
         pack={"__runner__": runner, "__utils__": utils},
         extra_module_dirs=utils.module_dirs if utils else None,
+        loaded_base_name=loaded_base_name,
     )
 
 
-def thorium(opts, functions, runners):
+def thorium(opts, functions, runners, loaded_base_name=None):
     """
     Load the thorium runtime modules
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     pack = {"__salt__": functions, "__runner__": runners, "__context__": {}}
-    ret = LazyLoader(_module_dirs(opts, "thorium"), opts, tag="thorium", pack=pack)
+    ret = LazyLoader(
+        _module_dirs(opts, "thorium"),
+        opts,
+        tag="thorium",
+        pack=pack,
+        loaded_base_name=loaded_base_name,
+    )
     ret.pack["__thorium__"] = ret
     return ret
 
 
 def states(
-    opts, functions, utils, serializers, whitelist=None, proxy=None, context=None
+    opts,
+    functions,
+    utils,
+    serializers,
+    whitelist=None,
+    proxy=None,
+    context=None,
+    loaded_base_name=None,
 ):
     """
     Returns the state modules
 
     :param dict opts: The Salt options dictionary
-    :param dict functions: A dictionary of minion modules, with module names as
-                            keys and funcs as values.
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
+    :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
+    :param LazyLoader serializers: An optional LazyLoader instance returned from ``serializers``.
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
 
     .. code-block:: python
 
@@ -661,16 +819,21 @@ def states(
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__states__",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def beacons(opts, functions, context=None, proxy=None):
+def beacons(opts, functions, context=None, proxy=None, loaded_base_name=None):
     """
     Load the beacon modules
 
     :param dict opts: The Salt options dictionary
-    :param dict functions: A dictionary of minion modules, with module names as
-                            keys and funcs as values.
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "beacons"),
@@ -678,31 +841,39 @@ def beacons(opts, functions, context=None, proxy=None):
         tag="beacons",
         pack={"__context__": context, "__salt__": functions, "__proxy__": proxy or {}},
         virtual_funcs=[],
+        loaded_base_name=loaded_base_name,
     )
 
 
-def log_handlers(opts):
+def log_handlers(opts, loaded_base_name=None):
     """
     Returns the custom logging handler modules
 
     :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     ret = LazyLoader(
         _module_dirs(
             opts,
             "log_handlers",
-            int_type="handlers",
-            base_path=str(SALT_BASE_PATH / "log"),
         ),
         opts,
         tag="log_handlers",
+        loaded_base_name=loaded_base_name,
     )
     return FilterDictWrapper(ret, ".setup_handlers")
 
 
-def ssh_wrapper(opts, functions=None, context=None):
+def ssh_wrapper(opts, functions=None, context=None, loaded_base_name=None):
     """
     Returns the custom logging handler modules
+
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(
@@ -713,12 +884,24 @@ def ssh_wrapper(opts, functions=None, context=None):
         opts,
         tag="wrapper",
         pack={"__salt__": functions, "__context__": context},
+        loaded_base_name=loaded_base_name,
     )
 
 
-def render(opts, functions, states=None, proxy=None, context=None):
+def render(
+    opts, functions, states=None, proxy=None, context=None, loaded_base_name=None
+):
     """
     Returns the render modules
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param LazyLoader states: A LazyLoader instance returned from ``states``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     if context is None:
         context = {}
@@ -746,6 +929,7 @@ def render(opts, functions, states=None, proxy=None, context=None):
         opts,
         tag="render",
         pack=pack,
+        loaded_base_name=loaded_base_name,
     )
     rend = FilterDictWrapper(ret, ".render")
 
@@ -761,9 +945,16 @@ def render(opts, functions, states=None, proxy=None, context=None):
     return rend
 
 
-def grain_funcs(opts, proxy=None, context=None):
+def grain_funcs(opts, proxy=None, context=None, loaded_base_name=None):
     """
     Returns the grain functions
+
+    :param dict opts: The Salt options dictionary
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
 
       .. code-block:: python
 
@@ -786,6 +977,7 @@ def grain_funcs(opts, proxy=None, context=None):
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
         pack=pack,
+        loaded_base_name=loaded_base_name,
     )
     ret.pack["__utils__"] = _utils
     return ret
@@ -841,10 +1033,18 @@ def _load_cached_grains(opts, cfn):
         return None
 
 
-def grains(opts, force_refresh=False, proxy=None, context=None):
+def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name=None):
     """
     Return the functions for the dynamic grains and the values for the static
     grains.
+
+    :param dict opts: The Salt options dictionary
+    :param bool force_refresh: Force the refresh of grains
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
 
     Since grains are computed early in the startup process, grains functions
     do not have __salt__ or __proxy__ available.  At proxy-minion startup,
@@ -903,7 +1103,9 @@ def grains(opts, force_refresh=False, proxy=None, context=None):
 
     grains_data = {}
     blist = opts.get("grains_blacklist", [])
-    funcs = grain_funcs(opts, proxy=proxy, context=context or {})
+    funcs = grain_funcs(
+        opts, proxy=proxy, context=context or {}, loaded_base_name=loaded_base_name
+    )
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
@@ -1036,19 +1238,29 @@ def call(fun, **kwargs):
     """
     args = kwargs.get("args", [])
     dirs = kwargs.get("dirs", [])
+    loaded_base_name = kwargs.pop("loaded_base_name", None)
 
     funcs = LazyLoader(
         [str(SALT_BASE_PATH / "modules")] + dirs,
         None,
         tag="modules",
         virtual_enable=False,
+        loaded_base_name=loaded_base_name,
     )
     return funcs[fun](*args)
 
 
-def runner(opts, utils=None, context=None, whitelist=None):
+def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None):
     """
     Directly call a function inside a loader directory
+
+    :param dict opts: The Salt options dictionary
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     if utils is None:
         utils = {}
@@ -1063,23 +1275,36 @@ def runner(opts, utils=None, context=None, whitelist=None):
         extra_module_dirs=utils.module_dirs if utils else None,
         # TODO: change from __salt__ to something else, we overload __salt__ too much
         pack_self="__salt__",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def queues(opts):
+def queues(opts, loaded_base_name=None):
     """
     Directly call a function inside a loader directory
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "queues", "queue", ext_type_dirs="queue_dirs"),
         opts,
         tag="queues",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def sdb(opts, functions=None, whitelist=None, utils=None):
+def sdb(opts, functions=None, whitelist=None, utils=None, loaded_base_name=None):
     """
     Make a very small database call
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     if utils is None:
         utils = {}
@@ -1095,38 +1320,54 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
         },
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
+        loaded_base_name=loaded_base_name,
     )
 
 
-def pkgdb(opts):
+def pkgdb(opts, loaded_base_name=None):
     """
     Return modules for SPM's package database
 
     .. versionadded:: 2015.8.0
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "pkgdb", base_path=str(SALT_BASE_PATH / "spm")),
         opts,
         tag="pkgdb",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def pkgfiles(opts):
+def pkgfiles(opts, loaded_base_name=None):
     """
     Return modules for SPM's file handling
 
     .. versionadded:: 2015.8.0
+
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "pkgfiles", base_path=str(SALT_BASE_PATH / "spm")),
         opts,
         tag="pkgfiles",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def clouds(opts):
+def clouds(opts, loaded_base_name=None):
     """
     Return the cloud functions
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     _utils = utils(opts)
     # Let's bring __active_provider_name__, defaulting to None, to all cloud
@@ -1144,6 +1385,7 @@ def clouds(opts):
         tag="clouds",
         pack={"__utils__": _utils, "__active_provider_name__": None},
         extra_module_dirs=_utils.module_dirs,
+        loaded_base_name=loaded_base_name,
     )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
@@ -1155,20 +1397,33 @@ def clouds(opts):
     return functions
 
 
-def netapi(opts):
+def netapi(opts, loaded_base_name=None):
     """
     Return the network api functions
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "netapi"),
         opts,
         tag="netapi",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def executors(opts, functions=None, context=None, proxy=None):
+def executors(opts, functions=None, context=None, proxy=None, loaded_base_name=None):
     """
     Returns the executor modules
+
+    :param dict opts: The Salt options dictionary
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+    :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     if proxy is None:
         proxy = {}
@@ -1180,17 +1435,23 @@ def executors(opts, functions=None, context=None, proxy=None):
         tag="executor",
         pack={"__salt__": functions, "__context__": context, "__proxy__": proxy},
         pack_self="__executors__",
+        loaded_base_name=loaded_base_name,
     )
 
 
-def cache(opts):
+def cache(opts, loaded_base_name=None):
     """
     Returns the returner modules
+
+    :param dict opts: The Salt options dictionary
+    :param str loaded_base_name: The imported modules namespace when imported
+                                 by the salt loader.
     """
     return LazyLoader(
         _module_dirs(opts, "cache", "cache"),
         opts,
         tag="cache",
+        loaded_base_name=loaded_base_name,
     )
 
 

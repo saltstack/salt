@@ -4,11 +4,12 @@
 
 import textwrap
 
+from yaml.constructor import ConstructorError
+
 import salt.utils.files
 from salt.utils.yamlloader import SaltYamlSafeLoader, yaml
 from tests.support.mock import mock_open, patch
 from tests.support.unit import TestCase
-from yaml.constructor import ConstructorError
 
 
 class YamlLoaderTestCase(TestCase):
