@@ -25,12 +25,26 @@ def proxy_id(request, salt_delta_proxy, skip_on_tcp_transport):
     return request.param
 
 
-def test_can_it_ping(salt_cli, proxy_id):
+@pytest.fixture
+def proxy_ids(request, salt_delta_proxy, skip_on_tcp_transport):
+    return pytest.helpers.proxy.delta_proxy_minion_ids()
+
+
+def test_can_it_ping(salt_cli, proxy_id, proxy_ids):
     """
     Ensure the proxy can ping
     """
     ret = salt_cli.run("test.ping", minion_tgt=proxy_id)
     assert ret.data is True
+
+
+def test_can_it_ping_all(salt_cli, proxy_ids):
+    """
+    Ensure the proxy can ping (all proxy minions)
+    """
+    ret = salt_cli.run("-L", "test.ping", minion_tgt=",".join(proxy_ids))
+    for _id in proxy_ids:
+        assert ret.data[_id] is True
 
 
 def test_list_pkgs(salt_cli, proxy_id):
