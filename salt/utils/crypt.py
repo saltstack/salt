@@ -13,10 +13,31 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import Crypto.Random  # nosec
+    import M2Crypto  # pylint: disable=unused-import
 
-    HAS_CRYPTO = True
+    Random = None
+    HAS_M2CRYPTO = True
 except ImportError:
+    HAS_M2CRYPTO = False
+
+if not HAS_M2CRYPTO:
+    try:
+        from Cryptodome import Random
+
+        HAS_CRYPTODOME = True
+    except ImportError:
+        HAS_CRYPTODOME = False
+else:
+    HAS_CRYPTODOME = False
+
+if not HAS_M2CRYPTO and not HAS_CRYPTODOME:
+    try:
+        from Crypto import Random  # nosec
+
+        HAS_CRYPTO = True
+    except ImportError:
+        HAS_CRYPTO = False
+else:
     HAS_CRYPTO = False
 
 
@@ -104,8 +125,8 @@ def reinit_crypto():
         child processes after using os.fork()
 
     """
-    if HAS_CRYPTO:
-        Crypto.Random.atfork()
+    if HAS_CRYPTODOME or HAS_CRYPTO:
+        Random.atfork()
 
 
 def pem_finger(path=None, key=None, sum_type="sha256"):

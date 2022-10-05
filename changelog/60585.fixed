@@ -1,2 +1,0 @@
-Have the beacon call run through a try...except, catching any errors, logging and firing an event that includes the error.
-Fixing the swapusage beacon to ensure value is a string before we attempt to filter out the %.

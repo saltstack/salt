@@ -2,6 +2,7 @@ import os.path
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.xmlutil as xmlutil
@@ -1353,7 +1354,7 @@ def test_update_add_cpu_topology(make_mock_vm):
     assert setxml.find("./cpu/feature[@name='lahf']").get("policy") == "optional"
 
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("cpus") == "0,1,2,3"
-    assert setxml.find("./cpu/numa/cell/[@id='0']").get("memory") == str(1024 ** 3)
+    assert setxml.find("./cpu/numa/cell/[@id='0']").get("memory") == str(1024**3)
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("unit") == "bytes"
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("discard") == "yes"
     assert (
@@ -1382,7 +1383,7 @@ def test_update_add_cpu_topology(make_mock_vm):
     )
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("cpus") == "4,5,6"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("memory") == str(
-        int(1024 ** 3 / 2)
+        int(1024**3 / 2)
     )
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("unit") == "bytes"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("discard") == "no"
@@ -1570,10 +1571,10 @@ def test_update_add_memtune(make_mock_vm):
 
     assert ret["definition"]
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
-    assert_equal_unit(setxml.find("memtune/soft_limit"), int(0.5 * 1024 ** 3), "bytes")
-    assert_equal_unit(setxml.find("memtune/hard_limit"), 1024 * 1024 ** 2, "bytes")
-    assert_equal_unit(setxml.find("memtune/swap_hard_limit"), 2048 * 1024 ** 2, "bytes")
-    assert_equal_unit(setxml.find("memtune/min_guarantee"), 1 * 1024 ** 3, "bytes")
+    assert_equal_unit(setxml.find("memtune/soft_limit"), int(0.5 * 1024**3), "bytes")
+    assert_equal_unit(setxml.find("memtune/hard_limit"), 1024 * 1024**2, "bytes")
+    assert_equal_unit(setxml.find("memtune/swap_hard_limit"), 2048 * 1024**2, "bytes")
+    assert_equal_unit(setxml.find("memtune/min_guarantee"), 1 * 1024**3, "bytes")
 
 
 def test_update_add_memtune_invalid_unit(make_mock_vm):
@@ -1624,7 +1625,7 @@ def test_update_mem_simple(make_mock_vm):
     assert ret["definition"]
     assert ret["mem"]
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
-    assert setxml.find("memory").text == str(2048 * 1024 ** 2)
+    assert setxml.find("memory").text == str(2048 * 1024**2)
     assert setxml.find("memory").get("unit") == "bytes"
     assert domain_mock.setMemoryFlags.call_args[0][0] == 2048 * 1024
 
@@ -1643,9 +1644,9 @@ def test_update_mem(make_mock_vm):
     assert ret["mem"]
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert setxml.find("memory").get("unit") == "bytes"
-    assert setxml.find("memory").text == str(int(0.5 * 1024 ** 3))
-    assert setxml.find("maxMemory").text == str(1 * 1024 ** 3)
-    assert setxml.find("currentMemory").text == str(2 * 1024 ** 3)
+    assert setxml.find("memory").text == str(int(0.5 * 1024**3))
+    assert setxml.find("maxMemory").text == str(1 * 1024**3)
+    assert setxml.find("currentMemory").text == str(2 * 1024**3)
 
 
 def test_update_add_mem_backing(make_mock_vm):
@@ -1675,8 +1676,8 @@ def test_update_add_mem_backing(make_mock_vm):
         p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
         for p in setxml.findall("memoryBacking/hugepages/page")
     } == {
-        "1,2,3,5": {"size": str(1024 ** 3), "unit": "bytes"},
-        "4": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+        "1,2,3,5": {"size": str(1024**3), "unit": "bytes"},
+        "4": {"size": str(2 * 1024**3), "unit": "bytes"},
     }
     assert setxml.find("./memoryBacking/nosharepages") is not None
     assert setxml.find("./memoryBacking/nosharepages").text is None
@@ -1850,7 +1851,9 @@ def test_update_console(make_mock_vm):
             <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
           </os>
           <devices>
-            <serial type='pty'/>
+            <serial type='pty'>
+              <source path='/dev/pts/4'/>
+            </serial>
             <console type='pty'/>
           </devices>
         </domain>

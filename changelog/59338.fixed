@@ -1,1 +1,0 @@
-Fixed the zabbix module to read the connection data from pillar.

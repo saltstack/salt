@@ -19,6 +19,7 @@ For PagerDuty API details, see https://developer.pagerduty.com/documentation/res
 """
 
 import requests
+
 import salt.utils.json
 
 

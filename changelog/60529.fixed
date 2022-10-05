@@ -1,1 +1,0 @@
-Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False

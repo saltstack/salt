@@ -4,6 +4,7 @@ import string
 from copy import deepcopy
 
 import pytest
+
 import salt.loader
 import salt.states.boto_s3_bucket as boto_s3_bucket
 from tests.support.mock import MagicMock, patch

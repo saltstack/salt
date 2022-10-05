@@ -4,9 +4,15 @@ on:
   pull_request_target:
     types: [opened, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
 
   Check-Changed-Files-Docstrings:
+    permissions:
+      contents: read
+      pull-requests: write
     name: Check Docstrings For Changed Files On PR
     runs-on: ubuntu-latest
 
@@ -23,6 +29,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install pre-commit pygithub
 
+      - name: Install Pre-Commit Hooks
+        run: |
+          pre-commit install --install-hooks
+
       - id: changed-files
         name: Get Changed Files
         uses: dorny/paths-filter@v2
@@ -36,17 +46,22 @@ jobs:
 
       - name: Check Docstrings For Changed Files On PR
         id: check-known-missing-docstrings
-        if: github.event_name == 'pull_request' && steps.changed-files.outputs.salt == 'true'
+        if: github.event_name == 'pull_request_target' && steps.changed-files.outputs.salt == 'true'
         continue-on-error: true
+        shell: bash
         run: |
-          pre-commit run -v --hook-stage manual check-known-missing-docstrings --show-diff-on-failure --color=never --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
+          set -o pipefail
+          pre-commit run --hook-stage manual check-known-missing-docstrings \
+            --show-diff-on-failure --color=never \
+            --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
 
       - name: Comment on PR
-        if: hashFiles('output.txt') != ''
+        # Comment on PRs if pre-commit triggered a failure
+        if: steps.check-known-missing-docstrings.outcome == 'failure'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python .github/workflows/scripts/pr-docstring-comments.py \
             --org ${{ github.repository_owner }} \
             --repo ${{ github.event.repository.name }} \
-            --issue ${{ github.event.issue.number }} output.txt
+            --issue ${{ github.event.number }} output.txt

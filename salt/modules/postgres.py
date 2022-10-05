@@ -2787,7 +2787,7 @@ def _make_privileges_list_query(name, object_type, prepend):
                     "ON n.oid = c.relnamespace",
                     "WHERE nspname = '{0}'",
                     "AND relname = '{1}'",
-                    "AND relkind = 'r'",
+                    "AND relkind in ('r', 'v')",
                     "ORDER BY relname",
                 ]
             )
@@ -2946,6 +2946,8 @@ def _get_object_owner(
                     "FROM pg_catalog.pg_proc p",
                     "JOIN pg_catalog.pg_namespace n",
                     "ON n.oid = p.pronamespace",
+                    "JOIN pg_catalog.pg_roles r",
+                    "ON p.proowner = r.oid",
                     "WHERE nspname = '{0}'",
                     "AND p.oid::regprocedure::text = '{1}'",
                     "ORDER BY proname, proargtypes",

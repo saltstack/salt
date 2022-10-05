@@ -18,7 +18,7 @@ class Features:
         if not self.setup:
             self.features.update(opts.get("features", {}))
         else:
-            log.warn("Features already setup")
+            log.warning("Features already setup")
 
     def get(self, key, default=None):
         return self.features.get(key, default)
