@@ -125,6 +125,7 @@ import logging
 import os
 
 import jinja2
+
 import salt.utils.data
 from salt.exceptions import SaltInvocationError
 

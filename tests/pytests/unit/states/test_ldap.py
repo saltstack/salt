@@ -12,6 +12,7 @@ import logging
 
 import attr
 import pytest
+
 import salt.states.ldap
 from salt.utils.oset import OrderedSet
 from salt.utils.stringutils import to_bytes

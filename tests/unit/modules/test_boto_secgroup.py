@@ -69,7 +69,7 @@ boto_conn_parameters = {
 
 
 def _random_group_id():
-    group_id = "sg-{:x}".format(random.randrange(2 ** 32))
+    group_id = "sg-{:x}".format(random.randrange(2**32))
     return group_id
 
 

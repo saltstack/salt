@@ -1,6 +1,7 @@
 import io
 
 import pytest
+
 import salt.modules.nilrt_ip as nilrt_ip
 from tests.support.mock import patch
 
