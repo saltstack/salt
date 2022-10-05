@@ -404,12 +404,30 @@ def _get_connection_config(cbank, opts, context, force_local=False):
         return config, None
 
     log.debug("Using new Vault server connection configuration.")
-    config = _query_master(
-        "get_config",
-        opts,
-        issue_params=parse_config(opts.get("vault", {}), validate=False)["issue_params"]
-        or None,
-    )
+    try:
+        issue_params = parse_config(opts.get("vault", {}), validate=False)[
+            "issue_params"
+        ]
+        config = _query_master(
+            "get_config",
+            opts,
+            issue_params=issue_params or None,
+        )
+    except VaultConfigExpired as err:
+        # Make sure to still work with old peer_run configuration
+        if "Peer runner return was empty" not in err.message:
+            raise err
+        log.warning(
+            "Got empty response to Vault config request. Falling back to vault.generate_token. "
+            "Please update your master peer_run configuration."
+        )
+        config = _query_master(
+            "generate_token",
+            opts,
+            ttl=issue_params.get("ttl"),
+            uses=issue_params.get("uses"),
+            upgrade_request=True,
+        )
     config = parse_config(config, opts=opts)
     if config["server"]["verify"] is None:
         # make sure local verify settings are respected in case the master did not
@@ -587,7 +605,7 @@ def _query_master(
             nonlocal func
             log.error(
                 "Failed to get Vault connection from master! No result returned - "
-                "does the peer runner publish configuration include `%s`?",
+                "does the peer runner publish configuration include `vault.%s`?",
                 func,
             )
             # Expire configuration in case this is the result of an auth method change.

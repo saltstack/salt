@@ -725,6 +725,7 @@ class TestAppRoleIssuance:
             if config_cachefile.exists():
                 config_cachefile.unlink()
 
+    @pytest.mark.usefixtures("conn_cache_absent")
     def test_minion_can_authenticate(self, vault_salt_call_cli):
         """
         Test that the minion can run queries against Vault.
@@ -1008,6 +1009,7 @@ class TestTokenIssuance:
         assert ret.data
         assert ctype in ret.data
 
+    @pytest.mark.usefixtures("conn_cache_absent")
     @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
     def test_issue_param_overrides_require_setting(self, overriding_vault_salt_minion):
         """
@@ -1066,6 +1068,7 @@ class TestAppRoleIssuanceWithoutSecretId:
             },
         }
 
+    @pytest.mark.usefixtures("conn_cache_absent")
     def test_minion_can_authenticate(self, vault_salt_call_cli, caplog):
         """
         Test that the minion can run queries against Vault.
@@ -1089,8 +1092,7 @@ class TestOldConfigSyntax:
             "open_mode": True,
             "peer_run": {
                 ".*": [
-                    "vault.get_config",
-                    "vault.generate_new_token",
+                    "vault.generate_token",
                 ],
             },
             "vault": {
@@ -1125,6 +1127,28 @@ class TestOldConfigSyntax:
             assert ret.returncode == 0, ret
             yield factory
 
+    @pytest.mark.usefixtures("conn_cache_absent")
+    def test_minion_can_authenticate(self, vault_salt_call_cli, caplog):
+        """
+        Test that the minion can authenticate, even if the master peer_run
+        configuration has not been updated.
+        """
+        ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
+        assert (
+            "does the peer runner publish configuration include `vault.get_config`"
+            in caplog.text
+        )
+        assert "Peer runner return was empty." not in caplog.text
+        assert "Falling back to vault.generate_token." in caplog.text
+        assert (
+            "Detected minion fallback to old vault.generate_token peer run function"
+            in caplog.text
+        )
+
+    @pytest.mark.usefixtures("conn_cache_absent")
     def test_token_is_configured_as_expected(
         self, vault_salt_call_cli, vault_salt_minion
     ):
@@ -1142,6 +1166,7 @@ class TestOldConfigSyntax:
             f"salt_minion_{vault_salt_minion.id}",
         }
 
+    @pytest.mark.usefixtures("conn_cache_absent")
     def test_issue_param_overrides_work(self, overriding_vault_salt_minion):
         """
         Test that minion overrides of issue params work for the old configuration.

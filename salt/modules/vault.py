@@ -22,9 +22,14 @@ configuration, as well as configuration for the module.
 
 .. versionchanged:: 3006
 
-    The configuration structure has changed significantly to account for many
-    new features. If found, the old configuration structure will be translated
-    to the new one automatically.
+    The ``vault`` configuration structure has changed significantly to account
+    for many new features. If found, the old structure will be automatically
+    translated to the new one.
+
+    **Please update your peer_run configuration** to take full advantage of the
+    updated modules. The old endpoint (``vault.generate_token``) will continue
+    to work, but result in unnecessary roundtrips once your minions have been
+    updated.
 
 To allow minions to pull configuration and credentials from the Salt master,
 add this segment to the master configuration file:
@@ -33,9 +38,9 @@ add this segment to the master configuration file:
 
     peer_run:
         .*:
-            - vault.get_config
-            - vault.generate_new_token  # relevant when ``issue:type`` == ``token``
-            - vault.generate_secret_id  # relevant when ``issue:type`` == ``approle``
+            - vault.get_config          # always
+            - vault.generate_new_token  # relevant when ``token`` == ``issue:type``
+            - vault.generate_secret_id  # relevant when ``approle`` == ``issue:type``
 
 Minimally required configuration:
 
@@ -590,7 +595,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
 
     .. code-block:: terraform
 
-        path "<mount/<secret>" {
+        path "<mount>/<secret>" {
             capabilities = ["read"]
         }
 
@@ -651,7 +656,7 @@ def write_secret(path, **kwargs):
 
     .. code-block:: terraform
 
-        path "<mount/<secret>" {
+        path "<mount>/<secret>" {
             capabilities = ["create", "update"]
         }
 
@@ -761,7 +766,7 @@ def delete_secret(path, *args):
 
     .. code-block:: terraform
 
-        path "<mount/<secret>" {
+        path "<mount>/<secret>" {
             capabilities = ["delete"]
         }
 

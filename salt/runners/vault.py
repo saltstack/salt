@@ -28,7 +28,12 @@ log = logging.getLogger(__name__)
 
 
 def generate_token(
-    minion_id, signature, impersonated_by_master=False, ttl=None, uses=None
+    minion_id,
+    signature,
+    impersonated_by_master=False,
+    ttl=None,
+    uses=None,
+    upgrade_request=False,
 ):
     """
     .. deprecated:: 3006
@@ -51,7 +56,22 @@ def generate_token(
 
     uses
         Number of times a token can be used
+
+    upgrade_request
+        In case the new runner endpoints have not been whitelisted for peer running,
+        this endpoint serves as a gateway to ``vault.get_config``.
+        Defaults to False.
     """
+    if upgrade_request:
+        log.warning(
+            "Detected minion fallback to old vault.generate_token peer run function. "
+            "Please update your master peer_run configuration."
+        )
+        issue_params = {"ttl": ttl, "uses": uses}
+        return get_config(
+            minion_id, signature, impersonated_by_master, issue_params=issue_params
+        )
+
     log.debug(
         "Token generation request for %s (impersonated by master: %s)",
         minion_id,
