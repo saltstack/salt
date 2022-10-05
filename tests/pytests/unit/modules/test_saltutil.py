@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.saltutil as saltutil
 from salt.client import LocalClient
 from tests.support.mock import create_autospec

@@ -29,8 +29,8 @@ log = logging.getLogger(__name__)
 
 try:
     # noinspection PyUnresolvedReferences
-    from impacket.smbconnection import SessionError as smbSessionError
     from impacket.smb3 import SessionError as smb3SessionError
+    from impacket.smbconnection import SessionError as smbSessionError
 
     HAS_IMPACKET = True
 except ImportError:
@@ -38,18 +38,17 @@ except ImportError:
 
 try:
     # noinspection PyUnresolvedReferences
-    from winrm.exceptions import WinRMTransportError
-
     # noinspection PyUnresolvedReferences
     from requests.exceptions import (
         ConnectionError,
         ConnectTimeout,
-        ReadTimeout,
-        SSLError,
-        ProxyError,
-        RetryError,
         InvalidSchema,
+        ProxyError,
+        ReadTimeout,
+        RetryError,
+        SSLError,
     )
+    from winrm.exceptions import WinRMTransportError
 
     HAS_WINRM = True
 except ImportError:

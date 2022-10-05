@@ -1,9 +1,15 @@
 import pytest
+
 import salt.states.virt as virt
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-from .test_helpers import domain_update_call
+from .helpers import domain_update_call
+
+
+@pytest.fixture
+def configure_loader_modules(libvirt_mock):
+    return {virt: {"libvirt": libvirt_mock}}
 
 
 def test_defined_no_change(test):

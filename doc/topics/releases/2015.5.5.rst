@@ -14,7 +14,10 @@ Statistics
 - Total Issue References: **28**
 - Total PR References: **39**
 
-- Contributors: **20** (`TheBigBear`_, `arthurlogilab`_, `basepi`_, `bastiaanb`_, `cachedout`_, `driskell`_, `garethgreenaway`_, `jacobhammons`_, `jahamn`_, `jfindlay`_, `rallytime`_, `s0undt3ch`_, `scottjpack`_, `silenius`_, `sixninetynine`_, `stanislavb`_, `terminalmage`_, `thusoy`_, `twangboy`_, `vr-jack`_)
+- Contributors: **20** (`TheBigBear`_, `arthurlogilab`_, `basepi`_, `bastiaanb`_, `cachedout`_,
+  `driskell`_, `garethgreenaway`_, `jacobhammons`_, `jahamn`_, `jfindlay`_, `rallytime`_,
+  `s0undt3ch`_, `scottjpack`_, `silenius`_, `sixninetynine`_, `stanislavb`_, `terminalmage`_,
+  `thusoy`_, `twangboy`_, `vr-jack`_)
 
 
 Changelog for v2015.5.4..v2015.5.5
@@ -92,12 +95,12 @@ Changelog for v2015.5.4..v2015.5.5
 
   * cbe330e78b add dateutil dependency reporting
 
-* **PR** `#26494`_: (`cachedout`_) Remove unecessary debug statements
+* **PR** `#26494`_: (`cachedout`_) Remove unnecessary debug statements
   @ *2015-08-19 20:46:00 UTC*
 
   * 4fff53b842 Merge pull request `#26494`_ from cachedout/remove_debug_statements
 
-  * d717a43dcc Remove unecessary debug statements
+  * d717a43dcc Remove unnecessary debug statements
 
 * **PR** `#26465`_: (`rallytime`_) Back-port `#26457`_ to 2015.5
   @ *2015-08-19 16:08:16 UTC*
@@ -231,7 +234,7 @@ Changelog for v2015.5.4..v2015.5.5
 
   * 87151736c5 Merge pull request `#26371`_ from bastiaanb/fix/issue-26161-salt-initscripts-dont-set-lockfile
 
-  * ec8d4b0470 test wether RETVAL is 0 with -eq rather than =.
+  * ec8d4b0470 test whether RETVAL is 0 with -eq rather than =.
 
   * a83a5de41e fix issue `#26161`_: on RedHat family systems touch /var/lock/subsys/$SERVICE to ensure the daemon will be stopped on shutdown.
 

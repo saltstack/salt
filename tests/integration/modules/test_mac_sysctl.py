@@ -6,6 +6,7 @@ import os
 import random
 
 import pytest
+
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
