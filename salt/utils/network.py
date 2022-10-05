@@ -2353,19 +2353,11 @@ def ipwrap(data):
         ret = []
         for element in data:
             if _is_ipv(element, 6, options=None):
-                # Check if we have an address with a CIDR mask
-                if len(element.split("/")) == 2:
-                    element = "[" + "]/".join(element.split("/"))
-                else:
-                    element = "[" + element + "]"
+                element = ip_bracket(element)
             ret.append(element)
     else:
         if _is_ipv(data, 6, options=None):
-            # Check if we have an address with a CIDR mask
-            if len(data.split("/")) == 2:
-                data = "[" + "]/".join(data.split("/"))
-            else:
-                data = "[" + data + "]"
+            data = ip_bracket(data)
         ret = data
     return ret
 
