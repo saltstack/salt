@@ -97,7 +97,6 @@ import logging
 import re
 import ssl
 
-import salt.loader.context
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
@@ -140,8 +139,6 @@ try:
 except ImportError:
     pass
 
-__salt_loader__ = salt.loader.context.LoaderContext()
-__context__ = __salt_loader__.named_context("__context__", {})
 
 LOAD_BALANCING_POLICY_MAP = {
     "HostDistance": HostDistance,

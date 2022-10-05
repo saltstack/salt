@@ -14,6 +14,11 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def configure_loader_modules():
+    return {cql: {"__context__": {}}}
+
+
 def test_cql_query(caplog):
     """
     Test salt.modules.cassandra_cql.cql_query function
