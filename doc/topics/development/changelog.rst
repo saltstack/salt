@@ -76,7 +76,7 @@ you can run towncrier in draft mode:
 
 .. code-block:: bash
 
-    nox -e 'changelog(draft=True)' -- 3000.1
+    nox -e 'changelog(force=False, draft=True)' -- 3000.1
 
 Version will need to be set to whichever version we are about to release. Once you are
 confident the draft output looks correct you can now generate the changelog by running:
@@ -87,9 +87,17 @@ confident the draft output looks correct you can now generate the changelog by r
 
 .. code-block:: bash
 
-    nox -e 'changelog(draft=False)' -- 3000.1
+    nox -e 'changelog(force=False, draft=False)' -- 3000.1
 
 After this is run towncrier will automatically remove all the files in the changelog directory.
+
+
+If you want to force towncrier to automatically remove all the files in the changelog directory
+without asking you to type yes, you can set force to True.
+
+.. code-block:: bash
+
+    nox -e 'changelog(force=True, draft=False)' -- 3000.1
 
 
 .. _`SEP 01`: https://github.com/saltstack/salt-enhancement-proposals/pull/2

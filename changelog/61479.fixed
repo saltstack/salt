@@ -1,1 +1,0 @@
-Fixed wua.installed and wua.uptodate to return all changes, failures, and supersedences

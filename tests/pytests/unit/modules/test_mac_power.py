@@ -3,6 +3,7 @@ mac_power tests
 """
 
 import pytest
+
 import salt.modules.mac_power as mac_power
 from salt.exceptions import SaltInvocationError
 

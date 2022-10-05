@@ -1,1 +1,0 @@
-Fixing REST auth so that we actually support using ACLs from the REST server like we said in the documentation.

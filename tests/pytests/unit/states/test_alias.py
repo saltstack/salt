@@ -3,6 +3,7 @@ unit tests for the alias state
 """
 
 import pytest
+
 import salt.states.alias as alias
 from tests.support.mock import MagicMock, patch
 

@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 

@@ -13,6 +13,7 @@ import multiprocessing
 import os
 import queue
 import re
+import shlex
 import subprocess
 import sys
 import tarfile
@@ -918,6 +919,7 @@ class Single:
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
         self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
+        self.ssh_pre_flight_args = kwargs.get("ssh_pre_flight_args", None)
 
         if self.ssh_pre_flight:
             self.ssh_pre_file = os.path.basename(self.ssh_pre_flight)
@@ -1009,7 +1011,7 @@ class Single:
 
         self.shell.send(self.ssh_pre_flight, script)
 
-        return self.execute_script(script)
+        return self.execute_script(script, script_args=self.ssh_pre_flight_args)
 
     def check_thin_dir(self):
         """
@@ -1341,15 +1343,22 @@ ARGS = {arguments}\n'''.format(
 
         return cmd
 
-    def execute_script(self, script, extension="py", pre_dir=""):
+    def execute_script(self, script, extension="py", pre_dir="", script_args=None):
         """
         execute a script on the minion then delete
         """
+        args = ""
+        if script_args:
+            if not isinstance(script_args, (list, tuple)):
+                script_args = shlex.split(str(script_args))
+            args = " {}".format(" ".join([shlex.quote(str(el)) for el in script_args]))
         if extension == "ps1":
             ret = self.shell.exec_cmd('"powershell {}"'.format(script))
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd("/bin/sh '{}{}'".format(pre_dir, script))
+                ret = self.shell.exec_cmd(
+                    "/bin/sh '{}{}'{}".format(pre_dir, script, args)
+                )
             else:
                 ret = saltwinshell.call_python(self, script)
 

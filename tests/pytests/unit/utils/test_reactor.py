@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.data
 import salt.utils.reactor as reactor
 from tests.support.mock import MagicMock, call, patch

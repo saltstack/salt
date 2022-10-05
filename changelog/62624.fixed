@@ -1,0 +1,1 @@
+updated rest_cherry/app to properly detect arg sent as a string as curl will do when only one arg is supplied. 

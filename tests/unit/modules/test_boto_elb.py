@@ -27,7 +27,6 @@ except ImportError:
 
 try:
     import pkg_resources
-
     from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
     from moto import mock_elb_deprecated  # pylint: disable=no-name-in-module
 

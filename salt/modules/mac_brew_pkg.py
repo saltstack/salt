@@ -9,9 +9,7 @@ Homebrew for macOS
 """
 
 import copy
-import functools
 import logging
-import re
 
 import salt.utils.data
 import salt.utils.functools
@@ -170,49 +168,30 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for package in package_info["formulae"]:
         # Brew allows multiple versions of the same package to be installed.
         # Salt allows for this, so it must be accounted for.
-        versions = [v["version"] for v in package["installed"]]
+        pkg_versions = [v["version"] for v in package["installed"]]
         # Brew allows for aliasing of packages, all of which will be
         # installable from a Salt call, so all names must be accounted for.
-        names = package["aliases"] + [package["name"], package["full_name"]]
+        pkg_names = package["aliases"] + [package["name"], package["full_name"]]
         # Create a list of tuples containing all possible combinations of
         # names and versions, because all are valid.
-        combinations = [(n, v) for n in names for v in versions]
+        combinations = [(n, v) for n in pkg_names for v in pkg_versions]
 
-        for name, version in combinations:
-            __salt__["pkg_resource.add_pkg"](ret, name, version)
+        for pkg_name, pkg_version in combinations:
+            __salt__["pkg_resource.add_pkg"](ret, pkg_name, pkg_version)
 
-    # Grab packages from brew cask, if available.
-    # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
-    try:
-        out = _call_brew("list", "--cask", "--versions")["stdout"]
-
-        for line in out.splitlines():
-            try:
-                name_and_versions = line.split(" ")
-                pkg_name = name_and_versions[0]
-
-                # Get cask namespace
-                match = re.search(
-                    r"^From: .*/(.+?)/homebrew-(.+?)/.*$",
-                    _call_brew("info", "--cask", pkg_name)["stdout"],
-                    re.MULTILINE,
-                )
-                if match:
-                    namespace = "/".join(
-                        (match.group(1).lower(), match.group(2).lower())
-                    )
-                else:
-                    namespace = "homebrew/cask"
-
-                name = "/".join((namespace, pkg_name))
-                installed_versions = name_and_versions[1:]
-                key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
-                newest_version = sorted(installed_versions, key=key_func).pop()
-            except ValueError:
-                continue
-            __salt__["pkg_resource.add_pkg"](ret, name, newest_version)
-    except CommandExecutionError:
-        pass
+    for package in package_info["casks"]:
+        pkg_version = package["installed"]
+        pkg_names = {package["full_token"], package["token"]}
+        pkg_tap = package.get("tap", None)
+        # The following name is appended to maintain backward compatibility
+        # with old salt formulas. Since full_token and token are the same
+        # for official taps (homebrew/*).
+        if not pkg_tap:
+            # Tap is null when the package is from homebrew/cask.
+            pkg_tap = "homebrew/cask"
+        pkg_names.add("/".join([pkg_tap, package["token"]]))
+        for pkg_name in pkg_names:
+            __salt__["pkg_resource.add_pkg"](ret, pkg_name, pkg_version)
 
     __salt__["pkg_resource.sort_pkglist"](ret)
     __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
@@ -258,7 +237,10 @@ def latest_version(*names, **kwargs):
 
     def get_version(pkg_info):
         # Perhaps this will need an option to pick devel by default
-        return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        version = pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
+            version = "{}_{}".format(version, pkg_info["revision"])
+        return version
 
     versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
 
@@ -369,7 +351,21 @@ def _info(*pkgs):
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
-    return dict(zip(pkgs, output["formulae"]))
+
+    meta_info = {"formulae": ["name", "full_name"], "casks": ["token", "full_token"]}
+
+    pkgs_info = dict()
+    for tap, keys in meta_info.items():
+        data = output[tap]
+        if len(data) == 0:
+            continue
+
+        for _pkg in data:
+            for key in keys:
+                if _pkg[key] in pkgs:
+                    pkgs_info[_pkg[key]] = _pkg
+
+    return pkgs_info
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
@@ -481,7 +477,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
+def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disable=W0613
     """
     Check whether or not an upgrade is available for all packages
 
@@ -498,15 +494,21 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     ret = {}
 
     try:
-        data = salt.utils.json.loads(res["stdout"])["formulae"]
+        data = salt.utils.json.loads(res["stdout"])
     except ValueError as err:
         msg = 'unable to interpret output from "brew outdated": {}'.format(err)
         log.error(msg)
         raise CommandExecutionError(msg)
 
-    for pkg in data:
+    for pkg in data["formulae"]:
         # current means latest available to brew
         ret[pkg["name"]] = pkg["current_version"]
+
+    if include_casks:
+        for pkg in data["casks"]:
+            # current means latest available to brew
+            ret[pkg["name"]] = pkg["current_version"]
+
     return ret
 
 
@@ -520,7 +522,7 @@ def upgrade_available(pkg, **kwargs):
 
         salt '*' pkg.upgrade_available <package name>
     """
-    return pkg in list_upgrades()
+    return pkg in list_upgrades(**kwargs)
 
 
 def upgrade(refresh=True, **kwargs):

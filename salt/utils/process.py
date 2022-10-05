@@ -886,20 +886,13 @@ class Process(multiprocessing.Process):
         instance = super().__new__(cls)
         instance._after_fork_methods = []
         instance._finalize_methods = []
+        instance.__logging_config__ = salt._logging.get_logging_options_dict()
 
         if salt.utils.platform.spawning_platform():
             # On spawning platforms, subclasses should call super if they define
             # __setstate__ and/or __getstate__
             instance._args_for_getstate = copy.copy(args)
             instance._kwargs_for_getstate = copy.copy(kwargs)
-        return instance
-
-    def __init__(self, *args, **kwargs):
-        logging_config = kwargs.pop("__logging_config__", None)
-        super().__init__(*args, **kwargs)
-        if logging_config is None:
-            logging_config = salt._logging.get_logging_options_dict()
-        self.__logging_config__ = logging_config
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -908,7 +901,8 @@ class Process(multiprocessing.Process):
         #
         # We use setattr here to fool pylint not to complain that we're
         # overriding run from the subclass here
-        setattr(self, "run", self.__decorate_run(self.run))
+        setattr(instance, "run", instance.__decorate_run(instance.run))
+        return instance
 
     # __setstate__ and __getstate__ are only used on spawning platforms.
     def __setstate__(self, state):
@@ -921,8 +915,11 @@ class Process(multiprocessing.Process):
         """
         args = state["args"]
         kwargs = state["kwargs"]
+        logging_config = state["logging_config"]
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
+        # Override self.__logging_config__ with what's in state
+        self.__logging_config__ = logging_config
         for (function, args, kwargs) in state["after_fork_methods"]:
             self.register_after_fork_method(function, *args, **kwargs)
         for (function, args, kwargs) in state["finalize_methods"]:
@@ -937,13 +934,12 @@ class Process(multiprocessing.Process):
         """
         args = self._args_for_getstate
         kwargs = self._kwargs_for_getstate
-        if "__logging_config__" not in kwargs:
-            kwargs["__logging_config__"] = self.__logging_config__
         return {
             "args": args,
             "kwargs": kwargs,
             "after_fork_methods": self._after_fork_methods,
             "finalize_methods": self._finalize_methods,
+            "logging_config": self.__logging_config__,
         }
 
     def __decorate_run(self, run_func):
@@ -1051,20 +1047,18 @@ class Process(multiprocessing.Process):
 
 
 class SignalHandlingProcess(Process):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._signal_handled = multiprocessing.Event()
-        self.register_after_fork_method(SignalHandlingProcess._setup_signals, self)
-
-    def signal_handled(self):
-        return self._signal_handled.is_set()
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls, *args, **kwargs)
+        instance.register_after_fork_method(
+            SignalHandlingProcess._setup_signals, instance
+        )
+        return instance
 
     def _setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
-        self._signal_handled.set()
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = "{} received a ".format(self.__class__.__name__)

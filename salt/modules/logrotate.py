@@ -159,7 +159,7 @@ def get(key, value=None, conf_file=_DEFAULT_CONF):
     if value:
         if stanza:
             return stanza.get(value, False)
-        _LOG.warning("Block '%s' not present or empty.", key)
+        _LOG.debug("Block '%s' not present or empty.", key)
     return stanza
 
 
