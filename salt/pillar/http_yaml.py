@@ -55,7 +55,14 @@ def __virtual__():
 
 
 def ext_pillar(
-    minion_id, pillar, url, with_grains=False, **kwargs
+    minion_id,
+    pillar,
+    url,
+    with_grains=False,
+    header_dict=None,
+    auth=None,
+    username=None,
+    password=None,
 ):  # pylint: disable=W0613
     """
     Read pillar data from HTTP response.
@@ -71,10 +78,6 @@ def ext_pillar(
     :rtype: dict
     """
     # As we are dealing with kwargs, clean args that are hardcoded in this function
-    for arg in ["url", "decode", "decode_type"]:
-        if arg in kwargs:
-            del kwargs[arg]
-
     url = url.replace("%s", urllib.parse.quote(minion_id))
 
     grain_pattern = r"<(?P<grain_name>.*?)>"
@@ -94,7 +97,15 @@ def ext_pillar(
             url = re.sub("<{}>".format(grain_name), grain_value, url)
 
     log.debug("Getting url: %s", url)
-    data = __salt__["http.query"](url=url, decode=True, decode_type="yaml", **kwargs)
+    data = __salt__["http.query"](
+        url=url,
+        decode=True,
+        decode_type="yaml",
+        header_dict=header_dict,
+        auth=auth,
+        username=username,
+        password=password,
+    )
 
     if "dict" in data:
         return data["dict"]
