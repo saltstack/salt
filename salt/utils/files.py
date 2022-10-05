@@ -6,6 +6,7 @@ Functions for working with files
 import codecs
 import contextlib
 import errno
+import io
 import logging
 import os
 import re
@@ -383,9 +384,11 @@ def fopen(*args, **kwargs):
         kwargs["newline"] = ""
 
     # Workaround callers with bad buffering setting for binary files
-    if kwargs.get("buffering", -1) == 1 and 'b' in kwargs.get("mode", ""):
-        log.debug("Bad buffering specified for '%s'", args[0], stack_info=True)
-        del(kwargs["buffering"])
+    if kwargs.get("buffering") == 1 and "b" in kwargs.get("mode", ""):
+        log.debug(
+            "Line buffering (buffering=1) isn't supported in binary mode, the default buffer size will be used"
+        )
+        kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
