@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.postgres as postgres
 from tests.support.mock import MagicMock, patch
 
