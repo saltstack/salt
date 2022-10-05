@@ -2287,9 +2287,8 @@ def _decrypt_key(key):
                         key,
                     )
                     return False
-                encrypted_key = key
-                if not pathlib.Path(key).suffix:
-                    encrypted_key = key + ".gpg"
+                # The key is dearmoured to a temp file.
+                encrypted_key = __salt__["temp.file"]
                 cmd = ["gpg", "--yes", "--output", encrypted_key, "--dearmor", key]
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
@@ -2325,9 +2324,8 @@ def add_repo_key(
                        for adding third party keys. This argument is only used
                        when aptkey is False.
 
-    :param str keyfile: The name of the key to add. This is only required when
-                        aptkey is False and you are using a keyserver. This
-                        argument is only used when aptkey is False.
+    :param str keyfile: The name of the key to add. This is required when
+                        aptkey is False.
 
     :return: A boolean representing whether the repo key was added.
     :rtype: bool
@@ -2374,9 +2372,11 @@ def add_repo_key(
 
         if not aptkey:
             key = _decrypt_key(cached_source_path)
-            if not key:
+            # The key must be created and the keyfile path must exist in order to put the
+            # dearmoured key in the correct location
+            if not key or not keyfile:
                 return False
-            cmd = ["cp", key, str(keydir)]
+            cmd = ["cp", key, keyfile]
         else:
             cmd.extend(["add", cached_source_path])
     elif text:
@@ -2859,8 +2859,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             func_kwargs = {}
             if kwargs.get("signedby"):
                 func_kwargs["keydir"] = kwargs.get("signedby").parent
-
-            if not add_repo_key(path=str(fn_), aptkey=False, **func_kwargs):
+                key_file = kwargs["signedby"]
+            if not add_repo_key(path=str(fn_), aptkey=False, keyfile=key_file):
                 return False
         else:
             cmd = ["apt-key", "add", str(fn_)]
