@@ -10,13 +10,14 @@ import subprocess
 
 import attr
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 from salt.modules.config import DEFAULTS as _config_defaults
-from saltfactories.utils import random_string
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)

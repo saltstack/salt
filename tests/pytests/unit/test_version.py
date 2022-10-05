@@ -7,6 +7,7 @@ Test salt's regex git describe version parsing
 import re
 
 import pytest
+
 import salt.version
 from salt.version import (
     SaltStackVersion,
@@ -53,6 +54,10 @@ STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
             (3000, 2, "nb", 20201214010203, 0, "1e7bc8f"),
             "3000.2nb20201214010203",
         ),
+        ("v3006.0", (3006, 0, "", 0, 0, None), "3006.0"),
+        ("v3006.0rc1", (3006, 0, "rc", 1, 0, None), "3006.0rc1"),
+        ("v3006.1", (3006, 1, "", 0, 0, None), "3006.1"),
+        ("v3006.1rc1", (3006, 1, "rc", 1, 0, None), "3006.1rc1"),
     ],
 )
 def test_version_parsing(version_string, full_info, version):
@@ -101,6 +106,9 @@ def test_version_parsing(version_string, full_info, version):
         ("v3001rc1", "v2019.2.1rc1"),
         ("v3002", "v3002nb20201213"),
         ("v3002rc1", "v3002nb20201213"),
+        ("v3006.0", "v3006.0rc1"),
+        ("v3006.1", "v3006.0rc1"),
+        ("v3006.1", "v3006.0"),
     ],
 )
 def test_version_comparison(higher_version, lower_version):

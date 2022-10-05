@@ -602,9 +602,14 @@ The path to the minion's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/minion``
+Default: ``<LIB_STATE_DIR>/pki/minion``
 
 The directory used to store the minion's public and private keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 

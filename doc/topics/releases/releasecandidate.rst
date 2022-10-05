@@ -14,8 +14,11 @@ features! Be sure to report any bugs you find on `Github
 
 Install using packages
 ======================
-Builds for a few platforms are available as part of the RC at https://repo.saltproject.io/salt_rc/.
-The builds should include the latest version of the operating system that is currently available.
+Builds for a few platforms are available as part of the RC at:
+https://repo.saltproject.io/salt_rc/
+
+The builds include the latest version of the operating system that is currently
+available. Older versions of operating systems will not get an RC release.
 
 .. note::
 
@@ -35,24 +38,47 @@ of the file path.
 
 Tiamat packages
 ---------------
-For RedHat:
+For RedHat, replace:
+
+* The ``<os_version>`` variable with number of the RedHat version
+* The ``<salt version & release number>`` variable with the Salt version and
+  release
+
+.. Note::
+    Beginning with the release of RHEL 9, RedHat dropped support for SHA-1 and
+    now only accepts SHA-256 public keys. For that reason, any release
+    candidates for RedHat 9 and later need to import the
+    ``SALTSTACK-GPG-KEY2.pub`` key instead of the standard key.
 
 .. code-block:: bash
 
-    baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/
+    sudo rpm --import https://repo.saltproject.io/salt/py3/redhat/<os-version>/x86_64/minor/<salt version>/SALTSTACK-GPG-KEY.pub
+    baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/<salt version and release number>
 
-For Ubuntu, replace the ``<os_version>`` variable with number of the Ubuntu
-version and ``<codename>`` for the release codename.
+For example, for the 3005 release of RC 1-2:
+
+.. code-block:: bash
+
+    sudo rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest/3005/SALTSTACK-GPG-KEY2.pub
+    baseurl=https://repo.saltproject.io/salt_rc/salt/py3/redhat/$releasever/$basearch/minor/3005rc1-2
+
+For Ubuntu, replace:
+
+* The ``<os_version>`` variable with number of the Ubuntu version
+* The ``<codename>`` variable for the Ubuntu release codename
+* The ``<salt version & release number>`` variable with the Salt version and
+  release
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64 <codename> main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/<os_version>/amd64/minor/<salt version and release number> <codename> main
 
-For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish:
+For example, for the 22.04 release of Ubuntu, codename Jammy Jellyfish and the
+3005 release of RC 1-2:
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/22.04/amd64 jammy main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/ubuntu/22.04/amd64/minor/3005rc1-2 jammy main
 
 
 For Debian, the syntax is identical to Ubuntu. For example, for the version 10
@@ -60,7 +86,7 @@ For Debian, the syntax is identical to Ubuntu. For example, for the version 10
 
 .. code-block:: none
 
-    deb https://repo.saltproject.io/salt_rc/salt/py3/debian/10/amd64 buster main
+    deb https://repo.saltproject.io/salt_rc/salt/py3/debian/10/amd64/minor/3005rc1-2 buster main
 
 
 

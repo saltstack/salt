@@ -11,8 +11,14 @@ on:
         default: true
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   SaltChangelog:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Build Salt Changelog
     runs-on: ubuntu-latest
 
@@ -75,6 +81,9 @@ jobs:
           rn_changelog
 
   Manpages:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Build Salt man Pages
     runs-on: ubuntu-latest
 
@@ -134,6 +143,9 @@ jobs:
         path: doc/_build/man
 
   PullRequest:
+    permissions:
+      contents: write  # for peter-evans/create-pull-request to create branch
+      pull-requests: write  # for peter-evans/create-pull-request to create a PR
     needs: [SaltChangelog, Manpages]
     name: Create Pull Request
     runs-on: ubuntu-latest

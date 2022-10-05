@@ -35,8 +35,8 @@ from salt.exceptions import SaltInvocationError, SaltSystemExit
 
 try:
     from azure.common.credentials import (
-        UserPassCredentials,
         ServicePrincipalCredentials,
+        UserPassCredentials,
     )
     from msrestazure.azure_cloud import (
         MetadataEndpointError,

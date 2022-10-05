@@ -3,6 +3,7 @@ import sys
 
 import attr
 import pytest
+
 import salt.channel.server
 import salt.ext.tornado.gen
 import salt.transport.ipc

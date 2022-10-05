@@ -2,6 +2,7 @@ import sys
 import textwrap
 
 import pytest
+
 import salt.modules.state as state
 import salt.state
 import salt.utils.files

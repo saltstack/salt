@@ -2,6 +2,7 @@ import json
 import pathlib
 
 import pytest
+
 import salt.states.ansiblegate as ansiblegate
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS

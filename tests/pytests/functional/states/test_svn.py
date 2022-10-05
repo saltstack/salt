@@ -4,6 +4,7 @@ Tests for the SVN state
 import logging
 
 import pytest
+
 import salt.utils.platform
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 

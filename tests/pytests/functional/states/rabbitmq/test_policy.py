@@ -5,6 +5,7 @@ Integration tests for the rabbitmq_policy states
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_policy as rabbitmq_policy
 from tests.support.mock import MagicMock, patch

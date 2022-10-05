@@ -4,6 +4,7 @@
 
 
 import configparser
+import errno
 import io
 import os
 from xml.dom import minidom
@@ -14,7 +15,7 @@ import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.unit import TestCase
 
 
@@ -94,7 +95,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(
             zypper.__salt__, {"cmd.run_all": MagicMock(return_value=ref_out)}
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             upgrades = zypper.list_upgrades(refresh=False)
             self.assertEqual(len(upgrades), 3)
             for pkg, version in {
@@ -194,17 +195,34 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             ' type="error">Booya!</message></stream>'
         )
         sniffer = RunSniffer(stdout=stdout_xml_snippet, retcode=1)
-        with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
+        with patch.dict(
+            "salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError, "^Zypper command failure: Booya!$"
             ):
                 zypper.__zypper__.xml.call("crashme")
 
+        output_to_user_stdout = "Output to user to stdout"
+        output_to_user_stderr = "Output to user to stderr"
+        sniffer = RunSniffer(
+            stdout=output_to_user_stdout, stderr=output_to_user_stderr, retcode=1
+        )
+        with patch.dict(
+            "salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
-                CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"
+                CommandExecutionError,
+                "^Zypper command failure: {}$".format(
+                    output_to_user_stderr + output_to_user_stdout
+                ),
             ):
                 zypper.__zypper__.call("crashme again")
 
+        sniffer = RunSniffer(retcode=1)
+        with patch.dict(
+            "salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             zypper.__zypper__.noraise.call("stay quiet")
             self.assertEqual(zypper.__zypper__.error_msg, "Check Zypper's logs.")
 
@@ -228,7 +246,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             "salt.modules.zypperpkg.__salt__",
             {"cmd.run_all": MagicMock(return_value=ref_out)},
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError,
                 "^Zypper command failure: Some handled zypper internal error{}Another"
@@ -241,7 +259,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             "salt.modules.zypperpkg.__salt__",
             {"cmd.run_all": MagicMock(return_value=ref_out)},
-        ):
+        ), patch.object(zypper.__zypper__, "_is_rpm_lock", return_value=False):
             with self.assertRaisesRegex(
                 CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"
             ):
@@ -2063,3 +2081,37 @@ pattern() = package-c"""
         with patch("salt.modules.zypperpkg.__zypper__", zypper_mock):
             assert zypper.services_need_restart() == expected
             zypper_mock(root=None).nolock.call.assert_called_with("ps", "-sss")
+
+    def test_is_rpm_lock_no_error(self):
+        with patch.object(os.path, "exists", return_value=True):
+            self.assertFalse(zypper.__zypper__._is_rpm_lock())
+
+    def test_rpm_lock_does_not_exist(self):
+        if salt.utils.files.is_fcntl_available():
+            zypper.__zypper__.exit_code = 1
+            with patch.object(
+                os.path, "exists", return_value=False
+            ) as mock_path_exists:
+                self.assertFalse(zypper.__zypper__._is_rpm_lock())
+                mock_path_exists.assert_called_with(zypper.__zypper__.RPM_LOCK)
+            zypper.__zypper__._reset()
+
+    def test_rpm_lock_acquirable(self):
+        if salt.utils.files.is_fcntl_available():
+            zypper.__zypper__.exit_code = 1
+            with patch.object(os.path, "exists", return_value=True), patch(
+                "fcntl.lockf", side_effect=OSError(errno.EAGAIN, "")
+            ) as lockf_mock, patch("salt.utils.files.fopen", mock_open()):
+                self.assertTrue(zypper.__zypper__._is_rpm_lock())
+                lockf_mock.assert_called()
+            zypper.__zypper__._reset()
+
+    def test_rpm_lock_not_acquirable(self):
+        if salt.utils.files.is_fcntl_available():
+            zypper.__zypper__.exit_code = 1
+            with patch.object(os.path, "exists", return_value=True), patch(
+                "fcntl.lockf"
+            ) as lockf_mock, patch("salt.utils.files.fopen", mock_open()):
+                self.assertFalse(zypper.__zypper__._is_rpm_lock())
+                self.assertEqual(lockf_mock.call_count, 2)
+            zypper.__zypper__._reset()

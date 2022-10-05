@@ -5,6 +5,7 @@ import threading
 import time
 
 import pytest
+
 import salt.loader
 import salt.utils.atomicfile
 import salt.utils.files
@@ -727,6 +728,9 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
     duration = 4
     if salt.utils.platform.spawning_platform():
         duration = 30
+        # mac needs some more time to do its makeup
+        if salt.utils.platform.is_darwin():
+            duration += 15
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls(

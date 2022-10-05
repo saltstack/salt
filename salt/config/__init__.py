@@ -27,7 +27,6 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
-import salt.utils.zeromq
 from salt._logging import (
     DFLT_LOG_DATEFMT,
     DFLT_LOG_DATEFMT_LOGFILE,
@@ -85,6 +84,7 @@ def _gather_buffer_space():
     else:
         # Avoid loading core grains unless absolutely required
         import platform
+
         import salt.grains.core
 
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
@@ -964,6 +964,14 @@ VALID_OPTS = immutabletypes.freeze(
         # The port to be used when checking if a master is connected to a
         # minion
         "remote_minions_port": int,
+        # pass renderer: Fetch secrets only for the template variables matching the prefix
+        "pass_variable_prefix": str,
+        # pass renderer: Whether to error out when unable to fetch a secret
+        "pass_strict_fetch": bool,
+        # pass renderer: Set GNUPGHOME env for Pass
+        "pass_gnupghome": str,
+        # pass renderer: Set PASSWORD_STORE_DIR env for Pass
+        "pass_dir": str,
     }
 )
 
@@ -991,7 +999,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "syndic_finger": "",
         "user": salt.utils.user.get_user(),
         "root_dir": salt.syspaths.ROOT_DIR,
-        "pki_dir": os.path.join(salt.syspaths.CONFIG_DIR, "pki", "minion"),
+        "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "minion"),
         "id": "",
         "id_function": {},
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "minion"),
@@ -1286,7 +1294,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "keep_jobs": 24,
         "archive_jobs": False,
         "root_dir": salt.syspaths.ROOT_DIR,
-        "pki_dir": os.path.join(salt.syspaths.CONFIG_DIR, "pki", "master"),
+        "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "master"),
         "key_cache": "",
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "master"),
         "file_roots": {
@@ -1604,6 +1612,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fips_mode": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
+        "pass_variable_prefix": "",
+        "pass_strict_fetch": False,
+        "pass_gnupghome": "",
+        "pass_dir": "",
     }
 )
 
@@ -1635,7 +1647,7 @@ DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze(
         "proxy_always_alive": True,
         "proxy_keep_alive": True,  # by default will try to keep alive the connection
         "proxy_keep_alive_interval": 1,  # frequency of the proxy keepalive in minutes
-        "pki_dir": os.path.join(salt.syspaths.CONFIG_DIR, "pki", "proxy"),
+        "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "proxy"),
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "proxy"),
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "proxy"),
     }
@@ -4094,11 +4106,13 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
     # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
     if opts["interface"] == "0.0.0.0":
         opts["interface"] = "127.0.0.1"
+    elif opts["interface"] == "::":
+        opts["interface"] = "::1"
 
     # Make sure the master_uri is set
     if "master_uri" not in opts:
         opts["master_uri"] = "tcp://{ip}:{port}".format(
-            ip=salt.utils.zeromq.ip_bracket(opts["interface"]), port=opts["ret_port"]
+            ip=salt.utils.network.ip_bracket(opts["interface"]), port=opts["ret_port"]
         )
 
     # Return the client options
