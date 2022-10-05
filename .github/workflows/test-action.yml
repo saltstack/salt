@@ -54,32 +54,32 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         id: spin-up-vm
         run: |
-          tools vm create ${{ inputs.distro-slug }}
+          tools --timestamps vm create --destroy-on-failure ${{ inputs.distro-slug }}
 
       - name: Upload Checkout To VM
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools vm rsync ${{ inputs.distro-slug }}
+          tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
+          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools vm compress-dependencies ${{ inputs.distro-slug }}
+          tools --timestamps vm compress-dependencies ${{ inputs.distro-slug }}
 
       - name: Download Compressed .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools vm download-dependencies ${{ inputs.distro-slug }}
+          tools --timestamps vm download-dependencies ${{ inputs.distro-slug }}
 
       - name: Destroy VM
-        if: always() and steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools vm destroy ${{ inputs.distro-slug }}
+          tools --timestamps vm destroy ${{ inputs.distro-slug }}
 
       - name: Set Exit Status
         if: always()
@@ -135,32 +135,32 @@ jobs:
         env:
           TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
-          tools vm create ${{ inputs.distro-slug }}
+          tools --timestamps vm create --destroy-on-failure ${{ inputs.distro-slug }}
 
       - name: Upload Checkout To VM
         run: |
-          tools vm rsync ${{ inputs.distro-slug }}
+          tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
       - name: Decompress .nox Directory
         run: |
-          tools vm decompress-dependencies ${{ inputs.distro-slug }}
+          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
       - name: Run Tests
         id: run-tests
         run: |
-          tools vm test --print-tests-selection --skip-requirements-install \
+          tools --timestamps --no-output-timeout-secs=18000 vm test --print-tests-selection --skip-requirements-install \
             --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Combine Coverage Reports
         if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'skipped'
         run: |
-          tools vm combine-coverage ${{ inputs.distro-slug }}
+          tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
         if: always() && steps.spin-up-vm.conclusion == 'success' && steps.run-tests.conclusion != 'skipped'
         run: |
-          tools vm download-artifacts ${{ inputs.distro-slug }}
+          tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
           tree -a artifacts
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.tests-chunk }}
           echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
@@ -168,7 +168,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools vm destroy ${{ inputs.distro-slug }} || true
+          tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.conclusion == 'success'

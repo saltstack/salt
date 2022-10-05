@@ -38,14 +38,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    # pylint: disable=no-name-in-module
     from boto3.resources.factory.ec2 import Instance
-
-    try:
-        from io import TextIO  # type: ignore[attr-defined]
-    except ImportError:
-        from io import TextIOBase as TextIO
-    # pylint: enable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +68,9 @@ vm.add_argument("--region", help="The AWS region.", default="eu-central-1")
         "instance_type": {
             "help": "The instance type to use.",
         },
+        "destroy_on_failure": {
+            "help": "Destroy the instance on failing to craete and connect.",
+        },
     }
 )
 def create(
@@ -82,12 +78,17 @@ def create(
     name: str,
     key_name: str = None,
     instance_type: str = None,
+    destroy_on_failure: bool = False,
 ):
     """
     Create VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.create(key_name=key_name, instance_type=instance_type)
+    created = vm.create(key_name=key_name, instance_type=instance_type)
+    if created is not True and destroy_on_failure:
+        ctx.error(created)
+        vm.destroy()
+        ctx.exit(1)
 
 
 @vm.command(
@@ -222,7 +223,11 @@ def test(
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
     ):
         env["SKIP_REQUIREMENTS_INSTALL"] = "1"
-    vm.run_nox(nox_session=nox_session, session_args=nox_session_args, env=env)
+    vm.run_nox(
+        nox_session=nox_session,
+        session_args=nox_session_args,
+        env=env,
+    )
 
 
 @vm.command(
@@ -436,7 +441,7 @@ class VM:
     def create(self, key_name=None, instance_type=None):
         if self.is_running:
             log.info(f"{self!r} is already running...")
-            return
+            return True
         self.get_ec2_resource.cache_clear()
 
         create_timeout = self.config.create_timeout
@@ -620,7 +625,7 @@ class VM:
                     description=error,
                     completed=create_timeout,
                 )
-                self.ctx.exit(1, error)
+                return error
 
             # Wait until we can SSH into the VM
             host = self.instance.public_ip_address or self.instance.private_ip_address
@@ -632,6 +637,7 @@ class VM:
 
             proc = None
             checks = 0
+            last_error = None
             while ssh_connection_timeout_progress <= ssh_connection_timeout:
                 start = time.time()
                 if proc is None:
@@ -656,10 +662,11 @@ class VM:
                             description=f"SSH connection to {host} available!",
                             completed=ssh_connection_timeout,
                         )
-                        break
+                        return True
                     stderr = proc.stderr.read().strip()
                     if stderr:
                         stderr = f" Last Error: {stderr}"
+                        last_error = stderr
                     proc = None
                     if time.time() - wait_start < 1:
                         # Process exited too fast, sleep a little longer
@@ -678,7 +685,10 @@ class VM:
                     proc.kill()
                     proc = None
             else:
-                self.ctx.exit(1, f"Failed to establish an ssh connection to {host}")
+                error = f"Failed to establish an ssh connection to {host}"
+                if last_error:
+                    error += f". {last_error}"
+                return error
 
     def destroy(self):
         try:
@@ -790,14 +800,6 @@ class VM:
             env = []
         env.append("PYTHONUTF8=1")
         self.write_ssh_config()
-        stdout: TextIO | int
-        stderr: TextIO | int
-        if capture:
-            stdout = subprocess.PIPE
-            stderr = subprocess.PIPE
-        else:
-            stdout = sys.stdout
-            stderr = sys.stderr
         try:
             ssh_command = self.ssh_command_args(
                 *command,
@@ -806,15 +808,10 @@ class VM:
                 env=env,
                 log_command_level=log_command_level,
             )
-            return subprocess.run(
-                ssh_command,
-                stdin=sys.stdin,
-                stdout=stdout,
-                stderr=stderr,
-                universal_newlines=True,
-                shell=False,
+            return self.ctx.run(
+                *ssh_command,
                 check=check,
-                bufsize=0,
+                no_output_timeout_secs=self.ctx.parser.options.no_output_timeout_secs,
             )
         except (KeyboardInterrupt, SystemExit):
             pass
@@ -842,6 +839,7 @@ class VM:
             env = {}
         if "CI" in os.environ:
             env["CI"] = os.environ["CI"]
+        env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         if env:
             self.write_and_upload_dot_env(env)
@@ -849,7 +847,13 @@ class VM:
             sudo = True
         else:
             sudo = False
-        ret = self.run(cmd, sudo=sudo, check=False, capture=False, pseudo_terminal=True)
+        ret = self.run(
+            cmd,
+            sudo=sudo,
+            check=False,
+            capture=False,
+            pseudo_terminal=True,
+        )
         self.ctx.exit(ret.returncode)
 
     def combine_coverage(self):
