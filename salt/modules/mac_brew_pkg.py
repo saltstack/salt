@@ -168,26 +168,30 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for package in package_info["formulae"]:
         # Brew allows multiple versions of the same package to be installed.
         # Salt allows for this, so it must be accounted for.
-        versions = [v["version"] for v in package["installed"]]
+        pkg_versions = [v["version"] for v in package["installed"]]
         # Brew allows for aliasing of packages, all of which will be
         # installable from a Salt call, so all names must be accounted for.
-        names = package["aliases"] + [package["name"], package["full_name"]]
+        pkg_names = package["aliases"] + [package["name"], package["full_name"]]
         # Create a list of tuples containing all possible combinations of
         # names and versions, because all are valid.
-        combinations = [(n, v) for n in names for v in versions]
+        combinations = [(n, v) for n in pkg_names for v in pkg_versions]
 
-        for name, version in combinations:
-            __salt__["pkg_resource.add_pkg"](ret, name, version)
+        for pkg_name, pkg_version in combinations:
+            __salt__["pkg_resource.add_pkg"](ret, pkg_name, pkg_version)
 
     for package in package_info["casks"]:
-        version = package["installed"]
-        names = {package["full_token"], package["token"]}
+        pkg_version = package["installed"]
+        pkg_names = {package["full_token"], package["token"]}
+        pkg_tap = package.get("tap", None)
         # The following name is appended to maintain backward compatibility
         # with old salt formulas. Since full_token and token are the same
         # for official taps (homebrew/*).
-        names.add("/".join([package["tap"], package["token"]]))
-        for name in names:
-            __salt__["pkg_resource.add_pkg"](ret, name, version)
+        if not pkg_tap:
+            # Tap is null when the package is from homebrew/cask.
+            pkg_tap = "homebrew/cask"
+        pkg_names.add("/".join([pkg_tap, package["token"]]))
+        for pkg_name in pkg_names:
+            __salt__["pkg_resource.add_pkg"](ret, pkg_name, pkg_version)
 
     __salt__["pkg_resource.sort_pkglist"](ret)
     __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
