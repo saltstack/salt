@@ -500,7 +500,7 @@ lxml==4.9.1
     #   junos-eznc
     #   napalm
     #   ncclient
-mako==1.1.5
+mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.0.1
     # via
@@ -640,7 +640,7 @@ ntlm-auth==1.3.0
     # via
     #   requests-ntlm
     #   smbprotocol
-oauthlib==3.1.1
+oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
@@ -723,7 +723,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc20 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories

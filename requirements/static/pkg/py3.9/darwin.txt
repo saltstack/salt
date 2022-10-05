@@ -51,7 +51,7 @@ jinja2==3.1.0
     # via -r requirements/base.txt
 linode-python==1.1.1
     # via -r requirements/darwin.txt
-mako==1.1.4
+mako==1.2.2
     # via -r requirements/darwin.txt
 markupsafe==2.0.1
     # via
@@ -95,7 +95,7 @@ requests==2.25.1
     #   -r requirements/base.txt
     #   apache-libcloud
     #   vultr
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/darwin.txt
 six==1.16.0
     # via

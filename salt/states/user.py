@@ -98,9 +98,9 @@ def _changes(
         return False
 
     change = {}
-    if groups is None:
-        groups = lusr["groups"]
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
+    if not remove_groups:
+        wanted_groups = sorted(set(wanted_groups + lusr["groups"]))
     if uid and lusr["uid"] != uid:
         change["uid"] = uid
     if gid is not None and lusr["gid"] not in (gid, __salt__["file.group_to_gid"](gid)):
@@ -440,7 +440,7 @@ def present(
         home directory will be a unc path. Otherwise the home directory will be
         mapped to the specified drive. Must be a letter followed by a colon.
         Because of the colon, the value must be surrounded by single quotes. ie:
-        - win_homedrive: 'U:
+        ``- win_homedrive: 'U:'``
 
         .. versionchanged:: 2015.8.0
 
