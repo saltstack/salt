@@ -5,6 +5,7 @@
 """
 
 import pytest
+
 import salt.pillar.etcd_pillar as etcd_pillar
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, create_autospec, patch

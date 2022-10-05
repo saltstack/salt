@@ -5,8 +5,9 @@
 import os
 
 import pytest
-from salt.config import cloud_providers_config
 from saltfactories.utils import random_string
+
+from salt.config import cloud_providers_config
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
 

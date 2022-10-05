@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 import salt.loader
 import salt.modules.config
 import salt.modules.cp

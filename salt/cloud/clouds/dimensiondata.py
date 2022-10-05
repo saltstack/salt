@@ -39,13 +39,12 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 # Import libcloud
 try:
     import libcloud
-    from libcloud.compute.base import NodeDriver, NodeState
-    from libcloud.compute.base import NodeAuthPassword
-    from libcloud.compute.types import Provider
+    from libcloud.compute.base import NodeAuthPassword, NodeDriver, NodeState
     from libcloud.compute.providers import get_driver
+    from libcloud.compute.types import Provider
     from libcloud.loadbalancer.base import Member
-    from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
+    from libcloud.loadbalancer.types import Provider as Provider_lb
 
     # This work-around for Issue #32743 is no longer needed for libcloud >=
     # 1.4.0. However, older versions of libcloud must still be supported with

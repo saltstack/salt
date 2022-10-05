@@ -5,6 +5,7 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
+
 import salt.state
 import salt.utils.idem as idem
 import salt.utils.path

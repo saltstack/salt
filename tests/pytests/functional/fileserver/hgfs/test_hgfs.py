@@ -4,9 +4,10 @@ from pathlib import Path
 
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.config
 import salt.fileserver.hgfs as hgfs
-from pytestshellutils.utils.processes import terminate_process
 from tests.support.mock import patch
 
 try:

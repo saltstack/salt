@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.states.user as user
 from tests.support.mock import MagicMock, Mock, patch
 
@@ -177,8 +178,10 @@ def test_present_uid_gid_change():
     # get the before/after for the changes dict, and one last time to
     # confirm that no changes still need to be made.
     mock_info = MagicMock(side_effect=[before, before, after, after])
-    mock_group_to_gid = MagicMock(side_effect=["foo", "othergroup"])
-    mock_gid_to_group = MagicMock(side_effect=[5000, 5000, 5001, 5001])
+    mock_group_to_gid = MagicMock(side_effect=[5000, 5001])
+    mock_gid_to_group = MagicMock(
+        side_effect=["othergroup", "foo", "othergroup", "othergroup"]
+    )
     dunder_salt = {
         "user.info": mock_info,
         "user.chuid": Mock(),
@@ -196,7 +199,7 @@ def test_present_uid_gid_change():
         )
         assert ret == {
             "comment": "Updated user foo",
-            "changes": {"gid": 5001, "uid": 5001, "groups": ["othergroup"]},
+            "changes": {"gid": 5001, "uid": 5001, "groups": []},
             "name": "foo",
             "result": True,
         }
