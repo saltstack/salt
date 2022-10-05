@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.modules.btrfs as btrfs
 import salt.utils.files
 import salt.utils.fsutils

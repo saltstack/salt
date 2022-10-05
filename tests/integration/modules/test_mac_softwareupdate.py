@@ -3,6 +3,7 @@ integration tests for mac_softwareupdate
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
 

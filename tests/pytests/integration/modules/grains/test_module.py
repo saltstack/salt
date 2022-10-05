@@ -26,10 +26,10 @@ def test_items(salt_call_cli, minion_test_grain):
     grains.items
     """
     ret = salt_call_cli.run("grains.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert isinstance(ret.json, dict)
-    assert ret.json["test_grain"] == minion_test_grain
+    assert ret.returncode == 0
+    assert ret.data
+    assert isinstance(ret.data, dict)
+    assert ret.data["test_grain"] == minion_test_grain
 
 
 def test_item(salt_call_cli, minion_test_grain):
@@ -37,10 +37,10 @@ def test_item(salt_call_cli, minion_test_grain):
     grains.item
     """
     ret = salt_call_cli.run("grains.item", "test_grain")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert isinstance(ret.json, dict)
-    assert ret.json["test_grain"] == minion_test_grain
+    assert ret.returncode == 0
+    assert ret.data
+    assert isinstance(ret.data, dict)
+    assert ret.data["test_grain"] == minion_test_grain
 
 
 def test_ls(salt_call_cli, grains):
@@ -77,8 +77,8 @@ def test_ls(salt_call_cli, grains):
         "virtual",
     )
     ret = salt_call_cli.run("grains.ls")
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
     for grain in check_for:
         if grains["os"] == "Windows" and grain in (
             "cpu_flags",
@@ -87,7 +87,7 @@ def test_ls(salt_call_cli, grains):
             "uid",
         ):
             continue
-        assert grain in ret.json
+        assert grain in ret.data
 
 
 def test_set_val(salt_call_cli, wait_for_pillar_refresh_complete):
@@ -96,16 +96,16 @@ def test_set_val(salt_call_cli, wait_for_pillar_refresh_complete):
     """
     start_time = time.time()
     ret = salt_call_cli.run("grains.setval", "setgrain", "grainval")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == {"setgrain": "grainval"}
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == {"setgrain": "grainval"}
 
     # Let's wait for the pillar refresh, at which stage we know grains are also refreshed
     wait_for_pillar_refresh_complete(start_time)
 
     ret = salt_call_cli.run("grains.item", "setgrain")
-    assert ret.exitcode == 0
-    assert ret.json == {"setgrain": "grainval"}
+    assert ret.returncode == 0
+    assert ret.data == {"setgrain": "grainval"}
 
 
 def test_get(salt_call_cli):
@@ -113,9 +113,9 @@ def test_get(salt_call_cli):
     test grains.get
     """
     ret = salt_call_cli.run("grains.get", "level1:level2")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == "foo"
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data == "foo"
 
 
 @pytest.mark.parametrize(
@@ -126,12 +126,12 @@ def test_get_core_grains(salt_call_cli, grains, grain):
     test to ensure some core grains are returned
     """
     ret = salt_call_cli.run("grains.get", grain)
-    assert ret.exitcode == 0
-    log.debug("Value of '%s' grain: '%s'", grain, ret.json)
+    assert ret.returncode == 0
+    log.debug("Value of '%s' grain: '%s'", grain, ret.data)
     if grains["os"] in ("Arch", "Windows") and grain in ["osmajorrelease"]:
-        assert ret.json == ""
+        assert ret.data == ""
     else:
-        assert ret.json
+        assert ret.data
 
 
 @pytest.mark.parametrize("grain", ("num_cpus", "mem_total", "num_gpus", "uid"))
@@ -141,11 +141,11 @@ def test_get_grains_int(salt_call_cli, grains, grain):
     are returned as integers
     """
     ret = salt_call_cli.run("grains.get", grain)
-    assert ret.exitcode == 0
-    log.debug("Value of '%s' grain: %r", grain, ret.json)
+    assert ret.returncode == 0
+    log.debug("Value of '%s' grain: %r", grain, ret.data)
     if grains["os"] == "Windows" and grain in ["uid"]:
-        assert ret.json == ""
+        assert ret.data == ""
     else:
-        assert isinstance(ret.json, int), "grain: {} is not an int or empty".format(
+        assert isinstance(ret.data, int), "grain: {} is not an int or empty".format(
             grain
         )

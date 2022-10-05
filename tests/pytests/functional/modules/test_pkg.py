@@ -1,11 +1,18 @@
+import configparser
+import logging
 import os
+import shutil
+import tempfile
 import time
 
 import pytest
+from saltfactories.utils.functional import Loaders
+
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
-from tests.support.helpers import requires_system_grains
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -13,8 +20,25 @@ def ctx():
     return {}
 
 
+@pytest.fixture
+def preserve_rhel_yum_conf():
+
+    # save off current yum.conf
+    cfg_file = "/etc/yum.conf"
+    if not os.path.exists(cfg_file):
+        pytest.skip("Only runs on RedHat.")
+
+    tmp_dir = str(tempfile.gettempdir())
+    tmp_file = os.path.join(tmp_dir, "yum.conf")
+    shutil.copy2(cfg_file, tmp_file)
+    yield
+
+    # restore saved yum.conf
+    shutil.copy2(tmp_file, cfg_file)
+    os.remove(tmp_file)
+
+
 @pytest.fixture(autouse=True)
-@requires_system_grains
 def refresh_db(ctx, grains, modules):
     if "refresh" not in ctx:
         modules.pkg.refresh_db()
@@ -32,7 +56,6 @@ def refresh_db(ctx, grains, modules):
 
 
 @pytest.fixture(autouse=True)
-@requires_system_grains
 def test_pkg(grains):
     _pkg = "figlet"
     if salt.utils.platform.is_windows():
@@ -42,6 +65,8 @@ def test_pkg(grains):
             _pkg = "snoopy"
         else:
             _pkg = "units"
+    elif grains["os_family"] == "Debian":
+        _pkg = "ifenslave"
     return _pkg
 
 
@@ -56,7 +81,6 @@ def test_list(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.version_cmp")
-@requires_system_grains
 @pytest.mark.slow_test
 def test_version_cmp(grains, modules):
     """
@@ -82,7 +106,6 @@ def test_version_cmp(grains, modules):
 
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
 def test_mod_del_repo(grains, modules):
@@ -92,7 +115,8 @@ def test_mod_del_repo(grains, modules):
     repo = None
 
     try:
-        if grains["os"] == "Ubuntu":
+        # ppa:otto-kesselgulasch/gimp-edge has no Ubuntu 22.04 repo
+        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] != 22:
             repo = "ppa:otto-kesselgulasch/gimp-edge"
             uri = "http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu"
             ret = modules.pkg.mod_repo(repo, "comps=main")
@@ -192,6 +216,10 @@ def test_owner(modules):
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
+@pytest.mark.skipif(
+    not salt.utils.platform.is_freebsd(),
+    reason="test for new package manager for FreeBSD",
+)
 @pytest.mark.requires_salt_modules("pkg.which")
 def test_which(modules):
     """
@@ -244,7 +272,6 @@ def test_install_remove(modules, test_pkg):
     "pkg.remove",
     "pkg.list_pkgs",
 )
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
 @pytest.mark.requires_salt_states("pkg.installed")
@@ -292,10 +319,9 @@ def test_hold_unhold(grains, modules, states, test_pkg):
 
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.refresh_db")
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_refresh_db(grains, modules, tmp_path, minion_opts):
+def test_refresh_db(grains, tmp_path, minion_opts):
     """
     test refreshing the package database
     """
@@ -303,7 +329,8 @@ def test_refresh_db(grains, modules, tmp_path, minion_opts):
     salt.utils.pkg.write_rtag(minion_opts)
     assert os.path.isfile(rtag) is True
 
-    ret = modules.pkg.refresh_db()
+    loader = Loaders(minion_opts)
+    ret = loader.modules.pkg.refresh_db()
     if not isinstance(ret, dict):
         pytest.skip("Upstream repo did not return coherent results: {}".format(ret))
 
@@ -320,7 +347,6 @@ def test_refresh_db(grains, modules, tmp_path, minion_opts):
 
 
 @pytest.mark.requires_salt_modules("pkg.info_installed")
-@requires_system_grains
 @pytest.mark.slow_test
 def test_pkg_info(grains, modules, test_pkg):
     """
@@ -356,7 +382,6 @@ def test_pkg_info(grains, modules, test_pkg):
     "pkg.list_repo_pkgs",
     "pkg.list_upgrades",
 )
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
 def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
@@ -436,7 +461,6 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
     " unrunnable",
 )
 @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_salt_states("pkg.removed")
 def test_pkg_latest_version(grains, modules, states, test_pkg):
@@ -475,3 +499,46 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
         pytest.skip("TODO: test not configured for {}".format(grains["os_family"]))
     pkg_latest = modules.pkg.latest_version(test_pkg)
     assert pkg_latest in cmd_pkg
+
+
+@pytest.mark.destructive_test
+@pytest.mark.requires_salt_modules("pkg.list_repos")
+@pytest.mark.slow_test
+def test_list_repos_duplicate_entries(preserve_rhel_yum_conf, grains, modules):
+    """
+    test duplicate entries in /etc/yum.conf
+
+    This is a destructive test as it installs and then removes a package
+    """
+    if grains["os_family"] != "RedHat":
+        pytest.skip("Only runs on RedHat.")
+
+    if grains["os"] == "Amazon":
+        pytest.skip("Only runs on RedHat, Amazon /etc/yum.conf differs.")
+
+    # write valid config with duplicates entries
+    cfg_file = "/etc/yum.conf"
+    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+        fp_.write("[main]\n")
+        fp_.write("gpgcheck=1\n")
+        fp_.write("installonly_limit=3\n")
+        fp_.write("clean_requirements_on_remove=True\n")
+        fp_.write("best=True\n")
+        fp_.write("skip_if_unavailable=False\n")
+        fp_.write("http_caching=True\n")
+        fp_.write("http_caching=True\n")
+
+    ret = modules.pkg.list_repos(strict_config=False)
+    assert ret != []
+    assert isinstance(ret, dict) is True
+
+    # test explicitly strict_config
+    expected = "While reading from '/etc/yum.conf' [line  8]: option 'http_caching' in section 'main' already exists"
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos(strict_config=True)
+    assert "{}".format(exc_info.value) == expected
+
+    # test implicitly strict_config
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos()
+    assert "{}".format(exc_info.value) == expected

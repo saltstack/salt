@@ -114,17 +114,17 @@ try:
     # pylint: disable=no-name-in-module
     import profitbricks
     from profitbricks.client import (
-        ProfitBricksService,
-        Server,
+        LAN,
         NIC,
-        Volume,
+        Datacenter,
         FirewallRule,
         IPBlock,
-        Datacenter,
         LoadBalancer,
-        LAN,
-        PBNotFoundError,
         PBError,
+        PBNotFoundError,
+        ProfitBricksService,
+        Server,
+        Volume,
     )
 
     # pylint: enable=no-name-in-module

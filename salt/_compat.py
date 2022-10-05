@@ -11,23 +11,18 @@ if sys.version_info >= (3, 9, 5):
 else:
     import salt.ext.ipaddress as ipaddress
 
-if sys.version_info >= (3, 10):
-    # Python 3.10 will include a fix in importlib.metadata which allows us to
-    # get the distribution of a loaded entry-point
-    import importlib.metadata  # pylint: disable=no-member,no-name-in-module
-else:
-    # importlib_metadata before version 3.3.0 does not include the functionality we need.
-    try:
-        import importlib_metadata
+# importlib_metadata before version 3.3.0 does not include the functionality we need.
+try:
+    import importlib_metadata
 
-        importlib_metadata_version = [
-            int(part)
-            for part in importlib_metadata.version("importlib_metadata").split(".")
-            if part.isdigit()
-        ]
-        if tuple(importlib_metadata_version) < (3, 3, 0):
-            # Use the vendored importlib_metadata
-            import salt.ext.importlib_metadata as importlib_metadata
-    except ImportError:
+    importlib_metadata_version = [
+        int(part)
+        for part in importlib_metadata.version("importlib_metadata").split(".")
+        if part.isdigit()
+    ]
+    if tuple(importlib_metadata_version) < (3, 3, 0):
         # Use the vendored importlib_metadata
         import salt.ext.importlib_metadata as importlib_metadata
+except ImportError:
+    # Use the vendored importlib_metadata
+    import salt.ext.importlib_metadata as importlib_metadata

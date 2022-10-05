@@ -103,9 +103,9 @@ if HAS_PIP is True:
 
         purge_pip.__pip_ver__ = pip.__version__
     if salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="10.0"):
-        from pip._internal.exceptions import (
+        from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
             InstallationError,
-        )  # pylint: disable=E0611,E0401
+        )
     elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="1.0"):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
@@ -699,6 +699,20 @@ def installed(
 
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
+
+    If you are using onedir packages and you need to install python packages into
+    the system python environment, you must provide the pip_bin or
+    bin_env to the pip state module.
+
+
+    .. code-block:: yaml
+
+        lib-foo:
+          pip.installed:
+            - pip_bin: /usr/bin/pip3
+        lib-bar:
+          pip.installed:
+            - bin_env: /usr/bin/python3
     """
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -731,7 +745,7 @@ def installed(
     try:
         cur_version = __salt__["pip.version"](bin_env)
     except (CommandNotFoundError, CommandExecutionError) as err:
-        ret["result"] = None
+        ret["result"] = False
         ret["comment"] = "Error installing '{}': {}".format(name, err)
         return ret
     # Check that the pip binary supports the 'use_wheel' option

@@ -5,6 +5,7 @@
 import textwrap
 
 import pytest
+
 import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.mixins import LoaderModuleMockMixin

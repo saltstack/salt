@@ -220,11 +220,15 @@ the received message.
 4) The new minion thread is created. The _thread_return() function starts up
 and actually calls out to the requested function contained in the job.
 5) The requested function runs and returns a result. [Still in thread.]
-6) The result of the function that's run is encrypted and returned to the
-master's ReqServer (TCP 4506 on master). [Still in thread.]
+6) The result of the function that's run is published on the minion's local event bus with event
+tag "__master_req_channel_payload" [Still in thread.]
 7) Thread exits. Because the main thread was only blocked for the time that it
 took to initialize the worker thread, many other requests could have been
 received and processed during this time.
+8) Minion event handler gets the event with tag "__master_req_channel_payload"
+and sends the payload to master's ReqServer (TCP 4506 on master), via the long-running async request channel
+that was opened when minion first started up.
+
 
 
 A Note on ClearFuncs vs. AESFuncs

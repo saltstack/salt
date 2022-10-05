@@ -3,6 +3,7 @@ Integration tests for renderer functions
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 
 

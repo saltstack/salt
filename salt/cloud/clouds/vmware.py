@@ -139,9 +139,9 @@ except ImportError:
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
-    from requests.packages.urllib3 import (
+    from requests.packages.urllib3 import (  # pylint: disable=no-name-in-module
         disable_warnings,
-    )  # pylint: disable=no-name-in-module
+    )
 
     disable_warnings()
 except ImportError:
@@ -2771,6 +2771,9 @@ def create(vm_):
     cores_per_socket = config.get_cloud_config_value(
         "cores_per_socket", vm_, __opts__, default=None
     )
+    instant_clone = config.get_cloud_config_value(
+        "instant_clone", vm_, __opts__, default=False
+    )
     memory = config.get_cloud_config_value("memory", vm_, __opts__, default=None)
     devices = config.get_cloud_config_value("devices", vm_, __opts__, default=None)
     extra_config = config.get_cloud_config_value(
@@ -2822,6 +2825,21 @@ def create(vm_):
     )
     win_run_once = config.get_cloud_config_value(
         "win_run_once", vm_, __opts__, search_global=False, default=None
+    )
+    cpu_hot_add = config.get_cloud_config_value(
+        "cpu_hot_add", vm_, __opts__, search_global=False, default=None
+    )
+    cpu_hot_remove = config.get_cloud_config_value(
+        "cpu_hot_remove", vm_, __opts__, search_global=False, default=None
+    )
+    mem_hot_add = config.get_cloud_config_value(
+        "mem_hot_add", vm_, __opts__, search_global=False, default=None
+    )
+    nested_hv = config.get_cloud_config_value(
+        "nested_hv", vm_, __opts__, search_global=False, default=None
+    )
+    vpmc = config.get_cloud_config_value(
+        "vpmc", vm_, __opts__, search_global=False, default=None
     )
 
     # Get service instance object
@@ -2973,6 +2991,111 @@ def create(vm_):
                 reloc_spec.host = host_ref
             else:
                 log.error("Specified host: '%s' does not exist", host)
+
+        if instant_clone:
+            instant_clone_spec = vim.vm.InstantCloneSpec()
+            instant_clone_spec.name = vm_name
+            instant_clone_spec.location = reloc_spec
+
+            event_kwargs = vm_.copy()
+            if event_kwargs.get("password"):
+                del event_kwargs["password"]
+
+            try:
+                __utils__["cloud.fire_event"](
+                    "event",
+                    "requesting instance",
+                    "salt/cloud/{}/requesting".format(vm_["name"]),
+                    args=__utils__["cloud.filter_event"](
+                        "requesting", event_kwargs, list(event_kwargs)
+                    ),
+                    sock_dir=__opts__["sock_dir"],
+                    transport=__opts__["transport"],
+                )
+
+                log.info(
+                    "Creating %s from %s(%s)", vm_["name"], clone_type, vm_["clonefrom"]
+                )
+
+                if datastore and not datastore_ref and datastore_cluster_ref:
+                    # datastore cluster has been specified so apply Storage DRS recommendations
+                    pod_spec = vim.storageDrs.PodSelectionSpec(
+                        storagePod=datastore_cluster_ref
+                    )
+
+                    storage_spec = vim.storageDrs.StoragePlacementSpec(
+                        type="clone",
+                        vm=object_ref,
+                        podSelectionSpec=pod_spec,
+                        cloneName=vm_name,
+                        folder=folder_ref,
+                    )
+
+                    # get recommended datastores
+                    recommended_datastores = (
+                        si.content.storageResourceManager.RecommendDatastores(
+                            storageSpec=storage_spec
+                        )
+                    )
+
+                    # apply storage DRS recommendations
+                    task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(
+                        recommended_datastores.recommendations[0].key
+                    )
+                    salt.utils.vmware.wait_for_task(
+                        task, vm_name, "apply storage DRS recommendations", 5, "info"
+                    )
+                else:
+                    # Instant clone the VM
+                    task = object_ref.InstantClone_Task(spec=instant_clone_spec)
+                    salt.utils.vmware.wait_for_task(
+                        task, vm_name, "Instantclone", 5, "info"
+                    )
+
+            except Exception as exc:  # pylint: disable=broad-except
+                err_msg = "Error Instant cloning {}: {}".format(vm_["name"], exc)
+                log.error(
+                    err_msg,
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                return {"Error": err_msg}
+
+            new_vm_ref = salt.utils.vmware.get_mor_by_property(
+                si, vim.VirtualMachine, vm_name, container_ref=container_ref
+            )
+            out = None
+            if not template and power:
+                ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
+                if ip:
+                    log.info("[ %s ] IPv4 is: %s", vm_name, ip)
+                    # ssh or smb using ip and install salt only if deploy is True
+                    if deploy:
+                        vm_["key_filename"] = key_filename
+                        # if specified, prefer ssh_host to the discovered ip address
+                        if "ssh_host" not in vm_:
+                            vm_["ssh_host"] = ip
+                        log.info("[ %s ] Deploying to %s", vm_name, vm_["ssh_host"])
+
+                        out = __utils__["cloud.bootstrap"](vm_, __opts__)
+
+            data = show_instance(vm_name, call="action")
+
+            if deploy and isinstance(out, dict):
+                data["deploy_kwargs"] = out.get("deploy_kwargs", {})
+
+            __utils__["cloud.fire_event"](
+                "event",
+                "created instance",
+                "salt/cloud/{}/created".format(vm_["name"]),
+                args=__utils__["cloud.filter_event"](
+                    "created", vm_, ["name", "profile", "provider", "driver"]
+                ),
+                sock_dir=__opts__["sock_dir"],
+                transport=__opts__["transport"],
+            )
+            return {"Instant Clone created successfully": data}
+
     else:
         if not datastore:
             raise SaltCloudSystemExit(
@@ -3043,6 +3166,21 @@ def create(vm_):
             devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name
         )
         config_spec.deviceChange = specs["device_specs"]
+
+    if cpu_hot_add and hasattr(config_spec, "cpuHotAddEnabled"):
+        config_spec.cpuHotAddEnabled = bool(cpu_hot_add)
+
+    if cpu_hot_remove and hasattr(config_spec, "cpuHotRemoveEnabled"):
+        config_spec.cpuHotRemoveEnabled = bool(cpu_hot_remove)
+
+    if mem_hot_add and hasattr(config_spec, "memoryHotAddEnabled"):
+        config_spec.memoryHotAddEnabled = bool(mem_hot_add)
+
+    if nested_hv and hasattr(config_spec, "nestedHVEnabled"):
+        config_spec.nestedHVEnabled = bool(nested_hv)
+
+    if vpmc and hasattr(config_spec, "vPMCEnabled"):
+        config_spec.vPMCEnabled = bool(vpmc)
 
     if extra_config:
         for key, value in extra_config.items():
