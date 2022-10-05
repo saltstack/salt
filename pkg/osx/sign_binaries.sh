@@ -49,7 +49,7 @@ echo "Signing Binaries"
 ################################################################################
 if [[ $(id -u) -ne 0 ]]; then
     echo ">>>>>> Re-launching as sudo <<<<<<"
-    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+    exec sudo -E /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -69,48 +69,65 @@ echo "**** Setting Variables"
 INSTALL_DIR=/opt/salt
 PY_VERSION=3.9
 PY_DOT_VERSION=3.9.12
+CMD_OUTPUT=$(mktemp -t cmd.log)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 ################################################################################
 # Add rpath to the Python binaries before signing
 ################################################################################
 echo "**** Setting rpath in binaries"
-install_name_tool $INSTALL_DIR/bin/python${PY_VERSION}m \
+install_name_tool $INSTALL_DIR/bin/python${PY_VERSION} \
     -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/lib \
     -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl/lib || echo "already present"
-
-################################################################################
-# Add rpath to the Python binaries before signing
-################################################################################
-echo "**** Setting rpath in binaries"
-install_name_tool $INSTALL_DIR/bin/python3.7m \
-    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/lib \
-    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib || echo "already present"
 
 ################################################################################
 # Sign python binaries in `bin` and `lib`
 ################################################################################
 echo "**** Signing binaries that have entitlements (/opt/salt/.pyenv)"
-find ${INSTALL_DIR}/.pyenv \
+if ! find ${INSTALL_DIR}/.pyenv \
     -type f \
     -perm -u=x \
     -follow \
+    ! -name "*.so" \
+    ! -name "*.dylib" \
+    ! -name "*.py" \
+    ! -name "*.sh" \
+    ! -name "*.bat" \
+    ! -name "*.pl" \
+    ! -name "*.crt" \
+    ! -name "*.key" \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --entitlements ./entitlements.plist \
-                   --sign "$DEV_APP_CERT" "{}" \;
+                   --force \
+                   --entitlements "$SCRIPT_DIR/entitlements.plist" \
+                   --sign "$DEV_APP_CERT" "{}" \; > "$CMD_OUTPUT" 2>&1; then
+    echo "Failed to sign binaries"
+    echo "Failed to sign run with entitlements"
+    echo "output >>>>>>"
+    cat "$CMD_OUTPUT" 1>&2
+    echo "<<<<<< output"
+    exit 1
+fi
 
 echo "**** Signing dynamic libraries (*dylib) (/opt/salt/.pyenv)"
-find ${INSTALL_DIR}/.pyenv \
+if ! find ${INSTALL_DIR}/.pyenv \
     -type f \
     -name "*dylib" \
     -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
+                   --force \
+                   --sign "$DEV_APP_CERT" "{}" \; > "$CMD_OUTPUT" 2>&1; then
+    echo "Failed to sign dynamic libraries"
+    echo "output >>>>>>"
+    cat "$CMD_OUTPUT" 1>&2
+    echo "<<<<<< output"
+    exit 1
+fi
 
-echo "**** Signing shared libraries (*.so) (/opt/salt/.pyenv)"
+if ! echo "**** Signing shared libraries (*.so) (/opt/salt/.pyenv)"
 find ${INSTALL_DIR}/.pyenv \
     -type f \
     -name "*.so" \
@@ -118,7 +135,14 @@ find ${INSTALL_DIR}/.pyenv \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
+                   --force \
+                   --sign "$DEV_APP_CERT" "{}" \;  > "$CMD_OUTPUT" 2>&1; then
+    echo "Failed to sign shared libraries"
+    echo "output >>>>>>"
+    cat "$CMD_OUTPUT" 1>&2
+    echo "<<<<<< output"
+    exit 1
+fi
 
 echo "**** Signing Binaries Completed Successfully"
 echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

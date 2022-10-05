@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.platform
 import salt.utils.win_pdh as win_pdh
 from tests.support.mock import patch

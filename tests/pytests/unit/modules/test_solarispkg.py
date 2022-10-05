@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.solarispkg as solarispkg
 from tests.support.mock import ANY, MagicMock, call, patch
 

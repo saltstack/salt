@@ -4,11 +4,12 @@ import re
 import textwrap
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.yaml
-from saltfactories.utils import random_string
 
 pytestmark = [
     pytest.mark.slow_test,

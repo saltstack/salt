@@ -6,6 +6,7 @@ Test for the chocolatey module
 import os
 
 import pytest
+
 import salt.modules.chocolatey as chocolatey
 import salt.utils
 import salt.utils.platform

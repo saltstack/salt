@@ -59,7 +59,7 @@ def minion_config_overrides(zookeeper_port):
 def zookeeper_container(salt_factories):
     container = salt_factories.get_container(
         random_string("zookeeper-"),
-        "zookeeper",
+        "ghcr.io/saltstack/salt-ci-containers/zookeeper",
         container_run_kwargs={
             "ports": {
                 "2181/tcp": None,

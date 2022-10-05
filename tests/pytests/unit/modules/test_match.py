@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.loader
 import salt.matchers.compound_match as compound_match
 import salt.matchers.glob_match as glob_match
@@ -252,3 +253,75 @@ def test_list_match_different_minion_id():
 
     # passing minion_id, should return True
     assert match.list_("bar02,bar04", "bar04")
+
+
+def test_ifelse():
+    """
+    Tests if ifelse returns the correct value.
+    """
+    lookup = [
+        "foo*",
+        {"key1": "fooval1", "key2": "fooval2"},
+        "bar*",
+        {"key1": "barval1", "key2": "barval2"},
+    ]
+    default = {"key1": "default1", "key2": "default2"}
+
+    # even args
+    with pytest.raises(SaltException):
+        match.ifelse("matcher", "value")
+    # only default provided
+    assert match.ifelse(default, minion_id="foo03") == {
+        "key1": "default1",
+        "key2": "default2",
+    }
+    # match foo
+    assert match.ifelse(*lookup, default, minion_id="foo03") == {
+        "key1": "fooval1",
+        "key2": "fooval2",
+    }
+    # match bar
+    assert match.ifelse(*lookup, default, minion_id="bar03") == {
+        "key1": "barval1",
+        "key2": "barval2",
+    }
+    # no match
+    assert match.ifelse(*lookup, default, minion_id="baz03") == {
+        "key1": "default1",
+        "key2": "default2",
+    }
+    # boolean matchers
+    assert (
+        match.ifelse(False, "nuh uhn", True, "this is true", "default value")
+        == "this is true"
+    )
+
+
+def test_matchers_loaded_only_once(minion_id):
+    """
+    Test issue #62283
+    """
+    mock_compound_match = MagicMock()
+    target = "bar04"
+
+    with patch.object(
+        salt.loader,
+        "matchers",
+        return_value={"compound_match.match": mock_compound_match},
+    ) as matchers:
+        # do this 5 times
+        for run in range(0, 5):
+            match.compound(target)
+
+        # matcher loading was only performed once
+        matchers.assert_called_once()
+        # The matcher should get called with minion_id
+        assert len(matchers.call_args[0]) == 1
+        assert matchers.call_args[0][0].get("id") == minion_id
+
+        # compound match was called 5 times
+        assert mock_compound_match.call_count == 5
+        # The compound matcher should not get minion_id, no opts should be passed
+        mock_compound_match.assert_called_with(
+            target, minion_id=None, opts={"extension_modules": "", "id": minion_id}
+        )

@@ -1,6 +1,7 @@
 import threading
 
 import pytest
+
 import salt.modules.network as networkmod
 from tests.support.mock import patch
 
