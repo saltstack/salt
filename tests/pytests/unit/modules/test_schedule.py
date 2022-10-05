@@ -916,6 +916,7 @@ def test_list(sock_dir, job1):
                     assert ret == expected
 
 
+@pytest.mark.slow_test
 def test_list_global_enabled(sock_dir, job1):
     """
     Test schedule.list when enabled globally
@@ -961,6 +962,7 @@ def test_list_global_enabled(sock_dir, job1):
                     assert ret == expected
 
 
+@pytest.mark.slow_test
 def test_list_global_disabled(sock_dir, job1):
     """
     Test schedule.list when disabled  globally
