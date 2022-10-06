@@ -1,4 +1,6 @@
 Improvements to `salt.state.ldap` and `salt.modules.ldap3`:
+  * The order of an attribute's values is now preserved when reading from and
+    writing to the LDAP server.
   * Fixed support for `bytes` attribute values that are not in a list.
   * Documentation improvements.
   * Miscellaneous code cleanups.

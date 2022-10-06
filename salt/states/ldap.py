@@ -172,6 +172,13 @@ def managed(name, entries, connect_spec=None):
         Note that if all attribute values are removed from an entry,
         the entire entry is deleted.
 
+        `RFC 4511 section 4.1.7
+        <https://datatracker.ietf.org/doc/html/rfc4511#section-4.1.7>`_ says,
+        "The set of attribute values is unordered."  Despite this, if an
+        attribute has more than one new value, the new values are sent to the
+        server in the given order in case order is meaningful to the server (as
+        an extension to the standard).
+
     :param connect_spec:
         See the description of the ``connect_spec`` parameter of the
         :py:func:`ldap3.connect <salt.modules.ldap3.connect>` function
@@ -334,7 +341,7 @@ def managed(name, entries, connect_spec=None):
 
     # set ret['changes'].  filter out any unchanged attributes, and
     # convert the value sets to lists before returning them to the
-    # user (sorted for easier comparisons)
+    # user.
     for dn in success_dn_set:
         o = changed_old.get(dn, {})
         n = changed_new.get(dn, {})
@@ -345,7 +352,7 @@ def managed(name, entries, connect_spec=None):
                 changes[xn] = None
                 continue
             changes[xn] = {
-                attr: sorted(vals)
+                attr: list(vals)
                 for attr, vals in x.items()
                 if (
                     o.get(attr, AttributeValueSet())
@@ -463,9 +470,12 @@ def _update_entry(entry, status, directives):
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == "add":
-                vals.update(entry.get(attr, AttributeValueSet()))
-                if vals:
-                    entry[attr] = vals
+                existing_vals = entry.get(attr, AttributeValueSet())
+                # Preserve the order of pre-existing values by updating
+                # existing_vals with vals rather than the other way around.
+                existing_vals |= vals
+                if existing_vals:
+                    entry[attr] = existing_vals
             elif directive == "delete":
                 existing_vals = entry.pop(attr, AttributeValueSet())
                 if vals:
@@ -473,9 +483,13 @@ def _update_entry(entry, status, directives):
                     if existing_vals:
                         entry[attr] = existing_vals
             elif directive == "replace":
-                entry.pop(attr, None)
-                if vals:
-                    entry[attr] = vals
+                existing_vals = entry.pop(attr, AttributeValueSet())
+                # Preserve the order of pre-existing values by first keeping
+                # the common values then inserting the new values.
+                existing_vals &= vals
+                existing_vals |= vals
+                if existing_vals:
+                    entry[attr] = existing_vals
             else:
                 raise ValueError("unknown directive: " + directive)
 

@@ -62,45 +62,26 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
             ],
         },
     ]
+    want = {
+        "objectClass": ["person"],
+        "cn": ["u1"],
+        "sn": ["1234"],
+        "description": [
+            "Non-ASCII characters should be supported: 🙂",
+            "4567",
+            "abcd",
+        ],
+        "userPassword": [
+            "password",
+            b"\x00\x01\x02\x03\x80",
+        ],
+    }
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
-        "changes": {
-            u1dn: {
-                "old": None,
-                "new": {
-                    "objectClass": ["person"],
-                    "cn": ["u1"],
-                    "sn": ["1234"],
-                    "description": [
-                        "4567",
-                        "Non-ASCII characters should be supported: 🙂",
-                        "abcd",
-                    ],
-                    "userPassword": [
-                        b"\x00\x01\x02\x03\x80",
-                        "password",
-                    ],
-                },
-            },
-        },
+        "changes": {u1dn: {"old": None, "new": want}},
         "comment": "Successfully updated LDAP entries",
         "result": True,
     }
-    assert openldap_minion_run("ldap3.search", base=u1dn) == {
-        u1dn: {
-            "objectClass": ["person"],
-            "cn": ["u1"],
-            "sn": ["1234"],
-            "description": [
-                "Non-ASCII characters should be supported: 🙂",
-                "4567",
-                "abcd",
-            ],
-            "userPassword": [
-                "password",
-                b"\x00\x01\x02\x03\x80",
-            ],
-        },
-    }
+    assert openldap_minion_run("ldap3.search", base=u1dn) == {u1dn: want}
 
 
 def test_managed_add_new_attribute(openldap_minion_run, openldap_minion_apply, u0dn):
@@ -166,8 +147,8 @@ def test_managed_add_new_value_to_existing_attribute(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
-                "new": {"description": ["and another", "another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
+                "new": {"description": ["desc", "another desc", "and another"]},
             },
         },
         "comment": "Successfully updated LDAP entries",
@@ -178,7 +159,7 @@ def test_managed_add_new_value_to_existing_attribute(
             "objectClass": ["person"],
             "cn": ["u0"],
             "sn": ["Lastname"],
-            "description": ["and another", "desc", "another desc"],
+            "description": ["desc", "another desc", "and another"],
         },
     }
 
@@ -202,6 +183,25 @@ def test_managed_add_same_values_to_existing_attribute(
     }
 
 
+def test_managed_add_same_values_different_order(
+    openldap_minion_run, openldap_minion_apply, u0dn
+):
+    entries = [{u0dn: [{"add": {"description": ["another desc", "desc"]}}]}]
+    assert openldap_minion_apply("ldap.managed", entries=entries) == {
+        "changes": {},
+        "comment": "LDAP entries already set",
+        "result": True,
+    }
+    assert openldap_minion_run("ldap3.search", base=u0dn) == {
+        u0dn: {
+            "objectClass": ["person"],
+            "cn": ["u0"],
+            "sn": ["Lastname"],
+            "description": ["desc", "another desc"],
+        },
+    }
+
+
 def test_managed_add_overlapping_values(
     openldap_minion_run, openldap_minion_apply, u0dn
 ):
@@ -209,8 +209,8 @@ def test_managed_add_overlapping_values(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
-                "new": {"description": ["and another", "another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
+                "new": {"description": ["desc", "another desc", "and another"]},
             },
         },
         "comment": "Successfully updated LDAP entries",
@@ -221,7 +221,7 @@ def test_managed_add_overlapping_values(
             "objectClass": ["person"],
             "cn": ["u0"],
             "sn": ["Lastname"],
-            "description": ["desc", "and another", "another desc"],
+            "description": ["desc", "another desc", "and another"],
         },
     }
 
@@ -233,8 +233,8 @@ def test_managed_add_overlapping_values_different_order(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
-                "new": {"description": ["and another", "another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
+                "new": {"description": ["desc", "another desc", "and another"]},
             },
         },
         "comment": "Successfully updated LDAP entries",
@@ -245,7 +245,7 @@ def test_managed_add_overlapping_values_different_order(
             "objectClass": ["person"],
             "cn": ["u0"],
             "sn": ["Lastname"],
-            "description": ["and another", "desc", "another desc"],
+            "description": ["desc", "another desc", "and another"],
         },
     }
 
@@ -255,8 +255,8 @@ def test_managed_add_repeated_values(openldap_minion_run, openldap_minion_apply,
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
-                "new": {"description": ["another desc", "desc", "val"]},
+                "old": {"description": ["desc", "another desc"]},
+                "new": {"description": ["desc", "another desc", "val"]},
             },
         },
         "comment": "Successfully updated LDAP entries",
@@ -267,7 +267,7 @@ def test_managed_add_repeated_values(openldap_minion_run, openldap_minion_apply,
             "objectClass": ["person"],
             "cn": ["u0"],
             "sn": ["Lastname"],
-            "description": ["val", "desc", "another desc"],
+            "description": ["desc", "another desc", "val"],
         },
     }
 
@@ -332,7 +332,7 @@ def test_managed_replace_no_value_for_one_attribute(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {},
             },
         },
@@ -372,7 +372,7 @@ def test_managed_replace_no_values_for_all_attributes(
                     "objectClass": ["person"],
                     "cn": ["u0"],
                     "sn": ["Lastname"],
-                    "description": ["another desc", "desc"],
+                    "description": ["desc", "another desc"],
                 },
                 "new": None,
             },
@@ -407,7 +407,7 @@ def test_managed_replace_new_values(openldap_minion_run, openldap_minion_apply, 
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {"description": ["new desc"]},
             },
         },
@@ -441,6 +441,25 @@ def test_managed_replace_same_values(openldap_minion_run, openldap_minion_apply,
     }
 
 
+def test_managed_replace_same_values_different_order(
+    openldap_minion_run, openldap_minion_apply, u0dn
+):
+    entries = [{u0dn: [{"replace": {"description": ["another desc", "desc"]}}]}]
+    assert openldap_minion_apply("ldap.managed", entries=entries) == {
+        "changes": {},
+        "comment": "LDAP entries already set",
+        "result": True,
+    }
+    assert openldap_minion_run("ldap3.search", base=u0dn) == {
+        u0dn: {
+            "objectClass": ["person"],
+            "cn": ["u0"],
+            "sn": ["Lastname"],
+            "description": ["desc", "another desc"],
+        },
+    }
+
+
 def test_managed_replace_overlapping_values(
     openldap_minion_run, openldap_minion_apply, u0dn
 ):
@@ -448,7 +467,7 @@ def test_managed_replace_overlapping_values(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {"description": ["desc", "new desc"]},
             },
         },
@@ -472,7 +491,7 @@ def test_managed_replace_overlapping_values_different_order(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {"description": ["desc", "new desc"]},
             },
         },
@@ -484,7 +503,7 @@ def test_managed_replace_overlapping_values_different_order(
             "objectClass": ["person"],
             "cn": ["u0"],
             "sn": ["Lastname"],
-            "description": ["new desc", "desc"],
+            "description": ["desc", "new desc"],
         },
     }
 
@@ -579,7 +598,7 @@ def test_managed_delete_remaining_attribute_values(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {},
             },
         },
@@ -602,7 +621,7 @@ def test_managed_delete_all_attribute_values(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {},
             },
         },
@@ -642,7 +661,7 @@ def test_managed_delete_all_values_all_attributes(
                     "objectClass": ["person"],
                     "cn": ["u0"],
                     "sn": ["Lastname"],
-                    "description": ["another desc", "desc"],
+                    "description": ["desc", "another desc"],
                 },
                 "new": None,
             },
@@ -677,7 +696,7 @@ def test_managed_delete_remaining_values_all_attributes(
                     "objectClass": ["person"],
                     "cn": ["u0"],
                     "sn": ["Lastname"],
-                    "description": ["another desc", "desc"],
+                    "description": ["desc", "another desc"],
                 },
                 "new": None,
             },
@@ -695,7 +714,7 @@ def test_managed_delete_not_all_values(
     assert openldap_minion_apply("ldap.managed", entries=entries) == {
         "changes": {
             u0dn: {
-                "old": {"description": ["another desc", "desc"]},
+                "old": {"description": ["desc", "another desc"]},
                 "new": {"description": ["desc"]},
             },
         },
