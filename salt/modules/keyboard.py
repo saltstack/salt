@@ -63,21 +63,31 @@ def set_sys(layout):
 
         salt '*' keyboard.set_sys dvorak
     """
+    result = None
     if salt.utils.path.which("localectl"):
-        __salt__["cmd.run"]("localectl set-keymap {}".format(layout))
+        if __salt__["cmd.retcode"]("localectl set-keymap {}".format(layout)) == 0:
+            result = True
+        else:
+            result = False
+    #TODO: Make behaviour dependent on outcome of command below
+    # Right now "result = True" just mimics the old behaviour, to stop things
+    # breaking, but it's not the right thing to do as it ignores the retcode.
     elif "RedHat" in __grains__["os_family"]:
         __salt__["file.sed"](
             "/etc/sysconfig/keyboard", "^LAYOUT=.*", "LAYOUT={}".format(layout)
         )
+        result = True
     elif "Debian" in __grains__["os_family"]:
         __salt__["file.sed"](
             "/etc/default/keyboard", "^XKBLAYOUT=.*", "XKBLAYOUT={}".format(layout)
         )
+        result = True
     elif "Gentoo" in __grains__["os_family"]:
         __salt__["file.sed"](
             "/etc/conf.d/keymaps", "^keymap=.*", "keymap={}".format(layout)
         )
-    return layout
+        result = True
+    return result
 
 
 def get_x():
@@ -106,5 +116,7 @@ def set_x(layout):
         salt '*' keyboard.set_x dvorak
     """
     cmd = "setxkbmap {}".format(layout)
-    __salt__["cmd.run"](cmd)
-    return layout
+    if __salt__["cmd.retcode"](cmd) == 0:
+        return True
+    else:
+        return False

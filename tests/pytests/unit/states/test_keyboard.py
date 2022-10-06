@@ -25,7 +25,7 @@ def test_system():
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     mock = MagicMock(side_effect=[name, "", "", ""])
-    mock_t = MagicMock(side_effect=[True, False])
+    mock_t = MagicMock(side_effect=[True, False, None])
     with patch.dict(
         keyboard.__salt__, {"keyboard.get_sys": mock, "keyboard.set_sys": mock_t}
     ):
@@ -60,7 +60,7 @@ def test_xorg():
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     mock = MagicMock(side_effect=[name, "", "", ""])
-    mock_t = MagicMock(side_effect=[True, False])
+    mock_t = MagicMock(side_effect=[True, False, None])
     with patch.dict(
         keyboard.__salt__, {"keyboard.get_x": mock, "keyboard.set_x": mock_t}
     ):

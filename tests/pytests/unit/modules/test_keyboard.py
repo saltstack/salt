@@ -34,11 +34,11 @@ def test_set_sys():
     """
     Test if it set current system keyboard setting
     """
-    mock = MagicMock(return_value="us")
+    mock = MagicMock(return_value=0)
     with patch.dict(keyboard.__grains__, {"os_family": "RedHat"}):
-        with patch.dict(keyboard.__salt__, {"cmd.run": mock}):
+        with patch.dict(keyboard.__salt__, {"cmd.retcode": mock}):
             with patch.dict(keyboard.__salt__, {"file.sed": MagicMock()}):
-                assert keyboard.set_sys("us") == "us"
+                assert keyboard.set_sys("us") == True
 
 
 # 'get_x' function tests: 1
@@ -60,6 +60,6 @@ def test_set_x():
     """
     Test if it set current X keyboard setting
     """
-    mock = MagicMock(return_value="us")
-    with patch.dict(keyboard.__salt__, {"cmd.run": mock}):
-        assert keyboard.set_x("us") == "us"
+    mock = MagicMock(return_value=0)
+    with patch.dict(keyboard.__salt__, {"cmd.retcode": mock}):
+        assert keyboard.set_x("us") == True
