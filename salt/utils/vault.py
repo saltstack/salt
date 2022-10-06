@@ -1331,7 +1331,8 @@ class AuthenticatedVaultClient(VaultClient):
         ret = super().request_raw(
             method, endpoint, payload=payload, wrap=wrap, add_headers=add_headers
         )
-        if not endpoint.startswith("sys") and ret.ok or ret.status_code == 404:
+        # tokens are used regardless of status code
+        if not endpoint.startswith("sys"):
             # this is wonky tbh, there are many endpoints that consume a token use
             self.auth.used()
         return ret

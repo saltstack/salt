@@ -2189,30 +2189,21 @@ def test_vault_client_request_raw_increases_use_count_when_necessary_depending_o
 
 @pytest.mark.parametrize("client", ["valid_token"], indirect=True)
 @pytest.mark.parametrize(
-    "req_failed,use",
-    [
-        (400, False),
-        (403, False),
-        (404, True),
-        (405, False),
-        (412, False),
-        (500, False),
-        (502, False),
-        (503, False),
-        (401, False),
-    ],
-    indirect=["req_failed"],
+    "req_failed",
+    [400, 403, 404, 405, 412, 500, 502, 503, 401],
+    indirect=True,
 )
 def test_vault_client_request_raw_increases_use_count_when_necessary_depending_on_response(
-    req_failed, use, client
+    req_failed, client
 ):
     """
-    When a request is issued to an endpoint that consumes a use, but the response indicates an error,
-    make sure that a use is only registered if the endpoint reports 404 not found
+    When a request is issued to an endpoint that consumes a use, make sure that
+    this is registered regardless of status code:
+    https://github.com/hashicorp/vault/blob/c1cf97adac5c53301727623a74b828a5f12592cf/vault/request_handling.go#L864-L866
     ref: PR #62552
     """
     client.request_raw("GET", "secret/data/some/path")
-    assert client.auth.used.called == use
+    assert client.auth.used.called is True
 
 
 @pytest.mark.parametrize("client", ["valid_token"], indirect=True)
