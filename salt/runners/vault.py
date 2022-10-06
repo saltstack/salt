@@ -152,7 +152,7 @@ def generate_new_token(
             return {"expire_cache": True, "error": "Master does not issue tokens."}
 
         ret = {
-            "server": _get_server_config(),
+            "server": _config("server"),
             "auth": {},
         }
 
@@ -170,13 +170,6 @@ def generate_new_token(
         return ret
     except Exception as err:  # pylint: disable=broad-except
         return {"error": "{}: {}".format(type(err).__name__, str(err))}
-
-
-def _get_server_config():
-    ret = copy.copy(_config("server"))
-    if "default" == __opts__.get("vault", {}).get("server", {}).get("verify"):
-        ret["verify"] = "default"
-    return ret
 
 
 def _generate_token(minion_id, issue_params, wrap):
@@ -241,7 +234,7 @@ def get_config(minion_id, signature, impersonated_by_master=False, issue_params=
                 "method": _config("issue:type"),
             },
             "cache": _config("cache"),
-            "server": _get_server_config(),
+            "server": _config("server"),
             "wrap_info_nested": [],
         }
         wrap = _config("issue:wrap")
@@ -307,7 +300,7 @@ def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params
             return {"expire_cache": True, "error": "Master does not issue AppRoles."}
 
         ret = {
-            "server": _get_server_config(),
+            "server": _config("server"),
             "data": {},
         }
 
@@ -417,7 +410,7 @@ def generate_secret_id(
             }
 
         ret = {
-            "server": _get_server_config(),
+            "server": _config("server"),
             "data": {},
         }
 
@@ -750,7 +743,7 @@ def clear_cache():
 def _config(key=None):
     ckey = "vault_master_config"
     if ckey not in __context__:
-        __context__[ckey] = vault.parse_config(__opts__.get("vault", {}), opts=__opts__)
+        __context__[ckey] = vault.parse_config(__opts__.get("vault", {}))
 
     if key is None:
         return __context__[ckey]

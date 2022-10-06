@@ -22,7 +22,6 @@ import salt.crypt
 import salt.exceptions
 import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.http
 import salt.utils.json
 import salt.utils.versions
 from salt.defaults import NOT_SET
@@ -429,12 +428,6 @@ def _get_connection_config(cbank, opts, context, force_local=False):
             upgrade_request=True,
         )
     config = parse_config(config, opts=opts)
-    if config["server"]["verify"] is None:
-        # make sure local verify settings are respected in case the master did not
-        # send them
-        config["server"]["verify"] = parse_config(
-            opts.get("vault", {}), validate=False
-        )["server"]["verify"]
     # do not couple token cache with configuration cache
     embedded_token = config["auth"].pop("token", None)
     config = {
@@ -448,7 +441,7 @@ def _get_connection_config(cbank, opts, context, force_local=False):
 
 def _use_local_config(opts):
     log.debug("Using Vault connection details from local config.")
-    config = parse_config(opts.get("vault", {}), opts=opts)
+    config = parse_config(opts.get("vault", {}))
     embedded_token = config["auth"].pop("token", None)
     return {
         "auth": config["auth"],
@@ -634,10 +627,13 @@ def _query_master(
             log.info("Master requested Vault config expiration.")
             config_expired = True
 
-        reported_server = parse_config(result.get("server", {}), validate=False)[
-            "server"
-        ]
         if "server" in result:
+            # make sure locally overridden verify parameter does not
+            # always invalidate cache
+            nonlocal opts
+            reported_server = parse_config(result["server"], validate=False, opts=opts)[
+                "server"
+            ]
             result.update({"server": reported_server})
 
         if expected_server is not None and result.get("server") != expected_server:
@@ -852,10 +848,17 @@ def parse_config(config, validate=True, opts=None):
             merged["issue"]["allow_minion_override_params"] = merged["auth"][
                 "allow_minion_override"
             ]
-        if merged["server"]["verify"] == "default":
-            merged["server"]["verify"] = salt.utils.http.get_ca_bundle(opts)
+        if opts is not None and "vault" in opts:
+            local_config = opts["vault"]
+            # make sure to respect locally configured verify parameter
+            if local_config.get("verify", NOT_SET) != NOT_SET:
+                merged["server"]["verify"] = local_config["verify"]
+            elif local_config.get("server", {}).get("verify", NOT_SET) != NOT_SET:
+                merged["server"]["verify"] = local_config["server"]["verify"]
+
         if not validate:
             return merged
+
         if merged["auth"]["method"] == "approle":
             if "role_id" not in merged["auth"]:
                 raise AssertionError("auth:role_id is required for approle auth")

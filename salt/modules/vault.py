@@ -547,15 +547,18 @@ url
     URL to your Vault installation. Required.
 
 verify
-    For details please see
-    https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
+    Configures certificate verification behavior when issuing requests to the
+    Vault server. If unset, requests will use the system default CA bundle.
+
+    For details, please see `the requests documentation <https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification>`_.
 
     .. versionadded:: 2018.3.0
 
     .. versionchanged:: 3006
 
-        Setting this value to ``default`` will autodiscover the platform default
-        CA bundle using ``salt.utils.http.get_ca_bundle``.
+        Minions again respect the master configuration value, which was changed
+        implicitly in v3001. If this value is set in the minion configuration
+        as well, it will take precedence.
 
 namespace
     Optional Vault namespace. Used with Vault Enterprise.

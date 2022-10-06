@@ -633,24 +633,6 @@ def test_get_config_approle(
 
 @pytest.mark.parametrize(
     "config",
-    [{"server": {"verify": "something-else"}}],
-    indirect=True,
-)
-@pytest.mark.usefixtures("validate_signature")
-def test_get_config_verify_default(config, wrapped_serialized):
-    """
-    Test that get_config function does not return the parsed configuration value
-    from the master configuration, but "default", which is rendered on the minion.
-    """
-    with patch("salt.runners.vault._generate_token", autospec=True) as gen:
-        gen.return_value = (wrapped_serialized, 1)
-        with patch.dict(vault.__opts__, {"vault": {"server": {"verify": "default"}}}):
-            res = vault.get_config("test-minion", "sig")
-            assert res["server"]["verify"] == "default"
-
-
-@pytest.mark.parametrize(
-    "config",
     [{"issue:type": "approle"}, {"issue:type": "approle", "issue:wrap": False}],
     indirect=True,
 )
