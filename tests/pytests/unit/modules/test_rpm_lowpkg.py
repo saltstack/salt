@@ -380,6 +380,7 @@ def test_version_cmp_python():
         )
 
 
+@pytest.mark.skip_on_windows
 def test_info():
     """
     Confirm that a nonzero retcode does not raise an exception.
