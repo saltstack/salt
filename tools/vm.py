@@ -786,6 +786,9 @@ class VM:
     ):
         if not self.is_running:
             self.ctx.exit(1, message=f"{self!r} is not running")
+        if env is None:
+            env = []
+        env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         stdout: TextIO | int
         stderr: TextIO | int
