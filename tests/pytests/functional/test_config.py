@@ -3,6 +3,7 @@ import os
 import tempfile
 
 import pytest
+
 import salt.config
 
 pytestmark = [
