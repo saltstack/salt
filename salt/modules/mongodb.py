@@ -104,7 +104,7 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
 
     try:
         log.info("Listing databases")
-        return conn.database_names()
+        return conn.list_database_names()
     except pymongo.errors.PyMongoError as err:
         log.error(err)
         return str(err)
@@ -297,12 +297,14 @@ def user_create(
     if not roles:
         roles = []
 
+    _roles = [{"role": _role, "db": database} for _role in roles]
     try:
         log.info("Creating user %s", name)
         mdb = pymongo.database.Database(conn, database)
-        mdb.add_user(name, passwd, roles=roles)
+        ret = mdb.command("createUser", name, pwd=passwd, roles=_roles)
+
     except pymongo.errors.PyMongoError as err:
-        log.error("Creating database %s failed with error: %s", name, err)
+        log.error("Creating user %s failed with error: %s", name, err)
         return str(err)
     return True
 
@@ -326,7 +328,7 @@ def user_remove(
     try:
         log.info("Removing user %s", name)
         mdb = pymongo.database.Database(conn, database)
-        mdb.remove_user(name)
+        ret = mdb.command("dropUser", name)
     except pymongo.errors.PyMongoError as err:
         log.error("Creating database %s failed with error: %s", name, err)
         return str(err)
@@ -401,7 +403,7 @@ def user_grant_roles(
     try:
         log.info("Granting roles %s to user %s", roles, name)
         mdb = pymongo.database.Database(conn, database)
-        mdb.command("grantRolesToUser", name, roles=roles)
+        ret = mdb.command("grantRolesToUser", name, roles=roles)
     except pymongo.errors.PyMongoError as err:
         log.error(
             "Granting roles %s to user %s failed with error: %s", roles, name, err
@@ -447,6 +449,72 @@ def user_revoke_roles(
         return str(err)
 
     return True
+
+
+def collection_create(
+    collection,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+):
+    """
+    Create a collection in the specified database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.create_collection mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        log.info("Creating %s.%s", database, collection)
+        mdb = pymongo.database.Database(conn, database)
+        mdb.create_collection(collection)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            "Creating collection %r.%r failed with error %s", database, collection, err
+        )
+        return err
+    return True
+
+
+def collections_list(
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+):
+    """
+    List the collections available in the specified database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.collections_list mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        mdb = pymongo.database.Database(conn, database)
+        ret = mdb.list_collection_names()
+    except pymongo.errors.PyMongoError as err:
+        log.error("Listing collections failed with error %s", err)
+        return err
+    return ret
 
 
 def insert(
