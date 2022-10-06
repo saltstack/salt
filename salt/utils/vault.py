@@ -98,8 +98,8 @@ def read_kv(path, opts, context, include_metadata=False):
     kv = _get_kv(opts, context)
     try:
         return kv.read(path, include_metadata=include_metadata)
-    except (VaultAuthExpired, VaultPermissionDeniedError):
-        # in case metadata lookups spend a use TODO: check if necessary
+    except VaultPermissionDeniedError:
+        # in case cached authentication data was revoked
         clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.read(path, include_metadata=include_metadata)
@@ -112,7 +112,7 @@ def write_kv(path, data, opts, context):
     kv = _get_kv(opts, context)
     try:
         return kv.write(path, data)
-    except (VaultAuthExpired, VaultPermissionDeniedError):
+    except VaultPermissionDeniedError:
         clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.write(path, data)
@@ -125,7 +125,7 @@ def patch_kv(path, data, opts, context):
     kv = _get_kv(opts, context)
     try:
         return kv.patch(path, data)
-    except (VaultAuthExpired, VaultPermissionDeniedError):
+    except VaultPermissionDeniedError:
         clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.patch(path, data)
@@ -139,7 +139,7 @@ def delete_kv(path, opts, context, versions=None):
     kv = _get_kv(opts, context)
     try:
         return kv.delete(path, versions=versions)
-    except (VaultAuthExpired, VaultPermissionDeniedError):
+    except VaultPermissionDeniedError:
         clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.delete(path, versions=versions)
@@ -152,7 +152,7 @@ def destroy_kv(path, versions, opts, context):
     kv = _get_kv(opts, context)
     try:
         return kv.destroy(path, versions)
-    except (VaultAuthExpired, VaultPermissionDeniedError):
+    except VaultPermissionDeniedError:
         clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.destroy(path, versions)
@@ -166,7 +166,7 @@ def list_kv(path, opts, context):
     kv = _get_kv(opts, context)
     try:
         return kv.list(path)
-    except (VaultAuthExpired, VaultPermissionDeniedError):
+    except VaultPermissionDeniedError:
         clear_cache(opts, context)
         kv = _get_kv(opts, context)
         return kv.list(path)
@@ -1227,6 +1227,17 @@ class VaultClient:
         res.raise_for_status()
 
 
+# This list is not complete at all, but contains
+# the most important paths.
+VAULT_UNAUTHD_PATHS = (
+    "sys/wrapping/lookup",
+    "sys/internal/ui/mounts",
+    "sys/internal/ui/namespaces",
+    "sys/seal-status",
+    "sys/health",
+)
+
+
 class AuthenticatedVaultClient(VaultClient):
     """
     Authenticated client for the Vault API.
@@ -1335,8 +1346,7 @@ class AuthenticatedVaultClient(VaultClient):
             method, endpoint, payload=payload, wrap=wrap, add_headers=add_headers
         )
         # tokens are used regardless of status code
-        if not endpoint.startswith("sys"):
-            # this is wonky tbh, there are many endpoints that consume a token use
+        if not endpoint.startswith(VAULT_UNAUTHD_PATHS):
             self.auth.used()
         return ret
 

@@ -729,9 +729,7 @@ def opts_runtype(request):
         ("list_kv", None, ["foo"]),
     ],
 )
-@pytest.mark.parametrize(
-    "exception", ["VaultAuthExpired", "VaultPermissionDeniedError"]
-)
+@pytest.mark.parametrize("exception", ["VaultPermissionDeniedError"])
 def test_kv_wrapper_handles_auth_exceptions(wrapper, param, result, exception):
     """
     Test that *_kv wrappers retry with a new client if the authentication might
@@ -2177,7 +2175,12 @@ def test_vault_client_token_lookup_requires_token_for_unauthenticated_client(cli
     [
         ("secret/data/some/path", True),
         ("auth/approle/role/test-minion", True),
+        ("sys/internal/ui/mounts", False),
         ("sys/internal/ui/mounts/secret", False),
+        ("sys/wrapping/lookup", False),
+        ("sys/internal/ui/namespaces", False),
+        ("sys/health", False),
+        ("sys/seal-status", False),
     ],
 )
 def test_vault_client_request_raw_increases_use_count_when_necessary_depending_on_path(
@@ -2185,7 +2188,8 @@ def test_vault_client_request_raw_increases_use_count_when_necessary_depending_o
 ):
     """
     When a request is issued to an endpoint that consumes a use, ensure it is passed
-    along to the token
+    along to the token.
+    https://github.com/hashicorp/vault/blob/d467681e15898041b6dd5f2bf7789bd7c236fb16/vault/logical_system.go#L119-L155
     """
     client.request_raw("GET", endpoint)
     assert client.auth.used.called == use
