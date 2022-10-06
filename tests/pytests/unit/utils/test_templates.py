@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.templates as templates
 from tests.support.mock import patch
 

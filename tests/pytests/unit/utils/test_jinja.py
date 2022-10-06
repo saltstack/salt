@@ -3,6 +3,7 @@ import pathlib
 import tempfile
 
 import pytest
+
 import salt.utils.jinja as jinja
 from tests.support.mock import MagicMock, patch
 
@@ -41,7 +42,8 @@ def fake_template():
 
 
 def test_if_environment_and_template_then_tplroot_should_be_added_to_environment(
-    loader, fake_template,
+    loader,
+    fake_template,
 ):
     expected_globals = {
         "tplfile": "foo/bar/baz/fnord",
