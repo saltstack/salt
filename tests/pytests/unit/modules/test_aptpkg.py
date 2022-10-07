@@ -1048,7 +1048,7 @@ def test_expand_repo_def_cdrom():
 
     # Valid source
     repo = "# deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ bullseye main\n"
-    sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
+    sanitized = aptpkg.expand_repo_def(os_name="debian", repo=repo, file=source_file)
     log.warning("SAN: %s", sanitized)
 
     assert isinstance(sanitized, dict)
@@ -1060,7 +1060,7 @@ def test_expand_repo_def_cdrom():
     # Pass the architecture and make sure it is added the the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg.expand_repo_def(
-        repo=repo, file=source_file, architectures="amd64"
+        os_name="debian", repo=repo, file=source_file, architectures="amd64"
     )
 
     # Make sure line is in the dict
