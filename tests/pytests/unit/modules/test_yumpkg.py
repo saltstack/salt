@@ -17,6 +17,26 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def configure_loader_modules():
+    def _add_data(data, key, value):
+        data.setdefault(key, []).append(value)
+
+    return {
+        yumpkg: {
+            "__context__": {"yum_bin": "yum"},
+            "__grains__": {
+                "osarch": "x86_64",
+                "os": "CentOS",
+                "os_family": "RedHat",
+                "osmajorrelease": 7,
+            },
+            "__salt__": {"pkg_resource.add_pkg": _add_data},
+        },
+        pkg_resource: {},
+    }
+
+
 @pytest.fixture(scope="module")
 def list_repos_var():
 
@@ -54,21 +74,26 @@ def list_repos_var():
     }
 
 
-@pytest.fixture
-def configure_loader_modules():
-
-    return {
-        yumpkg: {
-            "__context__": {"yum_bin": "yum"},
-            "__grains__": {
-                "osarch": "x86_64",
-                "os": "CentOS",
-                "os_family": "RedHat",
-                "osmajorrelease": 7,
-            },
+@pytest.fixture(
+    ids=["yum", "dnf"],
+    params=[
+        {
+            "context": {"yum_bin": "yum"},
+            "grains": {"os": "CentOS", "osrelease": 7},
+            "cmd": ["yum", "-y"],
         },
-        pkg_resource: {},
-    }
+        {
+            "context": {"yum_bin": "dnf"},
+            "grains": {"os": "Fedora", "osrelease": 27},
+            "cmd": ["dnf", "-y", "--best", "--allowerasing"],
+        },
+    ],
+)
+def yum_and_dnf(request):
+    with patch.dict(yumpkg.__context__, request.param["context"]), patch.dict(
+        yumpkg.__grains__, request.param["grains"]
+    ), patch.dict(pkg_resource.__grains__, request.param["grains"]):
+        yield request.param["cmd"]
 
 
 def test_list_pkgs():
@@ -2048,3 +2073,40 @@ def test_61003_pkg_should_not_fail_when_target_not_in_old_pkgs():
         # packages that were returned by parse_targets that yumpkg.remove would
         # catch on fire.  This ensures that won't go undetected again.
         yumpkg.remove()
+
+
+@pytest.mark.parametrize(
+    "new,full_pkg_string",
+    (
+        (42, "fnord-42"),
+        (12, "fnord-12"),
+        ("42:1.2.3", "fnord-1.2.3"),
+    ),
+)
+def test_59705_version_as_accidental_float_should_become_text(
+    new, full_pkg_string, yum_and_dnf
+):
+    name = "fnord"
+    expected_cmd = yum_and_dnf + ["install", full_pkg_string]
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+
+    def fake_parse(*args, **kwargs):
+        return {name: kwargs["version"]}, "repository"
+
+    patch_yum_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "cmd.run": MagicMock(return_value=""),
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": fake_parse,
+            "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
+        },
+    )
+    patch_systemd = patch("salt.utils.systemd.has_scope", MagicMock(return_value=False))
+    with patch_systemd, patch_yum_salt:
+        yumpkg.install("fnord", version=new)
+        call = cmd_mock.mock_calls[0][1][0]
+        assert call == expected_cmd

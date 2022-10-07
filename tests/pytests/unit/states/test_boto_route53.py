@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.boto_route53 as boto_route53
 from tests.support.mock import MagicMock, patch
 

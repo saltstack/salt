@@ -2,6 +2,9 @@ name: Twine Check
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Twine-Check:
     name: Run 'twine check' Against Salt

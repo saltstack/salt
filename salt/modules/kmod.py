@@ -8,6 +8,7 @@ import re
 
 import salt.utils.files
 import salt.utils.path
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +109,16 @@ def _remove_persistent_module(mod, comment):
     return {mod_name}
 
 
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+    return _cmd
+
+
 def available():
     """
     Return a list of all available kernel modules
@@ -169,7 +180,7 @@ def lsmod():
         salt '*' kmod.lsmod
     """
     ret = []
-    for line in __salt__["cmd.run"]("lsmod").splitlines():
+    for line in __salt__["cmd.run"](_which("lsmod")).splitlines():
         comps = line.split()
         if not len(comps) > 2:
             continue
@@ -237,7 +248,9 @@ def load(mod, persist=False):
         salt '*' kmod.load kvm
     """
     pre_mods = lsmod()
-    res = __salt__["cmd.run_all"]("modprobe {}".format(mod), python_shell=False)
+    res = __salt__["cmd.run_all"](
+        "{} {}".format(_which("modprobe"), mod), python_shell=False
+    )
     if res["retcode"] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
@@ -283,7 +296,9 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove kvm
     """
     pre_mods = lsmod()
-    res = __salt__["cmd.run_all"]("rmmod {}".format(mod), python_shell=False)
+    res = __salt__["cmd.run_all"](
+        "{} {}".format(_which("rmmod"), mod), python_shell=False
+    )
     if res["retcode"] == 0:
         post_mods = lsmod()
         mods = _rm_mods(pre_mods, post_mods)

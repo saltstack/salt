@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.states.aptpkg as aptpkg
 from tests.support.mock import MagicMock, patch
 

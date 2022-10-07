@@ -17,8 +17,8 @@ from tests.support.unit import TestCase, skipIf
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
+    from botocore.exceptions import ClientError
 
     HAS_BOTO = True
 except ImportError:

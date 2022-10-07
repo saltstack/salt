@@ -20,7 +20,7 @@ is hosted by Google Groups. It is open to new members.
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
 Additionally, all users of Salt should be subscribed to the Announcements mailing
-list which contains important updates about Salt, such as new releaes and
+list which contains important updates about Salt, such as new releases and
 security-related announcements. This list is low-traffic.
 
 .. _`salt-announce mailing list`: https://groups.google.com/forum/#!forum/salt-announce
@@ -77,7 +77,6 @@ A few examples of salt states from the community:
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
 * https://github.com/rentalita/ubuntu-setup/
 * https://github.com/brutasse/states
-* https://github.com/bclermont/states
 * https://github.com/pcrews/salt-data
 
 Follow on ohloh

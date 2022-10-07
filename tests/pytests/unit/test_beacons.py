@@ -72,7 +72,7 @@ def test_beacon_process_invalid():
 
     beacon = salt.beacons.Beacon(mock_opts, [])
 
-    with patch.object(salt.beacons.log, "warn") as log_warn_mock, patch.object(
+    with patch.object(salt.beacons.log, "warning") as log_warn_mock, patch.object(
         salt.beacons.log, "error"
     ) as log_error_mock:
         ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])

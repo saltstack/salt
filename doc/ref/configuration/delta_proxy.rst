@@ -14,7 +14,7 @@ This guide is intended for system and network administrators with the general
 knowledge and experience required in the field. This guide is also intended for
 users that have ideally already tested and used standard Salt proxy minions in
 their environment before deciding to move to a delta proxy minion environment.
-See `Salt proxy minions <https://docs.saltstack.com/en/latest/topics/proxyminion/index.html>`_ for more information.
+See `Salt proxy minions <https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_ for more information.
 
 .. Note::
     If you have not used standard Salt proxy minions before, consider testing
@@ -24,7 +24,7 @@ See `Salt proxy minions <https://docs.saltstack.com/en/latest/topics/proxyminion
 Proxy minions vs. delta proxy minions
 =====================================
 Salt can target network devices through `Salt proxy minions
-<https://docs.saltstack.com/en/latest/topics/proxyminion/index.html>`_,
+<https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_,
 Proxy minions allow you to control network devices that, for whatever reason,
 cannot run the standard Salt minion. Examples include:
 
@@ -49,10 +49,10 @@ memory to run commands when needed.
     For more information about Salt proxy minions, see:
 
     * `Salt proxy minions
-      <https://docs.saltstack.com/en/latest/topics/proxyminion/index.html>`_
+      <https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_
 
     * `Salt proxy modules
-      <https://docs.saltstack.com/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
+      <https://docs.saltproject.io/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
 
 
 When delta proxy minions are needed
@@ -146,9 +146,9 @@ Before installing the delta proxy minion, ensure that:
 Install or upgrade Salt
 -----------------------
 Ensure your Salt masters are running at least Salt version 3004. For instructions
-on installing or upgrading Salt, see `repo.saltstack.com
-<http://repo.saltstack.com/>`_. For RedHat systems, see `Install or Upgrade Salt
-<https://enterprise.saltstack.com/en/latest/docs/install-salt.html>`_.
+on installing or upgrading Salt, see `repo.saltproject.io
+<http://repo.saltproject.io/>`_. For RedHat systems, see `Install or Upgrade Salt
+<https://enterprise.saltproject.io/en/latest/docs/install-salt.html>`_.
 
 
 
@@ -284,9 +284,9 @@ file on the Salt master. To create this file:
       the type of device you need to manage. See:
 
       * `Salt proxy modules
-        <https://docs.saltstack.com/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
+        <https://docs.saltproject.io/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
       * `Netmiko Salt proxy module
-        <https://docs.saltstack.com/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
+        <https://docs.saltproject.io/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
 
 #. Save the file.
 
@@ -359,6 +359,15 @@ To create a control proxy configuration file:
 
 #. Repeat the previous steps for each control proxy if needed.
 
+#. In an editor, open the proxy config file: ``/etc/salt/proxy``.
+   Add a section for metaproxy and set it's value to deltaproxy.
+
+   .. code-block:: yaml
+
+        metaproxy: deltaproxy
+
+
+
 
 Now that you have created the necessary configurations, proceed to the next
 section.
@@ -386,7 +395,7 @@ configured correctly:
 
    .. code-block:: bash
 
-       sudo salt-proxy --proxyid=my_managed_device_minion_ID
+       sudo salt-proxy --proxyid=<control_proxy_id>
 
 
 #. To test the delta proxy minion, run the following ``test.version`` command
@@ -417,11 +426,11 @@ This reference section includes additional resources for delta proxy minions.
 For reference, see:
 
 * `Salt proxy minions
-  <https://docs.saltstack.com/en/latest/topics/proxyminion/index.html>`_
+  <https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_
 
 * `Salt proxy modules
-  <https://docs.saltstack.com/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
+  <https://docs.saltproject.io/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
 
 * `Netmiko Salt proxy module
-  <https://docs.saltstack.com/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
+  <https://docs.saltproject.io/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
 

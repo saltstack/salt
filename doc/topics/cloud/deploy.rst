@@ -200,20 +200,20 @@ Salt Bootstrap can be updated automatically with ``salt-cloud``:
 
 Bear in mind that this updates to the latest **stable** version from:
 
-https://bootstrap.saltstack.com/stable/bootstrap-salt.sh
+https://bootstrap.saltproject.io/stable/bootstrap-salt.sh
 
 To update Salt Bootstrap script to the **develop** version, run the following
 command on the Salt minion host with ``salt-cloud`` installed:
 
 .. code-block:: bash
 
-    salt-call config.gather_bootstrap_script 'https://bootstrap.saltstack.com/develop/bootstrap-salt.sh'
+    salt-call config.gather_bootstrap_script 'https://bootstrap.saltproject.io/develop/bootstrap-salt.sh'
 
 Or just download the file manually:
 
 .. code-block:: bash
 
-    curl -L 'https://bootstrap.saltstack.com/develop' > /etc/salt/cloud.deploy.d/bootstrap-salt.sh
+    curl -L 'https://bootstrap.saltproject.io/develop' > /etc/salt/cloud.deploy.d/bootstrap-salt.sh
 
 
 Keeping /tmp/ Files

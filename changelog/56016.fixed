@@ -1,0 +1,1 @@
+Included stdout in error message for Zypper calls in zypperpkg module.

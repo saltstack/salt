@@ -26,12 +26,12 @@ Request Server
 ==============
 
 The request server implements a request / reply paradigm. Every request sent by
-the client must recieve exactly one reply.
+the client must receive exactly one reply.
 
 Request Client
 ==============
 
-The request client sends requests to a Request Server and recieves a reply message.
+The request client sends requests to a Request Server and receives a reply message.
 
 
 .. toctree::

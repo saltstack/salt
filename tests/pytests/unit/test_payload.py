@@ -9,6 +9,7 @@ import logging
 
 import salt.exceptions
 import salt.payload
+from salt.defaults import _Constant
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
 
@@ -199,3 +200,13 @@ def test_raw_vs_encoding_utf8():
     sdata = salt.payload.dumps(idata.copy())
     odata = salt.payload.loads(sdata, encoding="utf-8")
     assert isinstance(odata[dtvalue], str)
+
+
+def test_constants():
+    """
+    That that we handle encoding and decoding of constants.
+    """
+    constant = _Constant("Foo", "bar")
+    sdata = salt.payload.dumps(constant)
+    odata = salt.payload.loads(sdata)
+    assert odata == constant
