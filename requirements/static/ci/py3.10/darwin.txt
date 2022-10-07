@@ -485,7 +485,7 @@ lxml==4.9.1
     # via
     #   junos-eznc
     #   ncclient
-mako==1.1.4
+mako==1.2.2
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
@@ -611,7 +611,7 @@ ncclient==0.6.9
     # via junos-eznc
 netaddr==0.7.19
     # via junos-eznc
-oauthlib==3.1.0
+oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
