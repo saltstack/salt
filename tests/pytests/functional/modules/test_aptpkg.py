@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 
@@ -202,12 +203,19 @@ def test_del_repo(revert_repo_file):
     assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
 
 
-def test_expand_repo_def():
+@pytest.mark.skipif(
+    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
+)
+def test__expand_repo_def(grains):
     """
-    Test aptpkg.expand_repo_def when the repo exists.
+    Test aptpkg._expand_repo_def when the repo exists.
     """
     test_repo, comps = get_current_repo()
-    ret = aptpkg.expand_repo_def(repo=test_repo)
+    ret = aptpkg._expand_repo_def(
+        os_name=grains["os"],
+        lsb_distrib_codename=grains.get("lsb_distrib_codename"),
+        repo=test_repo,
+    )
     for key in [
         "comps",
         "dist",
