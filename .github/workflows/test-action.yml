@@ -33,59 +33,53 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+        id: nox-dependencies-cache
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt') }}
 
-      # Check the existance of nox.{distro-slug}.tar.*.
-      # If it exists, it means the cache was hit and we don't have to regenerate it again
-      - name: Check nox.${{ inputs.distro-slug }}.tar.* Exists
-        id: check-nox-tarball
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "nox.${{ inputs.distro-slug }}.tar.*"
-
+      # Skip jobs if nox.*.tar.* is already cached
       - name: PyPi Proxy
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
 
       - name: Install Python Tools Scripts
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
 
       - name: Start VM
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         id: spin-up-vm
         run: |
           tools vm create ${{ inputs.distro-slug }}
 
       - name: Upload Checkout To VM
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           tools vm rsync ${{ inputs.distro-slug }}
 
       - name: Install Dependencies
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           tools vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Compress .nox Directory
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           tools vm compress-dependencies ${{ inputs.distro-slug }}
 
       - name: Download Compressed .nox Directory
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           tools vm download-dependencies ${{ inputs.distro-slug }}
 
       - name: Destroy VM
-        if: always()
+        if: always() and steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools vm destroy ${{ inputs.distro-slug }} || true
+          tools vm destroy ${{ inputs.distro-slug }}
 
       - name: Set Exit Status
         if: always()
@@ -142,12 +136,10 @@ jobs:
           tools vm create ${{ inputs.distro-slug }}
 
       - name: Upload Checkout To VM
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
         run: |
           tools vm rsync ${{ inputs.distro-slug }}
 
       - name: Decompress .nox Directory
-        if: steps.check-nox-tarball.outputs.files_exists != 'true'
         run: |
           tools vm decompress-dependencies ${{ inputs.distro-slug }}
 
@@ -179,7 +171,7 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.conclusion == 'success'
         uses: actions/upload-artifact@v3
         with:
-          name: artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
           path: artifacts
 
 #      - name: Publish Test Report
