@@ -88,13 +88,21 @@ cluster.startup_nodes:
           - host: redis-member-2
             port: 6379
 
-cluster.skip_full_coverage_check: ``False``
+cluster.require_full_coverage: ``True``
+
+    .. versionadded:: 3005.2
+
     Some cluster providers restrict certain redis commands such as CONFIG for enhanced security.
-    Set this option to true to skip checks that required advanced privileges.
+    Set this option to false to skip checks that required advanced privileges.
 
     .. note::
 
-        Most cloud hosted redis clusters will require this to be set to ``True``
+        Most cloud hosted redis clusters will require this to be set to ``False``
+
+    .. versionchanged:: 3005.2
+
+    Changed this option from `skip_full_coverage_check` to be in sync with the module option.
+    The meaning of the option is switched so setting this per default to `true`.
 
 db: ``'0'``
     The database index.
@@ -104,6 +112,12 @@ db: ``'0'``
 
 password:
     Redis connection password.
+
+username:
+
+    .. versionadded:: 3005.2
+
+    Username to connect to the redis server.
 
 unix_socket_path:
 
@@ -118,6 +132,7 @@ Configuration Example:
     cache.redis.host: localhost
     cache.redis.port: 6379
     cache.redis.db: '0'
+    cache.redis.username: my username
     cache.redis.password: my pass
     cache.redis.bank_prefix: #BANK
     cache.redis.bank_keys_prefix: #BANKEYS
@@ -130,13 +145,14 @@ Cluster Configuration Example:
 .. code-block:: yaml
 
     cache.redis.cluster_mode: true
-    cache.redis.cluster.skip_full_coverage_check: true
+    cache.redis.cluster.require_full_coverage: false
     cache.redis.cluster.startup_nodes:
       - host: redis-member-1
         port: 6379
       - host: redis-member-2
         port: 6379
     cache.redis.db: '0'
+    cache.redis.username: default
     cache.redis.password: my pass
     cache.redis.bank_prefix: #BANK
     cache.redis.bank_keys_prefix: #BANKEYS
@@ -165,7 +181,8 @@ except ImportError:
     HAS_REDIS = False
 
 try:
-    from rediscluster import RedisCluster  # pylint: disable=no-name-in-module
+    from redis.cluster import RedisCluster  # pylint: disable=no-name-in-module
+    from redis.cluster import ClusterNode
 
     HAS_REDIS_CLUSTER = True
 except ImportError:
@@ -203,7 +220,9 @@ def __virtual__():
     if not HAS_REDIS:
         return (False, "Please install the python-redis package.")
     if not HAS_REDIS_CLUSTER and _get_redis_cache_opts()["cluster_mode"]:
-        return (False, "Please install the redis-py-cluster package.")
+        return (False, "Please install the redis python client at least version 4.1.0-rc1 with cluster\n" \
+                       "support added (https://github.com/redis/redis-py/releases/tag/v4.1.0rc1).")
+
     return __virtualname__
 
 
@@ -228,11 +247,12 @@ def _get_redis_cache_opts():
         "port": __opts__.get("cache.redis.port", 6379),
         "unix_socket_path": __opts__.get("cache.redis.unix_socket_path", None),
         "db": __opts__.get("cache.redis.db", "0"),
+        "username": __opts__.get("cache.redis.username", "default"),
         "password": __opts__.get("cache.redis.password", ""),
         "cluster_mode": __opts__.get("cache.redis.cluster_mode", False),
         "startup_nodes": __opts__.get("cache.redis.cluster.startup_nodes", {}),
-        "skip_full_coverage_check": __opts__.get(
-            "cache.redis.cluster.skip_full_coverage_check", False
+        "require_full_coverage": __opts__.get(
+            "cache.redis.cluster.require_full_coverage", False
         ),
     }
 
@@ -249,16 +269,23 @@ def _get_redis_server(opts=None):
         opts = _get_redis_cache_opts()
 
     if opts["cluster_mode"]:
+        nodes = []
+        for node in opts["startup_nodes"]:
+            nodes.append(ClusterNode(node["host"], node["port"]))
         REDIS_SERVER = RedisCluster(
-            startup_nodes=opts["startup_nodes"],
-            skip_full_coverage_check=opts["skip_full_coverage_check"],
+            startup_nodes=nodes,
+            require_full_coverage=opts["require_full_coverage"],
+            username=opts["username"],
+            password=opts["password"],
         )
+
     else:
         REDIS_SERVER = redis.StrictRedis(
             opts["host"],
             opts["port"],
             unix_socket_path=opts["unix_socket_path"],
             db=opts["db"],
+            username=opts["username"],
             password=opts["password"],
         )
     return REDIS_SERVER
