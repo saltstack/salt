@@ -3,7 +3,6 @@ import os
 import signal
 
 import pytest
-
 import salt.utils.vt as vt
 
 
