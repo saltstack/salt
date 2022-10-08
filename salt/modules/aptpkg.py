@@ -276,7 +276,7 @@ if not HAS_APT:
             opts_count = []
             opts_line = ""
             if architectures:
-                architectures = "arch={}".format(" ".join(architectures))
+                architectures = "arch={}".format(",".join(architectures))
                 opts_count.append(architectures)
             if signedby:
                 signedby = "signed-by={}".format(signedby)
@@ -2295,13 +2295,11 @@ def _decrypt_key(key):
                         key,
                     )
                     return False
-                encrypted_key = key
-                if not pathlib.Path(key).suffix:
-                    encrypted_key = key + ".gpg"
-                cmd = ["gpg", "--yes", "--output", encrypted_key, "--dearmor", key]
+                decrypted_key = str(key) + ".decrypted"
+                cmd = ["gpg", "--yes", "--output", decrypted_key, "--dearmor", key]
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
-                return encrypted_key
+                return decrypted_key
     except UnicodeDecodeError:
         log.debug("Key is not ASCII Armored. Do not need to decrypt")
     return key
@@ -2371,7 +2369,13 @@ def add_repo_key(
     cmd = ["apt-key"]
     kwargs = {}
 
-    current_repo_keys = get_repo_keys(aptkey=aptkey, keydir=keydir)
+    # If the keyid is provided or determined, check it against the existing
+    # repo key ids to determine whether it needs to be imported.
+    if keyid:
+        for current_keyid in get_repo_keys(aptkey=aptkey, keydir=keydir):
+            if current_keyid[-(len(keyid)) :] == keyid:
+                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
+                return True
 
     if path:
         cached_source_path = __salt__["cp.cache_file"](path, saltenv)
@@ -2384,7 +2388,13 @@ def add_repo_key(
             key = _decrypt_key(cached_source_path)
             if not key:
                 return False
-            cmd = ["cp", key, str(keydir)]
+            key = pathlib.Path(str(key))
+            if not keyfile:
+                keyfile = key.name
+                if keyfile.endswith(".decrypted"):
+                    keyfile = keyfile[:-10]
+            shutil.copyfile(str(key), str(keydir / keyfile))
+            return True
         else:
             cmd.extend(["add", cached_source_path])
     elif text:
@@ -2424,14 +2434,6 @@ def add_repo_key(
         raise TypeError(
             "{}() takes at least 1 argument (0 given)".format(add_repo_key.__name__)
         )
-
-    # If the keyid is provided or determined, check it against the existing
-    # repo key ids to determine whether it needs to be imported.
-    if keyid:
-        for current_keyid in current_repo_keys:
-            if current_keyid[-(len(keyid)) :] == keyid:
-                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
-                return True
 
     cmd_ret = _call_apt(cmd, **kwargs)
 
@@ -3099,14 +3101,21 @@ def _expand_repo_def(os_name, lsb_distrib_codename=None, **kwargs):
         if signedby not in sanitized["line"]:
             line = sanitized["line"].split()
             repo_opts = _get_opts(repo)
-            opts_order = [x for x in repo_opts.keys()]
+            opts_order = [
+                opt_type
+                for opt_type, opt_def in repo_opts.items()
+                if opt_def["full"] != ""
+            ]
             for opt in repo_opts:
                 if "index" in repo_opts[opt]:
                     idx = repo_opts[opt]["index"]
                     opts_order[idx] = repo_opts[opt]["full"]
 
             opts = "[" + " ".join(opts_order) + "]"
-            line[1] = opts
+            if line[1].startswith("["):
+                line[1] = opts
+            else:
+                line.insert(1, opts)
             sanitized["line"] = " ".join(line)
 
     return sanitized
