@@ -1178,3 +1178,46 @@ class TestOldConfigSyntax:
         assert ret.data
         assert ret.data["data"]["explicit_max_ttl"] == 180
         assert ret.data["data"]["num_uses"] == 4  # one use is consumed by the lookup
+
+
+@pytest.mark.usefixtures("vault_testing_values")
+class TestMinionLocal:
+    @pytest.fixture(scope="class")
+    def vault_master_config(self):
+        return {"open_mode": True}
+
+    @pytest.fixture(scope="class")
+    def vault_salt_minion(self, vault_salt_master, vault_port):
+        assert vault_salt_master.is_running()
+        factory = vault_salt_master.salt_minion_daemon(
+            random_string("vault-minion", uppercase=False),
+            defaults={
+                "open_mode": True,
+                "vault": {
+                    "auth": {"token": "testsecret"},
+                    "cache": {
+                        "backend": "file",
+                    },
+                    "server": {
+                        "url": f"http://127.0.0.1:{vault_port}",
+                    },
+                },
+                "grains": {},
+            },
+        )
+        with factory.started():
+            # Sync All
+            salt_call_cli = factory.salt_call_cli()
+            ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+            assert ret.returncode == 0, ret
+            yield factory
+
+    def test_minion_can_authenticate(self, vault_salt_call_cli):
+        """
+        Test that salt-call --local works with the Vault module.
+        Issue #58580
+        """
+        ret = vault_salt_call_cli.run("--local", "vault.read_secret", "secret/path/foo")
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data.get("success") == "yeehaaw"
