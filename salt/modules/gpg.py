@@ -35,6 +35,7 @@ LETTER_TRUST_DICT = {
     "f": "Fully Trusted",
     "m": "Marginally Trusted",
     "u": "Ultimately Trusted",
+    "r": "Revoked",
     "-": "Unknown",
 }
 

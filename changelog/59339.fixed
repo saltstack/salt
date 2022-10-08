@@ -1,0 +1,1 @@
+Don't check for cached pillar errors on state.apply
