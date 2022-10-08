@@ -127,8 +127,7 @@ log = logging.getLogger(__name__)
 
 try:
     # pylint: disable=no-name-in-module
-    from redis.cluster import RedisCluster
-    from redis.cluster import ClusterNode
+    from redis.cluster import RedisCluster, ClusterNode
 
     # pylint: enable=no-name-in-module
 
@@ -155,8 +154,12 @@ def __virtual__():
             "Could not import redis returner; redis python client is not installed.",
         )
     if not HAS_REDIS_CLUSTER and _get_options().get("cluster_mode", False):
-        return (False, "Please install the redis python client at least version 4.1.0-rc1 with cluster\n" \
-                       "support added (https://github.com/redis/redis-py/releases/tag/v4.1.0rc1).")
+        return (
+            False,
+            "Please install the redis python client at least version 4.1.0-rc1 with cluster\n" \
+            "support added (https://github.com/redis/redis-py/releases/tag/v4.1.0rc1)."
+        )
+
     return __virtualname__
 
 
@@ -259,9 +262,7 @@ def save_load(jid, load, minions=None):
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
-            _res = ckminions.check_minions(
-                load["tgt"], load.get("tgt_type", "glob")
-            )
+            _res = ckminions.check_minions(load["tgt"], load.get("tgt_type", "glob"))
             minions = _res["minions"]
         if minions:
             load["Minions"] = sorted(minions)
@@ -327,7 +328,9 @@ def get_jids():
     serv = _get_serv(ret=None)
     ret = {}
     if HAS_REDIS_CLUSTER: 
-        keys = serv.mget_nonatomic(serv.keys("load:*",target_nodes=RedisCluster.ALL_NODES))
+        keys = serv.mget_nonatomic(
+            serv.keys("load:*",target_nodes=RedisCluster.ALL_NODES)
+        )
     else:
         keys = serv.mget(serv.keys("load:*"))
     for s in keys:
@@ -357,8 +360,8 @@ def clean_old_jobs():
     do manually cleaning here.
     """
     serv = _get_serv(ret=None)
-    ret_jids = serv.keys("ret:*",target_nodes=RedisCluster.ALL_NODES)
-    living_jids = set(serv.keys("load:*",target_nodes=RedisCluster.ALL_NODES))
+    ret_jids = serv.keys("ret:*", target_nodes=RedisCluster.ALL_NODES)
+    living_jids = set(serv.keys("load:*", target_nodes=RedisCluster.ALL_NODES))
     to_remove = []
     for ret_key in ret_jids:
         load_key = ret_key.replace("ret:", "load:", 1)
