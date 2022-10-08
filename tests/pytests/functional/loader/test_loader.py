@@ -154,7 +154,7 @@ def test_extension_discovery_without_reload_with_importlib_metadata_installed(
     # Install our extension into the virtualenv
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name not in installed_packages
-    venv.install("importlib-metadata>=3.3.0")
+    venv.install("importlib-metadata==4.6.4")
     code = """
     import sys
     import json

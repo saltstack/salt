@@ -501,6 +501,7 @@ jinja2==3.0.3
     #   moto
 jmespath==0.9.4
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
