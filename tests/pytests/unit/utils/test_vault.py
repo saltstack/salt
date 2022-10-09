@@ -1828,7 +1828,31 @@ def test_vault_client_request_raw_url(endpoint, client, req):
     """
     expected_url = f"{client.url}/v1/secret/some/path"
     client.request_raw("GET", endpoint)
-    req.assert_called_with("GET", expected_url, headers=ANY, json=ANY)
+    req.assert_called_with(
+        "GET",
+        expected_url,
+        headers=ANY,
+        json=None,
+        verify=client.get_config()["verify"],
+    )
+
+
+def test_vault_client_request_raw_kwargs_passthrough(client, req):
+    """
+    Test that kwargs for requests.request are passed through
+    """
+    client.request_raw(
+        "GET", "secret/some/path", allow_redirects=False, cert="/etc/certs/client.pem"
+    )
+    req.assert_called_with(
+        "GET",
+        ANY,
+        headers=ANY,
+        json=ANY,
+        verify=ANY,
+        allow_redirects=False,
+        cert="/etc/certs/client.pem",
+    )
 
 
 @pytest.mark.parametrize("namespace", [None, "test-namespace"])

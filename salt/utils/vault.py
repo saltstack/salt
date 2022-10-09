@@ -42,14 +42,33 @@ def query(
     payload=None,
     wrap=False,
     raise_error=True,
+    **kwargs,
 ):
     """
     Make a request to Vault
     """
     vault = get_authd_client(opts, context)
-    return vault.request(
-        method, endpoint, payload=payload, wrap=wrap, raise_error=raise_error
-    )
+    try:
+        return vault.request(
+            method,
+            endpoint,
+            payload=payload,
+            wrap=wrap,
+            raise_error=raise_error,
+            **kwargs,
+        )
+    except VaultPermissionDeniedError:
+        # in case cached authentication data was revoked
+        clear_cache(opts, context)
+        vault = get_authd_client(opts, context)
+        return vault.request(
+            method,
+            endpoint,
+            payload=payload,
+            wrap=wrap,
+            raise_error=raise_error,
+            **kwargs,
+        )
 
 
 def query_raw(
@@ -59,23 +78,33 @@ def query_raw(
     context,
     payload=None,
     wrap=False,
+    retry=True,
+    **kwargs,
 ):
     """
-    Make a request to Vault
+    Make a request to Vault, returning the raw response object.
+
+    This retries the query with cleared cache in case the permission
+    was denied to check for revoked cached credentials.
+    This behavior can be disabled by setting retry to False.
     """
     vault = get_authd_client(opts, context)
-    return vault.request_raw(method, endpoint, payload=payload, wrap=wrap)
+    res = vault.request_raw(method, endpoint, payload=payload, wrap=wrap, **kwargs)
+
+    if not retry:
+        return res
+
+    if 403 == res.status_code:
+        # in case cached authentication data was revoked
+        clear_cache(opts, context)
+        vault = get_authd_client(opts, context)
+        res = vault.request_raw(method, endpoint, payload=payload, wrap=wrap, **kwargs)
+    return res
 
 
 def is_v2(path, opts=None, context=None):
     """
-    Determines if a given secret path is kv version 1 or 2
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' vault.is_v2 "secret/my/secret"
+    Determines if a given secret path is kv version 1 or 2.
     """
     # TODO: consider if at least context is really necessary to require
     if opts is None or context is None:
@@ -1059,13 +1088,19 @@ class VaultClient:
         wrap=False,
         raise_error=True,
         add_headers=None,
+        **kwargs,
     ):
         """
         Issue a request against the Vault API. Returns boolean when no data was returned,
         otherwise the decoded json data.
         """
         res = self.request_raw(
-            method, endpoint, payload=payload, wrap=wrap, add_headers=add_headers
+            method,
+            endpoint,
+            payload=payload,
+            wrap=wrap,
+            add_headers=add_headers,
+            **kwargs,
         )
         if res.status_code == 204:
             return True
@@ -1078,7 +1113,9 @@ class VaultClient:
             return VaultWrappedResponse(**data["wrap_info"])
         return data
 
-    def request_raw(self, method, endpoint, payload=None, wrap=False, add_headers=None):
+    def request_raw(
+        self, method, endpoint, payload=None, wrap=False, add_headers=None, **kwargs
+    ):
         """
         Issue a request against the Vault API. Returns the raw response object.
         """
@@ -1086,7 +1123,9 @@ class VaultClient:
         headers = self._get_headers(wrap)
         if isinstance(add_headers, dict):
             headers.update(add_headers)
-        res = requests.request(method, url, headers=headers, json=payload)
+        res = requests.request(
+            method, url, headers=headers, json=payload, verify=self.verify, **kwargs
+        )
         return res
 
     def unwrap(self, wrapped, expected_creation_path=None):
@@ -1341,9 +1380,16 @@ class AuthenticatedVaultClient(VaultClient):
             self.auth.update_token(res["auth"])
         return res["auth"]
 
-    def request_raw(self, method, endpoint, payload=None, wrap=False, add_headers=None):
+    def request_raw(
+        self, method, endpoint, payload=None, wrap=False, add_headers=None, **kwargs
+    ):
         ret = super().request_raw(
-            method, endpoint, payload=payload, wrap=wrap, add_headers=add_headers
+            method,
+            endpoint,
+            payload=payload,
+            wrap=wrap,
+            add_headers=add_headers,
+            **kwargs,
         )
         # tokens are used regardless of status code
         if not endpoint.startswith(VAULT_UNAUTHD_PATHS):
@@ -2264,23 +2310,28 @@ def get_vault_connection():
     context = globals().get("__context__", {})
 
     vault = get_authd_client(opts, context)
-    try:
-        token = vault.auth.get_token()
-    except (VaultAuthExpired, VaultPermissionDeniedError):
-        clear_cache(opts, context)
-        vault = get_authd_client(opts, context)
-        token = vault.auth.get_token()
+    token = vault.auth.get_token()
 
     server_config = vault.get_config()
 
-    return {
+    ret = {
         "url": server_config["url"],
         "namespace": server_config["namespace"],
         "token": str(token),
         "verify": server_config["verify"],
         "issued": token.creation_time,
-        "ttl": token.explicit_max_ttl,
     }
+
+    if _get_salt_run_type(opts) in [
+        SALT_RUNTYPE_MASTER_IMPERSONATING,
+        SALT_RUNTYPE_MINION_REMOTE,
+    ]:
+        ret["lease_duration"] = token.explicit_max_ttl
+        ret["uses"] = token.num_uses
+    else:
+        ret["ttl"] = token.explicit_max_ttl
+
+    return ret
 
 
 def del_cache():
@@ -2324,11 +2375,11 @@ def get_cache():
 def make_request(
     method,
     resource,
-    token=None,  # pylint: disable=unused-argument
-    vault_url=None,  # pylint: disable=unused-argument
-    namespace=None,  # pylint: disable=unused-argument
-    get_token_url=False,  # pylint: disable=unused-argument
-    retry=False,  # pylint: disable=unused-argument
+    token=None,
+    vault_url=None,
+    namespace=None,
+    get_token_url=False,
+    retry=False,
     **args,
 ):
     """
@@ -2338,22 +2389,42 @@ def make_request(
         "Argon",
         "salt.utils.vault.make_request is deprecated, please use "
         "salt.utils.vault.query or salt.utils.vault.query_raw.",
+        "To override token/url/namespace, please make use of the",
+        "provided classes directly.",
     )
+
+    def _get_client(token, vault_url, namespace, args):
+        vault = get_authd_client(opts, context)
+        if token is not None:
+            vault.auth.cache = None
+            vault.auth.token = VaultToken(
+                client_token=token, renewable=False, lease_duration=60, num_uses=1
+            )
+        if vault_url is not None:
+            vault.url = vault_url
+        if namespace is not None:
+            vault.namespace = namespace
+        if "verify" in args:
+            vault.verify = args.pop("verify")
+
+        return vault
 
     opts = globals().get("__opts__", {})
     context = globals().get("__context__", {})
     endpoint = resource.lstrip("/").lstrip("v1/")
-    payload = args.get("json")
+    payload = args.pop("json", None)
 
     if "data" in args:
-        payload = salt.utils.json.loads(args["data"])
+        payload = salt.utils.json.loads(args.pop("data"))
 
-    try:
-        return query_raw(method, endpoint, opts, context, payload=payload, wrap=False)
-    except VaultAuthExpired:
-        # mimic the previous behavior somewhat
-        # VaultAuthExpired should not be thrown at all though
-        response = requests.models.Response()
-        response.status_code = 403
-        response.reason = "Permission denied"
-        return response
+    vault = _get_client(token, vault_url, namespace, args)
+    res = vault.request_raw(method, endpoint, payload=payload, wrap=False, **args)
+    if 403 == res.status_code and not retry:
+        # retry was used to indicate to only try once more
+        clear_cache(opts, context)
+        vault = _get_client(token, vault_url, namespace, args)
+        res = vault.request_raw(method, endpoint, payload=payload, wrap=False, **args)
+
+    if get_token_url:
+        return res, str(vault.auth.token), vault.get_config()["url"]
+    return res
