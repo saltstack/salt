@@ -147,7 +147,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "httpdomain",
     "youtube",
-    "saltrepo"
+    "saltrepo",
+    "vaultpolicylexer",
     #'saltautodoc', # Must be AFTER autodoc
     #'shorturls',
 ]
