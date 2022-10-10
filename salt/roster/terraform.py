@@ -110,7 +110,6 @@ def _handle_new_salt_host_resource(resource):
         ret[MINION_ID] = attrs.get(MINION_ID)
         valid_attrs = set(attrs.keys()).intersection(TF_ROSTER_ATTRS.keys())
         for attr in valid_attrs:
-            print(attr)
             ret[attr] = _cast_output_to_type(attrs.get(attr), TF_ROSTER_ATTRS.get(attr))
         log.info(ret)
         rets.append(ret)
@@ -137,8 +136,7 @@ def _add_ssh_key(ret):
 
 def _cast_output_to_type(value, typ):
     """cast the value depending on the terraform type"""
-    if not value:
-        # handle None
+    if value is None:
         return value
     if typ == "b":
         return bool(value)
