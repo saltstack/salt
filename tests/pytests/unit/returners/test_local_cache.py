@@ -6,9 +6,7 @@ def test_remove_job_dir():
     # Test that _remove_job_dir job will catch error
     for e in (NotADirectoryError, OSError):
         with patch("shutil.rmtree", side_effect=e("Node Corruption!")):
-            with patch("salt.returners.local_cache.log.error") as log_func:
-                _remove_job_dir("cache")
-                log_func.assert_called_once()
+            assert _remove_job_dir("cache") == False
 
     # Test that _remove_job_dir job will not catch other errors
     with patch("shutil.rmtree", side_effect=FileExistsError()):
