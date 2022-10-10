@@ -3144,6 +3144,10 @@ def expand_repo_def(**kwargs):
         "the removal of this deprecation warning",
         stacklevel=3,
     )
+    if "os_name" not in kwargs:
+        kwargs["os_name"] = __grains__["os"]
+    if "lsb_distrib_codename" not in kwargs:
+        kwargs["lsb_distrib_codename"] = __grains__.get("lsb_distrib_codename")
     return _expand_repo_def(**kwargs)
 
 
