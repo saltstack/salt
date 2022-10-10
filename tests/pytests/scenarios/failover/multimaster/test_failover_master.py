@@ -4,6 +4,7 @@ import shutil
 import time
 
 import pytest
+
 import salt.utils.platform
 
 pytestmark = [

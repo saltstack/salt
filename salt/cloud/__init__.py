@@ -1143,7 +1143,7 @@ class Cloud:
 
         return ret
 
-    def create(self, vm_, local_master=True):
+    def create(self, vm_, local_master=True, sync_sleep=3):
         """
         Create a single VM
         """
@@ -1225,22 +1225,41 @@ class Cloud:
             ):
                 output = self.clouds[func](vm_)
             if output is not False and "sync_after_install" in self.opts:
-                if self.opts["sync_after_install"] not in (
+                if self.opts["sync_after_install"] and self.opts[
+                    "sync_after_install"
+                ] not in (
                     "all",
-                    "modules",
-                    "states",
+                    "beacons",
+                    "clouds",
+                    "engines",
+                    "executors",
                     "grains",
+                    "log",
+                    "matchers",
+                    "modules",
+                    "output",
+                    "pillar",
+                    "proxymodules",
+                    "renderers",
+                    "returners",
+                    "sdb",
+                    "serializers",
+                    "states",
+                    "thorium",
+                    "utils",
                 ):
-                    log.error("Bad option for sync_after_install")
-                    return output
+                    log.warning(
+                        "Bad option for sync_after_install. Defaulting to 'all'"
+                    )
+                    self.opts["sync_after_install"] = "all"
 
                 # A small pause helps the sync work more reliably
-                time.sleep(3)
+                time.sleep(sync_sleep)
 
-                start = int(time.time())
-                while int(time.time()) < start + 60:
+                expiration_time = time.time() + 60
+                while time.time() < expiration_time:
                     # We'll try every <timeout> seconds, up to a minute
-                    mopts_ = salt.config.DEFAULT_MASTER_OPTS
+                    mopts_ = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
                     conf_path = "/".join(self.opts["conf_file"].split("/")[:-1])
                     mopts_.update(
                         salt.config.master_config(os.path.join(conf_path, "master"))

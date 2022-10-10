@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.napalm_bgp as napalm_bgp
 import tests.support.napalm as napalm_test_support
 from tests.support.mock import MagicMock, patch

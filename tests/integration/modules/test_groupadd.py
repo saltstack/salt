@@ -1,9 +1,11 @@
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
+from tests.support.helpers import runs_on
 from tests.support.unit import skipIf
 
 if not salt.utils.platform.is_windows():

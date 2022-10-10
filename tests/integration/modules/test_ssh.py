@@ -6,6 +6,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from salt.ext.tornado.httpclient import HTTPClient

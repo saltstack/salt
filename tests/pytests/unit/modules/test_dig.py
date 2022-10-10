@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.dig as dig
 from tests.support.mock import MagicMock, patch

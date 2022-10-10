@@ -8,6 +8,7 @@ import logging
 import os
 
 import pytest
+
 import salt.config
 import salt.loader
 
