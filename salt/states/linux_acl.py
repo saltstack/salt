@@ -145,7 +145,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             user = None
 
         if user:
-            if perms.endswith('X'):
+            if perms.endswith("X"):
                 conditional_x = True
             else:
                 conditional_x = False
@@ -167,11 +167,11 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                         if _search_name in user_acl:
                             octal_current = user_acl[_search_name]["octal"]
                             executable = bool(octal_current % 2 == 1)
-                            if (
-                                octal_current == octal_new
-                                or
-                                (conditional_x and not executable and octal_current == (octal_new - 1))
-                            ):
+                            if octal_current == octal_new or (
+                                conditional_x
+                                and not executable
+                                and octal_current == (octal_new - 1)
+                             ):
                                 acl_found = True
                     if not acl_found:
                         need_refresh = True
@@ -196,7 +196,10 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 )
                 changes = {
                     "new": {"acl_name": acl_name, "acl_type": acl_type, "perms": perms},
-                    "old": {"acl_name": acl_name, "acl_type": acl_type, "perms": old_perms,
+                    "old": {
+                        "acl_name": acl_name,
+                        "acl_type": acl_type,
+                        "perms": old_perms,
                     },
                 }
 
