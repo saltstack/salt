@@ -48,10 +48,11 @@ def iter_entry_points(group, name=None):
                     continue
                 entry_points_listing.append(entry_point)
     # starting with importlib-metadata 5.0.0
-    for entry_point in entry_points.select(group=group):
-        if name is not None and entry_point.name != name:
-            continue
-        entry_points_listing.append(entry_point)
+    else:
+        for entry_point in entry_points.select(group=group):
+            if name is not None and entry_point.name != name:
+                continue
+            entry_points_listing.append(entry_point)
 
     return entry_points_listing
 
