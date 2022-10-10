@@ -127,7 +127,7 @@ log = logging.getLogger(__name__)
 
 try:
     # pylint: disable=no-name-in-module
-    from redis.cluster import RedisCluster, ClusterNode
+    from redis.cluster import ClusterNode, RedisCluster
 
     # pylint: enable=no-name-in-module
 
@@ -156,7 +156,7 @@ def __virtual__():
     if not HAS_REDIS_CLUSTER and _get_options().get("cluster_mode", False):
         return (
             False,
-            "Please install the redis python client at least version 4.1.0-rc1 with cluster\n" \
+            "Please install the redis python client at least version 4.1.0-rc1 with cluster\n"
             "support added (https://github.com/redis/redis-py/releases/tag/v4.1.0rc1)."
         )
 
@@ -327,9 +327,9 @@ def get_jids():
     """
     serv = _get_serv(ret=None)
     ret = {}
-    if HAS_REDIS_CLUSTER: 
+    if HAS_REDIS_CLUSTER:
         keys = serv.mget_nonatomic(
-            serv.keys("load:*",target_nodes=RedisCluster.ALL_NODES)
+            serv.keys("load:*", target_nodes=RedisCluster.ALL_NODES)
         )
     else:
         keys = serv.mget(serv.keys("load:*"))

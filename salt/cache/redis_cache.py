@@ -181,7 +181,7 @@ except ImportError:
     HAS_REDIS = False
 
 try:
-    from redis.cluster import RedisCluster, ClusterNode
+    from redis.cluster import ClusterNode, RedisCluster
 
     HAS_REDIS_CLUSTER = True
 except ImportError:
@@ -221,7 +221,7 @@ def __virtual__():
     if not HAS_REDIS_CLUSTER and _get_redis_cache_opts()["cluster_mode"]:
         return (
             False,
-            "Please install the redis python client at least version 4.1.0-rc1 with cluster\n" \
+            "Please install the redis python client at least version 4.1.0-rc1 with cluster\n"
             "support added (https://github.com/redis/redis-py/releases/tag/v4.1.0rc1)."
         )
 
