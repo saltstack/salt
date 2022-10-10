@@ -167,7 +167,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                                 conditional_x
                                 and not executable
                                 and octal_current == (octal_new - 1)
-                             ):
+                            ):
                                 acl_found = True
                     if not acl_found:
                         need_refresh = True
