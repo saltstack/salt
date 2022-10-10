@@ -5,7 +5,7 @@ from tests.support.mock import patch
 
 
 @pytest.mark.parametrize("e", (NotADirectoryError, OSError))
-def test_remove_job_dir():
+def test_remove_job_dir(e):
     # Test that _remove_job_dir job will catch error
     with patch("shutil.rmtree", side_effect=e("Node Corruption!")):
         assert not _remove_job_dir("cache")
