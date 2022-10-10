@@ -5,6 +5,7 @@ import threading
 import time
 
 import pytest
+
 import salt.loader
 import salt.utils.atomicfile
 import salt.utils.files
@@ -690,11 +691,52 @@ def test_retry_option_success(state, state_tree, tmp_path):
         testfile
     )
     duration = 4
-    if salt.utils.platform.is_windows():
+    if salt.utils.platform.spawning_platform():
         duration = 16
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls("retry")
+        for state_return in ret:
+            assert state_return.result is True
+            assert state_return.full_return["duration"] < duration
+            # It should not take 2 attempts
+            assert "Attempt 2" not in state_return.comment
+
+
+@pytest.mark.skip_on_windows(
+    reason="Skipped until parallel states can be fixed on Windows"
+)
+def test_retry_option_success_parallel(state, state_tree, tmp_path):
+    """
+    test a state with the retry option that should return True immediately (i.e. no retries)
+    """
+    testfile = tmp_path / "testfile"
+    testfile.touch()
+    sls_contents = """
+    file_test:
+      file.exists:
+        - name: {}
+        - parallel: True
+        - retry:
+            until: True
+            attempts: 5
+            interval: 2
+            splay: 0
+    """.format(
+        testfile
+    )
+    duration = 4
+    if salt.utils.platform.spawning_platform():
+        duration = 30
+        # mac needs some more time to do its makeup
+        if salt.utils.platform.is_darwin():
+            duration += 15
+
+    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+        ret = state.sls(
+            "retry", __pub_jid="1"
+        )  # Because these run in parallel we need a fake JID
+
         for state_return in ret:
             assert state_return.result is True
             assert state_return.full_return["duration"] < duration
@@ -741,6 +783,58 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         thread.start()
         ret = state.sls("retry")
         for state_return in ret:
+            assert state_return.result is True
+            assert state_return.full_return["duration"] > 4
+            # It should not take 5 attempts
+            assert "Attempt 5" not in state_return.comment
+
+
+@pytest.mark.skip_on_windows(
+    reason="Skipped until parallel states can be fixed on Windows"
+)
+@pytest.mark.slow_test
+def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
+    """
+    test a state with the retry option that should return True, eventually
+    """
+    testfile1 = tmp_path / "testfile-1"
+    testfile2 = tmp_path / "testfile-2"
+
+    def create_testfile(testfile1, testfile2):
+        while True:
+            if testfile1.exists():
+                break
+        time.sleep(2)
+        testfile2.touch()
+
+    thread = threading.Thread(target=create_testfile, args=(testfile1, testfile2))
+    sls_contents = """
+    file_test_a:
+      file.managed:
+        - name: {}
+        - content: 'a'
+
+    file_test:
+      file.exists:
+        - name: {}
+        - retry:
+            until: True
+            attempts: 5
+            interval: 2
+            splay: 0
+        - parallel: True
+        - require:
+          - file_test_a
+    """.format(
+        testfile1, testfile2
+    )
+    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+        thread.start()
+        ret = state.sls(
+            "retry", __pub_jid="1"
+        )  # Because these run in parallel we need a fake JID
+        for state_return in ret:
+            log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
             assert state_return.full_return["duration"] > 4
             # It should not take 5 attempts
@@ -878,3 +972,33 @@ def test_state_sls_lazyloader_allows_recursion(state, state_tree):
         for state_return in ret:
             assert state_return.result is True
             assert "Success!" in state_return.comment
+
+
+def test_issue_62264_requisite_not_found(state, state_tree):
+    """
+    This tests that the proper state module is referenced for _in requisites
+    when no explicit state module is given.
+    Context: https://github.com/saltstack/salt/pull/62264
+    """
+    sls_contents = """
+    stuff:
+      cmd.run:
+        - name: echo hello
+
+    thing_test:
+      cmd.run:
+        - name: echo world
+        - require_in:
+          - /stuff/*
+          - test: service_running
+
+    service_running:
+      test.succeed_without_changes:
+        - require:
+          - cmd: stuff
+    """
+    with pytest.helpers.temp_file("issue-62264.sls", sls_contents, state_tree):
+        ret = state.sls("issue-62264")
+        for state_return in ret:
+            assert state_return.result is True
+            assert "The following requisites were not found" not in state_return.comment

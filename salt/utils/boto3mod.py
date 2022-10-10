@@ -40,8 +40,8 @@ try:
     # pylint: disable=import-error
     import boto
     import boto3
-    import boto.exception
     import boto3.session
+    import boto.exception
     import botocore  # pylint: disable=W0611
 
     # pylint: enable=import-error

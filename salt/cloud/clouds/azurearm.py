@@ -8,6 +8,13 @@ Azure ARM Cloud Module
 
 The Azure ARM cloud module is used to control access to Microsoft Azure Resource Manager
 
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
     * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
@@ -95,6 +102,7 @@ import os.path
 import pprint
 import string
 import time
+from functools import wraps
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 
@@ -156,6 +164,28 @@ def _get_active_provider_name():
         return __active_provider_name__
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about msazure deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "This cloud provider will be removed from Salt in version 3007 due to "
+            "the deprecation of the 'Classic' API for Azure. Please migrate to "
+            "Azure Resource Manager by March 1, 2023 "
+            "(https://docs.microsoft.com/en-us/azure/virtual-machines/classic-vm-deprecation)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def get_api_versions(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Get a resource type api versions
@@ -187,6 +217,7 @@ def get_api_versions(call=None, kwargs=None):  # pylint: disable=unused-argument
     return api_versions
 
 
+@_deprecation_message
 def get_resource_by_id(resource_id, api_version, extract_value=None):
     """
     Get an AzureARM resource by id
@@ -210,6 +241,7 @@ def get_resource_by_id(resource_id, api_version, extract_value=None):
     return ret
 
 
+@_deprecation_message
 def get_configured_provider():
     """
     Return the first configured provider instance.
@@ -233,6 +265,7 @@ def get_configured_provider():
     return provider
 
 
+@_deprecation_message
 def get_dependencies():
     """
     Warn if dependencies aren't met.
@@ -240,6 +273,7 @@ def get_dependencies():
     return config.check_driver_dependencies(__virtualname__, {"azurearm": HAS_LIBS})
 
 
+@_deprecation_message
 def get_conn(client_type):
     """
     Return a connection object for a client type.
@@ -287,6 +321,7 @@ def get_conn(client_type):
     return client
 
 
+@_deprecation_message
 def get_location(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Return the location that is configured for this provider
@@ -300,6 +335,7 @@ def get_location(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
 
+@_deprecation_message
 def avail_locations(call=None):
     """
     Return a dict of all available regions.
@@ -333,6 +369,7 @@ def avail_locations(call=None):
     return ret
 
 
+@_deprecation_message
 def avail_images(call=None):
     """
     Return a dict of all available images on the provider
@@ -413,6 +450,7 @@ def avail_images(call=None):
     return ret
 
 
+@_deprecation_message
 def avail_sizes(call=None):
     """
     Return a list of sizes available from the provider
@@ -440,6 +478,7 @@ def avail_sizes(call=None):
     return ret
 
 
+@_deprecation_message
 def list_nodes(call=None):
     """
     List VMs on this Azure account
@@ -459,6 +498,7 @@ def list_nodes(call=None):
     return ret
 
 
+@_deprecation_message
 def list_nodes_full(call=None):
     """
     List all VMs on the subscription with full information
@@ -544,6 +584,7 @@ def list_nodes_full(call=None):
     return ret
 
 
+@_deprecation_message
 def list_resource_groups(call=None):
     """
     List resource groups associated with the subscription
@@ -568,6 +609,7 @@ def list_resource_groups(call=None):
     return ret
 
 
+@_deprecation_message
 def show_instance(name, call=None):
     """
     Show the details from AzureARM concerning an instance
@@ -587,6 +629,7 @@ def show_instance(name, call=None):
     return node
 
 
+@_deprecation_message
 def delete_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Delete a network interface.
@@ -673,6 +716,7 @@ def _get_network_interface(name, resource_group):
     return netiface, public_ips, private_ips
 
 
+@_deprecation_message
 def create_network_interface(call=None, kwargs=None):
     """
     Create a network interface.
@@ -1260,6 +1304,7 @@ def request_instance(vm_, kwargs=None):
     return vm_result
 
 
+@_deprecation_message
 def create(vm_):
     """
     Create a single VM from a data dict.
@@ -1378,6 +1423,7 @@ def create(vm_):
     return ret
 
 
+@_deprecation_message
 def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Destroy a VM.
@@ -1538,6 +1584,7 @@ def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
     return ret
 
 
+@_deprecation_message
 def list_storage_accounts(call=None):
     """
     List storage accounts within the subscription.
@@ -1623,6 +1670,7 @@ def _get_block_blob_service(kwargs=None):
     )
 
 
+@_deprecation_message
 def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     List blobs.
@@ -1649,6 +1697,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
     return ret
 
 
+@_deprecation_message
 def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Delete a blob from a container.
@@ -1668,6 +1717,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
     return True
 
 
+@_deprecation_message
 def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Delete a managed disk from a resource group.
@@ -1688,6 +1738,7 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
     return True
 
 
+@_deprecation_message
 def list_virtual_networks(call=None, kwargs=None):
     """
     List virtual networks.
@@ -1719,6 +1770,7 @@ def list_virtual_networks(call=None, kwargs=None):
     return ret
 
 
+@_deprecation_message
 def list_subnets(call=None, kwargs=None):
     """
     List subnets in a virtual network.
@@ -1765,6 +1817,7 @@ def list_subnets(call=None, kwargs=None):
     return ret
 
 
+@_deprecation_message
 def create_or_update_vmextension(
     call=None, kwargs=None
 ):  # pylint: disable=unused-argument
@@ -1866,6 +1919,7 @@ def create_or_update_vmextension(
     return ret
 
 
+@_deprecation_message
 def stop(name, call=None):
     """
     .. versionadded:: 2019.2.0
@@ -1926,6 +1980,7 @@ def stop(name, call=None):
     return ret
 
 
+@_deprecation_message
 def start(name, call=None):
     """
     .. versionadded:: 2019.2.0

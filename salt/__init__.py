@@ -132,5 +132,9 @@ __define_global_system_encoding_variable__()
 # This is now garbage collectable
 del __define_global_system_encoding_variable__
 
-# Import Salt's logging machinery
-import salt._logging.impl  # isort:skip  pylint: disable=unused-import
+# Make sure Salt's logging tweaks are always present
+# DO NOT MOVE THIS IMPORT
+# pylint: disable=unused-import
+import salt._logging  # isort:skip
+
+# pylint: enable=unused-import

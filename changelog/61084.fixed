@@ -1,1 +1,0 @@
-sys.argspec now works with pillar.get, vault.read_secret, and vault.list_secrets

@@ -98,7 +98,6 @@ if os.name == "nt":  # pragma: no cover
             except Exception:  # pylint: disable=broad-except
                 pass
 
-
 else:
     atomic_rename = os.rename  # pylint: disable=C0103
     CAN_RENAME_OPEN_FILE = True
