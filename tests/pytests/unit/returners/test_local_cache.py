@@ -1,4 +1,5 @@
 import pytest
+
 from salt.returners.local_cache import _remove_job_dir
 from tests.support.mock import patch
 
