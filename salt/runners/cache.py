@@ -9,7 +9,6 @@ import os
 import salt.cache
 import salt.config
 import salt.fileserver.gitfs
-import salt.log
 import salt.payload
 import salt.pillar.git_pillar
 import salt.runners.winrepo

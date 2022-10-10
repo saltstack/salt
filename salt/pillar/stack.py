@@ -8,17 +8,15 @@ Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 <https://github.com/conversis/varstack>`_ but is heavily based on Jinja2 for
 maximum flexibility.
 
-Any issue should be reported to the upstream project at:
-https://github.com/bbinet/pillarstack/issues
-
 It supports the following features:
 
 - multiple config files that are jinja2 templates with support for ``pillar``,
-  ``__grains__``, ``__salt__``, ``__opts__`` objects
+  ``__grains__``, ``__salt__``, ``__opts__`` objects and ``pillarenv``
 - a config file renders as an ordered list of files (paths of these files are
   relative to the current config file)
 - this list of files are read in ordered as jinja2 templates with support for
-  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects
+  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects and
+  ``pillarenv``
 - all these rendered files are then parsed as ``yaml``
 - then all yaml dicts are merged in order with support for the following
   merging strategies: ``merge-first``, ``merge-last``, ``remove``, and
@@ -86,15 +84,18 @@ Here is an example of such a configuration, which should speak by itself:
 
     ext_pillar:
       - stack:
-          pillar:environment:
-            dev: /path/to/dev/stack.cfg
-            prod: /path/to/prod/stack.cfg
+          pillar:something:
+            bar: /path/to/bar/stack.cfg
+            foo: /path/to/foo/stack.cfg
           grains:custom:grain:
             value:
               - /path/to/stack1.cfg
               - /path/to/stack2.cfg
           opts:custom:opt:
             value: /path/to/stack0.cfg
+          opts:saltenv:
+            dev: /path/to/dev/stack.cfg
+            __env__: /path/to/__env__/stack.cfg
 
 PillarStack configuration files
 -------------------------------
@@ -378,18 +379,28 @@ import logging
 import os
 import posixpath
 
+from jinja2 import Environment, FileSystemLoader
+
 import salt.utils.data
 import salt.utils.jinja
 import salt.utils.yaml
-from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 strategies = ("overwrite", "merge-first", "merge-last", "remove")
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
+    """
+    Builds stacked pillar from yaml files listed in file(s).
+
+    :param str minion_id: Minion ID
+    :param dict pillar: pillar
+    :param list args: (Optional) file(s) that list yaml files
+    :param dict kwargs: (Optional) conditional file(s) that list yaml files
+    """
     stack = {}
     stack_config_files = list(args)
+    pillarenv = __opts__["pillarenv"] or __opts__["saltenv"] or "base"
     traverse = {
         "pillar": functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
         "grains": functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
@@ -397,6 +408,11 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     }
     for matcher, matchs in kwargs.items():
         t, matcher = matcher.split(":", 1)
+        if "__env__" in matchs:
+            matchs = {
+                (pillarenv if k == "__env__" else k): v for k, v in matchs.items()
+            }
+
         if t not in traverse:
             raise Exception(
                 'Unknown traverse option "{}", should be one of {}'.format(
@@ -406,7 +422,8 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         cfgs = matchs.get(traverse[t](matcher, None), [])
         if not isinstance(cfgs, list):
             cfgs = [cfgs]
-        stack_config_files += cfgs
+        stack_config_files += [cfg.replace("__env__", pillarenv) for cfg in cfgs]
+
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
             log.info('Ignoring pillar stack cfg "%s": file does not exist', cfg)
@@ -420,7 +437,7 @@ def _to_unix_slashes(path):
 
 
 def _process_stack_cfg(cfg, stack, minion_id, pillar):
-    log.debug("Config: %s", cfg)
+    log.debug("Pillar.stack config: %s", cfg)
     basedir, filename = os.path.split(cfg)
     jenv = Environment(
         loader=FileSystemLoader(basedir),
@@ -437,6 +454,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             },
             "minion_id": minion_id,
             "pillar": pillar,
+            "pillarenv": __opts__["pillarenv"],
         }
     )
     for item in _parse_stack_cfg(jenv.get_template(filename).render(stack=stack)):
@@ -454,17 +472,22 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             log.debug("YAML: basedir=%s, path=%s", basedir, path)
             # FileSystemLoader always expects unix-style paths
             unix_path = _to_unix_slashes(os.path.relpath(path, basedir))
-            obj = salt.utils.yaml.safe_load(
-                jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
-            )
-            if not isinstance(obj, dict):
-                log.info(
-                    'Ignoring pillar stack template "%s": Can\'t parse '
-                    "as a valid yaml dictionary",
-                    path,
+            try:
+                yaml = jenv.get_template(unix_path).render(stack=stack, ymlpath=path)
+            except Exception as e:
+                raise Exception(
+                    'Stack pillar template render error in {}:\n"{}"'.format(path, e)
                 )
-                continue
-            stack = _merge_dict(stack, obj)
+            try:
+                obj = salt.utils.yaml.safe_load(yaml)
+            except Exception as e:
+                raise Exception(
+                    "Stack pillar yaml parsing error in {}:\n{}\n{}".format(
+                        path, e, yaml
+                    )
+                )
+            if isinstance(obj, dict):
+                stack = _merge_dict(stack, obj)
     return stack
 
 

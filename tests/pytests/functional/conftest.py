@@ -1,5 +1,4 @@
 import logging
-import pathlib
 import shutil
 
 import pytest
@@ -62,7 +61,6 @@ def minion_opts(
         {
             "file_client": "local",
             "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
-            "features": {"enable_slsvars_fixes": True},
         }
     )
     factory = salt_factories.salt_minion_daemon(
@@ -75,16 +73,11 @@ def minion_opts(
 
 @pytest.fixture(scope="module")
 def loaders(minion_opts):
-    return Loaders(minion_opts)
+    return Loaders(minion_opts, loaded_base_name="{}.loaded".format(__name__))
 
 
 @pytest.fixture(autouse=True)
 def reset_loaders_state(loaders):
-    # Delete the files cache after each test
-    cachedir = pathlib.Path(loaders.opts["cachedir"])
-    shutil.rmtree(str(cachedir), ignore_errors=True)
-    cachedir.mkdir(parents=True, exist_ok=True)
-    # The above can be deleted after pytest-salt-factories>=1.0.0rc7 has been merged
     try:
         # Run the tests
         yield

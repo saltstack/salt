@@ -21,6 +21,8 @@ import tempfile
 import time
 import xml.etree.ElementTree as etree
 
+from saltfactories.utils import random_string
+
 import salt.config
 import salt.exceptions
 import salt.utils.event
@@ -33,7 +35,6 @@ import salt.utils.yaml
 import salt.version
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-from saltfactories.utils import random_string
 from tests.support.paths import CODE_DIR
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
@@ -299,7 +300,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
     def test_salt_with_git_version(self):
         if getattr(self, "_call_binary_", None) is None:
             self.skipTest("'_call_binary_' not defined.")
-        from salt.version import __version_info__, SaltStackVersion
+        from salt.version import SaltStackVersion, __version_info__
 
         git = salt.utils.path.which("git")
         if not git:
