@@ -402,6 +402,8 @@ def _remove_job_dir(job_path):
         shutil.rmtree(job_path)
     except (NotADirectoryError, OSError) as err:
         log.error("Unable to remove %s: %s", job_path, err)
+        return False
+    return True
 
 
 def clean_old_jobs():
