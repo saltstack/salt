@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -15,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Salt Testing Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
@@ -25,15 +22,10 @@ import tempfile
 import salt.utils.files
 import salt.utils.stringutils
 from salt.modules import x509
+from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-
 
 try:
     import M2Crypto  # pylint: disable=unused-import
@@ -99,10 +91,9 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 }
 
 
-@skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {x509: {}}
+        return {x509: {"__opts__": {"fips_mode": False}}}
 
     @patch("salt.modules.x509.log", MagicMock())
     def test_private_func__parse_subject(self):
@@ -111,7 +102,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
 
-        class FakeSubject(object):
+        class FakeSubject:
             """
             Class for faking x509'th subject.
             """
@@ -261,7 +252,10 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_before_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = "not_before: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        msg = (
+            "not_before: this is an intentionally wrong format is not in required"
+            " format %Y-%m-%d %H:%M:%S"
+        )
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
             ca_key = default_values["ca_key"]
             cert_kwargs = default_values["x509_args_cert"].copy()
@@ -282,7 +276,10 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_after_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = "not_after: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        msg = (
+            "not_after: this is an intentionally wrong format is not in required format"
+            " %Y-%m-%d %H:%M:%S"
+        )
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
             ca_key = default_values["ca_key"]
             cert_kwargs = default_values["x509_args_cert"].copy()
@@ -436,3 +433,64 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # Ensure that the correct server cert serial is amongst
         # the revoked certificates
         self.assertIn(serial_number, crl)
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_read_certificate(self):
+        """
+        :return:
+        """
+        cet = dedent(
+            """
+                -----BEGIN CERTIFICATE-----
+        MIICdDCCAd2gAwIBAgIUH6g+PC0bGKSY4LMq7PISP09M5B4wDQYJKoZIhvcNAQEL
+        BQAwTDELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0FyaXpvbmExEzARBgNVBAcMClNj
+        b3R0c2RhbGUxFjAUBgNVBAoMDVN1cGVyIFdpZGdpdHMwHhcNMjEwMzIzMDExNDE2
+        WhcNMjIwMzIzMDExNDE2WjBMMQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQXJpem9u
+        YTETMBEGA1UEBwwKU2NvdHRzZGFsZTEWMBQGA1UECgwNU3VwZXIgV2lkZ2l0czCB
+        nzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAvtFFZP47UkzyAmVWtBnVHuXwe7iK
+        yu19c3qx59KPVAMHkMKgCew4S2KBMDHySBVnspiEz1peP1ywozcP1tIeWHG6aY/7
+        j2ewzl5bJ4HZPDBnEOYzGsC/NM8YY3qFlrteda/awvwoF99MkpVlrcLBMJzjt/c8
+        HjuBb0zTlnm4r7ECAwEAAaNTMFEwHQYDVR0OBBYEFJwdb0PKsvu3dU0j3kx3uP4B
+        NGpfMB8GA1UdIwQYMBaAFJwdb0PKsvu3dU0j3kx3uP4BNGpfMA8GA1UdEwEB/wQF
+        MAMBAf8wDQYJKoZIhvcNAQELBQADgYEAZblVv70rSk6+7ti3mYxVo48VLf3hG5R/
+        rMd434WYTeDOWlvl5GSklrBc4ToBW5GsJe/+JaFbUFo9YB+a0K0xjyNZ5CWWiaxg
+        3lwqTx6vwK1ucS18B+nt2qqyq9hL0UvpSB7gH4KeCwCMDIfRMsrPi32jg1RyKftD
+        B+O0S5LeuJw=
+        -----END CERTIFICATE-----
+        """
+        )
+        ret = x509.read_certificate(cet)
+        assert "MD5 Finger Print" in ret
+
+
+class X509FipsTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {x509: {"__opts__": {"fips_mode": True}}}
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_read_certificate(self):
+        """
+        :return:
+        """
+        cet = dedent(
+            """
+                -----BEGIN CERTIFICATE-----
+        MIICdDCCAd2gAwIBAgIUH6g+PC0bGKSY4LMq7PISP09M5B4wDQYJKoZIhvcNAQEL
+        BQAwTDELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0FyaXpvbmExEzARBgNVBAcMClNj
+        b3R0c2RhbGUxFjAUBgNVBAoMDVN1cGVyIFdpZGdpdHMwHhcNMjEwMzIzMDExNDE2
+        WhcNMjIwMzIzMDExNDE2WjBMMQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQXJpem9u
+        YTETMBEGA1UEBwwKU2NvdHRzZGFsZTEWMBQGA1UECgwNU3VwZXIgV2lkZ2l0czCB
+        nzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAvtFFZP47UkzyAmVWtBnVHuXwe7iK
+        yu19c3qx59KPVAMHkMKgCew4S2KBMDHySBVnspiEz1peP1ywozcP1tIeWHG6aY/7
+        j2ewzl5bJ4HZPDBnEOYzGsC/NM8YY3qFlrteda/awvwoF99MkpVlrcLBMJzjt/c8
+        HjuBb0zTlnm4r7ECAwEAAaNTMFEwHQYDVR0OBBYEFJwdb0PKsvu3dU0j3kx3uP4B
+        NGpfMB8GA1UdIwQYMBaAFJwdb0PKsvu3dU0j3kx3uP4BNGpfMA8GA1UdEwEB/wQF
+        MAMBAf8wDQYJKoZIhvcNAQELBQADgYEAZblVv70rSk6+7ti3mYxVo48VLf3hG5R/
+        rMd434WYTeDOWlvl5GSklrBc4ToBW5GsJe/+JaFbUFo9YB+a0K0xjyNZ5CWWiaxg
+        3lwqTx6vwK1ucS18B+nt2qqyq9hL0UvpSB7gH4KeCwCMDIfRMsrPi32jg1RyKftD
+        B+O0S5LeuJw=
+        -----END CERTIFICATE-----
+        """
+        )
+        ret = x509.read_certificate(cet)
+        assert "MD5 Finger Print" not in ret

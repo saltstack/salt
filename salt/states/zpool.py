@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 States for managing zpools
 
@@ -69,14 +68,10 @@ States for managing zpools
     Filesystem properties are also not updated, this should be managed by the zfs state module.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Python libs
 import os
 
-# Import Salt libs
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -89,10 +84,9 @@ def __virtual__():
     """
     Provides zpool state
     """
-    if __grains__["zfs_support"]:
-        return __virtualname__
-    else:
+    if not __grains__.get("zfs_support"):
         return False, "The zpool state cannot be loaded: zfs not supported"
+    return __virtualname__
 
 
 def _layout_to_vdev(layout, device_dir=None):
@@ -298,11 +292,11 @@ def present(
     if __opts__["test"]:
         if __salt__["zpool.exists"](name):
             ret["result"] = True
-            ret["comment"] = "storage pool {0} is {1}".format(name, "uptodate")
+            ret["comment"] = "storage pool {} is {}".format(name, "uptodate")
         else:
             ret["result"] = None
             ret["changes"][name] = "imported" if config["import"] else "created"
-            ret["comment"] = "storage pool {0} would have been {1}".format(
+            ret["comment"] = "storage pool {} would have been {}".format(
                 name, ret["changes"][name]
             )
 
@@ -340,7 +334,7 @@ def present(
                 ret["result"] = False
                 if ret["comment"] == "":
                     ret["comment"] = "The following properties were not updated:"
-                ret["comment"] = "{0} {1}".format(ret["comment"], prop)
+                ret["comment"] = "{} {}".format(ret["comment"], prop)
 
         if ret["result"]:
             ret["comment"] = (
@@ -352,13 +346,15 @@ def present(
         # import pool
         if config["import"]:
             mod_res = __salt__["zpool.import"](
-                name, force=config["force"], dir=config["import_dirs"],
+                name,
+                force=config["force"],
+                dir=config["import_dirs"],
             )
 
             ret["result"] = mod_res["imported"]
             if ret["result"]:
                 ret["changes"][name] = "imported"
-                ret["comment"] = "storage pool {0} was imported".format(name)
+                ret["comment"] = "storage pool {} was imported".format(name)
 
         # create pool
         if not ret["result"] and vdevs:
@@ -375,18 +371,17 @@ def present(
             ret["result"] = mod_res["created"]
             if ret["result"]:
                 ret["changes"][name] = "created"
-                ret["comment"] = "storage pool {0} was created".format(name)
+                ret["comment"] = "storage pool {} was created".format(name)
             elif "error" in mod_res:
                 ret["comment"] = mod_res["error"]
             else:
-                ret["comment"] = "could not create storage pool {0}".format(name)
+                ret["comment"] = "could not create storage pool {}".format(name)
 
         # give up, we cannot import the pool and we do not have a layout to create it
         if not ret["result"] and not vdevs:
-            ret[
-                "comment"
-            ] = "storage pool {0} was not imported, no (valid) layout specified for creation".format(
-                name
+            ret["comment"] = (
+                "storage pool {} was not imported, no (valid) layout specified for"
+                " creation".format(name)
             )
 
     return ret
@@ -399,7 +394,7 @@ def absent(name, export=False, force=False):
     name : string
         name of storage pool
     export : boolean
-        export instread of destroy the zpool if present
+        export instead of destroy the zpool if present
     force : boolean
         force destroy or export
 
@@ -431,15 +426,13 @@ def absent(name, export=False, force=False):
 
         if ret["result"]:  # update the changes and comment
             ret["changes"][name] = "exported" if export else "destroyed"
-            ret["comment"] = "storage pool {0} was {1}".format(
-                name, ret["changes"][name]
-            )
+            ret["comment"] = "storage pool {} was {}".format(name, ret["changes"][name])
         elif "error" in mod_res:
             ret["comment"] = mod_res["error"]
 
     else:  # we are looking good
         ret["result"] = True
-        ret["comment"] = "storage pool {0} is absent".format(name)
+        ret["comment"] = "storage pool {} is absent".format(name)
 
     return ret
 

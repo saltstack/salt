@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the YAML SDB module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.sdb.yaml as sdb
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

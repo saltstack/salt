@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Generate baseline proxy minion grains for ESXi hosts.
 
@@ -6,15 +5,10 @@ Generate baseline proxy minion grains for ESXi hosts.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.modules.vsphere
-import salt.utils.platform
-
-# Import Salt Libs
+import salt.utils.proxy
 from salt.exceptions import SaltSystemExit
 
 __proxyenabled__ = ["esxi"]
@@ -27,8 +21,14 @@ GRAINS_CACHE = {}
 
 def __virtual__():
 
+    # import salt.utils.proxy again
+    # so it is available for tests.
+    import salt.utils.proxy
+
     try:
-        if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "esxi":
+        if salt.utils.proxy.is_proxytype(__opts__, "esxi"):
+            import salt.modules.vsphere
+
             return __virtualname__
     except KeyError:
         pass

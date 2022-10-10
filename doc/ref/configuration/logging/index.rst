@@ -34,7 +34,7 @@ available in salt are shown in the table below.
     Python dependencies used by salt may define and use additional logging
     levels.  For example, the Python 2 version of the ``multiprocessing``
     standard Python library `uses the levels
-    <https://docs.python.org/2/library/multiprocessing.html#logging>`_
+    <https://docs.python.org/3/library/multiprocessing.html#logging>`_
     ``subwarning``, 25 and ``subdebug``, 5.
 
 +----------+---------------+--------------------------------------------------------------------------+
@@ -183,10 +183,10 @@ custom LogRecord attributes to colorize console log output:
 
 .. code-block:: python
 
-    '%(colorlevel)s'   # log level name colorized by level
-    '%(colorname)s'    # colorized module name
-    '%(colorprocess)s' # colorized process number
-    '%(colormsg)s'     # log message colorized by level
+    "%(colorlevel)s"  # log level name colorized by level
+    "%(colorname)s"  # colorized module name
+    "%(colorprocess)s"  # colorized process number
+    "%(colormsg)s"  # log message colorized by level
 
 .. note::
     The ``%(colorlevel)s``, ``%(colorname)s``, and ``%(colorprocess)``
@@ -212,9 +212,9 @@ these custom LogRecord attributes that include padding and enclosing brackets
 
 .. code-block:: python
 
-    '%(bracketlevel)s'   # equivalent to [%(levelname)-8s]
-    '%(bracketname)s'    # equivalent to [%(name)-17s]
-    '%(bracketprocess)s' # equivalent to [%(process)5s]
+    "%(bracketlevel)s"  # equivalent to [%(levelname)-8s]
+    "%(bracketname)s"  # equivalent to [%(name)-17s]
+    "%(bracketprocess)s"  # equivalent to [%(process)5s]
 
 .. code-block:: yaml
 

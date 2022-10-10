@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Keystone Users
 ======================================
@@ -30,7 +29,6 @@ Example States
         - description: 'my user'
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "keystone_user"
 
@@ -40,7 +38,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The keystoneng execution module failed to load: shade python module is not available",
+        "The keystoneng execution module failed to load: shade python module is not"
+        " available",
     )
 
 

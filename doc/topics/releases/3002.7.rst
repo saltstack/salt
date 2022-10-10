@@ -1,0 +1,21 @@
+.. _release-3002-7:
+
+========================
+Salt 3002.7 (2021-08-20)
+========================
+
+Version 3002.7 is a CVE security fix release for :ref:`3002 <release-3002>`.
+
+
+Fixed
+-----
+
+- Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
+
+
+Security
+--------
+
+- Fix the CVE-2021-31607 vulnerability
+  Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
+- Ensure that sourced file is cached using its hash name (cve-2021-21996)

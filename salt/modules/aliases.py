@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Manage the information in the aliases file
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import re
 import stat
 import tempfile
 
-# Import salt libs
+import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
 
 __outputter__ = {
     "rm_alias": "txt",
@@ -69,32 +63,30 @@ def __write_aliases_file(lines):
     afn = __get_aliases_filename()
     adir = os.path.dirname(afn)
 
-    out = tempfile.NamedTemporaryFile(dir=adir, delete=False)
+    with tempfile.NamedTemporaryFile(dir=adir, delete=False) as out:
 
-    if not __opts__.get("integration.test", False):
-        if os.path.isfile(afn):
-            afn_st = os.stat(afn)
-            os.chmod(out.name, stat.S_IMODE(afn_st.st_mode))
-            os.chown(out.name, afn_st.st_uid, afn_st.st_gid)
-        else:
-            os.chmod(out.name, 0o644)
-            os.chown(out.name, 0, 0)
+        if not __opts__.get("integration.test", False):
+            if os.path.isfile(afn):
+                afn_st = os.stat(afn)
+                os.chmod(out.name, stat.S_IMODE(afn_st.st_mode))
+                os.chown(out.name, afn_st.st_uid, afn_st.st_gid)
+            else:
+                os.chmod(out.name, 0o644)
+                os.chown(out.name, 0, 0)
 
-    for (line_alias, line_target, line_comment) in lines:
-        if isinstance(line_target, list):
-            line_target = ", ".join(line_target)
-        if not line_comment:
-            line_comment = ""
-        if line_alias and line_target:
-            write_line = "{0}: {1}{2}\n".format(line_alias, line_target, line_comment)
-        else:
-            write_line = "{0}\n".format(line_comment)
-        if six.PY3:
+        for (line_alias, line_target, line_comment) in lines:
+            if isinstance(line_target, list):
+                line_target = ", ".join(line_target)
+            if not line_comment:
+                line_comment = ""
+            if line_alias and line_target:
+                write_line = "{}: {}{}\n".format(line_alias, line_target, line_comment)
+            else:
+                write_line = "{}\n".format(line_comment)
             write_line = write_line.encode(__salt_system_encoding__)
-        out.write(write_line)
+            out.write(write_line)
 
-    out.close()
-    os.rename(out.name, afn)
+    salt.utils.atomicfile.atomic_rename(out.name, afn)
 
     # Search $PATH for the newalises command
     newaliases = salt.utils.path.which("newaliases")
@@ -116,7 +108,7 @@ def list_aliases():
 
         salt '*' aliases.list_aliases
     """
-    ret = dict((alias, target) for alias, target, comment in __parse_aliases() if alias)
+    ret = {alias: target for (alias, target, _) in __parse_aliases() if alias}
     return ret
 
 

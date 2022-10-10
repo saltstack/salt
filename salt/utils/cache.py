@@ -1,31 +1,26 @@
-# -*- coding: utf-8 -*-
 """
 In-memory caching used by Salt
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import functools
 import logging
 import os
 import re
 import time
 
-# Import salt libs
 import salt.config
 import salt.payload
+import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
-
-# Import third party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 
 
-class CacheFactory(object):
+class CacheFactory:
     """
     Cache which can use a number of backends
     """
@@ -88,7 +83,7 @@ class CacheDisk(CacheDict):
     """
 
     def __init__(self, ttl, path, *args, **kwargs):
-        super(CacheDisk, self).__init__(ttl, *args, **kwargs)
+        super().__init__(ttl, *args, **kwargs)
         self._path = path
         self._dict = {}
         self._read()
@@ -132,6 +127,15 @@ class CacheDisk(CacheDict):
         # Do the same as the parent but also persist
         self._write()
 
+    def clear(self):
+        """
+        Clear the cache
+        """
+        self._key_cache_time.clear()
+        self._dict.clear()
+        # Do the same as the parent but also persist
+        self._write()
+
     def _read(self):
         """
         Read in from disk
@@ -139,8 +143,8 @@ class CacheDisk(CacheDict):
         if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
             return
         with salt.utils.files.fopen(self._path, "rb") as fp_:
-            cache = salt.utils.data.decode(
-                salt.utils.msgpack.load(fp_, encoding=__salt_system_encoding__)
+            cache = salt.utils.msgpack.load(
+                fp_, encoding=__salt_system_encoding__, raw=False
             )
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
@@ -161,15 +165,15 @@ class CacheDisk(CacheDict):
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
-        with salt.utils.files.fopen(self._path, "wb+") as fp_:
+        with salt.utils.atomicfile.atomic_open(self._path, "wb+") as fp_:
             cache = {
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time,
             }
-            salt.utils.msgpack.dump(cache, fp_, use_bin_type=True)
+            salt.utils.msgpack.dump(cache, fp_)
 
 
-class CacheCli(object):
+class CacheCli:
     """
     Connection client for the ConCache. Should be used by all
     components that need the list of currently connected minions
@@ -180,7 +184,6 @@ class CacheCli(object):
         Sets up the zmq-connection to the ConCache
         """
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts.get("serial", ""))
         self.cache_sock = os.path.join(self.opts["sock_dir"], "con_cache.ipc")
         self.cache_upd_sock = os.path.join(self.opts["sock_dir"], "con_upd.ipc")
 
@@ -200,19 +203,19 @@ class CacheCli(object):
         """
         published the given minions to the ConCache
         """
-        self.cupd_out.send(self.serial.dumps(minions))
+        self.cupd_out.send(salt.payload.dumps(minions))
 
     def get_cached(self):
         """
         queries the ConCache for a list of currently connected minions
         """
-        msg = self.serial.dumps("minions")
+        msg = salt.payload.dumps("minions")
         self.creq_out.send(msg)
-        min_list = self.serial.loads(self.creq_out.recv())
+        min_list = salt.payload.loads(self.creq_out.recv())
         return min_list
 
 
-class CacheRegex(object):
+class CacheRegex:
     """
     Create a regular expression object cache for the most frequently
     used patterns to minimize compilation of the same patterns over
@@ -266,21 +269,18 @@ class CacheRegex(object):
             pass
         if len(self.cache) > self.size:
             self.sweep()
-        regex = re.compile("{0}{1}{2}".format(self.prepend, pattern, self.append))
+        regex = re.compile("{}{}{}".format(self.prepend, pattern, self.append))
         self.cache[pattern] = [1, regex, pattern, time.time()]
         return regex
 
 
-class ContextCache(object):
+class ContextCache:
     def __init__(self, opts, name):
         """
         Create a context cache
         """
         self.opts = opts
-        self.cache_path = os.path.join(
-            opts["cachedir"], "context", "{0}.p".format(name)
-        )
-        self.serial = salt.payload.Serial(self.opts)
+        self.cache_path = os.path.join(opts["cachedir"], "context", "{}.p".format(name))
 
     def cache_context(self, context):
         """
@@ -289,14 +289,14 @@ class ContextCache(object):
         if not os.path.isdir(os.path.dirname(self.cache_path)):
             os.mkdir(os.path.dirname(self.cache_path))
         with salt.utils.files.fopen(self.cache_path, "w+b") as cache:
-            self.serial.dump(context, cache)
+            salt.payload.dump(context, cache)
 
     def get_cache_context(self):
         """
         Retrieve a context cache from disk
         """
         with salt.utils.files.fopen(self.cache_path, "rb") as cache:
-            return salt.utils.data.decode(self.serial.load(cache))
+            return salt.utils.data.decode(salt.payload.load(cache))
 
 
 def context_cache(func):
@@ -308,9 +308,16 @@ def context_cache(func):
     is empty or contains no items, pass a list of keys to evaulate.
     """
 
+    @functools.wraps(func)
     def context_cache_wrap(*args, **kwargs):
-        func_context = func.__globals__["__context__"]
-        func_opts = func.__globals__["__opts__"]
+        try:
+            func_context = func.__globals__["__context__"].value()
+        except AttributeError:
+            func_context = func.__globals__["__context__"]
+        try:
+            func_opts = func.__globals__["__opts__"].value()
+        except AttributeError:
+            func_opts = func.__globals__["__opts__"]
         func_name = func.__globals__["__name__"]
 
         context_cache = ContextCache(func_opts, func_name)
@@ -323,17 +330,3 @@ def context_cache(func):
         return func(*args, **kwargs)
 
     return context_cache_wrap
-
-
-# test code for the CacheCli
-if __name__ == "__main__":
-
-    opts = salt.config.master_config("/etc/salt/master")
-
-    ccli = CacheCli(opts)
-
-    ccli.put_cache(["test1", "test10", "test34"])
-    ccli.put_cache(["test12"])
-    ccli.put_cache(["test18"])
-    ccli.put_cache(["test21"])
-    print("minions: {0}".format(ccli.get_cached()))

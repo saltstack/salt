@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage LXD containers.
 
@@ -28,14 +27,8 @@ Manage LXD containers.
 :platform: Linux
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.ext.six as six
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
 
 __docformat__ = "restructuredtext en"
 
@@ -218,7 +211,7 @@ def present(
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Profile not found
         pass
@@ -226,11 +219,11 @@ def present(
     if container is None:
         if __opts__["test"]:
             # Test is on, just return that we would create the container
-            msg = 'Would create the container "{0}"'.format(name)
+            msg = 'Would create the container "{}"'.format(name)
             ret["changes"] = {"created": msg}
             if running is True:
                 msg = msg + " and start it."
-                ret["changes"]["started"] = 'Would start the container "{0}"'.format(
+                ret["changes"]["started"] = 'Would start the container "{}"'.format(
                     name
                 )
 
@@ -254,9 +247,9 @@ def present(
                 verify_cert,
             )
         except CommandExecutionError as e:
-            return _error(ret, six.text_type(e))
+            return _error(ret, str(e))
 
-        msg = 'Created the container "{0}"'.format(name)
+        msg = 'Created the container "{}"'.format(name)
         ret["changes"] = {"created": msg}
 
         if running is True:
@@ -265,16 +258,16 @@ def present(
                     name, remote_addr, cert, key, verify_cert
                 )
             except CommandExecutionError as e:
-                return _error(ret, six.text_type(e))
+                return _error(ret, str(e))
 
             msg = msg + " and started it."
-            ret["changes"] = {"started": 'Started the container "{0}"'.format(name)}
+            ret["changes"] = {"started": 'Started the container "{}"'.format(name)}
 
         return _success(ret, msg)
 
     # Container exists, lets check for differences
-    new_profiles = set(map(six.text_type, profiles))
-    old_profiles = set(map(six.text_type, container.profiles))
+    new_profiles = set(map(str, profiles))
+    old_profiles = set(map(str, container.profiles))
 
     container_changed = False
 
@@ -282,18 +275,18 @@ def present(
     # Removed profiles
     for k in old_profiles.difference(new_profiles):
         if not __opts__["test"]:
-            profile_changes.append('Removed profile "{0}"'.format(k))
+            profile_changes.append('Removed profile "{}"'.format(k))
             old_profiles.discard(k)
         else:
-            profile_changes.append('Would remove profile "{0}"'.format(k))
+            profile_changes.append('Would remove profile "{}"'.format(k))
 
     # Added profiles
     for k in new_profiles.difference(old_profiles):
         if not __opts__["test"]:
-            profile_changes.append('Added profile "{0}"'.format(k))
+            profile_changes.append('Added profile "{}"'.format(k))
             old_profiles.add(k)
         else:
-            profile_changes.append('Would add profile "{0}"'.format(k))
+            profile_changes.append('Would add profile "{}"'.format(k))
 
     if profile_changes:
         container_changed = True
@@ -315,7 +308,7 @@ def present(
         try:
             __salt__["lxd.pylxd_save_object"](container)
         except CommandExecutionError as e:
-            return _error(ret, six.text_type(e))
+            return _error(ret, str(e))
 
     if running != is_running:
         if running is True:
@@ -323,7 +316,7 @@ def present(
                 changes["running"] = "Would start the container"
                 return _unchanged(
                     ret,
-                    ('Container "{0}" would get changed ' "and started.").format(name),
+                    'Container "{}" would get changed and started.'.format(name),
                 )
             else:
                 container.start(wait=True)
@@ -334,7 +327,7 @@ def present(
                 changes["stopped"] = "Would stopped the container"
                 return _unchanged(
                     ret,
-                    ('Container "{0}" would get changed ' "and stopped.").format(name),
+                    'Container "{}" would get changed and stopped.'.format(name),
                 )
             else:
                 container.stop(wait=True)
@@ -349,19 +342,19 @@ def present(
 
         if __opts__["test"]:
             changes["restarted"] = "Would restart the container"
-            return _unchanged(ret, 'Would restart the container "{0}"'.format(name))
+            return _unchanged(ret, 'Would restart the container "{}"'.format(name))
         else:
             container.restart(wait=True)
-            changes["restarted"] = 'Container "{0}" has been restarted'.format(name)
-            return _success(ret, 'Container "{0}" has been restarted'.format(name))
+            changes["restarted"] = 'Container "{}" has been restarted'.format(name)
+            return _success(ret, 'Container "{}" has been restarted'.format(name))
 
     if not container_changed:
         return _success(ret, "No changes")
 
     if __opts__["test"]:
-        return _unchanged(ret, 'Container "{0}" would get changed.'.format(name))
+        return _unchanged(ret, 'Container "{}" would get changed.'.format(name))
 
-    return _success(ret, "{0} changes".format(len(ret["changes"].keys())))
+    return _success(ret, "{} changes".format(len(ret["changes"].keys())))
 
 
 def absent(name, stop=False, remote_addr=None, cert=None, key=None, verify_cert=True):
@@ -415,13 +408,13 @@ def absent(name, stop=False, remote_addr=None, cert=None, key=None, verify_cert=
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _success(ret, 'Container "{0}" not found.'.format(name))
+        return _success(ret, 'Container "{}" not found.'.format(name))
 
     if __opts__["test"]:
-        ret["changes"] = {"removed": 'Container "{0}" would get deleted.'.format(name)}
+        ret["changes"] = {"removed": 'Container "{}" would get deleted.'.format(name)}
         return _unchanged(ret, ret["changes"]["removed"])
 
     if stop and container.status_code == CONTAINER_STATUS_RUNNING:
@@ -429,7 +422,7 @@ def absent(name, stop=False, remote_addr=None, cert=None, key=None, verify_cert=
 
     container.delete(wait=True)
 
-    ret["changes"]["deleted"] = 'Container "{0}" has been deleted.'.format(name)
+    ret["changes"]["deleted"] = 'Container "{}" has been deleted.'.format(name)
     return _success(ret, ret["changes"]["deleted"])
 
 
@@ -485,35 +478,35 @@ def running(
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Container "{0}" not found'.format(name))
+        return _error(ret, 'Container "{}" not found'.format(name))
 
     is_running = container.status_code == CONTAINER_STATUS_RUNNING
 
     if is_running:
         if not restart:
-            return _success(ret, 'The container "{0}" is already running'.format(name))
+            return _success(ret, 'The container "{}" is already running'.format(name))
         else:
             if __opts__["test"]:
-                ret["changes"][
-                    "restarted"
-                ] = 'Would restart the container "{0}"'.format(name)
+                ret["changes"]["restarted"] = 'Would restart the container "{}"'.format(
+                    name
+                )
                 return _unchanged(ret, ret["changes"]["restarted"])
             else:
                 container.restart(wait=True)
-                ret["changes"]["restarted"] = 'Restarted the container "{0}"'.format(
+                ret["changes"]["restarted"] = 'Restarted the container "{}"'.format(
                     name
                 )
                 return _success(ret, ret["changes"]["restarted"])
 
     if __opts__["test"]:
-        ret["changes"]["started"] = 'Would start the container "{0}"'.format(name)
+        ret["changes"]["started"] = 'Would start the container "{}"'.format(name)
         return _unchanged(ret, ret["changes"]["started"])
 
     container.start(wait=True)
-    ret["changes"]["started"] = 'Started the container "{0}"'.format(name)
+    ret["changes"]["started"] = 'Started the container "{}"'.format(name)
     return _success(ret, ret["changes"]["started"])
 
 
@@ -567,40 +560,40 @@ def frozen(name, start=True, remote_addr=None, cert=None, key=None, verify_cert=
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Container "{0}" not found'.format(name))
+        return _error(ret, 'Container "{}" not found'.format(name))
 
     if container.status_code == CONTAINER_STATUS_FROZEN:
-        return _success(ret, 'Container "{0}" is alredy frozen'.format(name))
+        return _success(ret, 'Container "{}" is alredy frozen'.format(name))
 
     is_running = container.status_code == CONTAINER_STATUS_RUNNING
 
     if not is_running and not start:
         return _error(
             ret,
-            (
-                'Container "{0}" is not running and start is False, ' "cannot freeze it"
-            ).format(name),
+            'Container "{}" is not running and start is False, cannot freeze it'.format(
+                name
+            ),
         )
 
     elif not is_running and start:
         if __opts__["test"]:
             ret["changes"][
                 "started"
-            ] = 'Would start the container "{0}" and freeze it after'.format(name)
+            ] = 'Would start the container "{}" and freeze it after'.format(name)
             return _unchanged(ret, ret["changes"]["started"])
         else:
             container.start(wait=True)
-            ret["changes"]["started"] = 'Start the container "{0}"'.format(name)
+            ret["changes"]["started"] = 'Start the container "{}"'.format(name)
 
     if __opts__["test"]:
-        ret["changes"]["frozen"] = 'Would freeze the container "{0}"'.format(name)
+        ret["changes"]["frozen"] = 'Would freeze the container "{}"'.format(name)
         return _unchanged(ret, ret["changes"]["frozen"])
 
     container.freeze(wait=True)
-    ret["changes"]["frozen"] = 'Froze the container "{0}"'.format(name)
+    ret["changes"]["frozen"] = 'Froze the container "{}"'.format(name)
 
     return _success(ret, ret["changes"]["frozen"])
 
@@ -655,20 +648,20 @@ def stopped(name, kill=False, remote_addr=None, cert=None, key=None, verify_cert
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Container "{0}" not found'.format(name))
+        return _error(ret, 'Container "{}" not found'.format(name))
 
     if container.status_code == CONTAINER_STATUS_STOPPED:
-        return _success(ret, 'Container "{0}" is already stopped'.format(name))
+        return _success(ret, 'Container "{}" is already stopped'.format(name))
 
     if __opts__["test"]:
-        ret["changes"]["stopped"] = 'Would stop the container "{0}"'.format(name)
+        ret["changes"]["stopped"] = 'Would stop the container "{}"'.format(name)
         return _unchanged(ret, ret["changes"]["stopped"])
 
     container.stop(force=kill, wait=True)
-    ret["changes"]["stopped"] = 'Stopped the container "{0}"'.format(name)
+    ret["changes"]["stopped"] = 'Stopped the container "{}"'.format(name)
     return _success(ret, ret["changes"]["stopped"])
 
 
@@ -684,7 +677,7 @@ def migrated(
     src_key=None,
     src_verify_cert=None,
 ):
-    """ Ensure a container is migrated to another host
+    """Ensure a container is migrated to another host
 
     If the container is running, it either must be shut down
     first (use stop_and_start=True) or criu must be installed
@@ -765,13 +758,13 @@ def migrated(
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Destination container not found
         pass
 
     if dest_container is not None:
-        return _success(ret, 'Container "{0}" exists on the destination'.format(name))
+        return _success(ret, 'Container "{}" exists on the destination'.format(name))
 
     if src_verify_cert is None:
         src_verify_cert = verify_cert
@@ -781,15 +774,17 @@ def migrated(
             name, src_remote_addr, src_cert, src_key, src_verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Container not found
-        return _error(ret, 'Source Container "{0}" not found'.format(name))
+        return _error(ret, 'Source Container "{}" not found'.format(name))
 
     if __opts__["test"]:
-        ret["changes"]["migrated"] = (
-            'Would migrate the container "{0}" from "{1}" to "{2}"'
-        ).format(name, src_remote_addr, remote_addr)
+        ret["changes"][
+            "migrated"
+        ] = 'Would migrate the container "{}" from "{}" to "{}"'.format(
+            name, src_remote_addr, remote_addr
+        )
         return _unchanged(ret, ret["changes"]["migrated"])
 
     try:
@@ -806,11 +801,11 @@ def migrated(
             src_verify_cert,
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
-    ret["changes"]["migrated"] = (
-        'Migrated the container "{0}" from "{1}" to "{2}"'
-    ).format(name, src_remote_addr, remote_addr)
+    ret["changes"]["migrated"] = 'Migrated the container "{}" from "{}" to "{}"'.format(
+        name, src_remote_addr, remote_addr
+    )
     return _success(ret, ret["changes"]["migrated"])
 
 

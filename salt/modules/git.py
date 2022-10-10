@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Support for the Git SCM
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import glob
 import logging
@@ -12,7 +9,6 @@ import os
 import re
 import stat
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -24,7 +20,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -51,7 +46,7 @@ def _check_worktree_support(failhard=True):
         if failhard:
             raise CommandExecutionError(
                 "Worktrees are only supported in git 2.5.0 and newer "
-                "(detected git version: " + git_version + ")"
+                "(detected git version: {})".format(git_version)
             )
         return False
     return True
@@ -84,8 +79,8 @@ def _config_getter(
         cwd = _expand_path(cwd, user)
 
     if get_opt == "--get-regexp":
-        if value_regex is not None and not isinstance(value_regex, six.string_types):
-            value_regex = six.text_type(value_regex)
+        if value_regex is not None and not isinstance(value_regex, str):
+            value_regex = str(value_regex)
     else:
         # Ignore value_regex
         value_regex = None
@@ -118,11 +113,11 @@ def _expand_path(cwd, user):
     except TypeError:
         # Users should never be numeric but if we don't account for this then
         # we're going to get a traceback if someone passes this invalid input.
-        to_expand = "~" + six.text_type(user) if user else "~"
+        to_expand = "~" + str(user) if user else "~"
     try:
         return os.path.join(os.path.expanduser(to_expand), cwd)
     except AttributeError:
-        return os.path.join(os.path.expanduser(to_expand), six.text_type(cwd))
+        return os.path.join(os.path.expanduser(to_expand), str(cwd))
 
 
 def _path_is_executable_others(path):
@@ -150,14 +145,14 @@ def _format_opts(opts):
     elif isinstance(opts, list):
         new_opts = []
         for item in opts:
-            if isinstance(item, six.string_types):
+            if isinstance(item, str):
                 new_opts.append(item)
             else:
-                new_opts.append(six.text_type(item))
+                new_opts.append(str(item))
         return new_opts
     else:
-        if not isinstance(opts, six.string_types):
-            opts = [six.text_type(opts)]
+        if not isinstance(opts, str):
+            opts = [str(opts)]
         else:
             opts = salt.utils.args.shlex_split(opts)
     opts = salt.utils.data.decode(opts)
@@ -183,7 +178,7 @@ def _format_git_opts(opts):
         if _LooseVersion(version_) < _LooseVersion("1.7.2"):
             raise SaltInvocationError(
                 "git_opts is only supported for git versions >= 1.7.2 "
-                "(detected: {0})".format(version_)
+                "(detected: {})".format(version_)
             )
     return _format_opts(opts)
 
@@ -307,7 +302,7 @@ def _git_run(
                 id_file
             ):
                 errors.append(
-                    "Identity file {0} is passphrase-protected and cannot be "
+                    "Identity file {} is passphrase-protected and cannot be "
                     "used in a non-interactive command. Using salt-call from "
                     "the minion will allow a passphrase-protected key to be "
                     "used.".format(id_file)
@@ -371,13 +366,13 @@ def _git_run(
 
         # We've tried all IDs and still haven't passed, so error out
         if failhard:
-            msg = "Unable to authenticate using identity file:\n\n{0}".format(
+            msg = "Unable to authenticate using identity file:\n\n{}".format(
                 "\n".join(errors)
             )
             if missing_keys:
                 if errors:
                     msg += "\n\n"
-                msg += "The following identity file(s) were not found: {0}".format(
+                msg += "The following identity file(s) were not found: {}".format(
                     ", ".join(missing_keys)
                 )
             raise CommandExecutionError(msg)
@@ -403,12 +398,12 @@ def _git_run(
         else:
             if failhard:
                 gitcommand = " ".join(command) if isinstance(command, list) else command
-                msg = "Command '{0}' failed".format(
+                msg = "Command '{}' failed".format(
                     salt.utils.url.redact_http_basic_auth(gitcommand)
                 )
                 err = result["stdout" if redirect_stderr else "stderr"]
                 if err:
-                    msg += ": {0}".format(salt.utils.url.redact_http_basic_auth(err))
+                    msg += ": {}".format(salt.utils.url.redact_http_basic_auth(err))
                 raise CommandExecutionError(msg)
             return result
 
@@ -1527,14 +1522,14 @@ def config_set(
             try:
                 multivar = multivar.split(",")
             except AttributeError:
-                multivar = six.text_type(multivar).split(",")
+                multivar = str(multivar).split(",")
         else:
             new_multivar = []
             for item in salt.utils.data.decode(multivar):
-                if isinstance(item, six.string_types):
+                if isinstance(item, str):
                     new_multivar.append(item)
                 else:
-                    new_multivar.append(six.text_type(item))
+                    new_multivar.append(str(item))
             multivar = new_multivar
 
     command_prefix = ["git", "config"]
@@ -1700,16 +1695,16 @@ def config_unset(
             )
             is None
         ):
-            raise CommandExecutionError("Key '{0}' does not exist".format(key))
+            raise CommandExecutionError("Key '{}' does not exist".format(key))
         else:
-            msg = "Multiple values exist for key '{0}'".format(key)
+            msg = "Multiple values exist for key '{}'".format(key)
             if value_regex is not None:
                 msg += " and value_regex matches multiple values"
             raise CommandExecutionError(msg)
     elif retcode == 6:
         raise CommandExecutionError("The value_regex is invalid")
     else:
-        msg = "Failed to unset key '{0}', git config returned exit code {1}".format(
+        msg = "Failed to unset key '{}', git config returned exit code {}".format(
             key, retcode
         )
         if ret["stderr"]:
@@ -1969,7 +1964,7 @@ def diff(
         try:
             paths = paths.split(",")
         except AttributeError:
-            paths = six.text_type(paths).split(",")
+            paths = str(paths).split(",")
 
     ignore_retcode = False
     failhard = True
@@ -1977,7 +1972,7 @@ def diff(
     if no_index:
         if _LooseVersion(version(versioninfo=False)) < _LooseVersion("1.5.1"):
             raise CommandExecutionError(
-                "The 'no_index' option is only supported in Git 1.5.1 and " "newer"
+                "The 'no_index' option is only supported in Git 1.5.1 and newer"
             )
         ignore_retcode = True
         failhard = False
@@ -2214,7 +2209,7 @@ def fetch(
             try:
                 refspecs = refspecs.split(",")
             except AttributeError:
-                refspecs = six.text_type(refspecs).split(",")
+                refspecs = str(refspecs).split(",")
         refspecs = salt.utils.data.stringify(refspecs)
         command.extend(refspecs)
     output = _git_run(
@@ -2344,7 +2339,6 @@ def init(
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`template directory`: http://git-scm.com/docs/git-init#_template_directory
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2361,17 +2355,17 @@ def init(
     if bare:
         command.append("--bare")
     if template is not None:
-        command.append("--template={0}".format(template))
+        command.append("--template={}".format(template))
     if separate_git_dir is not None:
-        command.append("--separate-git-dir={0}".format(separate_git_dir))
+        command.append("--separate-git-dir={}".format(separate_git_dir))
     if shared is not None:
-        if isinstance(shared, six.integer_types) and not isinstance(shared, bool):
-            shared = "0" + six.text_type(shared)
-        elif not isinstance(shared, six.string_types):
+        if isinstance(shared, int) and not isinstance(shared, bool):
+            shared = "0" + str(shared)
+        elif not isinstance(shared, str):
             # Using lower here because booleans would be capitalized when
             # converted to a string.
-            shared = six.text_type(shared).lower()
-        command.append("--shared={0}".format(shared))
+            shared = str(shared).lower()
+        command.append("--shared={}".format(shared))
     command.extend(_format_opts(opts))
     command.append(cwd)
     return _git_run(
@@ -2448,7 +2442,7 @@ def is_worktree(cwd, user=None, password=None, output_encoding=None):
                         return True
                     else:
                         return False
-    except IOError:
+    except OSError:
         return False
     return False
 
@@ -2520,7 +2514,7 @@ def list_branches(
         "for-each-ref",
         "--format",
         "%(refname:short)",
-        "refs/{0}/".format("heads" if not remote else "remotes"),
+        "refs/{}/".format("heads" if not remote else "remotes"),
     ]
     return _git_run(
         command,
@@ -2720,7 +2714,7 @@ def list_worktrees(
         if out["retcode"] != 0:
             msg = "Failed to list worktrees"
             if out["stderr"]:
-                msg += ": {0}".format(out["stderr"])
+                msg += ": {}".format(out["stderr"])
             raise CommandExecutionError(msg)
 
         def _untracked_item(line):
@@ -2733,7 +2727,7 @@ def list_worktrees(
             out["stdout"].strip(), "\n\n"
         ):
             # Initialize the dict where we're storing the tracked data points
-            worktree_data = dict([(x, "") for x in tracked_data_points])
+            worktree_data = {x: "" for x in tracked_data_points}
 
             for line in salt.utils.itertools.split(individual_worktree, "\n"):
                 try:
@@ -2752,7 +2746,7 @@ def list_worktrees(
 
                 if worktree_data[type_]:
                     log.error(
-                        "git.worktree: Unexpected duplicate %s entry " "'%s', skipping",
+                        "git.worktree: Unexpected duplicate %s entry '%s', skipping",
                         type_,
                         line,
                     )
@@ -2820,7 +2814,7 @@ def list_worktrees(
             worktree_root = os.path.join(cwd, worktree_root)
         if not os.path.isdir(worktree_root):
             raise CommandExecutionError(
-                "Worktree admin directory {0} not present".format(worktree_root)
+                "Worktree admin directory {} not present".format(worktree_root)
             )
 
         def _read_file(path):
@@ -2835,7 +2829,7 @@ def list_worktrees(
                         # shouldn't)
                         break
                     return ret
-            except (IOError, OSError) as exc:
+            except OSError as exc:
                 # Raise a CommandExecutionError
                 salt.utils.files.process_read_exception(exc, path)
 
@@ -3339,7 +3333,7 @@ def merge_base(
     if refs is None:
         refs = []
     elif not isinstance(refs, (list, tuple)):
-        refs = [x.strip() for x in six.text_type(refs).split(",")]
+        refs = [x.strip() for x in str(refs).split(",")]
     mutually_exclusive_count = len(
         [x for x in (octopus, independent, is_ancestor, fork_point) if x]
     )
@@ -3356,7 +3350,7 @@ def merge_base(
     elif fork_point:
         if len(refs) > 1:
             raise SaltInvocationError(
-                "At most one ref/commit can be passed if 'fork_point' is " "specified"
+                "At most one ref/commit can be passed if 'fork_point' is specified"
             )
         elif not refs:
             refs = ["HEAD"]
@@ -3493,7 +3487,7 @@ def merge_tree(
             base = merge_base(cwd, refs=[ref1, ref2], output_encoding=output_encoding)
         except (SaltInvocationError, CommandExecutionError):
             raise CommandExecutionError(
-                "Unable to determine merge base for {0} and {1}".format(ref1, ref2)
+                "Unable to determine merge base for {} and {}".format(ref1, ref2)
             )
     command.extend([base, ref1, ref2])
     return _git_run(
@@ -3829,7 +3823,6 @@ def rebase(
 
     .. _`git-rebase(1)`: http://git-scm.com/docs/git-rebase
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3845,8 +3838,8 @@ def rebase(
     command = ["git"] + _format_git_opts(git_opts)
     command.append("rebase")
     command.extend(opts)
-    if not isinstance(rev, six.string_types):
-        rev = six.text_type(rev)
+    if not isinstance(rev, str):
+        rev = str(rev)
     command.extend(salt.utils.args.shlex_split(rev))
     return _git_run(
         command,
@@ -3934,9 +3927,7 @@ def remote_get(
     )
     if remote not in all_remotes:
         raise CommandExecutionError(
-            "Remote '{0}' not present in git checkout located at {1}".format(
-                remote, cwd
-            )
+            "Remote '{}' not present in git checkout located at {}".format(remote, cwd)
         )
     return all_remotes[remote]
 
@@ -4205,14 +4196,14 @@ def remote_set(
         output_encoding=output_encoding,
     )
     if push_url:
-        if not isinstance(push_url, six.string_types):
-            push_url = six.text_type(push_url)
+        if not isinstance(push_url, str):
+            push_url = str(push_url)
         try:
             push_url = salt.utils.url.add_http_basic_auth(
                 push_url, push_https_user, push_https_pass, https_only=True
             )
         except ValueError as exc:
-            raise SaltInvocationError(six.text_type(exc))
+            raise SaltInvocationError(str(exc))
         command = ["git", "remote", "set-url", "--push", remote, push_url]
         _git_run(
             command,
@@ -4317,7 +4308,7 @@ def remotes(
         action = action.lstrip("(").rstrip(")").lower()
         if action not in ("fetch", "push"):
             log.warning(
-                "Unknown action '%s' for remote '%s' in git checkout " "located in %s",
+                "Unknown action '%s' for remote '%s' in git checkout located in %s",
                 action,
                 remote,
                 cwd,
@@ -4839,7 +4830,7 @@ def status(cwd, user=None, password=None, ignore_retcode=False, output_encoding=
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
     )["stdout"]
-    for line in output.split(str("\0")):
+    for line in output.split("\0"):
         try:
             state, filename = line.split(None, 1)
         except ValueError:
@@ -5101,7 +5092,7 @@ def symbolic_ref(
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ("-d", "--delete")):
         raise SaltInvocationError(
-            "Value cannot be set for symbolic ref if -d/--delete is included " "in opts"
+            "Value cannot be set for symbolic ref if -d/--delete is included in opts"
         )
     command.extend(opts)
     command.append(ref)
@@ -5256,7 +5247,11 @@ def version(versioninfo=False):
             log.error("Failed to obtain the git version (error follows):\n%s", exc)
             version_ = "unknown"
         try:
-            __context__[contextkey] = version_.split()[-1]
+            # On macOS, the git version is displayed in a different format
+            #  git version 2.21.1 (Apple Git-122.3)
+            # As opposed to:
+            #  git version 2.21.1
+            __context__[contextkey] = version_.split("(")[0].strip().split()[-1]
         except IndexError:
             # Somehow git --version returned no stdout while not raising an
             # error. Should never happen but we should still account for this
@@ -5403,7 +5398,7 @@ def worktree_add(
     if detach:
         if force:
             log.warning(
-                "'force' argument to git.worktree_add is ignored when " "detach=True"
+                "'force' argument to git.worktree_add is ignored when detach=True"
             )
         command.append("--detach")
     else:
@@ -5536,14 +5531,18 @@ def worktree_prune(
     if expire:
         command.extend(["--expire", expire])
     command.extend(_format_opts(opts))
-    return _git_run(
+    result = _git_run(
         command,
         cwd=cwd,
         user=user,
         password=password,
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
-    )["stdout"]
+    )
+    git_version = version(versioninfo=False)
+    if _LooseVersion(git_version) > _LooseVersion("2.35.0"):
+        return result["stderr"]
+    return result["stdout"]
 
 
 def worktree_rm(cwd, user=None, output_encoding=None):
@@ -5598,5 +5597,5 @@ def worktree_rm(cwd, user=None, output_encoding=None):
     try:
         salt.utils.files.rm_rf(cwd)
     except Exception as exc:  # pylint: disable=broad-except
-        raise CommandExecutionError("Unable to remove {0}: {1}".format(cwd, exc))
+        raise CommandExecutionError("Unable to remove {}: {}".format(cwd, exc))
     return True

@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_softwareupdate
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-)
-from tests.support.unit import skipIf
+from tests.support.helpers import runs_on
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("softwareupdate")
+@pytest.mark.skip_if_binaries_missing("softwareupdate")
 class MacSoftwareUpdateModuleTest(ModuleCase):
     """
     Validate the mac_softwareupdate module
@@ -35,7 +28,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.SCHEDULE = self.run_function("softwareupdate.schedule")
         self.CATALOG = self.run_function("softwareupdate.get_catalog")
 
-        super(MacSoftwareUpdateModuleTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         """
@@ -54,9 +47,9 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         else:
             self.run_function("softwareupdate.set_catalog", [self.CATALOG])
 
-        super(MacSoftwareUpdateModuleTest, self).tearDown()
+        super().tearDown()
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_list_available(self):
         """
         Test softwareupdate.list_available
@@ -65,8 +58,8 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         # is the correct type, dict
         self.assertIsInstance(self.run_function("softwareupdate.list_available"), dict)
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_ignore(self):
         """
         Test softwareupdate.ignore
@@ -85,8 +78,8 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIn("spongebob", self.run_function("softwareupdate.list_ignored"))
         self.assertIn("squidward", self.run_function("softwareupdate.list_ignored"))
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_schedule(self):
         """
         Test softwareupdate.schedule_enable
@@ -100,8 +93,8 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertTrue(self.run_function("softwareupdate.schedule_enable", [False]))
         self.assertFalse(self.run_function("softwareupdate.schedule_enabled"))
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_update(self):
         """
         Test softwareupdate.update_all
@@ -126,15 +119,15 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             self.run_function("softwareupdate.update", ["spongebob"]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_list_downloads(self):
         """
         Test softwareupdate.list_downloads
         """
         self.assertIsInstance(self.run_function("softwareupdate.list_downloads"), list)
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_download(self):
         """
         Test softwareupdate.download
@@ -148,16 +141,16 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             self.run_function("softwareupdate.download", ["spongebob"]),
         )
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_download_all(self):
         """
         Test softwareupdate.download_all
         """
         self.assertIsInstance(self.run_function("softwareupdate.download_all"), list)
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_get_set_reset_catalog(self):
         """
         Test softwareupdate.download_all

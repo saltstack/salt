@@ -1,24 +1,18 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
     Tests functions in salt.utils.vsan
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libraries
 from salt.exceptions import (
     VMwareApiError,
     VMwareObjectRetrievalError,
     VMwareRuntimeError,
 )
 from salt.utils import vsan
-
-# Import Salt testing libraries
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -32,7 +26,6 @@ except ImportError:
 HAS_PYVSAN = vsan.HAS_PYVSAN
 
 
-# Get Logging Started
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +53,7 @@ class VsanSupportedTestCase(TestCase):
             vsan.vsan_supported(mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_api_version_raises_vim_fault(self):
@@ -88,13 +81,7 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_vsan_cluster_config_system"""
 
     def setup_loader_modules(self):
-        return {
-            vsan: {
-                "__virtual__": MagicMock(return_value="vsan"),
-                "sys": MagicMock(),
-                "ssl": MagicMock(),
-            }
-        }
+        return {vsan: {"sys": MagicMock(), "ssl": MagicMock()}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -154,13 +141,7 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_vsan_disk_management_system"""
 
     def setup_loader_modules(self):
-        return {
-            vsan: {
-                "__virtual__": MagicMock(return_value="vsan"),
-                "sys": MagicMock(),
-                "ssl": MagicMock(),
-            }
-        }
+        return {vsan: {"sys": MagicMock(), "ssl": MagicMock()}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -298,7 +279,7 @@ class GetHostVsanSystemTestCase(TestCase):
                 vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Host's 'fake_hostname' VSAN system was " "not retrieved",
+            "Host's 'fake_hostname' VSAN system was not retrieved",
         )
 
     def test_valid_mors_result(self):
@@ -407,7 +388,7 @@ class CreateDiskgroupTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
@@ -583,7 +564,7 @@ class AddCapacityToDiskGroupTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
@@ -757,7 +738,7 @@ class RemoveCapacityFromDiskGroup(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_remove_disk_raise_vim_fault(self):
@@ -904,7 +885,7 @@ class RemoveDiskgroup(TestCase):
             vsan.remove_diskgroup(self.mock_si, self.mock_host_ref, self.mock_diskgroup)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_remove_disk_mapping_raise_vim_fault(self):
@@ -944,7 +925,7 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_cluster_vsan_info"""
 
     def setup_loader_modules(self):
-        return {vsan: {"__virtual__": MagicMock(return_value="vsan")}}
+        return {vsan: {}}
 
     def setUp(self):
         self.mock_cl_ref = MagicMock()
@@ -1004,7 +985,7 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_VsanClusterGetConfig_raises_vim_fault(self):
@@ -1120,7 +1101,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref, self.mock_cl_vsan_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_cluster_reconfig_raises_vim_fault(self):
@@ -1162,7 +1143,7 @@ class _WaitForTasks(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan._wait_for_tasks"""
 
     def setup_loader_modules(self):
-        return {vsan: {"__virtual__": MagicMock(return_value="vsan")}}
+        return {vsan: {}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -1193,7 +1174,7 @@ class _WaitForTasks(TestCase, LoaderModuleMockMixin):
                 vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_wait_for_tasks_raises_vim_fault(self):

@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Return cached data from minions
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import fnmatch
 import logging
 import os
 
 import salt.cache
-
-# Import salt libs
 import salt.config
 import salt.fileserver.gitfs
-import salt.log
 import salt.payload
 import salt.pillar.git_pillar
 import salt.runners.winrepo
@@ -22,7 +16,6 @@ import salt.utils.args
 import salt.utils.gitfs
 import salt.utils.master
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.fileserver import clear_lock as _clear_lock
 
 log = logging.getLogger(__name__)
@@ -32,7 +25,7 @@ __func_alias__ = {
 }
 
 
-def grains(tgt=None, tgt_type="glob", **kwargs):
+def grains(tgt, tgt_type="glob", **kwargs):
     """
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -46,7 +39,7 @@ def grains(tgt=None, tgt_type="glob", **kwargs):
         .. versionchanged:: 2017.7.5,2018.3.0
             The ``tgt`` argument is now required to display cached grains. If
             not used, the function will not return grains. This optional
-            argument will become mandatory in the Salt ``Sodium`` release.
+            argument will become mandatory in the Salt ``3001`` release.
 
     tgt_type
         The type of targeting to use for matching, such as ``glob``, ``list``,
@@ -58,16 +51,6 @@ def grains(tgt=None, tgt_type="glob", **kwargs):
 
         salt-run cache.grains '*'
     """
-    if tgt is None:
-        # Change ``tgt=None`` to ``tgt`` (mandatory kwarg) in Salt Sodium.
-        # This behavior was changed in PR #45588 to fix Issue #45489.
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Detected missing 'tgt' option. Cached grains will not be returned "
-            "without a specified 'tgt'. This option will be required starting in "
-            "Salt Sodium and this warning will be removed.",
-        )
-
     pillar_util = salt.utils.master.MasterPillarUtil(
         tgt, tgt_type, use_cached_grains=True, grains_fallback=False, opts=__opts__
     )
@@ -143,6 +126,7 @@ def _clear_cache(
     """
     if tgt is None:
         return False
+
     pillar_util = salt.utils.master.MasterPillarUtil(
         tgt,
         tgt_type,
@@ -343,7 +327,7 @@ def clear_git_lock(role, remote=None, **kwargs):
             )
             git_objects.append(obj)
     else:
-        raise SaltInvocationError("Invalid role '{0}'".format(role))
+        raise SaltInvocationError("Invalid role '{}'".format(role))
 
     ret = {}
     for obj in git_objects:
@@ -379,7 +363,7 @@ def cloud(tgt, provider=None):
         salt-run cache.cloud 'salt*'
         salt-run cache.cloud glance.example.org provider=openstack
     """
-    if not isinstance(tgt, six.string_types):
+    if not isinstance(tgt, str):
         return {}
 
     opts = salt.config.cloud_config(
@@ -393,9 +377,9 @@ def cloud(tgt, provider=None):
         return {}
 
     ret = {}
-    for driver, providers in six.iteritems(cloud_cache):
-        for provider, servers in six.iteritems(providers):
-            for name, data in six.iteritems(servers):
+    for driver, providers in cloud_cache.items():
+        for provider, servers in providers.items():
+            for name, data in servers.items():
                 if fnmatch.fnmatch(name, tgt):
                     ret[name] = data
                     ret[name]["provider"] = provider

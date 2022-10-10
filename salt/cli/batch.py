@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Execute batch runs
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 import logging
 import math
 import time
@@ -17,33 +11,39 @@ from datetime import datetime, timedelta
 import salt.client
 import salt.exceptions
 import salt.output
-
-# Import salt libs
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
 
-class Batch(object):
+class Batch:
     """
     Manage the execution of batch runs
+
     """
 
-    def __init__(self, opts, eauth=None, quiet=False, parser=None):
+    def __init__(self, opts, eauth=None, quiet=False, _parser=None):
+        """
+        :param dict opts: A config options dictionary.
+
+        :param dict eauth: An eauth config to use.
+
+                           The default is an empty dict.
+
+        :param bool quiet: Suppress printing to stdout
+
+                           The default is False.
+        """
         self.opts = opts
         self.eauth = eauth if eauth else {}
         self.pub_kwargs = eauth if eauth else {}
         self.quiet = quiet
-        self.local = salt.client.get_local_client(opts["conf_file"])
-        self.minions, self.ping_gen, self.down_minions = self.__gather_minions()
-        self.options = parser
+        self.options = _parser
+        # Passing listen True to local client will prevent it from purging
+        # cahced events while iterating over the batches.
+        self.local = salt.client.get_local_client(opts["conf_file"], listen=True)
 
-    def __gather_minions(self):
+    def gather_minions(self):
         """
         Return a list of minions to use for the batch run
         """
@@ -75,7 +75,7 @@ class Batch(object):
                 continue
             else:
                 try:
-                    m = next(six.iterkeys(ret))
+                    m = next(iter(ret.keys()))
                 except StopIteration:
                     if not self.quiet:
                         salt.utils.stringutils.print_cli(
@@ -92,10 +92,7 @@ class Batch(object):
         """
         partition = lambda x: float(x) / 100.0 * len(self.minions)
         try:
-            if (
-                isinstance(self.opts["batch"], six.string_types)
-                and "%" in self.opts["batch"]
-            ):
+            if isinstance(self.opts["batch"], str) and "%" in self.opts["batch"]:
                 res = partition(float(self.opts["batch"].strip("%")))
                 if res < 1:
                     return int(math.ceil(res))
@@ -106,7 +103,7 @@ class Batch(object):
         except ValueError:
             if not self.quiet:
                 salt.utils.stringutils.print_cli(
-                    "Invalid batch data sent: {0}\nData must be in the "
+                    "Invalid batch data sent: {}\nData must be in the "
                     "form of %10, 10% or 3".format(self.opts["batch"])
                 )
 
@@ -122,6 +119,7 @@ class Batch(object):
         """
         Execute the batch run
         """
+        self.minions, self.ping_gen, self.down_minions = self.gather_minions()
         args = [
             [],
             self.opts["fun"],
@@ -161,7 +159,7 @@ class Batch(object):
             # the user we won't be attempting to run a job on them
             for down_minion in self.down_minions:
                 salt.utils.stringutils.print_cli(
-                    "Minion {0} did not respond. No job will be sent.".format(
+                    "Minion {} did not respond. No job will be sent.".format(
                         down_minion
                     )
                 )
@@ -180,7 +178,7 @@ class Batch(object):
                     if to_run:
                         minion_id = to_run.pop()
                         if isinstance(minion_id, dict):
-                            next_.append(minion_id.keys()[0])
+                            next_.append(next(iter(minion_id)))
                         else:
                             next_.append(minion_id)
 
@@ -190,17 +188,18 @@ class Batch(object):
             if next_:
                 if not self.quiet:
                     salt.utils.stringutils.print_cli(
-                        "\nExecuting run on {0}\n".format(sorted(next_))
+                        "\nExecuting run on {}\n".format(sorted(next_))
                     )
                 # create a new iterator for this batch of minions
+                return_value = self.opts.get("return", self.opts.get("ret", ""))
                 new_iter = self.local.cmd_iter_no_block(
                     *args,
                     raw=self.opts.get("raw", False),
-                    ret=self.opts.get("return", ""),
+                    ret=return_value,
                     show_jid=show_jid,
                     verbose=show_verbose,
                     gather_job_timeout=self.opts["gather_job_timeout"],
-                    **self.eauth
+                    **self.eauth,
                 )
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -217,7 +216,7 @@ class Batch(object):
             for ping_ret in self.ping_gen:
                 if ping_ret is None:
                     break
-                m = next(six.iterkeys(ping_ret))
+                m = next(iter(ping_ret.keys()))
                 if m not in self.minions:
                     self.minions.append(m)
                     to_run.append(m)
@@ -242,9 +241,8 @@ class Batch(object):
                                 )
                             else:
                                 salt.utils.stringutils.print_cli(
-                                    "minion {0} was already deleted from tracker, probably a duplicate key".format(
-                                        part["id"]
-                                    )
+                                    "minion {} was already deleted from tracker,"
+                                    " probably a duplicate key".format(part["id"])
                                 )
                         else:
                             parts.update(part)
@@ -253,9 +251,8 @@ class Batch(object):
                                     minion_tracker[queue]["minions"].remove(id)
                                 else:
                                     salt.utils.stringutils.print_cli(
-                                        "minion {0} was already deleted from tracker, probably a duplicate key".format(
-                                            id
-                                        )
+                                        "minion {} was already deleted from tracker,"
+                                        " probably a duplicate key".format(id)
                                     )
                 except StopIteration:
                     # if a iterator is done:
@@ -273,46 +270,66 @@ class Batch(object):
                                 parts[minion] = {}
                                 parts[minion]["ret"] = {}
 
-            for minion, data in six.iteritems(parts):
+            for minion, data in parts.items():
                 if minion in active:
                     active.remove(minion)
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
-                # Munge retcode into return data
                 failhard = False
-                if (
-                    "retcode" in data
-                    and isinstance(data["ret"], dict)
-                    and "retcode" not in data["ret"]
-                ):
-                    data["ret"]["retcode"] = data["retcode"]
-                    if self.opts.get("failhard") and data["ret"]["retcode"] > 0:
-                        failhard = True
-                else:
-                    if self.opts.get("failhard") and data["retcode"] > 0:
-                        failhard = True
 
-                if self.opts.get("raw"):
-                    ret[minion] = data
-                    yield data
+                # need to check if Minion failed to respond to job sent
+                failed_check = data.get("failed", False)
+                if failed_check:
+                    log.debug(
+                        "Minion '%s' failed to respond to job sent, data '%s'",
+                        minion,
+                        data,
+                    )
+                    if not self.quiet:
+                        # We already know some minions didn't respond to the ping, so inform
+                        # inform user attempt to run a job failed
+                        salt.utils.stringutils.print_cli(
+                            "Minion '%s' failed to respond to job sent", minion
+                        )
+
+                    if self.opts.get("failhard"):
+                        failhard = True
                 else:
-                    ret[minion] = data["ret"]
-                    yield {minion: data["ret"]}
-                if not self.quiet:
-                    ret[minion] = data["ret"]
-                    data[minion] = data.pop("ret")
-                    if "out" in data:
-                        out = data.pop("out")
+                    # If we are executing multiple modules with the same cmd,
+                    # We use the highest retcode.
+                    retcode = 0
+                    if "retcode" in data:
+                        if isinstance(data["retcode"], dict):
+                            try:
+                                data["retcode"] = max(data["retcode"].values())
+                            except ValueError:
+                                data["retcode"] = 0
+                        if self.opts.get("failhard") and data["retcode"] > 0:
+                            failhard = True
+                        retcode = data["retcode"]
+
+                    if self.opts.get("raw"):
+                        ret[minion] = data
+                        yield data, retcode
                     else:
-                        out = None
-                    salt.output.display_output(data, out, self.opts)
+                        ret[minion] = data["ret"]
+                        yield {minion: data["ret"]}, retcode
+                    if not self.quiet:
+                        ret[minion] = data["ret"]
+                        data[minion] = data.pop("ret")
+                        if "out" in data:
+                            out = data.pop("out")
+                        else:
+                            out = None
+                        salt.output.display_output(data, out, self.opts)
+
                 if failhard:
                     log.error(
                         "Minion %s returned with non-zero exit code. "
                         "Batch run stopped due to failhard",
                         minion,
                     )
-                    raise StopIteration
+                    return
 
             # remove inactive iterators from the iters list
             for queue in minion_tracker:
@@ -325,3 +342,4 @@ class Batch(object):
                             active.remove(minion)
                             if bwait:
                                 wait.append(datetime.now() + timedelta(seconds=bwait))
+        self.local.destroy()

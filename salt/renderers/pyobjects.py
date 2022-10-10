@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Python renderer that includes a Pythonic Object based interface
 
@@ -211,6 +210,24 @@ The following pairs of lines are functionally equivalent:
     value = __salt__['config.get']('foo:bar:baz', 'qux')
 
 
+Opts dictionary and SLS name
+----------------------------
+
+Pyobjects provides variable access to the minion options dictionary and the SLS
+name that the code resides in. These variables are the same as the `opts` and
+`sls` variables available in the Jinja renderer.
+
+The following lines show how to access that information.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    test_mode = __opts__["test"]
+    sls_name = __sls__
+
+
 Map Data
 --------
 
@@ -298,8 +315,6 @@ file ``samba/map.sls``, you could do the following.
 """
 # TODO: Interface for working with reactor files
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -307,9 +322,6 @@ import re
 
 import salt.loader
 import salt.utils.files
-
-# Import Salt Libs
-from salt.ext import six
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Map, Registry, SaltObject, StateFactory
 
@@ -326,7 +338,7 @@ except NameError:
     __context__ = {}
 
 
-class PyobjectsModule(object):
+class PyobjectsModule:
     """This provides a wrapper for bare imports."""
 
     def __init__(self, name, attrs):
@@ -334,7 +346,7 @@ class PyobjectsModule(object):
         self.__dict__ = attrs
 
     def __repr__(self):
-        return "<module '{0!s}' (pyobjects)>".format(self.name)
+        return "<module '{!s}' (pyobjects)>".format(self.name)
 
 
 def load_states():
@@ -345,14 +357,14 @@ def load_states():
 
     # the loader expects to find pillar & grain data
     __opts__["grains"] = salt.loader.grains(__opts__)
-    __opts__["pillar"] = __pillar__
+    __opts__["pillar"] = __pillar__.value()
     lazy_utils = salt.loader.utils(__opts__)
     lazy_funcs = salt.loader.minion_mods(__opts__, utils=lazy_utils)
     lazy_serializers = salt.loader.serializers(__opts__)
     lazy_states = salt.loader.states(__opts__, lazy_funcs, lazy_utils, lazy_serializers)
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
-    for key, func in six.iteritems(lazy_states):
+    for key, func in lazy_states.items():
         if "." not in key:
             continue
         mod_name, func_name = key.split(".", 1)
@@ -376,10 +388,10 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
         mod_locals = {}
         mod_camel = "".join([part.capitalize() for part in mod.split("_")])
         valid_funcs = "','".join(__context__["pyobjects_states"][mod])
-        mod_cmd = "{0} = StateFactory('{1!s}', valid_funcs=['{2}'])".format(
+        mod_cmd = "{} = StateFactory('{!s}', valid_funcs=['{}'])".format(
             mod_camel, mod, valid_funcs
         )
-        six.exec_(mod_cmd, mod_globals, mod_locals)
+        exec(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -406,6 +418,8 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                 "__salt__": __salt__,
                 "__pillar__": __pillar__,
                 "__grains__": __grains__,
+                "__opts__": __opts__,
+                "__sls__": sls,
             }
         )
     except NameError:
@@ -450,12 +464,12 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                 state_file = client.cache_file(import_file, saltenv)
                 if not state_file:
                     raise ImportError(
-                        "Could not find the file '{0}'".format(import_file)
+                        "Could not find the file '{}'".format(import_file)
                     )
 
                 with salt.utils.files.fopen(state_file) as state_fh:
                     state_contents, state_globals = process_template(state_fh)
-                six.exec_(state_contents, state_globals)
+                exec(state_contents, state_globals)
 
                 # if no imports have been specified then we are being imported as: import salt://foo.sls
                 # so we want to stick all of the locals from our state file into the template globals
@@ -476,7 +490,7 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
 
                         if name not in state_globals:
                             raise ImportError(
-                                "'{0}' was not found in '{1}'".format(name, import_file)
+                                "'{}' was not found in '{}'".format(name, import_file)
                             )
                         template_globals[alias] = state_globals[name]
 
@@ -496,6 +510,6 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    six.exec_(final_template, _globals)
+    exec(final_template, _globals)
 
     return Registry.salt_data()
