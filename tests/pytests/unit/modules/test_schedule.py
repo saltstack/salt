@@ -74,7 +74,6 @@ def test_purge(sock_dir, job1):
 
     changes = {"job1": "removed", "job2": "removed", "job3": "removed"}
 
-    patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
     patch_schedule_opts = patch.dict(
         schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
     )
@@ -103,41 +102,49 @@ def test_delete(sock_dir, job1):
     """
     Test if it delete a job from the minion's schedule.
     """
-    with patch("os.makedirs", MagicMock(return_value=True)):
-        with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {"event.fire": mock}):
-                _ret_value = {"complete": True, "schedule": {}}
-                with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                    assert schedule.delete("job1") == {
-                        "comment": "Job job1 does not exist.",
-                        "changes": {},
-                        "result": False,
-                    }
+    patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
+    patch_schedule_opts = patch.dict(
+        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
+    )
+    patch_schedule_event_fire = patch.dict(
+        schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
+    )
+    patch_schedule_get_event = patch.object(
+        SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
+    )
+
+    with patch_makedirs, patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+        assert schedule.delete("job1") == {
+            "comment": "Job job1 does not exist.",
+            "changes": {},
+            "result": False,
+        }
 
     _schedule_data = {"job1": job1}
+    patch_schedule_list = patch.object(
+        schedule, "list_", MagicMock(return_value=_schedule_data)
+    )
+
+    patch_schedule_opts = patch.dict(
+        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
+    )
+
     comm = "Deleted Job job1 from schedule."
     changes = {"job1": "removed"}
-    with patch("os.makedirs", MagicMock(return_value=True)):
+    with patch_makedirs, patch_schedule_opts, patch_schedule_list:
         schedule_config_file = schedule._get_schedule_config_file()
-        with patch.dict(
-            schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
-        ):
-            with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
-                with patch.object(
-                    schedule, "list_", MagicMock(return_value=_schedule_data)
-                ):
-                    assert schedule.delete("job1", offline="True") == {
-                        "comment": comm,
-                        "changes": changes,
-                        "result": True,
-                    }
+        with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
+            assert schedule.delete("job1", offline="True") == {
+                "comment": comm,
+                "changes": changes,
+                "result": True,
+            }
 
-                    _call = call(b"schedule: {}\n")
-                    write_calls = fopen_mock.filehandles[schedule_config_file][
-                        0
-                    ].write._mock_mock_calls
-                    assert _call in write_calls
+            _call = call(b"schedule: {}\n")
+            write_calls = fopen_mock.filehandles[schedule_config_file][
+                0
+            ].write._mock_mock_calls
+            assert _call in write_calls
 
 
 # 'build_schedule_item' function tests: 1
