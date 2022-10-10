@@ -25,6 +25,7 @@ Functions to interact with Hashicorp Vault.
             url: https://vault.service.domain:8200
             verify: /etc/ssl/certs/ca-certificates.crt
             role_name: minion_role
+            namespace:  vault_enterprice_namespace
             auth:
                 method: approle
                 role_id: 11111111-2222-3333-4444-1111111111111
@@ -45,9 +46,17 @@ Functions to interact with Hashicorp Vault.
 
     verify
         For details please see
-        http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+        https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
 
         .. versionadded:: 2018.3.0
+
+    namespaces
+        Optional Vault Namespace. Used with Vault enterprice
+
+        For detail please see:
+        https://www.vaultproject.io/docs/enterprise/namespaces
+
+        .. versionadded:: 3004
 
     role_name
         Role name for minion tokens created. If omitted, minion tokens will be
@@ -116,10 +125,16 @@ Functions to interact with Hashicorp Vault.
             .. versionchanged:: 3001
 
     policies
-        Policies that are assigned to minions when requesting a token. These can
-        either be static, eg saltstack/minions, or templated with grain values,
-        eg, ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for grains[id],
-        ``saltstack/minion/{minion}``. .
+        Policies that are assigned to minions when requesting a token. These
+        can either be static, eg ``saltstack/minions``, or templated with grain
+        values, eg ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for
+        ``grains[id]``, eg ``saltstack/minion/{minion}``.
+
+        .. important::
+
+            See :ref:`Is Targeting using Grain Data Secure?
+            <faq-grain-security>` for important security information. In short,
+            everything except ``grains[id]`` is minion-controlled.
 
         If a template contains a grain which evaluates to a list, it will be
         expanded into multiple policies. For example, given the template
@@ -135,15 +150,15 @@ Functions to interact with Hashicorp Vault.
         The minion will have the policies ``saltstack/by-role/web`` and
         ``saltstack/by-role/database``.
 
-        Optional. If policies is not configured, ``saltstack/minions`` and
-        ``saltstack/{minion}`` are used as defaults.
-
         .. note::
 
-            list members which do not have simple string representations,
+            List members which do not have simple string representations,
             such as dictionaries or objects, do not work and will
             throw an exception. Strings and numbers are examples of
             types which work well.
+
+        Optional. If policies is not configured, ``saltstack/minions`` and
+        ``saltstack/{minion}`` are used as defaults.
 
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.
@@ -160,16 +175,16 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup:
 """
-# Import Python libs
 import logging
 import os
 
+from salt.defaults import NOT_SET
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
+def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -197,6 +212,8 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     """
+    if default == NOT_SET:
+        default = CommandExecutionError
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["data"]
@@ -342,7 +359,7 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path, default=CommandExecutionError):
+def list_secrets(path, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -358,6 +375,8 @@ def list_secrets(path, default=CommandExecutionError):
 
             salt '*' vault.list_secrets "secret/my/"
     """
+    if default == NOT_SET:
+        default = CommandExecutionError
     log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:

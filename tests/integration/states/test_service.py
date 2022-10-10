@@ -5,17 +5,17 @@ Tests for the service state
 import re
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 INIT_DELAY = 5
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the service state
@@ -26,6 +26,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         cmd_name = "crontab"
         os_family = self.run_function("grains.get", ["os_family"])
         os_release = self.run_function("grains.get", ["osrelease"])
+        is_systemd = self.run_function("grains.get", ["systemd"])
         self.stopped = False
         self.running = True
         if os_family == "RedHat":
@@ -34,9 +35,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.service_name = "sshd"
             cmd_name = "systemctl"
         elif os_family == "MacOS":
-            self.service_name = "org.ntp.ntpd"
-            if int(os_release.split(".")[1]) >= 13:
-                self.service_name = "com.apple.AirPlayXPCHelper"
+            self.service_name = "com.apple.AirPlayXPCHelper"
         elif os_family == "Windows":
             self.service_name = "Spooler"
 
@@ -52,6 +51,9 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
 
         if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
             self.skipTest("{} is not installed".format(cmd_name))
+
+        if is_systemd and self.run_function("service.offline"):
+            self.skipTest("systemd is OFFLINE")
 
     def tearDown(self):
         if self.post_srv_disable:
@@ -70,7 +72,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             if check_status is not exp_return:
                 self.fail("status of service is not returning correctly")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_running(self):
         """
         test service.running state module
@@ -88,7 +90,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(start_service)
         self.check_service_status(self.running)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_dead(self):
         """
         test service.dead state module
@@ -101,7 +103,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.check_service_status(self.stopped)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_dead_init_delay(self):
         """
         test service.dead state module with init_delay arg

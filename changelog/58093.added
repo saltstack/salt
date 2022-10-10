@@ -1,1 +1,0 @@
-Added salt-cloud support for Linode APIv4 via the ``api_version`` provider configuration parameter.

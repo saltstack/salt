@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 """
+Runner functions supporting the Vault modules. Configuration instructions are
+documented in the execution module docs.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
-
-Runner functions supporting the Vault modules. Configuration instructions are
-documented in the execution module docs.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import json
@@ -18,12 +15,8 @@ import time
 
 import requests
 
-# Import Salt libs
 import salt.crypt
 import salt.exceptions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -60,6 +53,8 @@ def generate_token(
     try:
         config = __opts__.get("vault", {})
         verify = config.get("verify", None)
+        # Vault Enterprise requires a namespace
+        namespace = config.get("namespace")
         # Allow disabling of minion provided values via the master
         allow_minion_override = config["auth"].get("allow_minion_override", False)
         # This preserves the previous behavior of default TTL and 1 use
@@ -73,18 +68,25 @@ def generate_token(
             if _selftoken_expired():
                 log.debug("Vault token expired. Recreating one")
                 # Requesting a short ttl token
-                url = "{0}/v1/auth/approle/login".format(config["url"])
-
+                url = "{}/v1/auth/approle/login".format(config["url"])
                 payload = {"role_id": config["auth"]["role_id"]}
                 if "secret_id" in config["auth"]:
                     payload["secret_id"] = config["auth"]["secret_id"]
-                response = requests.post(url, json=payload, verify=verify)
+                # Vault Enterprise call requires headers
+                headers = None
+                if namespace is not None:
+                    headers = {"X-Vault-Namespace": namespace}
+                response = requests.post(
+                    url, headers=headers, json=payload, verify=verify
+                )
                 if response.status_code != 200:
                     return {"error": response.reason}
                 config["auth"]["token"] = response.json()["auth"]["client_token"]
 
         url = _get_token_create_url(config)
         headers = {"X-Vault-Token": config["auth"]["token"]}
+        if namespace is not None:
+            headers["X-Vault-Namespace"] = namespace
         audit_data = {
             "saltstack-jid": globals().get("__jid__", "<no jid set>"),
             "saltstack-minion": minion_id,
@@ -117,13 +119,14 @@ def generate_token(
             "url": config["url"],
             "verify": verify,
             "token_backend": storage_type,
+            "namespace": namespace,
         }
         if uses >= 0:
             ret["uses"] = uses
 
         return ret
     except Exception as e:  # pylint: disable=broad-except
-        return {"error": six.text_type(e)}
+        return {"error": str(e)}
 
 
 def unseal():
@@ -182,15 +185,15 @@ def _validate_signature(minion_id, signature, impersonated_by_master):
     """
     pki_dir = __opts__["pki_dir"]
     if impersonated_by_master:
-        public_key = "{0}/master.pub".format(pki_dir)
+        public_key = "{}/master.pub".format(pki_dir)
     else:
-        public_key = "{0}/minions/{1}".format(pki_dir, minion_id)
+        public_key = "{}/minions/{}".format(pki_dir, minion_id)
 
     log.trace("Validating signature for %s", minion_id)
     signature = base64.b64decode(signature)
     if not salt.crypt.verify_signature(public_key, minion_id, signature):
         raise salt.exceptions.AuthenticationError(
-            "Could not validate token request from {0}".format(minion_id)
+            "Could not validate token request from {}".format(minion_id)
         )
     log.trace("Signature ok")
 
@@ -247,21 +250,21 @@ def _expand_pattern_lists(pattern, **mappings):
     """
     expanded_patterns = []
     f = string.Formatter()
-    """
-    This function uses a string.Formatter to get all the formatting tokens from
-    the pattern, then recursively replaces tokens whose expanded value is a
-    list. For a list with N items, it will create N new pattern strings and
-    then continue with the next token. In practice this is expected to not be
-    very expensive, since patterns will typically involve a handful of lists at
-    most.
-    """  # pylint: disable=W0105
+
+    # This function uses a string.Formatter to get all the formatting tokens from
+    # the pattern, then recursively replaces tokens whose expanded value is a
+    # list. For a list with N items, it will create N new pattern strings and
+    # then continue with the next token. In practice this is expected to not be
+    # very expensive, since patterns will typically involve a handful of lists at
+    # most.
+
     for (_, field_name, _, _) in f.parse(pattern):
         if field_name is None:
             continue
         (value, _) = f.get_field(field_name, None, mappings)
         if isinstance(value, list):
             token = "{{{0}}}".format(field_name)
-            expanded = [pattern.replace(token, six.text_type(elem)) for elem in value]
+            expanded = [pattern.replace(token, str(elem)) for elem in value]
             for expanded_item in expanded:
                 result = _expand_pattern_lists(expanded_item, **mappings)
                 expanded_patterns += result
@@ -275,17 +278,22 @@ def _selftoken_expired():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
-        url = "{0}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
+        url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+        # Add Vault namespace to headers if Vault Enterprise enabled
+        if namespace is not None:
+            headers["X-Vault-Namespace"] = namespace
         response = requests.get(url, headers=headers, verify=verify)
         if response.status_code != 200:
             return True
         return False
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up self token : {0}".format(six.text_type(e))
+            "Error while looking up self token : {}".format(str(e))
         )
 
 

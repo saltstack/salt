@@ -16,7 +16,6 @@ import hashlib
 import itertools
 import logging
 import mmap
-import operator
 import os
 import re
 import shutil
@@ -25,9 +24,9 @@ import string
 import sys
 import tempfile
 import time
+import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
-from functools import reduce  # pylint: disable=redefined-builtin
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -37,6 +36,7 @@ import salt.utils.files
 import salt.utils.find
 import salt.utils.functools
 import salt.utils.hashutils
+import salt.utils.http
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -47,14 +47,7 @@ import salt.utils.user
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.exceptions import get_error_message as _get_error_message
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.files import HASHES, HASHES_REVMAP
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 try:
     import grp
@@ -179,7 +172,8 @@ def _chattr_version():
     cmd = [tune2fs]
     result = __salt__["cmd.run"](cmd, ignore_retcode=True, python_shell=False)
     match = re.search(
-        r"tune2fs (?P<version>[0-9\.]+)", salt.utils.stringutils.to_str(result),
+        r"tune2fs (?P<version>[0-9\.]+)",
+        salt.utils.stringutils.to_str(result),
     )
     if match is None:
         version = None
@@ -265,7 +259,6 @@ def get_gid(path, follow_symlinks=True):
 
     follow_symlinks
         indicated if symlinks should be followed
-
 
     CLI Example:
 
@@ -587,8 +580,14 @@ def _cmp_attrs(path, attrs):
     new = set(attrs)
     old = set(lattrs)
 
+    # The "e" attribute can be set, but it cannot not be reset, so we add it to
+    # the new set if it is present in the old set.
+    if "e" in old:
+        new.add("e")
+
     return AttrChanges(
-        added="".join(new - old) or None, removed="".join(old - new) or None,
+        added="".join(new - old) or None,
+        removed="".join(old - new) or None,
     )
 
 
@@ -843,7 +842,7 @@ def get_source_sum(
         hash_fn = source_hash
     else:
         try:
-            proto = _urlparse(source_hash).scheme
+            proto = urllib.parse.urlparse(source_hash).scheme
             if proto in salt.utils.files.VALID_PROTOS:
                 hash_fn = __salt__["cp.cache_file"](
                     source_hash, saltenv, verify_ssl=verify_ssl
@@ -873,9 +872,9 @@ def get_source_sum(
         # The source_hash is a hash expression
         ret = {}
         try:
-            ret["hash_type"], ret["hsum"] = [
+            ret["hash_type"], ret["hsum"] = (
                 x.strip() for x in source_hash.split("=", 1)
-            ]
+            )
         except AttributeError:
             _invalid_source_hash_format()
         except ValueError:
@@ -1483,7 +1482,6 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
         salt '*' file.comment_line '/etc/modules' '^pcspkr'
 
-
     CLI Example:
 
     The following example will uncomment the ``log_level`` setting in ``minion``
@@ -1544,7 +1542,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                     found = True
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
 
     # We've searched the whole file. If we didn't find anything, return False
@@ -1564,7 +1562,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
     try:
         # Open the file in write mode
-        mode = "wb" if six.PY2 and salt.utils.platform.is_windows() else "w"
+        mode = "w"
         with salt.utils.files.fopen(path, mode=mode, buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
@@ -1585,11 +1583,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                             else:
                                 # Write the existing line (no change)
                                 wline = line
-                            wline = (
-                                salt.utils.stringutils.to_bytes(wline)
-                                if six.PY2 and salt.utils.platform.is_windows()
-                                else salt.utils.stringutils.to_str(wline)
-                            )
+                            wline = salt.utils.stringutils.to_str(wline)
                             w_file.write(wline)
                         except OSError as exc:
                             raise CommandExecutionError(
@@ -1626,38 +1620,38 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
 def _get_flags(flags):
     """
-    Return an integer appropriate for use as a flag for the re module from a
-    list of human-readable strings
+    Return the names of the Regex flags that correspond to flags
 
     .. code-block:: python
 
-        >>> _get_flags(['MULTILINE', 'IGNORECASE'])
-        10
+        >>> _get_flags(['IGNORECASE', 'MULTILINE'])
+        re.IGNORECASE|re.MULTILINE
         >>> _get_flags('MULTILINE')
-        8
-        >>> _get_flags(2)
-        2
+        re.MULTILINE
+        >>> _get_flags(8)
+        re.MULTILINE
+        >>> _get_flags(re.IGNORECASE)
+        re.IGNORECASE
     """
-    if isinstance(flags, str):
+    if isinstance(flags, re.RegexFlag):
+        return flags
+    elif isinstance(flags, int):
+        return re.RegexFlag(flags)
+    elif isinstance(flags, str):
         flags = [flags]
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
-        _flags_acc = []
+        _flags = re.RegexFlag(0)
         for flag in flags:
-            _flag = getattr(re, str(flag).upper())
-
-            if not isinstance(_flag, int):
-                raise SaltInvocationError("Invalid re flag given: {}".format(flag))
-
-            _flags_acc.append(_flag)
-
-        return reduce(operator.__or__, _flags_acc)
-    elif isinstance(flags, int):
-        return flags
+            _flag = getattr(re.RegexFlag, str(flag).upper(), None)
+            if not _flag:
+                raise CommandExecutionError(f"Invalid re flag given: {flag}")
+            _flags |= _flag
+        return _flags
     else:
-        raise SaltInvocationError(
-            'Invalid re flags: "{}", must be given either as a single flag '
-            "string, a list of strings, or as an integer".format(flags)
+        raise CommandExecutionError(
+            f'Invalid re flags: "{flags}", must be given either as a single flag '
+            "string, a list of strings, as an integer, or as an re flag"
         )
 
 
@@ -1693,7 +1687,7 @@ def _mkstemp_copy(path, preserve_inode=True):
         temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to create temp file. " "Exception: {}".format(exc)
+            "Unable to create temp file. Exception: {}".format(exc)
         )
     # use `copy` to preserve the inode of the
     # original file, and thus preserve hardlinks
@@ -1705,18 +1699,18 @@ def _mkstemp_copy(path, preserve_inode=True):
             shutil.copy2(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to copy file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to copy file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
     else:
         try:
             shutil.move(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to move file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to move file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
 
     return temp_file
@@ -2335,12 +2329,8 @@ def line(
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.files.fopen
-                if six.PY2 and salt.utils.platform.is_windows():
-                    mode = "wb"
-                    body = salt.utils.data.encode_list(body)
-                else:
-                    mode = "w"
-                    body = salt.utils.data.decode_list(body, to_str=True)
+                mode = "w"
+                body = salt.utils.data.decode_list(body, to_str=True)
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
                 fh_.writelines(body)
             finally:
@@ -2495,7 +2485,7 @@ def replace(
     symlink = False
     if is_link(path):
         symlink = True
-        target_path = os.readlink(path)
+        target_path = salt.utils.path.readlink(path)
         given_path = os.path.expanduser(path)
 
     path = os.path.realpath(os.path.expanduser(path))
@@ -2521,8 +2511,8 @@ def replace(
             "Only one of append and prepend_if_not_found is permitted"
         )
 
-    flags_num = _get_flags(flags)
-    cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), flags_num)
+    re_flags = _get_flags(flags)
+    cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), re_flags)
     filesize = os.path.getsize(path)
     if bufsize == "file":
         bufsize = filesize
@@ -2571,7 +2561,7 @@ def replace(
             else:
                 result, nrepl = re.subn(
                     cpattern,
-                    repl.replace("\\", "\\\\") if backslash_literal else repl,
+                    repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                     r_data,
                     count,
                 )
@@ -2590,7 +2580,7 @@ def replace(
                             "^{}($|(?=\r\n))".format(re.escape(content))
                         ),
                         r_data,
-                        flags=flags_num,
+                        flags=re_flags,
                     ):
                         # Content was found, so set found.
                         found = True
@@ -2601,10 +2591,12 @@ def replace(
                     else r_data.splitlines(True)
                 )
                 new_file = result.splitlines(True)
+                if orig_file == new_file:
+                    has_changes = False
 
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
     finally:
         if r_data and isinstance(r_data, mmap.mmap):
@@ -2630,7 +2622,7 @@ def replace(
                         r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
                         result, nrepl = re.subn(
                             cpattern,
-                            repl.replace("\\", "\\\\") if backslash_literal else repl,
+                            repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                             r_data,
                             count,
                         )
@@ -2717,8 +2709,7 @@ def replace(
             os.remove(temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to delete temp file '{}'. "
-                "Exception: {}".format(temp_file, exc)
+                "Unable to delete temp file '{}'. Exception: {}".format(temp_file, exc)
             )
 
     if not dry_run and not salt.utils.platform.is_windows():
@@ -2797,13 +2788,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -2934,51 +2925,49 @@ def blockreplace(
     # no changes are required and to avoid any file access on a partially
     # written file.
     try:
-        # pylint: disable=resource-leakage
-        fi_file = salt.utils.files.fopen(
-            path, mode="r", encoding=file_encoding, newline=""
-        )
-        # pylint: enable=resource-leakage
-        for line in fi_file:
-            write_line_to_new_file = True
+        with salt.utils.files.fopen(
+            path, "r", encoding=file_encoding, newline=""
+        ) as fi_file:
+            for line in fi_file:
+                write_line_to_new_file = True
 
-            if linesep is None:
-                # Auto-detect line separator
-                if line.endswith("\r\n"):
-                    linesep = "\r\n"
-                elif line.endswith("\n"):
-                    linesep = "\n"
+                if linesep is None:
+                    # Auto-detect line separator
+                    if line.endswith("\r\n"):
+                        linesep = "\r\n"
+                    elif line.endswith("\n"):
+                        linesep = "\n"
+                    else:
+                        # No newline(s) in file, fall back to system's linesep
+                        linesep = os.linesep
+
+                if marker_start in line:
+                    # We've entered the content block
+                    in_block = True
                 else:
-                    # No newline(s) in file, fall back to system's linesep
-                    linesep = os.linesep
+                    if in_block:
+                        # We're not going to write the lines from the old file to
+                        # the new file until we have exited the block.
+                        write_line_to_new_file = False
 
-            if marker_start in line:
-                # We've entered the content block
-                in_block = True
-            else:
-                if in_block:
-                    # We're not going to write the lines from the old file to
-                    # the new file until we have exited the block.
-                    write_line_to_new_file = False
+                        marker_end_pos = line.find(marker_end)
+                        if marker_end_pos != -1:
+                            # End of block detected
+                            in_block = False
+                            # We've found and exited the block
+                            block_found = True
 
-                    marker_end_pos = line.find(marker_end)
-                    if marker_end_pos != -1:
-                        # End of block detected
-                        in_block = False
-                        # We've found and exited the block
-                        block_found = True
+                            _add_content(
+                                linesep,
+                                lines=new_file,
+                                include_marker_start=False,
+                                end_line=line[marker_end_pos:],
+                            )
 
-                        _add_content(
-                            linesep,
-                            lines=new_file,
-                            include_marker_start=False,
-                            end_line=line[marker_end_pos:],
-                        )
-
-            # Save the line from the original file
-            orig_file.append(line)
-            if write_line_to_new_file:
-                new_file.append(line)
+                # Save the line from the original file
+                orig_file.append(line)
+                if write_line_to_new_file:
+                    new_file.append(line)
 
     except OSError as exc:
         raise CommandExecutionError("Failed to read from {}: {}".format(path, exc))
@@ -3141,7 +3130,11 @@ def search(path, pattern, flags=8, bufsize=1, ignore_if_missing=False, multiline
         salt '*' file.search /etc/crontab 'mymaintenance.sh'
     """
     if multiline:
-        flags = _add_flags(flags, "MULTILINE")
+        re_flags = _add_flags(flags, "MULTILINE")
+    else:
+        re_flags = _get_flags(flags)
+
+    if re.RegexFlag.MULTILINE in re_flags:
         bufsize = "file"
 
     # This function wraps file.replace on purpose in order to enforce
@@ -3151,7 +3144,7 @@ def search(path, pattern, flags=8, bufsize=1, ignore_if_missing=False, multiline
         path,
         pattern,
         "",
-        flags=flags,
+        flags=re_flags,
         bufsize=bufsize,
         dry_run=True,
         search_only=True,
@@ -3185,17 +3178,27 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     options
         Options to pass to patch.
 
+    .. note::
+        Windows now supports using patch as of 3004.
+
+        In order to use this function in Windows, please install the
+        patch binary through your own means and ensure it's found
+        in the system Path. If installing through git-for-windows,
+        please select the optional "Use Git and optional Unix tools
+        from the Command Prompt" option when installing Git.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
+
+        salt '*' file.patch C:\\file1.txt C:\\file3.patch
     """
     patchpath = salt.utils.path.which("patch")
     if not patchpath:
         raise CommandExecutionError(
-            "patch executable not found. Is the distribution's patch "
-            "package installed?"
+            "patch executable not found. Is the distribution's patch package installed?"
         )
 
     cmd = [patchpath]
@@ -3708,9 +3711,26 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path):
+def symlink(src, path, force=False, atomic=False):
     """
     Create a symbolic link (symlink, soft link) to a file
+
+    Args:
+
+        src (str): The path to a file or directory
+
+        path (str): The path to the link. Must be an absolute path
+
+        force (bool):
+            Overwrite an existing symlink with the same name
+            .. versionadded:: 3005
+
+        atomic (bool):
+            Use atomic file operations to create the symlink
+            .. versionadded:: 3006.0
+
+    Returns:
+        bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
 
     CLI Example:
 
@@ -3720,22 +3740,51 @@ def symlink(src, path):
     """
     path = os.path.expanduser(path)
 
-    try:
-        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
-            log.debug("link already in correct state: %s -> %s", path, src)
-            return True
-    except OSError:
-        pass
-
     if not os.path.isabs(path):
-        raise SaltInvocationError("File path must be absolute.")
+        raise SaltInvocationError("Link path must be absolute: {}".format(path))
+
+    if os.path.islink(path):
+        try:
+            if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(
+                src
+            ):
+                log.debug("link already in correct state: %s -> %s", path, src)
+                return True
+        except OSError:
+            pass
+
+        if not force and not atomic:
+            msg = "Found existing symlink: {}".format(path)
+            raise CommandExecutionError(msg)
+
+    if os.path.exists(path) and not force and not atomic:
+        msg = "Existing path is not a symlink: {}".format(path)
+        raise CommandExecutionError(msg)
+
+    if (os.path.islink(path) or os.path.exists(path)) and force and not atomic:
+        os.unlink(path)
+    elif atomic:
+        link_dir = os.path.dirname(path)
+        retry = 0
+        while retry < 5:
+            temp_link = tempfile.mktemp(dir=link_dir)
+            try:
+                os.symlink(src, temp_link)
+                break
+            except FileExistsError:
+                retry += 1
+        try:
+            os.replace(temp_link, path)
+            return True
+        except OSError:
+            os.remove(temp_link)
+            raise CommandExecutionError("Could not create '{}'".format(path))
 
     try:
         os.symlink(src, path)
         return True
     except OSError:
         raise CommandExecutionError("Could not create '{}'".format(path))
-    return False
 
 
 def rename(src, dst):
@@ -3807,7 +3856,8 @@ def copy(src, dst, recurse=False, remove_existing=False):
         if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
             if not recurse:
                 raise SaltInvocationError(
-                    "Cannot copy overwriting a directory without recurse flag set to true!"
+                    "Cannot copy overwriting a directory without recurse flag set to"
+                    " true!"
                 )
             if remove_existing:
                 if os.path.exists(dst):
@@ -3869,7 +3919,7 @@ def access(path, mode):
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
-    .. code-block::text
+    .. code-block:: text
 
         f: Test the existence of the path
         r: Test the readability of the path
@@ -3904,6 +3954,9 @@ def read(path, binary=False):
 
     Return the content of the file.
 
+    :param bool binary:
+        Whether to read and return binary data
+
     CLI Example:
 
     .. code-block:: bash
@@ -3914,7 +3967,10 @@ def read(path, binary=False):
     if binary is True:
         access_mode += "b"
     with salt.utils.files.fopen(path, access_mode) as file_obj:
-        return salt.utils.stringutils.to_unicode(file_obj.read())
+        if binary is True:
+            return file_obj.read()
+        else:
+            return salt.utils.stringutils.to_unicode(file_obj.read())
 
 
 def readlink(path, canonicalize=False):
@@ -3922,7 +3978,27 @@ def readlink(path, canonicalize=False):
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
-    If canonicalize is set to True, then it return the final target
+
+    Args:
+
+        path (str):
+            The path to the symlink
+
+        canonicalize (bool):
+            Get the canonical path eliminating any symbolic links encountered in
+            the path
+
+    Returns:
+
+        str: The path that the symlink points to
+
+    Raises:
+
+        SaltInvocationError: path is not absolute
+
+        SaltInvocationError: path is not a link
+
+        CommandExecutionError: error reading the symbolic link
 
     CLI Example:
 
@@ -3931,17 +4007,23 @@ def readlink(path, canonicalize=False):
         salt '*' file.readlink /path/to/link
     """
     path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("Path to link must be absolute.")
+        raise SaltInvocationError("Path to link must be absolute: {}".format(path))
 
     if not os.path.islink(path):
-        raise SaltInvocationError("A valid link was not specified.")
+        raise SaltInvocationError("A valid link was not specified: {}".format(path))
 
     if canonicalize:
         return os.path.realpath(path)
     else:
-        return os.readlink(path)
+        try:
+            return salt.utils.path.readlink(path)
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                raise CommandExecutionError("Not a symbolic link: {}".format(path))
+            raise CommandExecutionError(exc.__str__())
 
 
 def readdir(path):
@@ -4069,11 +4151,33 @@ def stats(path, hash_type=None, follow_symlinks=True):
     return ret
 
 
-def rmdir(path):
+def rmdir(path, recurse=False, verbose=False, older_than=None):
     """
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 3006.0
+        Changed return value for failure to a boolean.
 
     Remove the specified directory. Fails if a directory is not empty.
+
+    recurse
+        When ``recurse`` is set to ``True``, all empty directories
+        within the path are pruned.
+
+        .. versionadded:: 3006.0
+
+    verbose
+        When ``verbose`` is set to ``True``, a dictionary is returned
+        which contains more information about the removal process.
+
+        .. versionadded:: 3006.0
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -4081,6 +4185,9 @@ def rmdir(path):
 
         salt '*' file.rmdir /tmp/foo/
     """
+    ret = False
+    deleted = []
+    errors = []
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
@@ -4089,14 +4196,49 @@ def rmdir(path):
     if not os.path.isdir(path):
         raise SaltInvocationError("A valid directory was not specified.")
 
-    try:
-        os.rmdir(path)
-        return True
-    except OSError as exc:
-        return exc.strerror
+    if older_than:
+        now = time.time()
+        try:
+            older_than = now - (int(older_than) * 86400)
+            log.debug("Now (%s) looking for directories older than %s", now, older_than)
+        except (TypeError, ValueError) as exc:
+            older_than = 0
+            log.error("Unable to set 'older_than'. Defaulting to 0 days. (%s)", exc)
+
+    if recurse:
+        for root, dirs, _ in os.walk(path, topdown=False):
+            for subdir in dirs:
+                subdir_path = os.path.join(root, subdir)
+                if (
+                    older_than and os.path.getmtime(subdir_path) < older_than
+                ) or not older_than:
+                    try:
+                        log.debug("Removing '%s'", subdir_path)
+                        os.rmdir(subdir_path)
+                        deleted.append(subdir_path)
+                    except OSError as exc:
+                        errors.append([subdir_path, str(exc)])
+                        log.error("Could not remove '%s': %s", subdir_path, exc)
+        ret = not errors
+
+    if (older_than and os.path.getmtime(path) < older_than) or not older_than:
+        try:
+            log.debug("Removing '%s'", path)
+            os.rmdir(path)
+            deleted.append(path)
+            ret = True if ret or not recurse else False
+        except OSError as exc:
+            ret = False
+            errors.append([path, str(exc)])
+            log.error("Could not remove '%s': %s", path, exc)
+
+    if verbose:
+        return {"deleted": deleted, "errors": errors, "result": ret}
+    else:
+        return ret
 
 
-def remove(path):
+def remove(path, **kwargs):
     """
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
@@ -4107,7 +4249,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         The method now works on all types of file system entries, not just
         files, directories and symlinks.
     """
@@ -4301,7 +4443,7 @@ def source_list(source, source_hash, saltenv):
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                urlparsed_single_src = _urlparse(single_src)
+                urlparsed_single_src = urllib.parse.urlparse(single_src)
                 # Fix this for Windows
                 if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
@@ -4309,7 +4451,9 @@ def source_list(source, source_hash, saltenv):
                     # drive letter instead of the protocol. So, we'll add the
                     # protocol and re-parse
                     if urlparsed_single_src.scheme.lower() in string.ascii_lowercase:
-                        urlparsed_single_src = _urlparse("file://" + single_src)
+                        urlparsed_single_src = urllib.parse.urlparse(
+                            "file://" + single_src
+                        )
                 proto = urlparsed_single_src.scheme
                 if proto == "salt":
                     path, senv = salt.utils.url.parse(single_src)
@@ -4319,8 +4463,12 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    ret = (single_src, single_hash)
-                    break
+                    query_res = salt.utils.http.query(
+                        single_src, method="HEAD", decode_body=False
+                    )
+                    if "error" not in query_res:
+                        ret = (single_src, single_hash)
+                        break
                 elif proto == "file" and (
                     os.path.exists(urlparsed_single_src.netloc)
                     or os.path.exists(urlparsed_single_src.path)
@@ -4342,14 +4490,14 @@ def source_list(source, source_hash, saltenv):
                 if (path, senv) in mfiles or (path, senv) in mdirs:
                     ret = (single, source_hash)
                     break
-                urlparsed_src = _urlparse(single)
+                urlparsed_src = urllib.parse.urlparse(single)
                 if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
                     # protocol indicator (file://). The scheme will be the
                     # drive letter instead of the protocol. So, we'll add the
                     # protocol and re-parse
                     if urlparsed_src.scheme.lower() in string.ascii_lowercase:
-                        urlparsed_src = _urlparse("file://" + single)
+                        urlparsed_src = urllib.parse.urlparse("file://" + single)
                 proto = urlparsed_src.scheme
                 if proto == "file" and (
                     os.path.exists(urlparsed_src.netloc)
@@ -4361,8 +4509,12 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    ret = (single, source_hash)
-                    break
+                    query_res = salt.utils.http.query(
+                        single, method="HEAD", decode_body=False
+                    )
+                    if "error" not in query_res:
+                        ret = (single, source_hash)
+                        break
                 elif single.startswith(os.sep) and os.path.exists(single):
                     ret = (single, source_hash)
                     break
@@ -4418,15 +4570,13 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
             salt=__salt__,
             opts=__opts__,
         )["data"]
-        if six.PY2:
-            contents = contents.encode("utf-8")
-        elif six.PY3 and isinstance(contents, bytes):
+        if isinstance(contents, bytes):
             # bytes -> str
             contents = contents.decode("utf-8")
     else:
         ret = {}
         ret["result"] = False
-        ret["comment"] = ("Specified template format {} is not supported").format(
+        ret["comment"] = "Specified template format {} is not supported".format(
             template
         )
         return ret
@@ -4448,7 +4598,8 @@ def get_managed(
     defaults,
     skip_verify=False,
     verify_ssl=True,
-    **kwargs
+    use_etag=False,
+    **kwargs,
 ):
     """
     Return the managed file data for file.managed
@@ -4504,6 +4655,15 @@ def get_managed(
 
         .. versionadded:: 3002
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -4523,7 +4683,7 @@ def get_managed(
 
     # If we have a source defined, let's figure out what the hash is
     if source:
-        urlparsed_source = _urlparse(source)
+        urlparsed_source = urllib.parse.urlparse(source)
         if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
             parsed_scheme = urlparsed_source.scheme
         else:
@@ -4575,7 +4735,7 @@ def get_managed(
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
-                else:
+                elif not use_etag:
                     msg = (
                         "Unable to verify upstream hash of source file {}, "
                         "please set source_hash or set skip_verify to True".format(
@@ -4588,7 +4748,7 @@ def get_managed(
         # Check if we have the template or remote file cached
         cache_refetch = False
         cached_dest = __salt__["cp.is_cached"](source, saltenv)
-        if cached_dest and (source_hash or skip_verify):
+        if cached_dest and (source_hash or skip_verify or use_etag):
             htype = source_sum.get("hash_type", "sha256")
             cached_sum = get_hash(cached_dest, form=htype)
             if skip_verify:
@@ -4596,7 +4756,9 @@ def get_managed(
                 # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {"hsum": cached_sum, "hash_type": htype}
-            elif cached_sum != source_sum.get("hsum", __opts__["hash_type"]):
+            elif use_etag or cached_sum != source_sum.get(
+                "hsum", __opts__["hash_type"]
+            ):
                 cache_refetch = True
             else:
                 sfn = cached_dest
@@ -4610,6 +4772,7 @@ def get_managed(
                     saltenv,
                     source_hash=source_sum.get("hsum"),
                     verify_ssl=verify_ssl,
+                    use_etag=use_etag,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
@@ -4644,13 +4807,13 @@ def get_managed(
                     pillar=__pillar__,
                     grains=__opts__["grains"],
                     opts=__opts__,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 return (
                     sfn,
                     {},
-                    ("Specified template format {} is not supported").format(template),
+                    "Specified template format {} is not supported".format(template),
                 )
 
             if data["result"]:
@@ -4747,7 +4910,7 @@ def extract_hash(
     if source:
         if not isinstance(source, str):
             source = str(source)
-        urlparsed_source = _urlparse(source)
+        urlparsed_source = urllib.parse.urlparse(source)
         source_basename = os.path.basename(
             urlparsed_source.path or urlparsed_source.netloc
         )
@@ -4897,7 +5060,7 @@ def extract_hash(
 
     if partial:
         log.debug(
-            "file.extract_hash: Returning the partially identified %s hash " "'%s'",
+            "file.extract_hash: Returning the partially identified %s hash '%s'",
             partial["hash_type"],
             partial["hsum"],
         )
@@ -4938,6 +5101,7 @@ def check_perms(
         ``follow_symlinks`` option added
     """
     name = os.path.expanduser(name)
+    mode = salt.utils.files.normalize_mode(mode)
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": [], "result": True}
@@ -4946,123 +5110,125 @@ def check_perms(
         orig_comment = ret["comment"]
         ret["comment"] = []
 
-    # Check permissions
-    perms = {}
+    # Check current permissions
     cur = stats(name, follow_symlinks=follow_symlinks)
-    perms["luser"] = cur["user"]
-    perms["lgroup"] = cur["group"]
-    perms["lmode"] = salt.utils.files.normalize_mode(cur["mode"])
+
+    # Record initial stat for return later. Check whether we're receiving IDs
+    # or names so luser == cuser comparison makes sense.
+    perms = {}
+    perms["luser"] = cur["uid"] if isinstance(user, int) else cur["user"]
+    perms["lgroup"] = cur["gid"] if isinstance(group, int) else cur["group"]
+    perms["lmode"] = cur["mode"]
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
 
-    # user/group changes if needed, then check if it worked
+    # Check and make user/group/mode changes, then verify they were successful
     if user:
-        if isinstance(user, int):
-            user = uid_to_user(user)
         if (
-            salt.utils.platform.is_windows()
-            and user_to_uid(user) != user_to_uid(perms["luser"])
-        ) or (not salt.utils.platform.is_windows() and user != perms["luser"]):
+            salt.utils.platform.is_windows() and not user_to_uid(user) == cur["uid"]
+        ) or (
+            not salt.utils.platform.is_windows()
+            and not user == cur["user"]
+            and not user == cur["uid"]
+        ):
             perms["cuser"] = user
 
     if group:
-        if isinstance(group, int):
-            group = gid_to_group(group)
         if (
-            salt.utils.platform.is_windows()
-            and group_to_gid(group) != group_to_gid(perms["lgroup"])
-        ) or (not salt.utils.platform.is_windows() and group != perms["lgroup"]):
+            salt.utils.platform.is_windows() and not group_to_gid(group) == cur["gid"]
+        ) or (
+            not salt.utils.platform.is_windows()
+            and not group == cur["group"]
+            and not group == cur["gid"]
+        ):
             perms["cgroup"] = group
 
     if "cuser" in perms or "cgroup" in perms:
         if not __opts__["test"]:
-            if os.path.islink(name) and not follow_symlinks:
+            if is_link and not follow_symlinks:
                 chown_func = lchown
             else:
                 chown_func = chown
             if user is None:
-                user = perms["luser"]
+                user = cur["user"]
             if group is None:
-                group = perms["lgroup"]
+                group = cur["group"]
             try:
-                chown_func(name, user, group)
-                # Python os.chown() does reset the suid and sgid,
-                # that's why setting the right mode again is needed here.
-                set_mode(name, mode)
+                err = chown_func(name, user, group)
+                if err:
+                    ret["result"] = False
+                    ret["comment"].append(err)
+                else:
+                    # Python os.chown() resets the suid and sgid, hence we
+                    # setting the previous mode again. Pending mode changes
+                    # will be applied later.
+                    set_mode(name, cur["mode"])
             except OSError:
                 ret["result"] = False
 
+    # Mode changes if needed
+    if mode is not None:
+        if not __opts__["test"] is True:
+            # File is a symlink, ignore the mode setting
+            # if follow_symlinks is False
+            if not (is_link and not follow_symlinks):
+                if not mode == cur["mode"]:
+                    perms["cmode"] = mode
+                    set_mode(name, mode)
+
+    # verify user/group/mode changes
+    post = stats(name, follow_symlinks=follow_symlinks)
     if user:
-        if isinstance(user, int):
-            user = uid_to_user(user)
         if (
-            salt.utils.platform.is_windows()
-            and user_to_uid(user)
-            != user_to_uid(get_user(name, follow_symlinks=follow_symlinks))
-            and user != ""
+            salt.utils.platform.is_windows() and not user_to_uid(user) == post["uid"]
         ) or (
             not salt.utils.platform.is_windows()
-            and user != get_user(name, follow_symlinks=follow_symlinks)
-            and user != ""
+            and not user == post["user"]
+            and not user == post["uid"]
         ):
             if __opts__["test"] is True:
                 ret["changes"]["user"] = user
             else:
                 ret["result"] = False
                 ret["comment"].append("Failed to change user to {}".format(user))
-        elif "cuser" in perms and user != "":
+        elif "cuser" in perms:
             ret["changes"]["user"] = user
 
     if group:
-        if isinstance(group, int):
-            group = gid_to_group(group)
         if (
-            salt.utils.platform.is_windows()
-            and group_to_gid(group)
-            != group_to_gid(get_group(name, follow_symlinks=follow_symlinks))
-            and user != ""
+            salt.utils.platform.is_windows() and not group_to_gid(group) == post["gid"]
         ) or (
             not salt.utils.platform.is_windows()
-            and group != get_group(name, follow_symlinks=follow_symlinks)
-            and user != ""
+            and not group == post["group"]
+            and not group == post["gid"]
         ):
             if __opts__["test"] is True:
                 ret["changes"]["group"] = group
             else:
                 ret["result"] = False
                 ret["comment"].append("Failed to change group to {}".format(group))
-        elif "cgroup" in perms and user != "":
+        elif "cgroup" in perms:
             ret["changes"]["group"] = group
 
-    # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.files.normalize_mode(mode)
-            if mode != perms["lmode"]:
+        if not (is_link and not follow_symlinks):
+            if not mode == post["mode"]:
                 if __opts__["test"] is True:
                     ret["changes"]["mode"] = mode
                 else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
-                        ret["result"] = False
-                        ret["comment"].append(
-                            "Failed to change mode to {}".format(mode)
-                        )
-                    else:
-                        ret["changes"]["mode"] = mode
+                    ret["result"] = False
+                    ret["comment"].append("Failed to change mode to {}".format(mode))
+            elif "cmode" in perms:
+                ret["changes"]["mode"] = mode
 
     # Modify attributes of file if needed
     if attrs is not None and not is_dir:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
+        if not (is_link and not follow_symlinks):
             diff_attrs = _cmp_attrs(name, attrs)
             if diff_attrs and any(attr for attr in diff_attrs):
                 changes = {
@@ -5074,11 +5240,15 @@ def check_perms(
                 else:
                     if diff_attrs.added:
                         chattr(
-                            name, operator="add", attributes=diff_attrs.added,
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
                         )
                     if diff_attrs.removed:
                         chattr(
-                            name, operator="remove", attributes=diff_attrs.removed,
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
                         )
                     cmp_attrs = _cmp_attrs(name, attrs)
                     if any(attr for attr in cmp_attrs):
@@ -5103,9 +5273,11 @@ def check_perms(
                 current_serange,
             ) = get_selinux_context(name).split(":")
             log.debug(
-                "Current selinux context user:{} role:{} type:{} range:{}".format(
-                    current_seuser, current_serole, current_setype, current_serange
-                )
+                "Current selinux context user:%s role:%s type:%s range:%s",
+                current_seuser,
+                current_serole,
+                current_setype,
+                current_serange,
             )
         except ValueError:
             log.error("Unable to get current selinux attributes")
@@ -5174,7 +5346,7 @@ def check_perms(
                             range=requested_serange,
                             persist=True,
                         )
-                        log.debug("selinux set result: {}".format(result))
+                        log.debug("selinux set result: %s", result)
                         (
                             current_seuser,
                             current_serole,
@@ -5249,10 +5421,17 @@ def check_managed(
     serole=None,
     setype=None,
     serange=None,
-    **kwargs
+    follow_symlinks=False,
+    **kwargs,
 ):
     """
     Check to see what changes need to be made for a file
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -5284,7 +5463,7 @@ def check_managed(
             context,
             defaults,
             skip_verify,
-            **kwargs
+            **kwargs,
         )
         if comments:
             __clean_tmp(sfn)
@@ -5304,6 +5483,7 @@ def check_managed(
         serole=serole,
         setype=setype,
         serange=serange,
+        follow_symlinks=follow_symlinks,
     )
     # Ignore permission for files written temporary directories
     # Files in any path will still be set correctly using get_managed()
@@ -5340,7 +5520,8 @@ def check_managed_changes(
     setype=None,
     serange=None,
     verify_ssl=True,
-    **kwargs
+    follow_symlinks=False,
+    **kwargs,
 ):
     """
     Return a dictionary of what changes need to be made for a file
@@ -5354,6 +5535,12 @@ def check_managed_changes(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -5386,7 +5573,7 @@ def check_managed_changes(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
-            **kwargs
+            **kwargs,
         )
 
         # Ensure that user-provided hash string is lowercase
@@ -5397,7 +5584,10 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if _urlparse(source).scheme in ("salt", "file") or source.startswith("/"):
+            if urllib.parse.urlparse(source).scheme in (
+                "salt",
+                "file",
+            ) or source.startswith("/"):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
@@ -5417,6 +5607,7 @@ def check_managed_changes(
         serole=serole,
         setype=setype,
         serange=serange,
+        follow_symlinks=follow_symlinks,
     )
     __clean_tmp(sfn)
     return changes
@@ -5438,6 +5629,7 @@ def check_file_meta(
     setype=None,
     serange=None,
     verify_ssl=True,
+    follow_symlinks=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -5514,6 +5706,12 @@ def check_file_meta(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    follow_symlinks
+        If the desired path is a symlink, follow it and check the permissions
+        of the file to which the symlink points.
+
+        .. versionadded:: 3005
     """
     changes = {}
     if not source_sum:
@@ -5521,7 +5719,9 @@ def check_file_meta(
 
     try:
         lstats = stats(
-            name, hash_type=source_sum.get("hash_type", None), follow_symlinks=False
+            name,
+            hash_type=source_sum.get("hash_type", None),
+            follow_symlinks=follow_symlinks,
         )
     except CommandExecutionError:
         lstats = {}
@@ -5613,9 +5813,11 @@ def check_file_meta(
                     current_serange,
                 ) = get_selinux_context(name).split(":")
                 log.debug(
-                    "Current selinux context user:{} role:{} type:{} range:{}".format(
-                        current_seuser, current_serole, current_setype, current_serange
-                    )
+                    "Current selinux context user:%s role:%s type:%s range:%s",
+                    current_seuser,
+                    current_serole,
+                    current_setype,
+                    current_serange,
                 )
             except ValueError as exc:
                 log.error("Unable to get current selinux attributes")
@@ -5783,7 +5985,8 @@ def manage_file(
     setype=None,
     serange=None,
     verify_ssl=True,
-    **kwargs
+    use_etag=False,
+    **kwargs,
 ):
     """
     Checks the destination against what was retrieved with get_managed and
@@ -5903,6 +6106,15 @@ def manage_file(
 
         .. versionadded:: 3002
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -5914,6 +6126,12 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    check_web_source_hash = bool(
+        source
+        and urllib.parse.urlparse(source).scheme != "salt"
+        and not skip_verify
+        and not use_etag
+    )
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": "", "result": True}
@@ -5932,7 +6150,7 @@ def manage_file(
             source_sum = {"hash_type": htype, "hsum": get_hash(sfn, form=htype)}
 
         if keep_mode:
-            if _urlparse(source).scheme in ("salt", "file", ""):
+            if urllib.parse.urlparse(source).scheme in ("salt", "file", ""):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
@@ -5959,13 +6177,15 @@ def manage_file(
             or source_sum.get("hsum", __opts__["hash_type"]) != name_sum
         ):
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
+                sfn = __salt__["cp.cache_file"](
+                    source, saltenv, verify_ssl=verify_ssl, use_etag=use_etag
+                )
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
-            if not skip_verify and _urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -5987,9 +6207,9 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    ret["changes"]["diff"] = get_diff(
-                        real_name, sfn, show_filenames=False
-                    )
+                    file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    if file_diff:
+                        ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
                     ret["changes"]["diff"] = exc.strerror
 
@@ -6062,7 +6282,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and _urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6142,9 +6362,9 @@ def manage_file(
                 # directories created with makedirs_() below can't be
                 # listed via a shell.
                 mode_list = [x for x in str(mode)][-3:]
-                for idx in range(len(mode_list)):
-                    if mode_list[idx] != "0":
-                        mode_list[idx] = str(int(mode_list[idx]) | 1)
+                for idx, part in enumerate(mode_list):
+                    if part != "0":
+                        mode_list[idx] = str(int(part) | 1)
                 dir_mode = "".join(mode_list)
 
             if salt.utils.platform.is_windows():
@@ -6171,7 +6391,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and _urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6852,22 +7072,20 @@ def restore_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     salt.utils.files.backup_minion(path, _get_bkroot())
     try:
         shutil.copyfile(backup["Location"], path)
     except OSError as exc:
-        ret["comment"] = "Unable to restore {} to {}: " "{}".format(
+        ret["comment"] = "Unable to restore {} to {}: {}".format(
             backup["Location"], path, exc
         )
         return ret
     else:
         ret["result"] = True
-        ret["comment"] = "Successfully restored {} to " "{}".format(
+        ret["comment"] = "Successfully restored {} to {}".format(
             backup["Location"], path
         )
 
@@ -6913,9 +7131,7 @@ def delete_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     try:

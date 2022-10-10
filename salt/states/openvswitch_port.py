@@ -1,13 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Management of Open vSwitch ports.
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -40,8 +33,8 @@ def present(
 
     if tunnel_type and tunnel_type not in tunnel_types:
         raise TypeError(
-            "The optional type argument must be one of these values: {0}.".format(
-                six.text_type(tunnel_types)
+            "The optional type argument must be one of these values: {}.".format(
+                str(tunnel_types)
             )
         )
 
@@ -54,30 +47,29 @@ def present(
 
     comments = {}
 
-    comments["comment_bridge_notexists"] = "Bridge {0} does not exist.".format(bridge)
-    comments["comment_port_exists"] = "Port {0} already exists.".format(name)
-    comments["comment_port_created"] = "Port {0} created on bridge {1}.".format(
+    comments["comment_bridge_notexists"] = "Bridge {} does not exist.".format(bridge)
+    comments["comment_port_exists"] = "Port {} already exists.".format(name)
+    comments["comment_port_created"] = "Port {} created on bridge {}.".format(
         name, bridge
     )
     comments[
         "comment_port_notcreated"
-    ] = "Unable to create port {0} on bridge {1}.".format(name, bridge)
+    ] = "Unable to create port {} on bridge {}.".format(name, bridge)
     comments["changes_port_created"] = {
         name: {
-            "old": "No port named {0} present.".format(name),
+            "old": "No port named {} present.".format(name),
             "new": "Created port {1} on bridge {0}.".format(bridge, name),
         }
     }
     comments[
         "comment_port_internal"
-    ] = "Port {0} already exists, but interface type has been changed to internal.".format(
+    ] = "Port {} already exists, but interface type has been changed to internal.".format(
         name
     )
     comments["changes_port_internal"] = {"internal": {"old": False, "new": True}}
-    comments[
-        "comment_port_internal_not_changed"
-    ] = "Port {0} already exists, but the interface type could not be changed to internal.".format(
-        name
+    comments["comment_port_internal_not_changed"] = (
+        "Port {} already exists, but the interface type could not be changed to"
+        " internal.".format(name)
     )
 
     if tunnel_type:
@@ -86,27 +78,32 @@ def present(
             comments["comment_vlan_invalid_id"] = "VLANs id must be between 0 and 4095."
             comments[
                 "comment_vlan_invalid_name"
-            ] = "Could not find network interface {0}.".format(name)
+            ] = "Could not find network interface {}.".format(name)
             comments[
                 "comment_vlan_port_exists"
-            ] = "Port {0} with access to VLAN {1} already exists on bridge {2}.".format(
+            ] = "Port {} with access to VLAN {} already exists on bridge {}.".format(
                 name, id, bridge
             )
             comments[
                 "comment_vlan_created"
-            ] = "Created port {0} with access to VLAN {1} on bridge {2}.".format(
+            ] = "Created port {} with access to VLAN {} on bridge {}.".format(
                 name, id, bridge
             )
-            comments["comment_vlan_notcreated"] = (
-                "Unable to create port {0} with access to VLAN {1} on "
-                "bridge {2}.".format(name, id, bridge)
+            comments[
+                "comment_vlan_notcreated"
+            ] = "Unable to create port {} with access to VLAN {} on bridge {}.".format(
+                name, id, bridge
             )
             comments["changes_vlan_created"] = {
                 name: {
-                    "old": "No port named {0} with access to VLAN {1} present on "
-                    "bridge {2} present.".format(name, id, bridge),
-                    "new": "Created port {1} with access to VLAN {2} on "
-                    "bridge {0}.".format(bridge, name, id),
+                    "old": (
+                        "No port named {} with access to VLAN {} present on "
+                        "bridge {} present.".format(name, id, bridge)
+                    ),
+                    "new": (
+                        "Created port {1} with access to VLAN {2} on "
+                        "bridge {0}.".format(bridge, name, id)
+                    ),
                 }
             }
 
@@ -115,61 +112,67 @@ def present(
                 "comment_gre_invalid_id"
             ] = "Id of GRE tunnel must be an unsigned 32-bit integer."
             comments["comment_gre_interface_exists"] = (
-                "GRE tunnel interface {0} with rempte ip {1} and key {2} "
-                "already exists on bridge {3}.".format(name, remote, id, bridge)
+                "GRE tunnel interface {} with rempte ip {} and key {} "
+                "already exists on bridge {}.".format(name, remote, id, bridge)
             )
             comments["comment_gre_created"] = (
-                "Created GRE tunnel interface {0} with remote ip {1}  and key {2} "
-                "on bridge {3}.".format(name, remote, id, bridge)
+                "Created GRE tunnel interface {} with remote ip {}  and key {} "
+                "on bridge {}.".format(name, remote, id, bridge)
             )
             comments["comment_gre_notcreated"] = (
-                "Unable to create GRE tunnel interface {0} with remote ip {1} and key {2} "
-                "on bridge {3}.".format(name, remote, id, bridge)
+                "Unable to create GRE tunnel interface {} with remote ip {} and key {} "
+                "on bridge {}.".format(name, remote, id, bridge)
             )
             comments["changes_gre_created"] = {
                 name: {
-                    "old": "No GRE tunnel interface {0} with remote ip {1} and key {2} "
-                    "on bridge {3} present.".format(name, remote, id, bridge),
-                    "new": "Created GRE tunnel interface {0} with remote ip {1} and key {2} "
-                    "on bridge {3}.".format(name, remote, id, bridge),
+                    "old": (
+                        "No GRE tunnel interface {} with remote ip {} and key {} "
+                        "on bridge {} present.".format(name, remote, id, bridge)
+                    ),
+                    "new": (
+                        "Created GRE tunnel interface {} with remote ip {} and key {} "
+                        "on bridge {}.".format(name, remote, id, bridge)
+                    ),
                 }
             }
         elif tunnel_type == "vxlan":
             comments["comment_dstport"] = (
-                " (dst_port" + six.text_type(dst_port) + ")"
-                if 0 < dst_port <= 65535
-                else ""
+                " (dst_port" + str(dst_port) + ")" if 0 < dst_port <= 65535 else ""
             )
             comments[
                 "comment_vxlan_invalid_id"
             ] = "Id of VXLAN tunnel must be an unsigned 64-bit integer."
             comments["comment_vxlan_interface_exists"] = (
-                "VXLAN tunnel interface {0} with rempte ip {1} and key {2} "
-                "already exists on bridge {3}{4}.".format(
+                "VXLAN tunnel interface {} with rempte ip {} and key {} "
+                "already exists on bridge {}{}.".format(
                     name, remote, id, bridge, comments["comment_dstport"]
                 )
             )
             comments["comment_vxlan_created"] = (
-                "Created VXLAN tunnel interface {0} with remote ip {1}  and key {2} "
-                "on bridge {3}{4}.".format(
+                "Created VXLAN tunnel interface {} with remote ip {}  and key {} "
+                "on bridge {}{}.".format(
                     name, remote, id, bridge, comments["comment_dstport"]
                 )
             )
             comments["comment_vxlan_notcreated"] = (
-                "Unable to create VXLAN tunnel interface {0} with remote ip {1} and key {2} "
-                "on bridge {3}{4}.".format(
+                "Unable to create VXLAN tunnel interface {} with remote ip {} and key"
+                " {} on bridge {}{}.".format(
                     name, remote, id, bridge, comments["comment_dstport"]
                 )
             )
             comments["changes_vxlan_created"] = {
                 name: {
-                    "old": "No VXLAN tunnel interface {0} with remote ip {1} and key {2} "
-                    "on bridge {3}{4} present.".format(
-                        name, remote, id, bridge, comments["comment_dstport"]
+                    "old": (
+                        "No VXLAN tunnel interface {} with remote ip {} and key {} "
+                        "on bridge {}{} present.".format(
+                            name, remote, id, bridge, comments["comment_dstport"]
+                        )
                     ),
-                    "new": "Created VXLAN tunnel interface {0} with remote ip {1} and key {2} "
-                    "on bridge {3}{4}.".format(
-                        name, remote, id, bridge, comments["comment_dstport"]
+                    "new": (
+                        "Created VXLAN tunnel interface {} with remote ip {} and key {}"
+                        " on bridge {}{}.".format(
+                            name, remote, id, bridge, comments["comment_dstport"]
+                        )
                     ),
                 }
             }
@@ -196,7 +199,7 @@ def present(
     def _check_gre():
         interface_options = __salt__["openvswitch.interface_get_options"](name)
         interface_type = __salt__["openvswitch.interface_get_type"](name)
-        if not 0 <= id <= 2 ** 32:
+        if not 0 <= id <= 2**32:
             ret["result"] = False
             ret["comment"] = comments["comment_gre_invalid_id"]
         elif not __salt__["dig.check_ip"](remote):
@@ -204,11 +207,7 @@ def present(
             ret["comment"] = comments["comment_invalid_ip"]
         elif interface_options and interface_type and name in port_list:
             interface_attroptions = (
-                '{key="'
-                + six.text_type(id)
-                + '", remote_ip="'
-                + six.text_type(remote)
-                + '"}'
+                '{key="' + str(id) + '", remote_ip="' + str(remote) + '"}'
             )
             try:
                 if (
@@ -224,7 +223,7 @@ def present(
     def _check_vxlan():
         interface_options = __salt__["openvswitch.interface_get_options"](name)
         interface_type = __salt__["openvswitch.interface_get_type"](name)
-        if not 0 <= id <= 2 ** 64:
+        if not 0 <= id <= 2**64:
             ret["result"] = False
             ret["comment"] = comments["comment_vxlan_invalid_id"]
         elif not __salt__["dig.check_ip"](remote):
@@ -232,15 +231,13 @@ def present(
             ret["comment"] = comments["comment_invalid_ip"]
         elif interface_options and interface_type and name in port_list:
             opt_port = (
-                'dst_port="' + six.text_type(dst_port) + '", '
-                if 0 < dst_port <= 65535
-                else ""
+                'dst_port="' + str(dst_port) + '", ' if 0 < dst_port <= 65535 else ""
             )
             interface_attroptions = (
                 '{{{0}key="'.format(opt_port)
-                + six.text_type(id)
+                + str(id)
                 + '", remote_ip="'
-                + six.text_type(remote)
+                + str(remote)
                 + '"}'
             )
             try:
@@ -391,16 +388,16 @@ def absent(name, bridge=None):
 
     # Comment and change messages
     comments = {}
-    comments["comment_bridge_notexists"] = "Bridge {0} does not exist.".format(bridge)
-    comments[
-        "comment_port_notexists"
-    ] = "Port {0} does not exist on bridge {1}.".format(name, bridge)
-    comments["comment_port_deleted"] = "Port {0} deleted.".format(name)
-    comments["comment_port_notdeleted"] = "Unable to delete port {0}.".format(name)
+    comments["comment_bridge_notexists"] = "Bridge {} does not exist.".format(bridge)
+    comments["comment_port_notexists"] = "Port {} does not exist on bridge {}.".format(
+        name, bridge
+    )
+    comments["comment_port_deleted"] = "Port {} deleted.".format(name)
+    comments["comment_port_notdeleted"] = "Unable to delete port {}.".format(name)
     comments["changes_port_deleted"] = {
         name: {
-            "old": "Port named {0} may exist.".format(name),
-            "new": "Deleted port {0}.".format(name),
+            "old": "Port named {} may exist.".format(name),
+            "new": "Deleted port {}.".format(name),
         }
     }
 

@@ -8,4 +8,4 @@ pymongo
 python-redis / redis
 
 A semi-canonical list of the optional salt modules can be found at
-https://github.com/saltstack/salt/blob/develop/doc/conf.py#L30
+https://github.com/saltstack/salt/blob/master/doc/conf.py under MOCK_MODULES

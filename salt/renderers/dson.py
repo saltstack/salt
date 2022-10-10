@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DSON Renderer for Salt
 
@@ -12,13 +11,8 @@ This renderer requires `Dogeon`__ (installable via pip)
 .. __: https://github.com/soasme/dogeon
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
-
-# Import salt libs
-from salt.ext import six
 
 try:
     import dson
@@ -42,7 +36,7 @@ def render(dson_input, saltenv="base", sls="", **kwargs):
 
     :rtype: A Python data structure
     """
-    if not isinstance(dson_input, six.string_types):
+    if not isinstance(dson_input, str):
         dson_input = dson_input.read()
 
     log.debug("DSON input = %s", dson_input)

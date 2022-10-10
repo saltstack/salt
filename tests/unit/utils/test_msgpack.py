@@ -1,9 +1,6 @@
 """
 Test the MessagePack utility
 """
-
-# Import Python Libs
-
 import inspect
 import os
 import pprint
@@ -12,12 +9,7 @@ import sys
 from io import BytesIO
 
 import salt.utils.msgpack
-from salt.ext.six.moves import range
-
-# Import Salt Libs
 from salt.utils.odict import OrderedDict
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -73,7 +65,10 @@ class TestMsgpack(TestCase):
         False,
         (),
         ((),),
-        ((), None,),
+        (
+            (),
+            None,
+        ),
         {None: 0},
         (1 << 23),
     ]
@@ -163,6 +158,21 @@ class TestMsgpack(TestCase):
             unpacker = salt.utils.msgpack.Unpacker(bio)
         for size in sizes:
             self.assertEqual(unpacker.unpack(), {i: i * 2 for i in range(size)})
+
+    def test_max_buffer_size(self):
+        """
+        Test if max buffer size allows at least 100MiB
+        """
+        bio = BytesIO()
+        bio.write(salt.utils.msgpack.packb("0" * (100 * 1024 * 1024)))
+        bio.seek(0)
+        unpacker = salt.utils.msgpack.Unpacker(bio)
+        raised = False
+        try:
+            unpacker.unpack()
+        except ValueError:
+            raised = True
+        self.assertFalse(raised)
 
     def test_exceptions(self):
         # Verify that this exception exists
@@ -369,7 +379,8 @@ class TestMsgpack(TestCase):
             b"\xca" + struct.pack(">f", 1.0), pack_func(1.0, use_single_float=True)
         )
         self.assertEqual(
-            b"\xcb" + struct.pack(">d", 1.0), pack_func(1.0, use_single_float=False),
+            b"\xcb" + struct.pack(">d", 1.0),
+            pack_func(1.0, use_single_float=False),
         )
 
     def _test_odict(self, pack_func, unpack_func):
@@ -473,9 +484,8 @@ class TestMsgpack(TestCase):
                         if run:
                             if str(vanilla_run) == str(run):
                                 self.skipTest(
-                                    "Failed the same way as the vanilla msgpack module:\n{}".format(
-                                        run
-                                    )
+                                    "Failed the same way as the vanilla msgpack"
+                                    " module:\n{}".format(run)
                                 )
                 else:
                     # If subTest isn't available then run the tests collect the errors of all the tests before failing
@@ -484,9 +494,8 @@ class TestMsgpack(TestCase):
                         # If the vanilla msgpack module errored, then skip if we got the same error
                         if str(vanilla_run) == str(run):
                             self.skipTest(
-                                "Test failed the same way the vanilla msgpack module fails:\n{}".format(
-                                    run
-                                )
+                                "Test failed the same way the vanilla msgpack module"
+                                " fails:\n{}".format(run)
                             )
                         else:
                             errors[(test_func.__name__, func_name.__name__)] = run

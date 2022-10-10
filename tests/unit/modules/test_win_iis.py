@@ -4,16 +4,9 @@
     :maturity: develop
     versionadded:: 2016.11.0
 """
-
-# Import Python Libs
-
 import salt.modules.win_iis as win_iis
 import salt.utils.json
-
-# Import Salt Libs
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -62,6 +55,10 @@ SITE_LIST = {
 }
 
 VDIR_LIST = {"TestVdir": {"sourcepath": r"C:\inetpub\vdirs\TestVdir"}}
+NESTED_VDIR_LIST = {
+    "Test/Nested/Vdir": {"sourcepath": r"C:\inetpub\vdirs\NestedTestVdir"}
+}
+
 
 LIST_APPS_SRVMGR = {
     "retcode": 0,
@@ -96,6 +93,19 @@ LIST_VDIRS_SRVMGR = {
     "retcode": 0,
     "stdout": salt.utils.json.dumps(
         [{"name": "TestVdir", "physicalPath": r"C:\inetpub\vdirs\TestVdir"}]
+    ),
+}
+
+LIST_MORE_VDIRS_SRVMGR = {
+    "retcode": 0,
+    "stdout": salt.utils.json.dumps(
+        [
+            {"name": "TestVdir", "physicalPath": r"C:\inetpub\vdirs\TestVdir"},
+            {
+                "name": "Test/Nested/Vdir",
+                "physicalPath": r"C:\inetpub\vdirs\NestedTestVdir",
+            },
+        ]
     ),
 }
 
@@ -355,6 +365,38 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.modules.win_iis.list_vdirs", MagicMock(return_value=VDIR_LIST)):
             self.assertTrue(win_iis.remove_vdir(**kwargs))
 
+    def test_create_nested_vdir(self):
+        """
+        Test - Create a nested IIS virtual directory.
+        """
+        kwargs = {
+            "name": "Test/Nested/Vdir",
+            "site": "MyTestSite",
+            "sourcepath": r"C:\inetpub\vdirs\NestedTestVdir",
+        }
+        with patch.dict(win_iis.__salt__), patch(
+            "os.path.isdir", MagicMock(return_value=True)
+        ), patch(
+            "salt.modules.win_iis._srvmgr", MagicMock(return_value={"retcode": 0})
+        ), patch(
+            "salt.modules.win_iis.list_vdirs", MagicMock(return_value=NESTED_VDIR_LIST)
+        ):
+            self.assertTrue(win_iis.create_vdir(**kwargs))
+
+    def test_list_nested_vdirs(self):
+        """
+        Test - Get configured IIS virtual directories.
+        """
+        vdirs = {
+            "TestVdir": {"sourcepath": r"C:\inetpub\vdirs\TestVdir"},
+            "Test/Nested/Vdir": {"sourcepath": r"C:\inetpub\vdirs\NestedTestVdir"},
+        }
+        with patch.dict(win_iis.__salt__), patch(
+            "salt.modules.win_iis._srvmgr",
+            MagicMock(return_value=LIST_MORE_VDIRS_SRVMGR),
+        ):
+            self.assertEqual(win_iis.list_vdirs("MyTestSite"), vdirs)
+
     def test_create_cert_binding(self):
         """
         Test - Assign a certificate to an IIS binding.
@@ -504,7 +546,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         collection_setting = {"name": "Collection[{yaml:\n\tdata}]", "filter": "value"}
         filter_setting = {
             "name": "enabled",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
         }
         settings = [collection_setting, filter_setting]
 
@@ -524,7 +568,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                     "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
                     "$Property = $Property | Select-Object",
                     "-ExpandProperty Value };",
-                    "$Settings.add(@{{filter='{filter}';name='{name}';value=[String] $Property}})| Out-Null;".format(
+                    "$Settings.add(@{{filter='{filter}';name='{name}';value=[String]"
+                    " $Property}})| Out-Null;".format(
                         filter=setting["filter"], name=setting["name"]
                     ),
                     "$Property = $Null;",
@@ -557,7 +602,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         name = "IIS"
         setting = {
             "name": "Collection[{yaml:\n\tdata}]",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
             "value": [],
         }
         settings = [setting]
@@ -586,7 +633,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         name = "IIS"
         setting = {
             "name": "Collection[{yaml:\n\tdata}]",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
             "value": [],
         }
         settings = [setting]
@@ -614,7 +663,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         name = "IIS"
         setting = {
             "name": "Collection[{yaml:\n\tdata}]",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
             "value": [],
         }
         settings = [setting]
@@ -644,7 +695,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
             }
         ]
 
@@ -665,12 +718,15 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ps_cmd = [
             "$Settings = New-Object System.Collections.ArrayList;",
             "$Property = Get-WebConfigurationProperty -PSPath 'salt'",
-            "-Name 'enabled' -Filter 'system.webServer/security/authentication/anonymousAuthentication' -ErrorAction Stop;",
+            "-Name 'enabled' -Filter"
+            " 'system.webServer/security/authentication/anonymousAuthentication'"
+            " -ErrorAction Stop;",
             "if (([String]::IsNullOrEmpty($Property) -eq $False) -and",
             "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
             "$Property = $Property | Select-Object",
             "-ExpandProperty Value };",
-            "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';value=[String] $Property})| Out-Null;",
+            "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';value=[String]"
+            " $Property})| Out-Null;",
             "$Property = $Null;",
             "$Settings",
         ]
@@ -702,7 +758,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": False,
             }
         ]
@@ -710,7 +768,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         current_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": True,
             }
         ]
@@ -718,7 +778,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         new_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": False,
             }
         ]
@@ -763,7 +825,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": False,
             }
         ]
@@ -771,7 +835,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         current_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": True,
             }
         ]
@@ -779,7 +845,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         new_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": True,
             }
         ]

@@ -8,11 +8,9 @@ available.
 
 """
 
-# Import python libs
 import logging
 import shlex
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
@@ -46,8 +44,9 @@ def _check_valid_version():
     # pylint: enable=no-member
     if bower_version < valid_version:
         raise CommandExecutionError(
-            "'bower' is not recent enough({} < {}). "
-            "Please Upgrade.".format(bower_version, valid_version)
+            "'bower' is not recent enough({} < {}). Please Upgrade.".format(
+                bower_version, valid_version
+            )
         )
 
 
@@ -144,7 +143,6 @@ def uninstall(pkg, dir, runas=None, env=None):
         Environment variables to set when invoking Bower. Uses the same ``env``
         format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
         function.
-
 
     CLI Example:
 

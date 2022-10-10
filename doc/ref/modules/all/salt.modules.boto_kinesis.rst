@@ -1,5 +1,5 @@
-salt.modules.boto_kinesis module
-================================
+salt.modules.boto_kinesis
+=========================
 
 .. automodule:: salt.modules.boto_kinesis
     :members:

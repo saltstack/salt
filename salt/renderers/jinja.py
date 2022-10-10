@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Jinja loading utils to enable a more powerful backend for jinja templates
 
-For Jinja usage information see :ref:`Understanding Jinja <understanding-jinja>`.
+.. include:: ../../../_incl/jinja_security.rst
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+from io import StringIO
 
 import salt.utils.templates
-
-# Import salt libs
 from salt.exceptions import SaltRenderError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import StringIO  # pylint: disable=import-error
+from salt.loader.context import NamedLoaderContext
 
 log = logging.getLogger(__name__)
 
@@ -32,10 +25,13 @@ def _split_module_dicts():
 
         {{ salt.cmd.run('uptime') }}
     """
-    if not isinstance(__salt__, dict):
-        return __salt__
-    mod_dict = dict(__salt__)
-    for module_func_name, mod_fun in six.iteritems(mod_dict.copy()):
+    funcs = __salt__
+    if isinstance(__salt__, NamedLoaderContext) and isinstance(__salt__.value(), dict):
+        funcs = __salt__.value()
+    if not isinstance(funcs, dict):
+        return funcs
+    mod_dict = dict(funcs)
+    for module_func_name, mod_fun in mod_dict.copy().items():
         mod, fun = module_func_name.split(".", 1)
         if mod not in mod_dict:
             # create an empty object that we can add attributes to

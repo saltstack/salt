@@ -23,9 +23,7 @@ Docker Python SDK
 
 More information: https://docker-py.readthedocs.io/en/stable/
 """
-# Import python libraries
 
-# Import Salt libs
 import salt.utils.json
 
 
@@ -112,12 +110,20 @@ def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
             )
         )
         salt_return.update({"Comment": output, "Tokens": swarm_tokens()})
+    except docker.errors.APIError as err:
+        salt_return = {}
+        if "This node is already part of a swarm." in err.explanation:
+            salt_return.update({"Comment": err.explanation, "result": False})
+        else:
+            salt_return.update({"Error": str(err.explanation), "result": False})
     except TypeError:
         salt_return = {}
         salt_return.update(
             {
-                "Error": "Please make sure you are passing advertise_addr, "
-                "listen_addr and force_new_cluster correctly."
+                "Error": (
+                    "Please make sure you are passing advertise_addr, "
+                    "listen_addr and force_new_cluster correctly."
+                )
             }
         )
     return salt_return
@@ -156,8 +162,10 @@ def joinswarm(remote_addr=int, listen_addr=int, token=str):
         salt_return = {}
         salt_return.update(
             {
-                "Error": "Please make sure this minion is not part of a swarm and you are "
-                "passing remote_addr, listen_addr and token correctly."
+                "Error": (
+                    "Please make sure this minion is not part of a swarm and you are "
+                    "passing remote_addr, listen_addr and token correctly."
+                )
             }
         )
     return salt_return
@@ -256,8 +264,10 @@ def service_create(
         salt_return = {}
         salt_return.update(
             {
-                "Error": "Please make sure you are passing arguments correctly "
-                "[image, name, command, hostname, replicas, target_port and published_port]"
+                "Error": (
+                    "Please make sure you are passing arguments correctly [image, name,"
+                    " command, hostname, replicas, target_port and published_port]"
+                )
             }
         )
     return salt_return
@@ -462,7 +472,10 @@ def update_node(availability=str, node_name=str, role=str, node_id=str, version=
         salt_return = {}
         salt_return.update(
             {
-                "Error": "Make sure all args are passed [availability, node_name, role, node_id, version]"
+                "Error": (
+                    "Make sure all args are passed [availability, node_name, role,"
+                    " node_id, version]"
+                )
             }
         )
     return salt_return

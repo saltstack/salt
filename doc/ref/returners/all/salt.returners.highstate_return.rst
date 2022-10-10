@@ -1,5 +1,5 @@
-salt.returners.highstate_return module
-======================================
+salt.returners.highstate_return
+===============================
 
 .. automodule:: salt.returners.highstate_return
     :members:

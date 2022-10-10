@@ -1,1 +1,0 @@
-Fix kubeadm token_list when the list of tokens is empty

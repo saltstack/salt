@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 IRC Bot engine
 
@@ -13,7 +12,7 @@ Example Configuration
           nick: <nick>
           username: <username>
           password: <password>
-          host: chat.freenode.net
+          host: irc.oftc.net
           port: 7000
           channels:
             - salt-test
@@ -54,9 +53,7 @@ Example of usage
     [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': ['irc', 'is', 'useful']}
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libraries
 import base64
 import logging
 import re
@@ -66,12 +63,7 @@ from collections import namedtuple
 
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.iostream
-
-# Import salt libraries
 import salt.utils.event
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +73,7 @@ Event = namedtuple("Event", "source code line")
 PrivEvent = namedtuple("PrivEvent", "source nick user host code channel command line")
 
 
-class IRCClient(object):
+class IRCClient:
     def __init__(
         self,
         nick,
@@ -162,7 +154,7 @@ class IRCClient(object):
             search.group("host"),
         )
         search = re.match(
-            "^(?P<channel>[^ ]+) :(?:{0}(?P<command>[^ ]+)(?: (?P<line>.*))?)?$".format(
+            "^(?P<channel>[^ ]+) :(?:{}(?P<command>[^ ]+)(?: (?P<line>.*))?)?$".format(
                 self.char
             ),
             event.line,
@@ -181,16 +173,16 @@ class IRCClient(object):
                 event.source, nick, user, host, event.code, channel, command, line
             )
             if (self._allow_nick(nick) or self._allow_host(host)) and hasattr(
-                self, "_command_{0}".format(command)
+                self, "_command_{}".format(command)
             ):
-                getattr(self, "_command_{0}".format(command))(privevent)
+                getattr(self, "_command_{}".format(command))(privevent)
 
     def _command_echo(self, event):
-        message = "PRIVMSG {0} :{1}".format(event.channel, event.line)
+        message = "PRIVMSG {} :{}".format(event.channel, event.line)
         self.send_message(message)
 
     def _command_ping(self, event):
-        message = "PRIVMSG {0} :{1}: pong".format(event.channel, event.nick)
+        message = "PRIVMSG {} :{}: pong".format(event.channel, event.nick)
         self.send_message(message)
 
     def _command_event(self, event):
@@ -218,7 +210,7 @@ class IRCClient(object):
             payload = {"data": []}
 
         fire("salt/engines/ircbot/" + tag, payload)
-        message = "PRIVMSG {0} :{1}: TaDa!".format(event.channel, event.nick)
+        message = "PRIVMSG {} :{}: TaDa!".format(event.channel, event.nick)
         self.send_message(message)
 
     def _message(self, raw):
@@ -227,7 +219,7 @@ class IRCClient(object):
 
         if event.code == "PING":
             salt.ext.tornado.ioloop.IOLoop.current().spawn_callback(
-                self.send_message, "PONG {0}".format(event.line)
+                self.send_message, "PONG {}".format(event.line)
             )
         elif event.code == "PRIVMSG":
             salt.ext.tornado.ioloop.IOLoop.current().spawn_callback(
@@ -238,13 +230,13 @@ class IRCClient(object):
     def join_channel(self, channel):
         if not channel.startswith("#"):
             channel = "#" + channel
-        self.send_message("JOIN {0}".format(channel))
+        self.send_message("JOIN {}".format(channel))
 
     def on_connect(self):
         logging.info("on_connect")
         if self.sasl is True:
             self.send_message("CAP REQ :sasl")
-        self.send_message("NICK {0}".format(self.nick))
+        self.send_message("NICK {}".format(self.nick))
         self.send_message("USER saltstack 0 * :saltstack")
         if self.password:
             if self.sasl is True:
@@ -252,11 +244,11 @@ class IRCClient(object):
                     "{0}\x00{0}\x00{1}".format(self.username, self.password).encode()
                 )
                 self.send_message("AUTHENTICATE PLAIN")
-                self.send_message("AUTHENTICATE {0}".format(authstring))
+                self.send_message("AUTHENTICATE {}".format(authstring))
                 self.send_message("CAP END")
             else:
                 self.send_message(
-                    "PRIVMSG NickServ :IDENTIFY {0} {1}".format(
+                    "PRIVMSG NickServ :IDENTIFY {} {}".format(
                         self.username, self.password
                     )
                 )
@@ -268,7 +260,7 @@ class IRCClient(object):
         logging.info("on_closed")
 
     def send_message(self, line):
-        if isinstance(line, six.string_types):
+        if isinstance(line, str):
             line = line.encode("utf-8")
         log.debug("Sending:  %s", line)
         self._stream.write(line + b"\r\n")
@@ -295,7 +287,7 @@ def start(
         Nickname of the connected Bot.
 
     host
-        irc server (example - chat.freenode.net).
+        irc server (example - irc.oftc.net).
 
     port
         irc port.  Default: 6667

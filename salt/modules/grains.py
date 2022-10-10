@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return/control aspects of the grains data
 
@@ -10,14 +9,12 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import logging
 import math
 import operator
 import os
-import random
 from collections.abc import Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
@@ -54,7 +51,7 @@ def _serial_sanitizer(instr):
     """Replaces the last 1/4 of a string with X's"""
     length = len(instr)
     index = int(math.floor(length * 0.75))
-    return "{0}{1}".format(instr[:index], "X" * (length - index))
+    return "{}{}".format(instr[:index], "X" * (length - index))
 
 
 _FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
@@ -164,7 +161,7 @@ def items(sanitize=False):
                 out[key] = func(out[key])
         return out
     else:
-        return __grains__
+        return dict(__grains__)
 
 
 def item(*args, **kwargs):
@@ -258,7 +255,7 @@ def setvals(grains, destructive=False, refresh_pillar=True):
             try:
                 grains = salt.utils.yaml.safe_load(fp_)
             except salt.utils.yaml.YAMLError as exc:
-                return "Unable to read existing grains file: {0}".format(exc)
+                return "Unable to read existing grains file: {}".format(exc)
         if not isinstance(grains, dict):
             grains = {}
     for key, val in new_grains.items():
@@ -273,13 +270,13 @@ def setvals(grains, destructive=False, refresh_pillar=True):
     try:
         with salt.utils.files.fopen(gfn, "w+", encoding="utf-8") as fp_:
             salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
-    except (IOError, OSError):
+    except OSError:
         log.error("Unable to write to grains file at %s. Check permissions.", gfn)
     fn_ = os.path.join(__opts__["cachedir"], "module_refresh")
     try:
         with salt.utils.files.flopen(fn_, "w+"):
             pass
-    except (IOError, OSError):
+    except OSError:
         log.error("Unable to write to cache file %s. Check permissions.", fn_)
     if not __opts__.get("local", False):
         # Refresh the grains
@@ -354,9 +351,9 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         if not isinstance(grains, list):
             grains = [] if grains is None else [grains]
     if not isinstance(grains, list):
-        return "The key {0} is not a valid list".format(key)
+        return "The key {} is not a valid list".format(key)
     if val in grains:
-        return "The val {0} was already in the list {1}".format(val, key)
+        return "The val {} was already in the list {}".format(val, key)
     if isinstance(val, list):
         for item in val:
             grains.append(item)
@@ -401,9 +398,9 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     """
     grains = get(key, [], delimiter)
     if not isinstance(grains, list):
-        return "The key {0} is not a valid list".format(key)
+        return "The key {} is not a valid list".format(key)
     if val not in grains:
-        return "The val {0} was not in the list {1}".format(val, key)
+        return "The val {} was not in the list {}".format(val, key)
     grains.remove(val)
 
     while delimiter in key:
@@ -608,56 +605,6 @@ def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
     return nested_dict
 
 
-def get_or_set_hash(
-    name, length=8, chars="abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)"
-):
-    """
-    Perform a one-time generation of a hash and write it to the local grains.
-    If that grain has already been set return the value instead.
-
-    This is useful for generating passwords or keys that are specific to a
-    single minion that don't need to be stored somewhere centrally.
-
-    State Example:
-
-    .. code-block:: yaml
-
-        some_mysql_user:
-          mysql_user:
-            - present
-            - host: localhost
-            - password: {{ salt['grains.get_or_set_hash']('mysql:some_mysql_user') }}
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' grains.get_or_set_hash 'django:SECRET_KEY' 50
-
-    .. warning::
-
-        This function could return strings which may contain characters which are reserved
-        as directives by the YAML parser, such as strings beginning with ``%``. To avoid
-        issues when using the output of this function in an SLS file containing YAML+Jinja,
-        surround the call with single quotes.
-    """
-    ret = get(name, None)
-
-    if ret is None:
-        val = "".join([random.SystemRandom().choice(chars) for _ in range(length)])
-
-        if DEFAULT_TARGET_DELIM in name:
-            root, rest = name.split(DEFAULT_TARGET_DELIM, 1)
-            curr = get(root, _infinitedict())
-            val = _dict_from_path(rest, val)
-            curr.update(val)
-            setval(root, curr)
-        else:
-            setval(name, val)
-
-    return get(name)
-
-
 def set(key, val="", force=False, destructive=False, delimiter=DEFAULT_TARGET_DELIM):
     """
     Set a key to an arbitrary value. It is used like setval but works
@@ -717,14 +664,14 @@ def set(key, val="", force=False, destructive=False, delimiter=DEFAULT_TARGET_DE
     if _existing_value is not None and not force:
         if _existing_value_type == "complex":
             ret["comment"] = (
-                "The key '{0}' exists but is a dict or a list. "
+                "The key '{}' exists but is a dict or a list. "
                 "Use 'force=True' to overwrite.".format(key)
             )
             ret["result"] = False
             return ret
         elif _new_value_type == "complex" and _existing_value_type is not None:
             ret["comment"] = (
-                "The key '{0}' exists and the given value is a dict or a "
+                "The key '{}' exists and the given value is a dict or a "
                 "list. Use 'force=True' to overwrite.".format(key)
             )
             ret["result"] = False
@@ -759,8 +706,8 @@ def set(key, val="", force=False, destructive=False, delimiter=DEFAULT_TARGET_DE
             _existing_value = {rest: _value}
         else:
             ret["comment"] = (
-                "The key '{0}' value is '{1}', which is different from "
-                "the provided key '{2}'. Use 'force=True' to overwrite.".format(
+                "The key '{}' value is '{}', which is different from "
+                "the provided key '{}'. Use 'force=True' to overwrite.".format(
                     key, _existing_value, rest
                 )
             )
