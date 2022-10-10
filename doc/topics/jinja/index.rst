@@ -1894,7 +1894,7 @@ Returns:
 ``ipwrap``
 ----------
 
-.. versionadded:: 3005.0
+.. versionadded:: 3006.0
 
 From a string, list, or tuple, returns any IPv6 addresses wrapped in square brackets([])
 
