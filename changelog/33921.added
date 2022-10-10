@@ -1,0 +1,2 @@
+Added setfacl X permission feature to acl.present state function
+"The character X stands for the execute permission if the file is a directory or already has execute permission for some user."

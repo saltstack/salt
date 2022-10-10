@@ -30,7 +30,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         name = "/root"
         acl_type = "users"
         acl_name = "damian"
-        perms = "rwx"
+        perms = "rwX"
 
         mock = MagicMock(
             side_effect=[
