@@ -55,12 +55,13 @@ try:
     import boto.dynamodb2
 
     # pylint: enable=unused-import
-    from boto.dynamodb2.fields import HashKey, RangeKey
     from boto.dynamodb2.fields import (
         AllIndex,
         GlobalAllIndex,
         GlobalIncludeIndex,
         GlobalKeysOnlyIndex,
+        HashKey,
+        RangeKey,
     )
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError

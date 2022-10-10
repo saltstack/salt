@@ -184,7 +184,11 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         checks = __salt__["ansible.playbooks"](
             name, rundir=rundir, check=True, diff=True, **ansible_kwargs
         )
-        if all(
+        if "stats" not in checks:
+            ret["comment"] = checks.get("stderr", checks)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
             not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
@@ -207,7 +211,11 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         results = __salt__["ansible.playbooks"](
             name, rundir=rundir, diff=True, **ansible_kwargs
         )
-        if all(
+        if "stats" not in results:
+            ret["comment"] = results.get("stderr", results)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
             not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in results["stats"].values()
         ):

@@ -20,7 +20,9 @@ attrs==20.3.0
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
+    #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 boto3==1.17.67 ; python_version >= "3.6"
@@ -40,7 +42,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -129,6 +131,7 @@ importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
     #   -r requirements/windows.txt
     #   backports.entry-points-selectable
     #   jsonschema
+    #   mako
     #   moto
     #   pluggy
     #   pytest
@@ -156,6 +159,7 @@ jinja2==3.1.0
     #   moto
 jmespath==0.9.4
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
@@ -167,9 +171,9 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0
     # via -r requirements/windows.txt
-lxml==4.7.1
+lxml==4.9.1
     # via -r requirements/windows.txt
-mako==1.1.4
+mako==1.2.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -217,6 +221,8 @@ psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
@@ -226,7 +232,7 @@ pyasn1==0.4.8
     #   -r requirements/windows.txt
     #   pyasn1-modules
     #   rsa
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
@@ -237,7 +243,7 @@ pycurl==7.43.0.5 ; python_version <= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
     # via -r requirements/windows.txt
@@ -251,31 +257,44 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+    #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==0.912.1
+pytest-salt-factories==1.0.0rc20 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.2.0
+pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
+pytest-skip-markers==1.2.0
+    # via
+    #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
+pytest-system-statistics==1.0.2
+    # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==6.1.2 ; python_version <= "3.9"
+pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-subtests
+    #   pytest-system-statistics
     #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.1
@@ -290,7 +309,7 @@ python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt
-pytz==2021.1
+pytz==2022.1
     # via
     #   moto
     #   tempora
@@ -341,7 +360,7 @@ sed==0.3.1
     # via -r requirements/static/ci/windows.in
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/windows.txt
 six==1.16.0
     # via
@@ -375,18 +394,21 @@ tempora==4.1.1
 timelib==0.2.5
     # via -r requirements/windows.txt
 toml==0.10.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   pytest
+    # via -r requirements/static/ci/common.in
+tomli==2.0.1
+    # via pytest
 typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
     #   gitpython
     #   importlib-metadata
+    #   pytest-shell-utilities
+    #   pytest-system-statistics
     #   yarl
 urllib3==1.26.6
     # via
+    #   -r requirements/windows.txt
     #   botocore
     #   kubernetes
     #   python-etcd
