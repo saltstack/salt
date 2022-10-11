@@ -457,7 +457,7 @@ def upgraded(
 
 
 def source_present(
-    name, source_location, priority=None, username=None, password=None, force=False
+    name, source_location, username=None, password=None, force=False, priority=None
 ):
     """
     Instructs Chocolatey to add a source if not already present.
@@ -467,12 +467,6 @@ def source_present(
 
     source
         Location of the source you want to work with.
-
-    priority
-        The priority order of this source as compared to other sources,
-        lower is better. Defaults to 0 (no priority). All priorities
-        above 0 will be evaluated first, then zero-based values will be
-        evaluated in config file order.
 
     username
         Provide username for chocolatey sources that need authentication
@@ -486,6 +480,12 @@ def source_present(
         Salt will not modify a existing repository with the same name. Set this
         option to true to update an existing repository.
 
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
+
     CLI Example:
 
     .. code-block:: yaml
@@ -494,9 +494,9 @@ def source_present(
           chocolatey.source_present:
             - name: reponame
             - source: https://repo.exemple.com
-            - priority: 100
             - username: myuser
             - password: mypassword
+            - priority: 100
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
@@ -527,9 +527,9 @@ def source_present(
     result = __salt__["chocolatey.add_source"](
         name=name,
         source_location=source_location,
-        priority=priority,
         username=username,
         password=password,
+        priority=priority,
     )
 
     if "Running chocolatey failed" not in result:
