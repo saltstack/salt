@@ -567,8 +567,6 @@ def latest(
         directories. The example also sets up the ``ssh_known_hosts`` ssh key
         required to perform the git checkout.
 
-        Also, it has been reported that the SCP-like syntax for
-
         .. code-block:: yaml
 
             gitlab.example.com:
