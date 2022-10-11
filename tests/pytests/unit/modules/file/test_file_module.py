@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import textwrap
 
@@ -359,6 +360,27 @@ def test_group_to_gid_int():
     group = 5034
     ret = filemod.group_to_gid(group)
     assert ret == group
+
+
+def test__get_flags():
+    """
+    Test to ensure _get_flags returns a regex flag
+    """
+    flags = 10
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+    flags = "MULTILINE"
+    ret = filemod._get_flags(flags)
+    assert ret == re.MULTILINE
+
+    flags = ["IGNORECASE", "MULTILINE"]
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+    flags = re.IGNORECASE | re.MULTILINE
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
 
 
 def test_patch():
