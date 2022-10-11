@@ -1,3 +1,7 @@
+"""
+Test case for the vault SDB module
+"""
+
 import pytest
 
 import salt.exceptions
