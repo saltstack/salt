@@ -35,6 +35,9 @@ def timed_lru_cache(timeout_seconds, *, maxsize=256, typed=False):
 
 @timed_lru_cache(timeout_seconds=0.5)
 def iter_entry_points(group, name=None):
+    if int(importlib_metadata.version("importlib_metadata").split(".")[0]) > 4:
+        return list(importlib_metadata.entry_points(group=group, name=name))
+
     entry_points_listing = []
     entry_points = importlib_metadata.entry_points()
 
