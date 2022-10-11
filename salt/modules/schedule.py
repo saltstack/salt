@@ -90,8 +90,9 @@ def _get_schedule_config_file():
 
     if not os.path.isdir(config_dir):
         os.makedirs(config_dir)
-        if not os.path.isdir(minion_d_dir):
-            os.makedirs(minion_d_dir)
+
+    if not os.path.isdir(minion_d_dir):
+        os.makedirs(minion_d_dir)
 
     return os.path.join(minion_d_dir, "_schedule.conf")
 
