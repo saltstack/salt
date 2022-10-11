@@ -1008,6 +1008,23 @@ is set to ``tcp`` by default on Windows.
 
     ipc_mode: ipc
 
+.. conf_master:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
+
 .. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
