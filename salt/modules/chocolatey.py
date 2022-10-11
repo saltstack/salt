@@ -1143,7 +1143,7 @@ def add_source(name, source_location, username=None, password=None, priority=Non
     password
         Provide password for chocolatey sources that need authentication
         credentials.
-    
+
     priority
         The priority order of this source as compared to other sources,
         lower is better. Defaults to 0 (no priority). All priorities
