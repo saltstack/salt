@@ -63,6 +63,7 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recurse=True)
 
 
+@pytest.mark.slow_test
 def test_basic_operations(subtests, profile_name, prefix, etcd_version):
     """
     Test basic CRUD operations
@@ -124,6 +125,7 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
         assert etcd_state.rm("{}/2/3".format(prefix), profile=profile_name) == expected
 
 
+@pytest.mark.slow_test
 def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
     """
     Test the correct response when the profile is missing and we can't connect

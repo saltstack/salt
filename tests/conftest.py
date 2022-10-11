@@ -528,17 +528,21 @@ def pytest_runtest_setup(item):
         and PRE_PYTEST_SKIP_OR_NOT is True
     ):
         item._skipped_by_mark = True
-        pytest.skip(PRE_PYTEST_SKIP_REASON)
+        raise pytest.skip.Exception(PRE_PYTEST_SKIP_REASON)
 
     if item.get_closest_marker("core_test"):
         if not item.config.getoption("--core-tests"):
             item._skipped_by_mark = True
-            pytest.skip("Core tests are disabled, pass '--core-tests' to enable them.")
+            raise pytest.skip.Exception(
+                "Core tests are disabled, pass '--core-tests' to enable them."
+            )
 
     if item.get_closest_marker("slow_test"):
         if not item.config.getoption("--run-slow"):
             item._skipped_by_mark = True
-            pytest.skip("Slow tests are disabled, pass '--run-slow' to enable them.")
+            raise pytest.skip.Exception(
+                "Slow tests are disabled, pass '--run-slow' to enable them."
+            )
 
     if (
         not item.get_closest_marker("slow_test")
@@ -546,14 +550,14 @@ def pytest_runtest_setup(item):
     ) or item.get_closest_marker("fast_test"):
         if not item.config.getoption("--fast-tests"):
             item._skipped_by_mark = True
-            pytest.skip(
+            raise pytest.skip.Exception(
                 "Fast tests are disabled, dont pass '--fast-tests' to enable them."
             )
 
     if item.get_closest_marker("flaky_jail"):
         if not item.config.getoption("--flaky-jail"):
             item._skipped_by_mark = True
-            pytest.skip(
+            raise pytest.skip.Exception(
                 "flaky jail tests are disabled, pass '--flaky-jail' to enable them."
             )
 
@@ -561,7 +565,9 @@ def pytest_runtest_setup(item):
     if requires_sshd_server_marker is not None:
         if not item.config.getoption("--ssh-tests"):
             item._skipped_by_mark = True
-            pytest.skip("SSH tests are disabled, pass '--ssh-tests' to enable them.")
+            raise pytest.skip.Exception(
+                "SSH tests are disabled, pass '--ssh-tests' to enable them."
+            )
         item.fixturenames.append("sshd_server")
         item.fixturenames.append("salt_ssh_roster_file")
 
@@ -580,10 +586,10 @@ def pytest_runtest_setup(item):
         if not_available_modules:
             item._skipped_by_mark = True
             if len(not_available_modules) == 1:
-                pytest.skip(
+                raise pytest.skip.Exception(
                     "Salt module '{}' is not available".format(*not_available_modules)
                 )
-            pytest.skip(
+            raise pytest.skip.Exception(
                 "Salt modules not available: {}".format(
                     ", ".join(not_available_modules)
                 )
@@ -604,12 +610,12 @@ def pytest_runtest_setup(item):
         if not_available_states:
             item._skipped_by_mark = True
             if len(not_available_states) == 1:
-                pytest.skip(
+                raise pytest.skip.Exception(
                     "Salt state module '{}' is not available".format(
                         *not_available_states
                     )
                 )
-            pytest.skip(
+            raise pytest.skip.Exception(
                 "Salt state modules not available: {}".format(
                     ", ".join(not_available_states)
                 )
@@ -675,7 +681,7 @@ def pytest_runtest_setup(item):
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
             if windows_whitelisted_marker is None:
                 item._skipped_by_mark = True
-                pytest.skip("Test is not whitelisted for Windows")
+                raise pytest.skip.Exception("Test is not whitelisted for Windows")
 
 
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
@@ -1582,7 +1588,9 @@ def ssl_webserver(integration_files_dir, scope="module"):
     spins up an https webserver.
     """
     if sys.version_info < (3, 5, 3):
-        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+        raise pytest.skip.Exception(
+            "Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`"
+        )
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_cert_chain(
         str(integration_files_dir / "https" / "cert.pem"),

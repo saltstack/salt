@@ -9,7 +9,7 @@ import salt.utils.pycrypto
 import salt.utils.yaml
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 

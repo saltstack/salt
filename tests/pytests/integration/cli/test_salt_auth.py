@@ -5,7 +5,7 @@ import pytest
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
     pytest.mark.skip_on_windows,

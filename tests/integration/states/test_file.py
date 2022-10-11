@@ -133,6 +133,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test
 class FileTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the file state
@@ -3232,6 +3233,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = "# start"
     marker_end = "# end"

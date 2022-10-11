@@ -76,6 +76,7 @@ def existing_account():
         yield _account
 
 
+@pytest.mark.slow_test
 def test_user_absent(states):
     """
     Test user.absent with a non existing account

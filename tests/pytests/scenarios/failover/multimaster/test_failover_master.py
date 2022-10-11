@@ -8,7 +8,7 @@ import pytest
 import salt.utils.platform
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skipif(
         salt.utils.platform.is_freebsd(),

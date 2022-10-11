@@ -113,6 +113,7 @@ def web_root(tmp_path_factory):
         shutil.rmtree(str(_web_root), ignore_errors=True)
 
 
+@pytest.mark.slow_test
 def test_archive_extracted_web_source_etag_operation(
     modules, states, free_port, web_root, minion_opts
 ):

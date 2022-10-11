@@ -7,6 +7,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.core_test
 def test_minion_hangs_on_master_failure_50814(
     event_listener,
     salt_mm_master_1,

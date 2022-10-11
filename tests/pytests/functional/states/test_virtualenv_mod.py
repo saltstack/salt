@@ -16,6 +16,7 @@ pytestmark = [
 @SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.slow_test
 def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
     with pytest.helpers.create_account(create_group=True) as account:
 
@@ -38,6 +39,7 @@ def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
 
 
 @pytest.mark.parametrize("requirement", ["pep8==1.3.3", "zope.interface==5.0.0"])
+@pytest.mark.slow_test
 def test_issue_2594_non_invalidated_cache(tmp_path, state_tree, modules, requirement):
     state_tree_dirname = "issue-2594"
     state_tree_path = state_tree / state_tree_dirname

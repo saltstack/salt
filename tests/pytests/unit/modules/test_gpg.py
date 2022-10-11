@@ -664,6 +664,7 @@ def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                 )
 
 
+@pytest.mark.slow_test
 def test_create_key_without_passphrase(gpghome):
     """
     Test gpg.create_key without a passphrase

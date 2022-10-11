@@ -904,6 +904,7 @@ def test_running_explicit_networks(
         assert "Connected to network '{}'.".format(net.name) in ret.comment
 
 
+@pytest.mark.slow_test
 def test_run_with_onlyif(docker_container, container_name, image, modules):
     """
     Test docker_container.run with onlyif. The container should not run
@@ -948,6 +949,7 @@ def test_run_with_onlyif(docker_container, container_name, image, modules):
         modules.docker.rm(container_name, force=True)
 
 
+@pytest.mark.slow_test
 def test_run_with_unless(docker_container, container_name, image, modules):
     """
     Test docker_container.run with unless. The container should not run
@@ -993,6 +995,7 @@ def test_run_with_unless(docker_container, container_name, image, modules):
         modules.docker.rm(container_name, force=True)
 
 
+@pytest.mark.slow_test
 def test_run_with_creates(
     docker_container, container_name, image, tmp_path, subtests, modules
 ):
@@ -1184,6 +1187,7 @@ def test_run_failhard(docker_container, container_name, image, modules):
     modules.docker.rm(container_name, force=True)
 
 
+@pytest.mark.slow_test
 def test_run_bg(docker_container, container_name, image, modules):
     """
     Test to make sure that if the container is run in the background, we do

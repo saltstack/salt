@@ -83,6 +83,7 @@ def zookeeper(zookeeper_container, states):
     return states.zookeeper
 
 
+@pytest.mark.slow_test
 def test_zookeeper_present(zookeeper):
     ret = zookeeper.present(name="/test/name-1", value="testuser", makepath=True)
     assert ret.result is True
