@@ -3498,6 +3498,7 @@ def update(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    autostart=False,
     **kwargs
 ):
     """
@@ -3692,6 +3693,10 @@ def update(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3759,6 +3764,7 @@ def update(
             **kwargs
         )
     )
+    set_autostart(name, "on" if autostart else "off")
 
     if clock:
         offset = "utc" if clock.get("utc", True) else "localtime"
