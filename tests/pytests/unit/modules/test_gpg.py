@@ -243,7 +243,29 @@ def test_list_keys():
             "trust": "-",
             "type": "pub",
             "uids": ["GPG Person <person@example.com>"],
-        }
+        },
+        {
+            "dummy": "",
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "expires": "2011188692",
+            "sigs": [],
+            "subkeys": [
+                [
+                    "yyyyyyyyyyyyyyyy",
+                    "e",
+                    "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+                ]
+            ],
+            "length": "4096",
+            "ownertrust": "-",
+            "sig": "",
+            "algo": "1",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "date": "1506612692",
+            "trust": "r",
+            "type": "pub",
+            "uids": ["GPG Person <person@example.com>"],
+        },
     ]
 
     _expected_result = [
@@ -256,7 +278,17 @@ def test_list_keys():
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             "trust": "Unknown",
-        }
+        },
+        {
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "uids": ["GPG Person <person@example.com>"],
+            "created": "2017-09-28",
+            "expires": "2033-09-24",
+            "keyLength": "4096",
+            "ownerTrust": "Unknown",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "trust": "Revoked",
+        },
     ]
 
     mock_opt = MagicMock(return_value="root")
