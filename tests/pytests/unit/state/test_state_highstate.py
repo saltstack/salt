@@ -181,7 +181,7 @@ def test_find_sls_ids_with_exclude(highstate, state_tree_dir):
         with pytest.helpers.temp_file(
             "slsfile1.sls", slsfile1, sls_dir
         ), pytest.helpers.temp_file(
-            "slsfile1.sls", slsfile1, sls_dir
+            "slsfile2.sls", slsfile2, sls_dir
         ), pytest.helpers.temp_file(
             "stateB.sls", stateB, sls_dir
         ), pytest.helpers.temp_file(
