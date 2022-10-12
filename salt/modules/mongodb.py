@@ -486,6 +486,41 @@ def collection_create(
     return True
 
 
+def collection_drop(
+    collection,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+):
+    """
+    Drop a collection in the specified database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.collection_drop mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        log.info("Dropping %s.%s", database, collection)
+        mdb = pymongo.database.Database(conn, database)
+        mdb.drop_collection(collection)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            "Creating collection %r.%r failed with error %s", database, collection, err
+        )
+        return err
+    return True
+
+
 def collections_list(
     user=None,
     password=None,
@@ -550,8 +585,8 @@ def insert(
         log.info("Inserting %r into %s.%s", objects, database, collection)
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
-        ids = col.insert(objects)
-        return ids
+        ids = col.insert_many(objects)
+        return ids.acknowledged
     except pymongo.errors.PyMongoError as err:
         log.error("Inserting objects %r failed with error %s", objects, err)
         return err
@@ -662,8 +697,16 @@ def find(
         log.info("Searching for %r in %s", query, collection)
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
-        ret = col.find(query)
-        return list(ret)
+        if isinstance(query, list):
+            ret = []
+            for _query in query:
+                res = col.find(_query)
+                _ret = [_res for _res in res]
+                ret.extend(_ret)
+        else:
+            res = col.find(query)
+            ret = [_res for _res in res]
+        return ret
     except pymongo.errors.PyMongoError as err:
         log.error("Searching objects failed with error: %s", err)
         return err
@@ -681,7 +724,7 @@ def remove(
     authdb=None,
 ):
     """
-    Remove an object or list of objects into a collection
+    Remove an object or list of objects from a collection
 
     CLI Example:
 
@@ -703,8 +746,15 @@ def remove(
         log.info("Removing %r from %s", query, collection)
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
-        ret = col.remove(query, w=w)
-        return "{} objects removed".format(ret["n"])
+        deleted_count = 0
+        if isinstance(query, list):
+            for _query in query:
+                res = col.delete_many(_query)
+                deleted_count += res.deleted_count
+        else:
+            res = col.delete_many(query)
+            deleted_count += res.deleted_count
+        return "{} objects removed".format(deleted_count)
     except pymongo.errors.PyMongoError as err:
         log.error("Removing objects failed with error: %s", _get_error_message(err))
         return _get_error_message(err)
