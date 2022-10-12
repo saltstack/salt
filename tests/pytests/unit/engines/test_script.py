@@ -104,6 +104,11 @@ def event():
 
 
 @pytest.fixture()
+def new_tag():
+    return {"tag": "testnew", "data": {"foo": "bar", "id": "test"}}
+
+
+@pytest.fixture()
 def new_event():
     return {"tag": "test", "data": {"foo": "baz", "id": "test"}}
 
@@ -117,11 +122,28 @@ class TestStart:
         script.start("cmd")
         event_send.assert_called_once_with(tag=event["tag"], data=event["data"])
 
+    def test_start_multiple(self, event, new_event, raw_event, event_send):
+        raw_event.return_value = [event, new_event]
+        script.start("cmd")
+        assert event_send.call_count == 2
+        event_send.assert_any_call(tag=event["tag"], data=event["data"])
+        event_send.assert_any_call(tag=new_event["tag"], data=new_event["data"])
+
     @pytest.mark.parametrize("runs", [10], indirect=True)
     def test_start_onchange_no_change(self, event, raw_event, event_send):
         raw_event.side_effect = 10 * [[event]]
         script.start("cmd", onchange=True)
         event_send.assert_called_once_with(tag=event["tag"], data=event["data"])
+
+    @pytest.mark.parametrize("runs", [10], indirect=True)
+    def test_start_onchange_no_change_multiple(
+        self, event, new_tag, raw_event, event_send
+    ):
+        raw_event.side_effect = 10 * [[event, new_tag]]
+        script.start("cmd", onchange=True)
+        assert event_send.call_count == 2
+        event_send.assert_any_call(tag=event["tag"], data=event["data"])
+        event_send.assert_any_call(tag=new_tag["tag"], data=new_tag["data"])
 
     @pytest.mark.parametrize("runs", [8], indirect=True)
     def test_start_onchange_with_change(self, event, new_event, raw_event, event_send):
@@ -130,3 +152,10 @@ class TestStart:
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_called_with(tag=new_event["tag"], data=new_event["data"])
+
+    @pytest.mark.parametrize("runs", [10], indirect=True)
+    def test_start_onchange_new_tag(self, event, new_tag, raw_event, event_send):
+        raw_event.side_effect = 5 * [[event]] + 5 * [[new_tag]]
+        script.start("cmd", onchange=True)
+        event_send.assert_any_call(tag=event["tag"], data=event["data"])
+        event_send.assert_called_with(tag=new_tag["tag"], data=new_tag["data"])
