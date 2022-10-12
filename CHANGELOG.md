@@ -7,7 +7,32 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3005 (2022-06-30)
+Salt 3005.1 (2022-09-26)
+========================
+
+Fixed
+-----
+
+- Fix arch parsing issue in apt source files (#62247)
+- Fixed parsing CDROM apt sources (#62474)
+- Use str() method instead of repo_line for when python3-apt is installed or not in aptpkg.py. (#62546)
+- Remove the connection_timeout from netmiko_connection_args before netmiko_connection_args is added to __context__["netmiko_device"]["args"] which is passed along to the Netmiko library. (#62547)
+- fixes #62553 by checking for disabled master_type before starting master connection and skipping it if set. (#62553)
+- Fix runas with cmd module when using the onedir bundled packages (#62565)
+- Fix the Pyinstaller hooks to preserve the environment if None is passed. (#62567, #62628)
+- pkgrepo.managed sets wrong permissions on keys installed to /etc/apt/keyring (#62569)
+- pkgrepo.managed creates zero byte gpg files when dearmoring contents to the same filename (#62570)
+- Ensure default values for IPC Buffers are correct type (#62591)
+- Fix a hang on salt-ssh when using sudo. (#62603)
+- Renderers now have access to the correct set of salt functions. (#62610, #62620)
+- Fix including Jinja template from absolute path (#62611)
+- include jmespath in package requirements (#62613)
+- Fix pkgrepo.managed signed-by in test=true mode (#62662)
+- Ensure the status of the service is captured when the beacon function is called, even when the event is not being emitted. (#62675)
+- The sub proxies controlled by Deltaproxy need to have their own req_channel otherwise there are timeout exceptions when the __master_req_channel_payload is fired and reacted on. (#62708)
+
+
+Salt 3005 (2022-08-22)
 ======================
 
 Removed
@@ -29,6 +54,11 @@ Removed
     - tplfile: When using tplfile in a SLS file in the root directory of file roots it returns empty. Now it returns the filename. (#61697)
 - Remove SaltMessageServer.shutdown in favor of close.
   Remove LoadBalancerWorker.stop in favor of close. (#61698)
+- Removed the PyObjC dependency.
+
+  This addresses problems with building a one dir build for macOS.
+  It became problematic because depending on the macOS version, it pulls different dependencies, and we would either have to build a macos onedir for each macOS supported release, or ship a crippled onedir(because it would be tied to the macOS version where the onedir was built).
+  Since it's currently not being used, it's removed. (#62432)
 
 
 Deprecated
@@ -43,6 +73,7 @@ Deprecated
 - Deprecate all Azure cloud modules (#62183)
 - Deprecated ``defaults`` and ``preserve_context`` for ``salt.utils.functools.namespaced_function``.
   Additionally, the behavior when ``preserve_namespace=True`` was passed is now the default in order not to require duplicating imports on the modules that are namespacing functions. (#62272)
+- Deprecated the cassandra module in favor of the cassandra_cql module/returner. (#62327)
 
 
 Changed
@@ -243,6 +274,19 @@ Fixed
 - Fix variable reuse causing requisite_in problems (#62264)
 - Adding -G option to pkgdd cmd_prefix list when current_zone_only is True. (#62206)
 - Don't expect ``lsof`` to be installed when trying check which minions are connected. (#62303)
+- Added a pyinstaller hook that traverses the python used on the tiamat package to add all possible modules as hidden imports. (#62362)
+- Fix use of random shuffle and sample functions as Jinja filters (#62372)
+- All of the requirements provided in the requirements files are now included. The job of evaluating platform markers is not Salt's it's pip's. (#62392)
+- Update all platforms to use pycparser 2.21 or greater for Py 3.9 or higher, fixes fips fault with openssl v3.x (#62400)
+- Due to changes in the Netmiko library for the exception paths, need to check the version of Netmiko python library and then import the exceptions from different locations depending on the result. (#62405)
+- Fixed urlparse typo in rpmbuild_pkgbuild.py (#62442)
+- Fixing changes dict in pkg state to be consistent when installing and test=True. (#60995)
+- Use fire_event_async when expecting a coroutine (#62453)
+- Fixes import error under windows. (#62459)
+- account for revision number in formulas to account for difference between bottle and formula (#62466)
+- Fixed stacktrace on Windows when running pkg.list_pkgs (#62479)
+- Update sanitizing masking for Salt SSH to include additional password like strings. (#62483)
+- Fixes an issue where the minion could not connect to a master after 2 failed attempts (#62489)
 
 
 Added
@@ -301,6 +345,7 @@ Added
   * Fix issues when processing inventory and there are groups with no members.
   * Allow new types of targets for Ansible roster (#60056)
 - Add sample and shuffle functions from random (#62225)
+- Add "<tiamat> python" subcommand to allow execution or arbitrary scripts via bundled Python runtime (#62381)
 
 
 Salt 3004.2 (2022-05-12)

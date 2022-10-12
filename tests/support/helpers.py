@@ -47,7 +47,6 @@ import salt.utils.stringutils
 import salt.utils.versions
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
 from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
@@ -1722,12 +1721,16 @@ class VirtualEnv:
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
-        kwargs.setdefault("cwd", str(self.venv_dir))
+        kwargs.setdefault("cwd", tempfile.gettempdir())
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        kwargs.setdefault("env", self.environ)
-        proc = subprocess.run(args, check=False, **kwargs)
+        env = kwargs.pop("env", None)
+        if env:
+            env = self.environ.copy().update(env)
+        else:
+            env = self.environ
+        proc = subprocess.run(args, check=False, env=env, **kwargs)
         ret = ProcessResult(
             returncode=proc.returncode,
             stdout=proc.stdout,
@@ -1778,14 +1781,16 @@ class VirtualEnv:
         except AttributeError:
             return sys.executable
 
-    def run_code(self, code_string, **kwargs):
+    def run_code(self, code_string, python=None, **kwargs):
         if code_string.startswith("\n"):
             code_string = code_string[1:]
         code_string = textwrap.dedent(code_string).rstrip()
         log.debug(
             "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
         )
-        return self.run(str(self.venv_python), "-c", code_string, **kwargs)
+        if python is None:
+            python = str(self.venv_python)
+        return self.run(python, "-c", code_string, **kwargs)
 
     def get_installed_packages(self):
         data = {}
@@ -1795,12 +1800,17 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        sminion = create_sminion()
-        sminion.functions.virtualenv.create(
-            str(self.venv_dir),
-            python=self.get_real_python(),
-            system_site_packages=self.system_site_packages,
-        )
+        virtualenv = shutil.which("virtualenv")
+        if not virtualenv:
+            pytest.fail("'virtualenv' binary not found")
+        cmd = [
+            virtualenv,
+            "--python={}".format(self.get_real_python()),
+        ]
+        if self.system_site_packages:
+            cmd.append("--system-site-packages")
+        cmd.append(str(self.venv_dir))
+        self.run(*cmd, cwd=str(self.venv_dir.parent))
         self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
