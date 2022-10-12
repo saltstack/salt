@@ -25,8 +25,8 @@ import salt.utils.yaml
 from salt.template import compile_template
 
 try:
-    import pwd
     import grp
+    import pwd
 except ImportError:
     pass
 

@@ -2,12 +2,13 @@ import hashlib
 import time
 
 import pytest
+import zmq
+import zmq.eventloop.ioloop
+
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-import zmq
-import zmq.eventloop.ioloop
 from tests.support.events import eventpublisher_process, eventsender_process
 
 NO_LONG_IPC = False

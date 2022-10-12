@@ -2,6 +2,7 @@ import os
 import time
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from salt.beacons import watchdog

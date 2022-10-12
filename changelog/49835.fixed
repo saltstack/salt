@@ -1,1 +1,0 @@
-Fixes a scenario where ipv6 is enabled but the master is configured as an ipv4 IP address.

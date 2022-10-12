@@ -1,8 +1,9 @@
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.stringutils
 import salt.utils.win_reg as win_reg
 from salt.exceptions import CommandExecutionError
-from tests.support.helpers import random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
