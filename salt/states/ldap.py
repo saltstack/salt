@@ -8,11 +8,10 @@ The ``states.ldap`` state module allows you to manage LDAP entries and
 their attributes.
 """
 
-import copy
 import logging
 from collections import OrderedDict
 
-from salt.utils.ldap import LDAPError
+from salt.utils.ldap import AttributeValueSet, LDAPError
 from salt.utils.oset import OrderedSet
 
 log = logging.getLogger(__name__)
@@ -348,7 +347,10 @@ def managed(name, entries, connect_spec=None):
             changes[xn] = {
                 attr: sorted(vals)
                 for attr, vals in x.items()
-                if o.get(attr, ()) != n.get(attr, ())
+                if (
+                    o.get(attr, AttributeValueSet())
+                    != n.get(attr, AttributeValueSet())
+                )
             }
 
     return ret
@@ -372,15 +374,12 @@ def _process_entries(l, entries):
         An ``(old, new)`` tuple that describes the current state of the entries
         and what they will look like after modification. Each item in the tuple
         is an ``OrderedDict`` that maps an entry DN to a ``dict`` that maps an
-        attribute name to an ``OrderedSet`` of its values. (``OrderedSet`` is
-        used because the LDAP spec says there can't be duplicates, and it must
-        be ordered to support the `X-ORDERED
-        <https://datatracker.ietf.org/doc/html/draft-chu-ldap-xordered-00>`_
-        extension used by OpenLDAP.) The structure looks like this::
+        attribute name to an :py:class:`~salt.utils.ldap.AttributeValueSet` of
+        its values. The structure looks like this::
 
-            OrderedDict([(dn1, {attr1: OrderedSet([val1])}),
-                         (dn2, {attr1: OrderedSet([val2]),
-                                attr2: OrderedSet([val3, val4])})])
+            OrderedDict([(dn1, {attr1: AttributeValueSet([val1])}),
+                         (dn2, {attr1: AttributeValueSet([val2]),
+                                attr2: AttributeValueSet([val3, val4])})])
 
         All of an entry's attributes and values will be included, even if they
         will not be modified. If an entry mentioned in ``entries`` does not yet
@@ -411,19 +410,18 @@ def _process_entries(l, entries):
                 if len(results) == 1:
                     attrs = results[dn]
                     olde = {
-                        attr: OrderedSet(attrs[attr])
-                        for attr in attrs
-                        if len(attrs[attr])
+                        attr: AttributeValueSet(vals)
+                        for attr, vals in attrs.items()
+                        if len(vals)
                     }
                 else:
                     # nothing, so it must be a brand new entry
                     assert len(results) == 0
                     olde = {}
                 old[dn] = olde
-            # copy the old entry to create the new (don't do a simple
-            # assignment or else modifications to newe will affect
-            # olde)
-            newe = copy.deepcopy(olde)
+            # Deep copy the old entry to create the new (don't do a simple
+            # assignment or else modifications to `newe` will affect `olde`).
+            newe = {attr: AttributeValueSet(vals) for attr, vals in olde.items()}
             new[dn] = newe
 
             # process the directives
@@ -465,11 +463,11 @@ def _update_entry(entry, status, directives):
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == "add":
-                vals.update(entry.get(attr, OrderedSet()))
+                vals.update(entry.get(attr, AttributeValueSet()))
                 if vals:
                     entry[attr] = vals
             elif directive == "delete":
-                existing_vals = entry.pop(attr, OrderedSet())
+                existing_vals = entry.pop(attr, AttributeValueSet())
                 if vals:
                     existing_vals -= vals
                     if existing_vals:
@@ -508,18 +506,10 @@ def _normalize(thing):
 
 
 def _toset(thing):
-    """Helper to convert various things to an ``OrderedSet``.
+    """Helper to convert various things to an ``AttributeValueSet``.
 
     This enables flexibility in what users provide as the list of LDAP entry
-    attribute values. Note that the LDAP spec prohibits duplicate values in an
-    attribute, so a set type is used.
-
-    `RFC 4511 section 4.1.7
-    <https://datatracker.ietf.org/doc/html/rfc4511#section-4.1.7>`_ says, "The
-    set of attribute values is unordered." Despite this, the returned set is
-    ordered so that it can support the `X-ORDERED
-    <https://datatracker.ietf.org/doc/html/draft-chu-ldap-xordered-00>`_
-    extension. (OpenLDAP has some X-ORDERED attributes in its config schema.)
+    attribute values.
 
     Details:
       * ``None`` becomes a new empty set.
@@ -536,4 +526,4 @@ def _toset(thing):
             coll = (_normalize(thing),)
         except TypeError:
             coll = (_normalize(x) for x in thing)
-    return OrderedSet(coll)
+    return AttributeValueSet(coll)

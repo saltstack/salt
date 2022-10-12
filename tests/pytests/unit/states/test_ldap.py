@@ -1,7 +1,7 @@
 import pytest
 
 import salt.states.ldap as ldap
-from salt.utils.oset import OrderedSet
+from salt.utils.ldap import AttributeValueSet
 
 
 def _toset_testcases():
@@ -61,7 +61,7 @@ def test__toset(input, want_list):
         with pytest.raises(want_list):
             got = ldap._toset(input)
     else:
-        want = OrderedSet(want_list)
+        want = AttributeValueSet(want_list)
         got = ldap._toset(input)
         assert got == want
         assert list(got) == want_list
