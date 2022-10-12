@@ -12,9 +12,9 @@ from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=unused-import
 try:
-    import win32com
     import pythoncom
     import pywintypes
+    import win32com
 
     PYWINTYPES_ERROR = pywintypes.com_error(
         -1234, "Exception occurred.", (0, None, "C", None, 0, -2147352567), None

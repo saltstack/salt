@@ -508,19 +508,6 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
             ret.update(_enable(name, None, **kwargs))
         elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
-        else:
-            if __opts__["test"]:
-                ret["result"] = None
-                ret["comment"] = "\n".join(
-                    [
-                        _f
-                        for _f in [
-                            "The service {} is set to restart".format(name),
-                            unmask_ret["comment"],
-                        ]
-                        if _f
-                    ]
-                )
         return ret
 
     # Run the tests
@@ -797,6 +784,14 @@ def enabled(name, **kwargs):
     __context__["service.state"] = "enabled"
 
     ret.update(_enable(name, None, **kwargs))
+    if __opts__.get("test") and ret.get(
+        "comment"
+    ) == "The named service {} is not available".format(name):
+        ret["result"] = None
+        ret["comment"] = (
+            "Service {} not present; if created in this state run, "
+            "it would have been enabled".format(name)
+        )
     return ret
 
 

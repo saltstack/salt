@@ -60,13 +60,12 @@ import os
 import time
 from collections.abc import MutableMapping
 
+import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.iostream
-import salt.log.setup
 import salt.payload
-import salt.transport.client
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.cache
@@ -106,7 +105,7 @@ TAGS = {
 def get_event(
     node,
     sock_dir=None,
-    transport="zeromq",
+    transport=None,
     opts=None,
     listen=True,
     io_loop=None,
@@ -121,6 +120,13 @@ def get_event(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
     """
+    if transport:
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'transport' kwarg has been deprecated and it will be removed "
+            "in the Chlorine release, as such, its usage is no longer required.",
+        )
+
     sock_dir = sock_dir or opts["sock_dir"]
     # TODO: AIO core is separate from transport
     if node == "master":
@@ -147,11 +153,9 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     """
     Return an event object suitable for the named transport
     """
-    # TODO: AIO core is separate from transport
-    if opts["transport"] in ("zeromq", "tcp", "detect"):
-        return MasterEvent(
-            sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors
-        )
+    return MasterEvent(
+        sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors
+    )
 
 
 def fire_args(opts, jid, tag_data, prefix=""):
@@ -1168,8 +1172,6 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         """
         Bind the pub and pull sockets for events
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1330,8 +1332,6 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         """
         Spin up the multiprocess event returner
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if self.opts["event_return_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting EventReturn niceness to %i", self.opts["event_return_niceness"]
@@ -1457,7 +1457,7 @@ class StateFire:
             }
         )
 
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             try:
                 channel.send(load)
             except Exception as exc:  # pylint: disable=broad-except
@@ -1485,7 +1485,7 @@ class StateFire:
                 "True" if running[stag]["changes"] else "False",
             )
             load["events"].append({"tag": tag, "data": running[stag]})
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             try:
                 channel.send(load)
             except Exception as exc:  # pylint: disable=broad-except

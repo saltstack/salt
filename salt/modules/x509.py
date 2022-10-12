@@ -1635,13 +1635,6 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
 
     if "signing_private_key_passphrase" not in kwargs:
         kwargs["signing_private_key_passphrase"] = None
-    if "testrun" in kwargs and kwargs["testrun"] is True:
-        cert_props = read_certificate(cert)
-        cert_props["Issuer Public Key"] = get_public_key(
-            kwargs["signing_private_key"],
-            passphrase=kwargs["signing_private_key_passphrase"],
-        )
-        return cert_props
 
     if not verify_private_key(
         private_key=kwargs["signing_private_key"],
@@ -1666,6 +1659,14 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         raise salt.exceptions.SaltInvocationError(
             "failed to verify certificate signature"
         )
+
+    if "testrun" in kwargs and kwargs["testrun"] is True:
+        cert_props = read_certificate(cert)
+        cert_props["Issuer Public Key"] = get_public_key(
+            kwargs["signing_private_key"],
+            passphrase=kwargs["signing_private_key_passphrase"],
+        )
+        return cert_props
 
     if "copypath" in kwargs:
         if "prepend_cn" in kwargs and kwargs["prepend_cn"] is True:

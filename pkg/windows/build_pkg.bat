@@ -136,7 +136,7 @@ If Defined ProgramFiles(x86) goto dependencies_x64
 @echo.
 @echo Copying VCRedist 2013 X86 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltproject.io/windows/dependencies/32/vcredist_x86_2013.exe
+set Url=https://repo.saltproject.io/windows/dependencies/32/vcredist_x86_2013.exe
 set Name=vcredist_x86_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -144,7 +144,7 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 @echo.
 @echo Copying Universal C Runtimes X86 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltproject.io/windows/dependencies/32/ucrt_x86.zip
+set Url=https://repo.saltproject.io/windows/dependencies/32/ucrt_x86.zip
 set Name=ucrt_x86.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -156,7 +156,7 @@ goto prereq_end
 @echo.
 @echo Copying VCRedist 2013 X64 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltproject.io/windows/dependencies/64/vcredist_x64_2013.exe
+set Url=https://repo.saltproject.io/windows/dependencies/64/vcredist_x64_2013.exe
 set Name=vcredist_x64_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -164,7 +164,7 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 @echo.
 @echo Copying Universal C Runtimes X64 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltproject.io/windows/dependencies/64/ucrt_x64.zip
+set Url=https://repo.saltproject.io/windows/dependencies/64/ucrt_x64.zip
 set Name=ucrt_x64.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
@@ -582,8 +582,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
 :: Remove Unneeded Components
 If Exist "%BinDir%\Lib\site-packages\salt\cloud"^
     rd /S /Q "%BinDir%\Lib\site-packages\salt\cloud" 1>nul
-If Exist "%BinDir%\Scripts\salt-unity*"^
-    del /Q "%BinDir%\Scripts\salt-unity*" 1>nul
 
 @echo.
 

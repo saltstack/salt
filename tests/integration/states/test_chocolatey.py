@@ -5,6 +5,7 @@ Tests for the Chocolatey State
 import logging
 
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
