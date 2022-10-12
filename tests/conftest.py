@@ -26,6 +26,7 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
+
 import salt._logging
 import salt._logging.mixins
 import salt.config
@@ -57,6 +58,8 @@ os.chdir(str(CODE_DIR))
 if str(CODE_DIR) in sys.path:
     sys.path.remove(str(CODE_DIR))
 sys.path.insert(0, str(CODE_DIR))
+
+os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
 # Coverage
 if "COVERAGE_PROCESS_START" in os.environ:
@@ -267,7 +270,8 @@ def pytest_configure(config):
         "requiring a minimum value of random entropy. In the case where the value is lower "
         "than the provided 'minimum', an attempt will be made to raise that value up until "
         "the provided 'timeout' minutes have passed, at which time, depending on the value "
-        "of 'skip' the test will skip or fail.".format(
+        "of 'skip' the test will skip or fail.  For entropy poolsizes of 256 bits, the min "
+        "is adjusted to 192.".format(
             EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
         ),
     )
@@ -681,14 +685,20 @@ def salt_factories_config():
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    return {
+    if os.environ.get("JENKINS_URL") or os.environ.get("CI"):
+        start_timeout = 120
+    else:
+        start_timeout = 60
+    kwargs = {
         "code_dir": str(CODE_DIR),
-        "inject_coverage": MAYBE_RUN_COVERAGE,
-        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
-        "start_timeout": 120
-        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
-        else 60,
+        "start_timeout": start_timeout,
     }
+    if MAYBE_RUN_COVERAGE:
+        kwargs["coverage_rc_path"] = str(COVERAGERC_FILE)
+    coverage_db_path = os.environ.get("COVERAGE_FILE")
+    if coverage_db_path:
+        kwargs["coverage_db_path"] = coverage_db_path
+    return kwargs
 
 
 @pytest.fixture

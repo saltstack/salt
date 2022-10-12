@@ -115,36 +115,6 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
-
-You can also use the ``signedby`` option as an argument to the state.
-This option is only supported if you do NOT have python3-apt installed.
-Python3-apt does not currently support the ``signed-by`` option in repo
-definitions. You can set ``signed-by`` in the name of the repo, but
-NOT in the ``signedby`` argument of the state if python3-apt is installed.
-
-.. code-block:: yaml
-
-    deb [arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
-      pkgrepo.managed:
-        - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /etc/apt/keyrings/salt-archive-keyring.gpg
-        - keyserver: keyserver.ubuntu.com
-        - keyid: 0E08A149DE57BFBE
-        - aptkey: False
-
-If you have the ``signed-by`` option set in your pkgrepo.managed name
-and the ``signedby`` arg set in the state, the ``signedby`` arg
-will override what is set in the name.
-
-.. code-block:: yaml
-
-    deb [arch=amd64 signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
-      pkgrepo.managed:
-        - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /etc/apt/keyrings/salt-archive-keyring-override.gpg
-        - keyserver: keyserver.ubuntu.com
-        - keyid: 0E08A149DE57BFBE
-        - aptkey: False
 """
 
 
@@ -170,7 +140,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
-    <salt.modules.zypper>` repositories are supported.
+    <salt.modules.zypperpkg>` repositories are supported.
 
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
@@ -374,10 +344,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
        in the path, aptkey will be False, regardless of what is passed into
        this argument.
-
-    signedby:
-        On apt-based systems, ``signedby`` is the the path to the key file
-        the repository will use. This is required if apt-key is False.
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -480,8 +446,18 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if "pkg.expand_repo_def" in __salt__:
-        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
+    if __grains__.get("os_family") == "Debian":
+        from salt.modules.aptpkg import _expand_repo_def
+
+        os_name = __grains__["os"]
+        lsb_distrib_codename = __grains__["lsb_distrib_codename"]
+
+        sanitizedkwargs = _expand_repo_def(
+            os_name=os_name,
+            lsb_distrib_codename=lsb_distrib_codename,
+            repo=repo,
+            **kwargs
+        )
     else:
         sanitizedkwargs = kwargs
 

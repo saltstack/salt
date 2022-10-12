@@ -489,12 +489,13 @@ jinja2==3.1.0
     #   napalm
 jmespath==0.9.4
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.9"
+junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -508,12 +509,12 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-lxml==4.7.1
+lxml==4.9.1
     # via
     #   junos-eznc
     #   napalm
     #   ncclient
-mako==1.1.4
+mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.0.1
     # via
@@ -643,7 +644,7 @@ netmiko==3.2.0
     # via napalm
 ntc-templates==1.4.1
     # via junos-eznc
-oauthlib==3.1.0
+oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
@@ -723,6 +724,8 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
+pytest-custom-exit-code==0.3.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -730,9 +733,9 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc17 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc20 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.4.0
+pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
 pytest-skip-markers==1.2.0
     # via
@@ -752,6 +755,7 @@ pytest-timeout==1.4.2
 pytest==7.0.1 ; python_version >= "3.6"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-shell-utilities

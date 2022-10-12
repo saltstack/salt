@@ -3,6 +3,7 @@ from subprocess import PIPE
 from textwrap import dedent
 
 import pytest
+
 import salt.config
 import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError

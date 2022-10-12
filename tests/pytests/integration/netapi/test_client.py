@@ -1,4 +1,5 @@
 import pytest
+
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
 
