@@ -1,18 +1,12 @@
 import pytest
 
 import salt.modules.win_file
-import salt.modules.win_lgpo as win_lgpo
-import salt.utils.files
+import salt.utils.win_lgpo_reg as win_lgpo_reg
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
 ]
-
-
-@pytest.fixture
-def configure_loader_modules():
-    return {win_lgpo: {"__salt__": {"file.makedirs": salt.modules.win_file.makedirs_}}}
 
 
 def test_issue_56769_windows_line_endings():
@@ -44,12 +38,12 @@ def test_issue_56769_windows_line_endings():
         # doesn't preserve line endings when writing the test file
         with salt.utils.files.fopen(str(gpt_ini_file), "w") as fp:
             fp.write(gpt_ini)
-        win_lgpo._write_regpol_data(
+        win_lgpo_reg.write_reg_pol_data(
             data_to_write=data_to_write,
             policy_file_path=str(reg_pol_file),
-            gpt_ini_path=str(gpt_ini_file),
             gpt_extension=gpt_extension,
             gpt_extension_guid=gpt_extension_guid,
+            gpt_ini_path=str(gpt_ini_file),
         )
         # We're using salt.utils.file.fopen here because the temp_file helper
         # doesn't preserve line endings when reading the test file
@@ -88,12 +82,12 @@ def test_issue_56769_unix_line_endings():
         # doesn't preserve line endings when writing the test file
         with salt.utils.files.fopen(str(gpt_ini_file), "w") as fp:
             fp.write(gpt_ini)
-        win_lgpo._write_regpol_data(
+        win_lgpo_reg.write_reg_pol_data(
             data_to_write=data_to_write,
             policy_file_path=str(reg_pol_file),
-            gpt_ini_path=str(gpt_ini_file),
             gpt_extension=gpt_extension,
             gpt_extension_guid=gpt_extension_guid,
+            gpt_ini_path=str(gpt_ini_file),
         )
         # We're using salt.utils.file.fopen here because the temp_file helper
         # doesn't preserve line endings when reading the test file
@@ -132,12 +126,12 @@ def test_issue_56769_mixed_line_endings():
         # doesn't preserve line endings when writing the test file
         with salt.utils.files.fopen(str(gpt_ini_file), "w") as fp:
             fp.write(gpt_ini)
-        win_lgpo._write_regpol_data(
+        win_lgpo_reg.write_reg_pol_data(
             data_to_write=data_to_write,
             policy_file_path=str(reg_pol_file),
-            gpt_ini_path=str(gpt_ini_file),
             gpt_extension=gpt_extension,
             gpt_extension_guid=gpt_extension_guid,
+            gpt_ini_path=str(gpt_ini_file),
         )
         # We're using salt.utils.file.fopen here because the temp_file helper
         # doesn't preserve line endings when reading the test file

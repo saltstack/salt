@@ -8,6 +8,7 @@ import os
 import pytest
 
 import salt.config
+import salt.grains.core
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 import salt.states.win_lgpo
@@ -264,8 +265,13 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_get_policy_name(self):
+        grains = salt.grains.core.os_data()
+        if grains["osrelease"] == "11":
+            policy_name = "Allow Diagnostic Data"
+        else:
+            policy_name = "Allow Telemetry"
         result = win_lgpo.get_policy(
-            policy_name="Allow Telemetry",
+            policy_name=policy_name,
             policy_class="machine",
             return_value_only=True,
             return_full_policy_names=True,
@@ -286,21 +292,31 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result, expected)
 
     def test_get_policy_name_full_return_full_names(self):
+        grains = salt.grains.core.os_data()
+        if grains["osrelease"] == "11":
+            policy_name = "Allow Diagnostic Data"
+        else:
+            policy_name = "Allow Telemetry"
         result = win_lgpo.get_policy(
-            policy_name="Allow Telemetry",
+            policy_name=policy_name,
             policy_class="machine",
             return_value_only=False,
             return_full_policy_names=True,
             hierarchical_return=False,
         )
         expected = {
-            "Windows Components\\Data Collection and Preview Builds\\Allow Telemetry": (
+            "Windows Components\\Data Collection and Preview Builds\\{}".format(policy_name): (
                 "Not Configured"
             )
         }
         self.assertDictEqual(result, expected)
 
     def test_get_policy_id_full_return_full_names(self):
+        grains = salt.grains.core.os_data()
+        if grains["osrelease"] == "11":
+            policy_name = "Allow Diagnostic Data"
+        else:
+            policy_name = "Allow Telemetry"
         result = win_lgpo.get_policy(
             policy_name="AllowTelemetry",
             policy_class="machine",
@@ -309,15 +325,20 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
             hierarchical_return=False,
         )
         expected = {
-            "Windows Components\\Data Collection and Preview Builds\\Allow Telemetry": (
+            "Windows Components\\Data Collection and Preview Builds\\{}".format(policy_name): (
                 "Not Configured"
             )
         }
         self.assertDictEqual(result, expected)
 
     def test_get_policy_name_full_return_ids(self):
+        grains = salt.grains.core.os_data()
+        if grains["osrelease"] == "11":
+            policy_name = "Allow Diagnostic Data"
+        else:
+            policy_name = "Allow Telemetry"
         result = win_lgpo.get_policy(
-            policy_name="Allow Telemetry",
+            policy_name=policy_name,
             policy_class="machine",
             return_value_only=False,
             return_full_policy_names=False,
@@ -359,8 +380,13 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
     def test_get_policy_name_return_full_names_hierarchical(self):
+        grains = salt.grains.core.os_data()
+        if grains["osrelease"] == "11":
+            policy_name = "Allow Diagnostic Data"
+        else:
+            policy_name = "Allow Telemetry"
         result = win_lgpo.get_policy(
-            policy_name="Allow Telemetry",
+            policy_name=policy_name,
             policy_class="machine",
             return_value_only=False,
             return_full_policy_names=True,
@@ -371,7 +397,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
                 "Administrative Templates": {
                     "Windows Components": {
                         "Data Collection and Preview Builds": {
-                            "Allow Telemetry": "Not Configured"
+                            policy_name: "Not Configured"
                         }
                     }
                 }
