@@ -32,35 +32,27 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
                         # (numbers are stringified and then put in a list).
                         "sn": 1234,
                         # List of values of various types.
-                        #
-                        # Note that ldap.managed accepts arbitrary iterables,
-                        # not just lists.  Unfortunately, Salt's YAML loader
-                        # does not currently (as of 2022-10-11) support any
-                        # ordered non-list types (such as tuple or OrderedDict)
-                        # so we don't test them here.  (A dict can be used, but
-                        # iteration order isn't guaranteed so the tests would be
-                        # flaky.)
-                        #
-                        # Instead of a salt CLI fixture we could use a
-                        # LocalClient fixture (see salt_master.salt_client()),
-                        # which is able to pass tuples to the minion.  Using
-                        # such a fixture with state.single would make these
-                        # tests more like unit tests and less like integration
-                        # tests.  There are existing unit test cases for
-                        # non-list iterables of values, so it's no big deal that
-                        # there isn't integration test coverage here.
-                        #
-                        # Alternatively the YAML loader can be extended to
-                        # support tuples and/or OrderedDict.
                         "description": [
                             "Non-ASCII characters should be supported: 🙂",
                             4567,
                             b"abcd",
                         ],
-                        # Intentionally invalid UTF-8.  The syntax for
-                        # userPassword is Octet String, not Directory String
-                        # (like description), so this is acceptable.
-                        "userPassword": b"\x00\x01\x02\x03\x80",
+                        # Non-list iterable to exercise support for arbitrary
+                        # iterables of values, not just lists.  Note that tuples
+                        # are currently (as of 2022-10-23) serialized as lists,
+                        # but this value is not serialized before it is
+                        # processed by the minion.  (The state SLS file
+                        # generated from this object by the
+                        # openldap_minion_apply fixture is loaded on the minion
+                        # and processed directly, not loaded on the master and
+                        # sent to the minion in serialized form).
+                        "userPassword": (
+                            "password",
+                            # Intentionally invalid UTF-8.  The syntax for
+                            # userPassword is Octet String, not Directory String
+                            # (like description), so this is acceptable.
+                            b"\x00\x01\x02\x03\x80",
+                        ),
                         # Empty list should be a no-op.
                         "telephoneNumber": [],
                         # None should be equivalent to an empty list.
@@ -83,7 +75,10 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
                         "Non-ASCII characters should be supported: 🙂",
                         "abcd",
                     ],
-                    "userPassword": [b"\x00\x01\x02\x03\x80"],
+                    "userPassword": [
+                        b"\x00\x01\x02\x03\x80",
+                        "password",
+                    ],
                 },
             },
         },
@@ -100,7 +95,10 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
                 "4567",
                 "abcd",
             ],
-            "userPassword": [b"\x00\x01\x02\x03\x80"],
+            "userPassword": [
+                "password",
+                b"\x00\x01\x02\x03\x80",
+            ],
         },
     }
 
