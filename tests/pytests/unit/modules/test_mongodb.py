@@ -33,10 +33,31 @@ class MockMongoConnect:
         return True
 
 
+class MockInsertResult:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+        self.inserted_ids = []
+        self.acknowledged = True
+
+
+class MockDeleteResult:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+        self.deleted_count = 0
+        self.raw_result = {}
+        self.acknowledged = True
+
+
 class MockPyMongoDatabase:
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+
+        self.my_collection = None
 
     def authenticate(self, *args, **kwards):
         return True
@@ -51,6 +72,21 @@ class MockPyMongoDatabase:
         return []
 
 
+class MockPyMongoCollection:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def find(self, *args, **kwards):
+        return []
+
+    def insert_many(self, *args, **kwards):
+        return True
+
+    def delete_many(self, *args, **kwards):
+        return True
+
+
 @pytest.fixture
 def configure_loader_modules():
     return {mongodb: {}}
@@ -62,60 +98,78 @@ def test_version():
     """
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        database_command_mock = MagicMock(return_value={"version": "6.0.2"})
-        with patch.object(MockPyMongoDatabase, "command", database_command_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.version()
-                    assert ret == "6.0.2"
+    database_command_mock = MagicMock(autospec=True, return_value={"version": "6.0.2"})
+    config_option_mock = MagicMock(
+        side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", database_command_mock
+    )
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_command, patch_pymongo_database, patch_salt_dict:
+        ret = mongodb.version()
+        assert ret == "6.0.2"
 
 
 def test_db_list():
     """
     Test mongodb.db_list
     """
-    list_db_names_mock = MagicMock(return_value=["admin", "config", "local"])
-
+    list_db_names_mock = MagicMock(
+        autospec=True, return_value=["admin", "config", "local"]
+    )
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
-    with patch.object(MockMongoConnect, "list_database_names", list_db_names_mock):
-        mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-        with patch("pymongo.MongoClient", mongodb_client_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.db_list()
-                    assert ret == ["admin", "config", "local"]
+
+    patch_list_db_names = patch.object(
+        MockMongoConnect, "list_database_names", list_db_names_mock
+    )
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_list_db_names, patch_mongo_client, patch_pymongo_database, patch_salt_dict:
+        ret = mongodb.db_list()
+        assert ret == ["admin", "config", "local"]
 
 
 def test_db_exists():
     """
     Test mongodb.db_exists
     """
-    list_db_names_mock = MagicMock(return_value=["admin", "config", "local"])
-
+    list_db_names_mock = MagicMock(
+        autospec=True, return_value=["admin", "config", "local"]
+    )
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
-    with patch.object(MockMongoConnect, "list_database_names", list_db_names_mock):
-        mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-        with patch("pymongo.MongoClient", mongodb_client_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.db_exists("admin")
-                    assert ret
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_list_db_names = patch.object(
+        MockMongoConnect, "list_database_names", list_db_names_mock
+    )
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_list_db_names, patch_mongo_client, patch_pymongo_database, patch_salt_dict:
+        ret = mongodb.db_exists("admin")
+        assert ret
 
 
 def test_user_list():
@@ -143,32 +197,34 @@ def test_user_list():
         ],
         "ok": 1.0,
     }
+    database_version = {"version": "6.0.2"}
 
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        database_version = {"version": "6.0.2"}
-        with patch.object(
-            MockPyMongoDatabase,
-            "command",
-            MagicMock(side_effect=[database_version, user_info]),
-        ):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_list()
-                    expected = [
-                        {
-                            "user": "test_user",
-                            "roles": [{"role": "read", "db": "admin"}],
-                        },
-                        {"user": "test_user2", "roles": []},
-                    ]
-                    assert ret == expected
+    database_command_mock = MagicMock(side_effect=[database_version, user_info])
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", database_command_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_pymongo_command, patch_salt_dict:
+        ret = mongodb.user_list()
+        expected = [
+            {
+                "user": "test_user",
+                "roles": [{"role": "read", "db": "admin"}],
+            },
+            {"user": "test_user2", "roles": []},
+        ]
+        assert ret == expected
 
 
 def test_user_exists():
@@ -196,43 +252,49 @@ def test_user_exists():
         ],
         "ok": 1.0,
     }
+    database_version = {"version": "6.0.2"}
 
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        database_version = {"version": "6.0.2"}
-        with patch.object(
-            MockPyMongoDatabase,
-            "command",
-            MagicMock(side_effect=[database_version, user_info]),
-        ):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_exists("test_user")
-                    assert ret
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
 
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        database_version = {"version": "6.0.2"}
-        with patch.object(
-            MockPyMongoDatabase,
-            "command",
-            MagicMock(side_effect=[database_version, user_info]),
-        ):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
+    with patch_mongo_client, patch_pymongo_database:
+        config_option_mock = MagicMock(
+            autospec=True, side_effect=["user", "password", "localhost", "27017"]
+        )
+        database_command_mock = MagicMock(
+            autospec=True, side_effect=[database_version, user_info]
+        )
 
-                    ret = mongodb.user_exists("no_test_user")
-                    assert not ret
+        patch_salt_dict = patch.dict(
+            mongodb.__salt__, {"config.option": config_option_mock}
+        )
+        patch_pymongo_command = patch.object(
+            MockPyMongoDatabase, "command", database_command_mock
+        )
+
+        with patch_salt_dict, patch_pymongo_command:
+            ret = mongodb.user_exists("test_user")
+            assert ret
+
+        config_option_mock = MagicMock(
+            autospec=True, side_effect=["user", "password", "localhost", "27017"]
+        )
+        database_command_mock = MagicMock(
+            autospec=True, side_effect=[database_version, user_info]
+        )
+
+        patch_salt_dict = patch.dict(
+            mongodb.__salt__, {"config.option": config_option_mock}
+        )
+        patch_pymongo_command = patch.object(
+            MockPyMongoDatabase, "command", database_command_mock
+        )
+
+        with patch_salt_dict, patch_pymongo_command:
+            ret = mongodb.user_exists("no_test_user")
+            assert not ret
 
 
 def test_user_create():
@@ -243,38 +305,48 @@ def test_user_create():
 
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        with patch.object(MockPyMongoDatabase, "command", user_create_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_create("test_user", "test_password")
-                    assert ret
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", user_create_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_create("test_user", "test_password")
+        assert ret
 
 
 def test_user_remove():
     """
     Test mongodb.user_remove
     """
-    user_remove_mock = MagicMock(return_value={"ok": 1.0})
+    user_remove_mock = MagicMock(autospec=True, return_value={"ok": 1.0})
 
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        with patch.object(MockPyMongoDatabase, "command", user_remove_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_remove("test_user")
-                    assert ret
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", user_remove_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_remove("test_user")
+        assert ret
 
 
 def test_user_roles_exists():
@@ -302,116 +374,297 @@ def test_user_roles_exists():
         ],
         "ok": 1.0,
     }
+    database_version = {"version": "6.0.2"}
 
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        database_version = {"version": "6.0.2"}
-        with patch.object(
-            MockPyMongoDatabase,
-            "command",
-            MagicMock(side_effect=[database_version, user_info]),
-        ):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_roles_exists("test_user", '["read"]', "admin")
-                    assert ret
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+    database_command_mock = MagicMock(
+        autospec=True, side_effect=[database_version, user_info]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", database_command_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_roles_exists("test_user", '["read"]', "admin")
+        assert ret
 
 
 def test_user_grant_roles():
     """
     Test mongodb.user_remove
     """
-    user_grant_roles_mock = MagicMock(return_value={"ok": 1.0})
-
+    user_grant_roles_mock = MagicMock(autospec=True, return_value={"ok": 1.0})
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        with patch.object(MockPyMongoDatabase, "command", user_grant_roles_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_grant_roles(
-                        "test_user", '[{"role": "readWrite", "db": "admin" }]', "admin"
-                    )
-                    assert ret
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", user_grant_roles_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_grant_roles(
+            "test_user", '[{"role": "readWrite", "db": "admin" }]', "admin"
+        )
+        assert ret
 
 
 def test_user_revoke_roles():
     """
     Test mongodb.user_remove
     """
-    user_revoke_roles_mock = MagicMock(return_value={"ok": 1.0})
-
+    user_revoke_roles_mock = MagicMock(autospec=True, return_value={"ok": 1.0})
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        with patch.object(MockPyMongoDatabase, "command", user_revoke_roles_mock):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.user_revoke_roles(
-                        "test_user", '[{"role": "readWrite", "db": "admin" }]', "admin"
-                    )
-                    assert ret
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", user_revoke_roles_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_revoke_roles(
+            "test_user", '[{"role": "readWrite", "db": "admin" }]', "admin"
+        )
+        assert ret
 
 
 def test_collection_create():
     """
     Test mongodb.user_create
     """
-    collection_create_mock = MagicMock(return_value={"ok": 1.0})
-
+    collection_create_mock = MagicMock(autospec=True, return_value={"ok": 1.0})
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        with patch.object(
-            MockPyMongoDatabase, "create_collection", collection_create_mock
-        ):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.collection_create("test_collection")
-                    assert ret
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", collection_create_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.collection_create("test_collection")
+        assert ret
 
 
 def test_collections_list():
     """
     Test mongodb.collections_list
     """
-    collections_list = ["system.users", "mycollection", "system.version"]
+    collections_list = MagicMock(
+        autospec=True, return_value=["system.users", "mycollection", "system.version"]
+    )
+    pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_list_collection_names = patch.object(
+        MockPyMongoDatabase, "list_collection_names", collections_list
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_list_collection_names:
+        ret = mongodb.collections_list()
+        assert ret == ["system.users", "mycollection", "system.version"]
+
+
+def test_insert():
+    """
+    Test mongodb.insert
+    """
+    collection_insert_mock = MockInsertResult()
 
     pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
     mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
-    with patch("pymongo.MongoClient", mongodb_client_mock):
-        with patch.object(
-            MockPyMongoDatabase,
-            "list_collection_names",
-            MagicMock(return_value=collections_list),
-        ):
-            with patch("pymongo.database.Database", pymongo_database_mock):
-                config_option_mock = MagicMock(
-                    side_effect=["user", "password", "localhost", "27017"]
-                )
-                with patch.dict(
-                    mongodb.__salt__, {"config.option": config_option_mock}
-                ):
-                    ret = mongodb.collections_list()
-                    assert ret == ["system.users", "mycollection", "system.version"]
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+    pymongo_collection_mock = MagicMock(
+        autospec=True, return_value=MockPyMongoCollection()
+    )
+
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_pymongo_collection = patch.object(mongodb, "getattr", pymongo_collection_mock)
+
+    with patch_mongo_client, patch_salt_dict, patch_pymongo_database, patch_pymongo_collection:
+        patch_pymongo_collection_insert = patch.object(
+            MockPyMongoCollection,
+            "insert_many",
+            MagicMock(return_value=collection_insert_mock),
+        )
+        with patch_pymongo_collection_insert:
+            ret = mongodb.insert(
+                '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]',
+                "my_collection",
+            )
+            assert ret
+
+
+def test_find():
+    """
+    Test mongodb.find
+    """
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
+    pymongo_collection_mock = MagicMock(
+        autospec=True, return_value=MockPyMongoCollection()
+    )
+
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_pymongo_collection = patch.object(mongodb, "getattr", pymongo_collection_mock)
+
+    with patch_mongo_client, patch_pymongo_database, patch_pymongo_collection:
+        collection_find_mock = [
+            {"_id": "63459d7f78548d1d02295dd0", "foo": "FOO", "bar": "BAR"},
+            {"_id": "6345c4fea9a1255a430b2fef", "foo": "FOO", "bar": "BAR"},
+            {"_id": "6345c505961560271e34a22a", "foo": "FOO", "bar": "BAR"},
+        ]
+
+        config_option_mock = MagicMock(
+            autospec=True, side_effect=["user", "password", "localhost", "27017"]
+        )
+        patch_salt_dict = patch.dict(
+            mongodb.__salt__, {"config.option": config_option_mock}
+        )
+        patch_pymongo_collection_find = patch.object(
+            MockPyMongoCollection, "find", MagicMock(return_value=collection_find_mock)
+        )
+        with patch_pymongo_collection_find, patch_salt_dict:
+            expected = [
+                {"_id": "63459d7f78548d1d02295dd0", "foo": "FOO", "bar": "BAR"},
+                {"_id": "6345c4fea9a1255a430b2fef", "foo": "FOO", "bar": "BAR"},
+                {"_id": "6345c505961560271e34a22a", "foo": "FOO", "bar": "BAR"},
+                {"_id": "63459d7f78548d1d02295dd0", "foo": "FOO", "bar": "BAR"},
+                {"_id": "6345c4fea9a1255a430b2fef", "foo": "FOO", "bar": "BAR"},
+                {"_id": "6345c505961560271e34a22a", "foo": "FOO", "bar": "BAR"},
+            ]
+            ret = mongodb.find(
+                "test_collection",
+                ['{"foo": "FOO", "bar": "BAR"}', '{"foo": "BAZ", "bar": "BAM"}'],
+            )
+            assert ret == expected
+
+        collection_find_mock = [{"_id": "63459d7f78548d1d02295dd0", "baz": "BAZ"}]
+
+        config_option_mock = MagicMock(
+            autospec=True, side_effect=["user", "password", "localhost", "27017"]
+        )
+        patch_salt_dict = patch.dict(
+            mongodb.__salt__, {"config.option": config_option_mock}
+        )
+        patch_pymongo_collection_find = patch.object(
+            MockPyMongoCollection, "find", MagicMock(return_value=collection_find_mock)
+        )
+        with patch_pymongo_collection_find, patch_salt_dict:
+            expected = [{"_id": "63459d7f78548d1d02295dd0", "baz": "BAZ"}]
+            ret = mongodb.find("my_collection", {"baz": "BAZ"})
+            assert ret == expected
+
+
+def test_remove():
+    """
+    Test mongodb.remove
+    """
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
+    pymongo_collection_mock = MagicMock(
+        autospec=True, return_value=MockPyMongoCollection()
+    )
+
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_pymongo_collection = patch.object(mongodb, "getattr", pymongo_collection_mock)
+
+    with patch_mongo_client, patch_pymongo_database, patch_pymongo_collection:
+        config_option_mock = MagicMock(
+            autospec=True, side_effect=["user", "password", "localhost", "27017"]
+        )
+        patch_salt_dict = patch.dict(
+            mongodb.__salt__, {"config.option": config_option_mock}
+        )
+
+        # Assume we delete one entry each time
+        collection_delete_many_mock = MockDeleteResult()
+        collection_delete_many_mock.deleted_count = 1
+        collection_delete_many_mock.raw_result = {"n": 1, "ok": 1.0}
+        collection_delete_many_mock.acknowledged = True
+
+        patch_pymongo_collection_remove = patch.object(
+            MockPyMongoCollection,
+            "delete_many",
+            MagicMock(return_value=collection_delete_many_mock),
+        )
+        with patch_pymongo_collection_remove, patch_salt_dict:
+
+            ret = mongodb.remove(
+                "test_collection",
+                ['{"foo": "FOO", "bar": "BAR"}', '{"foo": "BAZ", "bar": "BAM"}'],
+            )
+            expected = "2 objects removed"
+            assert ret == expected
+
+        config_option_mock = MagicMock(
+            autospec=True, side_effect=["user", "password", "localhost", "27017"]
+        )
+        patch_salt_dict = patch.dict(
+            mongodb.__salt__, {"config.option": config_option_mock}
+        )
+
+        # Assume we delete one entry each time
+        collection_delete_many_mock = MockDeleteResult()
+        collection_delete_many_mock.deleted_count = 1
+        collection_delete_many_mock.raw_result = {"n": 1, "ok": 1.0}
+        collection_delete_many_mock.acknowledged = True
+
+        patch_pymongo_collection_remove = patch.object(
+            MockPyMongoCollection,
+            "delete_many",
+            MagicMock(return_value=collection_delete_many_mock),
+        )
+        with patch_pymongo_collection_remove, patch_salt_dict:
+
+            ret = mongodb.remove("test_collection", {"foo": "FOO", "bar": "BAR"})
+            expected = "1 objects removed"
+            assert ret == expected
