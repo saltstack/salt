@@ -1331,6 +1331,17 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
                         "old": subval1,
                         "new": subval2,
                     }
+        elif item == "Options":
+            for subkey in val1:
+                subval1 = val1[subkey]
+                subval2 = val2.get(subkey)
+                if subkey == "com.docker.network.bridge.name":
+                    continue
+                elif subval1 != subval2:
+                    ret.setdefault("Options", {})[subkey] = {
+                        "old": subval1,
+                        "new": subval2,
+                    }
         elif val1 != val2:
             ret[item] = {"old": val1, "new": val2}
 
@@ -2505,11 +2516,11 @@ def version():
     if "Version" in ret:
         match = version_re.match(str(ret["Version"]))
         if match:
-            ret["VersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["VersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     if "ApiVersion" in ret:
         match = version_re.match(str(ret["ApiVersion"]))
         if match:
-            ret["ApiVersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["ApiVersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     return ret
 
 

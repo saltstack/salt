@@ -5,9 +5,10 @@ import time
 
 import attr
 import pytest
+
+import salt.channel.client
 import salt.config
 import salt.master
-import salt.transport.client
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.user
@@ -71,7 +72,7 @@ def client_config(salt_minion, salt_master):
 
 @pytest.fixture
 def clear_channel(client_config):
-    with salt.transport.client.ReqChannel.factory(
+    with salt.channel.client.ReqChannel.factory(
         client_config, crypt="clear"
     ) as channel:
         yield channel

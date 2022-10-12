@@ -6,6 +6,7 @@
 import os
 
 import pytest
+
 import salt.modules.qemu_img as qemu_img
 from tests.support.mock import MagicMock, patch
 

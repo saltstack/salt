@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 pytestmark = [
@@ -43,12 +45,12 @@ def test_state_with_import(salt_ssh_cli, state_tree):
     verify salt-ssh can use imported map files in states
     """
     ret = salt_ssh_cli.run("state.sls", "test")
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
 
 
 @pytest.fixture
-def nested_state_tree(base_env_state_tree_root_dir, tmpdir):
+def nested_state_tree(base_env_state_tree_root_dir, tmp_path):
     top_file = """
     base:
       'localhost':
@@ -62,7 +64,7 @@ def nested_state_tree(base_env_state_tree_root_dir, tmpdir):
         - source: salt://foo/file.jinja
         - template: jinja
     """.format(
-        tmpdir
+        tmp_path
     )
     file_jinja = """
     {% from 'foo/map.jinja' import comment %}{{ comment }}
@@ -90,5 +92,35 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     ret = salt_ssh_cli.run(
         "--extra-filerefs=salt://foo/map.jinja", "state.apply", "foo"
     )
-    assert ret.exitcode == 0
-    assert ret.json
+    assert ret.returncode == 0
+    assert ret.data
+
+
+@pytest.mark.slow_test
+def test_state_low(salt_ssh_cli):
+    """
+    test state.low with salt-ssh
+    """
+    ret = salt_ssh_cli.run(
+        "state.low", '{"state": "cmd", "fun": "run", "name": "echo blah"}'
+    )
+    assert (
+        json.loads(ret.stdout)["localhost"]["cmd_|-echo blah_|-echo blah_|-run"][
+            "changes"
+        ]["stdout"]
+        == "blah"
+    )
+
+
+@pytest.mark.slow_test
+def test_state_high(salt_ssh_cli):
+    """
+    test state.high with salt-ssh
+    """
+    ret = salt_ssh_cli.run("state.high", '{"echo blah": {"cmd": ["run"]}}')
+    assert (
+        json.loads(ret.stdout)["localhost"]["cmd_|-echo blah_|-echo blah_|-run"][
+            "changes"
+        ]["stdout"]
+        == "blah"
+    )

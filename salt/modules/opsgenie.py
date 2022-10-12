@@ -23,6 +23,7 @@ Module for sending data to OpsGenie
 import logging
 
 import requests
+
 import salt.exceptions
 import salt.utils.json
 

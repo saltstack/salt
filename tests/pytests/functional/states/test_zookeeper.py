@@ -5,27 +5,17 @@ Integration tests for the zookeeper states
 import logging
 
 import pytest
-from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
-from saltfactories.utils.ports import get_unused_localhost_port
 
 pytest.importorskip("kazoo")
-docker = pytest.importorskip("docker")
-from docker.errors import (  # isort:skip pylint: disable=3rd-party-module-not-gated
-    DockerException,
-)
+pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    # pytest.mark.slow_test,
+    pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
-
-
-@pytest.fixture(scope="module")
-def zookeeper_port():
-    return get_unused_localhost_port()
 
 
 @pytest.fixture(scope="module")
@@ -66,28 +56,26 @@ def minion_config_overrides(zookeeper_port):
 
 
 @pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
-@pytest.fixture(scope="module")
-def zookeeper_container(salt_factories, docker_client, zookeeper_port):
+def zookeeper_container(salt_factories):
     container = salt_factories.get_container(
         random_string("zookeeper-"),
-        "zookeeper",
-        docker_client=docker_client,
-        check_ports=[zookeeper_port],
-        container_run_kwargs={"ports": {"2181/tcp": zookeeper_port}},
+        "ghcr.io/saltstack/salt-ci-containers/zookeeper",
+        container_run_kwargs={
+            "ports": {
+                "2181/tcp": None,
+            }
+        },
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
     )
     with container.started() as factory:
         yield factory
+
+
+@pytest.fixture(scope="module")
+def zookeeper_port(zookeeper_container):
+    return zookeeper_container.get_host_port_binding(2181, protocol="tcp", ipv6=False)
 
 
 @pytest.fixture(scope="module")

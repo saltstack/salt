@@ -274,7 +274,7 @@ If ( Test-Path "$($ini[$bitPaths]['NSISDir'])\Include\MoveFileFolder.nsh" ) {
     $file = "$($ini['Settings']['DownloadDir'])\$file"
     DownloadFileWithProgress $url $file
 
-    # Move libary to the include directory
+    # Move library to the include directory
     Write-Output " - Copying library to include directory . . ."
     Move-Item "$file" "$( $ini[$bitPaths]['NSISDir'] )\Include\MoveFileFolder.nsh" -Force
 }

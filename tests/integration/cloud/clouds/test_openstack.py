@@ -5,6 +5,7 @@ Tests for the Openstack Cloud Provider
 import logging
 
 import pytest
+
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -14,8 +15,10 @@ log = logging.getLogger(__name__)
 
 try:
     import keystoneclient  # pylint: disable=import-error,unused-import
-    from libcloud.common.openstack_identity import OpenStackIdentity_3_0_Connection
-    from libcloud.common.openstack_identity import OpenStackIdentityTokenScope
+    from libcloud.common.openstack_identity import (
+        OpenStackIdentity_3_0_Connection,
+        OpenStackIdentityTokenScope,
+    )
 
     HAS_KEYSTONE = True
 except ImportError:

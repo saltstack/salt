@@ -8,9 +8,9 @@ click==7.1.2
     # via towncrier
 incremental==17.5.0
     # via towncrier
-jinja2==2.11.3
+jinja2==3.0.3
     # via towncrier
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via jinja2
 toml==0.10.1
     # via towncrier
