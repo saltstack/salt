@@ -10,6 +10,7 @@ from collections import OrderedDict
 from pathlib import PurePath, PurePosixPath
 
 import pytest
+
 import salt.utils.files
 import salt.utils.templates
 from tests.support.helpers import with_tempdir

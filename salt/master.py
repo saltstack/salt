@@ -737,7 +737,10 @@ class Master(SMaster):
             # must be after channels
             log.info("Creating master maintenance process")
             self.process_manager.add_process(
-                Maintenance, args=(self.opts,), name="Maintenance"
+                Maintenance,
+                args=(self.opts,),
+                kwargs={"master_secrets": SMaster.secrets},
+                name="Maintenance",
             )
 
             if self.opts.get("event_return"):
@@ -965,8 +968,19 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
-            channel.close()
-        self.clear_funcs.destroy()
+            try:
+                channel.close()
+            except Exception:  # pylint: disable=broad-except
+                # Don't stop closing additional channels because an
+                # exception occurred.
+                pass
+        clear_funcs = getattr(self, "clear_funcs", None)
+        if clear_funcs is not None:
+            try:
+                clear_funcs.destroy()
+            except Exception:  # pylint: disable=broad-except
+                # Don't stop signal handling because an exception occurred.
+                pass
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):

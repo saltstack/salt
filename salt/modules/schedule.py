@@ -1,6 +1,8 @@
 """
 Module for managing the Salt schedule on a minion
 
+Requires that python-dateutil is installed on the minion.
+
 .. versionadded:: 2014.7.0
 
 """
@@ -11,11 +13,12 @@ import datetime
 import logging
 import os
 
+import yaml
+
 import salt.utils.event
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.yaml
-import yaml
 
 try:
     import dateutil.parser as dateutil_parser

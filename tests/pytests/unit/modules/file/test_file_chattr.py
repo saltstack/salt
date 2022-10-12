@@ -2,6 +2,7 @@ import logging
 import textwrap
 
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.file as filemod
 from tests.support.mock import MagicMock, Mock, patch

@@ -3,6 +3,7 @@ Tests for file.readlink function
 """
 
 import pytest
+
 from salt.exceptions import SaltInvocationError
 
 pytestmark = [

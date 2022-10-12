@@ -60,7 +60,9 @@ def present(name, persist=False, mods=None):
         The name of the kernel module to verify is loaded
 
     persist
-        Also add module to ``/etc/modules``
+        Also add module to ``/etc/modules`` (or
+        ``/etc/modules-load.d/salt_managed.conf`` if the ``systemd`` key is
+        present in Grains.
 
     mods
         A list of modules to verify are loaded.  If this argument is used, the
@@ -172,7 +174,9 @@ def absent(name, persist=False, comment=True, mods=None):
         The name of the kernel module to verify is not loaded
 
     persist
-        Remove module from ``/etc/modules``
+        Remove module from ``/etc/modules`` (or
+        ``/etc/modules-load.d/salt_managed.conf`` if the ``systemd`` key is
+        present in Grains.
 
     comment
         Comment out module in ``/etc/modules`` rather than remove it
