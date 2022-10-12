@@ -7760,6 +7760,9 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
+    check_cmd=False,
+    tmp_dir="",
+    tmp_ext="",
     **kwargs
 ):
     """
@@ -7910,6 +7913,48 @@ def serialize(
 
         .. versionadded:: 2019.2.0
 
+    check_cmd
+        .. versionadded:: 3006
+
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new managed contents.  If the command
+        exits with a zero status the new managed contents will be written to
+        the managed destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/web/web.conf:
+              file.serialize:
+                - user: root
+                - group: root
+                - mode: 0440
+                - check_cmd: /path/to/binary --check-config --configfile
+                - dataset:
+                    config:
+                        listen: 127.0.0.1:443
+
+        **NOTE**: This ``check_cmd`` functions differently than the requisite
+        ``check_cmd``.
+
+    tmp_dir
+        .. versionadded:: 3006
+
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+    tmp_ext
+        .. versionadded:: 3006
+
+        Suffix for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file extension (e.g. the init-checkconf upstart
+        config checker).
+
+
     For example, this state:
 
     .. code-block:: yaml
@@ -7961,8 +8006,6 @@ def serialize(
         serializer_options["json.serialize"].update({"ensure_ascii": False})
 
     ret = {"changes": {}, "comment": "", "name": name, "result": True}
-    if not name:
-        return _error(ret, "Must provide name to file.serialize")
 
     if not create:
         if not os.path.isfile(name):
@@ -7999,15 +8042,13 @@ def serialize(
     deserializer_name = "{}.deserialize".format(serializer)
 
     if serializer_name not in __serializers__:
-        return {
-            "changes": {},
-            "comment": (
+        return _error(
+            ret,
+            (
                 "The {} serializer could not be found. It either does "
                 "not exist or its prerequisites are not installed.".format(serializer)
             ),
-            "name": name,
-            "result": False,
-        }
+        )
 
     if serializer_opts:
         serializer_options.setdefault(serializer_name, {}).update(
@@ -8023,16 +8064,13 @@ def serialize(
     if merge_if_exists:
         if os.path.isfile(name):
             if deserializer_name not in __serializers__:
-                return {
-                    "changes": {},
-                    "comment": (
-                        "merge_if_exists is not supported for the {} serializer".format(
-                            serializer
-                        )
+                return _error(
+                    ret,
+                    "merge_if_exists is not supported for the {} serializer".format(
+                        serializer
                     ),
-                    "name": name,
-                    "result": False,
-                }
+                )
+
             open_args = "r"
             if serializer == "plist":
                 open_args += "b"
@@ -8042,11 +8080,9 @@ def serialize(
                         fhr, **deserializer_options.get(deserializer_name, {})
                     )
                 except (TypeError, DeserializationError) as exc:
-                    ret["result"] = False
-                    ret["comment"] = "Failed to deserialize existing data: {}".format(
-                        exc
+                    return _error(
+                        ret, "Failed to deserialize existing data: {}".format(exc)
                     )
-                    return ret
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(
@@ -8076,6 +8112,74 @@ def serialize(
         contents += "\n"
     except TypeError:
         pass
+
+    if check_cmd:
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
+
+        # If file described by name already exists, copy it to the tmp_filename
+        # so we can check for a diff before running check_cmd
+        if __salt__["file.file_exists"](name):
+            try:
+                __salt__["file.copy"](name, tmp_filename)
+            except Exception as exc:  # pylint: disable=broad-except
+                return _error(
+                    ret,
+                    "Unable to copy file {} to {}: {}".format(name, tmp_filename, exc),
+                )
+
+        try:
+            # Manage the dataset into the tmp_filename
+            ret = __salt__["file.manage_file"](
+                name=tmp_filename,
+                sfn="",
+                ret=ret,
+                source=None,
+                source_sum={},
+                user=user,
+                group=group,
+                mode=mode,
+                attrs=None,
+                saltenv=__env__,
+                backup=backup,
+                makedirs=makedirs,
+                template=None,
+                show_changes=show_changes,
+                encoding=encoding,
+                encoding_errors=encoding_errors,
+                contents=contents,
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            # Reset changes if we hit an exception
+            ret["changes"] = {}
+            log.debug(traceback.format_exc())
+
+            # Don't forget to clean up the tmp_filename
+            salt.utils.files.remove(tmp_filename)
+
+            return _error(ret, "Unable to check_cmd file: {}".format(exc))
+
+        if ret["changes"]:
+            # Reset changes here ready for running this for real.
+            # update preserves possible ret["warnings"] set above
+            ret.update({"changes": {}, "comment": "", "name": name, "result": True})
+
+            check_cmd_opts = {}
+            if "shell" in __grains__:
+                check_cmd_opts["shell"] = __grains__["shell"]
+
+            # Returns True if check_cmd returns success, otherwise returns a
+            # ret dict with ret["comment"] containing cmd error output
+            cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
+
+            if isinstance(cret, dict):
+                ret.update(cret)
+                salt.utils.files.remove(tmp_filename)
+                return ret
+
+        else:
+            # Reset changes here ready for running this for real.
+            # update preserves possible ret["warnings"] set above
+            ret.update({"changes": {}, "comment": "", "name": name, "result": True})
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
