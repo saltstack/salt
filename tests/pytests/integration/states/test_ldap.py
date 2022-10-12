@@ -46,7 +46,9 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
                         # which is able to pass tuples to the minion.  Using
                         # such a fixture with state.single would make these
                         # tests more like unit tests and less like integration
-                        # tests.
+                        # tests.  There are existing unit test cases for
+                        # non-list iterables of values, so it's no big deal that
+                        # there isn't integration test coverage here.
                         #
                         # Alternatively the YAML loader can be extended to
                         # support tuples and/or OrderedDict.
@@ -55,16 +57,10 @@ def test_managed_add_new_entry(openldap_minion_run, openldap_minion_apply, subtr
                             4567,
                             b"abcd",
                         ],
-                        "userPassword": [
-                            # Intentionally invalid UTF-8.  The syntax for
-                            # userPassword is Octet String, not Directory String
-                            # (like description), so this is acceptable.
-                            #
-                            # TODO: bytes objects must be in a list (this test
-                            # can't do `"userPassword": b"..."`) due to a bug in
-                            # the way values are turned into sets.
-                            b"\x00\x01\x02\x03\x80",
-                        ],
+                        # Intentionally invalid UTF-8.  The syntax for
+                        # userPassword is Octet String, not Directory String
+                        # (like description), so this is acceptable.
+                        "userPassword": b"\x00\x01\x02\x03\x80",
                         # Empty list should be a no-op.
                         "telephoneNumber": [],
                         # None should be equivalent to an empty list.

@@ -14,7 +14,6 @@ import logging
 
 from salt.utils.odict import OrderedDict
 from salt.utils.oset import OrderedSet
-from salt.utils.stringutils import to_bytes
 
 log = logging.getLogger(__name__)
 
@@ -493,6 +492,31 @@ def _update_entry(entry, status, directives):
                 raise ValueError("unknown directive: " + directive)
 
 
+def _normalize(thing):
+    """Convert thing to bytes.
+
+    Details:
+      * bytes-like values are copied and returned.
+      * str values are encoded to UTF-8 bytes.
+      * int values (including Booleans) are converted to str then encoded.
+      * Everything else raises an exception.
+    """
+    try:
+        # If thing is already a bytes-like object, return a copy of the bytes.
+        # The intermediate call to memoryview prevents this function from
+        # interpreting an iterable of 8-bit integer values as a string of bytes.
+        thing = bytes(memoryview(thing))
+    except:  # pylint: disable=bare-except
+        pass
+    if isinstance(thing, int):
+        thing = str(thing)
+    if isinstance(thing, str):
+        thing = thing.encode()
+    if not isinstance(thing, bytes):
+        raise TypeError(f"expected an int, str, or bytes-like value, got {type(thing)}")
+    return thing
+
+
 def _toset(thing):
     """Helper to convert various things to an ``OrderedSet``.
 
@@ -507,24 +531,19 @@ def _toset(thing):
     <https://datatracker.ietf.org/doc/html/draft-chu-ldap-xordered-00>`_
     extension. (OpenLDAP has some X-ORDERED attributes in its config schema.)
 
-    ``None`` becomes an empty set.  Iterables except for strings have their
-    elements added to a new set.  Non-``None` scalars (strings, numbers,
-    non-iterable objects, etc.) are added as the only member of a new set.
+    Details:
+      * ``None`` becomes a new empty set.
+      * ``bytes``-like, ``str``, and ``int`` values are normalized with
+        ``_normalize()`` and returned as the only member of a new set.
+      * Other values are assumed to be iterables of values to normalize and
+        return in the new set.  (If it is not an iterable, or if an entry can't
+        be normalized, an exception is raised).
     """
     if thing is None:
-        return OrderedSet()
-    if isinstance(thing, str):
-        return OrderedSet((to_bytes(thing),))
-    if isinstance(thing, int):
-        return OrderedSet((to_bytes(str(thing)),))
-    # convert numbers to strings and then bytes
-    # so that equality checks work
-    # (LDAP stores numbers as strings)
-    try:
-        return OrderedSet(
-            to_bytes(str(x)) if isinstance(x, int) else to_bytes(x) for x in thing
-        )
-    except TypeError:
-        return OrderedSet(
-            str(thing),
-        )
+        coll = ()
+    else:
+        try:
+            coll = (_normalize(thing),)
+        except TypeError:
+            coll = (_normalize(x) for x in thing)
+    return OrderedSet(coll)
