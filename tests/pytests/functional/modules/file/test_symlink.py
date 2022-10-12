@@ -5,6 +5,7 @@ Tests for file.symlink function
 import os
 
 import pytest
+
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -31,6 +32,19 @@ def test_symlink(file, source):
     target = source.parent / "symlink.lnk"
     try:
         file.symlink(str(source), str(target))
+        assert salt.utils.path.islink(str(target))
+    finally:
+        target.unlink()
+
+
+def test_symlink_missing_src(file, source):
+    """
+    Test symlink when src is missing should still create the link
+    """
+    target = source.parent / "symlink.lnk"
+    missing_source = source.parent / "missing.txt"
+    try:
+        file.symlink(str(missing_source), str(target))
         assert salt.utils.path.islink(str(target))
     finally:
         target.unlink()
@@ -106,3 +120,18 @@ def test_symlink_target_relative_path(file, source):
     with pytest.raises(SaltInvocationError) as exc:
         file.symlink(str(source), str(target))
     assert "Link path must be absolute" in exc.value.message
+
+
+def test_symlink_exists_different_atomic(file, source):
+    """
+    Test symlink with an existing symlink to a different file with atomic=True
+    Should replace the existing symlink with a new one to the correct location
+    """
+    dif_source = source.parent / "dif_source.txt"
+    target = source.parent / "symlink.lnk"
+    target.symlink_to(dif_source)
+    try:
+        file.symlink(str(source), str(target), atomic=True)
+        assert salt.utils.path.readlink(str(target)) == str(source)
+    finally:
+        target.unlink()

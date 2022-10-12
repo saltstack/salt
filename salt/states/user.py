@@ -78,6 +78,7 @@ def _changes(
     win_description=None,
     allow_uid_change=False,
     allow_gid_change=False,
+    password_lock=None,
 ):
     """
     Return a dict of the changes required for a user if the user is present,
@@ -98,9 +99,9 @@ def _changes(
         return False
 
     change = {}
-    if groups is None:
-        groups = lusr["groups"]
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
+    if not remove_groups:
+        wanted_groups = sorted(set(wanted_groups + lusr["groups"]))
     if uid and lusr["uid"] != uid:
         change["uid"] = uid
     if gid is not None and lusr["gid"] not in (gid, __salt__["file.group_to_gid"](gid)):
@@ -158,6 +159,10 @@ def _changes(
             change["warndays"] = warndays
         if expire and lshad["expire"] != expire:
             change["expire"] = expire
+        if (password_lock and not lshad["passwd"].startswith("!")) or (
+            password_lock is False and lshad["passwd"].startswith("!")
+        ):
+            change["password_lock"] = password_lock
     elif "shadow.info" in __salt__ and salt.utils.platform.is_windows():
         if (
             expire
@@ -166,6 +171,8 @@ def _changes(
             != salt.utils.dateutils.strftime(expire)
         ):
             change["expire"] = expire
+        if password_lock is False and lusr["account_locked"]:
+            change["password_lock"] = password_lock
 
     # GECOS fields
     fullname = salt.utils.data.decode(fullname)
@@ -266,6 +273,7 @@ def present(
     nologinit=False,
     allow_uid_change=False,
     allow_gid_change=False,
+    password_lock=None,
 ):
     """
     Ensure that the named user is present with the specified properties
@@ -368,6 +376,14 @@ def present(
     empty_password
         Set to True to enable password-less login for user, Default is ``False``.
 
+    password_lock
+        Set to ``False`` to unlock a user's password (or Windows account). On
+        non-Windows systems ONLY, this parameter can be set to ``True`` to lock
+        a user's password. Default is ``None``, which does not take action on
+        the password (or Windows account).
+
+        .. versionadded:: 3006.0
+
     shell
         The login shell, defaults to the system default shell
 
@@ -440,7 +456,7 @@ def present(
         home directory will be a unc path. Otherwise the home directory will be
         mapped to the specified drive. Must be a letter followed by a colon.
         Because of the colon, the value must be surrounded by single quotes. ie:
-        - win_homedrive: 'U:
+        ``- win_homedrive: 'U:'``
 
         .. versionchanged:: 2015.8.0
 
@@ -496,15 +512,15 @@ def present(
             password = __salt__["shadow.gen_password"](password)
 
     if fullname is not None:
-        fullname = salt.utils.data.decode(fullname)
+        fullname = salt.utils.data.decode(str(fullname))
     if roomnumber is not None:
-        roomnumber = salt.utils.data.decode(roomnumber)
+        roomnumber = salt.utils.data.decode(str(roomnumber))
     if workphone is not None:
-        workphone = salt.utils.data.decode(workphone)
+        workphone = salt.utils.data.decode(str(workphone))
     if homephone is not None:
-        homephone = salt.utils.data.decode(homephone)
+        homephone = salt.utils.data.decode(str(homephone))
     if other is not None:
-        other = salt.utils.data.decode(other)
+        other = salt.utils.data.decode(str(other))
 
     # createhome not supported on Windows
     if __grains__["kernel"] == "Windows":
@@ -597,6 +613,7 @@ def present(
             win_description,
             allow_uid_change,
             allow_gid_change,
+            password_lock=password_lock,
         )
     except CommandExecutionError as exc:
         ret["result"] = False
@@ -632,6 +649,17 @@ def present(
 
         if changes.pop("empty_password", False) is True:
             __salt__["shadow.del_password"](name)
+
+        if "password_lock" in changes:
+            passlock = changes.pop("password_lock")
+            if not passlock and salt.utils.platform.is_windows():
+                __salt__["shadow.unlock_account"](name)
+            elif not passlock:
+                __salt__["shadow.unlock_password"](name)
+            elif passlock and not salt.utils.platform.is_windows():
+                __salt__["shadow.lock_password"](name)
+            else:
+                log.warning("Account locking is not available on Windows.")
 
         if "date" in changes:
             del changes["date"]
@@ -766,6 +794,7 @@ def present(
             win_description,
             allow_uid_change=True,
             allow_gid_change=True,
+            password_lock=password_lock,
         )
         # allow_uid_change and allow_gid_change passed as True to avoid race
         # conditions where a uid/gid is modified outside of Salt. If an

@@ -216,6 +216,31 @@ pillar applying to all environments. For example:
 
 .. versionadded:: 2017.7.5,2018.3.1
 
+Taking it one step further, ``__env__`` can also be used in the ``pillar_root``
+filesystem path. It will be replaced with the actual ``pillarenv`` and searched
+for Pillar data to provide to the minion. Note this substitution ONLY occurs for
+the ``__env__`` environment. For instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/__env__/pillar
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      dev:
+        - /srv/dev/pillar
+      test:
+        - /srv/test/pillar
+      prod:
+        - /srv/prod/pillar
+
+.. versionadded:: 3005
+
 
 Pillar Namespace Flattening
 ===========================
@@ -497,7 +522,7 @@ The :py:func:`pillar.get <salt.modules.pillar.get>` Function
 
 The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the same
 way as the ``get`` method in a python dict, but with an enhancement: nested
-dictonaries can be traversed using a colon as a delimiter.
+dictionaries can be traversed using a colon as a delimiter.
 
 If a structure like this is in pillar:
 
@@ -681,7 +706,7 @@ The following functions support passing pillar data on the CLI via the
 - :py:func:`state.highstate <salt.modules.state.highstate>`
 - :py:func:`state.sls <salt.modules.state.sls>`
 
-Triggerring decryption of this CLI pillar data can be done in one of two ways:
+Triggering decryption of this CLI pillar data can be done in one of two ways:
 
 1. Using the ``pillar_enc`` argument:
 

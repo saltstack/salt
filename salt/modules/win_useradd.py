@@ -23,6 +23,7 @@ Module for managing Windows Users.
 """
 
 import logging
+import shlex
 import time
 from datetime import datetime
 
@@ -32,17 +33,10 @@ import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except Exception:  # pylint: disable=broad-except
-    from pipes import quote as _cmd_quote
-
-
 log = logging.getLogger(__name__)
 
 try:
     import pywintypes
-    import wmi
     import win32api
     import win32con
     import win32net
@@ -50,6 +44,7 @@ try:
     import win32profile
     import win32security
     import win32ts
+    import wmi
 
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -463,8 +458,8 @@ def addgroup(name, group):
 
         salt '*' user.addgroup jsnuffy 'Power Users'
     """
-    name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip("'").rstrip("'")
+    name = shlex.quote(name)
+    group = shlex.quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
     if not user:
@@ -496,8 +491,8 @@ def removegroup(name, group):
 
         salt '*' user.removegroup jsnuffy 'Power Users'
     """
-    name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip("'").rstrip("'")
+    name = shlex.quote(name)
+    group = shlex.quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
 
@@ -632,11 +627,11 @@ def chgroups(name, groups, append=True):
     if ugrps == set(groups):
         return True
 
-    name = _cmd_quote(name)
+    name = shlex.quote(name)
 
     if not append:
         for group in ugrps:
-            group = _cmd_quote(group).lstrip("'").rstrip("'")
+            group = shlex.quote(group).lstrip("'").rstrip("'")
             if group not in groups:
                 cmd = 'net localgroup "{}" {} /delete'.format(group, name)
                 __salt__["cmd.run_all"](cmd, python_shell=True)
@@ -644,7 +639,7 @@ def chgroups(name, groups, append=True):
     for group in groups:
         if group in ugrps:
             continue
-        group = _cmd_quote(group).lstrip("'").rstrip("'")
+        group = shlex.quote(group).lstrip("'").rstrip("'")
         cmd = 'net localgroup "{}" {} /add'.format(group, name)
         out = __salt__["cmd.run_all"](cmd, python_shell=True)
         if out["retcode"] != 0:

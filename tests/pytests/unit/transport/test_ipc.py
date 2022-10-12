@@ -1,9 +1,10 @@
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.ext.tornado.iostream
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
-from saltfactories.utils.ports import get_unused_localhost_port
 
 
 def test_ipc_connect_in_async_methods():
@@ -17,7 +18,7 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
     salt.utils.asynchronous.SyncWrapper.
     """
     if salt.utils.platform.is_windows():
-        socket_path = get_unused_localhost_port()
+        socket_path = ports.get_unused_localhost_port()
     else:
         socket_path = str(tmp_path / "noexist.ipc")
     subscriber = salt.utils.asynchronous.SyncWrapper(

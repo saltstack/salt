@@ -1,6 +1,7 @@
 import os.path
 
 import pytest
+
 import salt.modules.virt as virt
 from tests.support.mock import MagicMock, patch
 

@@ -97,6 +97,7 @@ Any of the [groups] or direct hostnames will return.  The 'all' is special, and 
 import copy
 import fnmatch
 
+import salt.utils.ansible
 import salt.utils.path
 from salt.roster import get_roster_file
 
@@ -124,27 +125,32 @@ def targets(tgt, tgt_type="glob", **kwargs):
     Return the targets from the ansible inventory_file
     Default: /etc/salt/roster
     """
-    inventory = __runner__["salt.cmd"](
-        "cmd.run", "ansible-inventory -i {} --list".format(get_roster_file(__opts__))
-    )
-    __context__["inventory"] = __utils__["json.loads"](
-        __utils__["stringutils.to_str"](inventory)
+    __context__["inventory"] = salt.utils.ansible.targets(
+        inventory=get_roster_file(__opts__)
     )
 
     if tgt_type == "glob":
         hosts = [
             host for host in _get_hosts_from_group("all") if fnmatch.fnmatch(host, tgt)
         ]
+    elif tgt_type == "list":
+        hosts = [host for host in _get_hosts_from_group("all") if host in tgt]
     elif tgt_type == "nodegroup":
         hosts = _get_hosts_from_group(tgt)
+    else:
+        hosts = []
+
     return {host: _get_hostvars(host) for host in hosts}
 
 
 def _get_hosts_from_group(group):
     inventory = __context__["inventory"]
+    if group not in inventory:
+        return []
     hosts = [host for host in inventory[group].get("hosts", [])]
     for child in inventory[group].get("children", []):
-        if child != "ungrouped":
+        child_info = _get_hosts_from_group(child)
+        if child_info not in hosts:
             hosts.extend(_get_hosts_from_group(child))
     return hosts
 

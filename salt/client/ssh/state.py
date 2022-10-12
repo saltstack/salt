@@ -31,8 +31,9 @@ class SSHState(salt.state.State):
     Create a State object which wraps the SSH functions for state operations
     """
 
-    def __init__(self, opts, pillar=None, wrapper=None):
+    def __init__(self, opts, pillar=None, wrapper=None, context=None):
         self.wrapper = wrapper
+        self.context = context
         super().__init__(opts, pillar)
 
     def load_modules(self, data=None, proxy=None):
@@ -68,10 +69,10 @@ class SSHHighState(salt.state.BaseHighState):
 
     stack = []
 
-    def __init__(self, opts, pillar=None, wrapper=None, fsclient=None):
+    def __init__(self, opts, pillar=None, wrapper=None, fsclient=None, context=None):
         self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
-        self.state = SSHState(opts, pillar, wrapper)
+        self.state = SSHState(opts, pillar, wrapper, context=context)
         self.matchers = salt.loader.matchers(self.opts)
         self.tops = salt.loader.tops(self.opts)
 

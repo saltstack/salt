@@ -1,7 +1,8 @@
-import collections
+import collections.abc
 import textwrap
 
 import pytest
+
 import salt.renderers.yaml as yaml
 from tests.support.mock import patch
 
@@ -22,7 +23,7 @@ def assert_unicode(value):
         for k, v in value.items():
             assert_unicode(k)
             assert_unicode(v)
-    elif isinstance(value, collections.Iterable):
+    elif isinstance(value, collections.abc.Iterable):
         for item in value:
             assert_unicode(item)
 

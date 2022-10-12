@@ -106,18 +106,17 @@ def _set_retcode(ret, highstate=None):
 
 def _get_pillar_errors(kwargs, pillar=None):
     """
-    Checks all pillars (external and internal) for errors.
-    Return an error message, if anywhere or None.
+    Check pillar for errors.
+
+    If a pillar is passed, it will be checked. Otherwise, the in-memory pillar
+    will checked instead. Passing kwargs['force'] = True short cuts the check
+    and always returns None, indicating no errors.
 
     :param kwargs: dictionary of options
-    :param pillar: external pillar
-    :return: None or an error message
+    :param pillar: pillar
+    :return: None or a list of error messages
     """
-    return (
-        None
-        if kwargs.get("force")
-        else (pillar or {}).get("_errors", __pillar__.get("_errors")) or None
-    )
+    return None if kwargs.get("force") else (pillar or __pillar__).get("_errors")
 
 
 def _wait(jid):
@@ -1013,6 +1012,15 @@ def highstate(test=None, queue=False, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
+    concurrent : False
+        Execute state runs concurrently instead of serially
+
+        .. warning::
+
+            This flag is potentially dangerous. It is designed for use when
+            multiple state runs can safely be run at the same time. Do *not*
+            use this flag for performance optimization.
+
     localconfig
         Optionally, instead of using the minion config, load minion opts from
         the file specified by this argument, and then merge them with the
@@ -1053,9 +1061,15 @@ def highstate(test=None, queue=False, **kwargs):
         }
         return ret
 
-    conflict = _check_queue(queue, kwargs)
-    if conflict is not None:
-        return conflict
+    concurrent = kwargs.get("concurrent", False)
+
+    if queue:
+        _wait(kwargs.get("__pub_jid"))
+    else:
+        conflict = running(concurrent)
+        if conflict:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return conflict
 
     orig_test = __opts__.get("test", None)
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
@@ -2478,7 +2492,6 @@ def event(
     with salt.utils.event.get_event(
         node,
         sock_dir or __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:

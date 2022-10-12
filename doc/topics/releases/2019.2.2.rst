@@ -98,7 +98,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * 9e3914a Merge pull request `#54826`_ from dwoz/issue_54755
 
-  * 0bad9cb Handle locals and globals separatly
+  * 0bad9cb Handle locals and globals separately
 
   * bcbe9a2 Only purge pip when needed
 
