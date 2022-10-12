@@ -271,14 +271,13 @@ def _get_pkg_info(*packages, **kwargs):
         "origin:${Origin}\\n"
         "homepage:${Homepage}\\n"
         "status:${db:Status-Abbrev}\\n"
-        "======\\n"
         "description:${Description}\\n"
-        "------\\n'"
+        "\\n*/~^\\\\*\\n'"
     )
     cmd += " {}".format(" ".join(packages))
     cmd = cmd.strip()
 
-    call = __salt__["cmd.run_all"](cmd, python_chell=False)
+    call = __salt__["cmd.run_all"](cmd, python_shell=False)
     if call["retcode"]:
         if failhard:
             raise CommandExecutionError(
@@ -287,9 +286,13 @@ def _get_pkg_info(*packages, **kwargs):
         else:
             return ret
 
-    for pkg_info in [elm for elm in re.split(r"------", call["stdout"]) if elm.strip()]:
+    for pkg_info in [
+        elm
+        for elm in re.split(r"\r?\n\*/~\^\\\*(\r?\n|)", call["stdout"])
+        if elm.strip()
+    ]:
         pkg_data = {}
-        pkg_info, pkg_descr = re.split(r"======", pkg_info)
+        pkg_info, pkg_descr = pkg_info.split("\ndescription:", 1)
         for pkg_info_line in [
             el.strip() for el in pkg_info.split(os.linesep) if el.strip()
         ]:
@@ -299,7 +302,7 @@ def _get_pkg_info(*packages, **kwargs):
             install_date = _get_pkg_install_time(pkg_data.get("package"))
             if install_date:
                 pkg_data["install_date"] = install_date
-        pkg_data["description"] = pkg_descr.split(":", 1)[-1]
+        pkg_data["description"] = pkg_descr
         ret.append(pkg_data)
 
     return ret
@@ -316,7 +319,7 @@ def _get_pkg_license(pkg):
     licenses = set()
     cpr = "/usr/share/doc/{}/copyright".format(pkg)
     if os.path.exists(cpr):
-        with salt.utils.files.fopen(cpr) as fp_:
+        with salt.utils.files.fopen(cpr, errors="ignore") as fp_:
             for line in salt.utils.stringutils.to_unicode(fp_.read()).split(os.linesep):
                 if line.startswith("License:"):
                     licenses.add(line.split(":", 1)[1].strip())

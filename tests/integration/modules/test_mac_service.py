@@ -5,6 +5,7 @@ integration tests for mac_service
 import plistlib
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on

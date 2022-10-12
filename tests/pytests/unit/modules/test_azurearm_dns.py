@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.azurearm_dns as azurearm_dns

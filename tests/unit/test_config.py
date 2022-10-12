@@ -6,6 +6,7 @@ import os
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.minion
 import salt.syspaths

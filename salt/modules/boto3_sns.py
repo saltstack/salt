@@ -50,8 +50,8 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=unused-import
 try:
-    import botocore
     import boto3
+    import botocore
     import jmespath
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
