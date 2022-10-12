@@ -17,6 +17,7 @@ import tempfile
 from contextlib import closing
 
 import pytest
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform

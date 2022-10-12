@@ -1,1 +1,0 @@
-Added ability to request VPC peering connections in different AWS regions (boto_vpc).

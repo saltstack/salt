@@ -12,6 +12,7 @@ import tempfile
 import time
 
 import pytest
+
 import salt.returners.local_cache as local_cache
 import salt.utils.files
 import salt.utils.jid

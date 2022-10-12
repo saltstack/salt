@@ -49,8 +49,8 @@ import salt.utils.versions
 # pylint: disable=unused-import
 try:
     import boto
-    import boto.iam
     import boto3
+    import boto.iam
     import botocore
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)

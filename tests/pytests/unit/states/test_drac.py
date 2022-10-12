@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.drac as drac
 from tests.support.mock import MagicMock, patch
 

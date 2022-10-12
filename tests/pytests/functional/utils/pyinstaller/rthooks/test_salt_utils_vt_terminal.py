@@ -3,6 +3,7 @@ import os
 import sys
 
 import pytest
+
 import salt.utils.pyinstaller.rthooks._overrides as overrides
 from tests.support import mock
 from tests.support.helpers import PatchedEnviron
@@ -16,8 +17,8 @@ def envvar(request):
 @pytest.fixture
 def meipass(envvar):
     with mock.patch("salt.utils.pyinstaller.rthooks._overrides.sys") as patched_sys:
-        patched_sys._MEIPASS = envvar
-        assert overrides.sys._MEIPASS == envvar
+        patched_sys._MEIPASS = "{}_VALUE".format(envvar)
+        assert overrides.sys._MEIPASS == "{}_VALUE".format(envvar)
         yield "{}_VALUE".format(envvar)
     assert not hasattr(sys, "_MEIPASS")
     assert not hasattr(overrides.sys, "_MEIPASS")
@@ -115,7 +116,7 @@ def test_vt_terminal_environ_cleanup(envvar, meipass):
 
 def test_vt_terminal_environ_cleanup_passed_directly_not_removed(envvar, meipass):
     env = {
-        envvar: meipass,
+        envvar: envvar,
     }
     original_env = dict(os.environ)
 
@@ -138,4 +139,4 @@ def test_vt_terminal_environ_cleanup_passed_directly_not_removed(envvar, meipass
     returned_env = json.loads(buffer_o)
     assert returned_env != original_env
     assert envvar in returned_env
-    assert returned_env[envvar] == meipass
+    assert returned_env[envvar] == envvar
