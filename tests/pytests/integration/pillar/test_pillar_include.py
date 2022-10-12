@@ -86,14 +86,14 @@ def pillar_include_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cl
         with top_tempfile, include_tempfile, include_a_tempfile, include_b_tempfile, include_c_tempfile, include_d_tempfile:
             with glob_include_tempfile, glob_include_a_tempfile, glob_include_b_tempfile:
                 ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-                assert ret.exitcode == 0
-                assert ret.json is True
+                assert ret.returncode == 0
+                assert ret.data is True
                 yield
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
 
 
 def test_pillar_include(pillar_include_tree, salt_call_cli):
@@ -101,13 +101,13 @@ def test_pillar_include(pillar_include_tree, salt_call_cli):
     Test pillar include
     """
     ret = salt_call_cli.run("pillar.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert "element" in ret.json
-    assert "a" in ret.json["element"]
-    assert ret.json["element"]["a"] == {"a": ["Entry A"]}
-    assert "b" in ret.json["element"]
-    assert ret.json["element"]["b"] == {"b": ["Entry B"]}
+    assert ret.returncode == 0
+    assert ret.data
+    assert "element" in ret.data
+    assert "a" in ret.data["element"]
+    assert ret.data["element"]["a"] == {"a": ["Entry A"]}
+    assert "b" in ret.data["element"]
+    assert ret.data["element"]["b"] == {"b": ["Entry B"]}
 
 
 def test_pillar_glob_include(pillar_include_tree, salt_call_cli):
@@ -115,12 +115,12 @@ def test_pillar_glob_include(pillar_include_tree, salt_call_cli):
     Test pillar include via glob pattern
     """
     ret = salt_call_cli.run("pillar.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert "glob-a" in ret.json
-    assert ret.json["glob-a"] == ["Entry A"]
-    assert "glob-b" in ret.json
-    assert ret.json["glob-b"] == ["Entry B"]
+    assert ret.returncode == 0
+    assert ret.data
+    assert "glob-a" in ret.data
+    assert ret.data["glob-a"] == ["Entry A"]
+    assert "glob-b" in ret.data
+    assert ret.data["glob-b"] == ["Entry B"]
 
 
 def test_pillar_include_already_included(pillar_include_tree, salt_call_cli):
@@ -129,8 +129,8 @@ def test_pillar_include_already_included(pillar_include_tree, salt_call_cli):
     has already been included.
     """
     ret = salt_call_cli.run("pillar.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    assert "element" in ret.json
-    assert "d" in ret.json["element"]
-    assert ret.json["element"]["d"] == {"c": ["Entry C"]}
+    assert ret.returncode == 0
+    assert ret.data
+    assert "element" in ret.data
+    assert "d" in ret.data["element"]
+    assert ret.data["element"]["d"] == {"c": ["Entry C"]}
