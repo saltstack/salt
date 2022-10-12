@@ -4,6 +4,7 @@ import textwrap
 import time
 
 import pytest
+
 import salt.exceptions
 import salt.utils.network as network
 from salt._compat import ipaddress
@@ -110,10 +111,10 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 """
 
-NETLINK_SS = """
-State      Recv-Q Send-Q               Local Address:Port                 Peer Address:Port
-ESTAB      0      0                    127.0.0.1:56726                    127.0.0.1:4505
-ESTAB      0      0                    ::ffff:1.2.3.4:5678                ::ffff:1.2.3.4:4505
+OPENBSD_NETSTAT = """\
+Active Internet connections
+Proto   Recv-Q Send-Q  Local Address          Foreign Address        (state)
+tcp          0      0  127.0.0.1.61115        127.0.0.1.4506         ESTABLISHED
 """
 
 LINUX_NETLINK_SS_OUTPUT = """\
@@ -122,6 +123,8 @@ TIME-WAIT   0      0                                                            
 LISTEN      0      128                                                                   127.0.0.1:5903                                                                                0.0.0.0:*
 ESTAB       0      0                                                            [::ffff:127.0.0.1]:4506                                                                    [::ffff:127.0.0.1]:32315
 ESTAB       0      0                                                                 192.168.122.1:4506                                                                       192.168.122.177:24545
+ESTAB       0      0                                                                    127.0.0.1:56726                                                                             127.0.0.1:4505
+ESTAB       0      0                                                                ::ffff:1.2.3.4:5678                                                                        ::ffff:1.2.3.4:4505
 """
 
 IPV4_SUBNETS = {
@@ -236,6 +239,15 @@ class NetworkTestCase(TestCase):
         self.assertTrue(network.ipv6("2001:0db8:85a3:0000:0000:8a2e:0370:7334"))
         self.assertTrue(network.ipv6("2001:0db8:85a3::8a2e:0370:7334"))
         self.assertTrue(network.ipv6("2001:67c:2e8::/48"))
+
+    def test_is_loopback(self):
+        self.assertTrue(network.is_loopback("127.0.1.1"))
+        self.assertTrue(network.is_loopback("::1"))
+        self.assertFalse(network.is_loopback("10.0.1.2"))
+        self.assertFalse(network.is_loopback("2001:db8:0:1:1:1:1:1"))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6("sixteen-char-str"))
 
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
@@ -633,13 +645,27 @@ class NetworkTestCase(TestCase):
                 with patch(
                     "subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT
                 ):
-                    remotes = network._netlink_tool_remote_on("4506", "local")
+                    remotes = network._netlink_tool_remote_on("4506", "local_port")
                     self.assertEqual(remotes, {"192.168.122.177", "::ffff:127.0.0.1"})
 
     def test_netlink_tool_remote_on_b(self):
-        with patch("subprocess.check_output", return_value=NETLINK_SS):
+        with patch("subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT):
             remotes = network._netlink_tool_remote_on("4505", "remote_port")
             self.assertEqual(remotes, {"127.0.0.1", "::ffff:1.2.3.4"})
+
+    def test_openbsd_remotes_on(self):
+        with patch("subprocess.check_output", return_value=OPENBSD_NETSTAT):
+            remotes = network._openbsd_remotes_on("4506", "remote")
+            self.assertEqual(remotes, {"127.0.0.1"})
+
+    def test_openbsd_remotes_on_issue_61966(self):
+        """
+        Test that the command output is correctly converted to string before
+        treating it as such
+        """
+        with patch("subprocess.check_output", return_value=OPENBSD_NETSTAT.encode()):
+            remotes = network._openbsd_remotes_on("4506", "remote")
+            self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_generate_minion_id_distinct(self):
         """
@@ -1273,3 +1299,15 @@ class NetworkTestCase(TestCase):
             ),
         ):
             self.assertEqual(network.get_fqhostname(), host)
+
+    def test_ip_bracket(self):
+        test_ipv4 = "127.0.0.1"
+        test_ipv6 = "::1"
+        test_ipv6_uri = "[::1]"
+        self.assertEqual(test_ipv4, network.ip_bracket(test_ipv4))
+        self.assertEqual(test_ipv6, network.ip_bracket(test_ipv6_uri, strip=True))
+        self.assertEqual("[{}]".format(test_ipv6), network.ip_bracket(test_ipv6))
+        self.assertEqual("[{}]".format(test_ipv6), network.ip_bracket(test_ipv6_uri))
+
+        ip_addr_obj = ipaddress.ip_address(test_ipv4)
+        self.assertEqual(test_ipv4, network.ip_bracket(ip_addr_obj))

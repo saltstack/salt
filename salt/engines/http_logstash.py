@@ -80,7 +80,6 @@ def start(url, funs=None, tags=None):
     with salt.utils.event.get_event(
         instance,
         sock_dir=__opts__["sock_dir"],
-        transport=__opts__["transport"],
         opts=__opts__,
     ) as event_bus:
         while True:

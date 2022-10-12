@@ -11,7 +11,6 @@ if sys.version_info >= (3, 9, 5):
 else:
     import salt.ext.ipaddress as ipaddress
 
-
 # importlib_metadata before version 3.3.0 does not include the functionality we need.
 try:
     import importlib_metadata
