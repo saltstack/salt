@@ -12,7 +12,7 @@ This can be easily installed with pip:
 
 .. code-block:: bash
 
-    pip install python-redis
+    salt \* pip.install redis
 
 As Redis provides a simple mechanism for very fast key-value store, in order to
 provide the necessary features for the Salt caching subsystem, the following
