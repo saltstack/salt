@@ -1,0 +1,1 @@
+Fixing changes dict in pkg state to be consistent when installing and test=True.

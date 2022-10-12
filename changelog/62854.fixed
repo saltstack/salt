@@ -1,0 +1,1 @@
+Use select instead of iterating over entrypoints as a dictionary for importlib_metadata>=5.0.0

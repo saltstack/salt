@@ -3,9 +3,10 @@ import logging
 import os
 import re
 
+from jinja2 import Environment, FileSystemLoader
+
 import salt.utils.path
 import salt.utils.yaml
-from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 

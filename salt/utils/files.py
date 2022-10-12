@@ -6,6 +6,7 @@ Functions for working with files
 import codecs
 import contextlib
 import errno
+import io
 import logging
 import os
 import re
@@ -55,8 +56,12 @@ def __clean_tmp(tmp):
     """
     try:
         rm_rf(tmp)
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error(
+            "Exception while removing temp directory: %s",
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
 
 
 def guess_archive_type(name):
@@ -377,6 +382,13 @@ def fopen(*args, **kwargs):
 
     if not binary and not kwargs.get("newline", None):
         kwargs["newline"] = ""
+
+    # Workaround callers with bad buffering setting for binary files
+    if kwargs.get("buffering") == 1 and "b" in kwargs.get("mode", ""):
+        log.debug(
+            "Line buffering (buffering=1) isn't supported in binary mode, the default buffer size will be used"
+        )
+        kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 

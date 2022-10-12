@@ -1,16 +1,12 @@
 """
 Module to provide MySQL compatibility to salt.
 
-:depends:   - MySQLdb Python module
-
-.. note::
-
-    On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb
-    need to be installed.
+:depends:   - Python module: MySQLdb, mysqlclient, or PyMYSQL
 
 :configuration: In order to connect to MySQL, certain configuration is required
-    in /etc/salt/minion on the relevant minions. Some sample configs might look
-    like::
+    in either the relevant minion config (/etc/salt/minion), or pillar.
+
+    Some sample configs might look like::
 
         mysql.host: 'localhost'
         mysql.port: 3306
@@ -49,10 +45,10 @@ import salt.utils.stringutils
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+    import MySQLdb.cursors
     from MySQLdb import OperationalError
+    from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -60,10 +56,10 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+        import MySQLdb.cursors
         from MySQLdb import OperationalError
+        from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
     except ImportError:
         MySQLdb = None
 
@@ -76,16 +72,17 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# TODO: this is not used anywhere in the code?
-__opts__ = {}
-
 __grants__ = [
     "ALL PRIVILEGES",
     "ALTER",
     "ALTER ROUTINE",
     "BACKUP_ADMIN",
     "BINLOG_ADMIN",
+    "BINLOG ADMIN",
+    "BINLOG MONITOR",
+    "BINLOG REPLAY",
     "CONNECTION_ADMIN",
+    "CONNECTION ADMIN",
     "CREATE",
     "CREATE ROLE",
     "CREATE ROUTINE",
@@ -99,6 +96,7 @@ __grants__ = [
     "ENCRYPTION_KEY_ADMIN",
     "EVENT",
     "EXECUTE",
+    "FEDERATED ADMIN",
     "FILE",
     "GRANT OPTION",
     "GROUP_REPLICATION_ADMIN",
@@ -107,19 +105,26 @@ __grants__ = [
     "LOCK TABLES",
     "PERSIST_RO_VARIABLES_ADMIN",
     "PROCESS",
+    "READ_ONLY ADMIN",
     "REFERENCES",
     "RELOAD",
+    "REPLICA MONITOR",
     "REPLICATION CLIENT",
+    "REPLICATION MASTER ADMIN",
+    "REPLICATION REPLICA",
     "REPLICATION SLAVE",
     "REPLICATION_SLAVE_ADMIN",
+    "REPLICATION SLAVE ADMIN",
     "RESOURCE_GROUP_ADMIN",
     "RESOURCE_GROUP_USER",
     "ROLE_ADMIN",
     "SELECT",
+    "SET USER",
     "SET_USER_ID",
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
+    "SLAVE MONITOR",
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
@@ -414,6 +419,13 @@ def _connect(**kwargs):
     _connarg("connection_unix_socket", "unix_socket", get_opts)
     _connarg("connection_default_file", "read_default_file", get_opts)
     _connarg("connection_default_group", "read_default_group", get_opts)
+    # MySQLdb states that this is required for charset usage
+    # but in fact it's more than it's internally activated
+    # when charset is used, activating use_unicode here would
+    # retrieve utf8 strings as unicode() objects in salt
+    # and we do not want that.
+    # _connarg('connection_use_unicode', 'use_unicode')
+    connargs["use_unicode"] = False
     _connarg("connection_charset", "charset")
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = "pyformat"
@@ -421,13 +433,6 @@ def _connect(**kwargs):
     for key in copy.deepcopy(connargs):
         if not connargs[key]:
             del connargs[key]
-
-    # MySQLdb states that this is required for charset usage
-    # but in fact it's more than it's internally activated
-    # when charset is used, activating use_unicode here would
-    # retrieve utf8 strings as unicode() objects in salt
-    # and we do not want that. So we'll force it to False.
-    connargs["use_unicode"] = False
 
     if (
         connargs.get("passwd", True) is None
@@ -622,6 +627,67 @@ def _grant_to_tokens(grant):
     return dict(user=user, host=host, grant=grant_tokens, database=database)
 
 
+def _resolve_grant_aliases(grants, server_version):
+    """
+
+    There can be a situation where the database supports grants "A" and "B", where
+    "B" is an alias for "A". In that case, when you want to grant "B" to a user,
+    the database will actually report it added "A". We need to resolve those
+    aliases to not report (wrong) errors.
+
+    :param grants: the tokenized grants
+
+    :param server_version: version string of the connected database
+
+    """
+    if "MariaDB" not in server_version:
+        return grants
+
+    mariadb_version_compare_replication_replica = "10.5.1"
+    mariadb_version_compare_binlog_monitor = "10.5.2"
+    mariadb_version_compare_slave_monitor = "10.5.9"
+
+    resolved_tokens = []
+
+    for token in grants:
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_replication_replica
+            )
+            >= 0
+        ):
+            if token == "REPLICATION REPLICA":
+                # https://mariadb.com/kb/en/grant/#replication-replica
+                resolved_tokens.append("REPLICATION SLAVE")
+                continue
+
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_binlog_monitor
+            )
+            >= 0
+        ):
+            if token == "REPLICATION CLIENT":
+                # https://mariadb.com/kb/en/grant/#replication-client
+                resolved_tokens.append("BINLOG MONITOR")
+                continue
+
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_slave_monitor
+            )
+            >= 0
+        ):
+            if token == "REPLICA MONITOR":
+                # https://mariadb.com/kb/en/grant/#replica-monitor
+                resolved_tokens.append("SLAVE MONITOR")
+                continue
+
+        resolved_tokens.append(token)
+
+    return resolved_tokens
+
+
 def quote_identifier(identifier, for_grants=False):
     r"""
     Return an identifier name (column, table, database, etc) escaped for MySQL
@@ -676,32 +742,13 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
+    if not HAS_SQLPARSE:
+        log.error(
+            "_sanitize_comments unavailable, no python sqlparse library installed."
+        )
+        return content
+
     return sqlparse.format(content, strip_comments=True)
-
-
-def _disable_conversions():
-    # The following 3 lines stops MySQLdb from converting the MySQL results
-    # into Python objects. It leaves them as strings.
-    orig_conv = MySQLdb.converters.conversions
-    conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
-
-    # some converters are lists, do not break theses
-    conv_mysqldb = {"MYSQLDB": True}
-    if conv_mysqldb.get(MySQLdb.__package__.upper()):
-        conv[FIELD_TYPE.BLOB] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.STRING] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.VAR_STRING] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.VARCHAR] = [
-            (FLAG.BINARY, str),
-        ]
-    return conv
 
 
 def query(database, query, **connection_args):
@@ -772,9 +819,29 @@ def query(database, query, **connection_args):
     # I don't think it handles multiple queries at once, so adding "commit"
     # might not work.
 
-    connection_args.update(
-        {"connection_db": database, "connection_conv": _disable_conversions()}
-    )
+    # The following 3 lines stops MySQLdb from converting the MySQL results
+    # into Python objects. It leaves them as strings.
+    orig_conv = MySQLdb.converters.conversions
+    conv_iter = iter(orig_conv)
+    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+
+    # some converters are lists, do not break theses
+    conv_mysqldb = {"MYSQLDB": True}
+    if conv_mysqldb.get(MySQLdb.__package__.upper()):
+        conv[FIELD_TYPE.BLOB] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VAR_STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VARCHAR] = [
+            (FLAG.BINARY, str),
+        ]
+
+    connection_args.update({"connection_db": database, "connection_conv": conv})
     dbc = _connect(**connection_args)
     if dbc is None:
         return {}
@@ -934,7 +1001,7 @@ def status(**connection_args):
     ret = {}
     for _ in range(cur.rowcount):
         row = cur.fetchone()
-        ret[salt.utils.data.decode(row[0])] = row[1]
+        ret[row[0]] = row[1]
     return ret
 
 
@@ -1109,8 +1176,9 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         return []
     cur = dbc.cursor()
     existing = db_get(name, **connection_args)
+    # escaping database name is not required because of backticks in query expression
     qry = "ALTER DATABASE `{}` CHARACTER SET {} COLLATE {};".format(
-        name.replace("%", r"\%").replace("_", r"\_"),
+        name,
         character_set or existing.get("character_set"),
         collate or existing.get("collate"),
     )
@@ -1546,8 +1614,6 @@ def user_info(user, host="localhost", **connection_args):
 
         salt '*' mysql.user_info root localhost
     """
-    connection_args.update({"connection_conv": _disable_conversions()})
-
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
@@ -2441,6 +2507,9 @@ def grant_exists(
     _grants = {}
     for grant in grants:
         grant_token = _grant_to_tokens(grant)
+        grant_token["grant"] = _resolve_grant_aliases(
+            grant_token["grant"], server_version
+        )
         if grant_token["database"] not in _grants:
             _grants[grant_token["database"]] = {
                 "user": grant_token["user"],
@@ -2452,6 +2521,9 @@ def grant_exists(
             _grants[grant_token["database"]]["grant"].extend(grant_token["grant"])
 
     target_tokens = _grant_to_tokens(target)
+    target_tokens["grant"] = _resolve_grant_aliases(
+        target_tokens["grant"], server_version
+    )
     for database, grant_tokens in _grants.items():
         try:
             _grant_tokens = {}

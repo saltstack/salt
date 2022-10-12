@@ -4,6 +4,7 @@ import string
 import sys
 
 import pytest
+
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
@@ -30,7 +31,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
