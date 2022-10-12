@@ -112,11 +112,9 @@ def _get_message(ret):
         if isinstance(kwargs, dict):
             kwarg_string = " ".join(
                 sorted(
-                    [
-                        "{}={}".format(k, v)
-                        for k, v in kwargs.items()
-                        if not k.startswith("_")
-                    ]
+                    "{}={}".format(k, v)
+                    for k, v in kwargs.items()
+                    if not k.startswith("_")
                 )
             )
     return "salt func: {fun} {argstr} {kwargstr}".format(

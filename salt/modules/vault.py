@@ -178,12 +178,13 @@ Functions to interact with Hashicorp Vault.
 import logging
 import os
 
+from salt.defaults import NOT_SET
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
+def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -211,6 +212,8 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     """
+    if default == NOT_SET:
+        default = CommandExecutionError
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["data"]
@@ -356,7 +359,7 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path, default=CommandExecutionError):
+def list_secrets(path, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -372,6 +375,8 @@ def list_secrets(path, default=CommandExecutionError):
 
             salt '*' vault.list_secrets "secret/my/"
     """
+    if default == NOT_SET:
+        default = CommandExecutionError
     log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:

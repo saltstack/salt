@@ -29,7 +29,6 @@ try:
     class OrderedDict(collections.OrderedDict):
         __hash__ = None
 
-
 except (ImportError, AttributeError):
     try:
         import ordereddict

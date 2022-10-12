@@ -6,12 +6,12 @@ import functools
 import logging
 
 try:
-    from salt.utils.versions import LooseVersion as _LooseVersion
-    from salt.exceptions import CommandExecutionError
+    import salt.modules.yumpkg
     import salt.utils.data
     import salt.utils.functools
     import salt.utils.systemd
-    import salt.modules.yumpkg
+    from salt.exceptions import CommandExecutionError
+    from salt.utils.versions import LooseVersion as _LooseVersion
 
     __IMPORT_ERROR = None
 except ImportError as exc:
@@ -21,10 +21,11 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "kernelpkg"
 
-# Import functions from yumpkg
-# pylint: disable=invalid-name, protected-access
-_yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())
-# pylint: enable=invalid-name, protected-access
+if __IMPORT_ERROR is None:
+    # Import functions from yumpkg
+    # pylint: disable=invalid-name, protected-access
+    _yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())
+    # pylint: enable=invalid-name, protected-access
 
 
 def __virtual__():
@@ -33,7 +34,7 @@ def __virtual__():
     """
 
     if __IMPORT_ERROR:
-        return (False, __IMPORT_ERROR)
+        return False, __IMPORT_ERROR
 
     if __grains__.get("os_family", "") == "RedHat":
         return __virtualname__
@@ -45,7 +46,7 @@ def __virtual__():
     ):
         return __virtualname__
 
-    return (False, "Module kernelpkg_linux_yum: no YUM based system detected")
+    return False, "Module kernelpkg_linux_yum: no YUM based system detected"
 
 
 def active():

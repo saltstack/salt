@@ -771,11 +771,11 @@ class FilterFalseyTestCase(TestCase):
         self.assertIs(type(old_dict), type(new_dict))
         # Test excluding int
         old_list = [0]
-        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type(0)])
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[int])
         self.assertEqual(old_list, new_list)
         # Test excluding str (or unicode) (or both)
         old_list = [""]
-        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type("")])
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[str])
         self.assertEqual(old_list, new_list)
         # Test excluding list
         old_list = [[]]
@@ -987,7 +987,7 @@ class FilterFalseyTestCase(TestCase):
             [{"foo": ""}],
         ]
         new_list = salt.utils.data.filter_falsey(
-            old_list, recurse_depth=3, ignore_types=[type(0), type("")]
+            old_list, recurse_depth=3, ignore_types=[int, str]
         )
         self.assertEqual(
             ["foo", ["foo"], ["foo"], {"foo": 0}, {"foo": "bar"}, [{"foo": ""}]],

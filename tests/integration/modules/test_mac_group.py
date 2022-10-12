@@ -3,9 +3,11 @@
 """
 
 import pytest
+from saltfactories.utils import random_string
+
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
+from tests.support.helpers import runs_on
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)

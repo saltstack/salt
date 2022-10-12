@@ -5,12 +5,10 @@
 import logging
 import os
 import signal
-import sys
 import threading
 import traceback
 import types
 
-# pylint: disable=3rd-party-module-not-gated
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -21,7 +19,6 @@ import salt.engines
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -816,22 +813,23 @@ def handle_decoded_payload(self, data):
     # side.
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
+    name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
-        if sys.platform.startswith("win"):
+        if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we're
             # running on windows
             instance = None
         with default_signals(signal.SIGINT, signal.SIGTERM):
             process = SignalHandlingProcess(
                 target=self._target,
-                name="ProcessPayload",
+                name=name,
                 args=(instance, self.opts, data, self.connected),
             )
     else:
         process = threading.Thread(
             target=self._target,
             args=(instance, self.opts, data, self.connected),
-            name=data["jid"],
+            name=name,
         )
 
     if multiprocessing_enabled:
@@ -841,7 +839,6 @@ def handle_decoded_payload(self, data):
             process.start()
     else:
         process.start()
-    process.name = "{}-Job-{}".format(process.name, data["jid"])
     self.subprocess_list.add(process)
 
 
