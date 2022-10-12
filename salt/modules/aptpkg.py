@@ -2301,7 +2301,7 @@ def _decrypt_key(key):
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
                 return decrypted_key
-                
+
     except UnicodeDecodeError:
         log.debug("Key is not ASCII Armored. Do not need to decrypt")
     return key
