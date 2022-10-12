@@ -27,6 +27,7 @@
 
 import sys
 
+import salt.loader.context
 import salt.modules.chroot as chroot
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -42,7 +43,28 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {chroot: {"__salt__": {}, "__utils__": {}, "__opts__": {"cachedir": ""}}}
+        loader_context = salt.loader.context.LoaderContext()
+        return {
+            chroot: {
+                "__salt__": {},
+                "__utils__": {"files.rm_rf": MagicMock()},
+                "__opts__": {"extension_modules": "", "cachedir": "/tmp/"},
+                "__pillar__": salt.loader.context.NamedLoaderContext(
+                    "__pillar__", loader_context, {}
+                ),
+            }
+        }
+
+    def test__create_and_execute_salt_state(self):
+        with patch(
+            "salt.client.ssh.wrapper.state._cleanup_slsmod_low_data", MagicMock()
+        ):
+            with patch(
+                "salt.utils.hashutils.get_hash", MagicMock(return_value="deadbeaf")
+            ):
+                with patch("salt.fileclient.get_file_client", MagicMock()):
+                    with patch("salt.modules.chroot.call", MagicMock()):
+                        chroot._create_and_execute_salt_state("", {}, {}, False, "md5")
 
     @patch("os.path.isdir")
     def test_exist(self, isdir):

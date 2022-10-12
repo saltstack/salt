@@ -16,6 +16,7 @@ import os
 import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
@@ -99,6 +100,16 @@ def _build_gecos(gecos_dict):
     ).rstrip(",")
 
 
+def _which(cmd):
+    """
+    Utility function wrapper to error out early if a command is not found
+    """
+    _cmd = salt.utils.path.which(cmd)
+    if not _cmd:
+        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+    return _cmd
+
+
 def _update_gecos(name, key, value, root=None):
     """
     Common code to change a user's GECOS information
@@ -117,7 +128,8 @@ def _update_gecos(name, key, value, root=None):
     gecos_data = copy.deepcopy(pre_info)
     gecos_data[key] = value
 
-    cmd = ["usermod"]
+    cmd = [_which("usermod")]
+
     if root is not None and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
     cmd.extend(("-c", _build_gecos(gecos_data), name))
@@ -209,7 +221,8 @@ def add(
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     """
-    cmd = ["useradd"]
+    cmd = [_which("useradd")]
+
     if shell:
         cmd.extend(["-s", shell])
     if uid not in (None, ""):
@@ -342,7 +355,7 @@ def delete(name, remove=False, force=False, root=None):
 
         salt '*' user.delete name remove=True force=True
     """
-    cmd = ["userdel"]
+    cmd = [_which("userdel")]
 
     if remove:
         cmd.append("-r")
@@ -421,7 +434,7 @@ def _chattrib(name, key, value, param, persist=False, root=None):
     if value == pre_info[key]:
         return True
 
-    cmd = ["usermod"]
+    cmd = [_which("usermod")]
 
     if root is not None and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
@@ -556,7 +569,8 @@ def chgroups(name, groups, append=False, root=None):
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-    cmd = ["usermod"]
+
+    cmd = [_which("usermod")]
 
     if __grains__["kernel"] != "OpenBSD":
         if append and __grains__["kernel"] != "AIX":
@@ -719,7 +733,7 @@ def chloginclass(name, loginclass, root=None):
     if loginclass == get_loginclass(name):
         return True
 
-    cmd = ["usermod", "-L", loginclass, name]
+    cmd = [_which("usermod"), "-L", loginclass, name]
 
     if root is not None and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
@@ -874,7 +888,7 @@ def list_users(root=None):
     else:
         getpwall = functools.partial(pwd.getpwall)
 
-    return sorted([user.pw_name for user in getpwall()])
+    return sorted(user.pw_name for user in getpwall())
 
 
 def rename(name, new_name, root=None):

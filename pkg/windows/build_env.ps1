@@ -226,7 +226,57 @@ If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll") -and (Test-Pa
     # Remove temp files
     Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar" -Force -Recurse
     Remove-Item "$file" -Force
+}
 
+#------------------------------------------------------------------------------
+# Check for installation of AccessControl Plugin for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for AccessControl Plugin installation  . . ."
+If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\AccessControl.dll") -and (Test-Path "$($ini[$bitPaths]['NSISPluginsDirU'])\AccessControl.dll") ) {
+    # Found AccessControl Plugin, do nothing
+    Write-Output " - AccessControl Plugin Found . . ."
+} Else {
+    # AccessControl Plugin not found, install
+    Write-Output " - AccessControl Plugin Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISPluginAccessControl']) . . ."
+    $file = "$($ini['Prerequisites']['NSISPluginAccessControl'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Zip File
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file "$($ini['Settings']['DownloadDir'])\nsisaccesscontrol"
+
+    # Copy dlls to plugins directory (both ANSI and Unicode)
+    Write-Output " - Copying dlls to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisaccesscontrol\Plugins\i386-ansi\AccessControl.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\AccessControl.dll" -Force
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisaccesscontrol\Plugins\i386-unicode\AccessControl.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\AccessControl.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisaccesscontrol" -Force -Recurse
+    Remove-Item "$file" -Force
+}
+
+#------------------------------------------------------------------------------
+# Check for installation of the MoveFileFolder Library for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for MoveFileFolder Library installation . . ."
+If ( Test-Path "$($ini[$bitPaths]['NSISDir'])\Include\MoveFileFolder.nsh" ) {
+    # Found MoveFileFolder Library for NSIS, do nothing
+    Write-Output " - MoveFileFolder Library for NSIS Found . . ."
+} Else {
+    # MoveFileFolder Library for NSIS not found, install
+    Write-Output " - MoveFileFolder Library for NSIS Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISLibMoveFileFolder']) . . ."
+    $file = "$($ini['Prerequisites']['NSISLibMoveFileFolder'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Move library to the include directory
+    Write-Output " - Copying library to include directory . . ."
+    Move-Item "$file" "$( $ini[$bitPaths]['NSISDir'] )\Include\MoveFileFolder.nsh" -Force
 }
 
 #------------------------------------------------------------------------------

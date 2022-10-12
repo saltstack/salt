@@ -567,8 +567,6 @@ def latest(
         directories. The example also sets up the ``ssh_known_hosts`` ssh key
         required to perform the git checkout.
 
-        Also, it has been reported that the SCP-like syntax for
-
         .. code-block:: yaml
 
             gitlab.example.com:
@@ -734,13 +732,6 @@ def latest(
         )
     except CommandExecutionError as exc:
         return _fail(ret, "Failed to check remote refs: {}".format(_strip_exc(exc)))
-    except NameError as exc:
-        if "global name" in exc.message:
-            raise CommandExecutionError(
-                "Failed to check remote refs: You may need to install "
-                "GitPython or PyGit2"
-            )
-        raise
 
     if "HEAD" in all_remote_refs:
         head_rev = all_remote_refs["HEAD"]

@@ -6,8 +6,8 @@ Provide authentication using OpenStack Keystone
 
 
 try:
-    from keystoneclient.v2_0 import client
     from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
+    from keystoneclient.v2_0 import client
 except ImportError:
     pass
 

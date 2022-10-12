@@ -42,3 +42,72 @@ class XFSTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
         )
+
+    def test__parse_xfs_info(self):
+        """
+        Test parsing output from mkfs.xfs.
+        """
+        data = textwrap.dedent(
+            """
+            meta-data=/dev/vg00/testvol      isize=512    agcount=4, agsize=1310720 blks
+                     =                       sectsz=4096  attr=2, projid32bit=1
+                     =                       crc=1        finobt=1, sparse=1, rmapbt=0
+                     =                       reflink=1
+            data     =                       bsize=4096   blocks=5242880, imaxpct=25
+                     =                       sunit=0      swidth=0 blks
+            naming   =version 2              bsize=4096   ascii-ci=0, ftype=1
+            log      =internal log           bsize=4096   blocks=2560, version=2
+                     =                       sectsz=4096  sunit=1 blks, lazy-count=1
+            realtime =none                   extsz=4096   blocks=0, rtextents=0
+            Discarding blocks...Done.
+            """
+        )
+
+        self.assertEqual(
+            xfs._parse_xfs_info(data),
+            {
+                "meta-data": {
+                    "section": "/dev/vg00/testvol",
+                    "isize": "512",
+                    "agcount": "4",
+                    "agsize": "1310720 blks",
+                    "sectsz": "4096",
+                    "attr": "2",
+                    "projid32bit": "1",
+                    "crc": "1",
+                    "finobt": "1",
+                    "sparse": "1",
+                    "rmapbt": "0",
+                    "reflink": "1",
+                },
+                "data": {
+                    "section": "data",
+                    "bsize": "4096",
+                    "blocks": "5242880",
+                    "imaxpct": "25",
+                    "sunit": "0",
+                    "swidth": "0 blks",
+                },
+                "naming": {
+                    "section": "version 2",
+                    "bsize": "4096",
+                    "ascii-ci": "0",
+                    "ftype": "1",
+                },
+                "log": {
+                    "section": "internal log",
+                    "bsize": "4096",
+                    "blocks": "2560",
+                    "version": "2",
+                    "sectsz": "4096",
+                    "sunit": "1 blks",
+                    "lazy-count": "1",
+                },
+                "realtime": {
+                    "section": "none",
+                    "extsz": "4096",
+                    "blocks": "0",
+                    "rtextents": "0",
+                },
+            },
+        )

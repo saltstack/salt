@@ -1,1 +1,0 @@
-Reworking the mysql module and state so that passwordless does not try to use unix_socket until unix_socket is set to True. 

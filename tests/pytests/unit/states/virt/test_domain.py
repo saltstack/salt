@@ -1,9 +1,14 @@
 import pytest
+
 import salt.states.virt as virt
 from salt.exceptions import CommandExecutionError
+from tests.pytests.unit.states.virt.helpers import domain_update_call
 from tests.support.mock import MagicMock, patch
 
-from .test_helpers import domain_update_call
+
+@pytest.fixture
+def configure_loader_modules(libvirt_mock):
+    return {virt: {"libvirt": libvirt_mock}}
 
 
 def test_defined_no_change(test):
@@ -202,30 +207,9 @@ def test_defined_update_error(test):
                 "comment": "Domain myvm updated with live update(s) failures",
             }
             init_mock.assert_not_called()
-            update_mock.assert_called_with(
-                "myvm",
-                cpu=2,
-                boot_dev="cdrom hd",
-                mem=None,
-                disk_profile=None,
-                disks=None,
-                nic_profile=None,
-                interfaces=None,
-                graphics=None,
-                live=True,
-                connection=None,
-                username=None,
-                password=None,
-                boot=None,
-                numatune=None,
-                test=test,
-                hypervisor_features=None,
-                clock=None,
-                serials=None,
-                consoles=None,
-                stop_on_reboot=False,
-                host_devices=None,
-            )
+            assert update_mock.call_args_list == [
+                domain_update_call("myvm", cpu=2, test=test, boot_dev="cdrom hd")
+            ]
 
 
 def test_defined_update_definition_error(test):
@@ -503,30 +487,7 @@ def test_running_update_error():
                 "result": True,
                 "comment": "Domain myvm updated with live update(s) failures",
             }
-            update_mock.assert_called_with(
-                "myvm",
-                cpu=2,
-                mem=None,
-                disk_profile=None,
-                disks=None,
-                nic_profile=None,
-                interfaces=None,
-                graphics=None,
-                live=True,
-                connection=None,
-                username=None,
-                password=None,
-                boot=None,
-                numatune=None,
-                test=False,
-                boot_dev=None,
-                hypervisor_features=None,
-                clock=None,
-                serials=None,
-                consoles=None,
-                stop_on_reboot=False,
-                host_devices=None,
-            )
+            assert update_mock.call_args_list == [domain_update_call("myvm", cpu=2)]
 
 
 @pytest.mark.parametrize("running", ["running", "shutdown"])

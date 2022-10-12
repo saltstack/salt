@@ -82,6 +82,39 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
         pkg.installed:
             - name: hello
 
+
+apt-key deprecated
+------------------
+``apt-key`` is deprecated and will be last available in Debian 11 and
+Ubuntu 22.04. The recommended way to manage repo keys going forward
+is to download the keys into /etc/apt/keyrings and use ``signed-by``
+in your repo file pointing to the key. This module was updated
+in version 3005 to implement the recommended approach. You need to add
+``- aptkey: False`` to your state and set ``signed-by`` in your repo
+name, to use this recommended approach.  If the cli command ``apt-key``
+is not available it will automatically set ``aptkey`` to False.
+
+
+Using ``aptkey: False`` with ``key_url`` example:
+
+.. code-block:: yaml
+
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+      pkgrepo.managed:
+        - file: /etc/apt/sources.list.d/salt.list
+        - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
+        - aptkey: False
+
+Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
+
+.. code-block:: yaml
+
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+      pkgrepo.managed:
+        - file: /etc/apt/sources.list.d/salt.list
+        - keyserver: keyserver.ubuntu.com
+        - keyid: 0E08A149DE57BFBE
+        - aptkey: False
 """
 
 
@@ -103,11 +136,11 @@ def __virtual__():
     return "pkg.mod_repo" in __salt__
 
 
-def managed(name, ppa=None, copr=None, **kwargs):
+def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
-    <salt.modules.zypper>` repositories are supported.
+    <salt.modules.zypperpkg>` repositories are supported.
 
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
@@ -307,7 +340,13 @@ def managed(name, ppa=None, copr=None, **kwargs):
        :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
        running of ``apt-get update`` prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
+
+    aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
+       in the path, aptkey will be False, regardless of what is passed into
+       this argument.
     """
+    if not salt.utils.path.which("apt-key"):
+        aptkey = False
 
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
@@ -407,13 +446,20 @@ def managed(name, ppa=None, copr=None, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if "pkg.expand_repo_def" in __salt__:
-        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
+    if __grains__.get("os_family") == "Debian":
+        from salt.modules.aptpkg import _expand_repo_def
+
+        os_name = __grains__["os"]
+        lsb_distrib_codename = __grains__["lsb_distrib_codename"]
+
+        sanitizedkwargs = _expand_repo_def(
+            os_name=os_name,
+            lsb_distrib_codename=lsb_distrib_codename,
+            repo=repo,
+            **kwargs
+        )
     else:
         sanitizedkwargs = kwargs
-
-    if __grains__["os_family"] == "Debian":
-        repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
         # 22412: Remove file attribute in case same repo is set up multiple times but with different files
@@ -437,22 +483,23 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
-                # split the line and sort everything after the URL
-                sanitizedsplit = sanitizedkwargs[kwarg].split()
-                sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = [
-                    x.strip() for x in pre[kwarg].partition("#")
-                ]
-                reposplit = reposplit.split()
-                reposplit[3:] = sorted(reposplit[3:])
-                if sanitizedsplit != reposplit:
-                    break
-                if "comments" in kwargs:
-                    post_comments = salt.utils.pkg.deb.combine_comments(
-                        kwargs["comments"]
+                if not sanitizedkwargs["disabled"]:
+                    # split the line and sort everything after the URL
+                    sanitizedsplit = sanitizedkwargs[kwarg].split()
+                    sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
+                    reposplit, _, pre_comments = (
+                        x.strip() for x in pre[kwarg].partition("#")
                     )
-                    if pre_comments != post_comments:
+                    reposplit = reposplit.split()
+                    reposplit[3:] = sorted(reposplit[3:])
+                    if sanitizedsplit != reposplit:
                         break
+                    if "comments" in kwargs:
+                        post_comments = salt.utils.pkg.deb.combine_comments(
+                            kwargs["comments"]
+                        )
+                        if pre_comments != post_comments:
+                            break
             elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
@@ -505,7 +552,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     try:
         if __grains__["os_family"] == "Debian":
-            __salt__["pkg.mod_repo"](repo, saltenv=__env__, **kwargs)
+            __salt__["pkg.mod_repo"](repo, saltenv=__env__, aptkey=aptkey, **kwargs)
         else:
             __salt__["pkg.mod_repo"](repo, **kwargs)
     except Exception as exc:  # pylint: disable=broad-except
@@ -622,8 +669,13 @@ def absent(name, **kwargs):
         ret["comment"] = "Repo key management is not implemented for this platform"
         return ret
 
+    if __grains__["os_family"] == "Debian":
+        stripname = salt.utils.pkg.deb.strip_uri(name)
+    else:
+        stripname = name
+
     try:
-        repo = __salt__["pkg.get_repo"](name, **kwargs)
+        repo = __salt__["pkg.get_repo"](stripname, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
@@ -644,14 +696,14 @@ def absent(name, **kwargs):
         return ret
 
     try:
-        __salt__["pkg.del_repo"](repo=name, **kwargs)
+        __salt__["pkg.del_repo"](repo=stripname, **kwargs)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret["result"] = False
         ret["comment"] = exc.strerror
         return ret
 
     repos = __salt__["pkg.list_repos"]()
-    if name not in repos:
+    if stripname not in repos:
         ret["changes"]["repo"] = name
         ret["comment"] = "Removed repo {}".format(name)
 
@@ -659,7 +711,7 @@ def absent(name, **kwargs):
             ret["result"] = True
         else:
             try:
-                removed_keyid = __salt__["pkg.del_repo_key"](name, **kwargs)
+                removed_keyid = __salt__["pkg.del_repo_key"](stripname, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
                 ret["result"] = False
                 ret["comment"] += ", but failed to remove key: {}".format(exc)

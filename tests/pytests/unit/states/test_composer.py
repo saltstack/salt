@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.composer as composer
 from salt.exceptions import SaltException
 from tests.support.mock import MagicMock, patch

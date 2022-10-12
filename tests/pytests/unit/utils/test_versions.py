@@ -3,6 +3,7 @@ import sys
 import warnings
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.versions
 import salt.version
@@ -105,7 +106,7 @@ def test_warn_until_good_version_argument(version):
         match=(
             r"The warning triggered on filename \'(.*)test_versions.py\', "
             r"line number ([\d]+), is supposed to be shown until version "
-            r"3007 is released. Current version is now 3009. "
+            r"3007.0 \(Chlorine\) is released. Current version is now 3009.0 \(Potassium\). "
             r"Please remove the warning."
         ),
     ):

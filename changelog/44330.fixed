@@ -1,1 +1,0 @@
-Fixes salt-cloud `KeyError` that occurs when there exists any subnets with no tags when profiles use `subnetname`

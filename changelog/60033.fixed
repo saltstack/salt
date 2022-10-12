@@ -1,1 +1,0 @@
-Fixed firewalld.list_zones when any "rich rules" is set

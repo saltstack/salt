@@ -1,6 +1,7 @@
 import random
 
 import pytest
+
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
