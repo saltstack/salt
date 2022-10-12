@@ -2750,7 +2750,7 @@ def managed(
                     seuser: system_u
                     serole: object_r
                     setype: system_conf_t
-                    seranage: s0
+                    serange: s0
 
         .. versionadded:: 3000
 
