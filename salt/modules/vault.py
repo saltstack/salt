@@ -126,7 +126,7 @@ Functions to interact with Hashicorp Vault.
 
     policies
         Policies that are assigned to minions when requesting a token. These
-        can either be static, eg ``saltstack/minions``, or templated with grain
+        can either be static, eg ``saltstack/minions``, or templated with grain or pillar
         values, eg ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for
         ``grains[id]``, eg ``saltstack/minion/{minion}``.
 
@@ -136,13 +136,21 @@ Functions to interact with Hashicorp Vault.
             <faq-grain-security>` for important security information. In short,
             everything except ``grains[id]`` is minion-controlled.
 
-        If a template contains a grain which evaluates to a list, it will be
+        If a template contains a grain or pillar which evaluates to a list, it will be
         expanded into multiple policies. For example, given the template
         ``saltstack/by-role/{grains[roles]}``, and a minion having these grains:
 
         .. code-block:: yaml
 
             grains:
+                roles:
+                    - web
+                    - database
+
+        Alternatively policies can be assigned via pillars ``saltstack/by-role/{pillar[roles]}`` 
+        .. code-block:: yaml
+
+            pillar:
                 roles:
                     - web
                     - database
