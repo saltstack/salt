@@ -2,6 +2,7 @@
 unit tests for the sqs_events engine
 """
 import pytest
+
 import salt.engines.sqs_events as sqs_events
 from tests.support.mock import MagicMock, patch
 

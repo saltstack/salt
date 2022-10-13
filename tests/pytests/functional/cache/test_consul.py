@@ -3,9 +3,10 @@ import socket
 import time
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.cache
 import salt.loader
-from saltfactories.utils import random_string
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
 docker = pytest.importorskip("docker")
@@ -41,7 +42,7 @@ def consul_container(salt_factories):
 
     container = salt_factories.get_container(
         random_string("consul-server-"),
-        image_name="consul:latest",
+        image_name="ghcr.io/saltstack/salt-ci-containers/consul:latest",
         container_run_kwargs={"ports": {"8500/tcp": None}},
         pull_before_start=True,
         skip_on_pull_failure=True,

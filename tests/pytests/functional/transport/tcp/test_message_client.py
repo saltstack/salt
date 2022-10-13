@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.ext.tornado.gen
 import salt.ext.tornado.iostream
 import salt.ext.tornado.tcpserver

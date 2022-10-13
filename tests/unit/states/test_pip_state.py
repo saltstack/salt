@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 import pytest
+
 import salt.states.pip_state as pip_state
 import salt.utils.path
 import salt.version

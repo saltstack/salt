@@ -2,11 +2,11 @@
 Integration tests for salt-ssh py_versions
 """
 import logging
-import shutil
-import subprocess
 
 import pytest
 from saltfactories.utils import random_string
+
+from tests.support.helpers import Keys
 
 pytest.importorskip("docker")
 
@@ -17,40 +17,6 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
-
-
-class Keys:
-    """
-    Temporary ssh key pair
-    """
-
-    def __init__(self, tmp_path_factory):
-        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
-        self.priv_path = priv_path
-
-    def generate(self):
-        subprocess.run(
-            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
-        )
-
-    @property
-    def pub_path(self):
-        return self.priv_path.with_name("{}.pub".format(self.priv_path.name))
-
-    @property
-    def pub(self):
-        return self.pub_path.read_text()
-
-    @property
-    def priv(self):
-        return self.priv_path.read_text()
-
-    def __enter__(self):
-        self.generate()
-        return self
-
-    def __exit__(self, *_):
-        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
@@ -129,7 +95,6 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, ssh_keys, ssh_docker_contain
     )
 
 
-@pytest.mark.slow_test
 def test_py36_target(salt_ssh_cli):
     """
     Test that a python >3.6 master can salt ssh to a <3.6 target

@@ -5,6 +5,7 @@
 import logging
 
 import pytest  # pylint: disable=unused-import
+
 import salt.exceptions
 import salt.state
 import salt.utils.files

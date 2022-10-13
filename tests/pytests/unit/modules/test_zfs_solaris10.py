@@ -3,6 +3,7 @@ Tests for salt.modules.zfs on Solaris
 """
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.zfs as zfs

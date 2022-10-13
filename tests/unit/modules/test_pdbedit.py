@@ -1,6 +1,7 @@
 import hashlib
 
 import pytest
+
 import salt.modules.pdbedit as pdbedit
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

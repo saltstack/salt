@@ -8,6 +8,7 @@ import time
 from subprocess import PIPE, Popen
 
 import pytest
+
 import salt.modules.k8s as k8s
 import salt.utils.files
 import salt.utils.json

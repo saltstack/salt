@@ -40,7 +40,7 @@ import logging
 import salt.utils.event
 
 try:
-    from fluent import sender, event
+    from fluent import event, sender
 except ImportError:
     sender = None
 

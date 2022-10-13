@@ -2,6 +2,7 @@ import urllib.parse
 
 import attr
 import pytest
+
 import salt.utils.json
 import salt.utils.yaml
 import tests.support.netapi as netapi

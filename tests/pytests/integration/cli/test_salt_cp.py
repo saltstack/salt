@@ -9,6 +9,7 @@ import os
 import pathlib
 
 import pytest
+
 import salt.utils.files
 from tests.support.runtests import RUNTIME_VARS
 
