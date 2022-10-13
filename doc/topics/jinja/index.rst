@@ -1144,7 +1144,7 @@ Example:
     This option may have adverse effects when using the default renderer,
     ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
-    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncrasies
     <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: json_decode_list
@@ -1889,6 +1889,28 @@ Returns:
   ["fe80::"]
 
 
+.. jinja_ref:: ipwrap
+
+``ipwrap``
+----------
+
+.. versionadded:: 3006.0
+
+From a string, list, or tuple, returns any IPv6 addresses wrapped in square brackets([])
+
+Example:
+
+.. code-block:: jinja
+
+  {{ ['192.0.2.1', 'foo', 'bar', 'fe80::', '2001:db8::1/64'] | ipwrap }}
+
+Returns:
+
+.. code-block:: python
+
+  ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
+
+
 .. jinja_ref:: network_hosts
 
 ``network_hosts``
@@ -1988,7 +2010,7 @@ Example:
     This option may have adverse effects when using the default renderer,
     ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
-    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncrasies
     <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
@@ -2366,8 +2388,8 @@ external template file.
 
 .. note::
 
-    Macros and variables can be shared across templates. They should not be
-    starting with one or more underscores, and should be managed by one of the
+    Macros and variables can be shared across templates. They should not start
+    with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
 

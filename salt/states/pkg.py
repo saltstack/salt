@@ -1046,8 +1046,8 @@ def installed(
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
-        :mod:`yumpkg <salt.modules.yumpkg>`, and
-        :mod:`zypper <salt.modules.zypper>`. The version number includes the
+        :mod:`yum <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypperpkg>`. The version number includes the
         release designation where applicable, to allow Salt to target a
         specific release of a given version. When in doubt, using the
         ``pkg.latest_version`` function for an uninstalled package will tell
@@ -1279,14 +1279,15 @@ def installed(
 
         .. versionadded:: 2014.7.0
 
-        For requested packages that are already installed and would not be
-        targeted for upgrade or downgrade, use pkg.verify to determine if any
-        of the files installed by the package have been altered. If files have
-        been altered, the reinstall option of pkg.install is used to force a
-        reinstall. Types to ignore can be passed to pkg.verify. Additionally,
-        ``verify_options`` can be used to modify further the behavior of
-        pkg.verify. See examples below.  Currently, this option is supported
-        for the following pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+        Use pkg.verify to check if already installed packages require
+        reinstallion. Requested packages that are already installed and not
+        targeted for up- or downgrade are verified with pkg.verify to determine
+        if any file installed by the package have been modified or if package
+        dependencies are not fulfilled. ``ignore_types`` and ``verify_options``
+        can be passed to pkg.verify. See examples below. Currently, this option
+        is supported for the following pkg providers:
+        :mod:`yum <salt.modules.yumpkg>`,
+        :mod:`zypperpkg <salt.modules.zypperpkg>`.
 
         Examples:
 
@@ -1391,8 +1392,8 @@ def installed(
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`winrepo <salt.modules.win_pkg>`,
-        :mod:`yumpkg <salt.modules.yumpkg>`, and
-        :mod:`zypper <salt.modules.zypper>`,
+        :mod:`yum <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypperpkg>`,
         version numbers can be specified
         in the ``pkgs`` argument. For example:
 
@@ -1406,7 +1407,7 @@ def installed(
                   - baz
 
         Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
-        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypper>`,
+        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypperpkg>`,
         :mod:`yum/dnf <salt.modules.yumpkg>`, and :mod:`apt
         <salt.modules.aptpkg>` support the ``<``, ``<=``, ``>=``, and ``>``
         operators for more control over what versions will be installed. For
@@ -2173,7 +2174,7 @@ def downloaded(
         is not defined for that function, will be silently ignored.
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
+    :mod:`yum <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypperpkg>` and :mod:`apt <salt.modules.aptpkg>`
 
     :param str name:
         The name of the package to be downloaded. This parameter is ignored if
@@ -2333,7 +2334,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         is not defined for that function, will be silently ignored.
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yum <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypperpkg>`
 
     CLI Example:
 
@@ -2416,7 +2417,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
     Ensure that packages related to certain advisory ids are downloaded.
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yum <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypperpkg>`
 
     CLI Example:
 
