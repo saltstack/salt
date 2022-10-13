@@ -23,7 +23,7 @@ pytestmark = [
 
 
 @pytest.fixture
-def configure_loader_modules(docker_cmd_run_all_wrapper):
+def configure_loader_modules(docker_cmd_run_all_wrapper, docker_cmd_run_wrapper):
     return {
         rabbitmq_user: {
             "__salt__": {
@@ -31,6 +31,12 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
                 "rabbitmq.add_user": rabbitmq.add_user,
                 "rabbitmq.delete_user": rabbitmq.delete_user,
                 "rabbitmq.list_user_permissions": rabbitmq.list_user_permissions,
+                "rabbitmq.list_users": rabbitmq.list_users,
+                "rabbitmq.set_user_tags": rabbitmq.set_user_tags,
+                "rabbitmq.set_permissions": rabbitmq.set_permissions,
+                "rabbitmq.check_password": rabbitmq.check_password,
+                "rabbitmq.change_password": rabbitmq.change_password,
+                "cmd.run": docker_cmd_run_wrapper,
             },
             "__opts__": {"test": False},
             "_utils__": {},
@@ -41,6 +47,7 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
                 "rabbitmq.add_user": rabbitmq.add_user,
                 "rabbitmq.list_user_permissions": rabbitmq.list_user_permissions,
                 "cmd.run_all": docker_cmd_run_all_wrapper,
+                "cmd.run": docker_cmd_run_wrapper,
             },
             "__opts__": {},
             "_utils__": {},
@@ -74,6 +81,50 @@ def test_present_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
         "changes": {"name": {"old": "myuser", "new": ""}},
     }
 
+    assert ret == expected
+
+    ret = rabbitmq_user.present(
+        "myuser",
+        password="password",
+        force=True,
+        tags=["monitoring", "user"],
+        perms=[{"/": [".*", ".*", "test$"]}],
+    )
+
+    expected = {
+        "name": "myuser",
+        "result": True,
+        "comment": "'myuser' was configured.",
+        "changes": {
+            "user": {"old": "", "new": "myuser"},
+            "tags": {"old": [""], "new": ["monitoring", "user"]},
+            "perms": {
+                "new": {"/": {"configure": ".*", "write": ".*", "read": "test$"}}
+            },
+        },
+    }
+    assert ret == expected
+
+    ret = rabbitmq_user.present(
+        "myuser",
+        password="password",
+        force=True,
+        tags=["monitoring", "user"],
+        perms=[{"/": ["", "", ".*"]}],
+    )
+
+    expected = {
+        "name": "myuser",
+        "result": True,
+        "comment": "'myuser' was configured.",
+        "changes": {
+            "password": {"old": "", "new": "Set password."},
+            "perms": {
+                "old": {"configure": ".*", "write": ".*", "read": "test$"},
+                "new": {"/": {"configure": "", "write": "", "read": ".*"}},
+            },
+        },
+    }
     assert ret == expected
 
 
