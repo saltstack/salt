@@ -1,4 +1,0 @@
-{% from '../macro' import mymacro with context %}
-{% macro rmacro(greeting, greetee='world') -%}
-{{ mymacro(greeting, greetee) }}
-{%- endmacro %}

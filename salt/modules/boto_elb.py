@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon ELB
 
@@ -44,36 +43,30 @@ Connection module for Amazon ELB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import logging
 import time
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-
-# Import third party libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
-
 
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
     from boto.ec2.elb import HealthCheck
-    from boto.ec2.elb.attributes import AccessLogAttribute
-    from boto.ec2.elb.attributes import ConnectionDrainingAttribute
-    from boto.ec2.elb.attributes import ConnectionSettingAttribute
-    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
+    from boto.ec2.elb.attributes import (
+        AccessLogAttribute,
+        ConnectionDrainingAttribute,
+        ConnectionSettingAttribute,
+        CrossZoneLoadBalancingAttribute,
+    )
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -93,7 +86,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an ELB exists.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -117,7 +110,7 @@ def get_all_elbs(region=None, key=None, keyid=None, profile=None):
     """
     Return all load balancers associated with an account
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -136,7 +129,7 @@ def list_elbs(region=None, key=None, keyid=None, profile=None):
     """
     Return names of all load balancers associated with an account
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -153,7 +146,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
     """
     Get an ELB configuration.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -201,6 +194,9 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
             for policy_list in lb_policy_lists:
                 policies += [p.policy_name for p in policy_list]
             ret["policies"] = policies
+            ret["canonical_hosted_zone_name"] = lb.canonical_hosted_zone_name
+            ret["canonical_hosted_zone_name_id"] = lb.canonical_hosted_zone_name_id
+            ret["vpc_id"] = lb.vpc_id
             return ret
         except boto.exception.BotoServerError as error:
             if error.error_code == "Throttling":
@@ -219,7 +215,7 @@ def listener_dict_to_tuple(listener):
     Convert an ELB listener dict into a listener tuple used by certain parts of
     the AWS ELB API.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -265,10 +261,10 @@ def create(
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if exists(name, region, key, keyid, profile):
         return True
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
 
-    if isinstance(listeners, six.string_types):
+    if isinstance(listeners, str):
         listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
@@ -328,7 +324,7 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None, profile
     """
     Create listeners on an ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -336,7 +332,7 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None, profile
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(listeners, six.string_types):
+    if isinstance(listeners, str):
         listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
@@ -360,7 +356,7 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None, profile=Non
     """
     Delete listeners on an ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -368,7 +364,7 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None, profile=Non
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(ports, six.string_types):
+    if isinstance(ports, str):
         ports = salt.utils.json.loads(ports)
     try:
         conn.delete_load_balancer_listeners(name, ports)
@@ -390,7 +386,7 @@ def apply_security_groups(
     """
     Apply security groups to ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -398,7 +394,7 @@ def apply_security_groups(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(security_groups, six.string_types):
+    if isinstance(security_groups, str):
         security_groups = salt.utils.json.loads(security_groups)
     try:
         conn.apply_security_groups_to_lb(name, security_groups)
@@ -416,7 +412,7 @@ def enable_availability_zones(
     """
     Enable availability zones for ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -424,7 +420,7 @@ def enable_availability_zones(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.enable_availability_zones(name, availability_zones)
@@ -441,7 +437,7 @@ def disable_availability_zones(
     """
     Disable availability zones for ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -449,7 +445,7 @@ def disable_availability_zones(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.disable_availability_zones(name, availability_zones)
@@ -469,7 +465,7 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     Attach ELB to subnets.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -477,7 +473,7 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, six.string_types):
+    if isinstance(subnets, str):
         subnets = salt.utils.json.loads(subnets)
     try:
         conn.attach_lb_to_subnets(name, subnets)
@@ -497,7 +493,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     Detach ELB from subnets.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -505,7 +501,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, six.string_types):
+    if isinstance(subnets, str):
         subnets = salt.utils.json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
@@ -525,7 +521,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if attributes are set on an ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -669,7 +665,7 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
     """
     Get the health check configured for this ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -743,7 +739,7 @@ def register_instances(
     - ``True``: instance(s) registered successfully
     - ``False``: instance(s) failed to be registered
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -752,7 +748,7 @@ def register_instances(
     """
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the register_instances method
-    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
+    if isinstance(instances, str) or isinstance(instances, str):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -788,7 +784,7 @@ def deregister_instances(
     - ``False``: instance(s) failed to be deregistered
     - ``None``: instance(s) not valid or not registered, no action taken
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -797,7 +793,7 @@ def deregister_instances(
     """
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the deregister_instances method
-    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
+    if isinstance(instances, str) or isinstance(instances, str):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -841,19 +837,16 @@ def set_instances(
     """
     Set the instances assigned to an ELB to exactly the list given
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_elb.set_instances myelb region=us-east-1 instances="[instance_id,instance_id]"
     """
     ret = True
-    current = set(
-        [
-            i["instance_id"]
-            for i in get_instance_health(name, region, key, keyid, profile)
-        ]
-    )
+    current = {
+        i["instance_id"] for i in get_instance_health(name, region, key, keyid, profile)
+    }
     desired = set(instances)
     add = desired - current
     remove = current - desired
@@ -877,7 +870,7 @@ def get_instance_health(
     """
     Get a list of instances and their health state
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -919,7 +912,7 @@ def create_policy(
 
     .. versionadded:: 2016.3.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -954,7 +947,7 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None, profile=
 
     .. versionadded:: 2016.3.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -987,7 +980,7 @@ def set_listener_policy(
 
     .. versionadded:: 2016.3.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: Bash
 
@@ -1021,7 +1014,9 @@ def set_backend_policy(
     """
     Set the policies of an ELB backend server.
 
-    CLI example:
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.set_backend_policy myelb 443 "[policy1,policy2]"
     """
@@ -1106,9 +1101,9 @@ def _build_tag_param_list(params, tags):
     i = 1
     for key in keys:
         value = tags[key]
-        params["Tags.member.{0}.Key".format(i)] = key
+        params["Tags.member.{}.Key".format(i)] = key
         if value is not None:
-            params["Tags.member.{0}.Value".format(i)] = value
+            params["Tags.member.{}.Value".format(i)] = value
         i += 1
 
 

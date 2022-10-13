@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
+from saltfactories.utils import random_string
 
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    random_string,
-    runs_on,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import runs_on
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -24,9 +17,9 @@ ADD_USER = random_string("RS-", lowercase=False)
 REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
-@destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.destructive_test
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module
@@ -40,7 +33,7 @@ class MacGroupModuleTest(ModuleCase):
         if os_grain["kernel"] not in "Darwin":
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_group_add(self):
         """
         Tests the add group function
@@ -53,7 +46,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [ADD_GROUP])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_group_delete(self):
         """
         Tests the delete group function
@@ -67,7 +60,7 @@ class MacGroupModuleTest(ModuleCase):
         ret = self.run_function("group.delete", [DEL_GROUP])
         self.assertTrue(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_group_chgid(self):
         """
         Tests changing the group id
@@ -85,7 +78,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [CHANGE_GROUP])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_adduser(self):
         """
         Tests adding user to the group
@@ -103,7 +96,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [ADD_GROUP])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_deluser(self):
         """
         Test deleting user from a group
@@ -122,7 +115,7 @@ class MacGroupModuleTest(ModuleCase):
         group_info = self.run_function("group.info", [ADD_GROUP])
         self.assertNotIn(ADD_USER, "".join(group_info["members"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_members(self):
         """
         Test replacing members of a group
@@ -133,7 +126,7 @@ class MacGroupModuleTest(ModuleCase):
         ):
             self.run_function("group.delete", [ADD_GROUP])
             self.skipTest(
-                "Failed to create the {0} group or add user {1} to group "
+                "Failed to create the {} group or add user {} to group "
                 "to manipulate".format(ADD_GROUP, ADD_USER)
             )
 
@@ -142,10 +135,10 @@ class MacGroupModuleTest(ModuleCase):
 
         # ensure new user is added to group and previous user is removed
         group_info = self.run_function("group.info", [ADD_GROUP])
-        self.assertIn(REP_USER_GROUP, six.text_type(group_info["members"]))
-        self.assertNotIn(ADD_USER, six.text_type(group_info["members"]))
+        self.assertIn(REP_USER_GROUP, str(group_info["members"]))
+        self.assertNotIn(ADD_USER, str(group_info["members"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mac_getent(self):
         """
         Test returning info on all groups
@@ -156,14 +149,14 @@ class MacGroupModuleTest(ModuleCase):
         ):
             self.run_function("group.delete", [ADD_GROUP])
             self.skipTest(
-                "Failed to create the {0} group or add user {1} to group "
+                "Failed to create the {} group or add user {} to group "
                 "to manipulate".format(ADD_GROUP, ADD_USER)
             )
 
         getinfo = self.run_function("group.getent")
         self.assertTrue(getinfo)
-        self.assertIn(ADD_GROUP, six.text_type(getinfo))
-        self.assertIn(ADD_USER, six.text_type(getinfo))
+        self.assertIn(ADD_GROUP, str(getinfo))
+        self.assertIn(ADD_USER, str(getinfo))
 
     def tearDown(self):
         """

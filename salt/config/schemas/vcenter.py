@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Rod McKenzie (roderick.mckenzie@morganstanley.com)`
     :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
@@ -9,11 +8,7 @@
     VCenter configuration schemas
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.utils.schema import ArrayItem, IntegerItem, Schema, StringItem
+from salt.utils.schema import ArrayItem, BooleanItem, IntegerItem, Schema, StringItem
 
 
 class VCenterEntitySchema(Schema):
@@ -48,6 +43,8 @@ class VCenterProxySchema(Schema):
     mechanism = StringItem(required=True, enum=["userpass", "sspi"])
     username = StringItem()
     passwords = ArrayItem(min_items=1, items=StringItem(), unique_items=True)
+    verify_ssl = BooleanItem()
+    ca_bundle = StringItem()
 
     domain = StringItem()
     principal = StringItem(default="host")

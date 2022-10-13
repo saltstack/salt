@@ -36,8 +36,8 @@ Installing Salt
 ---------------
 
 SaltStack has been made to be very easy to install and get started. The
-:ref:`installation documents <installation>` contain instructions
-for all supported platforms.
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_
+provides instructions for all supported platforms.
 
 Starting Salt
 -------------
@@ -258,8 +258,8 @@ module.
 
 The result of running this command will be the master instructing all of the
 minions to execute :py:func:`test.version <salt.modules.test.version>` in parallel
-and return the result. Using :py:func:`test.version <salt.modules.test.version>` 
-is a good way of confirming that a minion is connected, and reaffirm to the user 
+and return the result. Using :py:func:`test.version <salt.modules.test.version>`
+is a good way of confirming that a minion is connected, and reaffirm to the user
 the salt version(s) they have installed on the minions.
 
 .. note::

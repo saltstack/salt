@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Rackspace Queues
 =======================
@@ -21,7 +20,6 @@ This module is greatly inspired by boto_* modules from SaltStack code source.
         pyrax_queues.absent:
             - provider: my-pyrax
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.openstack.pyrax as suop
 
@@ -55,7 +53,7 @@ def present(name, provider):
 
     if not is_present:
         if __opts__["test"]:
-            msg = "Rackspace queue {0} is set to be created.".format(name)
+            msg = "Rackspace queue {} is set to be created.".format(name)
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -70,10 +68,10 @@ def present(name, provider):
             ret["changes"]["new"] = {"queue": queue}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {0} Rackspace queue.".format(name)
+            ret["comment"] = "Failed to create {} Rackspace queue.".format(name)
             return ret
     else:
-        ret["comment"] = "{0} present.".format(name)
+        ret["comment"] = "{} present.".format(name)
 
     return ret
 
@@ -100,7 +98,7 @@ def absent(name, provider):
 
     if is_present:
         if __opts__["test"]:
-            ret["comment"] = "Rackspace queue {0} is set to be removed.".format(name)
+            ret["comment"] = "Rackspace queue {} is set to be removed.".format(name)
             ret["result"] = None
             return ret
         queue = __salt__["cloud.action"]("queues_show", provider=provider, name=name)
@@ -112,8 +110,8 @@ def absent(name, provider):
             ret["changes"]["new"] = {}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {0} Rackspace queue.".format(name)
+            ret["comment"] = "Failed to delete {} Rackspace queue.".format(name)
     else:
-        ret["comment"] = "{0} does not exist.".format(name)
+        ret["comment"] = "{} does not exist.".format(name)
 
     return ret

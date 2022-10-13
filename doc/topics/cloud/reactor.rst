@@ -32,9 +32,7 @@ using the ``ec2-config`` provider, the payload for this tag would look like:
 
 .. code-block:: python
 
-    {'name': 'web1',
-     'profile': 'ec2-centos',
-     'provider': 'ec2-config:ec2'}
+    {"name": "web1", "profile": "ec2-centos", "provider": "ec2-config:ec2"}
 
 Available Events
 ================

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon EC2
 
@@ -43,22 +42,16 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import map
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -67,8 +60,8 @@ try:
     # pylint: enable=unused-import
     from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
     from boto.ec2.networkinterface import (
-        NetworkInterfaceSpecification,
         NetworkInterfaceCollection,
+        NetworkInterfaceSpecification,
     )
 
     HAS_BOTO = True
@@ -96,7 +89,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto.assign_funcs"](__name__, "ec2")
 
@@ -240,9 +232,9 @@ def get_eip_address_info(
 
     .. versionadded:: 2016.3.0
     """
-    if type(addresses) == (type("string")):
+    if isinstance(addresses, str):
         addresses = [addresses]
-    if type(allocation_ids) == (type("string")):
+    if isinstance(allocation_ids, str):
         allocation_ids = [allocation_ids]
 
     ret = _get_all_eip_addresses(
@@ -265,7 +257,7 @@ def get_eip_address_info(
         "private_ip_address",
     ]
 
-    return [dict([(x, getattr(address, x)) for x in interesting]) for address in ret]
+    return [{x: getattr(address, x) for x in interesting} for address in ret]
 
 
 def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile=None):
@@ -314,7 +306,7 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
         "private_ip_address",
     ]
 
-    return dict([(x, getattr(address, x)) for x in interesting])
+    return {x: getattr(address, x) for x in interesting}
 
 
 def release_eip_address(
@@ -342,7 +334,7 @@ def release_eip_address(
     """
     if not salt.utils.data.exactly_one((public_ip, allocation_id)):
         raise SaltInvocationError(
-            "Exactly one of 'public_ip' OR " "'allocation_id' must be provided"
+            "Exactly one of 'public_ip' OR 'allocation_id' must be provided"
         )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -692,8 +684,8 @@ def find_instances(
             filter_parameters["filters"]["tag:Name"] = name
 
         if tags:
-            for tag_name, tag_value in six.iteritems(tags):
-                filter_parameters["filters"]["tag:{0}".format(tag_name)] = tag_value
+            for tag_name, tag_value in tags.items():
+                filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
 
         if filters:
             filter_parameters["filters"].update(filters)
@@ -701,7 +693,7 @@ def find_instances(
         reservations = conn.get_all_reservations(**filter_parameters)
         instances = [i for r in reservations for i in r.instances]
         log.debug(
-            "The filters criteria %s matched the following " "instances:%s",
+            "The filters criteria %s matched the following instances:%s",
             filter_parameters,
             instances,
         )
@@ -766,7 +758,8 @@ def create_image(
         return False
     if len(instances) > 1:
         log.error(
-            "Multiple instances found, must match exactly only one instance to create an image from"
+            "Multiple instances found, must match exactly only one instance to create"
+            " an image from"
         )
         return False
 
@@ -817,11 +810,11 @@ def find_images(
             if ami_name:
                 filter_parameters["filters"]["name"] = ami_name
             if tags:
-                for tag_name, tag_value in six.iteritems(tags):
-                    filter_parameters["filters"]["tag:{0}".format(tag_name)] = tag_value
+                for tag_name, tag_value in tags.items():
+                    filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
             images = conn.get_all_images(**filter_parameters)
             log.debug(
-                "The filters criteria %s matched the following " "images:%s",
+                "The filters criteria %s matched the following images:%s",
                 filter_parameters,
                 images,
             )
@@ -919,7 +912,7 @@ def get_id(
             return instance_ids[0]
         else:
             raise CommandExecutionError(
-                "Found more than one instance " "matching the criteria."
+                "Found more than one instance matching the criteria."
             )
     else:
         log.warning("Could not find instance.")
@@ -1002,6 +995,7 @@ def _to_blockdev_map(thing):
     YAML example:
 
     .. code-block:: yaml
+
         device-maps:
             /dev/sdb:
                 ephemeral_name: ephemeral0
@@ -1020,7 +1014,7 @@ def _to_blockdev_map(thing):
         return None
     if isinstance(thing, BlockDeviceMapping):
         return thing
-    if isinstance(thing, six.string_types):
+    if isinstance(thing, str):
         thing = salt.utils.json.loads(thing)
     if not isinstance(thing, dict):
         log.error(
@@ -1032,7 +1026,7 @@ def _to_blockdev_map(thing):
         return None
 
     bdm = BlockDeviceMapping()
-    for d, t in six.iteritems(thing):
+    for d, t in thing.items():
         bdt = BlockDeviceType(
             ephemeral_name=t.get("ephemeral_name"),
             no_device=t.get("no_device", False),
@@ -1209,7 +1203,7 @@ def run(
     """
     if all((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "Only one of subnet_name or subnet_id may be " "provided."
+            "Only one of subnet_name or subnet_id may be provided."
         )
     if subnet_name:
         r = __salt__["boto_vpc.get_resource_id"](
@@ -1222,7 +1216,7 @@ def run(
 
     if all((security_group_ids, security_group_names)):
         raise SaltInvocationError(
-            "Only one of security_group_ids or " "security_group_names may be provided."
+            "Only one of security_group_ids or security_group_names may be provided."
         )
     if security_group_names:
         security_group_ids = []
@@ -1335,6 +1329,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if a key exists. Returns fingerprint and name if
     it does and False if it doesn't
+
     CLI Example:
 
     .. code-block:: bash
@@ -1519,11 +1514,12 @@ def get_attribute(
         )
     if instance_name and instance_id:
         raise SaltInvocationError(
-            "Both instance_name and instance_id can not be specified in the same command."
+            "Both instance_name and instance_id can not be specified in the same"
+            " command."
         )
     if attribute not in attribute_list:
         raise SaltInvocationError(
-            "Attribute must be one of: {0}.".format(attribute_list)
+            "Attribute must be one of: {}.".format(attribute_list)
         )
     try:
         if instance_name:
@@ -1606,15 +1602,17 @@ def set_attribute(
     ]
     if not any((instance_name, instance_id)):
         raise SaltInvocationError(
-            "At least one of the following must be specified: instance_name or instance_id."
+            "At least one of the following must be specified: instance_name or"
+            " instance_id."
         )
     if instance_name and instance_id:
         raise SaltInvocationError(
-            "Both instance_name and instance_id can not be specified in the same command."
+            "Both instance_name and instance_id can not be specified in the same"
+            " command."
         )
     if attribute not in attribute_list:
         raise SaltInvocationError(
-            "Attribute must be one of: {0}.".format(attribute_list)
+            "Attribute must be one of: {}.".format(attribute_list)
         )
     try:
         if instance_name:
@@ -1803,7 +1801,7 @@ def create_network_interface(
     """
     if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "One (but not both) of subnet_id or " "subnet_name must be provided."
+            "One (but not both) of subnet_id or subnet_name must be provided."
         )
 
     if subnet_name:
@@ -1826,7 +1824,7 @@ def create_network_interface(
     )
     vpc_id = vpc_id.get("vpc_id")
     if not vpc_id:
-        msg = "subnet_id {0} does not map to a valid vpc id.".format(subnet_id)
+        msg = "subnet_id {} does not map to a valid vpc id.".format(subnet_id)
         r["error"] = {"message": msg}
         return r
     _groups = __salt__["boto_secgroup.convert_to_group_ids"](
@@ -1977,7 +1975,7 @@ def detach_network_interface(
     """
     if not (name or network_interface_id or attachment_id):
         raise SaltInvocationError(
-            "Either name or network_interface_id or attachment_id must be" " provided."
+            "Either name or network_interface_id or attachment_id must be provided."
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
@@ -2055,7 +2053,7 @@ def modify_network_interface_attribute(
         )
         if not _value:
             r["error"] = {
-                "message": ("Security groups do not map to valid security" " group ids")
+                "message": "Security groups do not map to valid security group ids"
             }
             return r
     _attachment_id = None
@@ -2235,7 +2233,7 @@ def set_volumes_tags(
                         profile=profile,
                     )
                     if not instance_id:
-                        msg = "Couldn't resolve instance Name {0} to an ID.".format(v)
+                        msg = "Couldn't resolve instance Name {} to an ID.".format(v)
                         raise CommandExecutionError(msg)
                     new_filters["attachment.instance_id"] = instance_id
                 else:
@@ -2271,17 +2269,17 @@ def set_volumes_tags(
         else:
             log.debug("No changes needed for vol.id %s", vol.id)
         if add:
-            d = dict((k, tags[k]) for k in add)
+            d = {k: tags[k] for k in add}
             log.debug("New tags for vol.id %s: %s", vol.id, d)
         if update:
-            d = dict((k, tags[k]) for k in update)
+            d = {k: tags[k] for k in update}
             log.debug("Updated tags for vol.id %s: %s", vol.id, d)
         if not dry_run:
             if not create_tags(
                 vol.id, tags, region=region, key=key, keyid=keyid, profile=profile
             ):
                 ret["success"] = False
-                ret["comment"] = "Failed to set tags on vol.id {0}: {1}".format(
+                ret["comment"] = "Failed to set tags on vol.id {}: {}".format(
                     vol.id, tags
                 )
                 return ret
@@ -2299,7 +2297,7 @@ def set_volumes_tags(
                         ret["success"] = False
                         ret[
                             "comment"
-                        ] = "Failed to remove tags on vol.id {0}: {1}".format(
+                        ] = "Failed to remove tags on vol.id {}: {}".format(
                             vol.id, remove
                         )
                         return ret

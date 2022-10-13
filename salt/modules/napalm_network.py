@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM Network
 ==============
@@ -19,9 +18,6 @@ Dependencies
 .. versionchanged:: 2017.7.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import time
@@ -31,13 +27,9 @@ import salt.utils.napalm
 import salt.utils.templates
 import salt.utils.versions
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 
-# Import 3rd-party libs
 try:
     import jxmlease  # pylint: disable=unused-import
 
@@ -104,7 +96,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
     output_dict = dict()
 
-    for key, key_list in six.iteritems(input_dict):
+    for key, key_list in input_dict.items():
         key_list_filtered = _filter_list(key_list, search_key, search_value)
         if key_list_filtered:
             output_dict[key] = key_list_filtered
@@ -130,8 +122,6 @@ def _safe_commit_config(loaded_result, napalm_device):
 
 
 def _safe_dicard_config(loaded_result, napalm_device):
-    """
-    """
     log.debug("Discarding the config")
     log.debug(loaded_result)
     _discarded = discard_config(inherit_napalm_device=napalm_device)
@@ -203,7 +193,7 @@ def _config_logic(
 
     current_jid = kwargs.get("__pub_jid")
     if not current_jid:
-        current_jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+        current_jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     loaded_result["already_configured"] = False
 
@@ -281,18 +271,20 @@ def _config_logic(
                 if not discarded["result"]:
                     discarded["comment"] += (
                         "Scheduled the job to be executed at {schedule_ts}, "
-                        "but was unable to discard the config: \n"
-                    ).format(schedule_ts=commit_time)
+                        "but was unable to discard the config: \n".format(
+                            schedule_ts=commit_time
+                        )
+                    )
                     return discarded
                 loaded_result["comment"] = (
-                    "Changes discarded for now, and scheduled commit at: {schedule_ts}.\n"
-                    "The commit ID is: {current_jid}.\n"
-                    "To discard this commit, you can execute: \n\n"
-                    "salt {min_id} net.cancel_commit {current_jid}"
-                ).format(
-                    schedule_ts=commit_time,
-                    min_id=__opts__["id"],
-                    current_jid=current_jid,
+                    "Changes discarded for now, and scheduled commit at:"
+                    " {schedule_ts}.\nThe commit ID is: {current_jid}.\nTo discard this"
+                    " commit, you can execute: \n\nsalt {min_id} net.cancel_commit"
+                    " {current_jid}".format(
+                        schedule_ts=commit_time,
+                        min_id=__opts__["id"],
+                        current_jid=current_jid,
+                    )
                 )
                 loaded_result["commit_id"] = current_jid
                 return loaded_result
@@ -305,8 +297,9 @@ def _config_logic(
                 if __grains__["os"] == "junos":
                     if not HAS_JXMLEASE:
                         loaded_result["comment"] = (
-                            "This feature requires the library jxmlease to be installed.\n"
-                            "To install, please execute: ``pip install jxmlease``."
+                            "This feature requires the library jxmlease to be"
+                            " installed.\nTo install, please execute: ``pip install"
+                            " jxmlease``."
                         )
                         loaded_result["result"] = False
                         return loaded_result
@@ -353,14 +346,14 @@ def _config_logic(
                     log.debug(scheduled)
                     saved = __salt__["schedule.save"]()
                 loaded_result["comment"] = (
-                    "The commit ID is: {current_jid}.\n"
-                    "This commit will be reverted at: {schedule_ts}, unless confirmed.\n"
-                    "To confirm the commit and avoid reverting, you can execute:\n\n"
-                    "salt {min_id} net.confirm_commit {current_jid}"
-                ).format(
-                    schedule_ts=revert_time,
-                    min_id=__opts__["id"],
-                    current_jid=current_jid,
+                    "The commit ID is: {current_jid}.\nThis commit will be reverted at:"
+                    " {schedule_ts}, unless confirmed.\nTo confirm the commit and avoid"
+                    " reverting, you can execute:\n\nsalt {min_id} net.confirm_commit"
+                    " {current_jid}".format(
+                        schedule_ts=revert_time,
+                        min_id=__opts__["id"],
+                        current_jid=current_jid,
+                    )
                 )
                 loaded_result["commit_id"] = current_jid
                 return loaded_result
@@ -613,7 +606,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
         .. versionadded:: 2018.3.0
@@ -788,7 +781,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
-                ] += "\nUnable to process the output from {0}: {1}.".format(
+                ] += "\nUnable to process the output from {}: {}.".format(
                     command, processed_cli_output["comment"]
                 )
                 log.error(processed_cli_outputs["comment"])
@@ -816,7 +809,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
-                ] += "\nUnable to process the output from {0}: {1}".format(
+                ] += "\nUnable to process the output from {}: {}".format(
                     command, processed_cli_output["comment"]
                 )
                 log.error(processed_cli_outputs["comment"])
@@ -1945,9 +1938,11 @@ def load_template(
         _loaded.update(
             {
                 "result": False,
-                "comment": "Invalid templating engine! Choose between: {tpl_eng_opts}".format(
-                    tpl_eng_opts=", ".join(
-                        list(salt.utils.templates.TEMPLATE_REGISTRY.keys())
+                "comment": (
+                    "Invalid templating engine! Choose between: {tpl_eng_opts}".format(
+                        tpl_eng_opts=", ".join(
+                            list(salt.utils.templates.TEMPLATE_REGISTRY.keys())
+                        )
                     )
                 ),
             }
@@ -1979,7 +1974,7 @@ def load_template(
             defaults=defaults,
             saltenv=saltenv,
         )
-        if not isinstance(_rendered, six.string_types):
+        if not isinstance(_rendered, str):
             if "result" in _rendered:
                 _loaded["result"] = _rendered["result"]
             else:
@@ -1999,7 +1994,7 @@ def load_template(
             template_hash_name = [None] * len(template_name)
         if (
             template_hash
-            and isinstance(template_hash, six.string_types)
+            and isinstance(template_hash, str)
             and not (
                 template_hash.startswith("salt://")
                 or template_hash.startswith("file://")
@@ -2011,7 +2006,7 @@ def load_template(
             template_hash = [template_hash]
         elif (
             template_hash
-            and isinstance(template_hash, six.string_types)
+            and isinstance(template_hash, str)
             and (
                 template_hash.startswith("salt://")
                 or template_hash.startswith("file://")
@@ -2044,9 +2039,7 @@ def load_template(
                 saltenv=saltenv,
                 skip_verify=skip_verify,
             )
-            if not isinstance(_managed, (list, tuple)) and isinstance(
-                _managed, six.string_types
-            ):
+            if not isinstance(_managed, (list, tuple)) and isinstance(_managed, str):
                 _loaded["comment"] += _managed
                 _loaded["result"] = False
             elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
@@ -2246,9 +2239,10 @@ def config_control(
     try_commit = commit()
     if not try_commit.get("result"):
         result = False
-        comment = "Unable to commit the changes: {reason}.\n\
-        Will try to rollback now!".format(
-            reason=try_commit.get("comment")
+        comment = (
+            "Unable to commit the changes: {reason}.\nWill try to rollback now!".format(
+                reason=try_commit.get("comment")
+            )
         )
         try_rollback = rollback()
         if not try_rollback.get("result"):

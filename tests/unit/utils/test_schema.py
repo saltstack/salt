@@ -1,25 +1,13 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=function-redefined,missing-docstring
-# TODO: Remove the following PyLint disable as soon as we support YAML and RST rendering
-# pylint: disable=abstract-method
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+# pylint: disable=function-redefined
 import copy
 
-# Import Salt Libs
 import salt.utils.json
 import salt.utils.schema as schema
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     import jsonschema
     import jsonschema.exceptions
@@ -132,16 +120,20 @@ class ConfigTestCase(TestCase):
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
         class SSHKeyNamesSchema(schema.Schema):
             ssh_key_names = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on "
-                "DigitalOcean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on "
+                    "DigitalOcean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
         class Requirements(BaseRequirements):
@@ -150,8 +142,10 @@ class ConfigTestCase(TestCase):
 
             personal_access_token = schema.StringItem(
                 title="Personal Access Token",
-                description="This is the API access token which can be generated "
-                "under the API/Application on your account",
+                description=(
+                    "This is the API access token which can be generated "
+                    "under the API/Application on your account"
+                ),
                 required=True,
             )
 
@@ -178,20 +172,26 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -213,22 +213,28 @@ class ConfigTestCase(TestCase):
 
             personal_access_token = schema.StringItem(
                 title="Personal Access Token",
-                description="This is the API access token which can be generated "
-                "under the API/Application on your account",
+                description=(
+                    "This is the API access token which can be generated "
+                    "under the API/Application on your account"
+                ),
                 required=True,
             )
 
             ssh_key_file = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
             ssh_key_names = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on "
-                "DigitalOcean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on "
+                    "DigitalOcean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
             requirements_definition = schema.AnyOfItem(
@@ -252,20 +258,26 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -301,20 +313,26 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -338,15 +356,19 @@ class ConfigTestCase(TestCase):
 
             ssh_key_file_2 = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
             ssh_key_names_2 = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on "
-                "DigitalOcean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on "
+                    "DigitalOcean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
             requirements_definition_2 = schema.AnyOfItem(
@@ -370,32 +392,42 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
                 "ssh_key_file_2": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names_2": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -426,16 +458,20 @@ class ConfigTestCase(TestCase):
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
         class SSHKeyNamesSchema(schema.Schema):
             ssh_key_names = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on  "
-                "Digial Ocean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on  "
+                    "Digial Ocean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
         class Requirements(BaseRequirements):
@@ -444,8 +480,10 @@ class ConfigTestCase(TestCase):
 
             personal_access_token = schema.StringItem(
                 title="Personal Access Token",
-                description="This is the API access token which can be generated "
-                "under the API/Application on your account",
+                description=(
+                    "This is the API access token which can be generated "
+                    "under the API/Application on your account"
+                ),
                 required=True,
             )
 
@@ -468,7 +506,7 @@ class ConfigTestCase(TestCase):
                 Requirements.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -476,7 +514,7 @@ class ConfigTestCase(TestCase):
                 Requirements.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -484,7 +522,7 @@ class ConfigTestCase(TestCase):
                 Requirements.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -540,7 +578,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": False}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 1}, TestConf.serialize())
@@ -647,7 +685,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": "the item"}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         class TestConf(schema.Schema):
             item = schema.StringItem(
@@ -657,7 +695,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": "the item"}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 3}, TestConf.serialize())
@@ -684,7 +722,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": "foo"}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         class TestConf(schema.Schema):
             item = schema.StringItem(
@@ -707,7 +745,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -741,7 +779,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -778,7 +816,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -812,7 +850,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -846,7 +884,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -881,7 +919,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -928,7 +966,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1041,7 +1079,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 2}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": "3"}, TestConf.serialize())
@@ -1055,7 +1093,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4.4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 4}, TestConf.serialize())
@@ -1069,7 +1107,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 3}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 11}, TestConf.serialize())
@@ -1114,7 +1152,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(
@@ -1228,7 +1266,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 2}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 3.1}, TestConf.serialize())
@@ -1242,7 +1280,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 3}, TestConf.serialize())
@@ -1256,7 +1294,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 3}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": 11}, TestConf.serialize())
@@ -1301,7 +1339,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": 4}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(
@@ -1434,7 +1472,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1460,7 +1498,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1504,7 +1542,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1528,7 +1566,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1548,7 +1586,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
         try:
             jsonschema.validate(
                 {"item": ["Tobias"]},
@@ -1556,7 +1594,7 @@ class ConfigTestCase(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1732,7 +1770,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": {"sides": 1}}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": {"sides": "1"}}, TestConf.serialize())
@@ -1755,7 +1793,7 @@ class ConfigTestCase(TestCase):
                 {"item": {"sides": 1, "color": "red"}}, TestConf.serialize()
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1807,7 +1845,7 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -1839,7 +1877,7 @@ class ConfigTestCase(TestCase):
                 {"item": {"color": "red", "sides": 1}}, TestConf.serialize()
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -1847,7 +1885,7 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": {"color": "blue"}}, TestConf.serialize())
@@ -1932,7 +1970,7 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
@@ -1979,22 +2017,22 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate({"item": ["yes"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate({"item": [True]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate({"item": [False]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
@@ -2037,12 +2075,12 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate({"item": ["yes"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
@@ -2072,12 +2110,12 @@ class ConfigTestCase(TestCase):
         try:
             jsonschema.validate({"item": ["no"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate({"item": ["yes"]}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": [True]}, TestConf.serialize())
@@ -2120,7 +2158,9 @@ class ConfigTestCase(TestCase):
             "type": "object",
             "properties": {
                 "another_name": {
-                    "id": "https://non-existing.saltstack.com/schemas/another_name.json#",
+                    "id": (
+                        "https://non-existing.saltstack.com/schemas/another_name.json#"
+                    ),
                     "type": "object",
                     "properties": {
                         "item": {
@@ -2182,7 +2222,7 @@ class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
 
 
 class ComplexSchemaTestCase(TestCase):
-    """ Test cases with definition schemas containing complex items"""
+    """Test cases with definition schemas containing complex items"""
 
     obj = ComplexSchemaItem()
     complex_obj = ComplexComplexSchemaItem()
@@ -2417,18 +2457,14 @@ class ComplexSchemaTestCase(TestCase):
         try:
             jsonschema.validate({"complex_item": {"thirsty": True}}, serialized)
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_schema_item_thirsty_invalid(self):
         serialized = self.schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"complex_item": {"thirsty": "Foo"}}, serialized)
-        expected = (
-            "u'Foo' is not of type u'boolean'"
-            if six.PY2
-            else "'Foo' is not of type 'boolean'"
-        )
+        expected = "'Foo' is not of type 'boolean'"
         self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
@@ -2438,7 +2474,7 @@ class ComplexSchemaTestCase(TestCase):
         try:
             jsonschema.validate({"complex_complex_item": {"hungry": True}}, serialized)
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_both_complex_complex_schema_all_items_valid(self):
@@ -2454,18 +2490,14 @@ class ComplexSchemaTestCase(TestCase):
                 serialized,
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     def test_complex_complex_schema_item_hungry_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"complex_complex_item": {"hungry": "Foo"}}, serialized)
-        expected = (
-            "u'Foo' is not of type u'boolean'"
-            if six.PY2
-            else "'Foo' is not of type 'boolean'"
-        )
+        expected = "'Foo' is not of type 'boolean'"
         self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
@@ -2482,11 +2514,7 @@ class ComplexSchemaTestCase(TestCase):
                 },
                 serialized,
             )
-        expected = (
-            "u'Bar' is not of type u'boolean'"
-            if six.PY2
-            else "'Bar' is not of type 'boolean'"
-        )
+        expected = "'Bar' is not of type 'boolean'"
         self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")

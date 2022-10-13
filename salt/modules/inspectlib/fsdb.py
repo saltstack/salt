@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 SUSE LLC
 #
@@ -18,7 +17,6 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-from __future__ import absolute_import, with_statement
 
 import csv
 import datetime
@@ -28,11 +26,10 @@ import re
 import shutil
 import sys
 
-from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 
 
-class CsvDBEntity(object):
+class CsvDBEntity:
     """
     Serializable object for the table.
     """
@@ -46,7 +43,7 @@ class CsvDBEntity(object):
         return [getattr(self, attr) for attr in description]
 
 
-class CsvDB(object):
+class CsvDB:
     """
     File-based CSV database.
     This database is in-memory operating relatively small plain text csv files.
@@ -140,7 +137,7 @@ class CsvDB(object):
         return self._tables.keys()
 
     def _load_table(self, table_name):
-        with gzip.open(os.path.join(self.db_path, table_name), "rb") as table:
+        with gzip.open(os.path.join(self.db_path, table_name), "rt") as table:
             return OrderedDict(
                 [tuple(elm.split(":")) for elm in next(csv.reader(table))]
             )
@@ -187,7 +184,7 @@ class CsvDB(object):
         """
         get_type = lambda item: str(type(item)).split("'")[1]
         if not os.path.exists(os.path.join(self.db_path, obj._TABLE)):
-            with gzip.open(os.path.join(self.db_path, obj._TABLE), "wb") as table_file:
+            with gzip.open(os.path.join(self.db_path, obj._TABLE), "wt") as table_file:
                 csv.writer(table_file).writerow(
                     [
                         "{col}:{type}".format(col=elm[0], type=get_type(elm[1]))
@@ -215,7 +212,7 @@ class CsvDB(object):
             db_obj = self.get(obj.__class__, eq=fields)
             if db_obj and distinct:
                 raise Exception("Object already in the database.")
-        with gzip.open(os.path.join(self.db_path, obj._TABLE), "a") as table:
+        with gzip.open(os.path.join(self.db_path, obj._TABLE), "at") as table:
             csv.writer(table).writerow(self._validate_object(obj))
 
     def update(self, obj, matches=None, mt=None, lt=None, eq=None):
@@ -273,7 +270,7 @@ class CsvDB(object):
     def _validate_object(self, obj):
         descr = self._tables.get(obj._TABLE)
         if descr is None:
-            raise Exception("Table {0} not found.".format(obj._TABLE))
+            raise Exception("Table {} not found.".format(obj._TABLE))
         return obj._serialize(self._tables[obj._TABLE])
 
     def __criteria(self, obj, matches=None, mt=None, lt=None, eq=None):
@@ -321,7 +318,7 @@ class CsvDB(object):
         :return:
         """
         objects = []
-        with gzip.open(os.path.join(self.db_path, obj._TABLE), "rb") as table:
+        with gzip.open(os.path.join(self.db_path, obj._TABLE), "rt") as table:
             header = None
             for data in csv.reader(table):
                 if not header:

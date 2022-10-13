@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Microsoft SQLServer Users
 =======================================
@@ -12,7 +11,6 @@ and manage SQL Server Users
       mssql_user.present:
         - database: yolo
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 
@@ -28,7 +26,7 @@ def __virtual__():
 
 def _normalize_options(options):
     if type(options) in [dict, collections.OrderedDict]:
-        return ["{0}={1}".format(k, v) for k, v in options.items()]
+        return ["{}={}".format(k, v) for k, v in options.items()]
     if type(options) is list and (not options or type(options[0]) is str):
         return options
     # Invalid options
@@ -70,13 +68,13 @@ def present(
     if __salt__["mssql.user_exists"](name, domain=domain, database=database, **kwargs):
         ret[
             "comment"
-        ] = "User {0} is already present (Not going to try to set its roles or options)".format(
+        ] = "User {} is already present (Not going to try to set its roles or options)".format(
             name
         )
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "User {0} is set to be added".format(name)
+        ret["comment"] = "User {} is set to be added".format(name)
         return ret
 
     user_created = __salt__["mssql.user_create"](
@@ -92,9 +90,9 @@ def present(
         user_created is not True
     ):  # Non-empty strings are also evaluated to True, so we cannot use if not user_created:
         ret["result"] = False
-        ret["comment"] += "User {0} failed to be added: {1}".format(name, user_created)
+        ret["comment"] += "User {} failed to be added: {}".format(name, user_created)
         return ret
-    ret["comment"] += "User {0} has been added".format(name)
+    ret["comment"] += "User {} has been added".format(name)
     ret["changes"][name] = "Present"
     return ret
 
@@ -109,17 +107,17 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if not __salt__["mssql.user_exists"](name):
-        ret["comment"] = "User {0} is not present".format(name)
+        ret["comment"] = "User {} is not present".format(name)
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "User {0} is set to be removed".format(name)
+        ret["comment"] = "User {} is set to be removed".format(name)
         return ret
     if __salt__["mssql.user_remove"](name, **kwargs):
-        ret["comment"] = "User {0} has been removed".format(name)
+        ret["comment"] = "User {} has been removed".format(name)
         ret["changes"][name] = "Absent"
         return ret
     # else:
     ret["result"] = False
-    ret["comment"] = "User {0} failed to be removed".format(name)
+    ret["comment"] = "User {} failed to be removed".format(name)
     return ret

@@ -52,16 +52,9 @@ if Defined x (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==3 (
-    Set "PyDir=C:\Python37"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=7"
-) else (
-    :: Placeholder for future version
-    :: Set "PyDir=C:\Python4"
-    :: Set "PyVerMajor=0"
-    :: Set "PyVerMinor=0"
-)
+if %PyDir%=="" (Set "PyDir=C:\Python38")
+if %PyVerMajor%=="" (Set "PyVerMajor=3")
+if %PyVerMinor%=="" (Set "PyVerMinor=8")
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (
@@ -119,8 +112,8 @@ xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo ----------------------------------------------------------------------
 
 :: Set the location of the ssm to download
-Set Url64="https://repo.saltstack.com/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
-Set Url32="https://repo.saltstack.com/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
+Set Url64="https://repo.saltproject.io/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
+Set Url32="https://repo.saltproject.io/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
 
 :: Check for 64 bit by finding the Program Files (x86) directory
 If Defined ProgramFiles(x86) (
@@ -134,74 +127,45 @@ If Defined ProgramFiles(x86) (
 If Exist "%PreDir%" rd /s /q "%PreDir%"
 mkdir "%PreDir%"
 
-:: For PY 3, include KB2999226
-@echo Copying KB2999226 to Prerequisites
-@echo ----------------------------------------------------------------------
-:: 64 bit binaries required for AMD64 and x86
-:: Copy down the 64 bit binaries
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.0-KB2999226-x64.msu
-set Name=Windows6.0-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.1-KB2999226-x64.msu
-set Name=Windows6.1-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8-RT-KB2999226-x64.msu
-set Name=Windows8-RT-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8.1-KB2999226-x64.msu
-set Name=Windows8.1-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
 :: 32 bit binaries only needed for x86 installer
 :: ProgramFiles(x86) is defined on AMD64 systems
 :: If it's defined, skip the x86 binaries
-If Defined ProgramFiles(x86) goto vcredist_2013_x64
+If Defined ProgramFiles(x86) goto dependencies_x64
 
-:: Copy down the 32 bit binaries
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.0-KB2999226-x86.msu
-set Name=Windows6.0-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.1-KB2999226-x86.msu
-set Name=Windows6.1-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8-RT-KB2999226-x86.msu
-set Name=Windows8-RT-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8.1-KB2999226-x86.msu
-set Name=Windows8.1-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-:vcredist_2013_x86
+:dependencies_x86
 @echo.
 @echo Copying VCRedist 2013 X86 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2013.exe
+set Url=https://repo.saltproject.io/windows/dependencies/32/vcredist_x86_2013.exe
 set Name=vcredist_x86_2013.exe
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
+@echo.
+@echo Copying Universal C Runtimes X86 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=https://repo.saltproject.io/windows/dependencies/32/ucrt_x86.zip
+set Name=ucrt_x86.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
 goto prereq_end
 
-:vcredist_2013_x64
+:: These are only needed on 64bit installer
+:dependencies_x64
 @echo.
 @echo Copying VCRedist 2013 X64 to Prerequisites
 @echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2013.exe
+set Url=https://repo.saltproject.io/windows/dependencies/64/vcredist_x64_2013.exe
 set Name=vcredist_x64_2013.exe
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
+@echo.
+@echo Copying Universal C Runtimes X64 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=https://repo.saltproject.io/windows/dependencies/64/ucrt_x64.zip
+set Name=ucrt_x64.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
@@ -210,8 +174,10 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+:: As of setuptools 53.0 easy_install has been removed
+:: https://github.com/pypa/setuptools/pull/2544
+:: "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+:: "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
@@ -247,6 +213,9 @@ If Exist "%BinDir%\libs\_tkinter.lib" del /Q "%BinDir%\libs\_tkinter.lib" 1>nul
 :: Delete .txt files
 If Exist "%BinDir%\NEWS.txt"   del /Q "%BinDir%\NEWS.txt"   1>nul
 If Exist "%BinDir%\README.txt" del /Q "%BinDir%\README.txt" 1>nul
+
+:: Delete Unneeded Python Libraries
+If Exist "%BinDir%\Lib\site-packages\pythonwin" rd /S /Q "%BinDir%\Lib\site-packages\pythonwin"
 
 :: Delete Non-Windows Modules
 If Exist "%BinDir%\Lib\site-packages\salt\modules\acme.py"^
@@ -613,8 +582,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
 :: Remove Unneeded Components
 If Exist "%BinDir%\Lib\site-packages\salt\cloud"^
     rd /S /Q "%BinDir%\Lib\site-packages\salt\cloud" 1>nul
-If Exist "%BinDir%\Scripts\salt-unity*"^
-    del /Q "%BinDir%\Scripts\salt-unity*" 1>nul
 
 @echo.
 

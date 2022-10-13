@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 These only test the provider selection and verification logic, they do not init
 any remotes.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -16,6 +14,7 @@ import salt.utils.gitfs
 import salt.utils.platform
 import tests.support.paths
 from salt.exceptions import FileserverConfigError
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -30,6 +29,99 @@ except AttributeError:
 
 if HAS_PYGIT2:
     import pygit2
+
+
+def _clear_instance_map():
+    try:
+        del salt.utils.gitfs.GitFS.instance_map[
+            salt.ext.tornado.ioloop.IOLoop.current()
+        ]
+    except KeyError:
+        pass
+
+
+class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
+    def setUp(self):
+        class MockedProvider(
+            salt.utils.gitfs.GitProvider
+        ):  # pylint: disable=abstract-method
+            def __init__(
+                self,
+                opts,
+                remote,
+                per_remote_defaults,
+                per_remote_only,
+                override_params,
+                cache_root,
+                role="gitfs",
+            ):
+                self.provider = "mocked"
+                self.fetched = False
+                super().__init__(
+                    opts,
+                    remote,
+                    per_remote_defaults,
+                    per_remote_only,
+                    override_params,
+                    cache_root,
+                    role,
+                )
+
+            def init_remote(self):
+                self.repo = True
+                new = False
+                return new
+
+            def envs(self):
+                return ["base"]
+
+            def fetch(self):
+                self.fetched = True
+
+        git_providers = {
+            "mocked": MockedProvider,
+        }
+        gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
+        self.opts = self.get_temp_config(
+            "master", gitfs_remotes=gitfs_remotes, verified_gitfs_provider="mocked"
+        )
+        self.main_class = salt.utils.gitfs.GitFS(
+            self.opts,
+            self.opts["gitfs_remotes"],
+            per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+            per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
+            git_providers=git_providers,
+        )
+
+    @classmethod
+    def setUpClass(cls):
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        _clear_instance_map()
+
+    def tearDown(self):
+        # Providers are preserved with GitFS's instance_map
+        for remote in self.main_class.remotes:
+            remote.fetched = False
+        del self.main_class
+
+    def test_update_all(self):
+        self.main_class.update()
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertTrue(self.main_class.remotes[0].fetched)
+        self.assertTrue(self.main_class.remotes[1].fetched)
+
+    def test_update_by_name(self):
+        self.main_class.update("repo2")
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertFalse(self.main_class.remotes[0].fetched)
+        self.assertTrue(self.main_class.remotes[1].fetched)
+
+    def test_update_by_id_and_name(self):
+        self.main_class.update([("file://repo1.git", None)])
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertTrue(self.main_class.remotes[0].fetched)
+        self.assertFalse(self.main_class.remotes[1].fetched)
 
 
 class TestGitFSProvider(TestCase):
@@ -50,7 +142,7 @@ class TestGitFSProvider(TestCase):
             ("winrepo", salt.utils.gitfs.WinRepo),
         ):
 
-            key = "{0}_provider".format(role_name)
+            key = "{}_provider".format(role_name)
             with patch.object(
                 role_class, "verify_gitpython", MagicMock(return_value=True)
             ):
@@ -88,7 +180,7 @@ class TestGitFSProvider(TestCase):
             ("git_pillar", salt.utils.gitfs.GitPillar),
             ("winrepo", salt.utils.gitfs.WinRepo),
         ):
-            key = "{0}_provider".format(role_name)
+            key = "{}_provider".format(role_name)
             for provider in salt.utils.gitfs.GIT_PROVIDERS:
                 verify = "verify_gitpython"
                 mock1 = _get_mock(verify, provider)

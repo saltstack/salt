@@ -1,2 +1,0 @@
-include:
-  - 'glob_include*'

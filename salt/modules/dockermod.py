@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Docker Containers
 
@@ -197,15 +196,8 @@ Detailed Function Documentation
 -------------------------------
 """
 
-# Import Python Futures
-from __future__ import absolute_import
-
-# Import Python libs
 import bz2
 import copy
-
-# Remove unused-import from disabled pylint checks when we uncomment the logic
-# in _get_exec_driver() which checks the docker version
 import fnmatch
 import functools
 import gzip
@@ -217,7 +209,6 @@ import re
 import shutil
 import string
 import subprocess
-import sys
 import time
 import uuid
 
@@ -230,11 +221,7 @@ import salt.utils.dockermod.translate.network
 import salt.utils.functools
 import salt.utils.json
 import salt.utils.path
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 from salt.state import HighState
 
 __docformat__ = "restructuredtext en"
@@ -249,10 +236,8 @@ except ImportError:
     HAS_DOCKER_PY = False
 
 try:
-    if six.PY2:
-        import backports.lzma as lzma  # pylint: disable=no-name-in-module
-    else:
-        import lzma
+    import lzma
+
     HAS_LZMA = True
 except ImportError:
     HAS_LZMA = False
@@ -326,16 +311,14 @@ def __virtual__():
             else:
                 return (
                     False,
-                    "Insufficient Docker version (required: {0}, "
-                    "installed: {1})".format(
+                    "Insufficient Docker version (required: {}, installed: {})".format(
                         ".".join(map(str, MIN_DOCKER)),
                         ".".join(map(str, docker_versioninfo)),
                     ),
                 )
         return (
             False,
-            "Insufficient docker-py version (required: {0}, "
-            "installed: {1})".format(
+            "Insufficient docker-py version (required: {}, installed: {})".format(
                 ".".join(map(str, MIN_DOCKER_PY)),
                 ".".join(map(str, docker_py_versioninfo)),
             ),
@@ -378,7 +361,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         client_kwargs["base_url"] = os.environ.get("DOCKER_HOST")
 
     if "version" not in client_kwargs:
-        # Let docker-py auto detect docker version incase
+        # Let docker-py auto detect docker version in case
         # it's not defined by user.
         client_kwargs["version"] = "auto"
 
@@ -404,7 +387,7 @@ def _get_client(timeout=NOTSET, **kwargs):
             )
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Docker machine {0} failed: {1}".format(docker_machine, exc)
+                "Docker machine {} failed: {}".format(docker_machine, exc)
             )
     try:
         # docker-py 2.0 renamed this client attribute
@@ -504,7 +487,7 @@ def _change_state(name, action, expected, *args, **kwargs):
         return {
             "result": False,
             "state": {"old": expected, "new": expected},
-            "comment": ("Container '{0}' already {1}".format(name, expected)),
+            "comment": "Container '{}' already {}".format(name, expected),
         }
     _client_wrapper(action, name, *args, **kwargs)
     _clear_context()
@@ -521,9 +504,8 @@ def _clear_context():
     """
     Clear the state/exists values stored in context
     """
-    # Can't use 'for key in __context__' or six.iterkeys(__context__) because
-    # an exception will be raised if the size of the dict is modified during
-    # iteration.
+    # Can't use 'for key in __context__' because an exception will be raised if
+    # the size of the dict is modified during iteration.
     keep_context = (
         "docker.client",
         "docker.exec_driver",
@@ -544,7 +526,7 @@ def _get_md5(name, path):
     Get the MD5 checksum of a file from a container
     """
     output = run_stdout(
-        name, "md5sum {0}".format(pipes.quote(path)), ignore_retcode=True
+        name, "md5sum {}".format(pipes.quote(path)), ignore_retcode=True
     )
     try:
         return output.split()[0]
@@ -585,7 +567,7 @@ def _get_exec_driver():
             __context__[contextkey] = "nsenter"
         else:
             raise NotImplementedError(
-                "Unknown docker ExecutionDriver '{0}', or didn't find "
+                "Unknown docker ExecutionDriver '{}', or didn't find "
                 "command to attach to the container".format(driver)
             )
     return __context__[contextkey]
@@ -604,7 +586,7 @@ def _get_top_level_images(imagedata, subset=None):
     except (KeyError, TypeError):
         raise CommandExecutionError(
             "Invalid image data passed to _get_top_level_images(). Please "
-            "report this issue. Full image data: {0}".format(imagedata)
+            "report this issue. Full image data: {}".format(imagedata)
         )
 
 
@@ -624,7 +606,7 @@ def _scrub_links(links, name):
     if isinstance(links, list):
         ret = []
         for l in links:
-            ret.append(l.replace("/{0}/".format(name), "/", 1))
+            ret.append(l.replace("/{}/".format(name), "/", 1))
     else:
         ret = links
 
@@ -647,11 +629,11 @@ def _size_fmt(num):
     try:
         num = int(num)
         if num < 1024:
-            return "{0} bytes".format(num)
+            return "{} bytes".format(num)
         num /= 1024.0
         for unit in ("KiB", "MiB", "GiB", "TiB", "PiB"):
             if num < 1024.0:
-                return "{0:3.1f} {1}".format(num, unit)
+                return "{:3.1f} {}".format(num, unit)
             num /= 1024.0
     except Exception:  # pylint: disable=broad-except
         log.error("Unable to format file size for '%s'", num)
@@ -666,7 +648,7 @@ def _client_wrapper(attr, *args, **kwargs):
     catch_api_errors = kwargs.pop("catch_api_errors", True)
     func = getattr(__context__["docker.client"], attr, None)
     if func is None or not hasattr(func, "__call__"):
-        raise SaltInvocationError("Invalid client action '{0}'".format(attr))
+        raise SaltInvocationError("Invalid client action '{}'".format(attr))
     if attr in ("push", "pull"):
         try:
             # Refresh auth config from config.json
@@ -676,8 +658,7 @@ def _client_wrapper(attr, *args, **kwargs):
     err = ""
     try:
         log.debug(
-            'Attempting to run docker-py\'s "%s" function '
-            "with args=%s and kwargs=%s",
+            'Attempting to run docker-py\'s "%s" function with args=%s and kwargs=%s',
             attr,
             args,
             kwargs,
@@ -687,7 +668,7 @@ def _client_wrapper(attr, *args, **kwargs):
         if catch_api_errors:
             # Generic handling of Docker API errors
             raise CommandExecutionError(
-                "Error {0}: {1}".format(exc.response.status_code, exc.explanation)
+                "Error {}: {}".format(exc.response.status_code, exc.explanation)
             )
         else:
             # Allow API errors to be caught further up the stack
@@ -702,9 +683,9 @@ def _client_wrapper(attr, *args, **kwargs):
 
     # If we're here, it's because an exception was caught earlier, and the
     # API command failed.
-    msg = "Unable to perform {0}".format(attr)
+    msg = "Unable to perform {}".format(attr)
     if err:
-        msg += ": {0}".format(err)
+        msg += ": {}".format(err)
     raise CommandExecutionError(msg)
 
 
@@ -731,7 +712,7 @@ def _import_status(data, item, repo_name, repo_tag):
             return
         elif all(x in string.hexdigits for x in status):
             # Status is an image ID
-            data["Image"] = "{0}:{1}".format(repo_name, repo_tag)
+            data["Image"] = "{}:{}".format(repo_name, repo_tag)
             data["Id"] = status
     except (AttributeError, TypeError):
         pass
@@ -825,8 +806,9 @@ def _error_detail(data, item):
                 (item["errorDetail"]["code"], item["errorDetail"]["message"])
             )
         except TypeError:
-            msg = "{0}: {1}".format(
-                item["errorDetail"]["code"], item["errorDetail"]["message"],
+            msg = "{}: {}".format(
+                item["errorDetail"]["code"],
+                item["errorDetail"]["message"],
             )
     else:
         msg = item["errorDetail"]["message"]
@@ -918,11 +900,9 @@ def _get_create_kwargs(
             client_args = get_client_args(["create_container", "host_config"])
         except CommandExecutionError as exc:
             log.error(
-                "docker.create: Error getting client args: '%s'",
-                exc.__str__(),
-                exc_info=True,
+                "docker.create: Error getting client args: '%s'", exc, exc_info=True
             )
-            raise CommandExecutionError("Failed to get client args: {0}".format(exc))
+            raise CommandExecutionError("Failed to get client args: {}".format(exc))
 
     full_host_config = {}
     host_kwargs = {}
@@ -966,7 +946,6 @@ def compare_containers(first, second, ignore=None):
         A comma-separated list (or Python list) of keys to ignore when
         comparing. This is useful when comparing two otherwise identical
         containers which have different hostnames.
-
 
     CLI Examples:
 
@@ -1094,7 +1073,6 @@ def compare_container_networks(first, second):
 
     second
         Name or ID of second container (new)
-
 
     CLI Example:
 
@@ -1312,7 +1290,6 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
         A comma-separated list (or Python list) of keys to ignore when
         comparing.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1341,7 +1318,7 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
                 if bool(subval1) is bool(subval2) is False:
                     continue
                 elif subkey == "Config":
-                    kvsort = lambda x: (list(six.iterkeys(x)), list(six.itervalues(x)))
+                    kvsort = lambda x: (list(x.keys()), list(x.values()))
                     config1 = sorted(val1["Config"], key=kvsort)
                     config2 = sorted(val2.get("Config", []), key=kvsort)
                     if config1 != config2:
@@ -1351,6 +1328,17 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
                         }
                 elif subval1 != subval2:
                     ret.setdefault("IPAM", {})[subkey] = {
+                        "old": subval1,
+                        "new": subval2,
+                    }
+        elif item == "Options":
+            for subkey in val1:
+                subval1 = val1[subkey]
+                subval2 = val2.get(subkey)
+                if subkey == "com.docker.network.bridge.name":
+                    continue
+                elif subval1 != subval2:
+                    ret.setdefault("Options", {})[subkey] = {
                         "old": subval1,
                         "new": subval2,
                     }
@@ -1391,7 +1379,7 @@ def connected(name, verbose=False):
     """
     containers = inspect_network(name).get("Containers", {})
     ret = {}
-    for cid, cinfo in six.iteritems(containers):
+    for cid, cinfo in containers.items():
         # The Containers dict is keyed by container ID, but we want the results
         # to be keyed by container name, so we need to pop off the Name and
         # then add the Id key to the cinfo dict.
@@ -1456,15 +1444,16 @@ def login(*registries):
     if not isinstance(registry_auth, dict):
         errors.append("'docker-registries' Pillar value must be a dictionary")
         registry_auth = {}
-    for reg_name, reg_conf in six.iteritems(
-        __salt__["config.option"]("*-docker-registries", wildcard=True)
-    ):
+    for reg_name, reg_conf in __salt__["config.option"](
+        "*-docker-registries", wildcard=True
+    ).items():
         try:
             registry_auth.update(reg_conf)
         except TypeError:
             errors.append(
-                "Docker registry '{0}' was not specified as a "
-                "dictionary".format(reg_name)
+                "Docker registry '{}' was not specified as a dictionary".format(
+                    reg_name
+                )
             )
 
     # If no registries passed, we will auth to all of them
@@ -1474,15 +1463,15 @@ def login(*registries):
     results = ret.setdefault("Results", {})
     for registry in registries:
         if registry not in registry_auth:
-            errors.append("No match found for registry '{0}'".format(registry))
+            errors.append("No match found for registry '{}'".format(registry))
             continue
         try:
             username = registry_auth[registry]["username"]
             password = registry_auth[registry]["password"]
         except TypeError:
-            errors.append("Invalid configuration for registry '{0}'".format(registry))
+            errors.append("Invalid configuration for registry '{}'".format(registry))
         except KeyError as exc:
-            errors.append("Missing {0} for registry '{1}'".format(exc, registry))
+            errors.append("Missing {} for registry '{}'".format(exc, registry))
         else:
             cmd = ["docker", "login", "-u", username, "-p", password]
             if registry.lower() != "hub":
@@ -1493,7 +1482,9 @@ def login(*registries):
                 username,
             )
             login_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = login_cmd["retcode"] == 0
             if not results[registry]:
@@ -1547,15 +1538,16 @@ def logout(*registries):
     if not isinstance(registry_auth, dict):
         errors.append("'docker-registries' Pillar value must be a dictionary")
         registry_auth = {}
-    for reg_name, reg_conf in six.iteritems(
-        __salt__["config.option"]("*-docker-registries", wildcard=True)
-    ):
+    for reg_name, reg_conf in __salt__["config.option"](
+        "*-docker-registries", wildcard=True
+    ).items():
         try:
             registry_auth.update(reg_conf)
         except TypeError:
             errors.append(
-                "Docker registry '{0}' was not specified as a "
-                "dictionary".format(reg_name)
+                "Docker registry '{}' was not specified as a dictionary".format(
+                    reg_name
+                )
             )
 
     # If no registries passed, we will logout of all known registries
@@ -1565,7 +1557,7 @@ def logout(*registries):
     results = ret.setdefault("Results", {})
     for registry in registries:
         if registry not in registry_auth:
-            errors.append("No match found for registry '{0}'".format(registry))
+            errors.append("No match found for registry '{}'".format(registry))
             continue
         else:
             cmd = ["docker", "logout"]
@@ -1573,7 +1565,9 @@ def logout(*registries):
                 cmd.append(registry)
             log.debug("Attempting to logout of docker registry '%s'", registry)
             logout_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = logout_cmd["retcode"] == 0
             if not results[registry]:
@@ -1602,7 +1596,6 @@ def depends(name):
     - ``Containers`` - A list of containers which depend on the specified image
     - ``Images`` - A list of IDs of images which depend on the specified image
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1614,16 +1607,14 @@ def depends(name):
     image_id = inspect_image(name)["Id"]
 
     container_depends = []
-    for container in six.itervalues(ps_(all=True, verbose=True)):
+    for container in ps_(all=True, verbose=True).values():
         if container["Info"]["Image"] == image_id:
             container_depends.extend([x.lstrip("/") for x in container["Names"]])
 
     return {
         "Containers": container_depends,
         "Images": [
-            x[:12]
-            for x, y in six.iteritems(images(all=True))
-            if y["ParentId"] == image_id
+            x[:12] for x, y in images(all=True).items() if y["ParentId"] == image_id
         ],
     }
 
@@ -1647,7 +1638,6 @@ def diff(name):
 
     These keys will only be present if there were changes, so if the container
     has no differences the return dict will be empty.
-
 
     CLI Example:
 
@@ -1683,14 +1673,13 @@ def exists(name):
 
     A boolean (``True`` if the container exists, otherwise ``False``)
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.exists mycontainer
     """
-    contextkey = "docker.exists.{0}".format(name)
+    contextkey = "docker.exists.{}".format(name)
     if contextkey in __context__:
         return __context__[contextkey]
     try:
@@ -1750,7 +1739,6 @@ def history(name, quiet=False):
     - ``Time_Created_Local`` - Time this build step was completed (Minion's
       local timezone)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1767,7 +1755,7 @@ def history(name, quiet=False):
     # history is most-recent first, reverse this so it is ordered top-down
     for item in reversed(response):
         step = {}
-        for key, val in six.iteritems(item):
+        for key, val in item.items():
             step_key = key_map.get(key, key)
             if step_key == "Command":
                 if not val:
@@ -1782,7 +1770,7 @@ def history(name, quiet=False):
             )
         for param in ("Size",):
             if param in step:
-                step["{0}_Human".format(param)] = _size_fmt(step[param])
+                step["{}_Human".format(param)] = _size_fmt(step[param])
         ret.append(copy.deepcopy(step))
     if quiet:
         return [x.get("Command") for x in ret]
@@ -1806,7 +1794,6 @@ def images(verbose=False, **kwargs):
     A dictionary with each key being an image ID, and each value some general
     info about that image (time created, size, tags associated with the image,
     etc.)
-
 
     CLI Example:
 
@@ -1845,7 +1832,7 @@ def images(verbose=False, **kwargs):
                 )
             for param in ("Size", "VirtualSize"):
                 if param in bucket.get(img_id, {}):
-                    bucket[img_id]["{0}_Human".format(param)] = _size_fmt(
+                    bucket[img_id]["{}_Human".format(param)] = _size_fmt(
                         bucket[img_id][param]
                     )
 
@@ -1901,7 +1888,6 @@ def inspect(name):
 
     A dictionary of container/image/volume/network information
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1931,7 +1917,7 @@ def inspect(name):
             raise
 
     raise CommandExecutionError(
-        "Error 404: No such image/container/volume/network: {0}".format(name)
+        "Error 404: No such image/container/volume/network: {}".format(name)
     )
 
 
@@ -1947,7 +1933,6 @@ def inspect_container(name):
     **RETURN DATA**
 
     A dictionary of container information
-
 
     CLI Example:
 
@@ -1977,7 +1962,6 @@ def inspect_image(name):
 
     A dictionary of image information
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -1989,7 +1973,7 @@ def inspect_image(name):
     ret = _client_wrapper("inspect_image", name)
     for param in ("Size", "VirtualSize"):
         if param in ret:
-            ret["{0}_Human".format(param)] = _size_fmt(ret[param])
+            ret["{}_Human".format(param)] = _size_fmt(ret[param])
     return ret
 
 
@@ -2007,10 +1991,10 @@ def list_containers(**kwargs):
 
     .. code-block:: bash
 
-        salt myminion docker.inspect_image <image>
+        salt myminion docker.list_containers
     """
     ret = set()
-    for item in six.itervalues(ps_(all=kwargs.get("all", False))):
+    for item in ps_(all=kwargs.get("all", False)).values():
         names = item.get("Names")
         if not names:
             continue
@@ -2030,7 +2014,7 @@ def list_tags():
         salt myminion docker.list_tags
     """
     ret = set()
-    for item in six.itervalues(images()):
+    for item in images().values():
         if not item.get("RepoTags"):
             continue
         ret.update(set(item["RepoTags"]))
@@ -2061,7 +2045,7 @@ def resolve_image_id(name):
         pass
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2127,7 +2111,7 @@ def resolve_tag(name, **kwargs):
         return False
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2175,7 +2159,6 @@ def logs(name, **kwargs):
 
         .. note:
             Since it blocks, this option should be used with caution.
-
 
     CLI Examples:
 
@@ -2268,7 +2251,6 @@ def port(name, private_port=None):
     A dictionary of port mappings, with the keys being the port and the values
     being the mapping(s) for that port.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2284,11 +2266,11 @@ def port(name, private_port=None):
         pattern = "*"
     else:
         # Sanity checks
-        if isinstance(private_port, six.integer_types):
-            pattern = "{0}/*".format(private_port)
+        if isinstance(private_port, int):
+            pattern = "{}/*".format(private_port)
         else:
             err = (
-                "Invalid private_port '{0}'. Must either be a port number, "
+                "Invalid private_port '{}'. Must either be a port number, "
                 "or be in port/protocol notation (e.g. 5000/tcp)".format(private_port)
             )
             try:
@@ -2306,7 +2288,7 @@ def port(name, private_port=None):
         # the container and get the information from there. It's what they're
         # already doing (poorly) anyway.
         mappings = inspect_container(c_name).get("NetworkSettings", {}).get("Ports", {})
-        ret[c_name] = dict((x, mappings[x]) for x in fnmatch.filter(mappings, pattern))
+        ret[c_name] = {x: mappings[x] for x in fnmatch.filter(mappings, pattern)}
 
     return ret.get(name, {}) if not pattern_used else ret
 
@@ -2338,7 +2320,6 @@ def ps_(filters=None, **kwargs):
 
     A dictionary with each key being an container ID, and each value some
     general info about that container (time created, name, command, etc.)
-
 
     CLI Example:
 
@@ -2401,14 +2382,13 @@ def state(name):
     A string representing the current state of the container (either
     ``running``, ``paused``, or ``stopped``)
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.state mycontainer
     """
-    contextkey = "docker.state.{0}".format(name)
+    contextkey = "docker.state.{}".format(name)
     if contextkey in __context__:
         return __context__[contextkey]
     __context__[contextkey] = _get_state(inspect_container(name))
@@ -2439,7 +2419,6 @@ def search(name, official=False, trusted=False):
     - ``Stars`` - Number of stars the image has on the registry
     - ``Trusted`` - A boolean (``True`` if a trusted build, ``False`` if not)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2450,7 +2429,7 @@ def search(name, official=False, trusted=False):
     response = _client_wrapper("search", name)
     if not response:
         raise CommandExecutionError(
-            "No images matched the search string '{0}'".format(name)
+            "No images matched the search string '{}'".format(name)
         )
 
     key_map = {
@@ -2477,7 +2456,7 @@ def search(name, official=False, trusted=False):
         return results
 
     ret = {}
-    for key, val in six.iteritems(results):
+    for key, val in results.items():
         for item in limit:
             if val.get(item, False):
                 ret[key] = val
@@ -2493,7 +2472,6 @@ def top(name):
         Container name or ID
 
     CLI Example:
-
 
     **RETURN DATA**
 
@@ -2536,18 +2514,18 @@ def version():
     ret = _client_wrapper("version")
     version_re = re.compile(VERSION_RE)
     if "Version" in ret:
-        match = version_re.match(six.text_type(ret["Version"]))
+        match = version_re.match(str(ret["Version"]))
         if match:
-            ret["VersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["VersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     if "ApiVersion" in ret:
-        match = version_re.match(six.text_type(ret["ApiVersion"]))
+        match = version_re.match(str(ret["ApiVersion"]))
         if match:
-            ret["ApiVersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["ApiVersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     return ret
 
 
 def _create_networking_config(networks):
-    log.debug("creating networking config from {}".format(networks))
+    log.debug("creating networking config from %s", networks)
     return _client_wrapper(
         "create_networking_config",
         {
@@ -2811,15 +2789,15 @@ def create(
         - ``device_write_bps="/dev/sda:100mb,/dev/sdb:50mb"``
         - ``device_write_bps="['/dev/sda:100mb', '/dev/sdb:50mb']"``
 
-    device_read_iops
+    device_write_iops
         Limit write rate (I/O per second) from a device, specified as a list
         of expressions in the format ``PATH:RATE``, where ``RATE`` is a number
         of I/O operations.
 
         Examples:
 
-        - ``device_read_iops="/dev/sda:1000,/dev/sdb:500"``
-        - ``device_read_iops="['/dev/sda:1000', '/dev/sdb:500']"``
+        - ``device_write_iops="/dev/sda:1000,/dev/sdb:500"``
+        - ``device_write_iops="['/dev/sda:1000', '/dev/sdb:500']"``
 
     dns
         List of DNS nameservers. Can be passed as a comma-separated list or a
@@ -3277,7 +3255,6 @@ def create(
     - ``Id`` - ID of the newly-created container
     - ``Name`` - Name of the newly-created container
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3305,8 +3282,8 @@ def create(
         )
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
-        "with name '{0}' ".format(name) if name is not None else "",
+        "docker.create: creating container %susing the following arguments: %s",
+        "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
     time_started = time.time()
@@ -3417,13 +3394,13 @@ def run_container(
         else:
             if pre_state == "running" and not (replace and force):
                 raise CommandExecutionError(
-                    "Container '{0}' exists and is running. Run with "
+                    "Container '{}' exists and is running. Run with "
                     "replace=True and force=True to force removal of the "
                     "existing container.".format(name)
                 )
             elif not replace:
                 raise CommandExecutionError(
-                    "Container '{0}' exists. Run with replace=True to "
+                    "Container '{}' exists. Run with replace=True to "
                     "remove the existing container".format(name)
                 )
             else:
@@ -3462,16 +3439,16 @@ def run_container(
         )
 
     if networks:
-        if isinstance(networks, six.string_types):
+        if isinstance(networks, str):
             networks = {x: {} for x in networks.split(",")}
         if not isinstance(networks, dict) or not all(
-            isinstance(x, dict) for x in six.itervalues(networks)
+            isinstance(x, dict) for x in networks.values()
         ):
             raise SaltInvocationError("Invalid format for networks argument")
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
-        "with name '{0}' ".format(name) if name is not None else "",
+        "docker.create: creating container %susing the following arguments: %s",
+        "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
 
@@ -3500,7 +3477,7 @@ def run_container(
     try:
         if networks:
             try:
-                for net_name, net_conf in six.iteritems(networks):
+                for net_name, net_conf in networks.items():
                     __salt__["docker.connect_container_to_network"](
                         ret["Id"], net_name, **net_conf
                     )
@@ -3511,7 +3488,7 @@ def run_container(
                         rm_(name)
                     except CommandExecutionError as rm_exc:
                         exc_info.setdefault("other_errors", []).append(
-                            "Failed to auto_remove container: {0}".format(rm_exc)
+                            "Failed to auto_remove container: {}".format(rm_exc)
                         )
                 # Raise original exception with additional info
                 raise CommandExecutionError(exc.__str__(), info=exc_info)
@@ -3598,7 +3575,6 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
 
     A boolean (``True`` if successful, otherwise ``False``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3607,7 +3583,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
     """
     c_state = state(name)
     if c_state != "running":
-        raise CommandExecutionError("Container '{0}' is not running".format(name))
+        raise CommandExecutionError("Container '{}' is not running".format(name))
 
     # Destination file sanity checks
     if not os.path.isabs(dest):
@@ -3628,17 +3604,17 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
                     os.makedirs(dest_dir)
                 except OSError as exc:
                     raise CommandExecutionError(
-                        "Unable to make destination directory {0}: {1}".format(
+                        "Unable to make destination directory {}: {}".format(
                             dest_dir, exc
                         )
                     )
             else:
                 raise SaltInvocationError(
-                    "Directory {0} does not exist".format(dest_dir)
+                    "Directory {} does not exist".format(dest_dir)
                 )
     if not overwrite and os.path.exists(dest):
         raise CommandExecutionError(
-            "Destination path {0} already exists. Use overwrite=True to "
+            "Destination path {} already exists. Use overwrite=True to "
             "overwrite it".format(dest)
         )
 
@@ -3647,20 +3623,18 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
         raise SaltInvocationError("Source path must be absolute")
     else:
         if (
-            retcode(
-                name, "test -e {0}".format(pipes.quote(source)), ignore_retcode=True
-            )
+            retcode(name, "test -e {}".format(pipes.quote(source)), ignore_retcode=True)
             == 0
         ):
             if (
                 retcode(
-                    name, "test -f {0}".format(pipes.quote(source)), ignore_retcode=True
+                    name, "test -f {}".format(pipes.quote(source)), ignore_retcode=True
                 )
                 != 0
             ):
                 raise SaltInvocationError("Source must be a regular file")
         else:
-            raise SaltInvocationError("Source file {0} does not exist".format(source))
+            raise SaltInvocationError("Source file {} does not exist".format(source))
 
     # Before we try to replace the file, compare checksums.
     source_md5 = _get_md5(name, source)
@@ -3673,7 +3647,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
     try:
         src_path = ":".join((name, source))
     except TypeError:
-        src_path = "{0}:{1}".format(name, source)
+        src_path = "{}:{}".format(name, source)
     cmd = ["docker", "cp", src_path, dest_dir]
     __salt__["cmd.run"](cmd, python_shell=False)
     return source_md5 == __salt__["file.get_sum"](dest, "md5")
@@ -3715,7 +3689,6 @@ def copy_to(name, source, dest, exec_driver=None, overwrite=False, makedirs=Fals
     **RETURN DATA**
 
     A boolean (``True`` if successful, otherwise ``False``)
-
 
     CLI Example:
 
@@ -3794,7 +3767,6 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
     - ``Size_Human`` - Size of the file, in human-readable units
     - ``Time_Elapsed`` - Time in seconds taken to perform the export
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -3802,7 +3774,7 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
         salt myminion docker.export mycontainer /tmp/mycontainer.tar
         salt myminion docker.export mycontainer /tmp/mycontainer.tar.xz push=True
     """
-    err = "Path '{0}' is not absolute".format(path)
+    err = "Path '{}' is not absolute".format(path)
     try:
         if not os.path.isabs(path):
             raise SaltInvocationError(err)
@@ -3810,7 +3782,7 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
         raise SaltInvocationError(err)
 
     if os.path.exists(path) and not overwrite:
-        raise CommandExecutionError("{0} already exists".format(path))
+        raise CommandExecutionError("{} already exists".format(path))
 
     if compression is None:
         if path.endswith(".tar.gz") or path.endswith(".tgz"):
@@ -3833,20 +3805,20 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
         compression = "xz"
 
     if compression and compression not in ("gzip", "bzip2", "xz"):
-        raise SaltInvocationError("Invalid compression type '{0}'".format(compression))
+        raise SaltInvocationError("Invalid compression type '{}'".format(compression))
 
     parent_dir = os.path.dirname(path)
     if not os.path.isdir(parent_dir):
         if not makedirs:
             raise CommandExecutionError(
-                "Parent dir {0} of destination path does not exist. Use "
+                "Parent dir {} of destination path does not exist. Use "
                 "makedirs=True to create it.".format(parent_dir)
             )
         try:
             os.makedirs(parent_dir)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to make parent dir {0}: {1}".format(parent_dir, exc)
+                "Unable to make parent dir {}: {}".format(parent_dir, exc)
             )
 
     if compression == "gzip":
@@ -3854,7 +3826,7 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
             out = gzip.open(path, "wb")
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to open {0} for writing: {1}".format(path, exc)
+                "Unable to open {} for writing: {}".format(path, exc)
             )
     elif compression == "bzip2":
         compressor = bz2.BZ2Compressor()
@@ -3894,7 +3866,7 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
         except OSError:
             pass
         raise CommandExecutionError(
-            "Error occurred during container export: {0}".format(exc)
+            "Error occurred during container export: {}".format(exc)
         )
     finally:
         out.close()
@@ -3947,7 +3919,6 @@ def rm_(name, force=False, volumes=False, **kwargs):
 
     A list of the IDs of containers which were removed
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3964,7 +3935,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
 
     if state(name) == "running" and not (force or stop_):
         raise CommandExecutionError(
-            "Container '{0}' is running, use force=True to forcibly "
+            "Container '{}' is running, use force=True to forcibly "
             "remove this container".format(name)
         )
     if stop_ and not force:
@@ -4102,7 +4073,6 @@ def build(
       *(Only present if the image specified by the "repository" and "tag"
       arguments was not present on the Minion, or if cache=False)*
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4120,15 +4090,15 @@ def build(
                 "If tagging, both a repository and tag are required"
             )
         else:
-            if not isinstance(repository, six.string_types):
-                repository = six.text_type(repository)
-            if not isinstance(tag, six.string_types):
-                tag = six.text_type(tag)
+            if not isinstance(repository, str):
+                repository = str(repository)
+            if not isinstance(tag, str):
+                tag = str(tag)
 
     # For the build function in the low-level API, the "tag" refers to the full
     # tag (e.g. myuser/myimage:mytag). This is different than in other
     # functions, where the repo and tag are passed separately.
-    image_tag = "{0}:{1}".format(repository, tag) if repository and tag else None
+    image_tag = "{}:{}".format(repository, tag) if repository and tag else None
 
     time_started = time.time()
     response = _client_wrapper(
@@ -4147,7 +4117,7 @@ def build(
 
     if not response:
         raise CommandExecutionError(
-            "Build failed for {0}, no response returned from Docker API".format(path)
+            "Build failed for {}, no response returned from Docker API".format(path)
         )
 
     stream_data = []
@@ -4170,18 +4140,18 @@ def build(
     if "Id" not in ret:
         # API returned information, but there was no confirmation of a
         # successful build.
-        msg = "Build failed for {0}".format(path)
+        msg = "Build failed for {}".format(path)
         log.error(msg)
         log.error(stream_data)
         if errors:
-            msg += ". Error(s) follow:\n\n{0}".format("\n\n".join(errors))
+            msg += ". Error(s) follow:\n\n{}".format("\n\n".join(errors))
         raise CommandExecutionError(msg)
 
     resolved_tag = resolve_tag(ret["Id"], all=True)
     if resolved_tag:
         ret["Image"] = resolved_tag
     else:
-        ret["Warning"] = "Failed to tag image as {0}".format(image_tag)
+        ret["Warning"] = "Failed to tag image as {}".format(image_tag)
 
     if api_response:
         ret["API_Response"] = stream_data
@@ -4233,17 +4203,16 @@ def commit(name, repository, tag="latest", message=None, author=None):
     - ``Image`` - Name of the newly-created image
     - ``Time_Elapsed`` - Time in seconds taken to perform the commit
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.commit mycontainer myuser/myimage mytag
     """
-    if not isinstance(repository, six.string_types):
-        repository = six.text_type(repository)
-    if not isinstance(tag, six.string_types):
-        tag = six.text_type(tag)
+    if not isinstance(repository, str):
+        repository = str(repository)
+    if not isinstance(tag, str):
+        tag = str(tag)
 
     time_started = time.time()
     response = _client_wrapper(
@@ -4295,7 +4264,6 @@ def dangling(prune=False, force=False):
       *(Only present if prune failed)*
     - ``Removed`` - A boolean (``True`` if prune was successful, ``False`` if
       not)
-
 
     CLI Example:
 
@@ -4368,7 +4336,6 @@ def import_(source, repository, tag="latest", api_response=False):
     - ``Image`` - Name of the newly-created image
     - ``Time_Elapsed`` - Time in seconds taken to perform the commit
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4377,10 +4344,10 @@ def import_(source, repository, tag="latest", api_response=False):
         salt myminion docker.import /tmp/cent7-minimal.tar.xz myuser/centos:7
         salt myminion docker.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     """
-    if not isinstance(repository, six.string_types):
-        repository = six.text_type(repository)
-    if not isinstance(tag, six.string_types):
-        tag = six.text_type(tag)
+    if not isinstance(repository, str):
+        repository = str(repository)
+    if not isinstance(tag, str):
+        tag = str(tag)
 
     path = __salt__["container_resource.cache_file"](source)
 
@@ -4391,7 +4358,7 @@ def import_(source, repository, tag="latest", api_response=False):
 
     if not response:
         raise CommandExecutionError(
-            "Import failed for {0}, no response returned from Docker API".format(source)
+            "Import failed for {}, no response returned from Docker API".format(source)
         )
     elif api_response:
         ret["API_Response"] = response
@@ -4411,9 +4378,9 @@ def import_(source, repository, tag="latest", api_response=False):
     if "Id" not in ret:
         # API returned information, but there was no confirmation of a
         # successful push.
-        msg = "Import failed for {0}".format(source)
+        msg = "Import failed for {}".format(source)
         if errors:
-            msg += ". Error(s) follow:\n\n{0}".format("\n\n".join(errors))
+            msg += ". Error(s) follow:\n\n{}".format("\n\n".join(errors))
         raise CommandExecutionError(msg)
 
     return ret
@@ -4473,7 +4440,6 @@ def load(path, repository=None, tag=None):
 
       *(Only present if tag was specified and tagging failed)*
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4487,7 +4453,7 @@ def load(path, repository=None, tag=None):
 
     local_path = __salt__["container_resource.cache_file"](path)
     if not os.path.isfile(local_path):
-        raise CommandExecutionError("Source file {0} does not exist".format(path))
+        raise CommandExecutionError("Source file {} does not exist".format(path))
 
     pre = images(all=True)
     cmd = ["docker", "load", "-i", local_path]
@@ -4497,9 +4463,9 @@ def load(path, repository=None, tag=None):
     _clear_context()
     post = images(all=True)
     if result["retcode"] != 0:
-        msg = "Failed to load image(s) from {0}".format(path)
+        msg = "Failed to load image(s) from {}".format(path)
         if result["stderr"]:
-            msg += ": {0}".format(result["stderr"])
+            msg += ": {}".format(result["stderr"])
         raise CommandExecutionError(msg)
     ret["Path"] = path
 
@@ -4509,7 +4475,7 @@ def load(path, repository=None, tag=None):
     if repository or tag:
         if len(top_level_images) > 1:
             ret["Warning"] = (
-                "More than one top-level image layer was loaded ({0}), no "
+                "More than one top-level image layer was loaded ({}), no "
                 "image was tagged".format(", ".join(top_level_images))
             )
         else:
@@ -4518,16 +4484,16 @@ def load(path, repository=None, tag=None):
             # strings when passed (e.g. a numeric tag would be loaded as an int
             # or float), and because the tag_ function will stringify them if
             # need be, a str.format is the correct thing to do here.
-            tagged_image = "{0}:{1}".format(repository, tag)
+            tagged_image = "{}:{}".format(repository, tag)
             try:
                 result = tag_(top_level_images[0], repository=repository, tag=tag)
                 ret["Image"] = tagged_image
             except IndexError:
-                ret["Warning"] = (
-                    "No top-level image layers were loaded, no " "image was tagged"
-                )
+                ret[
+                    "Warning"
+                ] = "No top-level image layers were loaded, no image was tagged"
             except Exception as exc:  # pylint: disable=broad-except
-                ret["Warning"] = "Failed to tag {0} as {1}: {2}".format(
+                ret["Warning"] = "Failed to tag {} as {}: {}".format(
                     top_level_images[0], tagged_image, exc
                 )
     return ret
@@ -4555,7 +4521,7 @@ def layers(name):
     ):
         ret.append(line)
     if not ret:
-        raise CommandExecutionError("Image '{0}' not found".format(name))
+        raise CommandExecutionError("Image '{}' not found".format(name))
     return ret
 
 
@@ -4606,7 +4572,6 @@ def pull(
       message saying that an image was downloaded, or that it was up to date).
     - ``Time_Elapsed`` - Time in seconds taken to perform the pull
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4627,7 +4592,7 @@ def pull(
 
     if not response:
         raise CommandExecutionError(
-            "Pull failed for {0}, no response returned from Docker API".format(image)
+            "Pull failed for {}, no response returned from Docker API".format(image)
         )
     elif api_response:
         ret["API_Response"] = response
@@ -4640,7 +4605,7 @@ def pull(
             event = salt.utils.json.loads(event)
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Unable to interpret API event: '{0}'".format(event),
+                "Unable to interpret API event: '{}'".format(event),
                 info={"Error": exc.__str__()},
             )
         try:
@@ -4701,7 +4666,6 @@ def push(
         - ``Pushed`` - Layers that that were pushed
     - ``Time_Elapsed`` - Time in seconds taken to perform the push
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4709,8 +4673,8 @@ def push(
         salt myminion docker.push myuser/mycontainer
         salt myminion docker.push myuser/mycontainer:mytag
     """
-    if not isinstance(image, six.string_types):
-        image = six.text_type(image)
+    if not isinstance(image, str):
+        image = str(image)
 
     kwargs = {"stream": True, "client_timeout": client_timeout}
     if insecure_registry:
@@ -4723,7 +4687,7 @@ def push(
 
     if not response:
         raise CommandExecutionError(
-            "Push failed for {0}, no response returned from Docker API".format(image)
+            "Push failed for {}, no response returned from Docker API".format(image)
         )
     elif api_response:
         ret["API_Response"] = response
@@ -4735,7 +4699,7 @@ def push(
             event = salt.utils.json.loads(event)
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Unable to interpret API event: '{0}'".format(event),
+                "Unable to interpret API event: '{}'".format(event),
                 info={"Error": exc.__str__()},
             )
         try:
@@ -4777,7 +4741,6 @@ def rmi(*names, **kwargs):
     - ``Tags`` - A list of the tags that were removed
     - ``Errors`` - A list of any errors that were encountered
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -4809,15 +4772,15 @@ def rmi(*names, **kwargs):
                 if deps["Containers"] or deps["Images"]:
                     err = "Image is in use by "
                     if deps["Containers"]:
-                        err += "container(s): {0}".format(", ".join(deps["Containers"]))
+                        err += "container(s): {}".format(", ".join(deps["Containers"]))
                     if deps["Images"]:
                         if deps["Containers"]:
                             err += " and "
-                        err += "image(s): {0}".format(", ".join(deps["Images"]))
+                        err += "image(s): {}".format(", ".join(deps["Images"]))
                     errors.append(err)
             else:
                 errors.append(
-                    "Error {0}: {1}".format(exc.response.status_code, exc.explanation)
+                    "Error {}: {}".format(exc.response.status_code, exc.explanation)
                 )
 
     _clear_context()
@@ -4899,7 +4862,6 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
     - ``Size_Human`` - Size of the file, in human-readable units
     - ``Time_Elapsed`` - Time in seconds taken to perform the save
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -4907,7 +4869,7 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
         salt myminion docker.save centos:7 /tmp/cent7.tar
         salt myminion docker.save 0123456789ab cdef01234567 /tmp/saved.tar
     """
-    err = "Path '{0}' is not absolute".format(path)
+    err = "Path '{}' is not absolute".format(path)
     try:
         if not os.path.isabs(path):
             raise SaltInvocationError(err)
@@ -4915,7 +4877,7 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
         raise SaltInvocationError(err)
 
     if os.path.exists(path) and not overwrite:
-        raise CommandExecutionError("{0} already exists".format(path))
+        raise CommandExecutionError("{} already exists".format(path))
 
     if compression is None:
         if path.endswith(".tar.gz") or path.endswith(".tgz"):
@@ -4938,13 +4900,13 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
         compression = "xz"
 
     if compression and compression not in ("gzip", "bzip2", "xz"):
-        raise SaltInvocationError("Invalid compression type '{0}'".format(compression))
+        raise SaltInvocationError("Invalid compression type '{}'".format(compression))
 
     parent_dir = os.path.dirname(path)
     if not os.path.isdir(parent_dir):
         if not makedirs:
             raise CommandExecutionError(
-                "Parent dir '{0}' of destination path does not exist. Use "
+                "Parent dir '{}' of destination path does not exist. Use "
                 "makedirs=True to create it.".format(parent_dir)
             )
 
@@ -4960,9 +4922,9 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
     time_started = time.time()
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
     if result["retcode"] != 0:
-        err = "Failed to save image(s) to {0}".format(path)
+        err = "Failed to save image(s) to {}".format(path)
         if result["stderr"]:
-            err += ": {0}".format(result["stderr"])
+            err += ": {}".format(result["stderr"])
         raise CommandExecutionError(err)
 
     if compression:
@@ -4971,7 +4933,7 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
                 out = gzip.open(path, "wb")
             except OSError as exc:
                 raise CommandExecutionError(
-                    "Unable to open {0} for writing: {1}".format(path, exc)
+                    "Unable to open {} for writing: {}".format(path, exc)
                 )
         elif compression == "bzip2":
             compressor = bz2.BZ2Compressor()
@@ -5009,7 +4971,7 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
             except OSError:
                 pass
             raise CommandExecutionError(
-                "Error occurred during image save: {0}".format(exc)
+                "Error occurred during image save: {}".format(exc)
             )
         finally:
             try:
@@ -5067,10 +5029,10 @@ def tag_(name, repository, tag="latest", force=False):
 
         salt myminion docker.tag 0123456789ab myrepo/mycontainer mytag
     """
-    if not isinstance(repository, six.string_types):
-        repository = six.text_type(repository)
-    if not isinstance(tag, six.string_types):
-        tag = six.text_type(tag)
+    if not isinstance(repository, str):
+        repository = str(repository)
+    if not isinstance(tag, str):
+        tag = str(tag)
 
     image_id = inspect_image(name)["Id"]
     response = _client_wrapper(
@@ -5354,7 +5316,6 @@ def create_network(
         - ``aux_addresses='foo.bar.tld=192.168.50.10,hello.world.tld=192.168.50.11'``
         - ``aux_addresses="['foo.bar.tld=192.168.50.10', 'hello.world.tld=192.168.50.11']"``
         - ``aux_addresses="{'foo.bar.tld': '192.168.50.10', 'hello.world.tld': '192.168.50.11'}"``
-
 
     CLI Examples:
 
@@ -5665,7 +5626,6 @@ def kill(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be killed
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5693,7 +5653,6 @@ def pause(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be paused
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5705,7 +5664,7 @@ def pause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{0}' is stopped, cannot pause".format(name)),
+            "comment": "Container '{}' is stopped, cannot pause".format(name),
         }
     return _change_state(name, "pause", "paused")
 
@@ -5734,7 +5693,6 @@ def restart(name, timeout=10):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``restarted`` - If restart was successful, this key will be present and
       will be set to ``True``.
-
 
     CLI Examples:
 
@@ -5794,7 +5752,6 @@ def start_(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be started
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5806,7 +5763,7 @@ def start_(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{0}' is paused, cannot start".format(name)),
+            "comment": "Container '{}' is paused, cannot start".format(name),
         }
 
     return _change_state(name, "start", "running")
@@ -5843,7 +5800,6 @@ def stop(name, timeout=None, **kwargs):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container can not be stopped
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -5865,7 +5821,7 @@ def stop(name, timeout=None, **kwargs):
         if kwargs.get("unpause", False):
             unpause_result = _change_state(name, "unpause", "running")
             if unpause_result["result"] is False:
-                unpause_result["comment"] = "Failed to unpause container '{0}'".format(
+                unpause_result["comment"] = "Failed to unpause container '{}'".format(
                     name
                 )
                 return unpause_result
@@ -5874,7 +5830,7 @@ def stop(name, timeout=None, **kwargs):
                 "result": False,
                 "state": {"old": orig_state, "new": orig_state},
                 "comment": (
-                    "Container '{0}' is paused, run with "
+                    "Container '{}' is paused, run with "
                     "unpause=True to unpause before stopping".format(name)
                 ),
             }
@@ -5901,7 +5857,6 @@ def unpause(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container can not be unpaused
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5913,7 +5868,7 @@ def unpause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{0}' is stopped, cannot unpause".format(name)),
+            "comment": "Container '{}' is stopped, cannot unpause".format(name),
         }
     return _change_state(name, "unpause", "running")
 
@@ -5950,7 +5905,6 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
     - ``exit_status`` - Exit status for the container
     - ``comment`` - Only present if the container is already stopped
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5963,7 +5917,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
         # Container doesn't exist anymore
         return {
             "result": ignore_already_stopped,
-            "comment": "Container '{0}' absent".format(name),
+            "comment": "Container '{}' absent".format(name),
         }
     already_stopped = pre == "stopped"
     response = _client_wrapper("wait", name)
@@ -5987,7 +5941,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
         "exit_status": response,
     }
     if already_stopped:
-        result["comment"] = "Container '{0}' already stopped".format(name)
+        result["comment"] = "Container '{}' already stopped".format(name)
     if fail_on_exit_status and result["result"]:
         result["result"] = result["exit_status"] == 0
     return result
@@ -6161,7 +6115,7 @@ def _script(
         """
         try:
             os.remove(path)
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             log.error("cmd.script: Unable to clean tempfile '%s': %s", path, exc)
 
     path = __utils__["files.mkstemp"](
@@ -6199,7 +6153,7 @@ def _script(
 
     ret = run_all(
         name,
-        path + " " + six.text_type(args) if args else path,
+        path + " " + str(args) if args else path,
         exec_driver=exec_driver,
         stdin=stdin,
         python_shell=python_shell,
@@ -6694,7 +6648,7 @@ def _mk_fileclient():
 
 
 def _generate_tmp_path():
-    return os.path.join("/tmp", "salt.docker.{0}".format(uuid.uuid4().hex[:6]))
+    return os.path.join("/tmp", "salt.docker.{}".format(uuid.uuid4().hex[:6]))
 
 
 def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=""):
@@ -6717,27 +6671,26 @@ def _compile_state(sls_opts, mods=None):
     """
     Generates the chunks of lowdata from the list of modules
     """
-    st_ = HighState(sls_opts)
+    with HighState(sls_opts) as st_:
+        if not mods:
+            return st_.compile_low_chunks()
 
-    if not mods:
-        return st_.compile_low_chunks()
+        high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            return errors
 
-    high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        high_data = st_.state.apply_exclude(high_data)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    high_data = st_.state.apply_exclude(high_data)
-    # Verify that the high data is structurally sound
-    if errors:
-        return errors
-
-    # Compile and verify the raw chunks
-    return st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        return st_.state.compile_high_data(high_data)
 
 
 def call(name, function, *args, **kwargs):
@@ -6785,11 +6738,25 @@ def call(name, function, *args, **kwargs):
         name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path))
     )
 
+    # figure out available python interpreter inside the container (only Python3)
+    pycmds = ("python3", "/usr/libexec/platform-python")
+    container_python_bin = None
+    for py_cmd in pycmds:
+        cmd = [py_cmd] + ["--version"]
+        ret = run_all(name, subprocess.list2cmdline(cmd))
+        if ret["retcode"] == 0:
+            container_python_bin = py_cmd
+            break
+    if not container_python_bin:
+        raise CommandExecutionError(
+            "Python interpreter cannot be found inside the container. Make sure Python is installed in the container"
+        )
+
     # untar archive
     untar_cmd = [
-        "python",
+        container_python_bin,
         "-c",
-        ("import tarfile; " 'tarfile.open("{0}/{1}").extractall(path="{0}")').format(
+        'import tarfile; tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
             thin_dest_path, os.path.basename(thin_path)
         ),
     ]
@@ -6800,7 +6767,7 @@ def call(name, function, *args, **kwargs):
     try:
         salt_argv = (
             [
-                "python{0}".format(sys.version_info[0]),
+                container_python_bin,
                 os.path.join(thin_dest_path, "salt-call"),
                 "--metadata",
                 "--local",
@@ -6817,7 +6784,7 @@ def call(name, function, *args, **kwargs):
             ]
             + list(args)
             + [
-                "{0}={1}".format(key, value)
+                "{}={}".format(key, value)
                 for (key, value) in kwargs.items()
                 if not key.startswith("__")
             ]
@@ -6976,7 +6943,7 @@ def sls(name, mods=None, **kwargs):
         # delete the local version of the trans tar
         try:
             os.remove(trans_tar)
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             log.error(
                 "docker.sls: Unable to remove state tarball '%s': %s", trans_tar, exc
             )

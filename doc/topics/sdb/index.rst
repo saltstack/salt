@@ -140,7 +140,7 @@ something like:
 
 .. code-block:: python
 
-    mykey = __salt__['config.get']('mykey')
+    mykey = __salt__["config.get"]("mykey")
 
 Templating renderers use a similar construct. To get the ``mykey`` value from
 above in Jinja, you would use:
@@ -175,7 +175,7 @@ in the module as well:
 .. code-block:: python
 
     __func_alias__ = {
-        'set_': 'set',
+        "set_": "set",
     }
 
 This is because ``set`` is a Python built-in, and therefore functions should not

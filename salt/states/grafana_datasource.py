@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Grafana v2.0 data sources
 
@@ -24,10 +23,8 @@ Manage Grafana v2.0 data sources
         - basic_auth_password: mypass
         - is_default: true
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import requests
-from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -83,7 +80,7 @@ def present(
     is_default
         Default: False
     """
-    if isinstance(profile, string_types):
+    if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
@@ -113,19 +110,19 @@ def present(
         ret["result"] = True
         ret["changes"] = _diff(datasource, data)
         if ret["changes"]["new"] or ret["changes"]["old"]:
-            ret["comment"] = "Data source {0} updated".format(name)
+            ret["comment"] = "Data source {} updated".format(name)
         else:
             ret["changes"] = {}
-            ret["comment"] = "Data source {0} already up-to-date".format(name)
+            ret["comment"] = "Data source {} already up-to-date".format(name)
     else:
         requests.post(
-            "{0}/api/datasources".format(profile["grafana_url"]),
+            "{}/api/datasources".format(profile["grafana_url"]),
             data,
             headers=_get_headers(profile),
             timeout=profile.get("grafana_timeout", 3),
         )
         ret["result"] = True
-        ret["comment"] = "New data source {0} added".format(name)
+        ret["comment"] = "New data source {} added".format(name)
         ret["changes"] = data
 
     return ret
@@ -138,7 +135,7 @@ def absent(name, profile="grafana"):
     name
         Name of the data source to remove.
     """
-    if isinstance(profile, string_types):
+    if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
     ret = {"result": None, "comment": None, "changes": {}}
@@ -146,7 +143,7 @@ def absent(name, profile="grafana"):
 
     if not datasource:
         ret["result"] = True
-        ret["comment"] = "Data source {0} already absent".format(name)
+        ret["comment"] = "Data source {} already absent".format(name)
         return ret
 
     requests.delete(
@@ -156,18 +153,18 @@ def absent(name, profile="grafana"):
     )
 
     ret["result"] = True
-    ret["comment"] = "Data source {0} was deleted".format(name)
+    ret["comment"] = "Data source {} was deleted".format(name)
 
     return ret
 
 
 def _get_url(profile, datasource_id):
-    return "{0}/api/datasources/{1}".format(profile["grafana_url"], datasource_id)
+    return "{}/api/datasources/{}".format(profile["grafana_url"], datasource_id)
 
 
 def _get_datasource(profile, name):
     response = requests.get(
-        "{0}/api/datasources".format(profile["grafana_url"]),
+        "{}/api/datasources".format(profile["grafana_url"]),
         headers=_get_headers(profile),
         timeout=profile.get("grafana_timeout", 3),
     )
@@ -181,7 +178,7 @@ def _get_datasource(profile, name):
 def _get_headers(profile):
     return {
         "Accept": "application/json",
-        "Authorization": "Bearer {0}".format(profile["grafana_token"]),
+        "Authorization": "Bearer {}".format(profile["grafana_token"]),
     }
 
 

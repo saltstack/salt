@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import os
 import textwrap
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -28,6 +24,7 @@ class EnabledTest(ModuleCase):
     )
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_shell_default_enabled(self):
         """
         ensure that python_shell defaults to True for cmd.run
@@ -49,6 +46,7 @@ class EnabledTest(ModuleCase):
         self.assertEqual(ret, disabled_ret)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_template_shell(self):
         """
         Test cmd.shell works correctly when using a template.
@@ -62,7 +60,7 @@ class EnabledTest(ModuleCase):
         state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
         enabled_ret = "3 saltines"  # the result of running self.cmd in a shell
-        ret_key = "test_|-shell_enabled_|-{0}_|-configurable_test_state".format(
+        ret_key = "test_|-shell_enabled_|-{}_|-configurable_test_state".format(
             enabled_ret
         )
 
@@ -88,7 +86,7 @@ class EnabledTest(ModuleCase):
             os.remove(state_file)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @slowTest
+    @pytest.mark.slow_test
     def test_template_default_disabled(self):
         """
         test shell disabled output for templates (python_shell=False is the default
@@ -103,7 +101,7 @@ class EnabledTest(ModuleCase):
             "first second third | wc -l ; export SALTY_VARIABLE=saltines "
             "&& echo $SALTY_VARIABLE ; echo duh &> /dev/null"
         )
-        ret_key = "test_|-shell_enabled_|-{0}_|-configurable_test_state".format(
+        ret_key = "test_|-shell_enabled_|-{}_|-configurable_test_state".format(
             disabled_ret
         )
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Runner to manage Windows software repo
 """
@@ -6,8 +5,6 @@ Runner to manage Windows software repo
 # WARNING: Any modules imported here must also be added to
 # salt/modules/win_repo.py
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -19,17 +16,12 @@ import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.msgpack
 import salt.utils.path
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
-
-# Import third party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 # Global parameters which can be overridden on a per-remote basis
-PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs")
+PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback")
 
 # Fall back to default per-remote-only. This isn't technically needed since
 # salt.utils.gitfs.GitBase.__init__ will default to
@@ -83,20 +75,20 @@ def genrepo(opts=None, fire_event=True):
                     continue
                 if config:
                     revmap = {}
-                    for pkgname, versions in six.iteritems(config):
+                    for pkgname, versions in config.items():
                         log.debug("Compiling winrepo data for package '%s'", pkgname)
-                        for version, repodata in six.iteritems(versions):
+                        for version, repodata in versions.items():
                             log.debug(
                                 "Compiling winrepo data for %s version %s",
                                 pkgname,
                                 version,
                             )
-                            if not isinstance(version, six.string_types):
-                                config[pkgname][six.text_type(version)] = config[
-                                    pkgname
-                                ].pop(version)
+                            if not isinstance(version, str):
+                                config[pkgname][str(version)] = config[pkgname].pop(
+                                    version
+                                )
                             if not isinstance(repodata, dict):
-                                msg = "Failed to compile {0}.".format(
+                                msg = "Failed to compile {}.".format(
                                     os.path.join(root, name)
                                 )
                                 log.debug(msg)
@@ -192,7 +184,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     if isinstance(result, list):
                         # Errors were detected
                         raise CommandExecutionError(
-                            "Failed up update winrepo remotes: {0}".format(
+                            "Failed up update winrepo remotes: {}".format(
                                 "\n".join(result)
                             )
                         )
@@ -203,14 +195,27 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                         result = result[key]
                 else:
                     mminion = salt.minion.MasterMinion(opts)
-                    result = mminion.states["git.latest"](
-                        remote_url,
+                    result = mminion.functions["state.single"](
+                        "git.latest",
+                        name=remote_url,
                         rev=rev,
                         branch="winrepo",
                         target=gittarget,
                         force_checkout=True,
                         force_reset=True,
                     )
+                    if isinstance(result, list):
+                        # Errors were detected
+                        raise CommandExecutionError(
+                            "Failed to update winrepo remotes: {}".format(
+                                "\n".join(result)
+                            )
+                        )
+                    if "name" not in result:
+                        # Highstate output dict, the results are actually nested
+                        # one level down.
+                        key = next(iter(result))
+                        result = result[key]
                 winrepo_result[result["name"]] = result["result"]
             ret.update(winrepo_result)
         else:
@@ -232,7 +237,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     winrepo.clear_old_remotes()
                 winrepo.checkout()
             except Exception as exc:  # pylint: disable=broad-except
-                msg = "Failed to update winrepo_remotes: {0}".format(exc)
+                msg = "Failed to update winrepo_remotes: {}".format(exc)
                 log.error(msg, exc_info_on_loglevel=logging.DEBUG)
                 return msg
             ret.update(winrepo.winrepo_dirs)
