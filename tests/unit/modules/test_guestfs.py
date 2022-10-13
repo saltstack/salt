@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.guestfs as guestfs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch

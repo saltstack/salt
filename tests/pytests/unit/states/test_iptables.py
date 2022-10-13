@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.states.iptables as iptables
 from tests.support.mock import MagicMock, patch
 

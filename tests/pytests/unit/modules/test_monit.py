@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.monit as monit
 from tests.support.mock import MagicMock, patch
 

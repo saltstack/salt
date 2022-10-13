@@ -55,8 +55,10 @@ portend==2.4
     # via cherrypy
 psutil==5.8.0
     # via -r requirements/base.txt
-pycparser==2.17
-    # via cffi
+pycparser==2.21 ; python_version >= "3.9"
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==19.1.0

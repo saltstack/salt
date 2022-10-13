@@ -43,7 +43,7 @@ from salt.exceptions import (
 )
 
 try:
-    from M2Crypto import RSA, EVP, BIO
+    from M2Crypto import BIO, EVP, RSA
 
     HAS_M2 = True
 except ImportError:
@@ -51,11 +51,12 @@ except ImportError:
 
 if not HAS_M2:
     try:
-        from Cryptodome.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5 as PKCS1_v1_5_CIPHER
+        from Cryptodome import Random
+        from Cryptodome.Cipher import AES, PKCS1_OAEP
+        from Cryptodome.Cipher import PKCS1_v1_5 as PKCS1_v1_5_CIPHER
         from Cryptodome.Hash import SHA
         from Cryptodome.PublicKey import RSA
         from Cryptodome.Signature import PKCS1_v1_5
-        from Cryptodome import Random
 
         HAS_CRYPTO = True
     except ImportError:
@@ -63,17 +64,13 @@ if not HAS_M2:
 
 if not HAS_M2 and not HAS_CRYPTO:
     try:
-        from Crypto.Cipher import (  # nosec
-            AES,
-            PKCS1_OAEP,
-            PKCS1_v1_5 as PKCS1_v1_5_CIPHER,
-        )
+        # let this be imported, if possible
+        from Crypto import Random  # nosec
+        from Crypto.Cipher import AES, PKCS1_OAEP  # nosec
+        from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_CIPHER  # nosec
         from Crypto.Hash import SHA  # nosec
         from Crypto.PublicKey import RSA  # nosec
         from Crypto.Signature import PKCS1_v1_5  # nosec
-
-        # let this be imported, if possible
-        from Crypto import Random  # nosec
 
         HAS_CRYPTO = True
     except ImportError:

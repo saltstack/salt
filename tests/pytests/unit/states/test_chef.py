@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.chef
 import salt.states.chef as chef
 from tests.support.mock import MagicMock, create_autospec, patch

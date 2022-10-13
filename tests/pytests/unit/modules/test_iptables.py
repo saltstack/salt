@@ -6,6 +6,7 @@ import textwrap
 import uuid
 
 import pytest
+
 import salt.modules.iptables as iptables
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -472,9 +473,10 @@ def test_check():
 
     with patch.object(iptables, "_has_option", mock_has):
         with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
-            assert iptables.check(
-                table="filter", chain="INPUT", rule=mock_rule, family="ipv4"
-            )
+            with patch.dict(iptables.__context__, {"retcode": 1}):
+                assert not iptables.check(
+                    table="filter", chain="INPUT", rule=mock_rule, family="ipv4"
+                )
 
     mock_cmd = MagicMock(return_value="-A 0x4d2")
     mock_uuid = MagicMock(return_value=1234)
@@ -482,9 +484,10 @@ def test_check():
     with patch.object(iptables, "_has_option", mock_has):
         with patch.object(uuid, "getnode", mock_uuid):
             with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
-                assert iptables.check(
-                    table="filter", chain="0x4d2", rule=mock_rule, family="ipv4"
-                )
+                with patch.dict(iptables.__context__, {"retcode": 0}):
+                    assert iptables.check(
+                        table="filter", chain="0x4d2", rule=mock_rule, family="ipv4"
+                    )
 
 
 # 'check_chain' function tests: 1

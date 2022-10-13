@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 import salt.utils.versions as versions
 
 try:
@@ -63,3 +64,7 @@ def test_config():
 
 def test_version():
     assert versions.version_cmp(yamllint.version(), "1.26.3") >= 0
+
+
+def test_has_yamllint():
+    assert yamllint.has_yamllint() is True

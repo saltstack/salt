@@ -1,11 +1,24 @@
 import logging
 
 import salt.utils.stringutils
-import yamllint
-from yamllint import linter
-from yamllint.config import YamlLintConfig
+
+try:
+    import yamllint
+    from yamllint import linter
+    from yamllint.config import YamlLintConfig
+
+    HAS_YAMLLINT = True
+except ImportError:
+    HAS_YAMLLINT = False
 
 log = logging.getLogger(__name__)
+
+
+def has_yamllint():
+    """
+    report if yamllint could be imported safly. allowing for clean import detection
+    """
+    return HAS_YAMLLINT
 
 
 def version():

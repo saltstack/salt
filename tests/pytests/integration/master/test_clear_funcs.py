@@ -5,6 +5,7 @@ import time
 
 import attr
 import pytest
+
 import salt.channel.client
 import salt.config
 import salt.master

@@ -3,6 +3,7 @@ unit tests for the script engine
 """
 
 import pytest
+
 import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError

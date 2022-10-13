@@ -84,7 +84,7 @@ from salt.exceptions import SaltException
 
 try:
     import etcd
-    from urllib3.exceptions import ReadTimeoutError, MaxRetryError
+    from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
     HAS_ETCD_V2 = True
 except ImportError:
