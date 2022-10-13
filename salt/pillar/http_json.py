@@ -21,7 +21,7 @@ Set the following Salt config to setup http json result as external pillar sourc
 You can pass additional parameters, they will be added to the http.query call
 :py:func:`utils.http.query function <salt.utils.http.query>`:
 
-.. versionchanged:: TBD
+.. versionchanged:: 3006
     If namespace is defined, the data will be added under the specified subkeys in the Pillar structure.
 
 If the with_grains parameter is set, grain keys wrapped in can be provided (wrapped
@@ -81,6 +81,7 @@ def ext_pillar(
     :param str username: username for auth
     :param str pasword: password for auth
     :param str namespace: (Optional) A pillar key to namespace the values under.
+        .. versionadded:: 3006
 
     :return: A dictionary of the pillar data to add.
     :rtype: dict
