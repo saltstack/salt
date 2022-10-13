@@ -15,13 +15,15 @@ metadata server set `metadata_server_grains: True` in the minion config.
 
 """
 
+import logging
+
 import salt.utils.http as http
 import salt.utils.json
-import logging
 
 HOST = "http://169.254.169.254"
 URL = f"{HOST}/computeMetadata/v1/?alt=json&recursive=true"
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     # Check if metadata_server_grains minion option is enabled
@@ -35,9 +37,10 @@ def __virtual__():
         return False
     return True
 
+
 def metadata():
     log.debug("All checks true - loading gce metadata")
-    result = http.query(URL, headers=True, header_list=['Metadata-Flavor: Google'])
-    metadata = salt.utils.json.loads(result.get('body',{}))
+    result = http.query(URL, headers=True, header_list=["Metadata-Flavor: Google"])
+    metadata = salt.utils.json.loads(result.get("body", {}))
 
     return metadata
