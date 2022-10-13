@@ -477,12 +477,13 @@ jinja2==3.0.3
     #   napalm
 jmespath==0.10.0
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.9"
+junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
