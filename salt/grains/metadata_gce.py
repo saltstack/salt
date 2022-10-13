@@ -39,6 +39,7 @@ def __virtual__():
 
 
 def metadata():
+    '''Takes no arguments, returns a dictionary of metadata values from Google.'''
     log.debug("All checks true - loading gce metadata")
     result = http.query(URL, headers=True, header_list=["Metadata-Flavor: Google"])
     metadata = salt.utils.json.loads(result.get("body", {}))
