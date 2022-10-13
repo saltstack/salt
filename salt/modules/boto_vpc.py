@@ -1822,7 +1822,7 @@ def delete_nat_gateway(
     nat_gateway_id
         Id of the NAT Gateway
 
-    releaes_eips
+    release_eips
         whether to release the elastic IPs associated with the given NAT Gateway Id
 
     region
