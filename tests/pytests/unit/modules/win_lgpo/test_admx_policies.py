@@ -1,25 +1,27 @@
+"""
+:codeauthor: Shane Lee <slee@saltstack.com>
+"""
+import glob
 import logging
 import os
 import pathlib
 import re
+import requests
 import shutil
 import zipfile
 
 import pytest
-import requests
 
-import salt.modules.grains as grains
+import salt.grains.core
 import salt.modules.win_file as win_file
-import salt.modules.win_lgpo as lgpo
+import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
-import salt.utils.win_dacl as win_dacl
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
-    pytest.mark.destructive_test,
 ]
 
 
@@ -28,7 +30,7 @@ def configure_loader_modules(tmp_path):
     cachedir = tmp_path / "__test_admx_policy_cache_dir"
     cachedir.mkdir(parents=True, exist_ok=True)
     return {
-        lgpo: {
+        win_lgpo: {
             "__salt__": {
                 "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
@@ -37,18 +39,13 @@ def configure_loader_modules(tmp_path):
                 "cachedir": str(cachedir),
             },
         },
-        win_file: {
-            "__utils__": {
-                "dacl.set_perms": win_dacl.set_perms,
-            },
-        },
     }
 
 
 @pytest.fixture(scope="module")
 def osrelease():
-    osrelease_grains = grains.item("osrelease")
-    yield osrelease_grains.get("osrelease", None)
+    grains = salt.grains.core.os_data()
+    yield grains.get("osrelease", None)
 
 
 @pytest.fixture(scope="function")
@@ -103,8 +100,182 @@ def lgpo_bin():
         yield str(sys_dir / "lgpo.exe")
 
 
+def test_get_policy_name(osrelease):
+    if osrelease == "11":
+        policy_name = "Allow Diagnostic Data"
+    else:
+        policy_name = "Allow Telemetry"
+    result = win_lgpo.get_policy(
+        policy_name=policy_name,
+        policy_class="machine",
+        return_value_only=True,
+        return_full_policy_names=True,
+        hierarchical_return=False,
+    )
+    expected = "Not Configured"
+    assert result == expected
+
+
+def test_get_policy_id():
+    result = win_lgpo.get_policy(
+        policy_name="AllowTelemetry",
+        policy_class="machine",
+        return_value_only=True,
+        return_full_policy_names=True,
+        hierarchical_return=False,
+    )
+    expected = "Not Configured"
+    assert result == expected
+
+
+def test_get_policy_name_full_return_full_names(osrelease):
+    if osrelease == "11":
+        policy_name = "Allow Diagnostic Data"
+    else:
+        policy_name = "Allow Telemetry"
+    result = win_lgpo.get_policy(
+        policy_name=policy_name,
+        policy_class="machine",
+        return_value_only=False,
+        return_full_policy_names=True,
+        hierarchical_return=False,
+    )
+    expected = {
+        "Windows Components\\Data Collection and Preview Builds\\{}".format(policy_name): (
+            "Not Configured"
+        )
+    }
+    assert result == expected
+
+
+def test_get_policy_id_full_return_full_names(osrelease):
+    if osrelease == "11":
+        policy_name = "Allow Diagnostic Data"
+    else:
+        policy_name = "Allow Telemetry"
+    result = win_lgpo.get_policy(
+        policy_name="AllowTelemetry",
+        policy_class="machine",
+        return_value_only=False,
+        return_full_policy_names=True,
+        hierarchical_return=False,
+    )
+    expected = {
+        "Windows Components\\Data Collection and Preview Builds\\{}".format(policy_name): (
+            "Not Configured"
+        )
+    }
+    assert result == expected
+
+
+def test_get_policy_name_full_return_ids(osrelease):
+    if osrelease == "11":
+        policy_name = "Allow Diagnostic Data"
+    else:
+        policy_name = "Allow Telemetry"
+    result = win_lgpo.get_policy(
+        policy_name=policy_name,
+        policy_class="machine",
+        return_value_only=False,
+        return_full_policy_names=False,
+        hierarchical_return=False,
+    )
+    expected = {"AllowTelemetry": "Not Configured"}
+    assert result == expected
+
+
+def test_get_policy_id_full_return_ids():
+    result = win_lgpo.get_policy(
+        policy_name="AllowTelemetry",
+        policy_class="machine",
+        return_value_only=False,
+        return_full_policy_names=False,
+        hierarchical_return=False,
+    )
+    expected = {"AllowTelemetry": "Not Configured"}
+    assert result == expected
+
+
+def test_get_policy_id_full_return_ids_hierarchical():
+    result = win_lgpo.get_policy(
+        policy_name="AllowTelemetry",
+        policy_class="machine",
+        return_value_only=False,
+        return_full_policy_names=False,
+        hierarchical_return=True,
+    )
+    expected = {
+        "Computer Configuration": {
+            "Administrative Templates": {
+                "WindowsComponents": {
+                    "DataCollectionAndPreviewBuilds": {
+                        "AllowTelemetry": "Not Configured"
+                    }
+                }
+            }
+        }
+    }
+    assert result == expected
+
+
+def test_get_policy_name_return_full_names_hierarchical(osrelease):
+    if osrelease == "11":
+        policy_name = "Allow Diagnostic Data"
+    else:
+        policy_name = "Allow Telemetry"
+    result = win_lgpo.get_policy(
+        policy_name=policy_name,
+        policy_class="machine",
+        return_value_only=False,
+        return_full_policy_names=True,
+        hierarchical_return=True,
+    )
+    expected = {
+        "Computer Configuration": {
+            "Administrative Templates": {
+                "Windows Components": {
+                    "Data Collection and Preview Builds": {
+                        policy_name: "Not Configured"
+                    }
+                }
+            }
+        }
+    }
+    assert result == expected
+
+
+@pytest.mark.destructive_test
+def test__load_policy_definitions():
+    """
+    Test that unexpected files in the PolicyDefinitions directory won't
+    cause the _load_policy_definitions function to explode
+    https://gitlab.com/saltstack/enterprise/lock/issues/3826
+    """
+    # The PolicyDefinitions directory should only contain ADMX files. We
+    # want to make sure the `_load_policy_definitions` function skips non
+    # ADMX files in this directory.
+    # Create a bogus ADML file in PolicyDefinitions directory
+    bogus_fle = os.path.join("c:\\Windows\\PolicyDefinitions", "_bogus.adml")
+    cache_dir = os.path.join(win_lgpo.__opts__["cachedir"], "lgpo", "policy_defs")
+    try:
+        with salt.utils.files.fopen(bogus_fle, "w+") as fh:
+            fh.write("<junk></junk>")
+        # This function doesn't return anything (None), it just loads
+        # the XPath structures into __context__. We're just making sure it
+        # doesn't stack trace here
+        result = win_lgpo._load_policy_definitions()
+        assert result is None
+    finally:
+        # Remove source file
+        os.remove(bogus_fle)
+        # Remove cached file
+        search_string = "{}\\_bogus*.adml".format(cache_dir)
+        for file_name in glob.glob(search_string):
+            os.remove(file_name)
+
+
 def _test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
-    result = lgpo.set_computer_policy(name=name, setting=setting)
+    result = win_lgpo.set_computer_policy(name=name, setting=setting)
     assert result is True
     ret = shell.run(
         lgpo_bin,
@@ -122,7 +293,7 @@ def _test_set_computer_policy(lgpo_bin, shell, name, setting, exp_regexes):
 
 
 def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
-    result = lgpo.set_user_policy(name=name, setting=setting)
+    result = win_lgpo.set_user_policy(name=name, setting=setting)
     assert result is True
     ret = shell.run(
         lgpo_bin,
@@ -502,7 +673,7 @@ def test_set_computer_policy_windows_update(clean_comp, lgpo_bin, shell):
     # releases of Windows, so we'll get the elements and add them if they are
     # present. Newer elements will need to be added manually as they are
     # made available in newer releases of Windows
-    result = lgpo.get_policy_info(
+    result = win_lgpo.get_policy_info(
         policy_name="Configure Automatic Updates",
         policy_class="Machine",
     )

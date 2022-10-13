@@ -1,7 +1,8 @@
 import pytest
 
-import salt.loader
+import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
+import salt.utils.win_lgpo_auditpol as auditpol
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -11,14 +12,26 @@ pytestmark = [
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts, modules):
+def configure_loader_modules(tmp_path):
+    cachedir = tmp_path / "__test_admx_policy_cache_dir"
+    cachedir.mkdir(parents=True, exist_ok=True)
     return {
         win_lgpo: {
-            "__opts__": minion_opts,
-            "__salt__": modules,
-            "__utils__": salt.loader.utils(minion_opts),
-            "__context__": {},
+            "__opts__": {"cachedir": cachedir},
+            "__salt__": {
+                "file.copy": win_file.copy,
+                "file.file_exists": win_file.file_exists,
+                "file.makedirs": win_file.makedirs_,
+                "file.remove": win_file.remove,
+            },
+            "__utils__": {
+                "auditpol.get_auditpol_dump": auditpol.get_auditpol_dump,
+                "auditpol.set_setting": auditpol.set_setting,
+            },
         },
+        auditpol: {
+            "__context__": {},
+        }
     }
 
 
