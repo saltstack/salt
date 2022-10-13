@@ -1064,7 +1064,9 @@ class Schedule:
                         return
                     when_ = self.opts["pillar"]["whens"][i]
                 elif (
-                    "whens" in self.opts["grains"] and i in self.opts["grains"]["whens"]
+                    "grains" in self.opts
+                    and "whens" in self.opts["grains"]
+                    and i in self.opts["grains"]["whens"]
                 ):
                     if not isinstance(self.opts["grains"]["whens"], dict):
                         data[
