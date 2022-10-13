@@ -208,8 +208,10 @@ def test_add_source(choco_path):
     """
     cmd_run_all_mock = MagicMock(return_value={"retcode": 0, "stdout": "data"})
     cmd_run_which_mock = MagicMock(return_value=choco_path)
-    with patch.dict(chocolatey.__salt__, {"cmd.which": cmd_run_which_mock,
-                                          "cmd.run_all": cmd_run_all_mock}):
+    with patch.dict(
+        chocolatey.__salt__,
+        {"cmd.which": cmd_run_which_mock, "cmd.run_all": cmd_run_all_mock},
+    ):
         expected_call = [
             choco_path,
             "sources",
@@ -232,9 +234,10 @@ def test_add_source(choco_path):
             "--source",
             "source_location",
             "--priority",
-            "priority"
+            "priority",
         ]
 
         result = chocolatey.add_source(
-            "source_name", "source_location", priority="priority")
+            "source_name", "source_location", priority="priority"
+        )
         cmd_run_all_mock.assert_called_with(expected_call, python_shell=False)
