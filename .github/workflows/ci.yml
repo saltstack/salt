@@ -111,6 +111,16 @@ jobs:
       nox-session: ci-test-3
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  macos-12:
+    name: MacOS 12
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
@@ -126,6 +136,7 @@ jobs:
       - debian-11-arm64
       - ubuntu-2204
       - windows-2019
+      - macos-12
     steps:
     - name: Download Exit Status Files
       if: always()
