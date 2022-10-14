@@ -4,8 +4,11 @@ import time
 import pytest
 from pytestshellutils.exceptions import FactoryNotStarted
 
+from salt.utils.platform import is_freebsd
+
 pytestmark = [
     pytest.mark.destructive_test,
+    pytest.mark.skipif(is_freebsd(), reason="Daemons tests are flaky on FreeBSD"),
 ]
 
 
