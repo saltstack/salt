@@ -274,7 +274,7 @@ def reg_pol_to_dict(policy_data):
     reg_pol_header = REG_POL_HEADER.encode("utf-16-le")
     if not policy_data.startswith(reg_pol_header):
         msg = "LGPO_REG Util: Invalid Header. Registry.pol may be corrupt"
-        raise SaltInvocationError(msg)
+        raise CommandExecutionError(msg)
 
     # Strip the header information, we don't care about it now
     pol_file_data = policy_data.lstrip(reg_pol_header)
@@ -283,6 +283,12 @@ def reg_pol_to_dict(policy_data):
         log.debug("LGPO_REG Util: No registry.pol data to return")
         return {}
 
+    def strip_field_end(value):
+        while value[-2:] == b"\x00\x00":
+            value = value[:-2]
+        return value
+
+    log.debug("LGPO_REG Util: Unpacking reg pol data")
     reg_pol = {}
     # Each policy is inside square braces. In this case they're encoded
     # utf-16-le, so there's a null-byte for each character
@@ -294,36 +300,48 @@ def reg_pol_to_dict(policy_data):
         # all remaining is data
         key, v_name, v_type, v_size, v_data = policy.split(b";\x00", 4)
         # Removing trailing null-bytes
-        key = key.decode("utf-16-le").rstrip("\x00")
-        v_name = v_name.decode("utf-16-le").rstrip("\x00")
-        # v_type is an int, convert from little-endian
-        v_type = int.from_bytes(v_type, "little")
+        key = strip_field_end(key).decode("utf-16-le")
+        v_name = strip_field_end(v_name).decode("utf-16-le")
+        # v_type is one of (0, 1, 2, 3, 4, 5, 7, 11) as 32-bit little-endian
+        v_type = struct.unpack("<i", v_type)[0]
         if v_type == 0:
             # REG_NONE : No Type
-            v_data = " "
+            # We don't know what this data is, so don't do anything
+            pass
         elif v_type in (1, 2):
             # REG_SZ : String Type
             # REG_EXPAND_SZ : String with Environment Variables, ie %PATH%
-            v_data = v_data.decode("utf-16-le").rstrip("\x00")
+            v_data = strip_field_end(v_data).decode("utf-16-le")
         elif v_type == 4:
-            # REG_DWORD : Little Endian
-            v_data, = struct.unpack("<i", v_data)
+            # REG_DWORD : 32-bit little endian
+            v_data = struct.unpack("<i", v_data)[0]
         elif v_type == 5:
-            # REG_DWORD : Big Endian
-            v_data, = struct.unpack(">i", v_data)
+            # REG_DWORD : 32-bit big endian
+            v_data = struct.unpack(">i", v_data)[0]
         elif v_type == 7:
-            # REG_MULTI_SZ : Multiple strings, delimited by \x00, terminated by \x00\x00
-            v_data = v_data.decode("utf-16-le").rstrip("\x00").split("\x00")
+            # REG_MULTI_SZ : Multiple strings, delimited by \x00
+            v_data = strip_field_end(v_data)
+            if not v_data:
+                v_data = None
+            else:
+                v_data = v_data.decode("utf-16-le").split("\x00")
         elif v_type == 11:
-            # REG_QWORD : Little Endian
-            v_data, = struct.unpack("<q", v_data)
+            # REG_QWORD : 64-bit little endian
+            v_data = struct.unpack("<q", v_data)[0]
+        else:
+            msg = "LGPO_REG Util: Found unknown registry type: {}".format(v_type)
+            raise CommandExecutionError(msg)
 
         # Lookup the REG Type from the number
         reg = salt.utils.win_reg.Registry()
         v_type = reg.vtype_reverse.get(v_type, "REG_NONE")
+
         # Make the dictionary entries
         reg_pol.setdefault(key, {})
-        reg_pol[key][v_name] = {"type": v_type, "data": v_data}
+        if not v_name:
+            reg_pol[key]["*"] = "CREATEKEY"
+        else:
+            reg_pol[key][v_name] = {"type": v_type, "data": v_data}
 
     return reg_pol
 
@@ -350,43 +368,70 @@ def dict_to_reg_pol(data):
     policies = []
     for key, value in data.items():
         for v_name, d in value.items():
-            v_type = reg.vtype[d["type"]]
+            # Handle CREATEKEY entry
+            if v_name == "*" and d == "CREATEKEY":
+                v_name = ""
+                d = {"type": "REG_NONE"}
+
+            try:
+                v_type = reg.vtype[d["type"]]
+            except KeyError:
+                msg = "LGPO_REG Util: Found unknown registry type: {}".format(d["type"])
+                raise CommandExecutionError(msg)
+
             # The first three items are pretty straight forward
             policy = [
+                # Key followed by null byte
                 "{}".format(key).encode("utf-16-le") + pol_section_term,
+                # Value name followed by null byte
                 "{}".format(v_name).encode("utf-16-le") + pol_section_term,
-                v_type.to_bytes(2, "little") + pol_section_term,
+                # Type in 32-bit little-endian
+                struct.pack("<i", v_type),
                 ]
             # The data is encoded depending on the Type
             if v_type == 0:
-                # REG_NONE : No Type
-                v_data = " ".encode("utf-16-le") + pol_section_term
+                # REG_NONE : No value
+                v_data = b""
             elif v_type in (1, 2):
                 # REG_SZ : String Type
                 # REG_EXPAND_SZ : String with Environment Variables, ie %PATH%
+                # Value followed by null byte
                 v_data = d["data"].encode("utf-16-le") + pol_section_term
             elif v_type == 4:
                 # REG_DWORD : Little Endian
+                # 32-bit little endian
                 v_data = struct.pack("<i", d["data"])
             elif v_type == 5:
                 # REG_DWORD : Big Endian (not common)
+                # 32-bit big endian
                 v_data = struct.pack(">i", d["data"])
             elif v_type == 7:
-                # REG_MULTI_SZ : Multiple strings, delimited by \x00, terminated by \x00\x00
-                if len(d["data"]) == 1 and not d["data"][0]:
-                    # An empty data value just gets the section terminator
+                # REG_MULTI_SZ : Multiple strings
+                # Each element is delimited by \x00, terminated by \x00\x00
+                # Then the entire output is terminated with a null byte
+                if d["data"] is None:
+                    # An None value just gets the section terminator
+                    v_data = pol_section_term
+                elif len(d["data"]) == 0:
+                    # An empty list just gets the section terminator
+                    v_data = pol_section_term
+                elif len(d["data"]) == 1 and not d["data"][0]:
+                    # An list with an empty value just gets the section terminator
                     v_data = pol_section_term
                 else:
-                    # This is kind of strange, but it's exactly what gets output
-                    # by a REG_MULTI_SZ with multiple lines in gpedit.msc
+                    # All others will be joined with a null byte, the list
+                    # terminated, and the entire section terminated
                     v_data = "\x00".join(d["data"]).encode("utf-16-le") + pol_section_term + pol_section_term
             elif v_type == 11:
                 # REG_QWORD : Little Endian
+                # 64-bit little endian
                 v_data = struct.pack("<q", d["data"])
-            else:
-                raise CommandExecutionError("Unknown type found: {}".format(d["type"]))
 
             # Now that we have the data in the right format, let's calculate its size
+            # 16-bit little endian with null terminator
+            if len(v_data) > 65535:
+                msg = "LGPO_REG Util: Size exceeds 65535 bytes"
+                raise CommandExecutionError(msg)
             v_size = len(v_data).to_bytes(2, "little") + pol_section_term
 
             policy.append(v_size)
