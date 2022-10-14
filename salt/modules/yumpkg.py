@@ -1411,6 +1411,12 @@ def install(
 
         .. versionadded:: 2014.7.0
 
+    split_arch : True
+        If set to False it prevents package name normalization more strict way
+        than ``normalize`` set to ``False`` does.
+
+        .. versionadded:: 3006
+
     diff_attr:
         If a list of package attributes is specified, returned value will
         contain them, eg.::
@@ -2121,6 +2127,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         ``name`` parameter will be ignored if this option is passed.
 
     .. versionadded:: 0.16.0
+
+    split_arch : True
+        If set to False it prevents package name normalization by removing arch.
+
+        .. versionadded:: 3006
 
 
     Returns a dict containing the changes.
