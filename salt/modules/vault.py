@@ -147,15 +147,20 @@ Functions to interact with Hashicorp Vault.
                     - web
                     - database
 
-        Alternatively policies can be assigned via pillars ``saltstack/by-role/{pillar[roles]}`` 
+        The minion will have the policies ``saltstack/by-role/web`` and
+        ``saltstack/by-role/database``.
+
+
+        Alternatively policies can be assigned via pillars ``saltstack/by-role/{pillar[roles]}``.
+         
         .. code-block:: yaml
 
-            pillar:
-                roles:
-                    - web
-                    - database
+            # Pillars assigned to Minion 
+            roles:
+                - web
+                - database
 
-        The minion will have the policies ``saltstack/by-role/web`` and
+        The minion will have the same policies as before, but now assigned via pillar ``saltstack/by-role/web`` and
         ``saltstack/by-role/database``.
 
         .. note::
