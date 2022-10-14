@@ -66,7 +66,10 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 "deeply-nested-list:world",
             ],
             # Test cases -> pillar
-            "single-list-pillar:{pillar[roles]}": ["single-list-pillar:web", "single-list-pillar:database"],
+            "single-list-pillar:{pillar[roles]}": [
+                "single-list-pillar:web",
+                "single-list-pillar:database",
+            ],
             "multiple-lists-pillar:{pillar[roles]}+{pillar[aux]}": [
                 "multiple-lists-pillar:web+foo",
                 "multiple-lists-pillar:web+bar",
@@ -84,7 +87,11 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         }
 
         # The mappings dict is assembled in _get_policies, so emulate here
-        mappings = {"minion": self.grains["id"], "grains": self.grains, "pillar" : self.pillar}
+        mappings = {
+            "minion": self.grains["id"],
+            "grains": self.grains,
+            "pillar": self.pillar,
+        }
         for case, correct_output in cases.items():
             output = vault._expand_pattern_lists(
                 case, **mappings
@@ -148,7 +155,10 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 "case-should-be-lowered:up-low-up"
             ],
             # Test cases -> pillar
-            "single-list-pillar:{pillar[roles]}": ["single-list-pillar:web", "single-list-pillar:database"],
+            "single-list-pillar:{pillar[roles]}": [
+                "single-list-pillar:web",
+                "single-list-pillar:database",
+            ],
             "multiple-lists-pillar:{pillar[roles]}+{pillar[aux]}": [
                 "multiple-lists-pillar:web+foo",
                 "multiple-lists-pillar:web+bar",
