@@ -42,10 +42,40 @@ def query(
     payload=None,
     wrap=False,
     raise_error=True,
+    is_unauthd=False,
     **kwargs,
 ):
     """
-    Make a request to Vault
+    Query the Vault API. Supplemental arguments to ``requestes.request``
+    can be passed as kwargs.
+
+    method
+        HTTP verb to use.
+
+    endpoint
+        API path to call (without leading ``/v1/``).
+
+    opts
+        Pass ``__opts__`` from the module.
+
+    context
+        Pass ``__context__`` from the module.
+
+    payload
+        Dictionary of payload values to send, if any.
+
+    wrap
+        Whether to request response wrapping. Should be a time string
+        like ``30s`` or False (default).
+
+    raise_error
+        Whether to inspect the response code and raise exceptions.
+        Defaults to True.
+
+    is_unauthd
+        Whether the queried endpoint is an unauthenticated one and hence
+        does not deduct a token use. Only relevant for endpoints not found
+        in ``sys``. Defaults to False.
     """
     vault = get_authd_client(opts, context)
     try:
@@ -55,6 +85,7 @@ def query(
             payload=payload,
             wrap=wrap,
             raise_error=raise_error,
+            is_unauthd=is_unauthd,
             **kwargs,
         )
     except VaultPermissionDeniedError:
@@ -67,6 +98,7 @@ def query(
             payload=payload,
             wrap=wrap,
             raise_error=raise_error,
+            is_unauthd=is_unauthd,
             **kwargs,
         )
 
@@ -79,17 +111,46 @@ def query_raw(
     payload=None,
     wrap=False,
     retry=True,
+    is_unauthd=False,
     **kwargs,
 ):
     """
-    Make a request to Vault, returning the raw response object.
+    Query the Vault API, returning the raw response object. Supplemental
+    arguments to ``requestes.request`` can be passed as kwargs.
 
-    This retries the query with cleared cache in case the permission
-    was denied to check for revoked cached credentials.
-    This behavior can be disabled by setting retry to False.
+    method
+        HTTP verb to use.
+
+    endpoint
+        API path to call (without leading ``/v1/``).
+
+    opts
+        Pass ``__opts__`` from the module.
+
+    context
+        Pass ``__context__`` from the module.
+
+    payload
+        Dictionary of payload values to send, if any.
+
+    retry
+        Retry the query with cleared cache in case the permission
+        was denied (to check for revoked cached credentials).
+        Defaults to True.
+
+    wrap
+        Whether to request response wrapping. Should be a time string
+        like ``30s`` or False (default).
+
+    is_unauthd
+        Whether the queried endpoint is an unauthenticated one and hence
+        does not deduct a token use. Only relevant for endpoints not found
+        in ``sys``. Defaults to False.
     """
     vault = get_authd_client(opts, context)
-    res = vault.request_raw(method, endpoint, payload=payload, wrap=wrap, **kwargs)
+    res = vault.request_raw(
+        method, endpoint, payload=payload, wrap=wrap, is_unauthd=is_unauthd, **kwargs
+    )
 
     if not retry:
         return res
@@ -98,7 +159,14 @@ def query_raw(
         # in case cached authentication data was revoked
         clear_cache(opts, context)
         vault = get_authd_client(opts, context)
-        res = vault.request_raw(method, endpoint, payload=payload, wrap=wrap, **kwargs)
+        res = vault.request_raw(
+            method,
+            endpoint,
+            payload=payload,
+            wrap=wrap,
+            is_unauthd=is_unauthd,
+            **kwargs,
+        )
     return res
 
 
@@ -1381,8 +1449,15 @@ class AuthenticatedVaultClient(VaultClient):
         return res["auth"]
 
     def request_raw(
-        self, method, endpoint, payload=None, wrap=False, add_headers=None, **kwargs
-    ):
+        self,
+        method,
+        endpoint,
+        payload=None,
+        wrap=False,
+        add_headers=None,
+        is_unauthd=False,
+        **kwargs,
+    ):  # pylint: disable=arguments-differ
         ret = super().request_raw(
             method,
             endpoint,
@@ -1392,7 +1467,7 @@ class AuthenticatedVaultClient(VaultClient):
             **kwargs,
         )
         # tokens are used regardless of status code
-        if not endpoint.startswith(VAULT_UNAUTHD_PATHS):
+        if not is_unauthd and not endpoint.startswith(VAULT_UNAUTHD_PATHS):
             self.auth.used()
         return ret
 

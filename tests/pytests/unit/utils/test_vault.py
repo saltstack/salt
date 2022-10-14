@@ -2238,6 +2238,20 @@ def test_vault_client_request_raw_increases_use_count_when_necessary_depending_o
     assert client.auth.used.called is True
 
 
+@pytest.mark.usefixtures("req_any")
+@pytest.mark.parametrize("client", ["valid_token"], indirect=True)
+def test_vault_client_request_raw_does_not_increase_use_count_with_unauthd_endpoint(
+    client,
+):
+    """
+    Unauthenticated endpoints do not consume a token use. Since some cannot be detected
+    easily because of customizable mount points for secret engines and auth methods,
+    this can be specified in the request. Make sure it is honored.
+    """
+    client.request("GET", "pki/cert/ca", is_unauthd=True)
+    client.auth.used.assert_not_called()
+
+
 @pytest.mark.parametrize("client", ["valid_token"], indirect=True)
 def test_vault_client_token_lookup_self_possible(client, req_any):
     """
