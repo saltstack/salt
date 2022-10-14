@@ -68,7 +68,7 @@ def mock_fp():
         IdentityFile ~/.ssh/id_rsa_abc
 
     Host def*
-        IdentityFile ~/.ssh/id_rsa_def
+        IdentityFile  ~/.ssh/id_rsa_def
 
     Host abc.asdfgfdhgjkl.com
         HostName 123.123.123.123
@@ -77,7 +77,7 @@ def mock_fp():
         HostName 123.123.123.124
 
     Host def.asdfgfdhgjkl.com
-        HostName 234.234.234.234
+        HostName      234.234.234.234
     """
     )
 
