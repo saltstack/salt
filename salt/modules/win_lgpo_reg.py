@@ -151,7 +151,7 @@ def write_reg_pol(data, policy_class="Machine"):
 
 
 def get_value(key, v_name, policy_class="Machine"):
-    """
+    r"""
     Get the value of a single value pair as set in the ``Registry.pol``
     file.
 
@@ -206,7 +206,7 @@ def get_value(key, v_name, policy_class="Machine"):
 
 
 def get_key(key, policy_class="Machine"):
-    """
+    r"""
     Get all the values set in a key in the ``Registry.pol`` file.
 
     Args:
@@ -256,7 +256,7 @@ def set_value(
     v_type="REG_DWORD",
     policy_class="Machine",
 ):
-    """
+    r"""
     Add a key/value pair to the registry.pol file. This bypasses the admx/adml
     style policies. This is the equivalent of setting a policy to ``Enabled``
 
@@ -300,11 +300,11 @@ def set_value(
 
     .. code-block:: bash
 
-        # Set REG_DWORD value
-        salt '*' lgpo_reg.enable_value "SOFTWARE\MyKey" "MyValue" 1
+        # Set REG_DWORD value (default)
+        salt '*' lgpo_reg.set_value "SOFTWARE\MyKey" "MyValue" 1
 
         # Set REG_SZ value
-        salt '*' lgpo_reg.enable_value "SOFTWARE\MyKey" "MyValue" "string value"
+        salt '*' lgpo_reg.set_value "SOFTWARE\MyKey" "MyValue" "string value" "REG_SZ"
     """
     # Verify input
     if policy_class.lower() in  ["computer", "machine"]:
@@ -338,7 +338,7 @@ def set_value(
     elif v_type in ["REG_DWORD", "REG_QWORD"]:
         try:
             int(v_data)
-        except TypeError:
+        except (TypeError, ValueError):
             msg = "{} data must be an integer".format(v_type)
             raise SaltInvocationError(msg)
 
@@ -368,7 +368,7 @@ def set_value(
 
 
 def disable_value(key, v_name, policy_class="machine"):
-    """
+    r"""
     Mark a registry value for deletion in the registry.pol file. This bypasses
     the admx/adml style policies. This is the equivalent of setting the policy
     to ``Disabled`` in the Group Policy editor (``gpedit.msc``)
@@ -438,7 +438,7 @@ def disable_value(key, v_name, policy_class="machine"):
 
 
 def delete_value(key, v_name, policy_class="Machine"):
-    """
+    r"""
     Delete a key/value pair from the Registry.pol file. This bypasses the
     admx/adml style policies. This is the equivalent of setting the policy to
     ``Not Configured``.
@@ -501,3 +501,13 @@ def delete_value(key, v_name, policy_class="Machine"):
         return None
 
     return write_reg_pol(pol_data)
+
+
+# This is for testing different settings and verifying that we are writing the
+# values correctly
+# def test():
+#     pol_info = salt.utils.win_lgpo_reg.CLASS_INFO["Machine"]
+#     reg_data = salt.utils.win_lgpo_reg.read_reg_pol_file(reg_pol_path=pol_info["policy_path"])
+#     print(reg_data)
+#     dict_data = salt.utils.win_lgpo_reg.reg_pol_to_dict(reg_data)
+#     print(salt.utils.win_lgpo_reg.dict_to_reg_pol(dict_data))
