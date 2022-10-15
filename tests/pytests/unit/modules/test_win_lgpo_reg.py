@@ -1,7 +1,7 @@
 import pytest
 
-import salt.utils.files
 import salt.modules.win_lgpo_reg as lgpo_reg
+import salt.utils.files
 import salt.utils.win_lgpo_reg
 from salt.exceptions import SaltInvocationError
 
@@ -58,9 +58,7 @@ def test_read_reg_pol(empty_reg_pol):
 
 
 def test_read_reg_pol_invalid_policy_class():
-    pytest.raises(
-        SaltInvocationError, lgpo_reg.read_reg_pol, policy_class="Invalid"
-    )
+    pytest.raises(SaltInvocationError, lgpo_reg.read_reg_pol, policy_class="Invalid")
 
 
 def test_write_reg_pol(empty_reg_pol):
@@ -91,7 +89,11 @@ def test_get_value(reg_pol):
 
 def test_get_value_invalid_policy_class():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.get_value, key="", v_name="", policy_class="Invalid"
+        SaltInvocationError,
+        lgpo_reg.get_value,
+        key="",
+        v_name="",
+        policy_class="Invalid",
     )
 
 
@@ -108,15 +110,13 @@ def test_get_key(reg_pol):
 
 
 def test_get_key_invalid_policy_class():
-    pytest.raises(
-        SaltInvocationError, lgpo_reg.get_key, key="", policy_class="Invalid"
-    )
+    pytest.raises(SaltInvocationError, lgpo_reg.get_key, key="", policy_class="Invalid")
 
 
 def test_set_value(empty_reg_pol):
     expected = {"data": 1, "type": "REG_DWORD"}
     key = "SOFTWARE\\MyKey"
-    v_name="MyValue"
+    v_name = "MyValue"
     lgpo_reg.set_value(key=key, v_name=v_name, v_data=1)
     result = lgpo_reg.get_value(key=key, v_name=v_name)
     assert result == expected
@@ -124,25 +124,45 @@ def test_set_value(empty_reg_pol):
 
 def test_set_value_invalid_policy_class():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.set_value, key="", v_name="", v_data="", policy_class="Invalid"
+        SaltInvocationError,
+        lgpo_reg.set_value,
+        key="",
+        v_name="",
+        v_data="",
+        policy_class="Invalid",
     )
 
 
 def test_set_value_invalid_reg_type():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.set_value, key="", v_name="", v_data="", v_type="REG_INVALID"
+        SaltInvocationError,
+        lgpo_reg.set_value,
+        key="",
+        v_name="",
+        v_data="",
+        v_type="REG_INVALID",
     )
 
 
 def test_set_value_invalid_reg_sz():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.set_value, key="", v_name="", v_data=[], v_type="REG_SZ"
+        SaltInvocationError,
+        lgpo_reg.set_value,
+        key="",
+        v_name="",
+        v_data=[],
+        v_type="REG_SZ",
     )
 
 
 def test_set_value_invalid_reg_multi_sz():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.set_value, key="", v_name="", v_data=1, v_type="REG_MULTI_SZ"
+        SaltInvocationError,
+        lgpo_reg.set_value,
+        key="",
+        v_name="",
+        v_data=1,
+        v_type="REG_MULTI_SZ",
     )
 
 
@@ -154,13 +174,8 @@ def test_set_value_invalid_reg_dword():
 
 def test_disable_value(reg_pol):
     expected = {
-        "**del.MyValue1": {
-            "data": " ",
-            "type": "REG_SZ"},
-        "MyValue2": {
-            "data": 1,
-            "type": "REG_DWORD",
-        },
+        "**del.MyValue1": {"data": " ", "type": "REG_SZ"},
+        "MyValue2": {"data": 1, "type": "REG_DWORD"},
     }
     key = "SOFTWARE\\MyKey1"
     lgpo_reg.disable_value(key=key, v_name="MyValue1")
@@ -170,7 +185,11 @@ def test_disable_value(reg_pol):
 
 def test_disable_value_invalid_policy_class():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.disable_value, key="", v_name="", policy_class="Invalid"
+        SaltInvocationError,
+        lgpo_reg.disable_value,
+        key="",
+        v_name="",
+        policy_class="Invalid",
     )
 
 
@@ -189,5 +208,9 @@ def test_delete_value(reg_pol):
 
 def test_delete_value_invalid_policy_class():
     pytest.raises(
-        SaltInvocationError, lgpo_reg.delete_value, key="", v_name="", policy_class="Invalid"
+        SaltInvocationError,
+        lgpo_reg.delete_value,
+        key="",
+        v_name="",
+        policy_class="Invalid",
     )

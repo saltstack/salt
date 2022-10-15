@@ -55,9 +55,15 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
-from salt.utils.win_lgpo_reg import CLASS_INFO, REG_POL_HEADER, read_reg_pol_file, search_reg_pol, write_reg_pol_data
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.serializers.configparser import deserialize
+from salt.utils.win_lgpo_reg import (
+    CLASS_INFO,
+    REG_POL_HEADER,
+    read_reg_pol_file,
+    search_reg_pol,
+    write_reg_pol_data,
+)
 
 log = logging.getLogger(__name__)
 
@@ -6072,9 +6078,7 @@ def _checkListItem(
                     value_item, item_key, item_valuename, policy_element, item
                 )
                 if test_items:
-                    if search_reg_pol(
-                        re.escape(search_string), policy_file_data
-                    ):
+                    if search_reg_pol(re.escape(search_string), policy_file_data):
                         configured_items = configured_items + 1
                         log.trace(
                             "found the search string in the pol file,"
