@@ -36,9 +36,7 @@ def test_get_settings():
 
 
 def test_get_settings_invalid_category():
-    pytest.raises(
-        KeyError, win_lgpo_auditpol.get_settings, category="Fake Category"
-    )
+    pytest.raises(KeyError, win_lgpo_auditpol.get_settings, category="Fake Category")
 
 
 @pytest.mark.slow_test

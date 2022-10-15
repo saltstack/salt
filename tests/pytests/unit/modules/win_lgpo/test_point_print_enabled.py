@@ -4,8 +4,8 @@
 import pytest
 
 import salt.modules.cmdmod as cmdmod
-import salt.modules.win_lgpo as win_lgpo
 import salt.modules.win_file as win_file
+import salt.modules.win_lgpo as win_lgpo
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 import salt.utils.win_reg as win_reg
@@ -32,7 +32,7 @@ def configure_loader_modules(tmp_path):
             "__opts__": {
                 "cachedir": str(cachedir),
             },
-            "__utils__":{
+            "__utils__": {
                 "auditpol.get_auditpol_dump": win_lgpo_auditpol.get_auditpol_dump,
                 "reg.read_value": win_reg.read_value,
             },

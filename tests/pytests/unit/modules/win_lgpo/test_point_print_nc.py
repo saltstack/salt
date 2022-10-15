@@ -7,8 +7,8 @@ import salt.config
 import salt.grains.core
 import salt.loader
 import salt.modules.cmdmod as cmdmod
-import salt.modules.win_lgpo as win_lgpo
 import salt.modules.win_file as win_file
+import salt.modules.win_lgpo as win_lgpo
 import salt.states.win_lgpo
 import salt.utils.files
 import salt.utils.platform
@@ -39,7 +39,7 @@ def configure_loader_modules(tmp_path):
             "__opts__": {
                 "cachedir": str(cachedir),
             },
-            "__utils__":{
+            "__utils__": {
                 "auditpol.get_auditpol_dump": win_lgpo_auditpol.get_auditpol_dump,
                 "reg.read_value": win_reg.read_value,
             },

@@ -81,16 +81,12 @@ def test_get_settings_settings_lgpo():
 
 
 def test_get_settings_state_local():
-    ret = win_lgpo_netsh.get_settings(
-        profile="domain", section="state", store="local"
-    )
+    ret = win_lgpo_netsh.get_settings(profile="domain", section="state", store="local")
     assert "State" in ret
 
 
 def test_get_settings_state_lgpo():
-    ret = win_lgpo_netsh.get_settings(
-        profile="domain", section="state", store="lgpo"
-    )
+    ret = win_lgpo_netsh.get_settings(profile="domain", section="state", store="lgpo")
     assert "State" in ret
 
 
@@ -398,7 +394,7 @@ def test_set_firewall_settings_fwrules_lgpo_notconfigured():
         new = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="lgpo"
         )["LocalFirewallRules"]
-        assert new == "NotConfigured"
+        assert new is "NotConfigured"
     finally:
         ret = win_lgpo_netsh.set_settings(
             profile="domain",
@@ -562,9 +558,7 @@ def test_set_firewall_state_local_on():
         )["State"]
         assert new == "OFF"
     finally:
-        ret = win_lgpo_netsh.set_state(
-            profile="domain", state=current, store="local"
-        )
+        ret = win_lgpo_netsh.set_state(profile="domain", state=current, store="local")
         assert ret is True
 
 
@@ -582,9 +576,7 @@ def test_set_firewall_state_local_notconfigured():
             store="local",
         )
     finally:
-        ret = win_lgpo_netsh.set_state(
-            profile="domain", state=current, store="local"
-        )
+        ret = win_lgpo_netsh.set_state(profile="domain", state=current, store="local")
         assert ret is True
 
 
@@ -603,7 +595,5 @@ def test_set_firewall_state_lgpo_notconfigured():
         )["State"]
         assert new == "NotConfigured"
     finally:
-        ret = win_lgpo_netsh.set_state(
-            profile="domain", state=current, store="lgpo"
-        )
+        ret = win_lgpo_netsh.set_state(profile="domain", state=current, store="lgpo")
         assert ret is True
