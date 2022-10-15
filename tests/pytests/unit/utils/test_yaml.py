@@ -1,3 +1,4 @@
+import collections
 import textwrap
 
 import pytest
@@ -159,6 +160,17 @@ def test_load_with_plain_scalars():
         )
         == {"foo": {"b": {"foo": "bar", "one": 1, "list": [1, "two", 3]}}}
     )
+
+
+@pytest.mark.parametrize("dictclass", [dict, collections.OrderedDict])
+def test_load_dictclass(dictclass):
+    l = salt_yaml.SaltYamlSafeLoader("k1: v1\nk2: v2\n", dictclass=dictclass)
+    try:
+        d = l.get_single_data()
+    finally:
+        l.dispose()
+    assert isinstance(d, dictclass)
+    assert d == dictclass([("k1", "v1"), ("k2", "v2")])
 
 
 def test_not_yaml_monkey_patching():
