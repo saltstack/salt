@@ -66,6 +66,7 @@ VERIFY_TRUST_LEVELS = {
 
 try:
     import gnupg
+
     HAS_GPG_BINDINGS = True
 except ImportError:
     HAS_GPG_BINDINGS = False
