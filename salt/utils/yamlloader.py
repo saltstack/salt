@@ -47,7 +47,24 @@ class SaltYamlSafeLoader(BaseLoader):
     def construct_yaml_omap(self, node):
         if self.dictclass is dict:
             return (yield from super().construct_yaml_omap(node))
-        return (yield from self.construct_yaml_map(node))
+        # BaseLoader.construct_yaml_omap() returns a list of (key, value)
+        # tuples, which doesn't match the semantics of the `!!omap` YAML type.
+        # Convert the list of tuples to an OrderedDict.
+        d = self.dictclass()
+        yield d
+        (entries,) = super().construct_yaml_omap(node)
+        if hasattr(entries, "keys"):
+            entries = ((k, entries[k]) for k in entries.keys())
+        for k, v in entries:
+            if k in d:
+                raise ConstructorError(
+                    f"while constructing an ordered map",
+                    node.start_mark,
+                    f"duplicate key encountered: {k!r}",
+                    # TODO: Can we get the location of the duplicate key?
+                    node.start_mark,
+                )
+            d[k] = v
 
     def construct_unicode(self, node):
         return node.value

@@ -1,4 +1,7 @@
 Improvements to YAML processing (`salt.utils.yaml`):
+  * Loading an `!!omap` node with a `salt.utils.yaml.SaltYamlSafeLoader` that
+    was constructed with a non-`dict` class now returns a
+    `collections.OrderedMap` object instead of raising an exception.
   * Passing a non-`dict` class to the `salt.utils.yaml.SaltYamlSafeLoader`
     constructor no longer causes all future `!!omap` nodes to throw an exception
     when loading.
