@@ -6,8 +6,8 @@ import os
 import pytest
 
 import salt.modules.cmdmod as cmdmod
-import salt.modules.win_lgpo as win_lgpo
 import salt.modules.win_file as win_file
+import salt.modules.win_lgpo as win_lgpo
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 import salt.utils.win_reg as win_reg
@@ -35,7 +35,7 @@ def configure_loader_modules(tmp_path):
             "__opts__": {
                 "cachedir": str(cachedir),
             },
-            "__utils__":{
+            "__utils__": {
                 "auditpol.get_auditpol_dump": win_lgpo_auditpol.get_auditpol_dump,
                 "reg.read_value": win_reg.read_value,
             },
@@ -53,9 +53,7 @@ def _test_mechanism(policy_name):
     Helper function to get current setting
     """
     policy_data = win_lgpo._policy_info()
-    policy_definition = policy_data.policies["Machine"]["policies"][
-        policy_name
-    ]
+    policy_definition = policy_data.policies["Machine"]["policies"][policy_name]
     return win_lgpo._get_policy_info_setting(policy_definition)
 
 
@@ -102,9 +100,7 @@ def test_netsh():
         "FileName": "NotConfigured",
         "MaxFileSize": "NotConfigured",
     }
-    with patch(
-        "salt.utils.win_lgpo_netsh.get_all_settings", return_value=all_settings
-    ):
+    with patch("salt.utils.win_lgpo_netsh.get_all_settings", return_value=all_settings):
         result = _test_mechanism(policy_name=policy_name)
     expected = "Not configured"
     assert result == expected

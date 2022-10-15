@@ -31,7 +31,7 @@ def configure_loader_modules(tmp_path):
         },
         auditpol: {
             "__context__": {},
-        }
+        },
     }
 
 

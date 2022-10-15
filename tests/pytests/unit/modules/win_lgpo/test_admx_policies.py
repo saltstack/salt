@@ -6,11 +6,11 @@ import logging
 import os
 import pathlib
 import re
-import requests
 import shutil
 import zipfile
 
 import pytest
+import requests
 
 import salt.grains.core
 import salt.modules.win_file as win_file
@@ -140,11 +140,8 @@ def test_get_policy_name_full_return_full_names(osrelease):
         return_full_policy_names=True,
         hierarchical_return=False,
     )
-    expected = {
-        "Windows Components\\Data Collection and Preview Builds\\{}".format(policy_name): (
-            "Not Configured"
-        )
-    }
+    key = "Windows Components\\Data Collection and Preview Builds\\{}"
+    expected = {key.format(policy_name): "Not Configured"}
     assert result == expected
 
 
@@ -160,11 +157,8 @@ def test_get_policy_id_full_return_full_names(osrelease):
         return_full_policy_names=True,
         hierarchical_return=False,
     )
-    expected = {
-        "Windows Components\\Data Collection and Preview Builds\\{}".format(policy_name): (
-            "Not Configured"
-        )
-    }
+    key = "Windows Components\\Data Collection and Preview Builds\\{}"
+    expected = {key.format(policy_name): "Not Configured"}
     assert result == expected
 
 
@@ -210,10 +204,10 @@ def test_get_policy_id_full_return_ids_hierarchical():
                 "WindowsComponents": {
                     "DataCollectionAndPreviewBuilds": {
                         "AllowTelemetry": "Not Configured"
-                    }
-                }
-            }
-        }
+                    },
+                },
+            },
+        },
     }
     assert result == expected
 

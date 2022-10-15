@@ -73,7 +73,7 @@ def __virtual__():
 
 
 def read_reg_pol(policy_class="Machine"):
-    """
+    r"""
     Read the contents of the Registry.pol file. Display the contents as a
     human-readable dictionary.
 
@@ -92,6 +92,13 @@ def read_reg_pol(policy_class="Machine"):
 
     Returns:
         dict: A dictionary representing the contents of the Registry.pol file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Read the machine Registry.pol
+        salt '*' lgpo_reg.read_reg_pol
     """
     # Verify policy_class
     if policy_class.lower() in ["computer", "machine"]:
@@ -101,13 +108,15 @@ def read_reg_pol(policy_class="Machine"):
     else:
         raise SaltInvocationError("An invalid policy class was specified")
     pol_info = salt.utils.win_lgpo_reg.CLASS_INFO[policy_class]
-    pol_file_data = salt.utils.win_lgpo_reg.read_reg_pol_file(reg_pol_path=pol_info["policy_path"])
+    pol_file_data = salt.utils.win_lgpo_reg.read_reg_pol_file(
+        reg_pol_path=pol_info["policy_path"]
+    )
 
     return salt.utils.win_lgpo_reg.reg_pol_to_dict(pol_file_data)
 
 
 def write_reg_pol(data, policy_class="Machine"):
-    """
+    r"""
     Write data to the Registry.pol file. The data is a dictionary that is then
     converted to the appropriate bytes format expected by Registry.pol
 
@@ -128,6 +137,13 @@ def write_reg_pol(data, policy_class="Machine"):
 
     Returns:
         None
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Write to Machine Registry.pol
+        salt '*' lgpo_reg.write_reg_pol "{'SOFTWARE\MyKey': {'MyValue': 'data': 1, 'type': 'REG_DWORD'}}"
     """
     # Maybe have this data passed instead of opening it here
     # Verify policy_class
@@ -179,7 +195,7 @@ def get_value(key, v_name, policy_class="Machine"):
         salt '*' lgpo_reg.get_value "SOFTWARE\MyKey" "MyValue"
     """
     # Verify input
-    if policy_class.lower() in  ["computer", "machine"]:
+    if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
@@ -231,7 +247,7 @@ def get_key(key, policy_class="Machine"):
         salt '*' lgpo_reg.get_key "SOFTWARE\MyKey"
     """
     # Verify input
-    if policy_class.lower() in  ["computer", "machine"]:
+    if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
@@ -307,7 +323,7 @@ def set_value(
         salt '*' lgpo_reg.set_value "SOFTWARE\MyKey" "MyValue" "string value" "REG_SZ"
     """
     # Verify input
-    if policy_class.lower() in  ["computer", "machine"]:
+    if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
@@ -403,7 +419,7 @@ def disable_value(key, v_name, policy_class="machine"):
         salt '*' lgpo_reg.delete_value "SOFTWARE\MyKey" "MyValue"
     """
     # Verify input
-    if policy_class.lower() in  ["computer", "machine"]:
+    if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
@@ -430,7 +446,10 @@ def disable_value(key, v_name, policy_class="machine"):
             found_name = "**del.{}".format(found_name)
             pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
         else:
-            pol_data[found_key]["**del.{}".format(v_name)] = {"data": " ", "type": "REG_SZ"}
+            pol_data[found_key]["**del.{}".format(v_name)] = {
+                "data": " ",
+                "type": "REG_SZ"
+            }
     else:
         pol_data[key] = {"**del.{}".format(v_name): {"data": " ", "type": "REG_SZ"}}
 

@@ -3,8 +3,8 @@
 """
 import pytest
 
-import salt.modules.win_lgpo as win_lgpo
 import salt.modules.win_file as win_file
+import salt.modules.win_lgpo as win_lgpo
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -62,9 +62,7 @@ def test_get_policy_name_full_return():
         hierarchical_return=False,
     )
     expected = {
-        "Network firewall: Public: Settings: Display a notification": (
-            "Not configured"
-        )
+        "Network firewall: Public: Settings: Display a notification": "Not configured"
     }
     assert result == expected
 
@@ -78,9 +76,7 @@ def test_get_policy_id_full_return():
         hierarchical_return=False,
     )
     expected = {
-        "Network firewall: Public: Settings: Display a notification": (
-            "Not configured"
-        )
+        "Network firewall: Public: Settings: Display a notification": "Not configured"
     }
     assert result == expected
 
@@ -94,9 +90,7 @@ def test_get_policy_name_full_return_ids():
         hierarchical_return=False,
     )
     expected = {
-        "Network firewall: Public: Settings: Display a notification": (
-            "Not configured"
-        )
+        "Network firewall: Public: Settings: Display a notification": "Not configured"
     }
     assert result == expected
 

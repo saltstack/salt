@@ -78,7 +78,7 @@ def test_reg_pol_to_dict_reg_sz():
         b"S\x00t\x00r\x00i\x00n\x00g\x00\x00\x00"
         b"]\x00"
     )
-    expected= {
+    expected = {
         "SOFTWARE\\MyKey": {
             "MyValue": {
                 "data": "String",

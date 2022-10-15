@@ -7,9 +7,9 @@ import os
 import re
 import struct
 
+import salt.modules.win_file
 import salt.utils.files
 import salt.utils.win_reg
-import salt.modules.win_file
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 CLASS_INFO = {
@@ -144,7 +144,9 @@ def write_reg_pol_data(
         with salt.utils.files.fopen(policy_file_path, "wb") as pol_file:
             reg_pol_header = REG_POL_HEADER.encode("utf-16-le")
             if not data_to_write.startswith(reg_pol_header):
-                log.debug("LGPO_REG Util: Writing header to {}".format(policy_file_path))
+                log.debug(
+                    "LGPO_REG Util: Writing header to {}".format(policy_file_path)
+                )
                 pol_file.write(reg_pol_header)
             log.debug("LGPO_REG Util: Writing to {}".format(policy_file_path))
             pol_file.write(data_to_write)
@@ -165,7 +167,9 @@ def write_reg_pol_data(
             gpt_ini_data = gpt_file.read()
         # Make sure it has Windows Style line endings
         gpt_ini_data = (
-            gpt_ini_data.replace("\r\n", "_|-").replace("\n", "_|-").replace("_|-", "\r\n")
+            gpt_ini_data.replace("\r\n", "_|-")
+            .replace("\n", "_|-")
+            .replace("_|-", "\r\n")
         )
     if not search_reg_pol(r"\[General\]\r\n", gpt_ini_data):
         log.debug("LGPO_REG Util: Adding [General] section to gpt.ini")
@@ -177,7 +181,7 @@ def write_reg_pol_data(
             gpt_ini_data,
             re.IGNORECASE | re.MULTILINE,
             )
-        gpt_ext_str = gpt_ini_data[gpt_ext_loc.start(): gpt_ext_loc.end()]
+        gpt_ext_str = gpt_ini_data[gpt_ext_loc.start() : gpt_ext_loc.end()]
         if not search_reg_pol(
             search_string=r"{}".format(re.escape(gpt_extension_guid)),
             policy_data=gpt_ext_str,
@@ -187,26 +191,26 @@ def write_reg_pol_data(
             gpt_ext_str[1] = gpt_extension_guid + gpt_ext_str[1]
             gpt_ext_str = "=".join(gpt_ext_str)
             gpt_ini_data = (
-                gpt_ini_data[0: gpt_ext_loc.start()]
+                gpt_ini_data[0 : gpt_ext_loc.start()]
                 + gpt_ext_str
-                + gpt_ini_data[gpt_ext_loc.end():]
+                + gpt_ini_data[gpt_ext_loc.end() :]
             )
     else:
         general_location = re.search(
             r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         gpt_ini_data = "{}{}={}\r\n{}".format(
-            gpt_ini_data[general_location.start(): general_location.end()],
+            gpt_ini_data[general_location.start() : general_location.end()],
             gpt_extension,
             gpt_extension_guid,
-            gpt_ini_data[general_location.end():],
+            gpt_ini_data[general_location.end() :],
         )
     # https://technet.microsoft.com/en-us/library/cc978247.aspx
     if search_reg_pol(r"Version=", gpt_ini_data):
         version_loc = re.search(
             r"^Version=.*\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
-        version_str = gpt_ini_data[version_loc.start(): version_loc.end()]
+        version_str = gpt_ini_data[version_loc.start() : version_loc.end()]
         version_str = version_str.split("=")
         version_nums = struct.unpack(b">2H", struct.pack(b">I", int(version_str[1])))
         if gpt_extension.lower() == "gPCMachineExtensionNames".lower():
@@ -215,10 +219,10 @@ def write_reg_pol_data(
             version_nums = (version_nums[0] + 1, version_nums[1])
         version_num = struct.unpack(b">I", struct.pack(b">2H", *version_nums))[0]
         gpt_ini_data = "{}{}={}\r\n{}".format(
-            gpt_ini_data[0: version_loc.start()],
+            gpt_ini_data[0 : version_loc.start()],
             "Version",
             version_num,
-            gpt_ini_data[version_loc.end():],
+            gpt_ini_data[version_loc.end() :],
         )
     else:
         general_location = re.search(
@@ -229,7 +233,7 @@ def write_reg_pol_data(
         elif gpt_extension.lower() == "gPCUserExtensionNames".lower():
             version_nums = (1, 0)
         gpt_ini_data = "{}{}={}\r\n{}".format(
-            gpt_ini_data[general_location.start(): general_location.end()],
+            gpt_ini_data[general_location.start() : general_location.end()],
             "Version",
             int(
                 "{}{}".format(
@@ -238,7 +242,7 @@ def write_reg_pol_data(
                 ),
                 16,
             ),
-            gpt_ini_data[general_location.end():],
+            gpt_ini_data[general_location.end() :],
         )
     if gpt_ini_data:
         try:
@@ -387,7 +391,7 @@ def dict_to_reg_pol(data):
                 "{}".format(v_name).encode("utf-16-le") + pol_section_term,
                 # Type in 32-bit little-endian
                 struct.pack("<i", v_type),
-                ]
+            ]
             # The data is encoded depending on the Type
             if v_type == 0:
                 # REG_NONE : No value
@@ -421,7 +425,11 @@ def dict_to_reg_pol(data):
                 else:
                     # All others will be joined with a null byte, the list
                     # terminated, and the entire section terminated
-                    v_data = "\x00".join(d["data"]).encode("utf-16-le") + pol_section_term + pol_section_term
+                    v_data = (
+                        "\x00".join(d["data"]).encode("utf-16-le")
+                        + pol_section_term
+                        + pol_section_term
+                    )
             elif v_type == 11:
                 # REG_QWORD : Little Endian
                 # 64-bit little endian
