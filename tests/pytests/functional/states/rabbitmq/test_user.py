@@ -127,6 +127,17 @@ def test_present_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
     }
     assert ret == expected
 
+    # Delete the user
+    ret = rabbitmq_user.absent("myuser")
+    expected = {
+        "name": "myuser",
+        "result": True,
+        "comment": "The user 'myuser' was removed.",
+        "changes": {"name": {"old": "myuser", "new": ""}},
+    }
+
+    assert ret == expected
+
 
 def test_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
     """
