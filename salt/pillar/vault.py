@@ -123,9 +123,9 @@ minion-passwd   minionbadpasswd1
 
 import logging
 
-log = logging.getLogger(__name__)
+from requests.exceptions import HTTPError
 
-__func_alias__ = {"set_": "set"}
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -162,12 +162,13 @@ def ext_pillar(
 
         url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("GET", url)
-        if response.status_code == 200:
-            vault_pillar = response.json().get("data", {})
-        else:
-            log.info("Vault secret not found for: %s", path)
-    except KeyError:
-        log.error("No such path in Vault: %s", path)
+        response.raise_for_status()
+        vault_pillar = response.json().get("data", {})
+
+        if vault_pillar and version2["v2"]:
+            vault_pillar = vault_pillar["data"]
+    except HTTPError:
+        log.info("Vault secret not found for: %s", path)
 
     if nesting_key:
         vault_pillar = {nesting_key: vault_pillar}

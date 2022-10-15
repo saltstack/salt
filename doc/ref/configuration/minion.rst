@@ -177,7 +177,7 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
     master_type: str
 
-If this option is ``str`` (default), multiple hot masters are configured.    
+If this option is ``str`` (default), multiple hot masters are configured.
 Minions can connect to multiple masters simultaneously (all master are "hot").
 
 .. code-block:: yaml
@@ -602,9 +602,14 @@ The path to the minion's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/minion``
+Default: ``<LIB_STATE_DIR>/pki/minion``
 
 The directory used to store the minion's public and private keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -1488,6 +1493,23 @@ process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_minion:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_minion:: tcp_pub_port
 

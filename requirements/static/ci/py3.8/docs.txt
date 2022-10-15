@@ -483,12 +483,13 @@ jinja2==3.0.3
     #   sphinx
 jmespath==0.10.0
     # via
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.9"
+junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -509,7 +510,7 @@ lxml==4.9.1
     #   junos-eznc
     #   napalm
     #   ncclient
-mako==1.1.5
+mako==1.2.2
     # via -r requirements/static/ci/common.in
 markupsafe==2.0.1
     # via
@@ -642,7 +643,7 @@ ntc-templates==2.2.2
     # via
     #   junos-eznc
     #   netmiko
-oauthlib==3.1.1
+oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
