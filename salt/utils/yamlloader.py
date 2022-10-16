@@ -3,6 +3,8 @@ Custom YAML loading in Salt
 """
 
 
+import collections
+
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
@@ -45,12 +47,10 @@ class SaltYamlSafeLoader(BaseLoader):
         data.update(value)
 
     def construct_yaml_omap(self, node):
-        if self.dictclass is dict:
-            return (yield from super().construct_yaml_omap(node))
         # BaseLoader.construct_yaml_omap() returns a list of (key, value)
         # tuples, which doesn't match the semantics of the `!!omap` YAML type.
         # Convert the list of tuples to an OrderedDict.
-        d = self.dictclass()
+        d = collections.OrderedDict()
         yield d
         (entries,) = super().construct_yaml_omap(node)
         if hasattr(entries, "keys"):

@@ -12,11 +12,6 @@ import salt.utils.yaml as salt_yaml
 from tests.support.mock import mock_open, patch
 
 
-class _OrderedDictLoader(salt_yaml.SaltYamlSafeLoader):
-    def __init__(self, stream):
-        super().__init__(stream, dictclass=collections.OrderedDict)
-
-
 def test_dump():
     data = {"foo": "bar"}
     assert salt_yaml.dump(data) == "{foo: bar}\n"
@@ -201,14 +196,14 @@ def test_load_omap():
     random.shuffle(keys)
     want_items = [(k, i) for i, k in enumerate(keys)]
     yaml = "!!omap\n" + "".join(f"- {k}: {v}\n" for k, v in want_items)
-    got = salt_yaml.load(yaml, Loader=_OrderedDictLoader)
+    got = salt_yaml.load(yaml)
     assert isinstance(got, collections.OrderedDict)
     assert got == collections.OrderedDict(want_items)
     assert list(got.items()) == want_items
 
 
 def test_load_omap_empty():
-    got = salt_yaml.load("!!omap []\n", Loader=_OrderedDictLoader)
+    got = salt_yaml.load("!!omap []\n")
     assert isinstance(got, collections.OrderedDict)
     assert got == collections.OrderedDict()
     assert list(got.items()) == []
@@ -226,7 +221,7 @@ def test_load_omap_empty():
 )
 def test_load_omap_invalid(input):
     with pytest.raises(ConstructorError):
-        salt_yaml.load(input, Loader=_OrderedDictLoader)
+        salt_yaml.load(input)
 
 
 def test_load_untagged_omaplike_is_seq():

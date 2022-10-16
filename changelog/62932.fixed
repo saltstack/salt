@@ -1,10 +1,7 @@
 Improvements to YAML processing (`salt.utils.yaml`):
-  * Loading an `!!omap` node with a `salt.utils.yaml.SaltYamlSafeLoader` that
-    was constructed with a non-`dict` class now returns a
-    `collections.OrderedMap` object instead of raising an exception.
-  * Passing a non-`dict` class to the `salt.utils.yaml.SaltYamlSafeLoader`
-    constructor no longer causes all future `!!omap` nodes to throw an exception
-    when loading.
+  * Loading an `!!omap` node now always returns a `collections.OrderedMap`
+    object.  Before it would sometimes return a list of (key, value) tuples
+    and sometimes raise an exception.
   * Loading an explicitly tagged `!!timestamp` node now produces a
     `datetime.datetime` object instead of a string.
   * `salt.utils.yaml.dump()` now defaults to `salt.utils.yaml.OrderedDumper`
