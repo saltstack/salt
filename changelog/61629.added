@@ -1,3 +1,0 @@
-Multiprocessing logging no longer uses multiprocessing queues which penalized performance.
-
-Instead, each new process configures the terminal and file logging, and also any external logging handlers configured.

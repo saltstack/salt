@@ -7,6 +7,7 @@
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.network_info as network_info
 from tests.support.mock import MagicMock, patch
 

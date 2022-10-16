@@ -12,15 +12,16 @@ import types
 
 import psutil
 import pytest
+
 import salt.modules.gpg as gpg
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
-from tests.support.pytest.helpers import EntropyGenerator
 
 pytest.importorskip("gnupg")
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
+    pytest.mark.requires_random_entropy,
 ]
 
 log = logging.getLogger(__name__)
@@ -157,12 +158,6 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 """
 
 
-@pytest.fixture(autouse=True)
-def entropy_generation():
-    with EntropyGenerator():
-        yield
-
-
 @pytest.fixture
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
@@ -248,7 +243,29 @@ def test_list_keys():
             "trust": "-",
             "type": "pub",
             "uids": ["GPG Person <person@example.com>"],
-        }
+        },
+        {
+            "dummy": "",
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "expires": "2011188692",
+            "sigs": [],
+            "subkeys": [
+                [
+                    "yyyyyyyyyyyyyyyy",
+                    "e",
+                    "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+                ]
+            ],
+            "length": "4096",
+            "ownertrust": "-",
+            "sig": "",
+            "algo": "1",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "date": "1506612692",
+            "trust": "r",
+            "type": "pub",
+            "uids": ["GPG Person <person@example.com>"],
+        },
     ]
 
     _expected_result = [
@@ -261,7 +278,17 @@ def test_list_keys():
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             "trust": "Unknown",
-        }
+        },
+        {
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "uids": ["GPG Person <person@example.com>"],
+            "created": "2017-09-28",
+            "expires": "2033-09-24",
+            "keyLength": "4096",
+            "ownerTrust": "Unknown",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "trust": "Revoked",
+        },
     ]
 
     mock_opt = MagicMock(return_value="root")
