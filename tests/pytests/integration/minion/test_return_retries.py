@@ -35,7 +35,7 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # stop the salt master for some time
     with salt_master.stopped():
         # verify we don't yet have the result and sleep
-        assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).json == {}
+        assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).data == {}
 
         # the 70s sleep (and 60s timer value) is to reduce flakiness due to slower test runs
         # and should be addresses when number of tries is configurable through minion opts
@@ -44,7 +44,7 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     data = None
     for i in range(1, 30):
         time.sleep(1)
-        data = salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).json
+        data = salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).data
         if data:
             break
 

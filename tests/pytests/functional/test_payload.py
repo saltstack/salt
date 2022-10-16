@@ -4,9 +4,10 @@ import threading
 import time
 
 import pytest
+import zmq
+
 import salt.exceptions
 import salt.payload
-import zmq
 
 log = logging.getLogger(__name__)
 

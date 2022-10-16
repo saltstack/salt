@@ -74,7 +74,7 @@ class SysInfo:
         for dev, dev_data in salt.utils.fsutils._blkid().items():
             dev = self._get_disk_size(dev)
             device = dev.pop("device")
-            dev["type"] = dev_data["type"]
+            dev["type"] = dev_data.get("type", "UNKNOWN")
             data[device] = dev
 
         return data

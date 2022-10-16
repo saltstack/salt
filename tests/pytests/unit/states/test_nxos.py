@@ -17,6 +17,7 @@
 # limitations under the License.
 
 import pytest
+
 import salt.states.nxos as nxos_state
 from tests.support.mock import MagicMock, patch
 

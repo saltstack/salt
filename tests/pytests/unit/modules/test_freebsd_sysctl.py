@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.freebsd_sysctl as freebsd_sysctl
 import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
@@ -85,6 +86,46 @@ def test_persist_no_conf_failure():
                 1,
                 config=None,
             )
+
+
+def test_persist_nochange():
+    """
+    Tests success when no changes need to be made
+    """
+    mock_get_cmd = MagicMock(return_value="1")
+    content = "vfs.usermount=1\n"
+    with patch("salt.utils.files.fopen", mock_open(read_data=content)):
+        with patch.dict(
+            freebsd_sysctl.__salt__,
+            {"cmd.run": mock_get_cmd},
+        ):
+            assert freebsd_sysctl.persist("vfs.usermount", 1) == "Already set"
+
+
+def test_persist_in_memory():
+    """
+    Tests success when the on-disk value is correct but the in-memory value
+    needs updating.
+    """
+    mock_get_cmd = MagicMock(return_value="0")
+    set_cmd = {
+        "pid": 1337,
+        "retcode": 0,
+        "stderr": "",
+        "stdout": "vfs.usermount: 0 -> 1",
+    }
+    mock_set_cmd = MagicMock(return_value=set_cmd)
+    content = "vfs.usermount=1\n"
+    with patch("salt.utils.files.fopen", mock_open(read_data=content)):
+        with patch.dict(
+            freebsd_sysctl.__salt__,
+            {"cmd.run": mock_get_cmd},
+        ):
+            with patch.dict(
+                freebsd_sysctl.__salt__,
+                {"cmd.run_all": mock_set_cmd},
+            ):
+                assert freebsd_sysctl.persist("vfs.usermount", 1) == "Updated"
 
 
 def test_persist_updated():
