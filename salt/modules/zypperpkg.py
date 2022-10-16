@@ -1369,7 +1369,7 @@ def mod_repo(repo, **kwargs):
         salt.utils.versions.warn_until(
             3009,
             "Passing 'humanname' to 'mod_repo' is deprecated, slated "
-            "for removal in {version}. Please use 'name' instead."
+            "for removal in {version}. Please use 'name' instead.",
         )
         cmd_opt.append("--name='{}'".format(kwargs.get("humanname")))
 

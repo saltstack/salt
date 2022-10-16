@@ -1398,9 +1398,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         with zypper_patcher:
-            zypper.mod_repo(
-                name, **{"url": url, "name": desc_name}
-            )
+            zypper.mod_repo(name, **{"url": url, "name": desc_name})
             self.assertEqual(
                 zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call("ar", url, name)],
