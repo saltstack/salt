@@ -1249,7 +1249,7 @@ def mod_repo(repo, **kwargs):
         but do not remove if disabled.
 
     name
-        This is used as the name value in the repo file.
+        This is used as the descriptive name value in the repo file.
 
     refresh
         Enable or disable (True or False) auto-refresh of the repository.
@@ -1364,6 +1364,14 @@ def mod_repo(repo, **kwargs):
 
     if "priority" in kwargs:
         cmd_opt.append("--priority={}".format(kwargs.get("priority", DEFAULT_PRIORITY)))
+
+    if "humanname" in kwargs:
+        salt.utils.versions.warn_until(
+            3009,
+            "Passing 'humanname' to 'mod_repo' is deprecated, slated "
+            "for removal in {version}. Please use 'name' instead."
+        )
+        cmd_opt.append("--name='{}'".format(kwargs.get("humanname")))
 
     if "name" in kwargs:
         cmd_opt.append("--name")

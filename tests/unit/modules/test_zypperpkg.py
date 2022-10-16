@@ -71,6 +71,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "enabled": False,
                     "baseurl": self.new_repo_config["url"],
                     "alias": self.new_repo_config["name"],
+                    "name": self.new_repo_config["name"],
                     "priority": 1,
                     "type": "rpm-md",
                 }
@@ -1377,9 +1378,36 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(type(r_info["enabled"]), bool)
             self.assertEqual(type(r_info["autorefresh"]), bool)
             self.assertEqual(type(r_info["baseurl"]), str)
+            self.assertEqual(type(r_info["name"]), str)
             self.assertEqual(r_info["type"], None)
             self.assertEqual(r_info["enabled"], alias == "SLE12-SP1-x86_64-Update")
             self.assertEqual(r_info["autorefresh"], alias == "SLE12-SP1-x86_64-Update")
+
+    def test_repo_add_mod_name(self):
+        """
+        Test mod_repo adds the new repo and call modify to update descriptive
+        name.
+
+        :return:
+        """
+        url = self.new_repo_config["url"]
+        name = self.new_repo_config["name"]
+        desc_name = "Update Repository"
+        zypper_patcher = patch.multiple(
+            "salt.modules.zypperpkg", **self.zypper_patcher_config
+        )
+
+        with zypper_patcher:
+            zypper.mod_repo(
+                name, **{"url": url, "name": desc_name}
+            )
+            self.assertEqual(
+                zypper.__zypper__(root=None).xml.call.call_args_list,
+                [call("ar", url, name)],
+            )
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
+                "mr", "--name", desc_name, name
+            )
 
     def test_repo_add_nomod_noref(self):
         """
@@ -1451,6 +1479,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             zypper.mod_repo(name, **params)
             expected_params = {
                 "alias": "mock-repo-name",
+                "name": "mock-repo-name",
                 "autorefresh": True,
                 "baseurl": "http://repo.url/some/path-changed",
                 "enabled": False,
