@@ -1,0 +1,2 @@
+Improvements to YAML processing (`salt.utils.yaml`):
+  * Code health clean-ups.
