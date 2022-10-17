@@ -54,7 +54,7 @@ def osrelease():
     yield grains.get("osrelease", None)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def clean_comp():
     reg_pol = pathlib.Path(
         os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol"
@@ -64,7 +64,7 @@ def clean_comp():
     reg_pol.unlink(missing_ok=True)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def clean_user():
     reg_pol = pathlib.Path(
         os.getenv("SystemRoot"), "System32", "GroupPolicy", "User", "Registry.pol"

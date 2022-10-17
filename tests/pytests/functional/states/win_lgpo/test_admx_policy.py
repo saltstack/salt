@@ -51,7 +51,7 @@ def configure_loader_modules(tmp_path):
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def clean_comp():
     reg_pol = pathlib.Path(
         os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol"

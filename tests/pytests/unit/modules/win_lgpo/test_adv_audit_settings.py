@@ -79,7 +79,7 @@ def disable_legacy_auditing():
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No Auditing"
@@ -94,7 +94,7 @@ def clear_policy():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def set_policy():
     # Ensure the policy is set
     test_setting = "Success"
