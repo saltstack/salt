@@ -14,6 +14,7 @@ import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
 import salt.utils.stringutils
+from salt.defaults import _Constant
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
 from salt.utils.data import CaseInsensitiveDict
 
@@ -77,6 +78,9 @@ def loads(msg, encoding=None, raw=False):
             if code == 78:
                 data = salt.utils.stringutils.to_unicode(data)
                 return datetime.datetime.strptime(data, "%Y%m%dT%H:%M:%S.%f")
+            if code == 79:
+                name, value = salt.utils.msgpack.loads(data, raw=False)
+                return _Constant(name, value)
             return data
 
         gc.disable()  # performance optimization for msgpack
@@ -143,6 +147,12 @@ def dumps(msg, use_bin_type=False):
             return salt.utils.msgpack.ExtType(
                 78,
                 salt.utils.stringutils.to_bytes(obj.strftime("%Y%m%dT%H:%M:%S.%f")),
+            )
+        elif isinstance(obj, _Constant):
+            # Special case our constants.
+            return salt.utils.msgpack.ExtType(
+                79,
+                salt.utils.msgpack.dumps((obj.name, obj.value), use_bin_type=True),
             )
         # The same for immutable types
         elif isinstance(obj, immutabletypes.ImmutableDict):

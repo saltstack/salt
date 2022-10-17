@@ -6,8 +6,9 @@ import copy
 import logging
 
 import pytest
-import salt.proxy.netmiko_px as netmiko_proxy
 from saltfactories.utils import random_string
+
+import salt.proxy.netmiko_px as netmiko_proxy
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -102,6 +103,24 @@ def test_init_skip_connect_on_init_false(proxy_minion_config):
 
     assert "always_alive" in netmiko_device
     assert "connection" in netmiko_device
+
+
+def test_init_connection_timeout(proxy_minion_config):
+    """
+    check that connection_timeout is removed from args
+    before being passed along.
+    """
+
+    proxy_minion_config["connection_timeout"] = 60
+
+    mock_make_con = MagicMock()
+    with patch.object(netmiko_proxy, "make_con", mock_make_con):
+        assert netmiko_proxy.init(proxy_minion_config) is None
+
+    assert "netmiko_device" in netmiko_proxy.__context__
+    netmiko_device = netmiko_proxy.__context__["netmiko_device"]
+    assert "args" in netmiko_device
+    assert "connection_timeout" not in netmiko_device["args"]
 
 
 def test_make_con(proxy_minion_config):

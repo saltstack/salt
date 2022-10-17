@@ -1,0 +1,2 @@
+Include UID and GID checks in modules.file.check_perms as well as comparing
+ownership by username and group name.

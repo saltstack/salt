@@ -19,10 +19,7 @@
 ###############################################################################
 # Define Variables
 ###############################################################################
-# Get Minor Version
-OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
-MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
-# Path Variables
+PY_DOT_VERSION=3.9.12
 INSTALL_DIR="/opt/salt"
 BIN_DIR="$INSTALL_DIR/bin"
 CONFIG_DIR="/etc/salt"
@@ -30,115 +27,122 @@ TEMP_DIR="/tmp"
 SBIN_DIR="/usr/local/sbin"
 
 ###############################################################################
-# Set up logging and error handling
+# Define Functions
 ###############################################################################
-echo "Post install script started on:" > "$TEMP_DIR/postinstall.txt"
-date "+%Y/%m/%d %H:%m:%S" >> "$TEMP_DIR/postinstall.txt"
-trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
+log () {
+    if [ -f "$TEMP_DIR/postinstall.txt" ]; then
+        echo "$1" >> "$TEMP_DIR/postinstall.txt"
+    else
+        echo "$1" > "$TEMP_DIR/postinstall.txt"
+    fi
+}
 
 quit_on_error() {
-    echo "$(basename $0) caught error on line : $1 command was: $2" >> "$TEMP_DIR/postinstall.txt"
-    exit -1
+    log "$(basename "$0") caught error: $1 on line : $2 command was: $3"
+    exit 1
 }
+
+###############################################################################
+# Set up logging and error handling
+###############################################################################
+log "Post install script started on: $(date '+%Y/%m/%d %H:%M:%S')"
+trap 'quit_on_error $? $LINENO $BASH_COMMAND' ERR
 
 ###############################################################################
 # Check for existing minion config, copy if it doesn't exist
 ###############################################################################
 if [ ! -f "$CONFIG_DIR/minion" ]; then
-    echo "Config: Copy Started..." >> "$TEMP_DIR/postinstall.txt"
+    log "Config: Copy Started..."
     cp "$CONFIG_DIR/minion.dist" "$CONFIG_DIR/minion"
-    echo "Config: Copied Successfully" >> "$TEMP_DIR/postinstall.txt"
+    log "Config: Copied Successfully"
 fi
+
+###############################################################################
+# Create symlinks to pyenv directories
+###############################################################################
+log "Symlink: Creating symlinks to pyenv directories..."
+ln -s "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/bin" "$INSTALL_DIR/bin"
+ln -s "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/include" "$INSTALL_DIR/include"
+ln -s "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/lib" "$INSTALL_DIR/lib"
+
+log "Symlink: Creating symlinks to library files..."
+find "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION" \
+    -name '*.dylib' \
+    -type f \
+    -exec ln -s {} $INSTALL_DIR/lib/ \;
+
+log "Symlink: Copying symlinks for openssl..."
+find "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl" \
+    -name '*.dylib' \
+    -type l \
+    -exec cp -R {} $INSTALL_DIR/lib/ \;
+
+log "Symlink: Copying symlinks for readline..."
+find "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/readline" \
+    -name '*.dylib' \
+    -type l \
+    -exec cp -R {} $INSTALL_DIR/lib/ \;
+
+log "Symlink: Created Successfully"
 
 ###############################################################################
 # Create symlink to salt-config.sh
 ###############################################################################
 if [ ! -d "$SBIN_DIR" ]; then
-    echo "Symlink: Creating $SBIN_DIR..." >> "$TEMP_DIR/postinstall.txt"
+    log "Symlink: Creating $SBIN_DIR..."
     mkdir "$SBIN_DIR"
-    echo "Symlink: Created Successfully" >> "$TEMP_DIR/postinstall.txt"
+    log "Symlink: Created Successfully"
 fi
-echo "Symlink: Creating symlink for salt-config..." >> "$TEMP_DIR/postinstall.txt"
+# This is a special tool to make it easier for the user to get started setting
+# up salt
+log "Symlink: Creating symlink for salt-config..."
 ln -sf "$BIN_DIR/salt-config.sh" "$SBIN_DIR/salt-config"
-echo "Symlink: Created Successfully" >> "$TEMP_DIR/postinstall.txt"
+log "Symlink: Created Successfully"
 
 ###############################################################################
 # Add salt to paths.d
 ###############################################################################
 if [ ! -d "/etc/paths.d" ]; then
-    echo "Path: Creating paths.d directory..." >> "$TEMP_DIR/postinstall.txt"
+    log "Path: Creating paths.d directory..."
     mkdir /etc/paths.d
-    echo "Path: Created Successfully" >> "$TEMP_DIR/postinstall.txt"
+    log "Path: Created Successfully"
 fi
-echo "Path: Adding salt to the path..." >> "$TEMP_DIR/postinstall.txt"
+log "Path: Adding salt to the path..."
 sh -c "echo \"$BIN_DIR\" > /etc/paths.d/salt"
 sh -c "echo \"$SBIN_DIR\" >> /etc/paths.d/salt"
-echo "Path: Added Successfully" >> "$TEMP_DIR/postinstall.txt"
+log "Path: Added Successfully"
 
 ###############################################################################
 # Register Salt as a service
 ###############################################################################
-setup_services_maverick() {
-    echo "Service: Using old (< 10.10) launchctl interface" >> "$TEMP_DIR/postinstall.txt"
-    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service: Stopping salt-minion..." >> "$TEMP_DIR/postinstall.txt"
-        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-        echo "Service: Stopped Successfully" >> "$TEMP_DIR/postinstall.txt"
-    fi;
-    echo "Service: Starting salt-minion..." >> "$TEMP_DIR/postinstall.txt"
-    launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist || return 1
-    echo "Service: Started Successfully" >> "$TEMP_DIR/postinstall.txt"
+log "Service: Configuring..."
 
-    echo "Service: Disabling Master, Syndic, and API services..." >> "$TEMP_DIR/postinstall.txt"
-    launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
-    launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
-    launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
-    echo "Service: Disabled Successfully" >> "$TEMP_DIR/postinstall.txt"
+log "Service: Enabling salt-minion..."
+launchctl enable system/com.saltstack.salt.minion
+log "Service: Enabled Successfully"
 
-    return 0
-}
+log "Service: Bootstrapping salt-minion..."
+launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+log "Service: Bootstrapped Successfully"
 
-setup_services_yosemite_and_later() {
-    echo "Service: Using new (>= 10.10) launchctl interface" >> "$TEMP_DIR/postinstall.txt"
-    echo "Service: Enabling salt-minion..." >> "$TEMP_DIR/postinstall.txt"
-    launchctl enable system/com.saltstack.salt.minion
-    echo "Service: Enabled Successfully" >> "$TEMP_DIR/postinstall.txt"
+if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+    log "Service: Service Running"
+else
+    log "Service: Kickstarting Service..."
+    launchctl kickstart -kp system/com.saltstack.salt.minion
+    log "Service: Kickstarted Successfully"
+fi
 
-    echo "Service: Bootstrapping salt-minion..." >> "$TEMP_DIR/postinstall.txt"
-    launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-    echo "Service: Bootstrapped Successfully" >> "$TEMP_DIR/postinstall.txt"
+log "Service: Started Successfully"
 
-    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service: Service Running" >> "$TEMP_DIR/postinstall.txt"
-    else
-        echo "Service: Kickstarting Service..." >> "$TEMP_DIR/postinstall.txt"
-        launchctl kickstart -kp system/com.saltstack.salt.minion
-        echo "Service: Kickstarted Successfully" >> "$TEMP_DIR/postinstall.txt"
-    fi
+log "Service: Disabling Master, Syndic, and API services"
+launchctl disable system/com.saltstack.salt.master
+launchctl disable system/com.saltstack.salt.syndic
+launchctl disable system/com.saltstack.salt.api
+log "Service: Disabled Successfully"
 
-    echo "Service: Started Successfully" >> "$TEMP_DIR/postinstall.txt"
+log "Service: Configured Successfully"
 
-    echo "Service: Disabling Master, Syndic, and API services" >> "$TEMP_DIR/postinstall.txt"
-    launchctl disable system/com.saltstack.salt.master
-    launchctl disable system/com.saltstack.salt.syndic
-    launchctl disable system/com.saltstack.salt.api
-    echo "Service: Disabled Successfully" >> "$TEMP_DIR/postinstall.txt"
-
-    return 0
-}
-
-echo "Service: Configuring..." >> "$TEMP_DIR/postinstall.txt"
-case $MINOR in
-        9 )
-                setup_services_maverick;
-                ;;
-        * )
-                setup_services_yosemite_and_later;
-                ;;
-esac
-echo "Service: Configured Successfully" >> "$TEMP_DIR/postinstall.txt"
-
-echo "Post install completed successfully on:" >> "$TEMP_DIR/postinstall.txt"
-date "+%Y/%m/%d %H:%m:%S" >> "$TEMP_DIR/postinstall.txt"
+log "Post install completed successfully on: $(date '+%Y/%m/%d %H:%M:%S')"
 
 exit 0

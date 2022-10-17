@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.postgres as postgres
 import salt.states.postgres_user as postgres_user
 from tests.support.mock import create_autospec, patch

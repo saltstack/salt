@@ -7,6 +7,7 @@
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.swapusage as swapusage
 from tests.support.mock import MagicMock, patch
 

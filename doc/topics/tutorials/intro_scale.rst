@@ -7,8 +7,8 @@ Using Salt at scale
 The focus of this tutorial will be building a Salt infrastructure for handling
 large numbers of minions. This will include tuning, topology, and best practices.
 
-For how to install the Salt Master please
-go here: `Installing saltstack <https://docs.saltproject.io/topics/installation/index.html>`_
+For how to install the Salt Master, see the
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 .. note::
 
@@ -282,7 +282,7 @@ that information back to the waiting client before the job can be published.
 To mitigate this, a key cache may be enabled. This will reduce the load
 on the master to a single file open instead of thousands or tens of thousands.
 
-This cache is updated by the maintanence process, however, which means that
+This cache is updated by the maintenance process, however, which means that
 minions with keys that are accepted may not be targeted by the master
 for up to sixty seconds by default.
 
@@ -304,4 +304,3 @@ The job cache can be disabled:
 .. code-block:: yaml
 
    job_cache: False
-
