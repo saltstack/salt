@@ -108,7 +108,6 @@ def test_get_key(reg_pol):
     assert result == expected
 
 
-
 def test_get_key_invalid_policy_class():
     pytest.raises(SaltInvocationError, lgpo_reg.get_key, key="", policy_class="Invalid")
 

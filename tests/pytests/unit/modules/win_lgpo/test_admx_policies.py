@@ -257,8 +257,8 @@ def test__load_policy_definitions():
         # This function doesn't return anything (None), it just loads
         # the XPath structures into __context__. We're just making sure it
         # doesn't stack trace here
-        result = win_lgpo._load_policy_definitions()
-        assert result is None
+        win_lgpo._load_policy_definitions()
+        assert True
     finally:
         # Remove source file
         os.remove(bogus_fle)

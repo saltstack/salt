@@ -11,7 +11,7 @@ import salt.modules.win_lgpo as win_lgpo
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 import salt.utils.win_reg as win_reg
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,

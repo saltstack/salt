@@ -10,7 +10,7 @@ import struct
 import salt.modules.win_file
 import salt.utils.files
 import salt.utils.win_reg
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 CLASS_INFO = {
     "User": {
@@ -79,7 +79,7 @@ def search_reg_pol(search_string, policy_data):
     """
     if policy_data:
         if search_string:
-            log.debug("LGPO_REG Util: Searching for {}".format(search_string))
+            log.debug("LGPO_REG Util: Searching for %s", search_string)
             match = re.search(search_string, policy_data, re.IGNORECASE)
             if match:
                 log.debug("LGPO_REG Util: Found")
@@ -100,7 +100,7 @@ def read_reg_pol_file(reg_pol_path):
     """
     return_data = None
     if os.path.exists(reg_pol_path):
-        log.debug("LGPO_REG Utils: Reading from {}".format(reg_pol_path))
+        log.debug("LGPO_REG Utils: Reading from %s", reg_pol_path)
         with salt.utils.files.fopen(reg_pol_path, "rb") as pol_file:
             return_data = pol_file.read()
     return return_data
@@ -144,11 +144,9 @@ def write_reg_pol_data(
         with salt.utils.files.fopen(policy_file_path, "wb") as pol_file:
             reg_pol_header = REG_POL_HEADER.encode("utf-16-le")
             if not data_to_write.startswith(reg_pol_header):
-                log.debug(
-                    "LGPO_REG Util: Writing header to {}".format(policy_file_path)
-                )
+                log.debug("LGPO_REG Util: Writing header to %s", policy_file_path)
                 pol_file.write(reg_pol_header)
-            log.debug("LGPO_REG Util: Writing to {}".format(policy_file_path))
+            log.debug("LGPO_REG Util: Writing to %s", policy_file_path)
             pol_file.write(data_to_write)
     # TODO: This needs to be more specific
     except Exception as e:  # pylint: disable=broad-except
@@ -180,7 +178,7 @@ def write_reg_pol_data(
             r"^{}=.*\r\n".format(re.escape(gpt_extension)),
             gpt_ini_data,
             re.IGNORECASE | re.MULTILINE,
-            )
+        )
         gpt_ext_str = gpt_ini_data[gpt_ext_loc.start() : gpt_ext_loc.end()]
         if not search_reg_pol(
             search_string=r"{}".format(re.escape(gpt_extension_guid)),

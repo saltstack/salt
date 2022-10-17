@@ -49,9 +49,7 @@ def test_get_settings_logging_local():
 
 
 def test_get_settings_logging_lgpo():
-    ret = win_lgpo_netsh.get_settings(
-        profile="domain", section="logging", store="lgpo"
-    )
+    ret = win_lgpo_netsh.get_settings(profile="domain", section="logging", store="lgpo")
     assert "FileName" in ret
     assert "LogAllowedConnections" in ret
     assert "LogDroppedConnections" in ret
@@ -394,7 +392,7 @@ def test_set_firewall_settings_fwrules_lgpo_notconfigured():
         new = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="lgpo"
         )["LocalFirewallRules"]
-        assert new is "NotConfigured"
+        assert new == "NotConfigured"
     finally:
         ret = win_lgpo_netsh.set_settings(
             profile="domain",
