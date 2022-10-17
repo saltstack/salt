@@ -17,9 +17,7 @@ pytestmark = [
 def configure_loader_modules():
     return {
         lgpo_reg: {
-            "__opts__": {
-                "test": False
-            },
+            "__opts__": {"test": False},
             "__salt__": {
                 "lgpo_reg.get_value": win_lgpo_reg.get_value,
                 "lgpo_reg.set_value": win_lgpo_reg.set_value,
@@ -178,7 +176,7 @@ def test_value_present_existing_disabled(reg_pol):
         "changes": {
             "data": {
                 "new": 2,
-                "old": "**del.MyValue2"
+                "old": "**del.MyValue2",
             },
             "type": {
                 "new": "REG_DWORD",
@@ -279,10 +277,7 @@ def test_value_absent(reg_pol):
     """
     Test value.absent
     """
-    result = lgpo_reg.value_absent(
-        name="MyValue1",
-        key="SOFTWARE\\MyKey1"
-    )
+    result = lgpo_reg.value_absent(name="MyValue1", key="SOFTWARE\\MyKey1")
     expected = {
         "changes": {
             "data": {
@@ -305,10 +300,7 @@ def test_value_absent_no_change(empty_reg_pol):
     """
     Test value.absent when the value is already absent
     """
-    result = lgpo_reg.value_absent(
-        name="MyValue1",
-        key="SOFTWARE\\MyKey1"
-    )
+    result = lgpo_reg.value_absent(name="MyValue1", key="SOFTWARE\\MyKey1")
     expected = {
         "changes": {},
         "comment": "Registry.pol value already absent",
@@ -322,10 +314,7 @@ def test_value_absent_disabled(reg_pol):
     """
     Test value.absent when the value is disabled
     """
-    result = lgpo_reg.value_absent(
-        name="MyValue2",
-        key="SOFTWARE\\MyKey1"
-    )
+    result = lgpo_reg.value_absent(name="MyValue2", key="SOFTWARE\\MyKey1")
     expected = {
         "changes": {
             "data": {
@@ -349,10 +338,7 @@ def test_value_absent_test_true(reg_pol):
     Test value.absent with test=True
     """
     with patch.dict(lgpo_reg.__opts__, {"test": True}):
-        result = lgpo_reg.value_absent(
-            name="MyValue1",
-            key="SOFTWARE\\MyKey1",
-        )
+        result = lgpo_reg.value_absent(name="MyValue1", key="SOFTWARE\\MyKey1")
     expected = {
         "changes": {},
         "comment": "Registry.pol value will be deleted",
