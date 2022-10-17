@@ -452,11 +452,11 @@ Ordered Dictionaries
 .. versionchanged:: 3007.0
 
     Dumping any ``collections.OrderedDict`` object to YAML now reliably produces
-    a plain mapping node.  Previously, only the subtype
-    ``salt.utils.odict.OrderedDict`` was supported, and other types produced
-    various constructs that could not be loaded back as any kind of ``dict``.
-    Set the ``yaml_compatibility`` option to 3006 to revert to the previous
-    behavior.
+    an ``!!omap`` node.  Previously, only the subtype
+    ``salt.utils.odict.OrderedDict`` was supported, and it always produced a
+    plain mapping node.  Other types produced various constructs that could not
+    be loaded back as any kind of ``dict``.  Set the ``yaml_compatibility``
+    option to 3006 to revert to the previous behavior.
 
 The YAML specification defines an `ordered mapping type
 <https://yaml.org/type/omap>`_ which is equivalent to a plain mapping except
@@ -484,8 +484,8 @@ node.  (Salt's behavior differs from PyYAML's default behavior, which is to
 produce a ``list`` of (key, value) ``tuple`` objects.)  These objects are a
 subtype of ``dict``, so ``!!omap`` is a drop-in replacement for a plain mapping.
 
-When dumping a ``collections.OrderedDict`` object to YAML, Salt generates a
-plain mapping, not an ``!!omap`` node.
+When dumping a ``collections.OrderedDict`` object to YAML, Salt produces an
+``!!omap`` node.
 
 Beware that Salt currently serializes ``collections.OrderedDict`` objects the
 same way it serializes plain ``dict`` objects, so they become plain ``dict``

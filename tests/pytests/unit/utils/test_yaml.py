@@ -176,8 +176,13 @@ def test_dump_omap(yaml_compatibility, dictcls, dumpercls):
             # available on the system or not (yaml.CSafeDumper and
             # yaml.SafeDumper do not always behave the same).
             want = re.compile(r"NULL\n(?:\.\.\.\n)?")
-    else:
+    elif yaml_compatibility == 3006:
         want = "".join(f"{k}: {v}\n" for k, v in items)
+    else:
+        # Note that there is no extra indentation added for the
+        # IndentedSafeOrderedDumper case because the !!omap node is the
+        # top-level node so there is no indentation for the sequence elements.
+        want = "!!omap\n" + "".join(f"- {k}: {v}\n" for k, v in items)
     got = salt_yaml.dump(d, Dumper=dumpercls, default_flow_style=False)
     try:
         assert want.fullmatch(got)

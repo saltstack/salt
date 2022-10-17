@@ -111,8 +111,12 @@ class _CommonMixin(
     _VersionedRepresentersMixin,
     _InheritedRepresentersMixin,
 ):
-    def _rep_ordereddict(self, data):
+    def _rep_ordereddict_as_plain_map(self, data):
         return self.represent_dict(list(data.items()))
+
+    def _rep_ordereddict(self, data):
+        seq = [{k: v} for k, v in data.items()]
+        return self.represent_sequence("tag:yaml.org,2002:omap", seq)
 
     def _rep_default(self, data):
         """Represent types that don't match any other registered representers.
@@ -132,7 +136,9 @@ class _CommonMixin(
 # TODO: Why does this registration exist?  Isn't it better to raise an exception
 # for unsupported types?
 _CommonMixin.add_representer(None, _CommonMixin._rep_default)
-_CommonMixin.V3006.add_representer(OrderedDict, _CommonMixin._rep_ordereddict)
+_CommonMixin.V3006.add_representer(
+    OrderedDict, _CommonMixin._rep_ordereddict_as_plain_map
+)
 # This multi representer covers collections.OrderedDict and all of its
 # subclasses, including salt.utils.odict.OrderedDict.
 _CommonMixin.V3007.add_multi_representer(
@@ -154,15 +160,26 @@ _CommonMixin.add_representer(
 )
 
 
-class OrderedDumper(_CommonMixin, Dumper):
-    """
-    A YAML dumper that represents python OrderedDict as simple YAML map.
-    """
-
-
 class SafeOrderedDumper(_CommonMixin, SafeDumper):
+    """A safe YAML dumper that uses the YAML ``!!omap`` type for ``OrderedDict``
+
+    ``OrderedDict``s are represented as a a sequence of single-entry mappings
+    and tagged with ``!!omap``:
+
+    .. code-block:: yaml
+
+        !!omap
+        - first key: first value
+        - second key: second value
+
+    See https://yaml.org/type/omap.html for details.
     """
-    A YAML safe dumper that represents python OrderedDict as simple YAML map.
+
+
+class OrderedDumper(_CommonMixin, Dumper):
+    """A YAML dumper that uses the YAML ``!!omap`` type for ``OrderedDict``
+
+    See ``SafeOrderedDumper`` for details.
     """
 
 
