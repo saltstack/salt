@@ -2,6 +2,7 @@ import pytest
 
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
+import salt.utils.win_dacl as win_dacl
 import salt.utils.win_lgpo_auditpol as auditpol
 
 pytestmark = [
@@ -32,6 +33,9 @@ def configure_loader_modules(tmp_path):
         auditpol: {
             "__context__": {},
         },
+        win_file: {
+            "__utils__": win_dacl.set_perms,
+        }
     }
 
 
