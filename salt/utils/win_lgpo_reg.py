@@ -402,11 +402,11 @@ def dict_to_reg_pol(data):
             elif v_type == 4:
                 # REG_DWORD : Little Endian
                 # 32-bit little endian
-                v_data = struct.pack("<i", d["data"])
+                v_data = struct.pack("<i", int(d["data"]))
             elif v_type == 5:
                 # REG_DWORD : Big Endian (not common)
                 # 32-bit big endian
-                v_data = struct.pack(">i", d["data"])
+                v_data = struct.pack(">i", int(d["data"]))
             elif v_type == 7:
                 # REG_MULTI_SZ : Multiple strings
                 # Each element is delimited by \x00, terminated by \x00\x00
@@ -431,7 +431,7 @@ def dict_to_reg_pol(data):
             elif v_type == 11:
                 # REG_QWORD : Little Endian
                 # 64-bit little endian
-                v_data = struct.pack("<q", d["data"])
+                v_data = struct.pack("<q", int(d["data"]))
 
             # Now that we have the data in the right format, let's calculate its size
             # 16-bit little endian with null terminator
