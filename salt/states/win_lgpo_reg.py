@@ -17,11 +17,17 @@ def __virtual__():
     return __virtualname__
 
 
-def value_present(key, v_name, v_data, v_type="REG_DWORD", policy_class="Machine"):
+def value_present(
+    name, key, v_name, v_data, v_type="REG_DWORD", policy_class="Machine"
+):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
 
     Args:
+
+        name (str): The name of the state itself. It is required by the state
+            system and has no functional value. You must specify a key and
+            v_name.
 
         key (str): The registry key path
 
@@ -84,11 +90,15 @@ def value_present(key, v_name, v_data, v_type="REG_DWORD", policy_class="Machine
     return ret
 
 
-def value_disabled(key, v_name, policy_class="Machine"):
+def value_disabled(name, key, v_name, policy_class="Machine"):
     r"""
     Ensure a registry setting is disabled in the Registry.pol file.
 
     Args:
+
+        name (str): The name of the state itself. It is required by the state
+            system and has no functional value. You must specify a key and
+            v_name.
 
         key (str): The registry key path
 
@@ -134,11 +144,15 @@ def value_disabled(key, v_name, policy_class="Machine"):
     return ret
 
 
-def value_absent(key, v_name, policy_class="Machine"):
+def value_absent(name, key, v_name, policy_class="Machine"):
     r"""
     Ensure a registry setting is not present in the Registry.pol file.
 
     Args:
+
+        name (str): The name of the state itself. It is required by the state
+            system and has no functional value. You must specify a key and
+            v_name.
 
         key (str): The registry key path
 
@@ -167,9 +181,7 @@ def value_absent(key, v_name, policy_class="Machine"):
         ret["result"] = None
         return ret
 
-    __salt__["lgpo_reg.delete_value"](
-        key=key, v_name=v_name, policy_class=policy_class
-    )
+    __salt__["lgpo_reg.delete_value"](key=key, v_name=v_name, policy_class=policy_class)
 
     new = __salt__["lgpo_reg.get_value"](
         key=key, v_name=v_name, policy_class=policy_class

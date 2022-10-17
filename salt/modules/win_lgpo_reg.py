@@ -448,7 +448,7 @@ def disable_value(key, v_name, policy_class="machine"):
         else:
             pol_data[found_key]["**del.{}".format(v_name)] = {
                 "data": " ",
-                "type": "REG_SZ"
+                "type": "REG_SZ",
             }
     else:
         pol_data[key] = {"**del.{}".format(v_name): {"data": " ", "type": "REG_SZ"}}
