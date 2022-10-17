@@ -21,6 +21,17 @@ def test_safe_dump():
     assert salt_yaml.safe_dump(data, default_flow_style=False) == "foo: bar\n"
 
 
+def test_dump_indented():
+    data = {"foo": ["bar"]}
+    got = salt_yaml.dump(
+        data,
+        Dumper=salt_yaml.IndentedSafeOrderedDumper,
+        default_flow_style=False,
+    )
+    want = "foo:\n  - bar\n"
+    assert got == want
+
+
 def render_yaml(data):
     """
     Takes a YAML string, puts it into a mock file, passes that to the YAML

@@ -43,7 +43,10 @@ class SafeOrderedDumper(SafeDumper):
     """
 
 
-class IndentedSafeOrderedDumper(SafeOrderedDumper):
+# This must inherit from yaml.SafeDumper, not yaml.CSafeDumper, because the
+# increase_indent hack doesn't work with yaml.CSafeDumper.
+# https://github.com/yaml/pyyaml/issues/234#issuecomment-786026671
+class IndentedSafeOrderedDumper(yaml.SafeDumper):
     """Like ``SafeOrderedDumper``, except it indents lists for readability."""
 
     def increase_indent(self, flow=False, indentless=False):
@@ -58,16 +61,14 @@ def represent_undefined(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:null", "NULL")
 
 
-# OrderedDumper does not inherit from SafeOrderedDumper, so any applicable
-# representers added to SafeOrderedDumper must also be explicitly added to
-# OrderedDumper.
-
-# TODO: Why does this representer exist?  It doesn't seem to do anything
-# different compared to PyYAML's yaml.SafeDumper.
-# TODO: Why isn't this representer also registered with OrderedDumper?
-SafeOrderedDumper.add_representer(None, represent_undefined)
-
-for D in (SafeOrderedDumper, OrderedDumper):
+# The above Dumper classes do not inherit from each other, so any applicable
+# representers must be added to each.
+for D in (SafeOrderedDumper, IndentedSafeOrderedDumper):
+    # TODO: Why does this representer exist?  It doesn't seem to do anything
+    # different compared to PyYAML's yaml.SafeDumper.
+    # TODO: Why isn't this representer also registered with OrderedDumper?
+    D.add_representer(None, represent_undefined)
+for D in (SafeOrderedDumper, IndentedSafeOrderedDumper, OrderedDumper):
     D.add_representer(OrderedDict, represent_ordereddict)
     D.add_representer(
         collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
