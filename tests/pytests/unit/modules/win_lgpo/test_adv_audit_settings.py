@@ -24,6 +24,7 @@ def configure_loader_modules(tmp_path):
                 "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
                 "file.remove": win_file.remove,
+                "file.write": win_file.write,
             },
             "__utils__": {
                 "auditpol.get_auditpol_dump": auditpol.get_auditpol_dump,

@@ -17,9 +17,7 @@ def __virtual__():
     return __virtualname__
 
 
-def value_present(
-    name, key, v_data, v_type="REG_DWORD", policy_class="Machine"
-):
+def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
 
@@ -120,9 +118,7 @@ def value_disabled(name, key, policy_class="Machine"):
         ret["result"] = None
         return ret
 
-    __salt__["lgpo_reg.disable_value"](
-        key=key, v_name=name, policy_class=policy_class
-    )
+    __salt__["lgpo_reg.disable_value"](key=key, v_name=name, policy_class=policy_class)
 
     new = __salt__["lgpo_reg.get_value"](
         key=key, v_name=name, policy_class=policy_class
