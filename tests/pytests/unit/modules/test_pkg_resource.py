@@ -7,7 +7,7 @@ import salt.modules.pkg_resource as pkg_resource
 import salt.utils.data
 import salt.utils.yaml
 import yaml
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 
@@ -231,7 +231,7 @@ def test_repack_pkgs():
     """
     assert pkg_resource._repack_pkgs([{"A": "a"}])
     assert pkg_resource._repack_pkgs([{"A": "a"}, {"B": "b"}])
-    with pytest.raises(CommandExecutionError):
+    with pytest.raises(SaltInvocationError):
         assert pkg_resource._repack_pkgs([{"A": "a"}, {"A": "c"}])
 
 

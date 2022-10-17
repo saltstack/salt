@@ -12,7 +12,7 @@ import pprint
 import salt.utils.data
 import salt.utils.versions
 import salt.utils.yaml
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ("x86_64", "noarch")
@@ -35,7 +35,7 @@ def _repack_pkgs(pkgs, normalize=True):
 
     # Check if there were collisions in names
     if len(pkgs) != len(repacked_pkgs):
-        raise CommandExecutionError(
+        raise SaltInvocationError(
             "You are passing a list of packages that contains duplicated packages names: {}. This cannot be processed. In case you are targeting different versions of the same package, please target them individually".format(
                 pkgs
             )
