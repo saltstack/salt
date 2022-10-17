@@ -41,7 +41,9 @@ CLASS_INFO = {
     },
 }
 REG_POL_HEADER = "\u5250\u6765\x01\x00"
-GPT_INI_PATH = os.path.join(os.getenv("WINDIR", "C:\\Windows"), "System32", "GroupPolicy", "gpt.ini")
+GPT_INI_PATH = os.path.join(
+    os.getenv("WINDIR", "C:\\Windows"), "System32", "GroupPolicy", "gpt.ini"
+)
 
 log = logging.getLogger(__name__)
 
