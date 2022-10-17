@@ -184,8 +184,7 @@ def get_value(key, v_name, policy_class="Machine"):
         SaltInvocationError: Invalid policy class
 
     Returns:
-        dict: A dictionary containing the value data and the value type
-        None: If key/value not found
+        dict: A dictionary containing the value data and the value type found
 
     CLI Example:
 
@@ -218,7 +217,7 @@ def get_value(key, v_name, policy_class="Machine"):
                 pol_data[found_key][found_name]["data"] = found_name
             return pol_data[found_key][found_name]
 
-    return None
+    return {}
 
 
 def get_key(key, policy_class="Machine"):
@@ -237,7 +236,6 @@ def get_key(key, policy_class="Machine"):
 
     Returns:
         dict: A dictionary containing the value data and the value type
-        None: If key not found
 
     CLI Example:
 
@@ -262,7 +260,7 @@ def get_key(key, policy_class="Machine"):
     if found_key:
         return pol_data[found_key]
 
-    return None
+    return {}
 
 
 def set_value(

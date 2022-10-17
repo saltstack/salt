@@ -18,20 +18,16 @@ def __virtual__():
 
 
 def value_present(
-    name, key, v_name, v_data, v_type="REG_DWORD", policy_class="Machine"
+    name, key, v_data, v_type="REG_DWORD", policy_class="Machine"
 ):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
 
     Args:
 
-        name (str): The name of the state itself. It is required by the state
-            system and has no functional value. You must specify a key and
-            v_name.
+        name (str): The registry value name within the key
 
         key (str): The registry key path
-
-        v_name (str): The registry value name within the key
 
         v_data(str): The registry value
 
@@ -58,27 +54,27 @@ def value_present(
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     old = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
-    if old["data"] == v_data and old["type"] == v_type:
+    if old.get("data", "") == v_data and old.get("type", "") == v_type:
         ret["comment"] = "Registry.pol value already present"
         return ret
 
     if __opts__["test"]:
-        ret["changes"] = "Registry.pol value will be set"
+        ret["comment"] = "Registry.pol value will be set"
         ret["result"] = None
         return ret
 
     __salt__["lgpo_reg.set_value"](
         key=key,
-        v_name=v_name,
+        v_name=name,
         v_data=v_data,
         v_type=v_type,
         policy_class=policy_class,
     )
 
     new = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
 
     changes = salt.utils.data.compare_dicts(old, new)
@@ -86,23 +82,20 @@ def value_present(
     if changes:
         ret["comment"] = "Registry.pol value has been set"
         ret["changes"] = changes
+        ret["result"] = True
 
     return ret
 
 
-def value_disabled(name, key, v_name, policy_class="Machine"):
+def value_disabled(name, key, policy_class="Machine"):
     r"""
     Ensure a registry setting is disabled in the Registry.pol file.
 
     Args:
 
-        name (str): The name of the state itself. It is required by the state
-            system and has no functional value. You must specify a key and
-            v_name.
-
         key (str): The registry key path
 
-        v_name (str): The registry value name within the key
+        name (str): The registry value name within the key
 
         policy_class (str): The registry class to write to. Can be one of the
             following:
@@ -116,23 +109,23 @@ def value_disabled(name, key, v_name, policy_class="Machine"):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     old = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
-    if old["data"] == "**del.{}".format(v_name):
+    if old.get("data", "") == "**del.{}".format(name):
         ret["comment"] = "Registry.pol value already disabled"
         return ret
 
     if __opts__["test"]:
-        ret["changes"] = "Registry.pol value will be disabled"
+        ret["comment"] = "Registry.pol value will be disabled"
         ret["result"] = None
         return ret
 
     __salt__["lgpo_reg.disable_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
 
     new = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
 
     changes = salt.utils.data.compare_dicts(old, new)
@@ -140,23 +133,20 @@ def value_disabled(name, key, v_name, policy_class="Machine"):
     if changes:
         ret["comment"] = "Registry.pol value enabled"
         ret["changes"] = changes
+        ret["result"] = True
 
     return ret
 
 
-def value_absent(name, key, v_name, policy_class="Machine"):
+def value_absent(name, key, policy_class="Machine"):
     r"""
     Ensure a registry setting is not present in the Registry.pol file.
 
     Args:
 
-        name (str): The name of the state itself. It is required by the state
-            system and has no functional value. You must specify a key and
-            v_name.
-
         key (str): The registry key path
 
-        v_name (str): The registry value name within the key
+        name (str): The registry value name within the key
 
         policy_class (str): The registry class to write to. Can be one of the
             following:
@@ -170,21 +160,21 @@ def value_absent(name, key, v_name, policy_class="Machine"):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     old = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
-    if old is None:
+    if not old:
         ret["comment"] = "Registry.pol value already absent"
         return ret
 
     if __opts__["test"]:
-        ret["changes"] = "Registry.pol value will be deleted"
+        ret["comment"] = "Registry.pol value will be deleted"
         ret["result"] = None
         return ret
 
-    __salt__["lgpo_reg.delete_value"](key=key, v_name=v_name, policy_class=policy_class)
+    __salt__["lgpo_reg.delete_value"](key=key, v_name=name, policy_class=policy_class)
 
     new = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=v_name, policy_class=policy_class
+        key=key, v_name=name, policy_class=policy_class
     )
 
     if new is None:
@@ -195,5 +185,6 @@ def value_absent(name, key, v_name, policy_class="Machine"):
     if changes:
         ret["comment"] = "Registry.pol value deleted"
         ret["changes"] = changes
+        ret["result"] = True
 
     return ret

@@ -1,336 +1,362 @@
-"""
-:codeauthor: Shane Lee <slee@saltstack.com>
-"""
-import copy
-
 import pytest
 
-import salt.config
-import salt.loader
-import salt.states.win_lgpo as win_lgpo
-import salt.utils.platform
-import salt.utils.stringutils
+import salt.modules.win_lgpo_reg as win_lgpo_reg
+import salt.states.win_lgpo_reg as lgpo_reg
+import salt.utils.files
+import salt.utils.win_lgpo_reg
 from tests.support.mock import patch
+
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+    pytest.mark.destructive_test,
+]
 
 
 @pytest.fixture
 def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts)
-    modules = salt.loader.minion_mods(opts, utils=utils)
     return {
-        win_lgpo: {
-            "__opts__": copy.deepcopy(opts),
-            "__salt__": modules,
-            "__utils__": utils,
-        }
+        lgpo_reg: {
+            "__opts__": {
+                "test": False
+            },
+            "__salt__": {
+                "lgpo_reg.get_value": win_lgpo_reg.get_value,
+                "lgpo_reg.set_value": win_lgpo_reg.set_value,
+                "lgpo_reg.disable_value": win_lgpo_reg.disable_value,
+                "lgpo_reg.delete_value": win_lgpo_reg.delete_value,
+            },
+        },
     }
 
 
 @pytest.fixture(scope="function")
-def policy_clear():
-    # Make sure policy is not set to begin with, unsets it after test
-    try:
-        computer_policy = {"Point and Print Restrictions": "Not Configured"}
-        with patch.dict(win_lgpo.__opts__, {"test": False}):
-            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-        yield
-    finally:
-        computer_policy = {"Point and Print Restrictions": "Not Configured"}
-        with patch.dict(win_lgpo.__opts__, {"test": False}):
-            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+def empty_reg_pol():
+    class_info = salt.utils.win_lgpo_reg.CLASS_INFO
+    reg_pol_file = class_info["Machine"]["policy_path"]
+    with salt.utils.files.fopen(reg_pol_file, "wb") as f:
+        f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
+    yield
+    with salt.utils.files.fopen(reg_pol_file, "wb") as f:
+        f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
 @pytest.fixture(scope="function")
-def policy_set():
-    # Make sure policy is set to begin with, unsets it after test
-    try:
-        computer_policy = {
-            "Point and Print Restrictions": {
-                "Users can only point and print to these servers": True,
-                "Enter fully qualified server names separated by semicolons": (
-                    "fakeserver1;fakeserver2"
-                ),
-                "Users can only point and print to machines in their forest": True,
-                "When installing drivers for a new connection": (
-                    "Show warning and elevation prompt"
-                ),
-                "When updating drivers for an existing connection": "Show warning only",
-            }
-        }
-        with patch.dict(win_lgpo.__opts__, {"test": False}):
-            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-        yield
-    finally:
-        computer_policy = {"Point and Print Restrictions": "Not Configured"}
-        with patch.dict(win_lgpo.__opts__, {"test": False}):
-            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-
-
-def test__compare_policies_string():
-    """
-    ``_compare_policies`` should only return ``True`` when the string values
-    are the same. All other scenarios should return ``False``
-    """
-    compare_string = "Salty test"
-    # Same
-    assert win_lgpo._compare_policies(compare_string, compare_string)
-    # Different
-    assert not win_lgpo._compare_policies(compare_string, "Not the same")
-    # List
-    assert not win_lgpo._compare_policies(compare_string, ["item1", "item2"])
-    # Dict
-    assert not win_lgpo._compare_policies(compare_string, {"key": "value"})
-    # None
-    assert not win_lgpo._compare_policies(compare_string, None)
-
-
-def test__compare_policies_list():
-    """
-    ``_compare_policies`` should only return ``True`` when the lists are the
-    same. All other scenarios should return ``False``
-    """
-    compare_list = ["Salty", "test"]
-    # Same
-    assert win_lgpo._compare_policies(compare_list, compare_list)
-    # Different
-    assert not win_lgpo._compare_policies(compare_list, ["Not", "the", "same"])
-    # String
-    assert not win_lgpo._compare_policies(compare_list, "Not a list")
-    # Dict
-    assert not win_lgpo._compare_policies(compare_list, {"key": "value"})
-    # None
-    assert not win_lgpo._compare_policies(compare_list, None)
-
-
-def test__compare_policies_dict():
-    """
-    ``_compare_policies`` should only return ``True`` when the dicts are the
-    same. All other scenarios should return ``False``
-    """
-    compare_dict = {"Salty": "test"}
-    # Same
-    assert win_lgpo._compare_policies(compare_dict, compare_dict)
-    # Different
-    assert not win_lgpo._compare_policies(compare_dict, {"key": "value"})
-    # String
-    assert not win_lgpo._compare_policies(compare_dict, "Not a dict")
-    # List
-    assert not win_lgpo._compare_policies(compare_dict, ["Not", "a", "dict"])
-    # None
-    assert not win_lgpo._compare_policies(compare_dict, None)
-
-
-def test__compare_policies_integer():
-    """
-    ``_compare_policies`` should only return ``True`` when the integer
-    values are the same. All other scenarios should return ``False``
-    """
-    compare_integer = 1
-    # Same
-    assert win_lgpo._compare_policies(compare_integer, compare_integer)
-    # Different
-    assert not win_lgpo._compare_policies(compare_integer, 0)
-    # List
-    assert not win_lgpo._compare_policies(compare_integer, ["item1", "item2"])
-    # Dict
-    assert not win_lgpo._compare_policies(compare_integer, {"key": "value"})
-    # None
-    assert not win_lgpo._compare_policies(compare_integer, None)
-
-
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.destructive_test
-@pytest.mark.slow_test
-def test_current_element_naming_style(policy_clear):
-    """
-    Ensure that current naming style works properly.
-    """
-    computer_policy = {
-        "Point and Print Restrictions": {
-            "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by semicolons": (
-                "fakeserver1;fakeserver2"
-            ),
-            "Users can only point and print to machines in their forest": True,
-            "When installing drivers for a new connection": (
-                "Show warning and elevation prompt"
-            ),
-            "When updating drivers for an existing connection": "Show warning only",
-        }
+def reg_pol():
+    data_to_write = {
+        r"SOFTWARE\MyKey1": {
+            "MyValue1": {
+                "data": "squidward",
+                "type": "REG_SZ",
+            },
+            "**del.MyValue2": {
+                "data": " ",
+                "type": "REG_SZ",
+            },
+        },
+        r"SOFTWARE\MyKey2": {
+            "MyValue3": {
+                "data": ["spongebob", "squarepants"],
+                "type": "REG_MULTI_SZ",
+            },
+        },
     }
-    with patch.dict(win_lgpo.__opts__, {"test": False}):
-        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-        result = win_lgpo._convert_to_unicode(result)
-    expected = {
-        "Point and Print Restrictions": {
-            "Enter fully qualified server names separated by semicolons": (
-                "fakeserver1;fakeserver2"
-            ),
-            "When installing drivers for a new connection": (
-                "Show warning and elevation prompt"
-            ),
-            "Users can only point and print to machines in their forest": True,
-            "Users can only point and print to these servers": True,
-            "When updating drivers for an existing connection": "Show warning only",
-        }
-    }
-    assert result["changes"]["new"]["Computer Configuration"] == expected
+    win_lgpo_reg.write_reg_pol(data_to_write)
+    yield
+    class_info = salt.utils.win_lgpo_reg.CLASS_INFO
+    reg_pol_file = class_info["Machine"]["policy_path"]
+    with salt.utils.files.fopen(reg_pol_file, "wb") as f:
+        f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.destructive_test
-@pytest.mark.slow_test
-def test_old_element_naming_style(policy_clear):
+def test_value_present(empty_reg_pol):
     """
-    Ensure that the old naming style is converted to new and a warning is
-    returned
+    Test value.present
     """
-    computer_policy = {
-        "Point and Print Restrictions": {
-            "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by semicolons": (
-                "fakeserver1;fakeserver2"
-            ),
-            "Users can only point and print to machines in their forest": True,
-            # Here's the old one
-            "Security Prompts: When installing drivers for a new connection": (
-                "Show warning and elevation prompt"
-            ),
-            "When updating drivers for an existing connection": "Show warning only",
-        }
-    }
-
-    with patch.dict(win_lgpo.__opts__, {"test": False}):
-        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-    assert result["changes"] == {}
-    expected = (
-        "The LGPO module changed the way it gets policy element names.\n"
-        '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
-        'Please use "When installing drivers for a new connection" instead.'
+    result = lgpo_reg.value_present(
+        name="MyValue",
+        key="SOFTWARE\\MyKey",
+        v_data="1",
+        v_type="REG_DWORD",
     )
-    assert result["comment"] == expected
-
-
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.destructive_test
-@pytest.mark.slow_test
-def test_invalid_elements():
-    computer_policy = {
-        "Point and Print Restrictions": {
-            "Invalid element spongebob": True,
-            "Invalid element squidward": False,
-        }
+    expected = {
+        "changes": {
+            "data": {
+                "new": 1,
+                "old": "",
+            },
+            "type": {
+                "new": "REG_DWORD",
+                "old": "",
+            },
+        },
+        "comment": "Registry.pol value has been set",
+        "name": "MyValue",
+        "result": True,
     }
+    assert result == expected
 
-    with patch.dict(win_lgpo.__opts__, {"test": False}):
-        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+
+def test_value_present_existing_change(reg_pol):
+    """
+    Test value.present with existing incorrect value
+    """
+    result = lgpo_reg.value_present(
+        name="MyValue1",
+        key="SOFTWARE\\MyKey1",
+        v_data="2",
+        v_type="REG_DWORD",
+    )
+    expected = {
+        "changes": {
+            "data": {
+                "new": 2,
+                "old": "squidward",
+            },
+            "type": {
+                "new": "REG_DWORD",
+                "old": "REG_SZ",
+            },
+        },
+        "comment": "Registry.pol value has been set",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_value_present_existing_no_change(reg_pol):
+    """
+    Test value.present with existing correct value
+    """
+    result = lgpo_reg.value_present(
+        name="MyValue1",
+        key="SOFTWARE\\MyKey1",
+        v_data="squidward",
+        v_type="REG_SZ",
+    )
     expected = {
         "changes": {},
-        "comment": (
-            "Invalid element name: Invalid element squidward\n"
-            "Invalid element name: Invalid element spongebob"
-        ),
-        "name": "test_state",
+        "comment": "Registry.pol value already present",
+        "name": "MyValue1",
         "result": False,
     }
-    assert result["changes"] == expected["changes"]
-    assert "Invalid element squidward" in result["comment"]
-    assert "Invalid element spongebob" in result["comment"]
-    assert not expected["result"]
+    assert result == expected
 
 
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.destructive_test
-@pytest.mark.slow_test
-def test_current_element_naming_style_true(policy_set):
+def test_value_present_test_true(empty_reg_pol):
     """
-    Test current naming style with test=True
+    Test value.present with test=True
     """
-    computer_policy = {
-        "Point and Print Restrictions": {
-            "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by semicolons": (
-                "fakeserver1;fakeserver2"
-            ),
-            "Users can only point and print to machines in their forest": True,
-            "When installing drivers for a new connection": (
-                "Show warning and elevation prompt"
-            ),
-            "When updating drivers for an existing connection": "Show warning only",
-        }
-    }
-    with patch.dict(win_lgpo.__opts__, {"test": True}):
-        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_present(
+            name="MyValue",
+            key="SOFTWARE\\MyKey",
+            v_data="1",
+            v_type="REG_DWORD",
+        )
     expected = {
         "changes": {},
-        "comment": "All specified policies are properly configured",
+        "comment": "Registry.pol value will be set",
+        "name": "MyValue",
+        "result": None,
     }
-    assert result["changes"] == expected["changes"]
-    assert result["result"]
-    assert result["comment"] == expected["comment"]
+    assert result == expected
 
 
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.destructive_test
-@pytest.mark.slow_test
-def test_old_element_naming_style_true(policy_set):
+def test_value_present_existing_disabled(reg_pol):
     """
-    Test old naming style with test=True. Should not make changes but return a
-    warning
+    Test value.present with existing value that is disabled
     """
-    computer_policy = {
-        "Point and Print Restrictions": {
-            "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by semicolons": (
-                "fakeserver1;fakeserver2"
-            ),
-            "Users can only point and print to machines in their forest": True,
-            # Here's the old one
-            "Security Prompts: When installing drivers for a new connection": (
-                "Show warning and elevation prompt"
-            ),
-            "When updating drivers for an existing connection": "Show warning only",
-        }
+    result = lgpo_reg.value_present(
+        name="MyValue2",
+        key="SOFTWARE\\MyKey1",
+        v_data="2",
+        v_type="REG_DWORD",
+    )
+    expected = {
+        "changes": {
+            "data": {
+                "new": 2,
+                "old": "**del.MyValue2"
+            },
+            "type": {
+                "new": "REG_DWORD",
+                "old": "REG_SZ",
+            },
+        },
+        "comment": "Registry.pol value has been set",
+        "name": "MyValue2",
+        "result": True,
     }
-    with patch.dict(win_lgpo.__opts__, {"test": True}):
-        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+    assert result == expected
+
+
+def test_value_disabled(empty_reg_pol):
+    """
+    Test value.disabled
+    """
+    result = lgpo_reg.value_disabled(
+        name="MyValue1",
+        key="SOFTWARE\\MyKey1",
+    )
+    expected = {
+        "changes": {
+            "data": {
+                "new": "**del.MyValue1",
+                "old": "",
+            },
+            "type": {
+                "new": "REG_SZ",
+                "old": "",
+            },
+        },
+        "comment": "Registry.pol value enabled",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_value_disabled_existing_change(reg_pol):
+    """
+    Test value.disabled with an existing value that is not disabled
+    """
+    result = lgpo_reg.value_disabled(
+        name="MyValue1",
+        key="SOFTWARE\\MyKey1",
+    )
+    expected = {
+        "changes": {
+            "data": {
+                "new": "**del.MyValue1",
+                "old": "squidward",
+            },
+        },
+        "comment": "Registry.pol value enabled",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_value_disabled_existing_no_change(reg_pol):
+    """
+    Test value.disabled with an existing disabled value
+    """
+    result = lgpo_reg.value_disabled(
+        name="MyValue2",
+        key="SOFTWARE\\MyKey1",
+    )
     expected = {
         "changes": {},
-        "comment": (
-            "The LGPO module changed the way it gets policy element names.\n"
-            '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
-            'Please use "When installing drivers for a new connection" instead.'
-        ),
-    }
-    assert result["changes"] == expected["changes"]
-    assert not result["result"]
-    assert result["comment"] == expected["comment"]
-
-
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.destructive_test
-@pytest.mark.slow_test
-def test_invalid_elements_true():
-    computer_policy = {
-        "Point and Print Restrictions": {
-            "Invalid element spongebob": True,
-            "Invalid element squidward": False,
-        }
-    }
-
-    with patch.dict(win_lgpo.__opts__, {"test": True}):
-        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-    expected = {
-        "changes": {},
-        "comment": (
-            "Invalid element name: Invalid element squidward\n"
-            "Invalid element name: Invalid element spongebob"
-        ),
-        "name": "test_state",
+        "comment": "Registry.pol value already disabled",
+        "name": "MyValue2",
         "result": False,
     }
-    assert result["changes"] == expected["changes"]
-    assert "Invalid element squidward" in result["comment"]
-    assert "Invalid element spongebob" in result["comment"]
-    assert not expected["result"]
+    assert result == expected
+
+
+def test_value_disabled_test_true(empty_reg_pol):
+    """
+    Test value.disabled when test=True
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_disabled(
+            name="MyValue",
+            key="SOFTWARE\\MyKey",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Registry.pol value will be disabled",
+        "name": "MyValue",
+        "result": None,
+    }
+    assert result == expected
+
+
+def test_value_absent(reg_pol):
+    """
+    Test value.absent
+    """
+    result = lgpo_reg.value_absent(
+        name="MyValue1",
+        key="SOFTWARE\\MyKey1"
+    )
+    expected = {
+        "changes": {
+            "data": {
+                "new": "",
+                "old": "squidward",
+            },
+            "type": {
+                "new": "",
+                "old": "REG_SZ",
+            },
+        },
+        "comment": "Registry.pol value deleted",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_value_absent_no_change(empty_reg_pol):
+    """
+    Test value.absent when the value is already absent
+    """
+    result = lgpo_reg.value_absent(
+        name="MyValue1",
+        key="SOFTWARE\\MyKey1"
+    )
+    expected = {
+        "changes": {},
+        "comment": "Registry.pol value already absent",
+        "name": "MyValue1",
+        "result": False,
+    }
+    assert result == expected
+
+
+def test_value_absent_disabled(reg_pol):
+    """
+    Test value.absent when the value is disabled
+    """
+    result = lgpo_reg.value_absent(
+        name="MyValue2",
+        key="SOFTWARE\\MyKey1"
+    )
+    expected = {
+        "changes": {
+            "data": {
+                "new": "",
+                "old": "**del.MyValue2",
+            },
+            "type": {
+                "new": "",
+                "old": "REG_SZ",
+            },
+        },
+        "comment": "Registry.pol value deleted",
+        "name": "MyValue2",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_value_absent_test_true(reg_pol):
+    """
+    Test value.absent with test=True
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_absent(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Registry.pol value will be deleted",
+        "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected

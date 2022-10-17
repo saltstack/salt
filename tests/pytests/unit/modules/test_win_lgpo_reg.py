@@ -31,9 +31,9 @@ def reg_pol():
                 "data": "squidward",
                 "type": "REG_SZ",
             },
-            "MyValue2": {
-                "data": 1,
-                "type": "REG_DWORD",
+            "**del.MyValue2": {
+                "data": " ",
+                "type": "REG_SZ",
             },
         },
         r"SOFTWARE\MyKey2": {
@@ -116,7 +116,25 @@ def test_set_value(empty_reg_pol):
     expected = {"data": 1, "type": "REG_DWORD"}
     key = "SOFTWARE\\MyKey"
     v_name = "MyValue"
-    lgpo_reg.set_value(key=key, v_name=v_name, v_data=1)
+    lgpo_reg.set_value(key=key, v_name=v_name, v_data="1")
+    result = lgpo_reg.get_value(key=key, v_name=v_name)
+    assert result == expected
+
+
+def test_set_value_existing_change(reg_pol):
+    expected = {"data": 1, "type": "REG_DWORD"}
+    key = "SOFTWARE\\MyKey"
+    v_name = "MyValue1"
+    lgpo_reg.set_value(key=key, v_name=v_name, v_data="1")
+    result = lgpo_reg.get_value(key=key, v_name=v_name)
+    assert result == expected
+
+
+def test_set_value_existing_no_change(reg_pol):
+    expected = {"data": "squidward", "type": "REG_SZ"}
+    key = "SOFTWARE\\MyKey"
+    v_name = "MyValue1"
+    lgpo_reg.set_value(key=key, v_name=v_name, v_data="squidward", v_type="REG_SZ")
     result = lgpo_reg.get_value(key=key, v_name=v_name)
     assert result == expected
 
@@ -174,10 +192,21 @@ def test_set_value_invalid_reg_dword():
 def test_disable_value(reg_pol):
     expected = {
         "**del.MyValue1": {"data": " ", "type": "REG_SZ"},
-        "MyValue2": {"data": 1, "type": "REG_DWORD"},
+        "**del.MyValue2": {"data": " ", "type": "REG_SZ"},
     }
     key = "SOFTWARE\\MyKey1"
     lgpo_reg.disable_value(key=key, v_name="MyValue1")
+    result = lgpo_reg.get_key(key=key)
+    assert result == expected
+
+
+def test_disable_value_no_change(reg_pol):
+    expected = {
+        "MyValue1": {"data": "squidward", "type": "REG_SZ"},
+        "**del.MyValue2": {"data": " ", "type": "REG_SZ"},
+    }
+    key = "SOFTWARE\\MyKey1"
+    lgpo_reg.disable_value(key=key, v_name="MyValue2")
     result = lgpo_reg.get_key(key=key)
     assert result == expected
 
@@ -192,15 +221,23 @@ def test_disable_value_invalid_policy_class():
     )
 
 
-def test_delete_value(reg_pol):
+def test_delete_value_existing(reg_pol):
     expected = {
-        "MyValue2": {
-            "data": 1,
-            "type": "REG_DWORD",
+        "**del.MyValue2": {
+            "data": " ",
+            "type": "REG_SZ",
         },
     }
     key = "SOFTWARE\\MyKey1"
     lgpo_reg.delete_value(key=key, v_name="MyValue1")
+    result = lgpo_reg.get_key(key=key)
+    assert result == expected
+
+
+def test_delete_value_no_change(empty_reg_pol):
+    expected = {}
+    key = "SOFTWARE\\MyKey1"
+    lgpo_reg.delete_value(key=key, v_name="MyValue2")
     result = lgpo_reg.get_key(key=key)
     assert result == expected
 
