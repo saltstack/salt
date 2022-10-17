@@ -10,6 +10,7 @@ from yaml.constructor import ConstructorError
 
 import salt.utils.files
 import salt.utils.yaml as salt_yaml
+from salt.utils.odict import OrderedDict
 from tests.support.mock import mock_open, patch
 
 
@@ -33,6 +34,29 @@ def test_dump_indented():
         default_flow_style=False,
     )
     want = "foo:\n  - bar\n"
+    assert got == want
+
+
+@pytest.mark.parametrize("dictcls", [OrderedDict, collections.OrderedDict])
+@pytest.mark.parametrize(
+    "dumpercls",
+    [
+        salt_yaml.OrderedDumper,
+        salt_yaml.SafeOrderedDumper,
+        salt_yaml.IndentedSafeOrderedDumper,
+    ],
+)
+def test_dump_omap(dictcls, dumpercls):
+    # The random keys are filtered through a set to avoid duplicates.
+    keys = list({f"random key {random.getrandbits(32)}" for _ in range(20)})
+    # Avoid unintended correlation with set()'s iteration order.
+    random.shuffle(keys)
+    d = dictcls((k, i) for i, k in enumerate(keys))
+    # Note that there is no extra indentation added for the
+    # IndentedSafeOrderedDumper case because the omap node is the top-level node
+    # so there is no indentation for the sequence elements.
+    want = "".join(f"{k}: {i}\n" for i, k in enumerate(keys))
+    got = salt_yaml.dump(d, Dumper=dumpercls, default_flow_style=False)
     assert got == want
 
 

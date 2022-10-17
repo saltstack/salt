@@ -12,7 +12,6 @@ import collections
 import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.context
-from salt.utils.odict import OrderedDict
 
 try:
     from yaml import CDumper as Dumper
@@ -79,7 +78,14 @@ for D in (SafeOrderedDumper, IndentedSafeOrderedDumper):
     # TODO: Why isn't this representer also registered with OrderedDumper?
     D.add_representer(None, represent_undefined)
 for D in (SafeOrderedDumper, IndentedSafeOrderedDumper, OrderedDumper):
-    D.add_representer(OrderedDict, represent_ordereddict)
+    # This multi representer covers collections.OrderedDict and all of its
+    # subclasses, including salt.utils.odict.OrderedDict.
+    D.add_multi_representer(collections.OrderedDict, represent_ordereddict)
+    # This non-multi representer may seem redundant given the multi representer
+    # registered above, but it is needed to override the non-multi representer
+    # that exists in the ancestor Representer class.  (Non-multi representers
+    # take priority over multi representers.)
+    D.add_representer(collections.OrderedDict, represent_ordereddict)
     D.add_representer(
         collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
     )
