@@ -4,6 +4,7 @@
 import copy
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.win_lgpo as win_lgpo

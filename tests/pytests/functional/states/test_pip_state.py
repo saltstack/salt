@@ -6,6 +6,7 @@ import shutil
 import sys
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
