@@ -34,8 +34,10 @@ def configure_loader_modules(tmp_path):
             "__context__": {},
         },
         win_file: {
-            "__utils__": win_dacl.set_perms,
-        }
+            "__utils__": {
+                "dacl.set_perms": win_dacl.set_perms,
+            },
+        },
     }
 
 
