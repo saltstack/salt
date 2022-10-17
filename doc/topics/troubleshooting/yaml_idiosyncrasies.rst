@@ -472,6 +472,31 @@ Beware that Salt currently serializes ``collections.OrderedDict`` objects the
 same way it serializes plain ``dict`` objects, so they become plain ``dict``
 objects when deserialized by the recipient.
 
+Tuples
+======
+
+.. versionchanged:: 3006.0
+
+    Loading a YAML ``!!python/tuple`` node is now supported.
+
+The YAML ``!!python/tuple`` type can be used to produce a Python ``tuple``
+object when loaded:
+
+.. code-block:: yaml
+
+    !!python/tuple
+    - first item
+    - second item
+
+When dumped to YAML with ``salt.utils.yaml.dump()``, a ``tuple`` object produces
+a ``!!python/tuple`` node.  When dumped to YAML with
+``salt.utils.yaml.safe_dump()``, a ``tuple`` object produces a plain sequence
+node (which will be loaded as a ``list`` object).
+
+Beware that Salt currently serializes ``tuple`` objects the same way it
+serializes ``list`` objects, so they become ``list`` objects when deserialized
+by the recipient.
+
 Keys Limited to 1024 Characters
 ===============================
 

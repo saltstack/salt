@@ -3,6 +3,8 @@ immediately:
   * Passing a non-`dict` class to the `salt.utils.yaml.SaltYamlSafeLoader`
     constructor no longer causes all future `!!omap` nodes to raise an exception
     when loaded.
+  * Loading a sequence node tagged with `!!python/tuple` is now supported, and
+    produces a Python `tuple` object.
 
 Improvements to YAML processing that are expected to take effect in Salt 3007
 but can be previewed now by setting the option `yaml_compatibility` to `3007`:
