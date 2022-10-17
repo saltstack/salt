@@ -122,11 +122,50 @@ class SafeOrderedDumper(_CommonMixin, SafeDumper):
     """
 
 
-class IndentedSafeOrderedDumper(SafeOrderedDumper):
+# This must inherit from yaml.SafeDumper, not yaml.CSafeDumper, because the
+# increase_indent hack doesn't work with yaml.CSafeDumper.
+# https://github.com/yaml/pyyaml/issues/234#issuecomment-786026671
+class IndentedSafeOrderedDumper(_CommonMixin, yaml.SafeDumper):
     """Like ``SafeOrderedDumper``, except it indents lists for readability."""
 
     def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
+
+    # TODO: Everything below this point is to provide backwards compatibility.
+    # It can be removed once support for yaml_compatibility=3006 is dropped.
+
+    class _Legacy(SafeOrderedDumper):
+        def increase_indent(self, flow=False, indentless=False):
+            return super().increase_indent(flow, False)
+
+    def __init__(self, *args, **kwargs):
+        super().__setattr__("_in_init", True)
+        try:
+            super().__init__(*args, **kwargs)
+            Legacy = super().__getattribute__("_Legacy")
+            super().__setattr__("_legacy", Legacy(*args, **kwargs))
+        finally:
+            super().__setattr__("_in_init", False)
+
+    def _use_legacy(self):
+        if super().__getattribute__("_in_init"):
+            return False
+        return _yaml_common.compat_ver() < SaltStackVersion(3007)
+
+    def __getattribute__(self, name):
+        if super().__getattribute__("_use_legacy")():
+            return getattr(super().__getattribute__("_legacy"), name)
+        return super().__getattribute__(name)
+
+    def __setattr__(self, name, value):
+        if super().__getattribute__("_use_legacy")():
+            return setattr(super().__getattribute__("_legacy"), name, value)
+        return super().__setattr__(name, value)
+
+    def __delattr__(self, name):
+        if super().__getattribute__("_use_legacy")():
+            return delattr(super().__getattribute__("_legacy"), name)
+        return super().__delattr__(name)
 
 
 def get_dumper(dumper_name):

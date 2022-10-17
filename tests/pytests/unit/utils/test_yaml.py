@@ -114,6 +114,29 @@ def test_dump_default_dumper(yaml_compatibility, input_dumper, want_dumper):
             assert got_kwargs["Dumper"] is want_dumper
 
 
+@pytest.mark.parametrize(
+    "yaml_compatibility,want",
+    [
+        # With v3006, sometimes it indents and sometimes it doesn't depending on
+        # whether yaml.CSafeDumper exists on the system.
+        (3006, re.compile(r"foo:\n(?:  )?- bar\n")),
+        (3007, "foo:\n  - bar\n"),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_dump_indented(yaml_compatibility, want):
+    data = {"foo": ["bar"]}
+    got = salt_yaml.dump(
+        data,
+        Dumper=salt_yaml.IndentedSafeOrderedDumper,
+        default_flow_style=False,
+    )
+    try:
+        assert want.fullmatch(got)
+    except AttributeError:
+        assert got == want
+
+
 def render_yaml(data):
     """
     Takes a YAML string, puts it into a mock file, passes that to the YAML
