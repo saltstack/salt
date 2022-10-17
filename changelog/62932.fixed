@@ -2,6 +2,8 @@ Improvements to YAML processing (`salt.utils.yaml`):
   * Loading an `!!omap` node now always returns a `collections.OrderedMap`
     object.  Before it would sometimes return a list of (key, value) tuples
     and sometimes raise an exception.
+  * Loading a sequence node tagged with `!!python/tuple` is now supported, and
+    produces a Python `tuple` object.
   * Loading an explicitly tagged `!!timestamp` node now produces a
     `datetime.datetime` object instead of a string.
   * `salt.utils.yaml.dump()` now defaults to `salt.utils.yaml.OrderedDumper`

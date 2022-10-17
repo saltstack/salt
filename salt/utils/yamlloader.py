@@ -107,6 +107,9 @@ class SaltYamlSafeLoader(BaseLoader):
             mapping[key] = value
         return mapping
 
+    def construct_python_tuple(self, node):
+        return tuple(self.construct_sequence(node))
+
     def construct_scalar(self, node):
         """
         Verify integers and pass them in correctly is they are declared
@@ -183,6 +186,7 @@ for tag, constructor in [
     ("tag:yaml.org,2002:map", SaltYamlSafeLoader.construct_yaml_map),
     ("tag:yaml.org,2002:omap", SaltYamlSafeLoader.construct_yaml_omap),
     ("tag:yaml.org,2002:str", SaltYamlSafeLoader.construct_yaml_str),
+    ("tag:yaml.org,2002:python/tuple", SaltYamlSafeLoader.construct_python_tuple),
     ("tag:yaml.org,2002:python/unicode", SaltYamlSafeLoader.construct_unicode),
 ]:
     SaltYamlSafeLoader.add_constructor(tag, constructor)

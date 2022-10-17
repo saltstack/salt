@@ -256,6 +256,13 @@ def test_load_timestamp(input_yaml, want):
     assert got == want
 
 
+def test_load_tuple():
+    input = "!!python/tuple\n- foo\n- bar\n"
+    got = salt_yaml.load(input)
+    want = ("foo", "bar")
+    assert got == want
+
+
 def test_not_yaml_monkey_patching():
     if hasattr(yaml, "CSafeLoader"):
         assert yaml.SafeLoader != yaml.CSafeLoader
