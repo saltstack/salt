@@ -28,7 +28,7 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def empty_reg_pol():
     class_info = salt.utils.win_lgpo_reg.CLASS_INFO
     reg_pol_file = class_info["Machine"]["policy_path"]
@@ -39,7 +39,7 @@ def empty_reg_pol():
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def reg_pol():
     data_to_write = {
         r"SOFTWARE\MyKey1": {
