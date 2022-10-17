@@ -40,15 +40,26 @@ class _RemoveImplicitResolverMixin:
         }
 
 
-class OrderedDumper(Dumper, _RemoveImplicitResolverMixin):
-    """
-    A YAML dumper that represents python OrderedDict as simple YAML map.
-    """
-
-
 class SafeOrderedDumper(SafeDumper, _RemoveImplicitResolverMixin):
+    """A safe YAML dumper that uses the YAML ``!!omap`` type for ``OrderedDict``
+
+    ``OrderedDict``s are represented as a a sequence of single-entry mappings
+    and tagged with ``!!omap``:
+
+    .. code-block:: yaml
+
+        !!omap
+        - first key: first value
+        - second key: second value
+
+    See https://yaml.org/type/omap.html for details.
     """
-    A YAML safe dumper that represents python OrderedDict as simple YAML map.
+
+
+class OrderedDumper(Dumper, _RemoveImplicitResolverMixin):
+    """A YAML dumper that uses the YAML ``!!omap`` type for ``OrderedDict``
+
+    See ``SafeOrderedDumper`` for details.
     """
 
 
@@ -63,7 +74,8 @@ class IndentedSafeOrderedDumper(yaml.SafeDumper, _RemoveImplicitResolverMixin):
 
 
 def represent_ordereddict(dumper, data):
-    return dumper.represent_dict(list(data.items()))
+    seq = [{k: v} for k, v in data.items()]
+    return dumper.represent_sequence("tag:yaml.org,2002:omap", seq)
 
 
 def represent_undefined(dumper, data):

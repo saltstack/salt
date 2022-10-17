@@ -55,7 +55,7 @@ def test_dump_omap(dictcls, dumpercls):
     # Note that there is no extra indentation added for the
     # IndentedSafeOrderedDumper case because the omap node is the top-level node
     # so there is no indentation for the sequence elements.
-    want = "".join(f"{k}: {i}\n" for i, k in enumerate(keys))
+    want = "!!omap\n" + "".join(f"- {k}: {i}\n" for i, k in enumerate(keys))
     got = salt_yaml.dump(d, Dumper=dumpercls, default_flow_style=False)
     assert got == want
 

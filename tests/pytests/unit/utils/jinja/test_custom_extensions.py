@@ -3,6 +3,7 @@ Tests for salt.utils.jinja
 """
 
 import ast
+import collections
 import itertools
 import os
 import pprint
@@ -135,6 +136,8 @@ def test_serialize_yaml():
     env = Environment(extensions=[SerializerExtension])
     rendered = env.from_string("{{ dataset|yaml }}").render(dataset=dataset)
     assert dataset == salt.utils.yaml.safe_load(rendered)
+    assert isinstance(dataset["spam"], collections.OrderedDict)
+    assert isinstance(dataset["spam"]["foo"], collections.OrderedDict)
 
 
 def test_serialize_yaml_str():
