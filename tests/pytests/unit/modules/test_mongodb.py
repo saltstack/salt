@@ -83,7 +83,7 @@ class MockPyMongoCollection:
     def insert_many(self, *args, **kwards):
         return True
 
-    def delete_many(self, *args, **kwards):
+    def delete_one(self, *args, **kwards):
         return True
 
 
@@ -626,15 +626,15 @@ def test_remove():
         )
 
         # Assume we delete one entry each time
-        collection_delete_many_mock = MockDeleteResult()
-        collection_delete_many_mock.deleted_count = 1
-        collection_delete_many_mock.raw_result = {"n": 1, "ok": 1.0}
-        collection_delete_many_mock.acknowledged = True
+        collection_delete_one_mock = MockDeleteResult()
+        collection_delete_one_mock.deleted_count = 1
+        collection_delete_one_mock.raw_result = {"n": 1, "ok": 1.0}
+        collection_delete_one_mock.acknowledged = True
 
         patch_pymongo_collection_remove = patch.object(
             MockPyMongoCollection,
-            "delete_many",
-            MagicMock(return_value=collection_delete_many_mock),
+            "delete_one",
+            MagicMock(return_value=collection_delete_one_mock),
         )
         with patch_pymongo_collection_remove, patch_salt_dict:
 
@@ -653,15 +653,15 @@ def test_remove():
         )
 
         # Assume we delete one entry each time
-        collection_delete_many_mock = MockDeleteResult()
-        collection_delete_many_mock.deleted_count = 1
-        collection_delete_many_mock.raw_result = {"n": 1, "ok": 1.0}
-        collection_delete_many_mock.acknowledged = True
+        collection_delete_one_mock = MockDeleteResult()
+        collection_delete_one_mock.deleted_count = 1
+        collection_delete_one_mock.raw_result = {"n": 1, "ok": 1.0}
+        collection_delete_one_mock.acknowledged = True
 
         patch_pymongo_collection_remove = patch.object(
             MockPyMongoCollection,
-            "delete_many",
-            MagicMock(return_value=collection_delete_many_mock),
+            "delete_one",
+            MagicMock(return_value=collection_delete_one_mock),
         )
         with patch_pymongo_collection_remove, patch_salt_dict:
 
