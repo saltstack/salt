@@ -113,6 +113,7 @@ def state(
     pillar=None,
     pillarenv=None,
     expect_minions=True,
+    exclude=None,
     fail_minions=None,
     allow_fail=0,
     concurrent=False,
@@ -196,6 +197,9 @@ def state(
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -235,6 +239,18 @@ def state(
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -296,6 +312,9 @@ def state(
 
     if saltenv is not None:
         cmd_kw["kwarg"]["saltenv"] = saltenv
+
+    if exclude is not None:
+        cmd_kw["kwarg"]["exclude"] = exclude
 
     cmd_kw["kwarg"]["queue"] = queue
 
@@ -475,6 +494,11 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
 
+    roster
+        In the event of using salt-ssh, a roster system can be set
+
+        .. versionadded:: 3005
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
@@ -505,6 +529,8 @@ def function(
 
     cmd_kw["tgt_type"] = tgt_type
     cmd_kw["ssh"] = ssh
+    if "roster" in kwargs:
+        cmd_kw["roster"] = kwargs["roster"]
     cmd_kw["expect_minions"] = expect_minions
     cmd_kw["_cmd_meta"] = True
 
@@ -574,7 +600,7 @@ def function(
         func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
             func_ret["comment"] = "Running function {} failed on minions: {}".format(
@@ -640,7 +666,7 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
         return ret
 
     with salt.utils.event.get_event(
-        node, __opts__["sock_dir"], __opts__["transport"], opts=__opts__, listen=True
+        node, __opts__["sock_dir"], opts=__opts__, listen=True
     ) as sevent:
 
         del_counter = 0
@@ -663,26 +689,50 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
                     val = event["data"]["data"].get(event_id)
 
                 if val is not None:
-                    try:
-                        val_idx = id_list.index(val)
-                    except ValueError:
-                        log.trace(
-                            "wait_for_event: Event identifier '%s' not in "
-                            "id_list; skipping.",
-                            event_id,
-                        )
-                    else:
-                        del id_list[val_idx]
-                        del_counter += 1
-                        minions_seen = ret["changes"].setdefault("minions_seen", [])
-                        minions_seen.append(val)
+                    if isinstance(val, list):
 
-                        log.debug(
-                            "wait_for_event: Event identifier '%s' removed "
-                            "from id_list; %s items remaining.",
-                            val,
-                            len(id_list),
-                        )
+                        val_list = [id for id in id_list if id in val]
+
+                        if not val_list:
+                            log.trace(
+                                "wait_for_event: Event identifier '%s' not in "
+                                "id_list; skipping",
+                                event_id,
+                            )
+                        elif val_list:
+                            minions_seen = ret["changes"].setdefault("minions_seen", [])
+                            for found_val in val_list:
+                                id_list.remove(found_val)
+                                del_counter += 1
+                                minions_seen.append(found_val)
+                                log.debug(
+                                    "wait_for_event: Event identifier '%s' removed "
+                                    "from id_list; %s items remaining.",
+                                    found_val,
+                                    len(id_list),
+                                )
+
+                    else:
+                        try:
+                            val_idx = id_list.index(val)
+                        except ValueError:
+                            log.trace(
+                                "wait_for_event: Event identifier '%s' not in "
+                                "id_list; skipping.",
+                                event_id,
+                            )
+                        else:
+                            del id_list[val_idx]
+                            del_counter += 1
+                            minions_seen = ret["changes"].setdefault("minions_seen", [])
+                            minions_seen.append(val)
+
+                            log.debug(
+                                "wait_for_event: Event identifier '%s' removed "
+                                "from id_list; %s items remaining.",
+                                val,
+                                len(id_list),
+                            )
                 else:
                     log.trace(
                         "wait_for_event: Event identifier '%s' not in event "

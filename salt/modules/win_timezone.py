@@ -218,7 +218,10 @@ def get_zone():
         raise CommandExecutionError(
             "tzutil encountered an error getting timezone", info=res
         )
-    tz = res["stdout"].lower().strip("_dstoff")
+    tz = res["stdout"].lower()
+    if tz.endswith("_dstoff"):
+        tz = tz[:-7]
+
     return mapper.get_unix(tz, "Unknown")
 
 

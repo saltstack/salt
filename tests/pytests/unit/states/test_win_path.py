@@ -5,6 +5,7 @@ Tests for win_path states
 import copy
 
 import pytest
+
 import salt.states.win_path as win_path
 from tests.support.mock import MagicMock, Mock, patch
 

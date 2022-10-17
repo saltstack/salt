@@ -1,0 +1,7 @@
+[databases]
+host1
+host2
+
+[webservers]
+host3
+host4

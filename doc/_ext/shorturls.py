@@ -6,7 +6,7 @@ import os
 
 import sphinx.ext.intersphinx
 
-DOCS_URL = "http://docs.saltstack.com/en/latest/"
+DOCS_URL = "https://docs.saltproject.io/en/latest/"
 
 
 def write_urls_index(app, exc):

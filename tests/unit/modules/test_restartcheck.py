@@ -7,7 +7,7 @@ import os
 import salt.modules.restartcheck as restartcheck
 import salt.utils.path
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -428,5 +428,6 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         with patch_kernel, patch_salt, patch_deleted, patch_readlink, patch_grains, patch_popen:
             ret = restartcheck.restartcheck()
             self.assertIn("Found 1 processes using old versions of upgraded files", ret)
-            args, kwargs = popen_mock.call_args
-            assert args[0] == ["repoquery", "-l", "--admindir tmp dpkg"]
+            popen_mock.assert_called_with(
+                ["repoquery", "-l", "--admindir tmp dpkg"], stdout=ANY
+            )

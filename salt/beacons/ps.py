@@ -3,6 +3,8 @@ Send events covering process status
 """
 import logging
 
+import salt.utils.beacons
+
 try:
     import salt.utils.psutil_compat as psutil
 
@@ -18,7 +20,9 @@ __virtualname__ = "ps"
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, "cannot load ps beacon: psutil not available")
+        err_msg = "psutil library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     return __virtualname__
 
 
@@ -30,13 +34,12 @@ def validate(config):
     if not isinstance(config, list):
         return False, "Configuration for ps beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "processes" not in _config:
+        if "processes" not in config:
             return False, "Configuration for ps beacon requires processes."
         else:
-            if not isinstance(_config["processes"], dict):
+            if not isinstance(config["processes"], dict):
                 return False, "Processes for ps beacon must be a dictionary."
 
     return True, "Valid beacon configuration"
@@ -70,16 +73,15 @@ def beacon(config):
         if _name not in procs:
             procs.append(_name)
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    for process in _config.get("processes", {}):
+    for process in config.get("processes", {}):
         ret_dict = {}
-        if _config["processes"][process] == "running":
+        if config["processes"][process] == "running":
             if process in procs:
                 ret_dict[process] = "Running"
                 ret.append(ret_dict)
-        elif _config["processes"][process] == "stopped":
+        elif config["processes"][process] == "stopped":
             if process not in procs:
                 ret_dict[process] = "Stopped"
                 ret.append(ret_dict)

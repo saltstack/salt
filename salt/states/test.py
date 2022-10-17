@@ -134,7 +134,7 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     ret = {"name": name, "changes": {}, "result": True, "comment": comment}
 
     # Following the docs as written here
-    # http://docs.saltstack.com/ref/states/writing.html#return-data
+    # https://docs.saltproject.io/ref/states/writing.html#return-data
     ret["changes"] = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
@@ -161,7 +161,7 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     ret = {"name": name, "changes": {}, "result": False, "comment": comment}
 
     # Following the docs as written here
-    # http://docs.saltstack.com/ref/states/writing.html#return-data
+    # https://docs.saltproject.io/ref/states/writing.html#return-data
     ret["changes"] = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
@@ -230,7 +230,7 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
     if changes is True:
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
-        # http://docs.saltstack.com/ref/states/writing.html#return-data
+        # https://docs.saltproject.io/ref/states/writing.html#return-data
         ret["changes"] = change_data
     elif changes is False:
         # Don't modify changes from the "ret" dict set above
@@ -239,7 +239,7 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
         if str(changes).lower() == "random":
             if random.choice((True, False)):
                 # Following the docs as written here
-                # http://docs.saltstack.com/ref/states/writing.html#return-data
+                # https://docs.saltproject.io/ref/states/writing.html#return-data
                 ret["changes"] = change_data
         else:
             err = (

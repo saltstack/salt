@@ -10,7 +10,7 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
-    testrun_timeout: 6,
+    testrun_timeout: 8,
     use_spot_instances: true,
 )
 

@@ -40,7 +40,7 @@ def present(
     """
     Ensure the RabbitMQ policy exists.
 
-    Reference: http://www.rabbitmq.com/ha.html
+    Reference: https://rabbitmq.com/parameters.html#policies
 
     name
         Policy name

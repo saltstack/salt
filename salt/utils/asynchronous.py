@@ -34,7 +34,7 @@ class SyncWrapper:
     This is uses as a simple wrapper, for example:
 
     asynchronous = AsyncClass()
-    # this method would reguarly return a future
+    # this method would regularly return a future
     future = asynchronous.async_method()
 
     sync = SyncWrapper(async_factory_method, (arg1, arg2), {'kwarg1': 'val'})

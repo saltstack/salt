@@ -40,8 +40,8 @@ try:
     # pylint: disable=W0611
     import capirca
     import capirca.aclgen
-    import capirca.lib.policy
     import capirca.lib.aclgenerator
+    import capirca.lib.policy
 
     HAS_CAPIRCA = True
     # pylint: enable=W0611

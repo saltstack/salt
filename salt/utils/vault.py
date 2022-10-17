@@ -10,11 +10,14 @@ documented in the execution module docs.
 import base64
 import logging
 import os
+import tempfile
 import time
 
 import requests
+
 import salt.crypt
 import salt.exceptions
+import salt.utils.json
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -227,7 +230,7 @@ def write_cache(connection):
         # Must have been passed metadata. This is already handled by _get_secret_path_metadata
         #  and does not need to be resaved
         return True
-
+    temp_fp, temp_file = tempfile.mkstemp(dir=__opts__["cachedir"])
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
     try:
         log.debug("Writing vault cache file")
@@ -236,8 +239,11 @@ def write_cache(connection):
             connection["unlimited_use_token"] = True
         else:
             connection["unlimited_use_token"] = False
-        with salt.utils.files.fpopen(cache_file, "w", mode=0o600) as fp_:
+        with salt.utils.files.fpopen(temp_file, "w", mode=0o600) as fp_:
             fp_.write(salt.utils.json.dumps(connection))
+        os.close(temp_fp)
+        # Atomic operation to pervent race condition with concurrent calls.
+        os.rename(temp_file, cache_file)
         return True
     except OSError:
         log.error(
@@ -311,7 +317,7 @@ def make_request(
         connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
-    namespace = namespace or connection["namespace"]
+    namespace = namespace or connection.get("namespace")
     if "verify" in args:
         args["verify"] = args["verify"]
     else:
