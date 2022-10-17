@@ -15,7 +15,7 @@ from salt.exceptions import CommandExecutionError
 CLASS_INFO = {
     "User": {
         "policy_path": os.path.join(
-            os.getenv("WINDIR"),
+            os.getenv("WINDIR", r"C:\Windows"),
             "System32",
             "GroupPolicy",
             "User",
@@ -28,7 +28,7 @@ CLASS_INFO = {
     },
     "Machine": {
         "policy_path": os.path.join(
-            os.getenv("WINDIR"),
+            os.getenv("WINDIR", r"C:\Windows"),
             "System32",
             "GroupPolicy",
             "Machine",
