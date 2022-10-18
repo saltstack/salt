@@ -25,6 +25,8 @@ def _get_rvm_location(runas=None):
         rvmpath = "{}/.rvm/bin/rvm".format(runas_home)
         if os.path.exists(rvmpath):
             return [rvmpath]
+    if os.path.exists("/usr/share/rvm/bin/rvm"):
+        return ["/usr/share/rvm/bin/rvm"]
     return ["/usr/local/rvm/bin/rvm"]
 
 
