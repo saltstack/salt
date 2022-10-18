@@ -2,6 +2,8 @@
 LGPO - Registry.pol
 ===================
 
+.. versionadded:: 3006
+
 A module for working with registry based policies in Windows Local Group Policy
 (LGPO). This module contains functions for working with the ``Registry.pol``
 file. The ``Registry.pol`` file is the source of truth for registry settings
