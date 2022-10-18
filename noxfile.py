@@ -34,7 +34,7 @@ CI_RUN = (
 PIP_INSTALL_SILENT = CI_RUN is False
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
-COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT") or "coverage==5.2"
+COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
 
 # Global Path Definitions
 REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
@@ -307,8 +307,15 @@ def _install_requirements(
 
 def _run_with_coverage(session, *test_cmd, env=None):
     if SKIP_REQUIREMENTS_INSTALL is False:
+        coverage_requirement = COVERAGE_REQUIREMENT
+        if coverage_requirement is None:
+            version_info = _get_session_python_version_info(session)
+            if version_info < (3, 7):
+                coverage_requirement = "coverage==6.2"
+            else:
+                coverage_requirement = "coverage==6.5.0"
         session.install(
-            "--progress-bar=off", COVERAGE_REQUIREMENT, silent=PIP_INSTALL_SILENT
+            "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
     session.run("coverage", "erase")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
