@@ -51,7 +51,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
     CLI Example:
 
-    .. code-clock:: yaml
+    .. code-block:: yaml
 
         # Using the name parameter in the definition
         set_reg_pol_value:
@@ -128,7 +128,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     CLI Example:
 
-    .. code-clock:: yaml
+    .. code-block:: yaml
 
         # Using the name parameter in the definition
         set_reg_pol_value:
@@ -195,7 +195,7 @@ def value_absent(name, key, policy_class="Machine"):
 
     CLI Example:
 
-    .. code-clock:: yaml
+    .. code-block:: yaml
 
         # Using the name parameter in the definition
         set_reg_pol_value:
