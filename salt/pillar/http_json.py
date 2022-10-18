@@ -12,6 +12,7 @@ Set the following Salt config to setup http json result as external pillar sourc
   ext_pillar:
     - http_json:
         url: http://example.com/api/minion_id
+        namespace: 'subkey'
         username: username
         password: password
         header_dict: None
@@ -19,6 +20,9 @@ Set the following Salt config to setup http json result as external pillar sourc
 
 You can pass additional parameters, they will be added to the http.query call
 :py:func:`utils.http.query function <salt.utils.http.query>`:
+
+.. versionchanged:: 3006
+    If namespace is defined, the data will be added under the specified subkeys in the Pillar structure.
 
 If the with_grains parameter is set, grain keys wrapped in can be provided (wrapped
 in <> brackets) in the url in order to populate pillar data based on the grain value.
@@ -65,6 +69,7 @@ def ext_pillar(
     auth=None,
     username=None,
     password=None,
+    namespace=None,
 ):  # pylint: disable=W0613
     """
     Read pillar data from HTTP response.
@@ -75,6 +80,8 @@ def ext_pillar(
     :param auth: special auth if needed
     :param str username: username for auth
     :param str pasword: password for auth
+    :param str namespace: (Optional) A pillar key to namespace the values under.
+        .. versionadded:: 3006
 
     :return: A dictionary of the pillar data to add.
     :rtype: dict
@@ -109,7 +116,10 @@ def ext_pillar(
     )
 
     if "dict" in data:
-        return data["dict"]
+        if namespace:
+            return {namespace: data["dict"]}
+        else:
+            return data["dict"]
 
     log.error("Error on minion '%s' http query: %s\nMore Info:\n", minion_id, url)
 
