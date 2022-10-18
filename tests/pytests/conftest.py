@@ -2,12 +2,14 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+import contextlib
 import functools
 import inspect
 import logging
 import os
 import pathlib
 import shutil
+import signal
 import stat
 import sys
 import tempfile
@@ -612,3 +614,57 @@ def delta_proxy_minion_ids():
 
 
 # <---- Helpers ------------------------------------------------------------------------------------------------------
+
+
+# ----- Loop Helpers ------------------------------------------------------------------------------------------------>
+
+
+@pytest.fixture
+def timeout_interrupt():
+    def raiser(*args):
+        """
+        Simply raise TimeoutError. Only exists because we can't raise in a
+        lambda. Triggers when the alarm expires.
+        """
+        raise TimeoutError("Timeout was reached")
+
+    @contextlib.contextmanager
+    def interrupt(timeout, reraise=False):
+        """
+        Actual interrupt function. Registers a handler for SIGALRM ``timeout``
+        seconds in the future. If timeout is reached, TimeoutError will be
+        raised, regardless of where execution currently is in the running test.
+
+        If reraise is True then the TimeoutError will be re-raised, for use
+        with pytest.raises. Alternatively, the timed_out attribute will be
+        set to True if the timeout was reached, or False if not.
+
+        >>> import time
+        >>> with timeout_interrupt(1) as rupt:
+        ...     while True:
+        ...         time.sleep(2)
+        ...
+        >>> assert rupt.timed_out
+        >>> with timeout_interrupt(4) as rupt:
+        ...     while True:
+        ...         time.sleep(2)
+        ...         break
+        ...
+        >>> assert not rupt.timed_out
+        """
+        interrupt.timed_out = False
+        signal.signal(signal.SIGALRM, raiser)
+        signal.alarm(timeout)
+        try:
+            yield interrupt
+        except TimeoutError:
+            interrupt.timed_out = True
+            if reraise:
+                raise
+        finally:
+            signal.alarm(0)
+
+    return interrupt
+
+
+# <---- Loop Helpers -------------------------------------------------------------------------------------------------
