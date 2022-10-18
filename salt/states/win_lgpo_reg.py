@@ -48,6 +48,28 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
             - User
 
             Default is ``Machine``
+
+    CLI Example:
+
+    .. code-clock:: yaml
+
+        # Using the name parameter in the definition
+        set_reg_pol_value:
+          lgpo_reg.present:
+            - key: SOFTWARE\MyKey
+            - name: MyValue
+            - v_type: REG_SZ
+            - v_data: "some string data"
+            - policy_class: Machine
+
+
+        # Using the name as the parameter and modifying the User policy
+        MyValue:
+          lgpo_reg.present:
+            - key: SOFTWARE\MyKey
+            - v_type: REG_SZ
+            - v_data: "some string data"
+            - policy_class: User
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -103,6 +125,24 @@ def value_disabled(name, key, policy_class="Machine"):
             - User
 
             Default is ``Machine``
+
+    CLI Example:
+
+    .. code-clock:: yaml
+
+        # Using the name parameter in the definition
+        set_reg_pol_value:
+          lgpo_reg.disabled:
+            - key: SOFTWARE\MyKey
+            - name: MyValue
+            - policy_class: Machine
+
+
+        # Using the name as the parameter and modifying the User policy
+        MyValue:
+          lgpo_reg.disabled:
+            - key: SOFTWARE\MyKey
+            - policy_class: User
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -152,6 +192,24 @@ def value_absent(name, key, policy_class="Machine"):
             - User
 
             Default is ``Machine``
+
+    CLI Example:
+
+    .. code-clock:: yaml
+
+        # Using the name parameter in the definition
+        set_reg_pol_value:
+          lgpo_reg.absent:
+            - key: SOFTWARE\MyKey
+            - name: MyValue
+            - policy_class: Machine
+
+
+        # Using the name as the parameter and modifying the User policy
+        MyValue:
+          lgpo_reg.absent:
+            - key: SOFTWARE\MyKey
+            - policy_class: User
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
