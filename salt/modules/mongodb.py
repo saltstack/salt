@@ -451,7 +451,7 @@ def user_create(
     try:
         log.info("Creating user %s", name)
         mdb = pymongo.database.Database(conn, database)
-        ret = mdb.command("createUser", name, pwd=passwd, roles=_roles)
+        mdb.command("createUser", name, pwd=passwd, roles=_roles)
 
     except pymongo.errors.PyMongoError as err:
         log.error("Creating user %s failed with error: %s", name, err)
@@ -724,7 +724,7 @@ def collection_create(
 
     .. code-block:: bash
 
-        salt '*' mongodb.create_collection mycollection <user> <password> <host> <port> <database>
+        salt '*' mongodb.collection_create mycollection <user> <password> <host> <port> <database>
 
     """
     conn = _connect(user, password, host, port, database, authdb)
