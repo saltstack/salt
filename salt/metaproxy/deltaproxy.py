@@ -372,6 +372,11 @@ def post_master_init(self, master):
         )
         _proxy_minion.subprocess_list = self.subprocess_list
 
+        # a long-running req channel
+        _proxy_minion.req_channel = salt.transport.client.AsyncReqChannel.factory(
+            proxyopts, io_loop=self.io_loop
+        )
+
         # And load the modules
         (
             _proxy_minion.functions,

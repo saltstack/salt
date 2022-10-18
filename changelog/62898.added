@@ -1,0 +1,1 @@
+Pass the context to pillar ext modules to make it possible to reuse the values from it.

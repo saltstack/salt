@@ -99,7 +99,7 @@ API and the runner system.  In this example, a command is published to the
           - mods: orchestrate.runit
     {% endif %}
 
-This example will execute the state.orchestrate runner and intiate an execution
+This example will execute the state.orchestrate runner and initiate an execution
 of the ``runit`` orchestrator located at ``/srv/salt/orchestrate/runit.sls``.
 
 Types of Reactions
