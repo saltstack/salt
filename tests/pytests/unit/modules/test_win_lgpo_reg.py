@@ -3,6 +3,7 @@ import pytest
 import salt.modules.win_lgpo_reg as lgpo_reg
 import salt.utils.files
 import salt.utils.win_lgpo_reg
+import salt.utils.win_reg
 from salt.exceptions import SaltInvocationError
 
 pytestmark = [
@@ -18,7 +19,11 @@ def empty_reg_pol():
     reg_pol_file = class_info["Machine"]["policy_path"]
     with salt.utils.files.fopen(reg_pol_file, "wb") as f:
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
+    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey1")
+    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey2")
     yield
+    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey1")
+    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey2")
     with salt.utils.files.fopen(reg_pol_file, "wb") as f:
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
@@ -26,7 +31,7 @@ def empty_reg_pol():
 @pytest.fixture
 def reg_pol():
     data_to_write = {
-        r"SOFTWARE\MyKey1": {
+        "SOFTWARE\\MyKey1": {
             "MyValue1": {
                 "data": "squidward",
                 "type": "REG_SZ",
@@ -36,7 +41,7 @@ def reg_pol():
                 "type": "REG_SZ",
             },
         },
-        r"SOFTWARE\MyKey2": {
+        "SOFTWARE\\MyKey2": {
             "MyValue3": {
                 "data": ["spongebob", "squarepants"],
                 "type": "REG_MULTI_SZ",
@@ -44,7 +49,23 @@ def reg_pol():
         },
     }
     lgpo_reg.write_reg_pol(data_to_write)
+    salt.utils.win_reg.set_value(
+        hive="HKLM",
+        key="SOFTWARE\\MyKey1",
+        vname="MyValue1",
+        vdata="squidward",
+        vtype="REG_SZ",
+    )
+    salt.utils.win_reg.set_value(
+        hive="HKLM",
+        key="SOFTWARE\\MyKey2",
+        vname="MyValue3",
+        vdata=["spongebob", "squarepants"],
+        vtype="REG_MULTI_SZ",
+    )
     yield
+    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey1")
+    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey2")
     class_info = salt.utils.win_lgpo_reg.CLASS_INFO
     reg_pol_file = class_info["Machine"]["policy_path"]
     with salt.utils.files.fopen(reg_pol_file, "wb") as f:
@@ -119,6 +140,16 @@ def test_set_value(empty_reg_pol):
     lgpo_reg.set_value(key=key, v_name=v_name, v_data="1")
     result = lgpo_reg.get_value(key=key, v_name=v_name)
     assert result == expected
+    expected = {
+        "hive": "HKLM",
+        "key": key,
+        "vname": v_name,
+        "vdata": 1,
+        "vtype": "REG_DWORD",
+        "success": True,
+    }
+    result = salt.utils.win_reg.read_value(hive="HKLM", key=key, vname=v_name)
+    assert result == expected
 
 
 def test_set_value_existing_change(reg_pol):
@@ -127,6 +158,16 @@ def test_set_value_existing_change(reg_pol):
     v_name = "MyValue1"
     lgpo_reg.set_value(key=key, v_name=v_name, v_data="1")
     result = lgpo_reg.get_value(key=key, v_name=v_name)
+    assert result == expected
+    expected = {
+        "hive": "HKLM",
+        "key": key,
+        "vname": v_name,
+        "vdata": 1,
+        "vtype": "REG_DWORD",
+        "success": True,
+    }
+    result = salt.utils.win_reg.read_value(hive="HKLM", key=key, vname=v_name)
     assert result == expected
 
 
@@ -198,6 +239,8 @@ def test_disable_value(reg_pol):
     lgpo_reg.disable_value(key=key, v_name="MyValue1")
     result = lgpo_reg.get_key(key=key)
     assert result == expected
+    result = salt.utils.win_reg.value_exists(hive="HKLM", key=key, vname="MyValue1")
+    assert result is False
 
 
 def test_disable_value_no_change(reg_pol):
@@ -232,6 +275,8 @@ def test_delete_value_existing(reg_pol):
     lgpo_reg.delete_value(key=key, v_name="MyValue1")
     result = lgpo_reg.get_key(key=key)
     assert result == expected
+    result = salt.utils.win_reg.value_exists(hive="HKLM", key=key, vname="MyValue2")
+    assert result is False
 
 
 def test_delete_value_no_change(empty_reg_pol):
