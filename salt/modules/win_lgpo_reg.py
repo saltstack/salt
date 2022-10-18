@@ -56,6 +56,7 @@ import logging
 
 import salt.utils.platform
 import salt.utils.win_lgpo_reg
+import salt.utils.win_reg
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -323,8 +324,10 @@ def set_value(
     # Verify input
     if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
+        hive = "HKLM"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
+        hive = "HKCU"
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
@@ -378,7 +381,15 @@ def set_value(
     else:
         pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
 
-    return write_reg_pol(pol_data)
+    write_reg_pol(pol_data)
+
+    salt.utils.win_reg.set_value(
+        hive=hive,
+        key=key,
+        vname=v_name,
+        vdata=v_data,
+        vtype=v_type,
+    )
 
 
 def disable_value(key, v_name, policy_class="machine"):
@@ -419,8 +430,10 @@ def disable_value(key, v_name, policy_class="machine"):
     # Verify input
     if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
+        hive = "HKLM"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
+        hive = "HKCU"
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
@@ -451,7 +464,9 @@ def disable_value(key, v_name, policy_class="machine"):
     else:
         pol_data[key] = {"**del.{}".format(v_name): {"data": " ", "type": "REG_SZ"}}
 
-    return write_reg_pol(pol_data)
+    write_reg_pol(pol_data)
+
+    salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
 
 
 def delete_value(key, v_name, policy_class="Machine"):
@@ -493,8 +508,10 @@ def delete_value(key, v_name, policy_class="Machine"):
     # Verify input
     if policy_class.lower() in ["computer", "machine"]:
         policy_class = "Machine"
+        hive = "HKLM"
     elif policy_class.lower() in ["user"]:
         policy_class = "User"
+        hive = "HKCU"
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
@@ -517,7 +534,9 @@ def delete_value(key, v_name, policy_class="Machine"):
     else:
         return None
 
-    return write_reg_pol(pol_data)
+    write_reg_pol(pol_data)
+
+    salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
 
 
 # This is for testing different settings and verifying that we are writing the
