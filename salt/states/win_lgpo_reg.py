@@ -1,3 +1,58 @@
+"""
+LGPO - Registry.pol
+===================
+
+.. versionadded:: 3006
+
+A state module for working with registry based policies in Windows Local Group
+Policy (LGPO). This module contains functions for working with the
+``Registry.pol`` file. The ``Registry.pol`` file is the source of truth for
+registry settings and LGPO.
+
+Group Policy is refreshed every 90 seconds by default. During that refresh the
+contents of the ``Registry.pol`` file are applied to the Registry. If the
+setting is changed outside of Group Policy to something other than what is
+contained in the ``Registry.pol`` file, it will be changed back during the next
+refresh.
+
+In the Group Policy Editor (``gpedit.msc``) these policies can be set to three
+states:
+
+- Not Configured
+- Enabled
+- Disabled
+
+A policy that is "Not Configured" does not have an entry in the ``Registry.pol``
+file. A Group Policy refresh will not make any changes to key/value pairs in the
+registry that are not specified in the ``Registry.pol`` file.
+
+An "Enabled" policy will have an entry in the ``Registry.pol`` files that
+contains its key path, value name, value type, value size, and value data. When
+Group Policy is refreshed, existing values will be overwritten with those
+contained in the ``Registry.pol`` file.
+
+A "Disabled" policy will have an entry in the ``Registry.pol`` file with the key
+path and the value name, but the value name will be prepended with ``**del.``.
+When Group Policy is refreshed the key/value will be deleted from the registry.
+If the key contains no values, it will also be deleted.
+
+Working with LGPO Reg
+---------------------
+
+The easiest way to figure out the values needed for this module is to set the
+policy using the Group Policy Editor (``gpedit.msc``) and then run the
+``lgpo_reg.read_reg_pol`` function. This function will display a dictionary of
+all registry-based policies in the ``Registry.pol`` file. From its return you
+can get the ``key``, ``v_name``, ``v_type``, and ``v_data`` required to
+configure that policy.
+
+.. note::
+    Not all policies in the Group Policy Editor (``gpedit.msc``) that write to
+    the registry make that change in the ``Registry.pol`` file. Those policies
+    could still be enforced via the ``Registry.pol`` file... theoretically. But
+    you will have to find the values needed to set them with this module using a
+    different method.
+"""
 import salt.utils.data
 import salt.utils.platform
 
