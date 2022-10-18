@@ -107,51 +107,62 @@ def start(cmd, output="json", interval=1, onchange=False):
     else:
         fire_master = __salt__["event.send"]
 
-    if onchange:
-        events = {}
-
-    while _running():
-
-        try:
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-            )
-
-            log.debug("Starting script with pid %d", proc.pid)
-
-            for raw_event in _read_stdout(proc):
-                log.debug(raw_event)
-
-                event = serializer.deserialize(raw_event)
-                tag = event.get("tag", None)
-                data = event.get("data", {})
-
-                if data and "id" not in data:
-                    data["id"] = __opts__["id"]
-
-                if tag:
-                    if onchange and tag in events and events[tag] == data:
-                        continue
-                    log.info("script engine firing event with tag %s", tag)
-                    fire_master(tag=tag, data=data)
-                    if onchange:
-                        events[tag] = data
-
-            log.debug("Closing script with pid %d", proc.pid)
-            proc.stdout.close()
-            rc = proc.wait()
-            if rc:
-                raise subprocess.CalledProcessError(rc, cmd)
-
-        except subprocess.CalledProcessError as e:
-            log.error(e)
-        finally:
-            if proc.poll is None:
-                proc.terminate()
-
-        time.sleep(interval)
+    script = ScriptEngine(fire_master, serializer, cmd, interval, onchange)
+    script.run()
 
 
-# helper to test the start function
-def _running():
-    return True
+class ScriptEngine:
+    RUNNING = True
+
+    def __init__(self, fire_master, serializer, cmd, interval, onchange):
+        self.fire_master = fire_master
+        self.serializer = serializer
+        self.cmd = cmd
+        self.interval = interval
+        self.onchange = onchange
+        self.events = {}
+
+    def run(self):
+        while self.RUNNING:
+            try:
+                proc = subprocess.Popen(
+                    self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+                )
+
+                log.debug("Starting script with pid %d", proc.pid)
+
+                for raw_event in _read_stdout(proc):
+                    log.debug(raw_event)
+
+                    event = self.serializer.deserialize(raw_event)
+                    tag = event.get("tag", None)
+                    data = event.get("data", {})
+
+                    if data and "id" not in data:
+                        data["id"] = __opts__["id"]
+
+                    if tag:
+                        if (
+                            self.onchange
+                            and tag in self.events
+                            and self.events[tag] == data
+                        ):
+                            continue
+                        log.info("script engine firing event with tag %s", tag)
+                        self.fire_master(tag=tag, data=data)
+                        if self.onchange:
+                            self.events[tag] = data
+
+                log.debug("Closing script with pid %d", proc.pid)
+                proc.stdout.close()
+                rc = proc.wait()
+                if rc:
+                    raise subprocess.CalledProcessError(rc, self.cmd)
+
+            except subprocess.CalledProcessError as e:
+                log.error(e)
+            finally:
+                if proc.poll is None:
+                    proc.terminate()
+
+            time.sleep(self.interval)
