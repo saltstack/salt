@@ -42,9 +42,6 @@ except ImportError:
     HAS_NAPALM = False
 
 try:
-    # try importing ConnectionClosedException
-    # from napalm-base
-    # this exception has been introduced only in version 0.24.0
     from napalm.base.exceptions import ConnectionClosedException
 
     HAS_CONN_CLOSED_EXC_CLASS = True
@@ -317,14 +314,6 @@ def get_device(opts, salt_obj=None):
     network_device = get_device_opts(opts, salt_obj=salt_obj)
     provider_lib = napalm_base
     if network_device.get("PROVIDER"):
-        # In case the user requires a different provider library,
-        #   other than napalm-base.
-        # For example, if napalm-base does not satisfy the requirements
-        #   and needs to be enahanced with more specific features,
-        #   we may need to define a custom library on top of napalm-base
-        #   with the constraint that it still needs to provide the
-        #   `get_network_driver` function. However, even this can be
-        #   extended later, if really needed.
         # Configuration example:
         #   provider: napalm_base_example
         try:
@@ -333,7 +322,6 @@ def get_device(opts, salt_obj=None):
             log.error(
                 "Unable to import %s", network_device.get("PROVIDER"), exc_info=True
             )
-            log.error("Falling back to napalm-base")
     _driver_ = provider_lib.get_network_driver(network_device.get("DRIVER_NAME"))
     try:
         network_device["DRIVER"] = _driver_(
