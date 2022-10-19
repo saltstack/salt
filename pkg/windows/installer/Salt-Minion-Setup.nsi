@@ -970,7 +970,7 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
-    nsExec::Exec `$INSTDIR\bin\Scripts\ssm.exe install salt-minion "$INSTDIR\bin\Scripts\python.exe" -E -s """$INSTDIR\bin\Scripts\salt-minion""" -c """$RootDir\conf""" -l quiet`
+    nsExec::Exec `$INSTDIR\bin\Scripts\ssm.exe install salt-minion "$INSTDIR\bin\Scripts\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
     nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_AUTO_START"
     nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodConsole 24000"
