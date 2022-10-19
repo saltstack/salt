@@ -192,6 +192,14 @@ Functions to interact with Hashicorp Vault.
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.
 
+    config_location
+        Where to get the connection details for calling vault. By default,
+        vault will try to determine if it needs to request the connection
+        details from the master or from the local config. This optional option
+        will force vault to use the connection details from the master or the
+        local config. Can only be either ``master`` or ``local``.
+
+          .. versionadded:: 3006
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:
