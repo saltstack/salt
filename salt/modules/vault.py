@@ -590,6 +590,28 @@ namespace
 
     .. versionadded:: 3004
 
+
+Minion configuration (optional):
+
+config_location
+    Where to get the connection details for calling vault. By default,
+    vault will try to determine if it needs to request the connection
+    details from the master or from the local config. This optional option
+    will force vault to use the connection details from the master or the
+    local config. Can only be either ``master`` or ``local``.
+
+  .. versionadded:: 3006
+
+issue_params
+    Request overrides for token/AppRole issuance. This needs to be allowed
+    on the master by setting ``issue:allow_minion_override_params`` to true.
+    See the master configuration ``issue:token:params`` or ``issue:approle:params``
+    for reference.
+
+    .. versionchanged:: 3006
+
+        For token issuance, this used to be found in ``auth:ttl`` and ``auth:uses``.
+
 .. _vault-setup:
 """
 import logging

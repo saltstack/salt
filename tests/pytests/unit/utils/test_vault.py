@@ -992,6 +992,11 @@ class TestGetConnectionConfig:
             yield cache
 
     @pytest.fixture()
+    def local(self):
+        with patch("salt.utils.vault._use_local_config", autospec=True) as local:
+            yield local
+
+    @pytest.fixture()
     def remote(self, test_remote_config):
         with patch("salt.utils.vault._query_master") as query:
             query.return_value = test_remote_config
@@ -1011,16 +1016,15 @@ class TestGetConnectionConfig:
         ],
         indirect=["salt_runtype"],
     )
-    def test_get_connection_config_local(self, salt_runtype, force_local):
+    def test_get_connection_config_local(self, salt_runtype, force_local, local):
         """
         Ensure the local configuration is used when
         a) running on master
         b) running on master impersonating a minion when called from runner
         c) running on minion in local mode
         """
-        with patch("salt.utils.vault._use_local_config") as local:
-            vault._get_connection_config("vault", {}, {}, force_local=force_local)
-            local.assert_called_once()
+        vault._get_connection_config("vault", {}, {}, force_local=force_local)
+        local.assert_called_once()
 
     def test_get_connection_config_cached(self, cached, remote_unused):
         """
@@ -1044,6 +1048,31 @@ class TestGetConnectionConfig:
         token = data["auth"].pop("token", None)
         assert res == data
         assert embedded_token == token
+
+    @pytest.mark.usefixtures("uncached", "local")
+    @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+    @pytest.mark.parametrize(
+        "conf_location,called",
+        [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
+    )
+    def test_get_connection_config_location(self, conf_location, called, remote):
+        """
+        test the _get_connection_config function when
+        config_location is set in opts
+        """
+        opts = {"vault": {"config_location": conf_location}, "file_client": "local"}
+        if conf_location == "doesnotexist":
+            with pytest.raises(
+                salt.exceptions.InvalidConfigError,
+                match=".*config_location must be either local or master.*",
+            ):
+                vault._get_connection_config("vault", opts, {})
+        else:
+            vault._get_connection_config("vault", opts, {})
+            if called:
+                remote.assert_called()
+            else:
+                remote.assert_not_called()
 
 
 class TestFetchSecretId:
@@ -1074,6 +1103,11 @@ class TestFetchSecretId:
     def remote_unused(self):
         with patch("salt.utils.vault._query_master") as query:
             yield query
+
+    @pytest.fixture()
+    def local(self):
+        with patch("salt.utils.vault._use_local_config", autospec=True) as local:
+            yield local
 
     @pytest.fixture(params=["plain", "wrapped", "dict"])
     def secret_id(self, secret_id_response, wrapped_secret_id_response, request):
@@ -1169,6 +1203,33 @@ class TestFetchSecretId:
         data = remote()
         assert res == vault.VaultAppRoleSecretId(**data["data"])
 
+    @pytest.mark.usefixtures("local")
+    @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
+    @pytest.mark.parametrize(
+        "conf_location,called",
+        [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
+    )
+    def test_fetch_secret_id_config_location(
+        self, conf_location, called, remote, uncached, test_remote_config
+    ):
+        """
+        Ensure config_location is respected.
+        """
+        test_remote_config["config_location"] = conf_location
+        opts = {"vault": test_remote_config, "file_client": "local"}
+        if conf_location == "doesnotexist":
+            with pytest.raises(
+                salt.exceptions.InvalidConfigError,
+                match=".*config_location must be either local or master.*",
+            ):
+                vault._fetch_secret_id(test_remote_config, opts, uncached)
+        else:
+            vault._fetch_secret_id(test_remote_config, opts, uncached)
+            if called:
+                remote.assert_called()
+            else:
+                remote.assert_not_called()
+
 
 class TestFetchToken:
     @pytest.fixture()
@@ -1193,6 +1254,11 @@ class TestFetchToken:
     def remote_unused(self):
         with patch("salt.utils.vault._query_master") as query:
             yield query
+
+    @pytest.fixture()
+    def local(self):
+        with patch("salt.utils.vault._use_local_config", autospec=True) as local:
+            yield local
 
     @pytest.fixture(params=["plain", "wrapped", "dict"])
     def token(self, token_auth, wrapped_token_auth_response, request):
@@ -1374,6 +1440,38 @@ class TestFetchToken:
         uncached.store.assert_not_called()
         remote.assert_called_once()
         assert res == vault.VaultToken(**remote("func", {})["auth"])
+
+    @pytest.mark.usefixtures("local")
+    @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+    @pytest.mark.parametrize(
+        "conf_location,called",
+        [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
+    )
+    def test_fetch_token_config_location(
+        self, conf_location, called, remote, uncached, test_remote_config, token_auth
+    ):
+        """
+        Ensure config_location is respected.
+        """
+        test_remote_config["config_location"] = conf_location
+        opts = {"vault": test_remote_config, "file_client": "local"}
+        embedded_token = token_auth["auth"] if not called else None
+        if conf_location == "doesnotexist":
+            with pytest.raises(
+                salt.exceptions.InvalidConfigError,
+                match=".*config_location must be either local or master.*",
+            ):
+                vault._fetch_token(
+                    test_remote_config, opts, uncached, embedded_token=embedded_token
+                )
+        else:
+            vault._fetch_token(
+                test_remote_config, opts, uncached, embedded_token=embedded_token
+            )
+            if called:
+                remote.assert_called()
+            else:
+                remote.assert_not_called()
 
 
 @pytest.mark.parametrize(
