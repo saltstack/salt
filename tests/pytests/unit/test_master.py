@@ -75,10 +75,10 @@ def test_mworker_pass_context():
             mworker.context, test_context
         ):
             mworker.run()
-            assert (
-                loadler_pillars_mock.call_args_list[0][1].get("pack").get("__context__")
-                == test_context
-            )
+            call_args = loadler_pillars_mock.call_args_list
+            is_arg = test_context in call_args[0][0]
+            is_kwarg = call_args[0][1].get("pack").get("__context__") == test_context
+            assert is_arg or is_kwarg
 
         loadler_pillars_mock.reset_mock()
 
