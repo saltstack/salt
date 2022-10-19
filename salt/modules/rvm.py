@@ -7,6 +7,7 @@ import os
 import re
 
 import salt.utils.args
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -25,9 +26,11 @@ def _get_rvm_location(runas=None):
         rvmpath = "{}/.rvm/bin/rvm".format(runas_home)
         if os.path.exists(rvmpath):
             return [rvmpath]
-    if os.path.exists("/usr/share/rvm/bin/rvm"):
-        return ["/usr/share/rvm/bin/rvm"]
-    return ["/usr/local/rvm/bin/rvm"]
+    which_result = salt.utils.path.which("rvm")
+    for path in [which_result, "/usr/share/rvm/bin/rvm", "/usr/local/rvm/bin/rvm"]:
+        if path and os.path.exists(path):
+            return [path]
+    return [None]
 
 
 def _rvm(command, runas=None, cwd=None, env=None):
