@@ -583,3 +583,35 @@ def test_expand_pattern_lists():
     for case, correct_output in cases.items():
         output = vault.expand_pattern_lists(case, **mappings)
         assert output == correct_output
+
+
+@pytest.mark.parametrize(
+    "conf_location,called",
+    [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
+)
+def test_get_vault_connection_config_location(tmp_path, conf_location, called, caplog):
+    """
+    test the get_vault_connection function when
+    config_location is set in opts
+    """
+    token_url = {
+        "url": "http://127.0.0.1",
+        "namespace": None,
+        "token": "test",
+        "verify": None,
+        "issued": 1666100373,
+        "ttl": 3600,
+    }
+
+    opts = {"config_location": conf_location, "pki_dir": tmp_path / "pki"}
+    with patch.object(vault, "_get_token_and_url_from_master") as patch_token:
+        patch_token.return_vaule = token_url
+        with patch.dict(vault.__opts__["vault"], opts):
+            vault.get_vault_connection()
+
+    if called:
+        patch_token.assert_called()
+    else:
+        patch_token.assert_not_called()
+    if conf_location == "doesnotexist":
+        assert "config_location must be either local or master" in caplog.text

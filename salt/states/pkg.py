@@ -1876,6 +1876,7 @@ def installed(
                 normalize=normalize,
                 update_holds=update_holds,
                 ignore_epoch=ignore_epoch,
+                split_arch=False,
                 **kwargs
             )
         except CommandExecutionError as exc:
@@ -2943,7 +2944,7 @@ def _uninstall(
         }
 
     changes = __salt__["pkg.{}".format(action)](
-        name, pkgs=pkgs, version=version, **kwargs
+        name, pkgs=pkgs, version=version, split_arch=False, **kwargs
     )
     new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     failed = []
