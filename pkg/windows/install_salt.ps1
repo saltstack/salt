@@ -67,16 +67,14 @@ If (!(Get-IsAdministrator)) {
 
 # Python Variables
 $PY_VERSION     = "3.8"
-$PYTHON_DIR     = "C:\Python$($PY_VERSION -replace "\.")"
-$PYTHON_BIN     = "$PYTHON_DIR\python.exe"
-$SCRIPTS_DIR    = "$PYTHON_DIR\Scripts"
+$PYTHON_DIR     = "$SCRIPT_DIR\buildenv\bin"
+$PYTHON_BIN     = "$SCRIPT_DIR\buildenv\bin\Scripts\python.exe"
+$SCRIPTS_DIR    = "$SCRIPT_DIR\buildenv\bin\Scripts"
 $SITE_PKGS_DIR  = "$PYTHON_DIR\Lib\site-packages"
 
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
-$SALT_REPO_URL   = "https://github.com/saltstack/salt"
-$SALT_SRC_DIR    = "$( (Get-Item $PROJECT_DIR).Parent.FullName )\salt"
-$SALT_DEPS       = "$SALT_SRC_DIR\requirements\static\pkg\py$PY_VERSION\windows.txt"
+$SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.txt"
 if ( $Architecture -eq "x64" ) {
     $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/64"
 } else {
@@ -108,9 +106,9 @@ if ( ! (Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe") ) {
 Write-Host "Cleaning Salt Build Environment: " -NoNewline
 $remove = "build", "dist"
 $remove | ForEach-Object {
-    if ( Test-Path -Path "$SALT_SRC_DIR\$_" ) {
-        Remove-Item -Path "$SALT_SRC_DIR\$_" -Recurse -Force
-        if ( Test-Path -Path "$SALT_SRC_DIR\$_" ) {
+    if ( Test-Path -Path "$PROJECT_DIR\$_" ) {
+        Remove-Item -Path "$PROJECT_DIR\$_" -Recurse -Force
+        if ( Test-Path -Path "$PROJECT_DIR\$_" ) {
             Write-Host "Failed" -ForegroundColor Red
             Write-Host "Failed to remove $_"
             exit 1
@@ -118,11 +116,10 @@ $remove | ForEach-Object {
     }
 }
 Write-Host "Success" -ForegroundColor Green
-
-Write-Host "Installing Salt: " -NoNewline
-Start-Process -FilePath $SCRIPTS_DIR\pip.exe `
+# TODO: Do we use pip3.exe here or make a pip.exe?
+Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
               -ArgumentList "install", "." `
-              -WorkingDirectory "$SALT_SRC_DIR" `
+              -WorkingDirectory "$PROJECT_DIR" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
     Write-Host "Success" -ForegroundColor Green
@@ -131,26 +128,13 @@ if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
     exit 1
 }
 
-Write-Host "Copying Scripts: " -NoNewline
-$salt_binaries = Get-ChildItem -Path $SCRIPTS_DIR -Filter "salt*.exe"
-$salt_binaries | ForEach-Object {
-    Copy-Item -Path "$SALT_SRC_DIR\scripts\$($_.BaseName)" `
-              -Destination "$SCRIPTS_DIR" -Force
-}
-$salt_files = Get-ChildItem -Path $SCRIPTS_DIR -Filter "salt*"
-if ( $salt_files.Count -eq ($salt_binaries.Count * 2) ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-}
-
 #-------------------------------------------------------------------------------
 # Installing Libsodium DLL
 #-------------------------------------------------------------------------------
 Write-Host "Installing Libsodium DLL: " -NoNewline
 $libsodium_url = "$SALT_DEP_URL/libsodium/1.0.18/libsodium.dll"
-Invoke-WebRequest -Uri $libsodium_url -OutFile "$PYTHON_DIR\libsodium.dll"
-if ( Test-Path -Path "$PYTHON_DIR\libsodium.dll" ) {
+Invoke-WebRequest -Uri $libsodium_url -OutFile "$SCRIPTS_DIR\libsodium.dll"
+if ( Test-Path -Path "$SCRIPTS_DIR\libsodium.dll" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -160,30 +144,6 @@ if ( Test-Path -Path "$PYTHON_DIR\libsodium.dll" ) {
 #-------------------------------------------------------------------------------
 # Cleaning Up Installation
 #-------------------------------------------------------------------------------
-
-# Remove doc
-if ( Test-Path -Path "$PYTHON_DIR\doc" ) {
-    Write-Host "Removing doc directory: " -NoNewline
-    Remove-Item "$PYTHON_DIR\doc" -Recurse -Force
-    if ( ! (Test-Path -Path "$PYTHON_DIR\doc") ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-# Remove share
-if ( Test-Path -Path "$PYTHON_DIR\share" ) {
-    Write-Host "Removing share directory: " -NoNewline
-    Remove-Item "$PYTHON_DIR\share" -Recurse -Force
-    if ( ! (Test-Path -Path "$PYTHON_DIR\share") ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
 
 # Remove WMI Test Scripts
 Write-Host "Removing wmitest scripts: " -NoNewline
@@ -220,9 +180,9 @@ Write-Host "Success" -ForegroundColor Green
 # Move DLL's to Python Root
 # The dlls have to be in Python directory and the site-packages\win32 directory
 Write-Host "Placing PyWin32 DLLs: " -NoNewline
-Copy-Item "$SITE_PKGS_DIR\pywin32_system32\*.dll" "$PYTHON_DIR" -Force | Out-Null
+Copy-Item "$SITE_PKGS_DIR\pywin32_system32\*.dll" "$SCRIPTS_DIR" -Force | Out-Null
 Move-Item "$SITE_PKGS_DIR\pywin32_system32\*.dll" "$SITE_PKGS_DIR\win32" -Force | Out-Null
-if ( ! ((Test-Path -Path "$PYTHON_DIR\pythoncom38.dll") -and (Test-Path -Path "$PYTHON_DIR\pythoncom38.dll")) ) {
+if ( ! ((Test-Path -Path "$SCRIPTS_DIR\pythoncom38.dll") -and (Test-Path -Path "$SCRIPTS_DIR\pythoncom38.dll")) ) {
     Write-Host "Failed" -ForegroundColor Red
     exit 1
 }

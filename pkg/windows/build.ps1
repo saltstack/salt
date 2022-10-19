@@ -137,15 +137,6 @@ Write-Host "- Architecture:   $Architecture"
 Write-Host $("#" * 80)
 
 #-------------------------------------------------------------------------------
-# Clean the Environment
-#-------------------------------------------------------------------------------
-PowerShell.exe -file "$SCRIPT_DIR\clean_env.ps1"
-if ( ! $? ) {
-    Write-Host "Failed to clean the environment"
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
 # Install NSIS
 #-------------------------------------------------------------------------------
 powershell -file "$SCRIPT_DIR\install_nsis.ps1"

@@ -87,7 +87,7 @@ If (!(Get-IsAdministrator)) {
 #-------------------------------------------------------------------------------
 
 Write-Host $("=" * 80)
-Write-Host "Build Python from Source" -ForegroundColor Cyan
+Write-Host "Build Python with Mayflower" -ForegroundColor Cyan
 Write-Host "- Python Version: $Version"
 Write-Host "- Architecture:   $Architecture"
 Write-Host $("-" * 80)
@@ -137,33 +137,33 @@ Write-Host "Success" -ForegroundColor Green
 #-------------------------------------------------------------------------------
 
 # Script Variables
-$PROJ_DIR     = $(git rev-parse --show-toplevel)
+$PROJ_DIR      = $(git rev-parse --show-toplevel)
+$MAYFLOWER_DIR = "$SCRIPT_DIR\Mayflower"
+$MAYFLOWER_URL = "https://github.com/saltstack/mayflower"
 
 # Python Variables
 
 $PY_DOT_VERSION = $Version
 $PY_VERSION     = [String]::Join(".", $Version.Split(".")[0..1])
-$PY_SRC_DIR     = "$( (Get-Item $PROJ_DIR).Parent.FullName )\cpython"
-$PY_REPO_URL    = "https://github.com/python/cpython"
-$PIP_URL        = "https://bootstrap.pypa.io/get-pip.py"
-$PYTHON_DIR     = "C:\Python$($PY_VERSION -replace "\.")"
-$SCRIPTS_DIR    = "$PYTHON_DIR\Scripts"
+$BIN_DIR        = "$SCRIPT_DIR\buildenv\bin"
+$SCRIPTS_DIR    = "$BIN_DIR\Scripts"
 
 if ( $Architecture -eq "x64" ) {
-    $PY_BLD_DIR     = "$PY_SRC_DIR\PCbuild\amd64"
     $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/64"
+    $BUILD_DIR     = "$MAYFLOWER_DIR\mayflower\_build\x86_64-win"
 } else {
-    $PY_BLD_DIR     = "$PY_SRC_DIR\PCbuild\win32"
     $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/32"
+    # Not sure of the exact name here
+    $BUILD_DIR     = "$MAYFLOWER_DIR\mayflower\_build\x86_32-win"
 }
 
 #-------------------------------------------------------------------------------
 # Prepping Environment
 #-------------------------------------------------------------------------------
-if ( Test-Path -Path "$PY_SRC_DIR" ) {
-    Write-Host "Removing existing cpython directory: " -NoNewline
-    Remove-Item -Path "$PY_SRC_DIR" -Recurse -Force
-    if ( Test-Path -Path "$PY_SRC_DIR" ) {
+if ( Test-Path -Path "$MAYFLOWER_DIR" ) {
+    Write-Host "Removing existing mayflower directory: " -NoNewline
+    Remove-Item -Path "$MAYFLOWER_DIR" -Recurse -Force
+    if ( Test-Path -Path "$MAYFLOWER_DIR" ) {
         Write-Host "Failed" -ForegroundColor Red
         exit 1
     } else {
@@ -171,10 +171,10 @@ if ( Test-Path -Path "$PY_SRC_DIR" ) {
     }
 }
 
-if ( Test-Path -Path "$PYTHON_DIR" ) {
-    Write-Host "Removing Existing Build Directory ($PYTHON_DIR): " -NoNewline
-    Remove-Item -Path "$PYTHON_DIR" -Recurse -Force | Out-Null
-    if ( Test-Path -Path "$PYTHON_DIR" ) {
+if ( Test-Path -Path "$BIN_DIR" ) {
+    Write-Host "Removing existing bin directory: " -NoNewline
+    Remove-Item -Path "$BIN_DIR" -Recurse -Force
+    if ( Test-Path -Path "$BIN_DIR" ) {
         Write-Host "Failed" -ForegroundColor Red
         exit 1
     } else {
@@ -183,36 +183,17 @@ if ( Test-Path -Path "$PYTHON_DIR" ) {
 }
 
 #-------------------------------------------------------------------------------
-# Building Python
+# Downloading Mayflower
 #-------------------------------------------------------------------------------
-Write-Host "Cloning Python ($PY_DOT_VERSION): " -NoNewline
-$args = "clone", "--depth", "1", "--branch", "v$PY_DOT_VERSION", "$PY_REPO_URL", "$PY_SRC_DIR"
+# TODO: Eventually we should just download the tarball from a release, but since
+# TODO: there is no release yet, we'll just clone the directory
+
+Write-Host "Cloning Mayflower: " -NoNewline
+$args = "clone", "--depth", "1", "$MAYFLOWER_URL", "$MAYFLOWER_DIR"
 Start-Process -FilePath git `
               -ArgumentList $args `
               -Wait -WindowStyle Hidden
-if ( Test-Path -Path "$PY_SRC_DIR\Python") {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Building Python (long-running): " -NoNewLine
-# Visual Studio Leaves and MSbuild.exe process hanging around to optimize future
-# builds. This causes the build to hang waiting for all processes to end. So, we
-# need to disable Node Reuse so it closes the running MSBuild.exe process.
-[System.Environment]::SetEnvironmentVariable("MSBUILDDISABLENODEREUSE", "1")
-Start-Process -FilePath "$PY_SRC_DIR\PCbuild\build.bat" `
-    -ArgumentList "-p", "$Architecture", "--no-tkinter" `
-    -WindowStyle Hidden
-# Sometimes the process doesn't return properly so the script can continue
-# So, we'll run it asynchronously and check for the last file it builds
-while ( ! (Test-Path -Path "$PY_BLD_DIR\pythonw.exe") ) {
-    Start-Sleep -Seconds 5
-}
-# Remove the environment variable after build
-[System.Environment]::SetEnvironmentVariable("MSBUILDDISABLENODEREUSE", $null)
-if ( Test-Path -Path "$PY_BLD_DIR\python.exe") {
+if ( Test-Path -Path "$MAYFLOWER_DIR\mayflower") {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -220,140 +201,66 @@ if ( Test-Path -Path "$PY_BLD_DIR\python.exe") {
 }
 
 #-------------------------------------------------------------------------------
-# Creating Python Directory Structure
+# Installing Mayflower
 #-------------------------------------------------------------------------------
-Write-Host "Creating Build Directory ($PYTHON_DIR): " -NoNewline
-New-Item -Path "$PYTHON_DIR" -ItemType Directory | Out-Null
-if ( Test-Path -Path "$PYTHON_DIR" ) {
+Write-Host "Installing Mayflower: " -NoNewLine
+$output = pip install -e "$MAYFLOWER_DIR\." --disable-pip-version-check
+$output = pip list --disable-pip-version-check
+if ("mayflower" -in $output.split()) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "Moving Python binaries: " -NoNewline
-$binaries = @(
-    "py.exe",
-    "pyw.exe",
-    "python.exe",
-    "pythonw.exe",
-    "python3.dll",
-    "python38.dll",
-    "vcruntime140.dll",
-    "venvlauncher.exe",
-    "venvwlauncher.exe"
-)
-$binaries | ForEach-Object {
-    Move-Item -Path "$PY_BLD_DIR\$_" -Destination "$PYTHON_DIR" | Out-Null
-    if ( ! ( Test-Path -Path "$PYTHON_DIR\$_") ) {
+#-------------------------------------------------------------------------------
+# Building Python with Mayflower
+#-------------------------------------------------------------------------------
+Write-Host "Building Python with Mayflower (long-running): " -NoNewLine
+$output = python -m mayflower build --clean
+if ( Test-Path -Path "$BUILD_DIR\Scripts\python.exe") {
+    Write-Host "Success" -ForegroundColor Green
+} else {
+    Write-Host "Failed" -ForegroundColor Red
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Moving Python to Bin Dir
+#-------------------------------------------------------------------------------
+if ( !( Test-Path -Path $BIN_DIR ) ) {
+    Write-Host "Creating the bin directory: " -NoNewLine
+    New-Item -Path $BIN_DIR -ItemType Directory | Out-Null
+    if ( Test-Path -Path $BIN_DIR ) {
+        Write-Host "Success" -ForegroundColor Green
+    } else {
         Write-Host "Failed" -ForegroundColor Red
         exit 1
     }
 }
-Write-Host "Success" -ForegroundColor Green
 
-Write-Host "Creating DLLs directory: " -NoNewline
-New-Item -Path "$PYTHON_DIR\DLLs" -ItemType Directory | Out-Null
-if ( Test-Path -Path "$PYTHON_DIR\DLLs" ) {
+Write-Host "Moving Python to bin directory: " -NoNewLine
+Move-Item -Path "$BUILD_DIR\*" -Destination "$BIN_DIR"
+if ( Test-Path -Path "$SCRIPTS_DIR\python.exe") {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "Moving Python DLLS: " -NoNewline
-Move-Item -Path "$PY_BLD_DIR\*.pyd" -Destination "$PYTHON_DIR\DLLs"
-Move-Item -Path "$PY_BLD_DIR\*.dll" -Destination "$PYTHON_DIR\DLLs"
-if ( ! (Test-Path -Path "$PYTHON_DIR\DLLs\select.pyd") ) {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-if ( Test-Path -Path "$PYTHON_DIR\DLLs\sqlite3.dll" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Copying Header Files: " -NoNewline
-Copy-Item -Path "$PY_SRC_DIR\include" -Destination "$PYTHON_DIR\include" -Recurse | Out-Null
-Copy-Item -Path "$PY_SRC_DIR\PC\pyconfig.h" -Destination "$PYTHON_DIR\include" -Recurse | Out-Null
-if ( ! (Test-Path -Path "$PYTHON_DIR\include\abstract.h") ) {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-if ( Test-Path -Path "$PYTHON_DIR\include\pyconfig.h" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Copying Library Files: " -NoNewline
-Copy-Item -Path "$PY_SRC_DIR\Lib" -Destination "$PYTHON_DIR\Lib" -Recurse | Out-Null
-if ( Test-Path -Path "$PYTHON_DIR\Lib\abc.py" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Creating libs directory: " -NoNewline
-New-Item -Path "$PYTHON_DIR\libs" -ItemType Directory | Out-Null
-if ( Test-Path -Path "$PYTHON_DIR\libs" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Copying lib Files: " -NoNewline
-Copy-Item -Path "$PY_BLD_DIR\python3.lib" -Destination "$PYTHON_DIR\libs" | Out-Null
-Copy-Item -Path "$PY_BLD_DIR\python38.lib" -Destination "$PYTHON_DIR\libs" | Out-Null
-if ( ! (Test-Path -Path "$PYTHON_DIR\libs\python3.lib") ) {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-if ( Test-Path -Path "$PYTHON_DIR\libs\python38.lib" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Retrieving SSL libaries: " -NoNewline
+#-------------------------------------------------------------------------------
+# Retrieving SSL Libraries
+#-------------------------------------------------------------------------------
+Write-Host "Retrieving SSL Libaries: " -NoNewline
 $libeay_url = "$SALT_DEP_URL/openssl/1.1.1k/libeay32.dll"
 $ssleay_url = "$SALT_DEP_URL/openssl/1.1.1k/ssleay32.dll"
-Invoke-WebRequest -Uri "$libeay_url" -OutFile "$PYTHON_DIR\libeay32.dll" | Out-Null
-Invoke-WebRequest -Uri "$ssleay_url" -OutFile "$PYTHON_DIR\ssleay32.dll" | Out-Null
-if ( ! (Test-Path -Path "$PYTHON_DIR\libeay32.dll") ) {
+Invoke-WebRequest -Uri "$libeay_url" -OutFile "$SCRIPTS_DIR\libeay32.dll" | Out-Null
+Invoke-WebRequest -Uri "$ssleay_url" -OutFile "$SCRIPTS_DIR\ssleay32.dll" | Out-Null
+if ( ! (Test-Path -Path "$SCRIPTS_DIR\libeay32.dll") ) {
     Write-Host "Failed" -ForegroundColor Red
     exit 1
 }
-if ( Test-Path -Path "$PYTHON_DIR\ssleay32.dll" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
-# Installing PIP
-#-------------------------------------------------------------------------------
-Write-Host "Downloading pip: " -NoNewline
-Invoke-WebRequest -Uri $PIP_URL -OutFile "$env:TEMP\get-pip.py" | Out-Null
-if ( Test-Path -Path "$env:TEMP\get-pip.py" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Installing pip: " -NoNewline
-Start-Process -FilePath "$PYTHON_DIR\python.exe" `
-    -ArgumentList "$env:TEMP\get-pip.py" `
-    -Wait -WindowStyle Hidden
-if ( Test-Path -Path "$PYTHON_DIR\Scripts\pip.exe" ) {
+if ( Test-Path -Path "$SCRIPTS_DIR\ssleay32.dll" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -369,39 +276,18 @@ $remove = "idlelib",
           "tkinter",
           "turtledemo"
 $remove | ForEach-Object {
-    Remove-Item -Path "$PYTHON_DIR\Lib\$_" -Recurse -Force
-    if ( Test-Path -Path "$PYTHON_DIR\Lib\$_" ) {
+    Remove-Item -Path "$BIN_DIR\Lib\$_" -Recurse -Force
+    if ( Test-Path -Path "$BIN_DIR\Lib\$_" ) {
         Write-Host "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $PYTHON_DIR\Lib\$_"
+        Write-Host "Failed to remove: $BIN_DIR\Lib\$_"
         exit 1
     }
 }
 Write-Host "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
-# Updating PATH Environment Variable
+# Restoring Original Global Script Preferences
 #-------------------------------------------------------------------------------
-Write-Host "Updating Path: " -NoNewLine
-$Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
-if ( ! ($Path.ToLower().Contains("$SCRIPTS_DIR".ToLower())) ) {
-    $env:Path = "$PYTHON_DIR;$SCRIPTS_DIR;$Path"
-    [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
-}
-
-$Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
-if ( ! ($Path.ToLower().Contains("$PYTHON_DIR".ToLower())) ) {
-    Write-Host "Failed" -ForegroundColor Red
-    Write-Host "Failed to add $PYTHON_DIR to path"
-    exit 1
-}
-if ( $Path.ToLower().Contains("$SCRIPTS_DIR".ToLower()) ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    Write-Host "Failed to add $SCRIPTS_DIR to path"
-    exit 1
-}
-
 if ( $CREATED_POWERSHELL_PROFILE_DIRECTORY ) {
     Write-Host "Removing PowerShell Profile Directory"
     Remove-Item -Path "$(Split-Path "$profile" -Parent)" -Recurse -Force
@@ -436,23 +322,10 @@ if ( Test-Path -Path "$profile.salt_bak" ) {
 }
 
 #-------------------------------------------------------------------------------
-# Adding Registry Key for Python Launcher
-#-------------------------------------------------------------------------------
-Write-Host "Writing Python Launcher Registry Entries: " -NoNewline
-$PL_REG = "HKLM:\SOFTWARE\Python\PythonCore\$PY_VERSION\InstallPath"
-New-Item -Path $PL_REG -Value $PYTHON_DIR -Force | Out-Null
-if ( Test-Path -Path $PL_REG ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
 # Finished
 #-------------------------------------------------------------------------------
 Write-Host $("-" * 80)
-Write-Host "Build Python $Architecture from Source Completed" `
+Write-Host "Build Python $Architecture with Mayflower Completed" `
     -ForegroundColor Cyan
-Write-Host "Environment Location: $PYTHON_DIR"
+Write-Host "Environment Location: $BIN_DIR"
 Write-Host $("=" * 80)

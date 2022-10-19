@@ -35,6 +35,8 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
+$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
+
 # Script Variables
 $NSIS_DIR       = "$( ${env:ProgramFiles(x86)} )\NSIS"
 if ( $Architecture -eq "x64" ) {
@@ -49,15 +51,13 @@ if ( $Architecture -eq "x64" ) {
 # TODO: These need to be moved to a Script option
 $PY_VERSION     = "3.8"
 $PY_DOT_VERSION = "3.8.14"
-$PYTHON_DIR     = "C:\Python$($PY_VERSION -replace "\.")"
-$PYTHON_BIN     = "$PYTHON_DIR\python.exe"
-$SCRIPTS_DIR    = "$PYTHON_DIR\Scripts"
+$BIN_DIR        = "$SCRIPT_DIR\buildenv\bin"
+$SCRIPTS_DIR    = "$BIN_DIR\Scripts"
+$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 
 # Build Variables
-$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $SALT_REPO_URL  = "https://github.com/saltstack/salt"
-$SALT_SRC_DIR   = "$( (Get-Item $PROJECT_DIR).Parent.FullName )\salt"
 $BUILD_DIR      = "$SCRIPT_DIR\buildenv"
 $BUILD_DIR_BIN  = "$BUILD_DIR\bin"
 $BUILD_DIR_SALT = "$BUILD_DIR_BIN\Lib\site-packages\salt"
@@ -70,16 +70,10 @@ $PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 #-------------------------------------------------------------------------------
 
 if ( [String]::IsNullOrEmpty($Version) ) {
-    if ( ! (Test-Path -Path $SALT_SRC_DIR) ) {
-        Write-Host "Missing Salt Source Directory: $SALT_SRC_DIR"
-        exit 1
-    }
-    Push-Location $SALT_SRC_DIR
     $Version = $( git describe )
     $Version = $Version.Trim("v")
-    Pop-Location
     if ( [String]::IsNullOrEmpty($Version) ) {
-        Write-Host "Failed to get version from $SALT_SRC_DIR"
+        Write-Host "Failed to get version from $PROJECT_DIR"
         exit 1
     }
 }
@@ -97,16 +91,8 @@ Write-Host $("-" * 80)
 #-------------------------------------------------------------------------------
 # Verify Environment
 #-------------------------------------------------------------------------------
-Write-Host "Verifying Salt Source Present: " -NoNewline
-if ( Test-Path -Path $SALT_SRC_DIR ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit
-}
-
-Write-Host "Verifying Python Installation: " -NoNewline
-if ( Test-Path -Path "$PYTHON_DIR\python.exe" ) {
+Write-Host "Verifying Python Build: " -NoNewline
+if ( Test-Path -Path "$PYTHON_BIN" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -132,17 +118,6 @@ if ( Test-Path -Path "$NSIS_DIR\makensis.exe" ) {
 #-------------------------------------------------------------------------------
 # Cleaning Build Environment
 #-------------------------------------------------------------------------------
-if ( Test-Path -Path $BUILD_DIR_BIN ) {
-    Write-Host "Removing Bin Directory: " -NoNewline
-    Remove-Item -Path $BUILD_DIR_BIN -Recurse -Force
-    if ( ! (Test-Path -Path $BUILD_DIR_BIN) ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
 if ( Test-Path -Path $BUILD_DIR_CONF ) {
     Write-Host "Removing Configs Directory: " -NoNewline
     Remove-Item -Path $BUILD_DIR_CONF -Recurse -Force
@@ -168,18 +143,9 @@ if ( Test-Path -Path $PREREQ_DIR ) {
 #-------------------------------------------------------------------------------
 # Staging the Build Environment
 #-------------------------------------------------------------------------------
-Write-Host "Copying $PYTHON_DIR to Bin: " -NoNewline
-Copy-Item -Path "$PYTHON_DIR" -Destination "$BUILD_DIR_BIN" -Recurse
-if ( Test-Path -Path "$BUILD_DIR_BIN\python.exe" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
 Write-Host "Copying config files from Salt: " -NoNewline
 New-Item -Path $BUILD_DIR_CONF -ItemType Directory | Out-Null
-Copy-Item -Path "$SALT_SRC_DIR\conf\minion" -Destination "$BUILD_DIR_CONF"
+Copy-Item -Path "$PROJECT_DIR\conf\minion" -Destination "$BUILD_DIR_CONF"
 if ( Test-Path -Path "$BUILD_DIR_CONF\minion" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
@@ -188,8 +154,8 @@ if ( Test-Path -Path "$BUILD_DIR_CONF\minion" ) {
 }
 
 Write-Host "Copying SSM to Bin: " -NoNewline
-Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR_BIN\ssm.exe"
-if ( Test-Path -Path "$BUILD_DIR_BIN\ssm.exe" ) {
+Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$SCRIPTS_DIR\ssm.exe"
+if ( Test-Path -Path "$SCRIPTS_DIR\ssm.exe" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -253,31 +219,41 @@ $binaries = @(
 )
 Write-Host "Removing Python binaries: " -NoNewline
 $binaries | ForEach-Object {
-    Remove-Item -Path "$BUILD_DIR_BIN\$_"
-        if ( ! ( Test-Path -Path "$PYTHON_DIR\$_") ) {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
+    if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
+        # Use .net, the powershell function is asynchronous
+        [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
+        if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
+            Write-Host "Failed" -ForegroundColor Red
+            exit 1
+        }
     }
 }
 Write-Host "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
-# Make the Binaries in the Scripts directory portable
+# Remove Unneeded Directories from bin dir
 #-------------------------------------------------------------------------------
-$binaries = Get-ChildItem -Path "$BUILD_DIR_BIN\Scripts" -Filter "*.exe"
-$binaries | ForEach-Object {
-    Write-Host "Making $_ Portable: " -NoNewline
-    $before = $_.LastWriteTime
-    Start-Process -FilePath "$PYTHON_BIN" `
-                  -ArgumentList "$SCRIPT_DIR\portable.py", "-f", "$($_.FullName)" `
-                  -Wait -WindowStyle Hidden
-    $after = (Get-Item -Path $_.FullName).LastWriteTime
-    if ( $after -gt $before) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
+$delete = @(
+    "doc",
+    "share",
+    "readme.rst"
+)
+Write-Host "Removing Unneeded Directories: " -NoNewline
+$delete | ForEach-Object {
+    if ( Test-Path -Path "$BIN_DIR\$_" ) {
+        # Use .net, the powershell function is asynchronous
+        if ( (Get-Item "$BIN_DIR\$_") -is [System.IO.DirectoryInfo] ) {
+            [System.IO.Directory]::Delete("$BIN_DIR\$_", $true)
+        } else {
+            [System.IO.File]::Delete("$BIN_DIR\$_")
+        }
+        if ( Test-Path -Path "$BIN_DIR\$_" ) {
+            Write-Host "Failed" -ForegroundColor Red
+            exit 1
+        }
     }
 }
+Write-Host "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Remove Non-Windows Execution Modules
@@ -522,16 +498,15 @@ if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
     exit 1
 }
 
-
-if ( ! (Test-Path -Path "$PROJECT_DIR\build") ) {
-    New-Item -Path "$PROJECT_DIR\build" -ItemType Directory | Out-Null
+if ( ! (Test-Path -Path "$SCRIPT_DIR\build") ) {
+    New-Item -Path "$SCRIPT_DIR\build" -ItemType Directory | Out-Null
 }
-if ( Test-Path -Path "$PROJECT_DIR\build\$installer_name" ) {
+if ( Test-Path -Path "$SCRIPT_DIR\build\$installer_name" ) {
     Write-Host "Backing up existing installer: " -NoNewline
     $new_name = "$installer_name.$( Get-Date -UFormat %s ).bak"
-    Move-Item -Path "$PROJECT_DIR\build\$installer_name" `
-              -Destination "$PROJECT_DIR\build\$new_name"
-    if ( Test-Path -Path "$PROJECT_DIR\build\$new_name" ) {
+    Move-Item -Path "$SCRIPT_DIR\build\$installer_name" `
+              -Destination "$SCRIPT_DIR\build\$new_name"
+    if ( Test-Path -Path "$SCRIPT_DIR\build\$new_name" ) {
         Write-Host "Success" -ForegroundColor Green
     } else {
         Write-Host "Failed" -ForegroundColor Red
@@ -540,8 +515,8 @@ if ( Test-Path -Path "$PROJECT_DIR\build\$installer_name" ) {
 }
 
 Write-Host "Moving the Installer: " -NoNewline
-Move-Item -Path "$INSTALLER_DIR\$installer_name" -Destination "$PROJECT_DIR\build"
-if ( Test-Path -Path "$PROJECT_DIR\build\$installer_name" ) {
+Move-Item -Path "$INSTALLER_DIR\$installer_name" -Destination "$SCRIPT_DIR\build"
+if ( Test-Path -Path "$SCRIPT_DIR\build\$installer_name" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -556,4 +531,4 @@ Write-Host "Build NullSoft Installer for Salt Completed" `
     -ForegroundColor Cyan
 Write-Host $("=" * 80)
 Write-Host "Installer can be found at the following location:"
-Write-Host "$PROJECT_DIR\build\$installer_name"
+Write-Host "$SCRIPT_DIR\build\$installer_name"

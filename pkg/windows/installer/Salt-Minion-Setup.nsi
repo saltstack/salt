@@ -1,6 +1,6 @@
 !define PRODUCT_NAME "Salt Minion"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
-!define PRODUCT_WEB_SITE "http://saltstack.org"
+!define PRODUCT_WEB_SITE "http://saltproject.io"
 !define PRODUCT_CALL_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-call.exe"
 !define PRODUCT_CP_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-cp.exe"
 !define PRODUCT_KEY_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-key.exe"
@@ -48,13 +48,8 @@ ${StrStrAdv}
     !define CPUARCH "x86"
 !endif
 
-!ifdef Tiamat
-    !define BUILD_TYPE "Tiamat"
-    !define OUTFILE "Salt-${PRODUCT_VERSION}-Tiamat-${CPUARCH}-Setup.exe"
-!else
-    !define BUILD_TYPE "Python 3"
-    !define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py3-${CPUARCH}-Setup.exe"
-!endif
+!define BUILD_TYPE "Python 3"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py3-${CPUARCH}-Setup.exe"
 
 # Part of the Trim function for Strings
 !define Trim "!insertmacro Trim"
@@ -573,9 +568,9 @@ Section -install_ucrt
 
     ClearErrors
 
-    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin"
-    CreateDirectory $INSTDIR\bin
-    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin"
+    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin\Scripts"
+    CreateDirectory $INSTDIR\bin\Scripts
+    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin\Scripts"
 
     # Clean up the stack
     Pop $R0  # Get Error
@@ -718,11 +713,7 @@ Section "MainSection" SEC01
     # Install files to the Installation Directory
     SetOutPath "$INSTDIR\"
     SetOverwrite off
-    ${If} "${BUILD_TYPE}" == "Tiamat"
-        File /r "..\buildenv_tiamat\"
-    ${Else}
-        File /r "..\buildenv\"
-    ${EndIf}
+    File /r "..\buildenv\"
 
     # Set up Root Directory
     CreateDirectory "$RootDir\conf\pki\minion"
@@ -935,16 +926,16 @@ Section -Post
         "DependOnService" "nsi"
 
     # Set the estimated size
-    ${GetSize} "$INSTDIR\bin" "/S=OK" $0 $1 $2
+    ${GetSize} "$INSTDIR" "/S=OK" $0 $1 $2
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "EstimatedSize" "$0"
 
     # Write Commandline Registry Entries
     WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
-    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\"
+    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\Scripts\"
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
-    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
+    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\Scripts\"
 
     # Write Salt Configuration Registry Entries
     # We want to write EXPAND_SZ string types to allow us to use environment
@@ -979,16 +970,12 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
-    ${If} "${BUILD_TYPE}" == "Tiamat"
-        nsExec::Exec `$INSTDIR\bin\ssm.exe install salt-minion "$INSTDIR\bin\salt.exe" minion -c """$RootDir\conf""" -l quiet`
-    ${Else}
-        nsExec::Exec `$INSTDIR\bin\ssm.exe install salt-minion "$INSTDIR\bin\python.exe" -E -s """$INSTDIR\bin\Scripts\salt-minion""" -c """$RootDir\conf""" -l quiet`
-    ${EndIf}
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Start SERVICE_AUTO_START"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodConsole 24000"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodWindow 2000"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppRestartDelay 60000"
+    nsExec::Exec `$INSTDIR\bin\Scripts\ssm.exe install salt-minion "$INSTDIR\bin\Scripts\python.exe" -E -s """$INSTDIR\bin\Scripts\salt-minion""" -c """$RootDir\conf""" -l quiet`
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_AUTO_START"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodConsole 24000"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodWindow 2000"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppRestartDelay 60000"
 
     # There is a default minion config laid down in the $INSTDIR directory
     ${Switch} $ConfigType
@@ -1022,7 +1009,7 @@ Function .onInstSuccess
 
     # If StartMinionDelayed is 1, then set the service to start delayed
     ${If} $StartMinionDelayed == 1
-        nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
+        nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
     ${EndIf}
 
     # If start-minion is 1, then start the service
