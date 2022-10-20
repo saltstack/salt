@@ -375,11 +375,21 @@ def _get_salt_run_type(opts):
         if "grains" in opts and "id" in opts["grains"]:
             return SALT_RUNTYPE_MASTER_IMPERSONATING
         return SALT_RUNTYPE_MASTER
-    if any(
+
+    config_location = opts.get("vault", {}).get("config_location")
+    if config_location and config_location not in ["local", "master"]:
+        raise salt.exceptions.InvalidConfigError(
+            "Invalid vault configuration: config_location must be either local or master"
+        )
+
+    if "master" == config_location:
+        pass
+    elif any(
         (
             opts.get("local", None),
             opts.get("file_client", None) == "local",
             opts.get("master_type", None) == "disable",
+            "local" == config_location,
         )
     ):
         return SALT_RUNTYPE_MINION_LOCAL
@@ -482,18 +492,9 @@ def _build_authd_client(opts, context, force_local=False):
 
 
 def _get_connection_config(cbank, opts, context, force_local=False):
-    config_location = opts.get("vault", {}).get("config_location")
-    if config_location and config_location not in ["local", "master"]:
-        raise salt.exceptions.InvalidConfigError(
-            "Invalid vault configuration: config_location must be either local or master"
-        )
-
-    if "master" == config_location and not force_local:
-        pass
-    elif (
+    if (
         _get_salt_run_type(opts) in [SALT_RUNTYPE_MASTER, SALT_RUNTYPE_MINION_LOCAL]
         or force_local
-        or "local" == config_location
     ):
         # only cache config fetched from remote
         return _use_local_config(opts)
@@ -581,18 +582,9 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
             secret_id_cache.store(secret_id)
         return secret_id
 
-    config_location = opts.get("vault", {}).get("config_location")
-    if config_location and config_location not in ["local", "master"]:
-        raise salt.exceptions.InvalidConfigError(
-            "Invalid vault configuration: config_location must be either local or master"
-        )
-
-    if "master" == config_location and not force_local:
-        pass
-    elif (
+    if (
         _get_salt_run_type(opts) in [SALT_RUNTYPE_MASTER, SALT_RUNTYPE_MINION_LOCAL]
         or force_local
-        or "local" == config_location
     ):
         secret_id = config["auth"]["secret_id"]
         if isinstance(secret_id, dict):
@@ -652,20 +644,9 @@ def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=No
             token_cache.store(token)
         return token
 
-    runtype = _get_salt_run_type(opts)
-
-    config_location = opts.get("vault", {}).get("config_location")
-    if config_location and config_location not in ["local", "master"]:
-        raise salt.exceptions.InvalidConfigError(
-            "Invalid vault configuration: config_location must be either local or master"
-        )
-
-    if "master" == config_location and not force_local:
-        pass
-    elif (
-        runtype in [SALT_RUNTYPE_MASTER, SALT_RUNTYPE_MINION_LOCAL]
+    if (
+        _get_salt_run_type(opts) in [SALT_RUNTYPE_MASTER, SALT_RUNTYPE_MINION_LOCAL]
         or force_local
-        or "local" == config_location
     ):
         token = None
         if isinstance(embedded_token, dict):
