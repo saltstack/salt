@@ -138,7 +138,7 @@ def run_file(
             return ret
 
         ret["result"] = None
-        ret["comment"] = ("Database {} is not present").format(database)
+        ret["comment"] = "Database {} is not present".format(database)
         return ret
 
     # Check if execution needed
@@ -316,7 +316,7 @@ def run(
             return ret
 
         ret["result"] = None
-        ret["comment"] = ("Database {} is not present").format(name)
+        ret["comment"] = "Database {} is not present".format(name)
         return ret
 
     # Check if execution needed

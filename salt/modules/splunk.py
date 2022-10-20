@@ -28,8 +28,8 @@ import subprocess
 HAS_LIBS = False
 try:
     import splunklib.client
-    from splunklib.client import AuthenticationError
     from splunklib.binding import HTTPError
+    from splunklib.client import AuthenticationError
 
     HAS_LIBS = True
 except ImportError:
@@ -73,7 +73,8 @@ def _get_secret_key(profile):
 
 def _generate_password(email):
     m = hmac.new(
-        base64.b64decode(_get_secret_key("splunk")), str([email, SERVICE_NAME]),
+        base64.b64decode(_get_secret_key("splunk")),
+        str([email, SERVICE_NAME]),
     )
     return base64.urlsafe_b64encode(m.digest()).strip().replace("=", "")
 
@@ -272,7 +273,7 @@ def update_user(email, profile="splunk", **kwargs):
     user = list_users(profile).get(email)
 
     if not user:
-        log.error("Failed to retrieve user {}".format(email))
+        log.error("Failed to retrieve user %s", email)
         return False
 
     property_map = {}

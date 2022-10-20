@@ -1,6 +1,7 @@
 import os.path
 
 import pytest
+
 import salt.modules.archive as archive
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import MagicMock, patch
@@ -511,7 +512,8 @@ def test_unrar_raises_exception_if_not_found():
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
             with pytest.raises(CommandNotFoundError):
                 archive.unrar(
-                    "/tmp/rarfile.rar", "/home/strongbad/",
+                    "/tmp/rarfile.rar",
+                    "/home/strongbad/",
                 )
             assert not mock.called
 

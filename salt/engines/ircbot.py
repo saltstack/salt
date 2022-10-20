@@ -12,7 +12,7 @@ Example Configuration
           nick: <nick>
           username: <username>
           password: <password>
-          host: chat.freenode.net
+          host: irc.oftc.net
           port: 7000
           channels:
             - salt-test
@@ -287,7 +287,7 @@ def start(
         Nickname of the connected Bot.
 
     host
-        irc server (example - chat.freenode.net).
+        irc server (example - irc.oftc.net).
 
     port
         irc port.  Default: 6667

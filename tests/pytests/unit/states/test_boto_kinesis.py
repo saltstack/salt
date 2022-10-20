@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.boto_kinesis as boto_kinesis
 from tests.support.mock import MagicMock, patch
 
@@ -63,10 +64,10 @@ def test_stream_present():
     ):
         # already present, no change required
         comt = (
-            "Kinesis stream {0} already exists,\n"
-            "Kinesis stream {0}: retention hours did not require change, already set at {1},\n"
-            "Kinesis stream {0}: enhanced monitoring did not require change, already set at {2},\n"
-            "Kinesis stream {0}: did not require resharding, remains at {3} shards".format(
+            "Kinesis stream {0} already exists,\nKinesis stream {0}: retention hours"
+            " did not require change, already set at {1},\nKinesis stream {0}: enhanced"
+            " monitoring did not require change, already set at {2},\nKinesis stream"
+            " {0}: did not require resharding, remains at {3} shards".format(
                 name, retention_hours, enhanced_monitoring, num_shards
             )
         )
@@ -118,10 +119,11 @@ def test_stream_present():
 
         with patch.dict(boto_kinesis.__opts__, {"test": False}):
             comt = (
-                "Kinesis stream {0} successfully created,\n"
-                "Kinesis stream {0}: retention hours did not require change, already set at {1},\n"
-                "Kinesis stream {0}: enhanced monitoring did not require change, already set at {2},\n"
-                "Kinesis stream {0}: did not require resharding, remains at {3} shards".format(
+                "Kinesis stream {0} successfully created,\nKinesis stream {0}:"
+                " retention hours did not require change, already set at {1},\nKinesis"
+                " stream {0}: enhanced monitoring did not require change, already set"
+                " at {2},\nKinesis stream {0}: did not require resharding, remains at"
+                " {3} shards".format(
                     name, retention_hours, enhanced_monitoring, num_shards
                 )
             )

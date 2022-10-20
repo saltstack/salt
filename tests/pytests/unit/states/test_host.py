@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.states.host as host
 from tests.support.mock import MagicMock, call, patch
 
@@ -77,7 +78,7 @@ def test_present():
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]}
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls
 
@@ -161,7 +162,7 @@ def test_present():
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls
 
@@ -185,7 +186,7 @@ def test_present():
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             "removed": {cur_ip: [hostname]},
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
         expected = [call(cur_ip, hostname)]
         assert rm_host.mock_calls == expected, rm_host.mock_calls
@@ -331,10 +332,10 @@ def test_present():
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             "comment_added": {ip_list[0]: ["A comment"], ip_list[1]: ["A comment"]},
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host_mock.mock_calls) == expected, add_host_mock.mock_calls
 
-        expected = sorted([call(x, "A comment") for x in ip_list])
+        expected = sorted(call(x, "A comment") for x in ip_list)
         assert (
             sorted(set_comment_mock.mock_calls) == expected
         ), set_comment_mock.mock_calls
@@ -346,12 +347,17 @@ def test_host_present_should_return_True_if_test_and_no_changes():
     add_host_mock = MagicMock(return_value=True)
     rm_host_mock = MagicMock(return_value=True)
     expected = {
-        "comment": "Host {} ({}) already present".format(hostname, ip_list[0],),
+        "comment": "Host {} ({}) already present".format(
+            hostname,
+            ip_list[0],
+        ),
         "changes": {},
         "name": hostname,
         "result": True,
     }
-    list_hosts = MagicMock(return_value={ip_list[0]: {"aliases": [hostname]}},)
+    list_hosts = MagicMock(
+        return_value={ip_list[0]: {"aliases": [hostname]}},
+    )
     with patch.dict(
         host.__salt__,
         {
@@ -372,12 +378,19 @@ def test_host_present_should_return_None_if_test_and_adding():
     expected = {
         "comment": "\n".join(
             ["Host {} ({}) already present", "Host {} ({}) would be added"]
-        ).format(hostname, ip_list[0], hostname, ip_list[1],),
+        ).format(
+            hostname,
+            ip_list[0],
+            hostname,
+            ip_list[1],
+        ),
         "changes": {"added": {ip_list[1]: [hostname]}},
         "name": hostname,
         "result": None,
     }
-    list_hosts = MagicMock(return_value={ip_list[0]: {"aliases": [hostname]}},)
+    list_hosts = MagicMock(
+        return_value={ip_list[0]: {"aliases": [hostname]}},
+    )
     with patch.dict(
         host.__salt__,
         {
@@ -398,7 +411,12 @@ def test_host_present_should_return_None_if_test_and_removing():
     expected = {
         "comment": "\n".join(
             ["Host {} ({}) already present", "Host {} ({}) would be removed"]
-        ).format(hostname, ip_list[0], hostname, ip_list[1],),
+        ).format(
+            hostname,
+            ip_list[0],
+            hostname,
+            ip_list[1],
+        ),
         "changes": {"removed": {ip_list[1]: [hostname]}},
         "name": hostname,
         "result": None,

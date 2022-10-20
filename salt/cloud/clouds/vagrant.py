@@ -60,8 +60,8 @@ def avail_locations(call=None):
 
 def avail_images(call=None):
     """This function returns a list of images available for this cloud provider.
-     vagrant will return a list of profiles.
-     salt-cloud --list-images my-cloud-provider
+    vagrant will return a list of profiles.
+    salt-cloud --list-images my-cloud-provider
     """
     vm_ = get_configured_provider()
     return {"Profiles": [profile for profile in vm_["profiles"]]}
@@ -175,7 +175,9 @@ def list_nodes_select(call=None):
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -290,7 +292,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a, or --action."
+            "The destroy action must be called with -d, --destroy, -a, or --action."
         )
 
     opts = __opts__

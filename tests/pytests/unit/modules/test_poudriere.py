@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.modules.poudriere as poudriere
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -142,7 +143,7 @@ def test_delete_jail():
     """
     Test if it deletes poudriere jail with `name`.
     """
-    ret = "Looks like there was an issue deleteing jail             90amd64"
+    ret = "Looks like there was an issue deleting jail 90amd64"
     mock_stack = MagicMock(return_value="90amd64 stack")
     with patch.dict(poudriere.__salt__, {"cmd.run": mock_stack}), patch(
         "salt.modules.poudriere._check_config_exists", MagicMock(return_value=True)
@@ -208,10 +209,7 @@ def test_bulk_build():
                 == "Could not find jail 90amd64"
             )
 
-    ret = (
-        "There may have been an issue building "
-        "packages dumping output: 90amd64 stack"
-    )
+    ret = "There may have been an issue building packages dumping output: 90amd64 stack"
     with patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
         "salt.modules.poudriere._check_config_exists", MagicMock(return_value=True)
     ):

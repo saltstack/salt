@@ -24,7 +24,7 @@ def get_file(path, dest, saltenv="base", makedirs=False, template=None, gzip=Non
         cp.get_file. The argument is only accepted for interface compatibility.
     """
     if gzip is not None:
-        log.warning("The gzip argument to cp.get_file in salt-ssh is " "unsupported")
+        log.warning("The gzip argument to cp.get_file in salt-ssh is unsupported")
 
     if template is not None:
         (path, dest) = _render_filenames(path, dest, saltenv, template)
@@ -102,8 +102,7 @@ def _render_filenames(path, dest, saltenv, template):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}

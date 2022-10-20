@@ -17,7 +17,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
 
 try:
     import spwd
@@ -122,7 +121,7 @@ def _set_attrib(name, key, value, param, root=None, validate=True):
 
     cmd.extend((param, value, name))
 
-    ret = not __salt__["cmd.run"](cmd, python_shell=False)
+    ret = not __salt__["cmd.retcode"](cmd, python_shell=False)
     if validate:
         ret = info(name, root=root).get(key) == value
     return ret
@@ -520,10 +519,7 @@ def list_users(root=None):
         getspall = functools.partial(spwd.getspall)
 
     return sorted(
-        [
-            user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam
-            for user in getspall()
-        ]
+        user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
     )
 
 

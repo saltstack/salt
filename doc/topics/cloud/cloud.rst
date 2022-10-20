@@ -306,7 +306,7 @@ general, the following code can be used as-is:
         Return a list of the VMs that are on the provider, with select fields
         """
         return salt.utils.cloud.list_nodes_select(
-            list_nodes_full("function"), __opts__["query.selection"], call,
+            list_nodes_full("function"), __opts__["query.selection"], call
         )
 
 However, depending on the cloud provider, additional variables may be required.
@@ -324,7 +324,7 @@ appropriately:
             conn = get_conn()  # pylint: disable=E0602
 
         return salt.utils.cloud.list_nodes_select(
-            list_nodes_full(conn, "function"), __opts__["query.selection"], call,
+            list_nodes_full(conn, "function"), __opts__["query.selection"], call
         )
 
 This function is normally called with the ``-S`` option:

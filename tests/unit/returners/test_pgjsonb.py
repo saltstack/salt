@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.returners.pgjsonb_test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,15 +5,10 @@ tests.unit.returners.pgjsonb_test
 Unit tests for the PGJsonb returner (pgjsonb).
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.returners.pgjsonb as pgjsonb
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

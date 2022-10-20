@@ -4,6 +4,7 @@
 """
 
 import pytest
+
 import salt.states.slack as slack
 from tests.support.mock import MagicMock, patch
 
@@ -74,7 +75,11 @@ def test_post_message_apikey():
         ret.update({"comment": comt, "result": False})
         assert (
             slack.post_message(
-                name, channel=channel, from_name=None, message=message, api_key=api_key,
+                name,
+                channel=channel,
+                from_name=None,
+                message=message,
+                api_key=api_key,
             )
             == ret
         )
@@ -167,7 +172,11 @@ def test_post_message_webhook():
         ret.update({"comment": comt, "result": False})
         assert (
             slack.post_message(
-                name, channel=channel, username=username, message=None, webhook=webhook,
+                name,
+                channel=channel,
+                username=username,
+                message=None,
+                webhook=webhook,
             )
             == ret
         )

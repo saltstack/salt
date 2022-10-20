@@ -5,6 +5,7 @@
 """
 
 import builtins
+import getpass
 import logging
 import os
 import re
@@ -12,22 +13,25 @@ import sys
 import tempfile
 
 import pytest
+
+import salt.grains.extra
 import salt.modules.cmdmod as cmdmod
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+from salt._logging import LOG_LEVELS
 from salt.exceptions import CommandExecutionError
-from salt.log.setup import LOG_LEVELS
 from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 
 DEFAULT_SHELL = "foo/bar"
-MOCK_SHELL_FILE = "# List of acceptable shells\n" "\n" "/bin/bash\n"
+MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {cmdmod: {}}
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    return {cmdmod: {"__opts__": opts}}
 
 
 @pytest.fixture(scope="module")
@@ -50,6 +54,20 @@ def test_render_cmd_no_template():
     Tests return when template=None
     """
     assert cmdmod._render_cmd("foo", "bar", None) == ("foo", "bar")
+
+
+def test_render_cmd_saltenv_from_config():
+    mock_template = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            "salt.utils.templates.TEMPLATE_REGISTRY", {"test": mock_template}
+        ):
+            cmdmod._render_cmd("test", "test", "test")
+            assert mock_template.call_count == 2
+            assert mock_template.call_args[1]["saltenv"] == "base"
+            cmdmod._render_cmd("test", "test", "test", saltenv="fake")
+            assert mock_template.call_count == 4
+            assert mock_template.call_args[1]["saltenv"] == "fake"
 
 
 def test_render_cmd_unavailable_engine():
@@ -191,7 +209,11 @@ def test_run_invalid_umask():
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
                     pytest.raises(
-                        CommandExecutionError, cmdmod._run, "foo", "bar", umask="baz",
+                        CommandExecutionError,
+                        cmdmod._run,
+                        "foo",
+                        "bar",
+                        umask="baz",
                     )
 
 
@@ -364,6 +386,47 @@ def test_os_environment_remains_intact():
                     getpwnam_mock.assert_called_with("foobar")
 
 
+@pytest.mark.skip_on_windows
+def test_os_environment_do_not_pass_notify_socket():
+    """
+    Make sure NOTIFY_SOCKET environment variable is not passed
+    to the command if not explicitly set with env parameter.
+    """
+    with patch("pwd.getpwnam") as getpwnam_mock:
+        new_env = os.environ.copy()
+        new_env.update({"NOTIFY_SOCKET": "/run/systemd/notify"})
+        with patch("subprocess.Popen") as popen_mock, patch(
+            "os.environ.copy", return_value=new_env
+        ):
+            popen_mock.return_value = Mock(
+                communicate=lambda *args, **kwags: [b"", None],
+                pid=lambda: 1,
+                retcode=0,
+            )
+
+            with patch.dict(cmdmod.__grains__, {"os": "SUSE", "os_family": "Suse"}):
+                if sys.platform.startswith(("freebsd", "openbsd")):
+                    shell = "/bin/sh"
+                else:
+                    shell = "/bin/bash"
+
+                cmdmod._run("ls", cwd=tempfile.gettempdir(), shell=shell)
+
+                assert "NOTIFY_SOCKET" not in popen_mock.call_args_list[0][1]["env"]
+
+                cmdmod._run(
+                    "ls",
+                    cwd=tempfile.gettempdir(),
+                    shell=shell,
+                    env={"NOTIFY_SOCKET": "/run/systemd/notify.new"},
+                )
+
+                assert (
+                    popen_mock.call_args_list[1][1]["env"]["NOTIFY_SOCKET"]
+                    == "/run/systemd/notify.new"
+                )
+
+
 @pytest.mark.skip_unless_on_darwin
 def test_shell_properly_handled_on_macOS():
     """
@@ -393,11 +456,12 @@ def test_shell_properly_handled_on_macOS():
 
             # User default shell is '/usr/local/bin/bash'
             user_default_shell = "/usr/local/bin/bash"
-            with patch.dict(
-                cmdmod.__salt__,
-                {"user.info": MagicMock(return_value={"shell": user_default_shell})},
+            with patch(
+                "pwd.getpwall",
+                Mock(
+                    return_value=[Mock(pw_shell=user_default_shell, pw_name="foobar")]
+                ),
             ):
-
                 cmd_handler.clear()
                 cmdmod._run(
                     "ls", cwd=tempfile.gettempdir(), runas="foobar", use_vt=False
@@ -409,9 +473,11 @@ def test_shell_properly_handled_on_macOS():
 
             # User default shell is '/bin/zsh'
             user_default_shell = "/bin/zsh"
-            with patch.dict(
-                cmdmod.__salt__,
-                {"user.info": MagicMock(return_value={"shell": user_default_shell})},
+            with patch(
+                "pwd.getpwall",
+                Mock(
+                    return_value=[Mock(pw_shell=user_default_shell, pw_name="foobar")]
+                ),
             ):
 
                 cmd_handler.clear()
@@ -422,6 +488,37 @@ def test_shell_properly_handled_on_macOS():
                 assert not re.search(
                     "bash -l -c", cmd_handler.cmd
                 ), "cmd does not invoke user shell on macOS"
+
+
+@pytest.mark.skip_on_windows
+def test_run_all_quiet_does_not_depend_on_salt_dunder():
+    """
+    `cmdmod._run_all_quiet` should not depend on availability
+    of __salt__ dictionary (issue #61816).
+
+    This test checks for __salt__ specifically and will still
+    pass if other dunders, especially __grains__, are referenced.
+    This is the case on UNIX systems other than MacOS when
+    `sudo` could not be found.
+    """
+
+    proc = MagicMock(return_value=MockTimedProc(stdout=b"success", stderr=None))
+    runas = getpass.getuser()
+
+    with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            salt_dunder_mock = MagicMock(spec_set=dict)
+            salt_dunder_mock.__getitem__.side_effect = NameError(
+                "__salt__ might not be defined"
+            )
+
+            with patch.object(cmdmod, "__salt__", salt_dunder_mock):
+                ret = cmdmod._run_all_quiet("foo")
+                assert ret["stdout"] == "success"
+                assert salt_dunder_mock.__getitem__.call_count == 0
+                ret = cmdmod._run_all_quiet("foo", runas=runas)
+                assert ret["stdout"] == "success"
+                assert salt_dunder_mock.__getitem__.call_count == 0
 
 
 def test_run_cwd_doesnt_exist_issue_7154():
@@ -445,7 +542,7 @@ def test_run_cwd_in_combination_with_runas():
     """
     cmd = "pwd"
     cwd = "/tmp"
-    runas = os.getlogin()
+    runas = getpass.getuser()
 
     with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
         stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")
@@ -639,7 +736,7 @@ def test_run_chroot_runas():
         python_shell=True,
         reset_system_locale=True,
         rstrip=True,
-        saltenv="base",
+        saltenv=None,
         shell="/bin/sh",
         stdin=None,
         success_retcodes=None,
@@ -660,3 +757,303 @@ def test_cve_2021_25284(caplog):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             cmdmod.run("testcmd -p ImAPassword", output_loglevel="error")
         assert "ImAPassword" not in caplog.text
+
+
+def test__log_cmd_str():
+    "_log_cmd function handles strings"
+    assert cmdmod._log_cmd("foo bar") == "foo"
+
+
+def test__log_cmd_list():
+    "_log_cmd function handles lists"
+    assert cmdmod._log_cmd(["foo", "bar"]) == "foo"
+
+
+def test_log_cmd_tuple():
+    "_log_cmd function handles tuples"
+    assert cmdmod._log_cmd(("foo", "bar")) == "foo"
+
+
+def test_log_cmd_non_str_tuple_list():
+    "_log_cmd function casts objects to strings"
+
+    class cmd:
+        def __init__(self, cmd):
+            self.cmd = cmd
+
+        def __str__(self):
+            return self.cmd
+
+    assert cmdmod._log_cmd(cmd("foo bar")) == "foo"
+
+
+@pytest.mark.skip_on_windows
+def test_cmd_script_saltenv_from_config():
+    mock_cp_get_template = MagicMock()
+    mock_cp_cache_file = MagicMock()
+    mock_run = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "cp.get_template": mock_cp_get_template,
+                "file.user_to_uid": MagicMock(),
+                "file.remove": MagicMock(),
+            },
+        ):
+            with patch("salt.modules.cmdmod._run") as mock_run:
+                with patch("shutil.copyfile", MagicMock()):
+                    with patch("os.chmod", MagicMock()):
+                        with patch("os.chown", MagicMock()):
+                            cmdmod.script("test")
+                            assert mock_cp_cache_file.call_count == 1
+                            mock_cp_cache_file.assert_called_with("test", "base")
+                            assert mock_run.call_count == 1
+                            assert mock_run.call_args[1]["saltenv"] == "base"
+                            cmdmod.script("test", template="jinja")
+                            assert mock_cp_get_template.call_count == 1
+                            assert mock_cp_get_template.call_args[0][3] == "base"
+                            assert mock_run.call_count == 2
+                            assert mock_run.call_args[1]["saltenv"] == "base"
+
+
+@pytest.mark.skip_unless_on_windows
+def test_cmd_script_saltenv_from_config_windows():
+    mock_cp_get_template = MagicMock()
+    mock_cp_cache_file = MagicMock()
+    mock_run = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "cp.get_template": mock_cp_get_template,
+                "file.user_to_uid": MagicMock(),
+                "file.remove": MagicMock(),
+            },
+        ):
+            with patch("salt.modules.cmdmod._run") as mock_run:
+                with patch("shutil.copyfile", MagicMock()):
+                    cmdmod.script("test")
+                    assert mock_cp_cache_file.call_count == 1
+                    mock_cp_cache_file.assert_called_with("test", "base")
+                    assert mock_run.call_count == 1
+                    assert mock_run.call_args[1]["saltenv"] == "base"
+                    cmdmod.script("test", template="jinja")
+                    assert mock_cp_get_template.call_count == 1
+                    assert mock_cp_get_template.call_args[0][3] == "base"
+                    assert mock_run.call_count == 2
+                    assert mock_run.call_args[1]["saltenv"] == "base"
+
+
+@pytest.mark.parametrize("bundled", [True, False])
+@pytest.mark.parametrize(
+    "test_os,test_family",
+    [
+        ("FreeBSD", "FreeBSD"),
+        ("linux", "Solaris"),
+        ("linux", "AIX"),
+        ("linux", "linux"),
+    ],
+)
+@pytest.mark.skip_on_darwin
+@pytest.mark.skip_on_windows
+def test_runas_env_all_os(test_os, test_family, bundled):
+    """
+    cmd.run executes command and the environment is returned
+    when the runas parameter is specified
+    on all different OS types and os_family
+    """
+    with patch("pwd.getpwnam") as getpwnam_mock:
+        with patch("subprocess.Popen") as popen_mock:
+            popen_mock.return_value = Mock(
+                communicate=lambda *args, **kwags: [b"", None],
+                pid=lambda: 1,
+                retcode=0,
+            )
+            file_name = "/tmp/doesnotexist"
+
+            with patch.dict(
+                cmdmod.__grains__, {"os": test_os, "os_family": test_family}
+            ):
+                with patch("salt.utils.pkg.check_bundled", return_value=bundled):
+                    with patch("shutil.chown"):
+                        with patch("os.remove"):
+                            with patch.object(
+                                tempfile, "NamedTemporaryFile"
+                            ) as mock_fp:
+                                mock_fp.return_value.__enter__.return_value.name = (
+                                    file_name
+                                )
+                                if sys.platform.startswith(("freebsd", "openbsd")):
+                                    shell = "/bin/sh"
+                                else:
+                                    shell = "/bin/bash"
+                                _user = "foobar"
+                                cmdmod._run(
+                                    "ls",
+                                    cwd=tempfile.gettempdir(),
+                                    runas=_user,
+                                    shell=shell,
+                                )
+                                if not bundled:
+                                    if test_family in ("Solaris", "AIX"):
+                                        env_cmd = ["su", "-", _user, "-c"]
+                                    elif test_os == "FreeBSD":
+                                        env_cmd = ["su", "-", _user, "-c"]
+                                    else:
+                                        env_cmd = [
+                                            "su",
+                                            "-s",
+                                            shell,
+                                            "-",
+                                            _user,
+                                            "-c",
+                                        ]
+                                    if test_os == "FreeBSD":
+                                        env_cmd.extend(
+                                            ["{} -c {}".format(shell, sys.executable)]
+                                        )
+                                    else:
+                                        env_cmd.extend([sys.executable])
+                                    assert popen_mock.call_args_list[0][0][0] == env_cmd
+                                else:
+                                    if test_family in ("Solaris", "AIX"):
+                                        env_cmd = ["su", "-", _user, "-c"]
+                                    elif test_os == "FreeBSD":
+                                        env_cmd = ["su", "-", _user, "-c"]
+                                    else:
+                                        env_cmd = [
+                                            "su",
+                                            "-s",
+                                            shell,
+                                            "-",
+                                            _user,
+                                            "-c",
+                                        ]
+                                    if test_os == "FreeBSD":
+                                        env_cmd.extend(
+                                            [
+                                                "{} -c {} python {}".format(
+                                                    shell, sys.executable, file_name
+                                                )
+                                            ]
+                                        )
+                                    else:
+                                        env_cmd.extend(
+                                            [
+                                                "{} python {}".format(
+                                                    sys.executable, file_name
+                                                )
+                                            ]
+                                        )
+                                    assert popen_mock.call_args_list[0][0][0] == env_cmd
+
+
+@pytest.mark.skip_on_darwin
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize("bundled", [True, False])
+def test_runas_env_sudo_group(bundled):
+    """
+    cmd.run executes command and the environment is returned
+    when the runas parameter is specified
+    when group is passed and use_sudo=True
+    """
+    with patch("pwd.getpwnam") as getpwnam_mock:
+        with patch("subprocess.Popen") as popen_mock:
+            popen_mock.return_value = Mock(
+                communicate=lambda *args, **kwags: [b"", None],
+                pid=lambda: 1,
+                retcode=0,
+            )
+            file_name = "/tmp/doesnotexist"
+
+            with patch.dict(cmdmod.__grains__, {"os": "linux", "os_family": "linux"}):
+                with patch("grp.getgrnam"):
+                    with patch("salt.utils.pkg.check_bundled", return_value=bundled):
+                        with patch("shutil.chown"):
+                            with patch("os.remove"):
+                                with patch.object(
+                                    tempfile, "NamedTemporaryFile"
+                                ) as mock_fp:
+                                    mock_fp.return_value.__enter__.return_value.name = (
+                                        file_name
+                                    )
+                                    if sys.platform.startswith(("freebsd", "openbsd")):
+                                        shell = "/bin/sh"
+                                    else:
+                                        shell = "/bin/bash"
+                                    _user = "foobar"
+                                    _group = "foobar"
+                                    same_shell = False
+                                    if salt.grains.extra.shell()["shell"] == shell:
+                                        same_shell = True
+
+                                    cmdmod._run(
+                                        "ls",
+                                        cwd=tempfile.gettempdir(),
+                                        runas=_user,
+                                        shell=shell,
+                                        group=_group,
+                                    )
+                                    if not bundled:
+                                        exp_ret = [
+                                            "sudo",
+                                            "-u",
+                                            _user,
+                                            "-g",
+                                            _group,
+                                            "-s",
+                                            "--",
+                                            shell,
+                                            "-c",
+                                            sys.executable,
+                                        ]
+                                        if same_shell:
+                                            exp_ret = [
+                                                "sudo",
+                                                "-u",
+                                                _user,
+                                                "-g",
+                                                _group,
+                                                "-i",
+                                                "--",
+                                                sys.executable,
+                                            ]
+                                        assert (
+                                            popen_mock.call_args_list[0][0][0]
+                                            == exp_ret
+                                        )
+                                    else:
+                                        exp_ret = [
+                                            "sudo",
+                                            "-u",
+                                            _user,
+                                            "-g",
+                                            _group,
+                                            "-s",
+                                            "--",
+                                            shell,
+                                            "-c",
+                                            "{} python {}".format(
+                                                sys.executable, file_name
+                                            ),
+                                        ]
+                                        if same_shell:
+                                            exp_ret = [
+                                                "sudo",
+                                                "-u",
+                                                _user,
+                                                "-g",
+                                                _group,
+                                                "-i",
+                                                "--",
+                                                "{} python {}".format(
+                                                    sys.executable, file_name
+                                                ),
+                                            ]
+                                        assert (
+                                            popen_mock.call_args_list[0][0][0]
+                                            == exp_ret
+                                        )

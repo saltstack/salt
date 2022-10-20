@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.modules.dnsutil as dnsutil
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)

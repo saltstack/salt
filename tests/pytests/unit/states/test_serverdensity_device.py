@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.serverdensity_device as serverdensity_device
 from tests.support.mock import MagicMock, patch
 
@@ -41,9 +42,7 @@ def test_monitored():
         ret.update({"comment": comt})
         assert serverdensity_device.monitored(name) == ret
 
-        comt = (
-            "Successfully installed agent and created" " device in Server Density db."
-        )
+        comt = "Successfully installed agent and created device in Server Density db."
         ret.update(
             {
                 "comment": comt,
