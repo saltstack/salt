@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interaction with Mercurial repositories
 =======================================
@@ -14,14 +13,11 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - target: /tmp/example_repo
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.states.git import _fail, _neutral_test
@@ -37,7 +33,7 @@ def __virtual__():
     """
     if __salt__["cmd.has_exec"](HG_BINARY):
         return True
-    return (False, "Command {0} not found".format(HG_BINARY))
+    return (False, "Command {} not found".format(HG_BINARY))
 
 
 def latest(
@@ -93,7 +89,7 @@ def latest(
     if not target:
         return _fail(ret, '"target option is required')
 
-    is_repository = os.path.isdir(target) and os.path.isdir("{0}/.hg".format(target))
+    is_repository = os.path.isdir(target) and os.path.isdir("{}/.hg".format(target))
 
     if is_repository:
         ret = _update_repo(
@@ -108,7 +104,7 @@ def latest(
             log.debug('target %s is not found, "hg clone" is required', target)
         if __opts__["test"]:
             return _neutral_test(
-                ret, "Repository {0} is about to be cloned to {1}".format(name, target)
+                ret, "Repository {} is about to be cloned to {}".format(name, target)
             )
         _clone_repo(ret, target, name, user, identity, rev, opts)
     return ret
@@ -122,13 +118,15 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
 
     current_rev = __salt__["hg.revision"](target, user=user, rev=".")
     if not current_rev:
-        return _fail(ret, "Seems that {0} is not a valid hg repo".format(target))
+        return _fail(ret, "Seems that {} is not a valid hg repo".format(target))
 
     if __opts__["test"]:
-        test_result = (
-            "Repository {0} update is probably required (current " "revision is {1})"
-        ).format(target, current_rev)
-        return _neutral_test(ret, test_result)
+        return _neutral_test(
+            ret,
+            "Repository {} update is probably required (current revision is {})".format(
+                target, current_rev
+            ),
+        )
 
     try:
         pull_out = __salt__["hg.pull"](
@@ -142,9 +140,10 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
     if update_head is False:
         changes = "no changes found" not in pull_out
         if changes:
-            ret[
-                "comment"
-            ] = "Update is probably required but update_head=False so we will skip updating."
+            ret["comment"] = (
+                "Update is probably required but update_head=False so we will skip"
+                " updating."
+            )
         else:
             ret[
                 "comment"
@@ -169,12 +168,12 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
     new_rev = __salt__["hg.revision"](cwd=target, user=user, rev=".")
 
     if current_rev != new_rev:
-        revision_text = "{0} => {1}".format(current_rev, new_rev)
+        revision_text = "{} => {}".format(current_rev, new_rev)
         log.info("Repository %s updated: %s", target, revision_text)
-        ret["comment"] = "Repository {0} updated.".format(target)
+        ret["comment"] = "Repository {} updated.".format(target)
         ret["changes"]["revision"] = revision_text
     elif "error:" in pull_out:
-        return _fail(ret, "An error was thrown by hg:\n{0}".format(pull_out))
+        return _fail(ret, "An error was thrown by hg:\n{}".format(pull_out))
     return ret
 
 
@@ -218,7 +217,7 @@ def _clone_repo(ret, target, name, user, identity, rev, opts):
             return ret
 
     new_rev = __salt__["hg.revision"](cwd=target, user=user)
-    message = "Repository {0} cloned to {1}".format(name, target)
+    message = "Repository {} cloned to {}".format(name, target)
     log.info(message)
     ret["comment"] = message
 

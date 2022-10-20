@@ -6,8 +6,9 @@ import contextlib
 import pathlib
 
 import pytest
+
 from tests.support.case import ShellCase
-from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.runtests import RUNTIME_VARS
 
@@ -18,7 +19,7 @@ class FileserverTest(ShellCase):
     Test the fileserver runner
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_dir_list(self):
         """
         fileserver.dir_list
@@ -37,7 +38,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], list)
         self.assertTrue("_modules" in ret["return"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_empty_dir_list(self):
         """
         fileserver.empty_dir_list
@@ -56,7 +57,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], list)
         self.assertEqual(ret["return"], [])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_envs(self):
         """
         fileserver.envs
@@ -72,7 +73,7 @@ class FileserverTest(ShellCase):
         ret = self.run_run_plus(fun="fileserver.envs", backend=["roots"])
         self.assertIsInstance(ret["return"], list)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clear_file_list_cache(self):
         """
         fileserver.clear_file_list_cache
@@ -149,7 +150,7 @@ class FileserverTest(ShellCase):
             )
             self.assertEqual(ret["return"], {"roots": ["base"]})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_file_list(self):
         """
         fileserver.file_list
@@ -168,7 +169,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], list)
         self.assertTrue("grail/scene33" in ret["return"])
 
-    @slowTest
+    @pytest.mark.slow_test
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
     def test_symlink_list(self):
         """
@@ -195,7 +196,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], dict)
         self.assertTrue("dest_sym_1" in ret["return"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_update(self):
         """
         fileserver.update
@@ -233,6 +234,7 @@ class FileserverTest(ShellCase):
                 fun="fileserver.update", backend="gitfs", unknown_arg="foo"
             )
         self.assertIn(
-            "Passed invalid arguments: got an unexpected keyword argument 'unknown_arg'",
+            "Passed invalid arguments: got an unexpected keyword argument"
+            " 'unknown_arg'",
             ret["return"],
         )

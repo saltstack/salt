@@ -7,8 +7,6 @@ import logging
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 

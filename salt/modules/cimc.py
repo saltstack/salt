@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide Cisco UCS compatibility to Salt
 
@@ -25,14 +24,10 @@ rest API.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.proxy.cimc
-
-# Import Salt Libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -77,7 +72,7 @@ def activate_backup_image(reset=False):
         r = "yes"
 
     inconfig = """<firmwareBootUnit dn='sys/rack-unit-1/mgmt/fw-boot-def/bootunit-combined'
-    adminState='trigger' image='backup' resetOnActivate='{0}' />""".format(
+    adminState='trigger' image='backup' resetOnActivate='{}' />""".format(
         r
     )
 
@@ -121,7 +116,7 @@ def create_user(uid=None, username=None, password=None, priv=None):
             "The privilege level must be specified."
         )
 
-    dn = "sys/user-ext/user-{0}".format(uid)
+    dn = "sys/user-ext/user-{}".format(uid)
 
     inconfig = """<aaaUser id="{0}" accountStatus="active" name="{1}" priv="{2}"
     pwd="{3}"  dn="sys/user-ext/user-{0}"/>""".format(
@@ -606,15 +601,15 @@ def mount_share(
         )
 
     if username and password:
-        mount_options = " mountOptions='username={0},password={1}'".format(
+        mount_options = " mountOptions='username={},password={}'".format(
             username, password
         )
     else:
         mount_options = ""
 
-    dn = "sys/svc-ext/vmedia-svc/vmmap-{0}".format(name)
-    inconfig = """<commVMediaMap dn='sys/svc-ext/vmedia-svc/vmmap-{0}' map='{1}'{2}
-    remoteFile='{3}' remoteShare='{4}' status='created'
+    dn = "sys/svc-ext/vmedia-svc/vmmap-{}".format(name)
+    inconfig = """<commVMediaMap dn='sys/svc-ext/vmedia-svc/vmmap-{}' map='{}'{}
+    remoteFile='{}' remoteShare='{}' status='created'
     volumeName='Win12' />""".format(
         name, mount_type, mount_options, remote_file, remote_share
     )
@@ -665,8 +660,10 @@ def set_hostname(hostname=None):
         raise salt.exceptions.CommandExecutionError("Hostname option must be provided.")
 
     dn = "sys/rack-unit-1/mgmt/if-1"
-    inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{0}" ></mgmtIf>""".format(
-        hostname
+    inconfig = (
+        """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{}" ></mgmtIf>""".format(
+            hostname
+        )
     )
 
     ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
@@ -716,7 +713,7 @@ def set_logging_levels(remote=None, local=None):
 
     if remote:
         if remote in logging_options:
-            query += ' remoteSeverity="{0}"'.format(remote)
+            query += ' remoteSeverity="{}"'.format(remote)
         else:
             raise salt.exceptions.CommandExecutionError(
                 "Remote Severity option is not valid."
@@ -724,14 +721,14 @@ def set_logging_levels(remote=None, local=None):
 
     if local:
         if local in logging_options:
-            query += ' localSeverity="{0}"'.format(local)
+            query += ' localSeverity="{}"'.format(local)
         else:
             raise salt.exceptions.CommandExecutionError(
                 "Local Severity option is not valid."
             )
 
     dn = "sys/svc-ext/syslog"
-    inconfig = """<commSyslog dn="sys/svc-ext/syslog"{0} ></commSyslog>""".format(query)
+    inconfig = """<commSyslog dn="sys/svc-ext/syslog"{} ></commSyslog>""".format(query)
 
     ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
@@ -762,8 +759,8 @@ def set_ntp_server(server1="", server2="", server3="", server4=""):
     """
 
     dn = "sys/svc-ext/ntp-svc"
-    inconfig = """<commNtpProvider dn="sys/svc-ext/ntp-svc" ntpEnable="yes" ntpServer1="{0}" ntpServer2="{1}"
-    ntpServer3="{2}" ntpServer4="{3}"/>""".format(
+    inconfig = """<commNtpProvider dn="sys/svc-ext/ntp-svc" ntpEnable="yes" ntpServer1="{}" ntpServer2="{}"
+    ntpServer3="{}" ntpServer4="{}"/>""".format(
         server1, server2, server3, server4
     )
 
@@ -821,7 +818,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
             if delayType == "fixed":
                 query += ' delayType="fixed"'
                 if delayValue:
-                    query += ' delay="{0}"'.format(delayValue)
+                    query += ' delay="{}"'.format(delayValue)
             elif delayType == "random":
                 query += ' delayType="random"'
             else:
@@ -839,7 +836,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
 
     dn = "sys/rack-unit-1/board/Resume-on-AC-power-loss"
     inconfig = """<biosVfResumeOnACPowerLoss
-    dn="sys/rack-unit-1/board/Resume-on-AC-power-loss"{0}>
+    dn="sys/rack-unit-1/board/Resume-on-AC-power-loss"{}>
     </biosVfResumeOnACPowerLoss>""".format(
         query
     )
@@ -877,13 +874,13 @@ def set_syslog_server(server=None, type="primary"):
 
     if type == "primary":
         dn = "sys/svc-ext/syslog/client-primary"
-        inconfig = """<commSyslogClient name='primary' adminState='enabled'  hostname='{0}'
+        inconfig = """<commSyslogClient name='primary' adminState='enabled'  hostname='{}'
         dn='sys/svc-ext/syslog/client-primary'> </commSyslogClient>""".format(
             server
         )
     elif type == "secondary":
         dn = "sys/svc-ext/syslog/client-secondary"
-        inconfig = """<commSyslogClient name='secondary' adminState='enabled'  hostname='{0}'
+        inconfig = """<commSyslogClient name='secondary' adminState='enabled'  hostname='{}'
         dn='sys/svc-ext/syslog/client-secondary'> </commSyslogClient>""".format(
             server
         )
@@ -927,18 +924,18 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
         raise salt.exceptions.CommandExecutionError("The user ID must be specified.")
 
     if status:
-        conf += ' accountStatus="{0}"'.format(status)
+        conf += ' accountStatus="{}"'.format(status)
 
     if username:
-        conf += ' name="{0}"'.format(username)
+        conf += ' name="{}"'.format(username)
 
     if priv:
-        conf += ' priv="{0}"'.format(priv)
+        conf += ' priv="{}"'.format(priv)
 
     if password:
-        conf += ' pwd="{0}"'.format(password)
+        conf += ' pwd="{}"'.format(password)
 
-    dn = "sys/user-ext/user-{0}".format(uid)
+    dn = "sys/user-ext/user-{}".format(uid)
 
     inconfig = """<aaaUser id="{0}"{1} dn="sys/user-ext/user-{0}"/>""".format(uid, conf)
 
@@ -975,7 +972,7 @@ def tftp_update_bios(server=None, path=None):
     dn = "sys/rack-unit-1/bios/fw-updatable"
 
     inconfig = """<firmwareUpdatable adminState='trigger' dn='sys/rack-unit-1/bios/fw-updatable'
-    protocol='tftp' remoteServer='{0}' remotePath='{1}'
+    protocol='tftp' remoteServer='{}' remotePath='{}'
     type='blade-bios' />""".format(
         server, path
     )
@@ -1013,7 +1010,7 @@ def tftp_update_cimc(server=None, path=None):
     dn = "sys/rack-unit-1/mgmt/fw-updatable"
 
     inconfig = """<firmwareUpdatable adminState='trigger' dn='sys/rack-unit-1/mgmt/fw-updatable'
-    protocol='tftp' remoteServer='{0}' remotePath='{1}'
+    protocol='tftp' remoteServer='{}' remotePath='{}'
     type='blade-controller' />""".format(
         server, path
     )

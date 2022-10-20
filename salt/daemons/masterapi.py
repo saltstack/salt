@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import fnmatch
 import logging
 import os
@@ -13,7 +10,6 @@ import re
 import stat
 import time
 
-# Import salt libs
 import salt.acl
 import salt.auth
 import salt.cache
@@ -44,9 +40,6 @@ import salt.utils.user
 import salt.utils.verify
 import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.pillar import git_pillar
 
 try:
@@ -94,9 +87,7 @@ def clean_fsbackend(opts):
     # Clear remote fileserver backend caches so they get recreated
     for backend in ("git", "hg", "svn"):
         if backend in opts["fileserver_backend"]:
-            env_cache = os.path.join(
-                opts["cachedir"], "{0}fs".format(backend), "envs.p"
-            )
+            env_cache = os.path.join(opts["cachedir"], "{}fs".format(backend), "envs.p")
             if os.path.isfile(env_cache):
                 log.debug("Clearing %sfs env cache", backend)
                 try:
@@ -107,7 +98,7 @@ def clean_fsbackend(opts):
                     )
 
             file_lists_dir = os.path.join(
-                opts["cachedir"], "file_lists", "{0}fs".format(backend)
+                opts["cachedir"], "file_lists", "{}fs".format(backend)
             )
             try:
                 file_lists_caches = os.listdir(file_lists_dir)
@@ -149,7 +140,7 @@ def clean_pub_auth(opts):
                         opts["keep_jobs"] * 3600
                     ):
                         os.remove(auth_file_path)
-    except (IOError, OSError):
+    except OSError:
         log.error("Unable to delete pub auth file")
 
 
@@ -158,9 +149,13 @@ def clean_old_jobs(opts):
     Clean out the old jobs from the job cache
     """
     # TODO: better way to not require creating the masterminion every time?
-    mminion = salt.minion.MasterMinion(opts, states=False, rend=False,)
+    mminion = salt.minion.MasterMinion(
+        opts,
+        states=False,
+        rend=False,
+    )
     # If the master job cache has a clean_old_jobs, call it
-    fstr = "{0}.clean_old_jobs".format(opts["master_job_cache"])
+    fstr = "{}.clean_old_jobs".format(opts["master_job_cache"])
     if fstr in mminion.returners:
         mminion.returners[fstr]()
 
@@ -178,10 +173,10 @@ def mk_key(opts, user):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         keyfile = os.path.join(
-            opts["cachedir"], ".{0}_key".format(user.replace("\\", "_"))
+            opts["cachedir"], ".{}_key".format(user.replace("\\", "_"))
         )
     else:
-        keyfile = os.path.join(opts["cachedir"], ".{0}_key".format(user))
+        keyfile = os.path.join(opts["cachedir"], ".{}_key".format(user))
 
     if os.path.exists(keyfile):
         log.debug("Removing stale keyfile: %s", keyfile)
@@ -262,7 +257,7 @@ def fileserver_update(fileserver):
         )
 
 
-class AutoKey(object):
+class AutoKey:
     """
     Implement the methods to run auto key acceptance and rejection
     """
@@ -395,7 +390,7 @@ class AutoKey(object):
         return False
 
 
-class RemoteFuncs(object):
+class RemoteFuncs:
     """
     Funcitons made available to minions, this class includes the raw routines
     post validation that make up the minion access to the master
@@ -406,11 +401,9 @@ class RemoteFuncs(object):
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
@@ -547,7 +540,7 @@ class RemoteFuncs(object):
             if any(key not in load for key in ("id", "tgt", "fun")):
                 return {}
 
-        if isinstance(load["fun"], six.string_types):
+        if isinstance(load["fun"], str):
             functions = list(set(load["fun"].split(",")))
             _ret_dict = len(functions) > 1
         elif isinstance(load["fun"], list):
@@ -595,7 +588,7 @@ class RemoteFuncs(object):
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch("minions/{0}".format(minion), "mine")
+            mine_data = self.cache.fetch("minions/{}".format(minion), "mine")
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -646,7 +639,7 @@ class RemoteFuncs(object):
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{0}".format(load["id"])
+            cbank = "minions/{}".format(load["id"])
             ckey = "mine"
             new_data = load["data"]
             if not load.get("clear", False):
@@ -665,7 +658,7 @@ class RemoteFuncs(object):
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{0}".format(load["id"])
+            cbank = "minions/{}".format(load["id"])
             ckey = "mine"
             try:
                 data = self.cache.fetch(cbank, ckey)
@@ -687,7 +680,7 @@ class RemoteFuncs(object):
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            return self.cache.flush("minions/{0}".format(load["id"]), "mine")
+            return self.cache.flush("minions/{}".format(load["id"]), "mine")
         return True
 
     def _file_recv(self, load):
@@ -761,7 +754,7 @@ class RemoteFuncs(object):
         data = pillar.compile_pillar()
         if self.opts.get("minion_data_cache", False):
             self.cache.store(
-                "minions/{0}".format(load["id"]),
+                "minions/{}".format(load["id"]),
                 "data",
                 {"grains": load["grains"], "pillar": data},
             )
@@ -810,13 +803,13 @@ class RemoteFuncs(object):
 
         if load["jid"] == "req":
             # The minion is returning a standalone job, request a jobid
-            prep_fstr = "{0}.prep_jid".format(self.opts["master_job_cache"])
+            prep_fstr = "{}.prep_jid".format(self.opts["master_job_cache"])
             load["jid"] = self.mminion.returners[prep_fstr](
                 nocache=load.get("nocache", False)
             )
 
             # save the load, since we don't have it
-            saveload_fstr = "{0}.save_load".format(self.opts["master_job_cache"])
+            saveload_fstr = "{}.save_load".format(self.opts["master_job_cache"])
             self.mminion.returners[saveload_fstr](load["jid"], load)
         log.info("Got return from %s for job %s", load["id"], load["jid"])
         self.event.fire_event(load, load["jid"])  # old dup event
@@ -827,11 +820,11 @@ class RemoteFuncs(object):
         if not self.opts["job_cache"] or self.opts.get("ext_job_cache"):
             return
 
-        fstr = "{0}.update_endtime".format(self.opts["master_job_cache"])
+        fstr = "{}.update_endtime".format(self.opts["master_job_cache"])
         if self.opts.get("job_cache_store_endtime") and fstr in self.mminion.returners:
             self.mminion.returners[fstr](load["jid"], endtime)
 
-        fstr = "{0}.returner".format(self.opts["master_job_cache"])
+        fstr = "{}.returner".format(self.opts["master_job_cache"])
         self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
@@ -844,11 +837,11 @@ class RemoteFuncs(object):
             return None
         # if we have a load, save it
         if "load" in load:
-            fstr = "{0}.save_load".format(self.opts["master_job_cache"])
+            fstr = "{}.save_load".format(self.opts["master_job_cache"])
             self.mminion.returners[fstr](load["jid"], load["load"])
 
         # Format individual return loads
-        for key, item in six.iteritems(load["return"]):
+        for key, item in load["return"].items():
             ret = {"jid": load["jid"], "id": key, "return": item}
             if "out" in load:
                 ret["out"] = load["out"]
@@ -961,7 +954,7 @@ class RemoteFuncs(object):
         auth_cache = os.path.join(self.opts["cachedir"], "publish_auth")
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, six.text_type(ret["jid"]))
+        jid_fn = os.path.join(auth_cache, str(ret["jid"]))
         with salt.utils.files.fopen(jid_fn, "w+") as fp_:
             fp_.write(salt.utils.stringutils.to_str(load["id"]))
         return ret
@@ -1001,14 +994,14 @@ class RemoteFuncs(object):
             try:
                 pub_load["timeout"] = int(load["tmo"])
             except ValueError:
-                msg = "Failed to parse timeout value: {0}".format(load["tmo"])
+                msg = "Failed to parse timeout value: {}".format(load["tmo"])
                 log.warning(msg)
                 return {}
         if "timeout" in load:
             try:
                 pub_load["timeout"] = int(load["timeout"])
             except ValueError:
-                msg = "Failed to parse timeout value: {0}".format(load["timeout"])
+                msg = "Failed to parse timeout value: {}".format(load["timeout"])
                 log.warning(msg)
                 return {}
         if "tgt_type" in load:
@@ -1033,7 +1026,7 @@ class RemoteFuncs(object):
                 ret[minion["id"]] = minion["return"]
                 if "jid" in minion:
                     ret["__jid__"] = minion["jid"]
-        for key, val in six.iteritems(self.local.get_cache_returns(ret["__jid__"])):
+        for key, val in self.local.get_cache_returns(ret["__jid__"]).items():
             if key not in ret:
                 ret[key] = val
         if load.get("form", "") != "full":
@@ -1046,14 +1039,22 @@ class RemoteFuncs(object):
         """
         if "id" not in load:
             return False
-        keyapi = salt.key.Key(self.opts)
-        keyapi.delete_key(
-            load["id"], preserve_minions=load.get("preserve_minion_cache", False)
-        )
+        with salt.key.Key(self.opts) as keyapi:
+            keyapi.delete_key(
+                load["id"], preserve_minions=load.get("preserve_minion_cache", False)
+            )
         return True
 
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
 
-class LocalFuncs(object):
+
+class LocalFuncs:
     """
     Set up methods for use only from the local system
     """
@@ -1064,13 +1065,11 @@ class LocalFuncs(object):
     # _auth
     def __init__(self, opts, key):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.key = key
         # Create the event manager
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
@@ -1109,8 +1108,10 @@ class LocalFuncs(object):
             return {
                 "error": {
                     "name": err_name,
-                    "message": 'Authentication failure of type "{0}" occurred '
-                    "for user {1}.".format(auth_type, username),
+                    "message": (
+                        'Authentication failure of type "{}" occurred '
+                        "for user {}.".format(auth_type, username)
+                    ),
                 }
             }
         elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -1128,7 +1129,7 @@ class LocalFuncs(object):
                 "error": {
                     "name": exc.__class__.__name__,
                     "args": exc.args,
-                    "message": six.text_type(exc),
+                    "message": str(exc),
                 }
             }
 
@@ -1159,8 +1160,10 @@ class LocalFuncs(object):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{0}" occurred for '
-                        "user {1}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:
@@ -1172,7 +1175,7 @@ class LocalFuncs(object):
         fun = load.pop("fun")
         tag = salt.utils.event.tagify(jid, prefix="wheel")
         data = {
-            "fun": "wheel.{0}".format(fun),
+            "fun": "wheel.{}".format(fun),
             "jid": jid,
             "tag": tag,
             "user": username,
@@ -1186,8 +1189,10 @@ class LocalFuncs(object):
             return {"tag": tag, "data": data}
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception occurred while introspecting %s", fun)
-            data["return"] = "Exception occurred in wheel {0}: {1}: {2}".format(
-                fun, exc.__class__.__name__, exc,
+            data["return"] = "Exception occurred in wheel {}: {}: {}".format(
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, salt.utils.event.tagify([jid, "ret"], "wheel"))
@@ -1254,7 +1259,7 @@ class LocalFuncs(object):
         # Setup authorization list variable and error information
         auth_list = auth_check.get("auth_list", [])
         error = auth_check.get("error")
-        err_msg = 'Authentication failure of type "{0}" occurred.'.format(auth_type)
+        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
 
         if error:
             # Authentication error occurred: do not continue.
@@ -1307,7 +1312,7 @@ class LocalFuncs(object):
                 return {"enc": "clear", "load": {"jid": None, "minions": minions}}
         # Retrieve the jid
         if not load["jid"]:
-            fstr = "{0}.prep_jid".format(self.opts["master_job_cache"])
+            fstr = "{}.prep_jid".format(self.opts["master_job_cache"])
             load["jid"] = self.mminion.returners[fstr](
                 nocache=extra.get("nocache", False)
             )
@@ -1334,7 +1339,7 @@ class LocalFuncs(object):
         # Save the invocation information
         if self.opts["ext_job_cache"]:
             try:
-                fstr = "{0}.save_load".format(self.opts["ext_job_cache"])
+                fstr = "{}.save_load".format(self.opts["ext_job_cache"])
                 self.mminion.returners[fstr](load["jid"], load)
             except KeyError:
                 log.critical(
@@ -1349,7 +1354,7 @@ class LocalFuncs(object):
 
         # always write out to the master job cache
         try:
-            fstr = "{0}.save_load".format(self.opts["master_job_cache"])
+            fstr = "{}.save_load".format(self.opts["master_job_cache"])
             self.mminion.returners[fstr](load["jid"], load)
         except KeyError:
             log.critical(
@@ -1422,3 +1427,11 @@ class LocalFuncs(object):
             key = self.key
 
         return auth_type, err_name, key
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None

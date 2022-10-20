@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage the shadow file on Linux systems
 
@@ -8,22 +7,16 @@ Manage the shadow file on Linux systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import functools
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import range
 
 try:
     import spwd
@@ -93,7 +86,7 @@ def info(name, root=None):
             "inact": data.sp_inact,
             "expire": data.sp_expire,
         }
-    except KeyError:
+    except (KeyError, FileNotFoundError):
         return {
             "name": "",
             "passwd": "",
@@ -128,7 +121,7 @@ def _set_attrib(name, key, value, param, root=None, validate=True):
 
     cmd.extend((param, value, name))
 
-    ret = not __salt__["cmd.run"](cmd, python_shell=False)
+    ret = not __salt__["cmd.retcode"](cmd, python_shell=False)
     if validate:
         ret = info(name, root=root).get(key) == value
     return ret
@@ -385,7 +378,7 @@ def set_password(name, password, use_usermod=False, root=None):
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
         if __grains__["os"] == "ALT":
-            s_file = "/etc/tcb/{0}/shadow".format(name)
+            s_file = "/etc/tcb/{}/shadow".format(name)
         else:
             s_file = "/etc/shadow"
         if root:
@@ -396,9 +389,7 @@ def set_password(name, password, use_usermod=False, root=None):
             return ret
         lines = []
         user_found = False
-        lstchg = six.text_type(
-            (datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days
-        )
+        lstchg = str((datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days)
         with salt.utils.files.fopen(s_file, "rb") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
@@ -528,10 +519,7 @@ def list_users(root=None):
         getspall = functools.partial(spwd.getspall)
 
     return sorted(
-        [
-            user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam
-            for user in getspall()
-        ]
+        user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
     )
 
 

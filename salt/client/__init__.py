@@ -9,11 +9,6 @@ The data structure needs to be:
 """
 
 
-# pylint: disable=import-error
-
-# Try to import range from https://github.com/ytoolshed/range
-#
-
 import logging
 
 # The components here are simple, and they need to be and stay simple, we
@@ -31,25 +26,23 @@ import time
 from datetime import datetime
 
 import salt.cache
+import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
-
-# Import tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen
 import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -59,7 +52,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
-from salt.ext import six
 
 HAS_RANGE = False
 try:
@@ -68,7 +60,6 @@ try:
     HAS_RANGE = True
 except ImportError:
     pass
-# pylint: enable=import-error
 
 
 log = logging.getLogger(__name__)
@@ -80,6 +71,7 @@ def get_local_client(
     skip_perm_errors=False,
     io_loop=None,
     auto_reconnect=False,
+    listen=False,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -87,11 +79,38 @@ def get_local_client(
     Read in the config and return the correct LocalClient object based on
     the configured transport
 
+    :param str c_path: Path of config file to use for opts.
+
+                       The default value is None.
+
+    :param bool mopts: When provided the local client will use this dictionary of
+                       options insead of loading a config file from the value
+                       of c_path.
+
+                       The default value is None.
+
+    :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                 The default value is False.
+
     :param IOLoop io_loop: io_loop used for events.
                            Pass in an io_loop if you want asynchronous
                            operation for obtaining events. Eg use of
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
+
+    :param bool keep_loop: Do not destroy the event loop when closing the event
+                           subsriber.
+
+    :param bool auto_reconnect: When True the event subscriber will reconnect
+                                automatically if a disconnect error is raised.
+
+    .. versionadded:: 3004
+    :param bool listen: Listen for events indefinitly. When option is set the
+                        LocalClient object will listen for events until it's
+                        destroy method is called.
+
+                        The default value is False.
     """
     if mopts:
         opts = mopts
@@ -107,6 +126,7 @@ def get_local_client(
         skip_perm_errors=skip_perm_errors,
         io_loop=io_loop,
         auto_reconnect=auto_reconnect,
+        listen=listen,
     )
 
 
@@ -137,6 +157,7 @@ class LocalClient:
 
         local = salt.client.LocalClient()
         local.cmd('*', 'test.fib', [10])
+
     """
 
     def __init__(
@@ -147,13 +168,41 @@ class LocalClient:
         io_loop=None,
         keep_loop=False,
         auto_reconnect=False,
+        listen=False,
     ):
         """
+        :param str c_path: Path of config file to use for opts.
+
+                           The default value is None.
+
+        :param bool mopts: When provided the local client will use this dictionary of
+                           options insead of loading a config file from the value
+                           of c_path.
+
+                           The default value is None.
+
+        :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                     The default value is False.
+
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
-                               set_event_handler() API. Otherwise,
-                               operation will be synchronous.
+                               set_event_handler() API. Otherwise, operation
+                               will be synchronous.
+
+        :param bool keep_loop: Do not destroy the event loop when closing the event
+                               subsriber.
+
+        :param bool auto_reconnect: When True the event subscriber will reconnect
+                                    automatically if a disconnect error is raised.
+
+        .. versionadded:: 3004
+        :param bool listen: Listen for events indefinitly. When option is set the
+                            LocalClient object will listen for events until it's
+                            destroy method is called.
+
+                            The default value is False.
         """
         if mopts:
             self.opts = mopts
@@ -166,17 +215,16 @@ class LocalClient:
                     c_path,
                 )
             self.opts = salt.config.client_config(c_path)
-        self.serial = salt.payload.Serial(self.opts)
         self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
+        self.listen = listen
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
-            listen=False,
+            listen=self.listen,
             io_loop=io_loop,
             keep_loop=keep_loop,
         )
@@ -280,7 +328,7 @@ class LocalClient:
         elif "jid" not in pub_data:
             return {}
         if pub_data["jid"] == "0":
-            print("Failed to connect to the Master, " "is the Salt Master running?")
+            print("Failed to connect to the Master, is the Salt Master running?")
             return {}
 
         # If we order masters (via a syndic), don't short circuit if no minions
@@ -480,6 +528,10 @@ class LocalClient:
             >>> SLC.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
         """
+
+        # Support legacy parameter name:
+        subset = kwargs.pop("sub", subset)
+
         minion_ret = self.cmd(tgt, "sys.list_functions", tgt_type=tgt_type, **kwargs)
         minions = list(minion_ret)
         random.shuffle(minions)
@@ -538,10 +590,9 @@ class LocalClient:
         # even though it has already been imported.
         # when cmd_batch is called via the NetAPI
         # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        import salt.utils.args
 
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {
@@ -576,7 +627,7 @@ class LocalClient:
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
-        for ret in batch.run():
+        for ret, _ in batch.run():
             yield ret
 
     def cmd(
@@ -1027,7 +1078,7 @@ class LocalClient:
 
         # if you have all the returns, stop
         if len(found.intersection(minions)) >= len(minions):
-            raise StopIteration()
+            return
 
         # otherwise, get them from the event system
         for event in event_iter:
@@ -1036,7 +1087,7 @@ class LocalClient:
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 self._clean_up_subscriptions(jid)
-                raise StopIteration()
+                return
 
     # TODO: tests!!
     def get_returns_no_block(self, tag, match_type=None):
@@ -1060,6 +1111,9 @@ class LocalClient:
                 auto_reconnect=self.auto_reconnect,
             )
             yield raw
+
+    def returns_for_job(self, jid):
+        return self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
 
     def get_iter_returns(
         self,
@@ -1097,14 +1151,11 @@ class LocalClient:
         missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if (
-                self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
-                == {}
-            ):
+            if not self.returns_for_job(jid):
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
-                raise StopIteration()
+                return
         except Exception as exc:  # pylint: disable=broad-except
             log.warning(
                 "Returner unavailable: %s", exc, exc_info_on_loglevel=logging.DEBUG
@@ -1397,8 +1448,9 @@ class LocalClient:
             )
         except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError(
-                "Returner {} could not fetch jid data. "
-                "Exception details: {}".format(self.opts["master_job_cache"], exc)
+                "Returner {} could not fetch jid data. Exception details: {}".format(
+                    self.opts["master_job_cache"], exc
+                )
             )
         for minion in data:
             m_data = {}
@@ -1594,7 +1646,7 @@ class LocalClient:
             timeout=timeout,
             tgt=tgt,
             tgt_type=tgt_type,
-            # (gtmanfred) expect_minions is popped here incase it is passed from a client
+            # (gtmanfred) expect_minions is popped here in case it is passed from a client
             # call. If this is not popped, then it would be passed twice to
             # get_iter_returns.
             expect_minions=(
@@ -1642,12 +1694,16 @@ class LocalClient:
                             yield {
                                 id_: {
                                     "out": "no_return",
-                                    "ret": "Minion did not return. [No response]"
-                                    "\nThe minions may not have all finished running and any "
-                                    "remaining minions will return upon completion. To look "
-                                    "up the return data for this job later, run the following "
-                                    "command:\n\n"
-                                    "salt-run jobs.lookup_jid {}".format(jid),
+                                    "ret": (
+                                        "Minion did not return. [No response]\nThe"
+                                        " minions may not have all finished running and"
+                                        " any remaining minions will return upon"
+                                        " completion. To look up the return data for"
+                                        " this job later, run the following"
+                                        " command:\n\nsalt-run jobs.lookup_jid {}".format(
+                                            jid
+                                        )
+                                    ),
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }
@@ -1676,7 +1732,7 @@ class LocalClient:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
-            raise StopIteration()
+            return
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)
@@ -1829,11 +1885,11 @@ class LocalClient:
         )
 
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -1932,12 +1988,12 @@ class LocalClient:
 
         master_uri = (
             "tcp://"
-            + salt.utils.zeromq.ip_bracket(self.opts["interface"])
+            + salt.utils.network.ip_bracket(self.opts["interface"])
             + ":"
             + str(self.opts["ret_port"])
         )
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -1991,9 +2047,7 @@ class LocalClient:
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
-        if hasattr(self, "event"):
-            # The call below will take care of calling 'self.event.destroy()'
-            del self.event
+        self.destroy()
 
     # pylint: enable=W1701
 
@@ -2001,6 +2055,17 @@ class LocalClient:
         if self.opts.get("order_masters"):
             self.event.unsubscribe("syndic/.*/{}".format(job_id), "regex")
         self.event.unsubscribe("salt/job/{}".format(job_id))
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class FunctionWrapper(dict):
@@ -2147,7 +2212,7 @@ class ProxyCaller:
     .. code-block:: python
 
         import salt.client
-        caller = salt.client.Caller()
+        caller = salt.client.ProxyCaller()
         caller.cmd('test.ping')
 
     Note, a running master or minion daemon is not required to use this class.

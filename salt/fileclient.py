@@ -1,22 +1,23 @@
 """
 Classes that manage file clients
 """
-
 import contextlib
 import errno
-import ftplib
+import ftplib  # nosec
+import http.server
 import logging
 import os
 import shutil
 import string
+import urllib.error
+import urllib.parse
 
+import salt.channel.client
 import salt.client
 import salt.crypt
-import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 import salt.fileserver
 import salt.loader
 import salt.payload
-import salt.transport.client
 import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.files
@@ -28,21 +29,15 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.verify
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-
-# pylint: disable=no-name-in-module,import-error
-from salt.ext import six
-from salt.ext.six.moves.urllib.error import HTTPError, URLError
-from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 from salt.ext.tornado.httputil import (
     HTTPHeaders,
     HTTPInputError,
     parse_response_start_line,
 )
 from salt.utils.openstack.swift import SaltSwift
-
-# pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
@@ -67,7 +62,7 @@ def decode_dict_keys_to_str(src):
     This is necessary because Python 3 makes a distinction
     between these types.
     """
-    if not six.PY3 or not isinstance(src, dict):
+    if not isinstance(src, dict):
         return src
 
     output = {}
@@ -89,7 +84,6 @@ class Client:
     def __init__(self, opts):
         self.opts = opts
         self.utils = salt.loader.utils(self.opts)
-        self.serial = salt.payload.Serial(self.opts)
 
     # Add __setstate__ and __getstate__ so that the object may be
     # deep copied. It normally can't be deep copied because its
@@ -177,7 +171,13 @@ class Client:
         raise NotImplementedError
 
     def cache_file(
-        self, path, saltenv="base", cachedir=None, source_hash=None, verify_ssl=True
+        self,
+        path,
+        saltenv="base",
+        cachedir=None,
+        source_hash=None,
+        verify_ssl=True,
+        use_etag=False,
     ):
         """
         Pull a file down from the file server and store it in the minion
@@ -191,6 +191,7 @@ class Client:
             cachedir=cachedir,
             source_hash=source_hash,
             verify_ssl=verify_ssl,
+            use_etag=use_etag,
         )
 
     def cache_files(self, paths, saltenv="base", cachedir=None):
@@ -353,7 +354,7 @@ class Client:
         Return the expected cache location for the specified URL and
         environment.
         """
-        proto = urlparse(url).scheme
+        proto = urllib.parse.urlparse(url).scheme
 
         if proto == "":
             # Local file path
@@ -471,11 +472,12 @@ class Client:
         cachedir=None,
         source_hash=None,
         verify_ssl=True,
+        use_etag=False,
     ):
         """
         Get a single file from a URL.
         """
-        url_data = urlparse(url)
+        url_data = urllib.parse.urlparse(url)
         url_scheme = url_data.scheme
         url_path = os.path.join(url_data.netloc, url_data.path).rstrip(os.sep)
 
@@ -583,7 +585,7 @@ class Client:
                 )
         if url_data.scheme == "ftp":
             try:
-                ftp = ftplib.FTP()
+                ftp = ftplib.FTP()  # nosec
                 ftp_port = url_data.port
                 if not ftp_port:
                     ftp_port = 21
@@ -633,7 +635,7 @@ class Client:
             at_sign_pos = netloc.rfind("@")
             if at_sign_pos != -1:
                 netloc = netloc[at_sign_pos + 1 :]
-            fixed_url = urlunparse(
+            fixed_url = urllib.parse.urlunparse(
                 (
                     url_data.scheme,
                     netloc,
@@ -648,6 +650,7 @@ class Client:
             fixed_url = url
 
         destfp = None
+        dest_etag = "{}.etag".format(dest)
         try:
             # Tornado calls streaming_callback on redirect response bodies.
             # But we need streaming to support fetching large files (> RAM
@@ -675,10 +678,16 @@ class Client:
             #   False to signify that we are done parsing.
             #
             # write_body[2] is where the encoding will be stored
-            write_body = [None, False, None]
+            #
+            # write_body[3] is where the etag will be stored if use_etag is
+            #   enabled. This allows us to iterate over the headers until
+            #   both content encoding and etag are found.
+            write_body = [None, False, None, None]
 
             def on_header(hdr):
-                if write_body[1] is not False and write_body[2] is None:
+                if write_body[1] is not False and (
+                    write_body[2] is None or (use_etag and write_body[3] is None)
+                ):
                     if not hdr.strip() and "Content-Type" not in write_body[1]:
                         # If write_body[0] is True, then we are not following a
                         # redirect (initial response was a 200 OK). So there is
@@ -688,17 +697,32 @@ class Client:
                             # write_body[0] so that we properly follow it.
                             write_body[0] = None
                         # We don't need the HTTPHeaders object anymore
-                        write_body[1] = False
+                        if not use_etag or write_body[3]:
+                            write_body[1] = False
                         return
                     # Try to find out what content type encoding is used if
                     # this is a text file
                     write_body[1].parse_line(hdr)  # pylint: disable=no-member
-                    if "Content-Type" in write_body[1]:
+                    # Case insensitive Etag header checking below. Don't break case
+                    # insensitivity unless you really want to mess with people's heads
+                    # in the tests. Note: http.server and apache2 use "Etag" and nginx
+                    # uses "ETag" as the header key. Yay standards!
+                    if use_etag and "etag" in map(str.lower, write_body[1]):
+                        etag = write_body[3] = [
+                            val
+                            for key, val in write_body[1].items()
+                            if key.lower() == "etag"
+                        ][0]
+                        with salt.utils.files.fopen(dest_etag, "w") as etagfp:
+                            etag = etagfp.write(etag)
+                    elif "Content-Type" in write_body[1]:
                         content_type = write_body[1].get(
                             "Content-Type"
                         )  # pylint: disable=no-member
                         if not content_type.startswith("text"):
-                            write_body[1] = write_body[2] = False
+                            write_body[2] = False
+                            if not use_etag or write_body[3]:
+                                write_body[1] = False
                         else:
                             encoding = "utf-8"
                             fields = content_type.split(";")
@@ -707,7 +731,8 @@ class Client:
                                     encoding = field.split("encoding=")[-1]
                             write_body[2] = encoding
                             # We have found our encoding. Stop processing headers.
-                            write_body[1] = False
+                            if not use_etag or write_body[3]:
+                                write_body[1] = False
 
                         # If write_body[0] is False, this means that this
                         # header is a 30x redirect, so we need to reset
@@ -750,6 +775,14 @@ class Client:
                     if write_body[0]:
                         destfp.write(chunk)
 
+            # ETag is only used for refetch. Cached file and previous ETag
+            # should be present for verification.
+            header_dict = {}
+            if use_etag and os.path.exists(dest_etag) and os.path.exists(dest):
+                with salt.utils.files.fopen(dest_etag, "r") as etagfp:
+                    etag = etagfp.read().replace("\n", "").strip()
+                header_dict["If-None-Match"] = etag
+
             query = salt.utils.http.query(
                 fixed_url,
                 stream=True,
@@ -759,10 +792,22 @@ class Client:
                 password=url_data.password,
                 opts=self.opts,
                 verify_ssl=verify_ssl,
+                header_dict=header_dict,
                 **get_kwargs
             )
+
+            # 304 Not Modified is returned when If-None-Match header
+            # matches server ETag for requested file.
+            if use_etag and query.get("status") == 304:
+                if not no_cache:
+                    destfp.close()
+                    destfp = None
+                    os.remove(dest_tmp)
+                return dest
             if "handle" not in query:
-                raise MinionError("Error: {} reading {}".format(query["error"], url))
+                raise MinionError(
+                    "Error: {} reading {}".format(query["error"], url_data.path)
+                )
             if no_cache:
                 if write_body[2]:
                     return "".join(result)
@@ -772,15 +817,15 @@ class Client:
                 destfp = None
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
-        except HTTPError as exc:
+        except urllib.error.HTTPError as exc:
             raise MinionError(
                 "HTTP error {0} reading {1}: {3}".format(
                     exc.code,
                     url,
-                    *BaseHTTPServer.BaseHTTPRequestHandler.responses[exc.code]
+                    *http.server.BaseHTTPRequestHandler.responses[exc.code]
                 )
             )
-        except URLError as exc:
+        except urllib.error.URLError as exc:
             raise MinionError("Error reading {}: {}".format(url, exc.reason))
         finally:
             if destfp is not None:
@@ -804,7 +849,7 @@ class Client:
             kwargs.pop("env")
 
         kwargs["saltenv"] = saltenv
-        url_data = urlparse(url)
+        url_data = urllib.parse.urlparse(url)
         sfn = self.cache_file(url, saltenv, cachedir=cachedir)
         if not sfn or not os.path.exists(sfn):
             return ""
@@ -839,7 +884,7 @@ class Client:
         """
         Return the extrn_filepath for a given url
         """
-        url_data = urlparse(url)
+        url_data = urllib.parse.urlparse(url)
         if salt.utils.platform.is_windows():
             netloc = salt.utils.path.sanitize_win_path(url_data.netloc)
         else:
@@ -857,6 +902,12 @@ class Client:
             file_name = "-".join([url_data.path, url_data.query])
         else:
             file_name = url_data.path
+
+        # clean_path returns an empty string if the check fails
+        root_path = salt.utils.path.join(cachedir, "extrn_files", saltenv, netloc)
+        new_path = os.path.sep.join([root_path, file_name])
+        if not salt.utils.verify.clean_path(root_path, new_path, subdir=True):
+            return "Invalid path"
 
         if len(file_name) > MAX_FILENAME_LENGTH:
             file_name = salt.utils.hashutils.sha256_digest(file_name)
@@ -1070,7 +1121,7 @@ class RemoteClient(Client):
     def __init__(self, opts):
         Client.__init__(self, opts)
         self._closing = False
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts)
         if hasattr(self.channel, "auth"):
             self.auth = self.channel.auth
         else:
@@ -1083,7 +1134,7 @@ class RemoteClient(Client):
         # Close the previous channel
         self.channel.close()
         # Instantiate a new one
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts)
         return self.channel
 
     # pylint: disable=no-dunder-del
@@ -1138,7 +1189,7 @@ class RemoteClient(Client):
         if dest is not None and (os.path.isdir(dest) or dest.endswith(("/", "\\"))):
             dest = os.path.join(dest, os.path.basename(path))
             log.debug(
-                "In saltenv '%s', '%s' is a directory. Changing dest to " "'%s'",
+                "In saltenv '%s', '%s' is a directory. Changing dest to '%s'",
                 saltenv,
                 os.path.dirname(dest),
                 dest,
@@ -1151,7 +1202,7 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                "In saltenv '%s', looking at rel_path '%s' to resolve " "'%s'",
+                "In saltenv '%s', looking at rel_path '%s' to resolve '%s'",
                 saltenv,
                 rel_path,
                 path,
@@ -1160,7 +1211,7 @@ class RemoteClient(Client):
                 dest2check = cache_dest
 
         log.debug(
-            "In saltenv '%s', ** considering ** path '%s' to resolve " "'%s'",
+            "In saltenv '%s', ** considering ** path '%s' to resolve '%s'",
             saltenv,
             dest2check,
             path,
@@ -1265,7 +1316,7 @@ class RemoteClient(Client):
                     data = salt.utils.gzip_util.uncompress(data["data"])
                 else:
                     data = data["data"]
-                if six.PY3 and isinstance(data, str):
+                if isinstance(data, str):
                     data = data.encode()
                 fn_.write(data)
             except (TypeError, KeyError) as exc:
@@ -1309,44 +1360,28 @@ class RemoteClient(Client):
         List the files on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv="base", prefix=""):
         """
         List the empty dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list_emptydirs"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         List the dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_dir_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         List symlinked files and dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_symlink_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def __hash_and_stat_file(self, path, saltenv="base"):
         """
@@ -1406,54 +1441,30 @@ class RemoteClient(Client):
         Return a list of the files in the file server's specified environment
         """
         load = {"saltenv": saltenv, "cmd": "_file_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def envs(self):
         """
         Return a list of available environments
         """
         load = {"cmd": "_file_envs"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def master_opts(self):
         """
         Return the master opts data
         """
         load = {"cmd": "_master_opts"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def master_tops(self):
         """
         Return the metadata derived from the master_tops system
         """
-        log.debug(
-            "The _ext_nodes master function has been renamed to _master_tops. "
-            "To ensure compatibility when using older Salt masters we will "
-            "continue to invoke the function as _ext_nodes until the "
-            "3002 release."
-        )
-        # TODO: Change back to _master_tops
-        # for 3002 release
-        load = {"cmd": "_ext_nodes", "id": self.opts["id"], "opts": self.opts}
+        load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
         if self.auth:
             load["tok"] = self.auth.gen_token(b"salt")
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
 
 class FSClient(RemoteClient):

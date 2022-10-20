@@ -1,0 +1,17 @@
+@Library('salt@master-1.11') _
+
+runTestSuite(
+    concurrent_builds: 1,
+    distro_name: 'debian',
+    distro_version: '10',
+    distro_arch: 'amd64',
+    env: env,
+    jenkins_slave_label: 'kitchen-slave',
+    nox_env_name: 'pytest-zeromq',
+    nox_passthrough_opts: '--ssh-tests',
+    python_version: 'py3',
+    testrun_timeout: 6,
+    use_spot_instances: true,
+)
+
+// vim: ft=groovy

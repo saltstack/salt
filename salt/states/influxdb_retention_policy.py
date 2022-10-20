@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Influxdb retention policies
 =========================================
@@ -7,9 +6,6 @@ Management of Influxdb retention policies
 
 (compatible with InfluxDB version 0.9+)
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -63,7 +59,7 @@ def present(name, database, duration="7d", replication=1, default=False, **clien
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "retention policy {0} is already present".format(name),
+        "comment": "retention policy {} is already present".format(name),
     }
 
     if not __salt__["influxdb.retention_policy_exists"](
@@ -71,16 +67,16 @@ def present(name, database, duration="7d", replication=1, default=False, **clien
     ):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = " {0} is absent and will be created".format(name)
+            ret["comment"] = " {} is absent and will be created".format(name)
             return ret
         if __salt__["influxdb.create_retention_policy"](
             database, name, duration, replication, default, **client_args
         ):
-            ret["comment"] = "retention policy {0} has been created".format(name)
+            ret["comment"] = "retention policy {} has been created".format(name)
             ret["changes"][name] = "Present"
             return ret
         else:
-            ret["comment"] = "Failed to create retention policy {0}".format(name)
+            ret["comment"] = "Failed to create retention policy {}".format(name)
             ret["result"] = False
             return ret
 
@@ -91,41 +87,35 @@ def present(name, database, duration="7d", replication=1, default=False, **clien
         update_policy = False
         if current_policy["duration"] != convert_duration(duration):
             update_policy = True
-            ret["changes"]["duration"] = "Retention changed from {0} to {1}.".format(
+            ret["changes"]["duration"] = "Retention changed from {} to {}.".format(
                 current_policy["duration"], duration
             )
 
         if current_policy["replicaN"] != replication:
             update_policy = True
-            ret["changes"][
-                "replication"
-            ] = "Replication changed from {0} to {1}.".format(
+            ret["changes"]["replication"] = "Replication changed from {} to {}.".format(
                 current_policy["replicaN"], replication
             )
 
         if current_policy["default"] != default:
             update_policy = True
-            ret["changes"]["default"] = "Default changed from {0} to {1}.".format(
+            ret["changes"]["default"] = "Default changed from {} to {}.".format(
                 current_policy["default"], default
             )
 
         if update_policy:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = " {0} is present and set to be changed".format(name)
+                ret["comment"] = " {} is present and set to be changed".format(name)
                 return ret
             else:
                 if __salt__["influxdb.alter_retention_policy"](
                     database, name, duration, replication, default, **client_args
                 ):
-                    ret["comment"] = "retention policy {0} has been changed".format(
-                        name
-                    )
+                    ret["comment"] = "retention policy {} has been changed".format(name)
                     return ret
                 else:
-                    ret["comment"] = "Failed to update retention policy {0}".format(
-                        name
-                    )
+                    ret["comment"] = "Failed to update retention policy {}".format(name)
                     ret["result"] = False
                     return ret
 
@@ -146,22 +136,22 @@ def absent(name, database, **client_args):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "retention policy {0} is not present".format(name),
+        "comment": "retention policy {} is not present".format(name),
     }
 
     if __salt__["influxdb.retention_policy_exists"](database, name, **client_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "retention policy {0} is present and needs to be removed"
-            ).format(name)
+            ret[
+                "comment"
+            ] = "retention policy {} is present and needs to be removed".format(name)
             return ret
         if __salt__["influxdb.drop_retention_policy"](database, name, **client_args):
-            ret["comment"] = "retention policy {0} has been removed".format(name)
+            ret["comment"] = "retention policy {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove retention policy {0}".format(name)
+            ret["comment"] = "Failed to remove retention policy {}".format(name)
             ret["result"] = False
             return ret
 

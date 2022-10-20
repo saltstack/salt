@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages via Telegram.
 
@@ -10,14 +9,11 @@ Module for sending messages via Telegram.
         telegram.token: '00000000:xxxxxxxxxxxxxxxxxxxxxxxx'
 
 """
-from __future__ import absolute_import
 
-# Import Python libs
 import logging
 
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
 try:
     import requests
 
@@ -80,7 +76,6 @@ def post_message(message, chat_id=None, token=None):
     :param token:   (optional) The Telegram API token.
     :return:        Boolean if message was sent successfully.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -109,7 +104,7 @@ def _post_message(message, chat_id, token):
     :param token:       The Telegram API token.
     :return:            Boolean if message was sent successfully.
     """
-    url = "https://api.telegram.org/bot{0}/sendMessage".format(token)
+    url = "https://api.telegram.org/bot{}/sendMessage".format(token)
 
     parameters = dict()
     if chat_id:
@@ -121,7 +116,7 @@ def _post_message(message, chat_id, token):
         response = requests.post(url, data=parameters)
         result = response.json()
 
-        log.debug("Raw response of the telegram request is {0}".format(response))
+        log.debug("Raw response of the telegram request is %s", response)
 
     except Exception:  # pylint: disable=broad-except
         log.exception("Sending telegram api request failed")
@@ -130,9 +125,9 @@ def _post_message(message, chat_id, token):
     # Check if the Telegram Bot API returned successfully.
     if not result.get("ok", False):
         log.debug(
-            "Sending telegram api request failed due to error {0} ({1})".format(
-                result.get("error_code"), result.get("description")
-            )
+            "Sending telegram api request failed due to error %s (%s)",
+            result.get("error_code"),
+            result.get("description"),
         )
         return False
 

@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Send events from Docker events
 :Depends:   Docker API >= 1.22
 """
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import traceback
 
 import salt.utils.event
 import salt.utils.json
 
-# pylint: disable=import-error
 try:
-    import docker
-    import docker.utils
+    import docker  # pylint: disable=import-error,no-name-in-module
+    import docker.utils  # pylint: disable=import-error,no-name-in-module
 
     HAS_DOCKER_PY = True
 except ImportError:
@@ -105,8 +99,8 @@ def start(
             # Each output includes the event type, actor id, name and action.
             # status field can be ommited
             if data["Action"]:
-                fire("{0}/{1}".format(tag, data["Action"]), data)
+                fire("{}/{}".format(tag, data["Action"]), data)
             else:
-                fire("{0}/{1}".format(tag, data["status"]), data)
+                fire("{}/{}".format(tag, data["status"]), data)
     except Exception:  # pylint: disable=broad-except
         traceback.print_exc()

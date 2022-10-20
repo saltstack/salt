@@ -2,10 +2,11 @@
 
 import os.path
 
+import pytest
+
 import salt.config
 import salt.modules.saltcheck as saltcheck
 import salt.syspaths as syspaths
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -28,7 +29,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {saltcheck: {"__opts__": local_opts}}
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_call_salt_command(self):
         """test simple test.echo module"""
         with patch.dict(
@@ -45,7 +46,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(returned, "hello")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_call_salt_command2(self):
         """test simple test.echo module again"""
         with patch.dict(
@@ -61,6 +62,24 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                 fun="test.echo", args=["hello"], kwargs=None
             )
             self.assertNotEqual(returned, "not-hello")
+
+    def test_call_saltcheck_with_proxy(self):
+        """test fail to load saltcheck module if proxy"""
+        with patch.dict(
+            saltcheck.__salt__,
+            {
+                "config.get": MagicMock(return_value=True),
+                "sys.list_modules": MagicMock(return_value=["module1"]),
+                "cp.cache_master": MagicMock(return_value=[True]),
+            },
+        ), patch("salt.utils.platform.is_proxy", MagicMock(return_value=[True])):
+            ret, message = saltcheck.__virtual__()
+            self.assertFalse(ret)
+            self.assertEqual(
+                message,
+                "The saltcheck execution module failed to load: only available on"
+                " minions.",
+            )
 
     def test__assert_equal1(self):
         """test"""
@@ -464,7 +483,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             mybool = sc_instance._SaltCheck__assert_not_empty("")
             self.assertNotEqual(mybool, "Pass")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_run_test_1(self):
         """test"""
         with patch.dict(

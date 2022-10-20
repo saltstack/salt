@@ -55,7 +55,7 @@ the master, the syntax looks like this:
 
 .. code-block:: bash
 
-    # salt '*' cp.get_file salt://vimrc /etc/vimrc
+    salt '*' cp.get_file salt://vimrc /etc/vimrc
 
 This will instruct all Salt minions to download the vimrc file and copy it
 to /etc/vimrc
@@ -65,7 +65,7 @@ like so:
 
 .. code-block:: bash
 
-    # salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
+    salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
 
 This example would instruct all Salt minions to download the vimrc from a
 directory with the same name as their OS grain and copy it to /etc/vimrc
@@ -81,7 +81,7 @@ words, 1 uses the least CPU on the master (and minion), while 9 uses the most.
 
 .. code-block:: bash
 
-    # salt '*' cp.get_file salt://vimrc /etc/vimrc gzip=5
+    salt '*' cp.get_file salt://vimrc /etc/vimrc gzip=5
 
 Finally, note that by default cp.get_file does *not* create new destination
 directories if they do not exist.  To change this, use the ``makedirs``
@@ -89,7 +89,7 @@ argument:
 
 .. code-block:: bash
 
-    # salt '*' cp.get_file salt://vimrc /etc/vim/vimrc makedirs=True
+    salt '*' cp.get_file salt://vimrc /etc/vim/vimrc makedirs=True
 
 In this example, /etc/vim/ would be created if it didn't already exist.
 
@@ -101,14 +101,14 @@ directory from the master.  The syntax is very similar to get_file:
 
 .. code-block:: bash
 
-    # salt '*' cp.get_dir salt://etc/apache2 /etc
+    salt '*' cp.get_dir salt://etc/apache2 /etc
 
 cp.get_dir supports template rendering and gzip compression arguments just like
 get_file:
 
 .. code-block:: bash
 
-    # salt '*' cp.get_dir salt://etc/{{pillar.webserver}} /etc gzip=5 template=jinja
+    salt '*' cp.get_dir salt://etc/{{pillar.webserver}} /etc gzip=5 template=jinja
 
 
 File Server Client Instance

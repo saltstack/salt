@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Interact with virtual machine images via libguestfs
 
 :depends:   - libguestfs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
-
-# Import Python libs
 import os
 import tempfile
 import time
 
-# Import Salt libs
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -71,7 +66,7 @@ def mount(location, access="rw", root=None):
                     log.info("Path already existing: %s", root)
         else:
             break
-    cmd = "guestmount -i -a {0} --{1} {2}".format(location, access, root)
+    cmd = "guestmount -i -a {} --{} {}".format(location, access, root)
     __salt__["cmd.run"](cmd, python_shell=False)
     return root
 
@@ -86,7 +81,7 @@ def umount(name, disk=None):
 
         salt '*' guestfs.umount /mountpoint disk=/srv/images/fedora.qcow
     """
-    cmd = "guestunmount -q {0}".format(name)
+    cmd = "guestunmount -q {}".format(name)
     __salt__["cmd.run"](cmd)
 
     # Wait at most 5s that the disk is no longuer used
@@ -94,7 +89,7 @@ def umount(name, disk=None):
     while (
         disk is not None
         and loops < 5
-        and len(__salt__["cmd.run"]("lsof {0}".format(disk)).splitlines()) != 0
+        and len(__salt__["cmd.run"]("lsof {}".format(disk)).splitlines()) != 0
     ):
         loops = loops + 1
         time.sleep(1)

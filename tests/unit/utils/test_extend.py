@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.utils.extend_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,20 +5,15 @@
     Test the salt extend script, leave templates/test alone to keep this working!
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 from datetime import date
 
-# Import salt libs
 import salt.utils.extend
 import salt.utils.files
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 

@@ -1,5 +1,10 @@
-# -*- coding: utf-8 -*-
 """
+
+.. warning::
+
+    The `cassandra` module is deprecated in favor of the `cassandra_cql`
+    module.
+
 Cassandra NoSQL Database Module
 
 :depends:   - pycassa Cassandra Python adapter
@@ -11,14 +16,11 @@ Cassandra NoSQL Database Module
         cassandra.host: localhost
         cassandra.thrift_port: 9160
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +44,12 @@ def __virtual__():
             "The cassandra execution module cannot be loaded: pycassa not installed.",
         )
 
+    warn_until_date(
+        "20240101",
+        "The cassandra returner is broken and deprecated, and will be removed"
+        " after {date}. Use the cassandra_cql returner instead",
+    )
+
     if HAS_PYCASSA and salt.utils.path.which("nodetool"):
         return "cassandra"
     return (
@@ -57,16 +65,16 @@ def _nodetool(cmd):
     """
     nodetool = __salt__["config.option"]("cassandra.nodetool")
     host = __salt__["config.option"]("cassandra.host")
-    return __salt__["cmd.run_stdout"]("{0} -h {1} {2}".format(nodetool, host, cmd))
+    return __salt__["cmd.run_stdout"]("{} -h {} {}".format(nodetool, host, cmd))
 
 
 def _sys_mgr():
     """
     Return a pycassa system manager connection object
     """
-    thrift_port = six.text_type(__salt__["config.option"]("cassandra.THRIFT_PORT"))
+    thrift_port = str(__salt__["config.option"]("cassandra.THRIFT_PORT"))
     host = __salt__["config.option"]("cassandra.host")
-    return SystemManager("{0}:{1}".format(host, thrift_port))
+    return SystemManager("{}:{}".format(host, thrift_port))
 
 
 def compactionstats():

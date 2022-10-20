@@ -118,7 +118,8 @@ class WinWuaInstalledTestCase(TestCase):
         with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
-                "WUA: The Background Intelligent Transfer service (bits) must not be disabled",
+                "WUA: The Background Intelligent Transfer service (bits) must not be"
+                " disabled",
             )
             result = win_wua.__virtual__()
             self.assertEqual(expected, result)
@@ -158,7 +159,8 @@ class WinWuaInstalledTestCase(TestCase):
         with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
-                "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
+                "WUA: The Cryptographic Services service (CryptSvc) must not be"
+                " disabled",
             )
             result = win_wua.__virtual__()
             self.assertEqual(expected, result)
@@ -179,7 +181,8 @@ class WinWuaInstalledTestCase(TestCase):
         with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
-                "WUA: The Windows Module Installer service (TrustedInstaller) must not be disabled",
+                "WUA: The Windows Module Installer service (TrustedInstaller) must not"
+                " be disabled",
             )
             result = win_wua.__virtual__()
             self.assertEqual(expected, result)

@@ -1,10 +1,6 @@
-# Import Python Libs
 import os
 
-# Import Salt Libs
 import salt.utils.platform
-
-# Import Salt Testing Libs
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 

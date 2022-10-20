@@ -1,6 +1,7 @@
 import os.path
 import random
 import string
+import sys
 from copy import deepcopy
 
 import salt.config
@@ -8,7 +9,6 @@ import salt.loader
 import salt.modules.boto_secgroup as boto_secgroup
 
 # pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
@@ -28,7 +28,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -69,7 +69,7 @@ boto_conn_parameters = {
 
 
 def _random_group_id():
-    group_id = "sg-{:x}".format(random.randrange(2 ** 32))
+    group_id = "sg-{:x}".format(random.randrange(2**32))
     return group_id
 
 
@@ -97,8 +97,9 @@ def _has_required_boto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -158,6 +159,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertEqual(boto_secgroup._split_rules(rules), split_rules)
 
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_create_ec2_classic(self):
         """
@@ -202,6 +204,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_get_group_id_ec2_classic(self):
         """
@@ -303,6 +306,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_exists_true_name_classic(self):
         """
@@ -368,6 +372,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         salt_exists_result = boto_secgroup.exists(group_id=group_id, **conn_parameters)
         self.assertFalse(salt_exists_result)
 
+    @skipIf(sys.version_info >= (3, 10), "Fails with python 3.10")
     @mock_ec2_deprecated
     def test_delete_group_ec2_classic(self):
         """

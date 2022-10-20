@@ -55,7 +55,6 @@ import logging
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -65,10 +64,10 @@ try:
     # pylint: disable=unused-import
     import boto
     import boto3
+    from botocore import __version__ as found_botocore_version
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
-    from botocore import __version__ as found_botocore_version
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -317,7 +316,7 @@ def create_policy(
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not isinstance(policyDocument, string_types):
+        if not isinstance(policyDocument, str):
             policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy(
             policyName=policyName, policyDocument=policyDocument
@@ -443,7 +442,7 @@ def create_policy_version(
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not isinstance(policyDocument, string_types):
+        if not isinstance(policyDocument, str):
             policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy_version(
             policyName=policyName,
@@ -611,7 +610,6 @@ def set_default_policy_version(
     Returns {changed: true} if the policy version was set
     {changed: False} if the policy version was not set.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -623,7 +621,7 @@ def set_default_policy_version(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.set_default_policy_version(
             policyName=policyName, policyVersionId=str(policyVersionId)
-        )  # future lint: disable=blacklisted-function
+        )
         return {"changed": True}
     except ClientError as e:
         return {"changed": False, "error": __utils__["boto3.get_error"](e)}
@@ -674,7 +672,6 @@ def attach_principal_policy(
 
     Returns {attached: true} if the policy was attached
     {attached: False} if the policy was not attached.
-
 
     CLI Example:
 

@@ -87,7 +87,9 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
     Returns True if the given rule exists and returns False if the given
     rule does not exist.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch_event.exists myevent region=us-east-1
     """
@@ -220,7 +222,9 @@ def list_rules(region=None, key=None, keyid=None, profile=None):
     """
     List, with details, all Cloudwatch Event rules visible in the current scope.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch_event.list_rules region=us-east-1
     """

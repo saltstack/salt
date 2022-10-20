@@ -87,8 +87,6 @@ markers for specific list items:
     to check the minion log for errors after configuring this beacon.
 
 """
-
-
 import datetime
 import logging
 
@@ -106,7 +104,7 @@ def validate(config):
     Validate the config is a dict
     """
     if not isinstance(config, list):
-        return False, ("Configuration for status beacon must be a list.")
+        return False, "Configuration for status beacon must be a list."
     return True, "Valid beacon configuration"
 
 

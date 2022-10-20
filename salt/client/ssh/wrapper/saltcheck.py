@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Wrap the saltcheck module to copy files to ssh minion before running tests
 """
-# Import Python libs
-from __future__ import absolute_import, print_function
 
 import logging
 import os
@@ -14,8 +11,6 @@ from contextlib import closing
 
 import salt.utils.files
 import salt.utils.json
-
-# Import salt libs
 import salt.utils.url
 
 log = logging.getLogger(__name__)
@@ -33,9 +28,9 @@ def update_master_cache(states, saltenv="base"):
     # Setup for copying states to gendir
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.files.mkstemp()
-    if "cp.fileclient_{0}".format(id(__opts__)) not in __context__:
+    if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
         __context__[
-            "cp.fileclient_{0}".format(id(__opts__))
+            "cp.fileclient_{}".format(id(__opts__))
         ] = salt.fileclient.get_file_client(__opts__)
 
     # generate cp.list_states output and save to gendir
@@ -64,7 +59,7 @@ def update_master_cache(states, saltenv="base"):
             log.debug("copying %s to %s", state_name, gendir)
             qualified_name = salt.utils.url.create(state_name, saltenv)
             # Duplicate cp.get_dir to gendir
-            copy_result = __context__["cp.fileclient_{0}".format(id(__opts__))].get_dir(
+            copy_result = __context__["cp.fileclient_{}".format(id(__opts__))].get_dir(
                 qualified_name, gendir, saltenv
             )
             if copy_result:
@@ -82,7 +77,7 @@ def update_master_cache(states, saltenv="base"):
                 else:
                     qualified_name = salt.utils.url.create(state_name, saltenv)
                     copy_result = __context__[
-                        "cp.fileclient_{0}".format(id(__opts__))
+                        "cp.fileclient_{}".format(id(__opts__))
                     ].get_dir(qualified_name, gendir, saltenv)
                     if copy_result:
                         copy_result = [
@@ -117,7 +112,7 @@ def update_master_cache(states, saltenv="base"):
     # Clean up local tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
+    except OSError:
         pass
 
     tar_path = os.path.join(thin_dir, os.path.basename(trans_tar))
