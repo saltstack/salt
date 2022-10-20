@@ -109,7 +109,4 @@ def safe_dump(data, stream=None, **kwargs):
     represented properly. Ensure that unicode strings are encoded unless
     explicitly told not to.
     """
-    if "allow_unicode" not in kwargs:
-        kwargs["allow_unicode"] = True
-    kwargs.setdefault("default_flow_style", None)
-    return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
+    return dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
