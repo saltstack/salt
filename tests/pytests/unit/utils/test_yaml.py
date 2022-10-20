@@ -90,6 +90,30 @@ def test_safe_dump():
     assert salt_yaml.safe_dump(data, default_flow_style=False) == "foo: bar\n"
 
 
+@pytest.mark.parametrize(
+    "yaml_compatibility,input_dumper,want_dumper",
+    [
+        (3006, None, None),
+        (3006, yaml.Dumper, yaml.Dumper),
+        (3007, None, salt_yaml.OrderedDumper),
+        (3007, yaml.Dumper, yaml.Dumper),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_dump_default_dumper(yaml_compatibility, input_dumper, want_dumper):
+    with patch.object(yaml, "dump") as mock:
+        kwargs = {}
+        if input_dumper is not None:
+            kwargs["Dumper"] = input_dumper
+        salt_yaml.dump([], **kwargs)
+        mock.assert_called_once()
+        got_kwargs = mock.mock_calls[0].kwargs
+        if want_dumper is None:
+            assert "Dumper" not in got_kwargs
+        else:
+            assert got_kwargs["Dumper"] is want_dumper
+
+
 def render_yaml(data):
     """
     Takes a YAML string, puts it into a mock file, passes that to the YAML

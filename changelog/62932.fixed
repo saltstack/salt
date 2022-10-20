@@ -1,0 +1,5 @@
+Improvements to YAML processing (`salt.utils.yaml`) that are expected to take
+effect in Salt 3007 but can be previewed now by setting the option
+`yaml_compatibility` to `3007`:
+  * `salt.utils.yaml.dump()` will default to `salt.utils.yaml.OrderedDumper`
+    instead of `yaml.Dumper`.

@@ -15,6 +15,7 @@ import salt.utils._yaml_common as _yaml_common
 import salt.utils.context
 from salt.utils.decorators import classproperty
 from salt.utils.odict import OrderedDict
+from salt.version import SaltStackVersion
 
 try:
     from yaml import CDumper as Dumper
@@ -140,11 +141,19 @@ def dump(data, stream=None, **kwargs):
     """
     .. versionadded:: 2018.3.0
 
+    .. versionchanged:: 3007.0
+
+        The default ``Dumper`` class is now ``OrderedDumper`` instead of
+        ``yaml.Dumper``.  Set the ``yaml_compatibility`` option to "3006" to
+        revert to the previous behavior.
+
     Helper that wraps yaml.dump and ensures that we encode unicode strings
     unless explicitly told not to.
     """
     kwargs.setdefault("allow_unicode", True)
     kwargs.setdefault("default_flow_style", None)
+    if "Dumper" not in kwargs and _yaml_common.compat_ver() >= SaltStackVersion(3007):
+        kwargs["Dumper"] = OrderedDumper
     return yaml.dump(data, stream, **kwargs)
 
 
