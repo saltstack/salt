@@ -68,7 +68,8 @@ def _check_last_run(schedule, job_name, runtime=None):
 
 
 @pytest.mark.slow_test
-def test_eval(schedule):
+@pytest.mark.parametrize("master", [False, True])
+def test_eval(schedule, master):
     """
     verify that scheduled job runs
     """
@@ -82,6 +83,10 @@ def test_eval(schedule):
 
     # Add the job to the scheduler
     schedule.opts.update(job)
+
+    # The master does not have grains
+    if master:
+        schedule.opts.pop("grains", None)
 
     # Evaluate 1 second before the run time
     schedule.eval(now=run_time1)

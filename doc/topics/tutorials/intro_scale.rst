@@ -282,7 +282,7 @@ that information back to the waiting client before the job can be published.
 To mitigate this, a key cache may be enabled. This will reduce the load
 on the master to a single file open instead of thousands or tens of thousands.
 
-This cache is updated by the maintanence process, however, which means that
+This cache is updated by the maintenance process, however, which means that
 minions with keys that are accepted may not be targeted by the master
 for up to sixty seconds by default.
 
