@@ -85,7 +85,7 @@ so either of the following versions for "Extract server package" is correct:
           - file: /usr/local/share/myapp.tar.xz
 
 Wildcard matching in requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 0.9.8
 
@@ -119,7 +119,7 @@ A leading or bare ``*`` must be quoted to avoid confusion with YAML references:
 
 
 Omitting state module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 2016.3.0
 
