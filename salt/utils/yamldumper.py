@@ -97,8 +97,7 @@ def dump(data, stream=None, **kwargs):
     Helper that wraps yaml.dump and ensures that we encode unicode strings
     unless explicitly told not to.
     """
-    if "allow_unicode" not in kwargs:
-        kwargs["allow_unicode"] = True
+    kwargs.setdefault("allow_unicode", True)
     kwargs.setdefault("default_flow_style", None)
     return yaml.dump(data, stream, **kwargs)
 
