@@ -104,12 +104,18 @@ def dump(data, stream=None, **kwargs):
     """
     .. versionadded:: 2018.3.0
 
+    .. versionchanged:: 3006.0
+
+        The default ``Dumper`` class is now ``OrderedDumper`` instead of
+        ``yaml.Dumper``.
+
     Helper that wraps yaml.dump and ensures that we encode unicode strings
     unless explicitly told not to.
     """
     kwargs = {
         "allow_unicode": True,
         "default_flow_style": None,
+        "Dumper": OrderedDumper,
         **kwargs,
     }
     return yaml.dump(data, stream, **kwargs)

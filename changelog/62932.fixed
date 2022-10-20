@@ -1,2 +1,4 @@
 Improvements to YAML processing (`salt.utils.yaml`):
+  * `salt.utils.yaml.dump()` now defaults to `salt.utils.yaml.OrderedDumper`
+    instead of `yaml.Dumper`.
   * Code health clean-ups.
