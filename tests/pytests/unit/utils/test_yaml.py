@@ -215,6 +215,28 @@ def test_dump_timestamp(yaml_compatibility, want_tag, dumpercls):
     assert re.fullmatch(want_re, got)
 
 
+@pytest.mark.parametrize(
+    "mktuple",
+    [
+        lambda *args: tuple(args),
+        collections.namedtuple("TestTuple", "a b"),
+    ],
+)
+@pytest.mark.parametrize(
+    "dumpercls",
+    [
+        salt_yaml.OrderedDumper,
+        salt_yaml.SafeOrderedDumper,
+        salt_yaml.IndentedSafeOrderedDumper,
+    ],
+)
+def test_dump_tuple(mktuple, dumpercls):
+    data = mktuple("foo", "bar")
+    want = "!!python/tuple [foo, bar]\n"
+    got = salt_yaml.dump(data, Dumper=dumpercls)
+    assert got == want
+
+
 def render_yaml(data):
     """
     Takes a YAML string, puts it into a mock file, passes that to the YAML

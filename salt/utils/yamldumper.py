@@ -158,6 +158,10 @@ _CommonMixin.add_representer(
     salt.utils.context.NamespacedDictWrapper,
     yaml.representer.SafeRepresenter.represent_dict,
 )
+# SafeDumper represents tuples as lists, but Dumper's behavior (sequence
+# tagged with `!!python/tuple`) is safe, so use it for all dumpers.
+_CommonMixin.add_multi_representer(tuple, Dumper.yaml_representers[tuple])
+_CommonMixin.add_representer(tuple, Dumper.yaml_representers[tuple])
 
 
 class SafeOrderedDumper(_CommonMixin, SafeDumper):

@@ -24,6 +24,9 @@ but can be previewed now by setting the option `yaml_compatibility` to `3007`:
     `datetime.datetime` object instead of a string.
   * Dumping a `datetime.datetime` object will explicitly tag the node with
     `!!timestamp`.  (Currently the nodes are untagged.)
+  * Dumping a `tuple` object will consistently produce a sequence node
+    explicitly tagged with `!!python/tuple`.  (Currently `safe_dump()` omits the
+    tag and `dump()` includes it.)
   * `salt.utils.yaml.dump()` will default to `salt.utils.yaml.OrderedDumper`
     instead of `yaml.Dumper`.
   * Dumping a YAML sequence with `salt.utils.yaml.IndentedSafeOrderedDumper`

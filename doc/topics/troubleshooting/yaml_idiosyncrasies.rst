@@ -498,6 +498,13 @@ Tuples
 
     Loading a YAML ``!!python/tuple`` node is now supported.
 
+.. versionchanged:: 3007.0
+
+    Dumping a ``tuple`` object to YAML now always produces a sequence node
+    tagged with ``!!python/tuple``.  Previously, ``salt.utils.yaml.safe_dump()``
+    did not tag the node.  Set the ``yaml_compatibility`` option to 3006 to
+    revert to the previous behavior.
+
 The YAML ``!!python/tuple`` type can be used to produce a Python ``tuple``
 object when loaded:
 
@@ -507,10 +514,8 @@ object when loaded:
     - first item
     - second item
 
-When dumped to YAML with ``salt.utils.yaml.dump()``, a ``tuple`` object produces
-a ``!!python/tuple`` node.  When dumped to YAML with
-``salt.utils.yaml.safe_dump()``, a ``tuple`` object produces a plain sequence
-node (which will be loaded as a ``list`` object).
+When dumped to YAML, a ``tuple`` object produces a sequence node tagged with
+``!!python/tuple``.
 
 Beware that Salt currently serializes ``tuple`` objects the same way it
 serializes ``list`` objects, so they become ``list`` objects when deserialized
