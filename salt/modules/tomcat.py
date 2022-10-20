@@ -66,25 +66,11 @@ import logging
 import os
 import re
 import tempfile
+import urllib.parse
+import urllib.request
 
 import salt.utils.data
 import salt.utils.stringutils
-
-# pylint: disable=no-name-in-module,import-error
-from salt.ext.six import string_types as _string_types
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.request import (
-    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import (
-    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-from salt.ext.six.moves.urllib.request import install_opener as _install_opener
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
-
-# pylint: enable=no-name-in-module,import-error
-
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +92,8 @@ def __virtual__():
         return "tomcat"
     return (
         False,
-        "Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.",
+        "Tomcat execution module not loaded: neither Tomcat installed locally nor"
+        " tomcat-manager credentials set in grains/pillar/config.",
     )
 
 
@@ -157,15 +144,15 @@ def _auth(uri):
     if user is False or password is False:
         return False
 
-    basic = _HTTPBasicAuthHandler()
+    basic = urllib.request.HTTPBasicAuthHandler()
     basic.add_password(
         realm="Tomcat Manager Application", uri=uri, user=user, passwd=password
     )
-    digest = _HTTPDigestAuthHandler()
+    digest = urllib.request.HTTPDigestAuthHandler()
     digest.add_password(
         realm="Tomcat Manager Application", uri=uri, user=user, passwd=password
     )
-    return _build_opener(basic, digest)
+    return urllib.request.build_opener(basic, digest)
 
 
 def extract_war_version(war):
@@ -230,19 +217,21 @@ def _wget(cmd, opts=None, url="http://localhost:8080/manager", timeout=180):
     url += "text/{}".format(cmd)
     url6 += "{}".format(cmd)
     if opts:
-        url += "?{}".format(_urlencode(opts))
-        url6 += "?{}".format(_urlencode(opts))
+        url += "?{}".format(urllib.parse.urlencode(opts))
+        url6 += "?{}".format(urllib.parse.urlencode(opts))
 
     # Make the HTTP request
-    _install_opener(auth)
+    urllib.request.install_opener(auth)
 
     try:
         # Trying tomcat >= 7 url
-        ret["msg"] = _urlopen(url, timeout=timeout).read().splitlines()
+        ret["msg"] = urllib.request.urlopen(url, timeout=timeout).read().splitlines()
     except Exception:  # pylint: disable=broad-except
         try:
             # Trying tomcat6 url
-            ret["msg"] = _urlopen(url6, timeout=timeout).read().splitlines()
+            ret["msg"] = (
+                urllib.request.urlopen(url6, timeout=timeout).read().splitlines()
+            )
         except Exception:  # pylint: disable=broad-except
             ret["msg"] = "Failed to create HTTP request"
 
@@ -609,7 +598,7 @@ def deploy_war(
         # Set it to defined version or attempt extract
         version = extract_war_version(war) if version is True else version
 
-        if isinstance(version, _string_types):
+        if isinstance(version, str):
             # Only pass version to Tomcat if not undefined
             opts["version"] = version
 
@@ -645,7 +634,13 @@ def passwd(passwd, user="", alg="sha1", realm=None):
     digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
     if digest:
         if realm:
-            digest.update("{}:{}:{}".format(user, realm, passwd,))
+            digest.update(
+                "{}:{}:{}".format(
+                    user,
+                    realm,
+                    passwd,
+                )
+            )
         else:
             digest.update(passwd)
 

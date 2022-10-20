@@ -14,7 +14,7 @@ newIssueWelcomeComment: >
     - [Community Wiki](https://github.com/saltstack/community/wiki)
     - [Salt’s Contributor Guide](https://docs.saltproject.io/en/master/topics/development/contributing.html)
     - [Join our Community Slack](https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg)
-    - [IRC on Freenode](https://webchat.freenode.net/#salt)
+    - [IRC on LiberaChat](https://web.libera.chat/#salt)
     - [Salt Project YouTube channel](https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg)
     - [Salt Project Twitch channel](https://www.twitch.tv/saltprojectoss)
 
@@ -40,7 +40,7 @@ newPRWelcomeComment: >
     - [Community Wiki](https://github.com/saltstack/community/wiki)
     - [Salt’s Contributor Guide](https://docs.saltproject.io/en/master/topics/development/contributing.html)
     - [Join our Community Slack](https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg)
-    - [IRC on Freenode](https://webchat.freenode.net/#salt)
+    - [IRC on LiberaChat](https://web.libera.chat/#salt)
     - [Salt Project YouTube channel](https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg)
     - [Salt Project Twitch channel](https://www.twitch.tv/saltprojectoss)
 

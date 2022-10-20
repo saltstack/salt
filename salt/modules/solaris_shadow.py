@@ -46,7 +46,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The solaris_shadow execution module failed to load: only available on Solaris systems.",
+        "The solaris_shadow execution module failed to load: only available on Solaris"
+        " systems.",
     )
 
 

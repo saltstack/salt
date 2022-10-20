@@ -1,11 +1,11 @@
-@Library('salt@master-1.10') _
+@Library('salt@master-1.11') _
 
 if (env.CHANGE_ID) {
     // This is a PR
     pre_commit_skips = ''
 } else {
     // This is a branch build
-    pre_commit_skips = 'pyupgrade,remove-import-headers,rstcheck'
+    pre_commit_skips = ''
 }
 
 runPreCommit(

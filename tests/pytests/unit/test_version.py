@@ -7,8 +7,14 @@ Test salt's regex git describe version parsing
 import re
 
 import pytest
+
 import salt.version
-from salt.version import SaltStackVersion, system_information, versions_report
+from salt.version import (
+    SaltStackVersion,
+    SaltVersionsInfo,
+    system_information,
+    versions_report,
+)
 from tests.support.mock import MagicMock, patch
 
 STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
@@ -48,6 +54,10 @@ STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
             (3000, 2, "nb", 20201214010203, 0, "1e7bc8f"),
             "3000.2nb20201214010203",
         ),
+        ("v3006.0", (3006, 0, "", 0, 0, None), "3006.0"),
+        ("v3006.0rc1", (3006, 0, "rc", 1, 0, None), "3006.0rc1"),
+        ("v3006.1", (3006, 1, "", 0, 0, None), "3006.1"),
+        ("v3006.1rc1", (3006, 1, "rc", 1, 0, None), "3006.1rc1"),
     ],
 )
 def test_version_parsing(version_string, full_info, version):
@@ -96,6 +106,9 @@ def test_version_parsing(version_string, full_info, version):
         ("v3001rc1", "v2019.2.1rc1"),
         ("v3002", "v3002nb20201213"),
         ("v3002rc1", "v3002nb20201213"),
+        ("v3006.0", "v3006.0rc1"),
+        ("v3006.1", "v3006.0rc1"),
+        ("v3006.1", "v3006.0"),
     ],
 )
 def test_version_comparison(higher_version, lower_version):
@@ -139,11 +152,13 @@ def test_version_report_lines():
     """
     Validate padding in versions report is correct
     """
-    # Get a set of all version report name lenghts including padding
+    # Get a set of all version report name lengths including padding
+    versions_report_ret = list(versions_report())
+    start_looking_index = versions_report_ret.index("Dependency Versions:") + 1
     line_lengths = {
         len(line.split(":")[0])
-        for line in list(versions_report())[4:]
-        if line != " " and line != "System Versions:"
+        for line in versions_report_ret[start_looking_index:]
+        if line != " " and line not in ("System Versions:", "Salt Extensions:")
     }
     # Check that they are all the same size (only one element in the set)
     assert len(line_lengths) == 1
@@ -366,7 +381,8 @@ def test_bugfix_string():
         ),
         (
             (2019, 2, 3, None, "nb", 20201214, 0, None),
-            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 nb=20201214>",
+            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3"
+            " nb=20201214>",
         ),
     ],
 )
@@ -376,6 +392,28 @@ def test_version_repr(version_tuple, expected):
     and new versioning scheme
     """
     assert repr(SaltStackVersion(*version_tuple)) == expected
+
+
+def test_previous_and_next_releases():
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.CALIFORNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.CALIFORNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.EINSTEINIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.BERKELIUM
+
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.NEPTUNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.NEPTUNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.PLUTONIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.URANIUM
 
 
 @pytest.mark.skip_unless_on_linux
@@ -440,7 +478,8 @@ def test_system_version_osx():
     """
 
     with patch(
-        "platform.mac_ver", MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
+        "platform.mac_ver",
+        MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
     ):
         versions = [item for item in system_information()]
         version = ("version", "10.15.2 x86_64")

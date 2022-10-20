@@ -105,9 +105,15 @@ def _absent(name, dataset_type, force=False, recursive=False):
         ret["result"] = mod_res["destroyed"]
         if ret["result"]:
             ret["changes"][name] = "destroyed"
-            ret["comment"] = "{} {} was destroyed".format(dataset_type, name,)
+            ret["comment"] = "{} {} was destroyed".format(
+                dataset_type,
+                name,
+            )
         else:
-            ret["comment"] = "failed to destroy {} {}".format(dataset_type, name,)
+            ret["comment"] = "failed to destroy {} {}".format(
+                dataset_type,
+                name,
+            )
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
     else:
@@ -270,9 +276,13 @@ def hold_absent(name, snapshot, recursive=False):
         ret["result"] = mod_res["released"]
         if ret["result"]:
             ret["changes"] = {snapshot: {name: "released"}}
-            ret["comment"] = "hold {} released".format(name,)
+            ret["comment"] = "hold {} released".format(
+                name,
+            )
         else:
-            ret["comment"] = "failed to release hold {}".format(name,)
+            ret["comment"] = "failed to release hold {}".format(
+                name,
+            )
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
     elif "error" in holds:
@@ -281,7 +291,9 @@ def hold_absent(name, snapshot, recursive=False):
         ret["comment"] = holds["error"]
     else:
         ## NOTE: no hold found with name for snapshot
-        ret["comment"] = "hold {} is absent".format(name,)
+        ret["comment"] = "hold {} is absent".format(
+            name,
+        )
 
     return ret
 
@@ -323,7 +335,10 @@ def hold_present(name, snapshot, recursive=False):
     holds = __salt__["zfs.holds"](snapshot)
     if name in holds:
         ## NOTE: hold with name already exists for snapshot
-        ret["comment"] = "hold {} is present for {}".format(name, snapshot,)
+        ret["comment"] = "hold {} is present for {}".format(
+            name,
+            snapshot,
+        )
     else:
         ## NOTE: no hold found with name for snapshot
         if not __opts__["test"]:
@@ -346,10 +361,10 @@ def hold_present(name, snapshot, recursive=False):
 def _dataset_present(
     dataset_type,
     name,
+    properties,
     volume_size=None,
     sparse=False,
     create_parent=False,
-    properties=None,
     cloned_from=None,
 ):
     """
@@ -393,12 +408,16 @@ def _dataset_present(
         dataset_type = "filesystem"
 
     ## ensure properties are zfs values
-    if volume_size:
-        volume_size = __utils__["zfs.from_size"](volume_size)
-    if properties:
-        properties = __utils__["zfs.from_auto_dict"](properties)
-    elif properties is None:
+    if properties is None:
         properties = {}
+    properties = __utils__["zfs.from_auto_dict"](properties)
+    if volume_size:
+        ## NOTE: add volsize to properties
+        volume_size = __utils__["zfs.from_size"](volume_size)
+        properties.update({"volsize": volume_size})
+    # The sorted isn't necessary for proper behavior, but it helps for the unit
+    # tests.
+    propnames = ",".join(sorted(properties.keys()))
 
     ## log configuration
     log.debug(
@@ -431,15 +450,19 @@ def _dataset_present(
 
     ## ensure dataset is in correct state
     ## NOTE: update the dataset
-    if __salt__["zfs.exists"](name, **{"type": dataset_type}):
+    exists = __salt__["zfs.exists"](name, **{"type": dataset_type})
+    if exists and len(properties) == 0:
+        ret["comment"] = "{} {} is uptodate".format(dataset_type, name)
+    elif exists and len(properties) > 0:
         ## NOTE: fetch current volume properties
         properties_current = __salt__["zfs.get"](
-            name, type=dataset_type, fields="value", depth=0, parsable=True,
+            name,
+            properties=propnames,
+            type=dataset_type,
+            fields="value",
+            depth=0,
+            parsable=True,
         ).get(name, OrderedDict())
-
-        ## NOTE: add volsize to properties
-        if volume_size:
-            properties["volsize"] = volume_size
 
         ## NOTE: build list of properties to update
         properties_update = []
@@ -484,7 +507,7 @@ def _dataset_present(
             ret["comment"] = "{} {} failed to be updated".format(dataset_type, name)
 
     ## NOTE: create or clone the dataset
-    else:
+    elif not exists:
         mod_res_action = "cloned" if cloned_from else "created"
         if __opts__["test"]:
             ## NOTE: pretend to create/clone
@@ -517,10 +540,16 @@ def _dataset_present(
             ret["changes"][name] = mod_res_action
             if properties:
                 ret["changes"][name] = properties
-            ret["comment"] = "{} {} was {}".format(dataset_type, name, mod_res_action,)
+            ret["comment"] = "{} {} was {}".format(
+                dataset_type,
+                name,
+                mod_res_action,
+            )
         else:
             ret["comment"] = "failed to {} {} {}".format(
-                mod_res_action[:-1], dataset_type, name,
+                mod_res_action[:-1],
+                dataset_type,
+                name,
             )
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
@@ -554,8 +583,8 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
     return _dataset_present(
         "filesystem",
         name,
+        properties,
         create_parent=create_parent,
-        properties=properties,
         cloned_from=cloned_from,
     )
 
@@ -603,10 +632,10 @@ def volume_present(
     return _dataset_present(
         "volume",
         name,
+        properties,
         volume_size,
         sparse=sparse,
         create_parent=create_parent,
-        properties=properties,
         cloned_from=cloned_from,
     )
 
@@ -856,7 +885,8 @@ def _schedule_snapshot_prepare(dataset, prefix, snapshots):
         if snapshots[hold]:
             ## NOTE: extract datetime from snapshot name
             timestamp = datetime.strptime(
-                snapshots[hold][-1], "{}@{}-%Y%m%d_%H%M%S".format(dataset, prefix),
+                snapshots[hold][-1],
+                "{}@{}-%Y%m%d_%H%M%S".format(dataset, prefix),
             ).replace(second=0, microsecond=0)
 
             ## NOTE: compare current timestamp to timestamp from snapshot
@@ -945,7 +975,9 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             snapshots["_schedule"][hold] = schedule[hold]
         else:
             ret["result"] = False
-            ret["comment"] = "schedule value for {} is not an integer".format(hold,)
+            ret["comment"] = "schedule value for {} is not an integer".format(
+                hold,
+            )
             break
         total_count += snapshots["_schedule"][hold]
     if ret["result"] and total_count == 0:
@@ -997,7 +1029,8 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                 if not mod_res["held"]:
                     ret["result"] = False
                     ret["comment"] = "error adding hold ({}) to snapshot ({})".format(
-                        hold, snapshot_name,
+                        hold,
+                        snapshot_name,
                     )
                     break
 
@@ -1026,7 +1059,8 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             if not mod_res["released"]:
                 ret["result"] = False
                 ret["comment"] = "error adding hold ({}) to snapshot ({})".format(
-                    hold, snapshot_name,
+                    hold,
+                    snapshot_name,
                 )
 
             ## NOTE: mark as prunable
@@ -1043,7 +1077,9 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
         if not mod_res["destroyed"]:
             ret["result"] = False
-            ret["comment"] = "error prunding snapshot ({1})".format(snapshot_name,)
+            ret["comment"] = "error prunding snapshot ({1})".format(
+                snapshot_name,
+            )
             break
 
     if ret["result"] and snapshots["_prunable"]:

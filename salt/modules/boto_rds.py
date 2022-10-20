@@ -289,7 +289,7 @@ def create(
         raise SaltInvocationError("master_user_password is required")
     if availability_zone and multi_az:
         raise SaltInvocationError(
-            "availability_zone and multi_az are mutually" " exclusive arguments."
+            "availability_zone and multi_az are mutually exclusive arguments."
         )
     if wait_status:
         wait_stati = ["available", "modifying", "backing-up"]
@@ -355,14 +355,17 @@ def create(
                 # Whoops, something is horribly wrong...
                 return {
                     "created": False,
-                    "error": "RDS instance {} should have been created but"
-                    " now I can't find it.".format(name),
+                    "error": (
+                        "RDS instance {} should have been created but"
+                        " now I can't find it.".format(name)
+                    ),
                 }
             if stat == wait_status:
                 return {
                     "created": True,
-                    "message": "RDS instance {} created (current status "
-                    "{})".format(name, stat),
+                    "message": "RDS instance {} created (current status {})".format(
+                        name, stat
+                    ),
                 }
             time.sleep(10)
             log.info("Instance status after 10 seconds is: %s", stat)
@@ -420,9 +423,7 @@ def create_read_replica(
         kwargs = {}
         for key in ("OptionGroupName", "MonitoringRoleArn"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         for key in ("MonitoringInterval", "Iops", "Port"):
             if locals()[key] is not None:
@@ -627,9 +628,7 @@ def update_parameter_group(
         if type(value) is bool:
             item.update({"ParameterValue": "on" if value else "off"})
         else:
-            item.update(
-                {"ParameterValue": str(value)}
-            )  # future lint: disable=blacklisted-function
+            item.update({"ParameterValue": str(value)})
         param_list.append(item)
 
     if not param_list:
@@ -861,7 +860,7 @@ def delete(
         if locals()["final_db_snapshot_identifier"] is not None:
             kwargs["FinalDBSnapshotIdentifier"] = str(
                 locals()["final_db_snapshot_identifier"]
-            )  # future lint: disable=blacklisted-function
+            )
 
         res = conn.delete_db_instance(DBInstanceIdentifier=name, **kwargs)
 
@@ -894,7 +893,7 @@ def delete(
                     "seconds".format(name, timeout)
                 )
             log.info(
-                "Waiting up to %s seconds for RDS instance %s to be " "deleted.",
+                "Waiting up to %s seconds for RDS instance %s to be deleted.",
                 timeout,
                 name,
             )
@@ -1015,9 +1014,7 @@ def describe_parameter_group(
         kwargs = {}
         for key in ("Marker", "Filters"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         if locals()["MaxRecords"] is not None:
             kwargs["MaxRecords"] = int(locals()["MaxRecords"])
@@ -1076,9 +1073,7 @@ def describe_parameters(
         kwargs.update({"DBParameterGroupName": name})
         for key in ("Marker", "Source"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         if locals()["MaxRecords"] is not None:
             kwargs["MaxRecords"] = int(locals()["MaxRecords"])

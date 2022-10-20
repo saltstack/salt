@@ -71,14 +71,11 @@ def list_(return_yaml=True, include_pillar=True, include_opts=True, **kwargs):
         ret["comment"] = "Event module not available. Beacon list failed."
         return ret
 
-    if beacons:
-        if return_yaml:
-            tmp = {"beacons": beacons}
-            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
-        else:
-            return beacons
+    if return_yaml:
+        tmp = {"beacons": beacons}
+        return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
-        return {"beacons": {}}
+        return beacons
 
 
 def list_available(return_yaml=True, **kwargs):
@@ -188,9 +185,10 @@ def add(name, beacon_data, **kwargs):
 
                 if not valid:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Beacon {} configuration invalid, "
-                        "not adding.\n{}".format(name, vcomment)
+                    ret[
+                        "comment"
+                    ] = "Beacon {} configuration invalid, not adding.\n{}".format(
+                        name, vcomment
                     )
                     return ret
         except KeyError:
@@ -224,10 +222,11 @@ def add(name, beacon_data, **kwargs):
                         ret["comment"] = event_ret["comment"]
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Did not receive the beacon add complete event before the timeout of {}s".format(
-                            kwargs.get("timeout", default_event_wait)
+                        ret["comment"] = (
+                            "Did not receive the beacon add complete event before the"
+                            " timeout of {}s".format(
+                                kwargs.get("timeout", default_event_wait)
+                            )
                         )
                     return ret
         except KeyError:
@@ -286,9 +285,10 @@ def modify(name, beacon_data, **kwargs):
 
                 if not valid:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Beacon {} configuration invalid, "
-                        "not modifying.\n{}".format(name, vcomment)
+                    ret[
+                        "comment"
+                    ] = "Beacon {} configuration invalid, not modifying.\n{}".format(
+                        name, vcomment
                     )
                     return ret
 
@@ -300,9 +300,10 @@ def modify(name, beacon_data, **kwargs):
 
         if not valid:
             ret["result"] = False
-            ret["comment"] = (
-                "Beacon {} configuration invalid, "
-                "not modifying.\n{}".format(name, vcomment)
+            ret[
+                "comment"
+            ] = "Beacon {} configuration invalid, not modifying.\n{}".format(
+                name, vcomment
             )
             return ret
 
@@ -351,10 +352,11 @@ def modify(name, beacon_data, **kwargs):
                         ret["comment"] = event_ret["comment"]
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Did not receive the beacon modify complete  event before the timeout of {}s".format(
-                            kwargs.get("timeout", default_event_wait)
+                        ret["comment"] = (
+                            "Did not receive the beacon modify complete  event before"
+                            " the timeout of {}s".format(
+                                kwargs.get("timeout", default_event_wait)
+                            )
                         )
                     return ret
         except KeyError:
@@ -410,10 +412,11 @@ def delete(name, **kwargs):
                         ret["comment"] = event_ret["comment"]
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Did not receive the beacon delete complete event before the timeout of {}s".format(
-                            kwargs.get("timeout", default_event_wait)
+                        ret["comment"] = (
+                            "Did not receive the beacon delete complete event before"
+                            " the timeout of {}s".format(
+                                kwargs.get("timeout", default_event_wait)
+                            )
                         )
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -502,10 +505,11 @@ def enable(**kwargs):
                             ret["comment"] = "Failed to enable beacons on minion."
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Did not receive the beacon enabled complete event before the timeout of {}s".format(
-                                kwargs.get("timeout", default_event_wait)
+                            ret["comment"] = (
+                                "Did not receive the beacon enabled complete event"
+                                " before the timeout of {}s".format(
+                                    kwargs.get("timeout", default_event_wait)
+                                )
                             )
                     return ret
         except KeyError:
@@ -554,10 +558,11 @@ def disable(**kwargs):
                             ret["comment"] = "Failed to disable beacons on minion."
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Did not receive the beacon disabled complete event before the timeout of {}s".format(
-                                kwargs.get("timeout", default_event_wait)
+                            ret["comment"] = (
+                                "Did not receive the beacon disabled complete event"
+                                " before the timeout of {}s".format(
+                                    kwargs.get("timeout", default_event_wait)
+                                )
                             )
                     return ret
         except KeyError:
@@ -639,10 +644,11 @@ def enable_beacon(name, **kwargs):
                         ret["comment"] = event_ret["comment"]
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Did not receive the beacon enabled complete event before the timeout of {}s".format(
-                            kwargs.get("timeout", default_event_wait)
+                        ret["comment"] = (
+                            "Did not receive the beacon enabled complete event before"
+                            " the timeout of {}s".format(
+                                kwargs.get("timeout", default_event_wait)
+                            )
                         )
                     return ret
         except KeyError:
@@ -716,10 +722,11 @@ def disable_beacon(name, **kwargs):
                         ret["comment"] = event_ret["comment"]
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Did not receive the beacon disabled complete event before the timeout of {}s".format(
-                            kwargs.get("timeout", default_event_wait)
+                        ret["comment"] = (
+                            "Did not receive the beacon disabled complete event before"
+                            " the timeout of {}s".format(
+                                kwargs.get("timeout", default_event_wait)
+                            )
                         )
                     return ret
         except KeyError:
@@ -765,10 +772,11 @@ def reset(**kwargs):
                         if ret is not None:
                             ret["comment"] = event_ret["comment"]
                         else:
-                            ret[
-                                "comment"
-                            ] = "Did not receive the beacon reset event before the timeout of {}s".format(
-                                kwargs.get("timeout", default_event_wait)
+                            ret["comment"] = (
+                                "Did not receive the beacon reset event before the"
+                                " timeout of {}s".format(
+                                    kwargs.get("timeout", default_event_wait)
+                                )
                             )
                     return ret
         except KeyError:

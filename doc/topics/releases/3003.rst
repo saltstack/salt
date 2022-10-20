@@ -76,6 +76,7 @@ Removed
 - Removing the _ext_nodes deprecation warning and alias to the master_tops function.  This change will break compatibility with a Salt master running versions 2017.7.8 and older and Salt minions running versions 3003 and newer. (#59804)
 - removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
 - Drop support for python 3.5 on Windows (#59479)
+- Removed support for Ubuntu 16.04 (#59913)
 
 Deprecated
 ==========
@@ -91,7 +92,7 @@ Fixed
 - The Google Cloud Engine salt-cloud provider now requires `apache-libcloud>=2.5.0`. Service account authentication is broken on older versions.
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
-- Supress noisy warnings when very old pyzmq is used. (#50327)
+- Suppress noisy warnings when very old pyzmq is used. (#50327)
 - Fixed glusterfs version parsing for pre-4.0 (#50707)
 - Prevent traceback when trying to list reactors when none are configured. (#53334)
 - Fixed zabbix_host.present to accept all Zabbix host properties (#53838)
@@ -113,7 +114,7 @@ Fixed
   minion not to start
   Use default timezone offset in scheduler when correct timezone cannot be determined (#58379)
 - Pop!_OS 20.04 and 20.10 now support using pkg.* / aptpkg.* (#58395)
-- Restoring functionallity of the textfsm module when using textfsm_path argument (#58499)
+- Restoring functionality of the textfsm module when using textfsm_path argument (#58499)
 - Invalidate file list cache when cache file has a future last modified time (#58529)
 - Fix issue with setting permissions in combination with the win_perms_reset
   option (#58541)

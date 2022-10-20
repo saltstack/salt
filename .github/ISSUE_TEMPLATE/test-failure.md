@@ -2,7 +2,7 @@
 name: Test Failure
 about: Jenkins Test Failure issues
 title: "[TEST FAILURE]"
-labels: Test Failure
+labels: 'Test-Failure'
 assignees: ''
 
 ---

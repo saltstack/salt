@@ -342,10 +342,7 @@ def managed(name, entries, connect_spec=None):
             if errs:
                 ret["result"] = False
                 ret["comment"] = "failed to " + ", ".join(
-                    (
-                        op + " entry " + dn + "(" + err.items() + ")"
-                        for op, dn, err in errs
-                    )
+                    (op + " entry " + dn + "(" + str(err) + ")" for op, dn, err in errs)
                 )
 
     # set ret['changes'].  filter out any unchanged attributes, and
@@ -475,12 +472,12 @@ def _update_entry(entry, status, directives):
             continue
         for attr, vals in state.items():
             status["mentioned_attributes"].add(attr)
-            vals = [to_bytes(val) for val in _toset(vals)]
+            vals = _toset(vals)
             if directive == "default":
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == "add":
-                vals.update(entry.get(attr, ()))
+                vals.update(entry.get(attr, OrderedSet()))
                 if vals:
                     entry[attr] = vals
             elif directive == "delete":
@@ -522,10 +519,17 @@ def _toset(thing):
     if thing is None:
         return OrderedSet()
     if isinstance(thing, str):
-        return OrderedSet((thing,))
-    # convert numbers to strings so that equality checks work
+        return OrderedSet((to_bytes(thing),))
+    if isinstance(thing, int):
+        return OrderedSet((to_bytes(str(thing)),))
+    # convert numbers to strings and then bytes
+    # so that equality checks work
     # (LDAP stores numbers as strings)
     try:
-        return OrderedSet(str(x) for x in thing)
+        return OrderedSet(
+            to_bytes(str(x)) if isinstance(x, int) else to_bytes(x) for x in thing
+        )
     except TypeError:
-        return OrderedSet(str(thing),)
+        return OrderedSet(
+            str(thing),
+        )

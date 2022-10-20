@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.composer as composer
 from salt.exceptions import SaltException
 from tests.support.mock import MagicMock, patch
@@ -44,7 +45,10 @@ def test_installed():
                 ret.update({"comment": comt, "result": False, "changes": {}})
                 assert composer.installed(name) == ret
 
-                comt = "Composer install completed successfully, output silenced by quiet flag"
+                comt = (
+                    "Composer install completed successfully, output silenced by quiet"
+                    " flag"
+                )
                 ret.update({"comment": comt, "result": True})
                 assert composer.installed(name, quiet=True) == ret
 
@@ -77,6 +81,9 @@ def test_update():
                 ret.update({"comment": comt, "result": False, "changes": {}})
                 assert composer.update(name) == ret
 
-                comt = "Composer update completed successfully, output silenced by quiet flag"
+                comt = (
+                    "Composer update completed successfully, output silenced by quiet"
+                    " flag"
+                )
                 ret.update({"comment": comt, "result": True})
                 assert composer.update(name, quiet=True) == ret

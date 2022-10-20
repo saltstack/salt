@@ -296,6 +296,7 @@ def defined(
     stop_on_reboot=False,
     live=True,
     host_devices=None,
+    autostart=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -598,6 +599,10 @@ def defined(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -667,6 +672,7 @@ def defined(
                 clock=clock,
                 stop_on_reboot=stop_on_reboot,
                 host_devices=host_devices,
+                autostart=autostart,
             )
             ret["changes"][name] = status
             if not status.get("definition"):
@@ -749,6 +755,7 @@ def running(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    autostart=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -952,6 +959,10 @@ def running(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     .. rubric:: Example States
 
     Make sure an already-defined virtual machine called ``domain_name`` is running:
@@ -1023,6 +1034,7 @@ def running(
         serials=serials,
         consoles=consoles,
         host_devices=host_devices,
+        autostart=autostart,
     )
 
     result = True if not __opts__["test"] else None
@@ -1360,7 +1372,7 @@ def network_defined(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -1687,7 +1699,7 @@ def network_running(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -2401,9 +2413,10 @@ def volume_defined(
             vol_infos.get("format") != format and format is not None
         ):
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "A volume with the same name but different backing store or format is existing"
+            ret["comment"] = (
+                "A volume with the same name but different backing store or format is"
+                " existing"
+            )
             return ret
 
         # otherwise assume the volume has already been defined

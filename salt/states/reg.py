@@ -95,8 +95,7 @@ def __virtual__():
     if "reg.delete_value" not in __utils__:
         return (
             False,
-            "reg state module failed to load: "
-            "missing util function: reg.delete_value",
+            "reg state module failed to load: missing util function: reg.delete_value",
         )
 
     if "reg.delete_key_recursive" not in __utils__:
@@ -408,7 +407,7 @@ def present(
     # If so, check perms
     # We check `vdata` and `success` because `vdata` can be None
     if vdata_decoded == reg_current["vdata"] and reg_current["success"]:
-        ret["comment"] = "{} in {} is already present" "".format(
+        ret["comment"] = "{} in {} is already present".format(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
             salt.utils.stringutils.to_unicode(name, "utf-8"),
         )

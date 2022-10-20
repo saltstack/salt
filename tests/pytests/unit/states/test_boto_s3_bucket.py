@@ -4,6 +4,7 @@ import string
 from copy import deepcopy
 
 import pytest
+
 import salt.loader
 import salt.states.boto_s3_bucket as boto_s3_bucket
 from tests.support.mock import MagicMock, patch
@@ -57,7 +58,9 @@ class GlobalConfig:
         "NotificationConfiguration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {
@@ -130,7 +133,9 @@ class GlobalConfig:
         "get_bucket_notification_configuration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {

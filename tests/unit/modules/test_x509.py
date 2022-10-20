@@ -252,7 +252,10 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_before_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = "not_before: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        msg = (
+            "not_before: this is an intentionally wrong format is not in required"
+            " format %Y-%m-%d %H:%M:%S"
+        )
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
             ca_key = default_values["ca_key"]
             cert_kwargs = default_values["x509_args_cert"].copy()
@@ -273,7 +276,10 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_after_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = "not_after: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        msg = (
+            "not_after: this is an intentionally wrong format is not in required format"
+            " %Y-%m-%d %H:%M:%S"
+        )
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
             ca_key = default_values["ca_key"]
             cert_kwargs = default_values["x509_args_cert"].copy()

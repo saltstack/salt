@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.serializers.python
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,7 +6,6 @@
 
     Implements a Python serializer (via pprint.format)
 """
-from __future__ import absolute_import, unicode_literals
 
 import pprint
 

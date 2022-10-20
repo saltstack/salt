@@ -9,9 +9,10 @@ import threading
 import time
 import traceback
 
+import yaml
+
 import salt.utils.files
 import salt.utils.win_runas
-import yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mock import Mock
@@ -19,11 +20,11 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 try:
-    import win32service
-    import win32serviceutil
-    import win32event
     import servicemanager
     import win32api
+    import win32event
+    import win32service
+    import win32serviceutil
 
     CODE_DIR = win32api.GetLongPathName(RUNTIME_VARS.CODE_DIR)
     HAS_WIN32 = True
@@ -592,7 +593,10 @@ class RunAsTest(ModuleCase):
         groups=["Administrators"],
     )
     def test_runas_powershell_remoting_admin(self, username):
-        psrp_wrap = "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit $LASTEXITCODE"
+        psrp_wrap = (
+            "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit"
+            " $LASTEXITCODE"
+        )
         runaspy = textwrap.dedent(
             """
         import sys
@@ -619,7 +623,10 @@ class RunAsTest(ModuleCase):
         groups=["Administrators"],
     )
     def test_runas_powershell_remoting_admin_no_pass(self, username):
-        psrp_wrap = "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit $LASTEXITCODE"
+        psrp_wrap = (
+            "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}; exit"
+            " $LASTEXITCODE"
+        )
         runaspy = textwrap.dedent(
             """
         import sys

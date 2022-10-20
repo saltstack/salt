@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Route53 records
 
@@ -71,17 +70,13 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import uuid
 
-# Import Salt Libs
 import salt.utils.data
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -172,15 +167,15 @@ def present(
             name=name_tag, return_objs=True, in_states=in_states, profile=profile
         )
         if len(r) < 1:
-            ret["comment"] = "Error: instance with Name tag {0} not found".format(
+            ret["comment"] = "Error: instance with Name tag {} not found".format(
                 name_tag
             )
             ret["result"] = False
             return ret
         if len(r) > 1:
-            ret[
-                "comment"
-            ] = "Error: Name tag {0} matched more than one instance".format(name_tag)
+            ret["comment"] = "Error: Name tag {} matched more than one instance".format(
+                name_tag
+            )
             ret["result"] = False
             return ret
         instance = r[0]
@@ -193,7 +188,7 @@ def present(
             if public_ip is None:
                 ret[
                     "comment"
-                ] = "Error: No Public IP assigned to instance with Name {0}".format(
+                ] = "Error: No Public IP assigned to instance with Name {}".format(
                     name_tag
                 )
                 ret["result"] = False
@@ -216,13 +211,13 @@ def present(
             identifier,
         )
     except SaltInvocationError as err:
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         ret["result"] = False
         return ret
 
     if isinstance(record, dict) and not record:
         if __opts__["test"]:
-            ret["comment"] = "Route53 record {0} set to be added.".format(name)
+            ret["comment"] = "Route53 record {} set to be added.".format(name)
             ret["result"] = None
             return ret
         added = __salt__["boto_route53.add_record"](
@@ -249,10 +244,10 @@ def present(
                 "ttl": ttl,
                 "identifier": identifier,
             }
-            ret["comment"] = "Added {0} Route53 record.".format(name)
+            ret["comment"] = "Added {} Route53 record.".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to add {0} Route53 record.".format(name)
+            ret["comment"] = "Failed to add {} Route53 record.".format(name)
             return ret
     elif record:
         need_to_update = False
@@ -269,11 +264,11 @@ def present(
             need_to_update = True
         if identifier and identifier != record["identifier"]:
             need_to_update = True
-        if ttl and six.text_type(ttl) != six.text_type(record["ttl"]):
+        if ttl and str(ttl) != str(record["ttl"]):
             need_to_update = True
         if need_to_update:
             if __opts__["test"]:
-                ret["comment"] = "Route53 record {0} set to be updated.".format(name)
+                ret["comment"] = "Route53 record {} set to be updated.".format(name)
                 ret["result"] = None
                 return ret
             updated = __salt__["boto_route53.update_record"](
@@ -300,12 +295,12 @@ def present(
                     "ttl": ttl,
                     "identifier": identifier,
                 }
-                ret["comment"] = "Updated {0} Route53 record.".format(name)
+                ret["comment"] = "Updated {} Route53 record.".format(name)
             else:
                 ret["result"] = False
-                ret["comment"] = "Failed to update {0} Route53 record.".format(name)
+                ret["comment"] = "Failed to update {} Route53 record.".format(name)
         else:
-            ret["comment"] = "{0} exists.".format(name)
+            ret["comment"] = "{} exists.".format(name)
     return ret
 
 
@@ -381,7 +376,7 @@ def absent(
     )
     if record:
         if __opts__["test"]:
-            ret["comment"] = "Route53 record {0} set to be deleted.".format(name)
+            ret["comment"] = "Route53 record {} set to be deleted.".format(name)
             ret["result"] = None
             return ret
         deleted = __salt__["boto_route53.delete_record"](
@@ -401,12 +396,12 @@ def absent(
         if deleted:
             ret["changes"]["old"] = record
             ret["changes"]["new"] = None
-            ret["comment"] = "Deleted {0} Route53 record.".format(name)
+            ret["comment"] = "Deleted {} Route53 record.".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {0} Route53 record.".format(name)
+            ret["comment"] = "Failed to delete {} Route53 record.".format(name)
     else:
-        ret["comment"] = "{0} does not exist.".format(name)
+        ret["comment"] = "{} does not exist.".format(name)
     return ret
 
 
@@ -484,7 +479,7 @@ def hosted_zone_present(
     if private_zone:
         if not salt.utils.data.exactly_one((vpc_name, vpc_id)):
             raise SaltInvocationError(
-                "Either vpc_name or vpc_id is required when creating a " "private zone."
+                "Either vpc_name or vpc_id is required when creating a private zone."
             )
         vpcs = __salt__["boto_vpc.describe_vpcs"](
             vpc_id=vpc_id,
@@ -538,7 +533,7 @@ def hosted_zone_present(
                     else:
                         create = True
         if not create:
-            ret["comment"] = "Hostd Zone {0} already in desired state".format(
+            ret["comment"] = "Hostd Zone {} already in desired state".format(
                 domain_name
             )
         else:
@@ -557,9 +552,9 @@ def hosted_zone_present(
 
     if create:
         if caller_ref is None:
-            caller_ref = six.text_type(uuid.uuid4())
+            caller_ref = str(uuid.uuid4())
         if __opts__["test"]:
-            ret["comment"] = "Route53 Hosted Zone {0} set to be added.".format(
+            ret["comment"] = "Route53 Hosted Zone {} set to be added.".format(
                 domain_name
             )
             ret["result"] = None
@@ -577,13 +572,13 @@ def hosted_zone_present(
             profile=profile,
         )
         if res:
-            msg = "Hosted Zone {0} successfully created".format(domain_name)
+            msg = "Hosted Zone {} successfully created".format(domain_name)
             log.info(msg)
             ret["comment"] = msg
             ret["changes"]["old"] = None
             ret["changes"]["new"] = res
         else:
-            ret["comment"] = "Creating Hosted Zone {0} failed".format(domain_name)
+            ret["comment"] = "Creating Hosted Zone {} failed".format(domain_name)
             ret["result"] = False
 
     return ret
@@ -611,13 +606,11 @@ def hosted_zone_absent(
         domain_name=domain_name, region=region, key=key, keyid=keyid, profile=profile
     )
     if not deets:
-        ret["comment"] = "Hosted Zone {0} already absent".format(domain_name)
+        ret["comment"] = "Hosted Zone {} already absent".format(domain_name)
         log.info(ret["comment"])
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Route53 Hosted Zone {0} set to be deleted.".format(
-            domain_name
-        )
+        ret["comment"] = "Route53 Hosted Zone {} set to be deleted.".format(domain_name)
         ret["result"] = None
         return ret
     # Not entirely comfortable with this - no safety checks around pub/priv, VPCs
@@ -626,7 +619,7 @@ def hosted_zone_absent(
     if __salt__["boto_route53.delete_zone"](
         zone=domain_name, region=region, key=key, keyid=keyid, profile=profile
     ):
-        ret["comment"] = "Route53 Hosted Zone {0} deleted".format(domain_name)
+        ret["comment"] = "Route53 Hosted Zone {} deleted".format(domain_name)
         log.info(ret["comment"])
         ret["changes"]["old"] = deets
         ret["changes"]["new"] = None

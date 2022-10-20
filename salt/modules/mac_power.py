@@ -120,7 +120,12 @@ def set_sleep(minutes):
 
     state = []
     for check in (get_computer_sleep, get_display_sleep, get_harddisk_sleep):
-        state.append(salt.utils.mac_utils.confirm_updated(value, check,))
+        state.append(
+            salt.utils.mac_utils.confirm_updated(
+                value,
+                check,
+            )
+        )
     return all(state)
 
 
@@ -163,7 +168,10 @@ def set_computer_sleep(minutes):
     cmd = "systemsetup -setcomputersleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(str(value), get_computer_sleep,)
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_computer_sleep,
+    )
 
 
 def get_display_sleep():
@@ -205,7 +213,10 @@ def set_display_sleep(minutes):
     cmd = "systemsetup -setdisplaysleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(str(value), get_display_sleep,)
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_display_sleep,
+    )
 
 
 def get_harddisk_sleep():
@@ -247,7 +258,10 @@ def set_harddisk_sleep(minutes):
     cmd = "systemsetup -setharddisksleep {}".format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(str(value), get_harddisk_sleep,)
+    return salt.utils.mac_utils.confirm_updated(
+        str(value),
+        get_harddisk_sleep,
+    )
 
 
 def get_wake_on_modem():
@@ -292,7 +306,10 @@ def set_wake_on_modem(enabled):
     cmd = "systemsetup -setwakeonmodem {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_wake_on_modem,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_wake_on_modem,
+    )
 
 
 def get_wake_on_network():
@@ -339,7 +356,10 @@ def set_wake_on_network(enabled):
     cmd = "systemsetup -setwakeonnetworkaccess {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_wake_on_network,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_wake_on_network,
+    )
 
 
 def get_restart_power_failure():
@@ -386,7 +406,10 @@ def set_restart_power_failure(enabled):
     cmd = "systemsetup -setrestartpowerfailure {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_restart_power_failure,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_restart_power_failure,
+    )
 
 
 def get_restart_freeze():
@@ -482,4 +505,7 @@ def set_sleep_on_power_button(enabled):
     cmd = "systemsetup -setallowpowerbuttontosleepcomputer {}".format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return salt.utils.mac_utils.confirm_updated(state, get_sleep_on_power_button,)
+    return salt.utils.mac_utils.confirm_updated(
+        state,
+        get_sleep_on_power_button,
+    )

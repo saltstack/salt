@@ -104,7 +104,7 @@ Also, check out some of our community resources including:
 
 * `Salt Project Community Wiki <https://github.com/saltstack/community/wiki>`_
 * `Salt Project Community Slack`_
-* `Salt Project: IRC on Freenode <https://webchat.freenode.net/#salt>`_
+* `Salt Project: IRC on LiberaChat <https://web.libera.chat/#salt>`_
 * `Salt Project YouTube channel <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
 * `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
 
