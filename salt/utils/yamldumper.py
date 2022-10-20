@@ -31,17 +31,6 @@ __all__ = [
 ]
 
 
-class IndentMixin(Dumper):
-    """
-    Mixin that improves YAML dumped list readability
-    by indenting them by two spaces,
-    instead of being flush with the key they are under.
-    """
-
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
-
-
 class OrderedDumper(Dumper):
     """
     A YAML dumper that represents python OrderedDict as simple YAML map.
@@ -54,11 +43,11 @@ class SafeOrderedDumper(SafeDumper):
     """
 
 
-class IndentedSafeOrderedDumper(IndentMixin, SafeOrderedDumper):
-    """
-    A YAML safe dumper that represents python OrderedDict as simple YAML map,
-    and also indents lists by two spaces.
-    """
+class IndentedSafeOrderedDumper(SafeOrderedDumper):
+    """Like ``SafeOrderedDumper``, except it indents lists for readability."""
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
 
 
 def represent_ordereddict(dumper, data):
