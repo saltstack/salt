@@ -93,6 +93,17 @@ OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 OrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
+
+# This default registration matches types that don't match any other
+# registration, overriding PyYAML's default behavior of raising an exception.
+# This representer instead produces null nodes.
+#
+# TODO: Why does this registration exist?  Isn't it better to raise an exception
+# for unsupported types?
+#
+# TODO: This representer could also be registered with OrderedDumper without
+# changing its behavior because Dumper has a multi representer registered
+# for `object` that takes priority.
 SafeOrderedDumper.add_representer(None, represent_undefined)
 IndentedSafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 IndentedSafeOrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
@@ -155,6 +166,7 @@ yaml.SafeDumper.add_representer(
     MaskedList, yaml.representer.SafeRepresenter.represent_list
 )
 
+# TODO: These seem wrong: the first argument should be a type, not a tag.
 OrderedDumper.add_representer(
     "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar
 )
