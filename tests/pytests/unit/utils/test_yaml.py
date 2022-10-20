@@ -1,6 +1,7 @@
 import collections
 import datetime
 import random
+import re
 import textwrap
 
 import pytest
@@ -33,6 +34,24 @@ def test_dump_indented():
     )
     want = "foo:\n  - bar\n"
     assert got == want
+
+
+@pytest.mark.parametrize(
+    "dumpercls",
+    [
+        salt_yaml.OrderedDumper,
+        salt_yaml.SafeOrderedDumper,
+        salt_yaml.IndentedSafeOrderedDumper,
+    ],
+)
+def test_dump_timestamp(dumpercls):
+    dt = datetime.datetime(
+        *(2022, 10, 21, 18, 16, 3, 100000),
+        tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+    )
+    got = salt_yaml.dump(dt, Dumper=dumpercls)
+    want_re = r"""!!timestamp (['"]?)2022-10-21[T ]18:16:03.10*-04:00\1\n"""
+    assert re.fullmatch(want_re, got)
 
 
 def render_yaml(data):

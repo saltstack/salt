@@ -31,13 +31,23 @@ __all__ = [
 ]
 
 
-class OrderedDumper(Dumper):
+class _RemoveImplicitResolverMixin:
+    @classmethod
+    def remove_implicit_resolver(cls, tag):
+        """Remove a previously registered implicit resolver for a tag."""
+        cls.yaml_implicit_resolvers = {
+            first_char: [r for r in resolver_list if r[0] != tag]
+            for first_char, resolver_list in cls.yaml_implicit_resolvers.items()
+        }
+
+
+class OrderedDumper(Dumper, _RemoveImplicitResolverMixin):
     """
     A YAML dumper that represents python OrderedDict as simple YAML map.
     """
 
 
-class SafeOrderedDumper(SafeDumper):
+class SafeOrderedDumper(SafeDumper, _RemoveImplicitResolverMixin):
     """
     A YAML safe dumper that represents python OrderedDict as simple YAML map.
     """
@@ -46,7 +56,7 @@ class SafeOrderedDumper(SafeDumper):
 # This must inherit from yaml.SafeDumper, not yaml.CSafeDumper, because the
 # increase_indent hack doesn't work with yaml.CSafeDumper.
 # https://github.com/yaml/pyyaml/issues/234#issuecomment-786026671
-class IndentedSafeOrderedDumper(yaml.SafeDumper):
+class IndentedSafeOrderedDumper(yaml.SafeDumper, _RemoveImplicitResolverMixin):
     """Like ``SafeOrderedDumper``, except it indents lists for readability."""
 
     def increase_indent(self, flow=False, indentless=False):
@@ -77,8 +87,8 @@ for D in (SafeOrderedDumper, IndentedSafeOrderedDumper, OrderedDumper):
         salt.utils.context.NamespacedDictWrapper,
         yaml.representer.SafeRepresenter.represent_dict,
     )
-    # TODO: This seems wrong: the first argument should be a type, not a tag.
-    D.add_representer("tag:yaml.org,2002:timestamp", Dumper.represent_scalar)
+    # Explicitly include the `!!timestamp` tag when dumping datetime objects.
+    D.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
 del D
 
 
