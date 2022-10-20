@@ -22,7 +22,7 @@ the ext_pillar section in the Salt master configuration.
       - vault: path=secret/salt
 
 Each key needs to have all the key-value pairs with the names you
-require. Avoid naming every key 'password' as you they will collide:
+require. Avoid naming every key 'password' as they will collide.
 
 If you want to nest results under a nesting_key name use the following format:
 
@@ -54,7 +54,7 @@ Multiple Vault sources may also be used:
       - vault: path=secret/minions/{minion}/pass
       - vault: path=secret/roles/{pillar[roles]}/pass
 
-You can also use nesting here as well.  Identical nesting keys will get merged.
+You can also use nesting here as well. Identical nesting keys will get merged.
 
 .. code-block:: yaml
 

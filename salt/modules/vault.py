@@ -17,8 +17,8 @@ Functions to interact with Hashicorp Vault.
 Configuration
 -------------
 
-The salt-master must be configured to allow peer-runner
-configuration, as well as configuration for the module.
+In addition to the module configuration, it is required for the Salt master
+to be configured to allow peer runs in order to use the Vault integration.
 
 .. versionchanged:: 3006
 
@@ -75,7 +75,6 @@ A sensible example configuration, e.g. in /etc/salt/master.d/vault.conf:
           - salt_role_{pillar[roles]}
       server:
         url: https://vault.example.com:8200
-        verify: /etc/ssl/cert.pem
 
 The above configuration requires the following policies for the master:
 
@@ -114,7 +113,6 @@ from a separate authentication endpoint (notice differing mounts):
           role: '{pillar[role]}'
       server:
         url: https://vault.example.com:8200
-        verify: /etc/ssl/cert.pem
     ext_pillar:
       - vault: path=salt/minions/{minion}
       - vault: path=salt/roles/{pillar[role]}
@@ -256,13 +254,13 @@ method
     Currently only ``token`` and ``approle`` auth types are supported.
     Defaults to ``token``.
 
-    Approle is the preferred way to authenticate with Vault as it provide
-    some advanced options to control authentication process.
-    Please visit Vault documentation for more info:
-    https://www.vaultproject.io/docs/auth/approle.html
+    Approle is the preferred way to authenticate with Vault as it provides
+    some advanced options to control the authentication process.
+    Please see the `Vault documentation <https://www.vaultproject.io/docs/auth/approle.html>`_
+    for more information.
 
 role_id
-    The role ID of the AppRole. Required if auth:method == ``approle``.
+    The role ID of the AppRole. Required if ``auth:method`` == ``approle``.
 
     .. versionchanged:: 3006
 
@@ -272,7 +270,7 @@ role_id
 
 secret_id
     The secret ID of the AppRole.
-    Only required if the configured role ID requires it.
+    Only required if the configured AppRole requires it.
 
     .. versionchanged:: 3006
 
@@ -281,7 +279,7 @@ secret_id
         of a wrapping request.
 
 token
-    Token to authenticate to Vault with. Required if auth:method == ``token``.
+    Token to authenticate to Vault with. Required if ``auth:method`` == ``token``.
 
     The token must be able to create tokens with the policies that should be
     assigned to minions.
@@ -334,7 +332,7 @@ config
     .. versionadded:: 3006
 
     The time in seconds to cache queried configuration from the master.
-    Defaults to ``3600`` (1h).
+    Defaults to ``3600`` (one hour).
 
 kv_metadata
     .. versionadded:: 3006
@@ -343,7 +341,7 @@ kv_metadata
     is using version 1/2 for. Defaults to ``connection``, which will clear
     the metadata cache once a new configuration is requested from the
     master. Setting this to ``None``/``null`` will keep the information
-    indefinitely until the cache is cleared.
+    indefinitely until the cache is cleared manually.
 
 secret
     .. versionadded:: 3006
@@ -425,7 +423,7 @@ allow_minion_override_params
 
     .. note::
 
-        Minion override parameters should be specified in the minion configuration
+        Minion override parameters can be specified in the minion configuration
         under ``vault:issue_params``. ``ttl`` and ``uses`` always refer to
         issued token lifecycle settings. For AppRoles specifically, there
         are more parameters, such as ``secret_id_num_uses`` and ``secret_id_ttl``.
@@ -446,8 +444,8 @@ wrap
 ~~~~~~~~~~~~
 .. versionadded:: 3006
 
-Configures metadata for the issued entities/secrets. Values have to be strings and can
-be templated with the following variables:
+Configures metadata for the issued entities/secrets. Values have to be strings
+and can be templated with the following variables:
 
 - ``{jid}`` Salt job ID that issued the secret.
 - ``{minion}`` The minion ID the secret was issued for.
@@ -495,7 +493,9 @@ assign
 
         Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``.
         Make sure to only reference pillars that are not sourced from Vault since the latter
-        ones might be unavailable during policy rendering.
+        ones might be unavailable during policy rendering. If you use the Vault
+        integration in one of your pillar ``sls`` files, all values from that file
+        will be absent during policy rendering, even the ones that do not depend on Vault.
 
     .. important::
 
@@ -553,7 +553,7 @@ refresh_pillar
         If you use pillar values for templating policies and do not disable
         refreshing pillar data, make sure the relevant values are not sourced
         from Vault (ext_pillar, sdb) or from a pillar sls file that uses the vault
-        execution module. Although this will often work when cached pillar data is
+        execution/sdb module. Although this will often work when cached pillar data is
         available, if the master needs to compile the pillar data during policy rendering,
         all Vault modules will be broken to prevent an infinite loop.
 
@@ -566,7 +566,7 @@ refresh_pillar
 Configures Vault server details.
 
 url
-    URL to your Vault installation. Required.
+    URL of your Vault installation. Required.
 
 verify
     Configures certificate verification behavior when issuing requests to the
@@ -625,7 +625,7 @@ log = logging.getLogger(__name__)
 
 def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """
-    Return the value of key at path in vault, or entire secret.
+    Return the value of <key> at <path> in vault, or entire secret.
 
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -729,7 +729,7 @@ def write_secret(path, **kwargs):
 
 def write_raw(path, raw):
     """
-    Set raw data at the path in vault. The vault policy used must allow this.
+    Set raw data at <path>. The vault policy used must allow this.
 
     CLI Example:
 
@@ -799,7 +799,7 @@ def patch_secret(path, **kwargs):
 
 def delete_secret(path, *args):
     """
-    Delete secret at the path in vault. The vault policy used must allow this.
+    Delete secret at <path>. The vault policy used must allow this.
     If <path> is on KV v2, the secret will be soft-deleted.
 
     CLI Example:
@@ -807,7 +807,7 @@ def delete_secret(path, *args):
     .. code-block:: bash
 
         salt '*' vault.delete_secret "secret/my/secret"
-        salt '*' vault.delete_secret "secret/my/secret" 0 1 2 3
+        salt '*' vault.delete_secret "secret/my/secret" 1 2 3
 
     Required policy:
 
@@ -832,7 +832,8 @@ def delete_secret(path, *args):
 
     .. versionadded:: 3006
 
-        For KV v2, you can specify versions to soft-delete as supplemental arguments.
+        For KV v2, you can specify versions to soft-delete as supplemental
+        positional arguments.
     """
     log.debug("Deleting vault secrets for %s in %s", __grains__.get("id"), path)
     try:
@@ -846,7 +847,7 @@ def destroy_secret(path, *args):
     """
     .. versionadded:: 3001
 
-    Destroy specified secret versions at the path in vault. The vault policy
+    Destroy specified secret versions <path>. The vault policy
     used must allow this. Only supported on Vault KV version 2.
 
     CLI Example:
@@ -866,8 +867,8 @@ def destroy_secret(path, *args):
     path
         The path to the secret, including mount.
 
-    You can specify versions to destroy as supplemental arguments. At least one
-    is required.
+    You can specify versions to destroy as supplemental positional arguments.
+    At least one is required.
     """
     if not args:
         raise SaltInvocationError("Need at least one version to destroy.")
@@ -881,7 +882,7 @@ def destroy_secret(path, *args):
 
 def list_secrets(path, default=NOT_SET, keys_only=False):
     """
-    List secret keys at the path in vault. The vault policy used must allow this.
+    List secret keys at <path>. The vault policy used must allow this.
     The path should end with a trailing slash.
 
     .. versionchanged:: 3001
@@ -988,7 +989,7 @@ def policy_fetch(policy):
         }
 
     policy
-        The name of the policy
+        The name of the policy to fetch.
     """
     # there is also "sys/policies/acl/{policy}"
     endpoint = f"sys/policy/{policy}"
@@ -1013,7 +1014,7 @@ def policy_write(policy, rules):
 
     .. code-block:: bash
 
-        salt '*' vault.policy_write salt_minion "path \"secret/foo\" {..."
+        salt '*' vault.policy_write salt_minion 'path "secret/foo" {...}'
 
     Required policy:
 
@@ -1024,10 +1025,10 @@ def policy_write(policy, rules):
         }
 
     policy
-        The name of the policy
+        The name of the policy to create/update.
 
     rules
-        Rules formatted as in-line HCL
+        Rules to write, formatted as in-line HCL.
     """
     endpoint = f"sys/policy/{policy}"
     payload = {"policy": rules}
@@ -1058,7 +1059,7 @@ def policy_delete(policy):
         }
 
     policy
-        The name of the policy
+        The name of the policy to delete.
     """
     endpoint = f"sys/policy/{policy}"
 
@@ -1117,7 +1118,7 @@ def query(method, endpoint, payload=None):
         vault read -output-policy auth/token/lookup-self
 
     method
-        HTTP method to use
+        HTTP method to use.
 
     endpoint
         Vault API endpoint to issue the request against. Do not include ``/v1/``.

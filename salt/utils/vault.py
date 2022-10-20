@@ -1100,7 +1100,7 @@ class VaultClient:
 
     def delete(self, endpoint, wrap=False, raise_error=True, add_headers=None):
         """
-        Wrapper for client.request("POST", ...)
+        Wrapper for client.request("DELETE", ...)
         """
         return self.request(
             "DELETE",
@@ -1171,8 +1171,9 @@ class VaultClient:
         **kwargs,
     ):
         """
-        Issue a request against the Vault API. Returns boolean when no data was returned,
-        otherwise the decoded json data.
+        Issue a request against the Vault API.
+        Returns boolean when no data was returned, otherwise the decoded json data
+        or a VaultWrappedResponse object if wrapping was requested.
         """
         res = self.request_raw(
             method,
@@ -1237,6 +1238,7 @@ class VaultClient:
                 re.fullmatch(p, wrap_info["creation_path"])
                 for p in expected_creation_path
             ):
+                # TODO: consider firing an event here as well
                 raise VaultUnwrapException(
                     "Wrapped response was not created from expected Vault path: "
                     f"`{wrap_info['creation_path']}` is not matched by any of `{expected_creation_path}`.\n"
@@ -2396,9 +2398,13 @@ def get_vault_connection():
     opts = globals().get("__opts__", {})
     context = globals().get("__context__", {})
 
-    vault = get_authd_client(opts, context)
-    token = vault.auth.get_token()
+    try:
+        vault = get_authd_client(opts, context)
+    except salt.exceptions.InvalidConfigError as err:
+        # This exception class was raised previously
+        raise salt.exceptions.CommandExecutionError(err) from err
 
+    token = vault.auth.get_token()
     server_config = vault.get_config()
 
     ret = {
