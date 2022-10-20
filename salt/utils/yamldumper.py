@@ -71,6 +71,10 @@ def represent_undefined(dumper, data):
 
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
+
+# TODO: Why does this representer exist?  It doesn't seem to do anything
+# different compared to PyYAML's yaml.SafeDumper.
+# TODO: Why isn't this representer also registered with OrderedDumper?
 SafeOrderedDumper.add_representer(None, represent_undefined)
 
 OrderedDumper.add_representer(
@@ -88,6 +92,7 @@ SafeOrderedDumper.add_representer(
     yaml.representer.SafeRepresenter.represent_dict,
 )
 
+# TODO: These seem wrong: the first argument should be a type, not a tag.
 OrderedDumper.add_representer(
     "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar
 )
