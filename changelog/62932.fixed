@@ -6,6 +6,8 @@ Improvements to YAML processing (`salt.utils.yaml`):
     node (a sequence of single-entry mappings).
   * Loading a sequence node tagged with `!!python/tuple` is now supported, and
     produces a Python `tuple` object.
+  * Dumping a `tuple` object now consistently produces a sequence node
+    explicitly tagged with `!!python/tuple`.
   * Loading an explicitly tagged `!!timestamp` node now produces a
     `datetime.datetime` object instead of a string.
   * Dumping a `datetime.datetime` object now explicitly tags the node with

@@ -105,6 +105,10 @@ for D in (SafeOrderedDumper, IndentedSafeOrderedDumper, OrderedDumper):
         salt.utils.context.NamespacedDictWrapper,
         yaml.representer.SafeRepresenter.represent_dict,
     )
+    # SafeDumper represents tuples as lists, but Dumper's behavior (sequence
+    # tagged with `!!python/tuple`) is safe, so use it for all dumpers.
+    D.add_multi_representer(tuple, Dumper.yaml_representers[tuple])
+    D.add_representer(tuple, Dumper.yaml_representers[tuple])
     # Explicitly include the `!!timestamp` tag when dumping datetime objects.
     D.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
 del D
