@@ -389,20 +389,31 @@ Automatic ``datetime`` conversion
     object, even if the node contained an invalid date (for example,
     ``4017-16-20``).
 
-Salt overrides PyYAML's default behavior and always loads YAML nodes that look
-like timestamps (including nodes explicitly tagged with ``!!timestamp``) as
-strings:
+.. versionchanged:: 3006.0
+
+    Loading a YAML ``!!timestamp`` node now produces a ``datetime.datetime``
+    object.  Previously, nodes tagged with ``!!timestamp`` produced strings.
+
+Salt overrides PyYAML's default behavior and loads YAML nodes that look like
+timestamps as strings:
 
 .. code-block:: pycon
 
     >>> import salt.utils.yaml
     >>> salt.utils.yaml.safe_load("2014-01-20 14:23:23")
     '2014-01-20 14:23:23'
+
+To force Salt to produce a ``datetime.datetime`` object instead of a string,
+explicitly tag the node with ``!!timestamp``:
+
+.. code-block:: pycon
+
+    >>> import salt.utils.yaml
     >>> salt.utils.yaml.safe_load("!!timestamp 2014-01-20 14:23:23")
     '2014-01-20 14:23:23'
 
-There is currently no way to force Salt to produce a Python
-``datetime.datetime`` object from a timestamp in a YAML file.
+Beware that Salt is currently unable to serialize ``datetime.datetime`` objects,
+so ``!!timestamp`` nodes cannot be used in pillar SLS files.
 
 Ordered Dictionaries
 ====================

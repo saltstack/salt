@@ -24,6 +24,14 @@ class SaltYamlSafeLoader(BaseLoader):
     to make things like sls file more intuitive.
     """
 
+    @classmethod
+    def remove_implicit_resolver(cls, tag):
+        """Remove a previously registered implicit resolver for a tag."""
+        cls.yaml_implicit_resolvers = {
+            first_char: [r for r in resolver_list if r[0] != tag]
+            for first_char, resolver_list in cls.yaml_implicit_resolvers.items()
+        }
+
     def __init__(self, stream, dictclass=dict):
         super().__init__(stream)
         self.dictclass = dictclass
@@ -159,9 +167,12 @@ for tag, constructor in [
     ("tag:yaml.org,2002:omap", SaltYamlSafeLoader.construct_yaml_omap),
     ("tag:yaml.org,2002:str", SaltYamlSafeLoader.construct_yaml_str),
     ("tag:yaml.org,2002:python/unicode", SaltYamlSafeLoader.construct_unicode),
-    ("tag:yaml.org,2002:timestamp", SaltYamlSafeLoader.construct_scalar),
 ]:
     SaltYamlSafeLoader.add_constructor(tag, constructor)
+
+# Require users to explicitly provide the `!!timestamp` tag if a datetime object
+# is desired.
+SaltYamlSafeLoader.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
 
 
 def load(stream, Loader=SaltYamlSafeLoader):

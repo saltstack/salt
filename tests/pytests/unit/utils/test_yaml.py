@@ -1,4 +1,5 @@
 import collections
+import datetime
 import textwrap
 
 import pytest
@@ -171,6 +172,24 @@ def test_load_dictclass(dictclass):
         l.dispose()
     assert isinstance(d, dictclass)
     assert d == dictclass([("k1", "v1"), ("k2", "v2")])
+
+
+@pytest.mark.parametrize(
+    "input_yaml,want",
+    [
+        (
+            "!!timestamp 2022-10-21T18:16:03.1-04:00",
+            datetime.datetime(
+                *(2022, 10, 21, 18, 16, 3, 100000),
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+            ),
+        ),
+        ("2022-10-21T18:16:03.1-04:00", "2022-10-21T18:16:03.1-04:00"),
+    ],
+)
+def test_load_timestamp(input_yaml, want):
+    got = salt_yaml.load(input_yaml)
+    assert got == want
 
 
 def test_not_yaml_monkey_patching():
