@@ -114,7 +114,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
         .. code-block:: python
 
-            runner.eauth_async({
+            runner.cmd_async({
                 'fun': 'jobs.list_jobs',
                 'username': 'saltdev',
                 'password': 'saltdev',
@@ -134,7 +134,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
         .. code-block:: python
 
-            runner.eauth_sync({
+            runner.cmd_sync({
                 'fun': 'jobs.list_jobs',
                 'username': 'saltdev',
                 'password': 'saltdev',

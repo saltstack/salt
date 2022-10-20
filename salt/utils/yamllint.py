@@ -2,23 +2,30 @@ import logging
 
 import salt.utils.stringutils
 
-HAS_YAMLLINT = True
 try:
+    import yamllint
     from yamllint import linter
     from yamllint.config import YamlLintConfig
+
+    HAS_YAMLLINT = True
 except ImportError:
     HAS_YAMLLINT = False
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "yamllint"
+
+def has_yamllint():
+    """
+    report if yamllint could be imported safly. allowing for clean import detection
+    """
+    return HAS_YAMLLINT
 
 
-def __virtual__():
-    if HAS_YAMLLINT:
-        return __virtualname__
-    else:
-        return (False, "YAMLLint Not installed")
+def version():
+    """
+    report version of yamllint installed for version comparison
+    """
+    return yamllint.__version__
 
 
 def lint(
@@ -44,7 +51,6 @@ def lint(
           empty-values: {forbid-in-block-mappings: false, forbid-in-flow-mappings: true}
           trailing-spaces: disable
           key-ordering: disable
-          truthy: {level: warning, check-keys: false }
         """
         conf = YamlLintConfig(yamlconf)
 

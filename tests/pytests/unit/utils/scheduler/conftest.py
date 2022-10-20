@@ -8,11 +8,12 @@ import copy
 import logging
 
 import pytest
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.utils.platform
 import salt.utils.schedule
 from salt.modules.test import ping
 from salt.utils.process import SubprocessList
-from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)

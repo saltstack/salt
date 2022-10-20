@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.win_disk as win_disk
 
 

@@ -11,8 +11,8 @@ from salt import exceptions
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:
-    from neutronclient.v2_0 import client
     from neutronclient.shell import NeutronShell
+    from neutronclient.v2_0 import client
 
     HAS_NEUTRON = True
 except ImportError:

@@ -299,6 +299,7 @@ import salt.loader
 import salt.payload
 import salt.utils.data
 import salt.utils.dateutils
+import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.hashutils
@@ -379,6 +380,11 @@ def _check_user(user, group):
         gid = __salt__["file.group_to_gid"](group)
         if gid == "":
             err += "Group {} is not available".format(group)
+    if err and __opts__["test"]:
+        # Write the warning with error message, but prevent failing,
+        # in case of applying the state in test mode.
+        log.warning(err)
+        return ""
     return err
 
 
@@ -662,32 +668,18 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
-    case_keep = None
-    if salt.utils.files.case_insensitive_filesystem():
-        # Create a case-sensitive dict before doing comparisons
-        # if file system is case sensitive
-        case_keep = keep
-
     root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
     def _delete_not_kept(nfn):
-        if nfn not in real_keep:
+        if os.path.normcase(nfn) not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to
             # check include_pat
             if not salt.utils.stringutils.check_include_exclude(
                 os.path.relpath(nfn, root), None, exclude_pat
             ):
                 return
-            # Before we can accurately assess the removal of a file, we must
-            # check for systems with case sensitive files. If we originally
-            # meant to keep a file, but due to case sensitivity python would
-            # otherwise remove the file, check against the original list.
-            if case_keep:
-                for item in case_keep:
-                    if item.casefold() == nfn.casefold():
-                        return
             removed.add(nfn)
             if not __opts__["test"]:
                 try:
@@ -754,9 +746,17 @@ def _check_directory(
                     fchange = {}
                     path = os.path.join(root, fname)
                     stats = __salt__["file.stats"](path, None, follow_symlinks)
-                    if user is not None and user != stats.get("user"):
+                    if (
+                        user is not None
+                        and not user == stats.get("user")
+                        and not user == stats.get("uid")
+                    ):
                         fchange["user"] = user
-                    if group is not None and group != stats.get("group"):
+                    if (
+                        group is not None
+                        and not group == stats.get("group")
+                        and not group == stats.get("gid")
+                    ):
                         fchange["group"] = group
                     smode = salt.utils.files.normalize_mode(stats.get("mode"))
                     file_mode = salt.utils.files.normalize_mode(file_mode)
@@ -1535,6 +1535,7 @@ def symlink(
     win_perms=None,
     win_deny_perms=None,
     win_inheritance=None,
+    atomic=False,
     **kwargs
 ):
     """
@@ -1613,17 +1614,22 @@ def symlink(
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
+
+    atomic
+        Use atomic file operation to create the symlink.
+
+        .. versionadded:: 3006.0
     """
     name = os.path.expanduser(name)
+
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    if not name:
+        return _error(ret, "Must provide name to file.symlink")
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    if not name:
-        return _error(ret, "Must provide name to file.symlink")
-
     if user is None:
         user = __opts__["user"]
 
@@ -1747,12 +1753,9 @@ def symlink(
 
     if __salt__["file.is_link"](name):
         # The link exists, verify that it matches the target
-        if os.path.normpath(__salt__["file.readlink"](name)) != os.path.normpath(
+        if os.path.normpath(__salt__["file.readlink"](name)) == os.path.normpath(
             target
         ):
-            # The target is wrong, delete the link
-            os.remove(name)
-        else:
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
                 if salt.utils.platform.is_windows():
@@ -1832,14 +1835,7 @@ def symlink(
                         name, backupname, exc
                     ),
                 )
-        elif force:
-            # Remove whatever is in the way
-            if __salt__["file.is_link"](name):
-                __salt__["file.remove"](name)
-                ret["changes"]["forced"] = "Symlink was forcibly replaced"
-            else:
-                __salt__["file.remove"](name)
-        else:
+        elif not force and not atomic:
             # Otherwise throw an error
             fs_entry_type = (
                 "File"
@@ -1853,26 +1849,24 @@ def symlink(
                 "{} exists where the symlink {} should be".format(fs_entry_type, name),
             )
 
-    if not os.path.exists(name):
-        # The link is not present, make it
-        try:
-            __salt__["file.symlink"](target, name)
-        except OSError as exc:
-            ret["result"] = False
-            ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
-                name, target, exc
-            )
-            return ret
-        else:
-            ret["comment"] = "Created new symlink {} -> {}".format(name, target)
-            ret["changes"]["new"] = name
+    try:
+        __salt__["file.symlink"](target, name, force=force, atomic=atomic)
+    except (CommandExecutionError, OSError) as exc:
+        ret["result"] = False
+        ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
+            name, target, exc
+        )
+        return ret
+    else:
+        ret["comment"] = "Created new symlink {} -> {}".format(name, target)
+        ret["changes"]["new"] = name
 
-        if not _check_symlink_ownership(name, user, group, win_owner):
-            if not _set_symlink_ownership(name, user, group, win_owner):
-                ret["result"] = False
-                ret["comment"] += ", but was unable to set ownership to {}:{}".format(
-                    user, group
-                )
+    if not _check_symlink_ownership(name, user, group, win_owner):
+        if not _set_symlink_ownership(name, user, group, win_owner):
+            ret["result"] = False
+            ret["comment"] += ", but was unable to set ownership to {}:{}".format(
+                user, group
+            )
     return ret
 
 
@@ -1904,10 +1898,7 @@ def absent(name, **kwargs):
             ret["comment"] = "File {} is set for removal".format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__["file.remove"](name, force=True)
-            else:
-                __salt__["file.remove"](name)
+            __salt__["file.remove"](name, force=True)
             ret["comment"] = "Removed file {}".format(name)
             ret["changes"]["removed"] = name
             return ret
@@ -1921,10 +1912,7 @@ def absent(name, **kwargs):
             ret["comment"] = "Directory {} is set for removal".format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__["file.remove"](name, force=True)
-            else:
-                __salt__["file.remove"](name)
+            __salt__["file.remove"](name, force=True)
             ret["comment"] = "Removed directory {}".format(name)
             ret["changes"]["removed"] = name
             return ret
@@ -1945,17 +1933,19 @@ def tidied(
     full_path_match=False,
     followlinks=False,
     time_comparison="atime",
+    age_size_logical_operator="OR",
+    age_size_only=None,
     **kwargs
 ):
     """
-    .. versionchanged:: 3005
+    .. versionchanged:: 3006,3005
 
-    Remove unwanted files based on specific criteria. Multiple criteria
-    are OR’d together, so a file that is too large but is not old enough
-    will still get tidied.
+    Remove unwanted files based on specific criteria.
 
-    If neither age nor size is given all files which match a pattern in
-    matches will be removed.
+    The default operation uses an OR operation to evaluate age and size, so a
+    file that is too large but is not old enough will still get tidied. If
+    neither age nor size is given all files which match a pattern in matches
+    will be removed.
 
     NOTE: The regex patterns in this function are used in ``re.match()``, so
     there is an implicit "beginning of string" anchor (``^``) in the regex and
@@ -2006,6 +1996,25 @@ def tidied(
 
         .. versionadded:: 3005
 
+    age_size_logical_operator
+        This parameter can change the default operation (OR) to an AND operation
+        to evaluate age and size. In that scenario, a file that is too large but
+        is not old enough will NOT get tidied. A file will need to fulfill BOTH
+        conditions in order to be tidied. Accepts ``OR`` or ``AND``.
+
+        .. versionadded:: 3006
+
+    age_size_only
+        This parameter can trigger the reduction of age and size conditions
+        which need to be satisfied down to ONLY age or ONLY size. By default,
+        this parameter is ``None`` and both conditions will be evaluated using
+        the logical operator defined in ``age_size_logical_operator``. The
+        parameter can be set to ``age`` or ``size`` in order to restrict
+        evaluation down to that specific condition. Path matching and
+        exclusions still apply.
+
+        .. versionadded:: 3006
+
     .. code-block:: yaml
 
         cleanup:
@@ -2019,6 +2028,16 @@ def tidied(
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if age_size_logical_operator.upper() not in ["AND", "OR"]:
+        age_size_logical_operator = "OR"
+        log.warning("Logical operator must be 'AND' or 'OR'. Defaulting to 'OR'...")
+
+    if age_size_only and age_size_only.lower() not in ["age", "size"]:
+        age_size_only = None
+        log.warning(
+            "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
+        )
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -2034,8 +2053,7 @@ def tidied(
 
     # Convert size with human units to bytes
     if isinstance(size, str):
-        # add handle_metric=True when #61833 is merged
-        size = salt.utils.stringutils.human_to_bytes(size)
+        size = salt.utils.stringutils.human_to_bytes(size, handle_metric=True)
 
     # Define some variables
     todelete = []
@@ -2101,11 +2119,17 @@ def tidied(
                 filename = path
 
             # Verify against given criteria, collect all elements that should be removed
-            if (
-                (mysize >= size or myage.days >= age)
-                and _matches(name=filename)
-                and deleteme
-            ):
+            if age_size_only and age_size_only.lower() in ["age", "size"]:
+                if age_size_only.lower() == "age":
+                    compare_age_size = myage.days >= age
+                else:
+                    compare_age_size = mysize >= size
+            elif age_size_logical_operator.upper() == "AND":
+                compare_age_size = mysize >= size and myage.days >= age
+            else:
+                compare_age_size = mysize >= size or myage.days >= age
+
+            if compare_age_size and _matches(name=filename) and deleteme:
                 todelete.append(path)
 
     # Now delete the stuff
@@ -2119,11 +2143,7 @@ def tidied(
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__["file.remove"](path, force=True)
-                else:
-                    __salt__["file.remove"](path)
-                # Remember what we've removed, will appear in the summary
+                __salt__["file.remove"](path, force=True)
                 ret["changes"]["removed"].append(path)
         except CommandExecutionError as exc:
             return _error(ret, "{}".format(exc))
@@ -2730,7 +2750,7 @@ def managed(
                     seuser: system_u
                     serole: object_r
                     setype: system_conf_t
-                    seranage: s0
+                    serange: s0
 
         .. versionadded:: 3000
 
@@ -3118,6 +3138,7 @@ def managed(
                     setype=setype,
                     serange=serange,
                     verify_ssl=verify_ssl,
+                    follow_symlinks=follow_symlinks,
                     **kwargs
                 )
 
@@ -3133,11 +3154,14 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if exc.strerror.startswith("Path not found"):
+                        if not isinstance(
+                            ret["changes"], tuple
+                        ) and exc.strerror.startswith("Path not found"):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
                 ret["result"], ret["comment"] = ret["changes"]
+                ret["changes"] = {}
             elif ret["changes"]:
                 ret["result"] = None
                 ret["comment"] = "The file {} is set to be changed".format(name)
@@ -3783,10 +3807,7 @@ def directory(
         u_check = _check_user(user, group)
         if u_check:
             # The specified user or group do not exist
-            if __opts__["test"]:
-                log.warning(u_check)
-            else:
-                return _error(ret, u_check)
+            return _error(ret, u_check)
 
     # Must be an absolute path
     if not os.path.isabs(name):
@@ -4284,13 +4305,16 @@ def recurse(
     keep_symlinks
         Keep symlinks when copying from the source. This option will cause
         the copy operation to terminate at the symlink. If desire behavior
-        similar to rsync, then set this to True.
+        similar to rsync, then set this to True. This option is not taken
+        in account if ``fileserver_followsymlinks`` is set to False.
 
     force_symlinks
         Force symlink creation. This option will force the symlink creation.
         If a file or directory is obstructing symlink creation it will be
         recursively removed so that symlink creation can proceed. This
-        option is usually not needed except in special circumstances.
+        option is usually not needed except in special circumstances. This
+        option is not taken in account if ``fileserver_followsymlinks`` is
+        set to False.
 
     win_owner
         The owner of the symlink and directories if ``makedirs`` is True. If
@@ -5849,10 +5873,6 @@ def blockreplace(
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        If ``True``, do not make any edits to the file and simply return the
-        changes that *would* be made.
-
     show_changes
         Controls how changes are presented. If ``True``, the ``Changes``
         section of the state return will contain a unified diff of the changes
@@ -6062,7 +6082,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
-    uncomment_regex = "^(?!.*{}).*".format(char) + unanchor_regex
+    uncomment_regex = r"^(?!\s*{}).*".format(char) + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
@@ -7296,6 +7316,7 @@ def copy_(
     user=None,
     group=None,
     mode=None,
+    dir_mode=None,
     subdir=False,
     **kwargs
 ):
@@ -7352,6 +7373,17 @@ def copy_(
 
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
+
+    dir_mode
+        .. versionadded:: 3006
+
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
+
+        The default mode for new files and directories corresponds to the umask
+        of the salt process. Not enforced for existing files and directories.
 
     subdir
         .. versionadded:: 2015.5.0
@@ -7447,7 +7479,7 @@ def copy_(
         elif not __opts__["test"] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__["file.remove"](name)
+                __salt__["file.remove"](name, force=True)
             except OSError:
                 return _error(
                     ret,
@@ -7478,8 +7510,18 @@ def copy_(
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
+            if dir_mode is None and mode is not None:
+                # Add execute bit to each nonzero digit in the mode, if
+                # dir_mode was not specified. Otherwise, any
+                # directories created with makedirs_() below can't be
+                # listed via a shell.
+                mode_list = [x for x in str(mode)][-3:]
+                for idx, part in enumerate(mode_list):
+                    if part != "0":
+                        mode_list[idx] = str(int(part) | 1)
+                dir_mode = "".join(mode_list)
             try:
-                _makedirs(name=name, user=user, group=group, dir_mode=mode)
+                _makedirs(name=name, user=user, group=group, dir_mode=dir_mode)
             except CommandExecutionError as exc:
                 return _error(ret, "Drive {} is not mapped".format(exc.message))
         else:
@@ -7977,6 +8019,7 @@ def serialize(
             salt.utils.data.repack_dictlist(deserializer_opts)
         )
 
+    existing_data = None
     if merge_if_exists:
         if os.path.isfile(name):
             if deserializer_name not in __serializers__:
@@ -8003,7 +8046,7 @@ def serialize(
                     ret["comment"] = "Failed to deserialize existing data: {}".format(
                         exc
                     )
-                    return False
+                    return ret
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(
@@ -8067,27 +8110,33 @@ def serialize(
         else:
             ret["result"] = True
             ret["comment"] = "The file {} is in the correct state".format(name)
-        return ret
+    else:
+        ret = __salt__["file.manage_file"](
+            name=name,
+            sfn="",
+            ret=ret,
+            source=None,
+            source_sum={},
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=None,
+            saltenv=__env__,
+            backup=backup,
+            makedirs=makedirs,
+            template=None,
+            show_changes=show_changes,
+            encoding=encoding,
+            encoding_errors=encoding_errors,
+            contents=contents,
+        )
 
-    return __salt__["file.manage_file"](
-        name=name,
-        sfn="",
-        ret=ret,
-        source=None,
-        source_sum={},
-        user=user,
-        group=group,
-        mode=mode,
-        attrs=None,
-        saltenv=__env__,
-        backup=backup,
-        makedirs=makedirs,
-        template=None,
-        show_changes=show_changes,
-        encoding=encoding,
-        encoding_errors=encoding_errors,
-        contents=contents,
-    )
+    if isinstance(existing_data, dict) and isinstance(merged_data, dict):
+        ret["changes"]["diff"] = salt.utils.dictdiffer.recursive_diff(
+            existing_data, merged_data
+        ).diffs
+
+    return ret
 
 
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
@@ -8484,6 +8533,10 @@ def shortcut(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     """
+    salt.utils.versions.warn_until(
+        version="Argon",
+        message="This function is being deprecated in favor of 'shortcut.present'",
+    )
     user = _test_owner(kwargs, user=user)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not salt.utils.platform.is_windows():
@@ -9045,3 +9098,77 @@ def mod_beacon(name, **kwargs):
             ),
             "result": False,
         }
+
+
+def pruned(name, recurse=False, ignore_errors=False, older_than=None):
+    """
+    .. versionadded:: 3006.0
+
+    Ensure that the named directory is absent. If it exists and is empty, it
+    will be deleted. An entire directory tree can be pruned of empty
+    directories as well, by using the ``recurse`` option.
+
+    name
+        The directory which should be deleted if empty.
+
+    recurse
+        If set to ``True``, this option will recursive deletion of empty
+        directories. This is useful if nested paths are all empty, and would
+        be the only items preventing removal of the named root directory.
+
+    ignore_errors
+        If set to ``True``, any errors encountered while attempting to delete a
+        directory are ignored. This **AUTOMATICALLY ENABLES** the ``recurse``
+        option since it's not terribly useful to ignore errors on the removal of
+        a single directory. Useful for pruning only the empty directories in a
+        tree which contains non-empty directories as well.
+
+    older_than
+        When ``older_than`` is set to a number, it is used to determine the
+        **number of days** which must have passed since the last modification
+        timestamp before a directory will be allowed to be removed. Setting
+        the value to 0 is equivalent to leaving it at the default of ``None``.
+    """
+    name = os.path.expanduser(name)
+
+    ret = {"name": name, "changes": {}, "comment": "", "result": True}
+
+    if ignore_errors:
+        recurse = True
+
+    if os.path.isdir(name):
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["changes"]["deleted"] = name
+            ret["comment"] = "Directory {} is set for removal".format(name)
+            return ret
+
+        res = __salt__["file.rmdir"](
+            name, recurse=recurse, verbose=True, older_than=older_than
+        )
+        result = res.pop("result")
+
+        if result:
+            if recurse and res["deleted"]:
+                ret[
+                    "comment"
+                ] = "Recursively removed empty directories under {}".format(name)
+                ret["changes"]["deleted"] = sorted(res["deleted"])
+            elif not recurse:
+                ret["comment"] = "Removed directory {}".format(name)
+                ret["changes"]["deleted"] = name
+            return ret
+        elif ignore_errors and res["deleted"]:
+            ret["comment"] = "Recursively removed empty directories under {}".format(
+                name
+            )
+            ret["changes"]["deleted"] = sorted(res["deleted"])
+            return ret
+
+        ret["result"] = result
+        ret["changes"] = res
+        ret["comment"] = "Failed to remove directory {}".format(name)
+        return ret
+
+    ret["comment"] = "Directory {} is not present".format(name)
+    return ret

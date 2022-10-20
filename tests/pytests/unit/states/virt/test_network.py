@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.virt as virt
 from tests.support.mock import MagicMock, patch
 

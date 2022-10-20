@@ -14,6 +14,7 @@ import tempfile
 import textwrap
 
 import pytest
+
 import salt.serializers.configparser
 import salt.serializers.plist
 import salt.utils.atomicfile
@@ -842,6 +843,26 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Shouldn't be any changes
             self.assertFalse(ret["changes"])
             # Check that we identified a hash mismatch
+            self.assertIn("does not exist", ret["comment"])
+
+    def test_test_managed_issue_55269(self):
+        """
+        Make sure that we exit gracefully in case a local source does not exist
+        when file.managed is run with test=1.
+        """
+        name = self.tmp_dir / "local_source_does_not_exist_testing"
+        self.addCleanup(salt.utils.files.safe_rm, str(name))
+        local_path = os.path.join(RUNTIME_VARS.BASE_FILES, "grail", "scene99")
+
+        for proto in ("file://", ""):
+            source = proto + local_path
+            log.debug("Trying source %s", source)
+            ret = self.run_state(
+                "file.managed", name=str(name), source=source, test=True
+            )
+            self.assertSaltFalseReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret["changes"])
             self.assertIn("does not exist", ret["comment"])
 
     def test_managed_unicode_jinja_with_tojson_filter(self):
@@ -2031,6 +2052,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
+        assert "changes" in ret
+        assert "diff" in ret["changes"]
+        assert "foo" in ret["changes"]["diff"]
+        assert "abc" in ret["changes"]["diff"]["foo"]
+        assert "new" in ret["changes"]["diff"]["foo"]["abc"]
+        assert ret["changes"]["diff"]["foo"]["abc"]["new"], 123
 
         with salt.utils.files.fopen(name) as fp_:
             serialized_data = salt.serializers.configparser.deserialize(fp_)
@@ -2077,6 +2104,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
+        assert "changes" in ret
+        assert "diff" in ret["changes"]
+        assert "foo" in ret["changes"]["diff"]
+        assert "abc" in ret["changes"]["diff"]["foo"]
+        assert "new" in ret["changes"]["diff"]["foo"]["abc"]
+        assert ret["changes"]["diff"]["foo"]["abc"]["new"], 123
 
         with salt.utils.files.fopen(name, "rb") as fp_:
             serialized_data = salt.serializers.plist.deserialize(fp_)
@@ -2113,6 +2146,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
+        assert "changes" in ret
+        assert "diff" in ret["changes"]
+        assert "foo" in ret["changes"]["diff"]
+        assert "abc" in ret["changes"]["diff"]["foo"]
+        assert "new" in ret["changes"]["diff"]["foo"]["abc"]
+        assert ret["changes"]["diff"]["foo"]["abc"]["new"], 123
 
         with salt.utils.files.fopen(name, "rb") as fp_:
             serialized_data = salt.serializers.plist.deserialize(fp_)
@@ -2707,6 +2746,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(ret["some-utf8-file-create2"]["changes"], {"diff": diff})
             if salt.utils.platform.is_windows():
                 import subprocess
+
                 import win32api
 
                 proc = subprocess.run(
@@ -2900,12 +2940,55 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             mode=mode,
         )
         self.assertSaltTrueReturn(ret)
-        file_checks = [str(dest), str(dest.parent), str(dest.parent.parent)]
-        for check in file_checks:
+        file_checks = [
+            (str(dest), mode),
+            (str(dest.parent), "0755"),
+            (str(dest.parent.parent), "0755"),
+        ]
+        for check, expected_mode in file_checks:
             user_check = self.run_function("file.get_user", [check])
             mode_check = self.run_function("file.get_mode", [check])
             self.assertEqual(user_check, user)
-            self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
+            self.assertEqual(salt.utils.files.normalize_mode(mode_check), expected_mode)
+
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
+    @with_tempfile()
+    def test_file_copy_make_dirs_dir_mode(self, source):
+        """
+        ensure make_dirs creates correct user perms
+        """
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, "hosts"), source)
+        dest = self.tmp_dir / "dir3" / "dir4" / "copied_file.txt"
+        self.addCleanup(salt.utils.files.rm_rf, str(dest.parent.parent))
+
+        user = "salt"
+        mode = "0644"
+        dir_mode = "0700"
+
+        ret = self.run_function("user.add", [user])
+        self.assertTrue(ret, "Failed to add user. Are you running as sudo?")
+        ret = self.run_state(
+            "file.copy",
+            name=str(dest),
+            source=source,
+            user=user,
+            makedirs=True,
+            mode=mode,
+            dir_mode=dir_mode,
+        )
+        self.assertSaltTrueReturn(ret)
+        file_checks = [
+            (str(dest), mode),
+            (str(dest.parent), dir_mode),
+            (str(dest.parent.parent), dir_mode),
+        ]
+        for check, expected_mode in file_checks:
+            user_check = self.run_function("file.get_user", [check])
+            mode_check = self.run_function("file.get_mode", [check])
+            self.assertEqual(user_check, user)
+            self.assertEqual(salt.utils.files.normalize_mode(mode_check), expected_mode)
 
     @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")

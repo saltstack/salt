@@ -4,6 +4,7 @@
 import copy
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
@@ -26,7 +27,7 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def policy_clear():
     # Make sure policy is not set to begin with, unsets it after test
     try:
@@ -40,7 +41,7 @@ def policy_clear():
             win_lgpo.set_(name="test_state", computer_policy=computer_policy)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def policy_set():
     # Make sure policy is set to begin with, unsets it after test
     try:
