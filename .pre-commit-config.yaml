@@ -1149,6 +1149,7 @@ repos:
                 salt/ext/.*|
                 tests/.*
             )$
+            additional_dependencies: ['importlib_metadata<5']
   - repo: https://github.com/PyCQA/bandit
     rev: "1.7.4"
     hooks:
@@ -1158,6 +1159,7 @@ repos:
         args: [--silent, -lll, --skip, B701]
         files: ^tests/.*
         exclude: ^tests/minionswarm\.py
+        additional_dependencies: ['importlib_metadata<5']
   # <---- Security ---------------------------------------------------------------------------------------------------
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>

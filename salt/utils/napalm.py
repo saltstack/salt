@@ -31,6 +31,7 @@ try:
     # pylint: disable=unused-import,no-name-in-module
     import napalm
     import napalm.base as napalm_base
+    from napalm.base.exceptions import ConnectionClosedException
 
     # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
@@ -41,12 +42,6 @@ try:
 except ImportError:
     HAS_NAPALM = False
 
-try:
-    from napalm.base.exceptions import ConnectionClosedException
-
-    HAS_CONN_CLOSED_EXC_CLASS = True
-except ImportError:
-    HAS_CONN_CLOSED_EXC_CLASS = False
 
 log = logging.getLogger(__file__)
 
@@ -179,11 +174,7 @@ def call(napalm_device, method, *args, **kwargs):
                     method=method, driver=napalm_device.get("DRIVER_NAME")
                 )
             )
-        elif (
-            retry
-            and HAS_CONN_CLOSED_EXC_CLASS
-            and isinstance(error, ConnectionClosedException)
-        ):
+        elif retry and isinstance(error, ConnectionClosedException):
             # Received disconection whilst executing the operation.
             # Instructed to retry (default behaviour)
             #   thus trying to re-establish the connection
