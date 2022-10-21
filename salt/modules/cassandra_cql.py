@@ -136,25 +136,25 @@ try:
 
     # pylint: enable=import-error,no-name-in-module
     HAS_DRIVER = True
+
+    LOAD_BALANCING_POLICY_MAP = {
+        "HostDistance": HostDistance,
+        "LoadBalancingPolicy": LoadBalancingPolicy,
+        "RoundRobinPolicy": RoundRobinPolicy,
+        "DCAwareRoundRobinPolicy": DCAwareRoundRobinPolicy,
+        "WhiteListRoundRobinPolicy": WhiteListRoundRobinPolicy,
+        "TokenAwarePolicy": TokenAwarePolicy,
+        "HostFilterPolicy": HostFilterPolicy,
+        "SimpleConvictionPolicy": SimpleConvictionPolicy,
+        "ExponentialReconnectionPolicy": ExponentialReconnectionPolicy,
+        "RetryPolicy": RetryPolicy,
+        "IdentityTranslator": IdentityTranslator,
+        "NoSpeculativeExecutionPlan": NoSpeculativeExecutionPlan,
+        "NoSpeculativeExecutionPolicy": NoSpeculativeExecutionPolicy,
+    }
+
 except ImportError:
     pass
-
-
-LOAD_BALANCING_POLICY_MAP = {
-    "HostDistance": HostDistance,
-    "LoadBalancingPolicy": LoadBalancingPolicy,
-    "RoundRobinPolicy": RoundRobinPolicy,
-    "DCAwareRoundRobinPolicy": DCAwareRoundRobinPolicy,
-    "WhiteListRoundRobinPolicy": WhiteListRoundRobinPolicy,
-    "TokenAwarePolicy": TokenAwarePolicy,
-    "HostFilterPolicy": HostFilterPolicy,
-    "SimpleConvictionPolicy": SimpleConvictionPolicy,
-    "ExponentialReconnectionPolicy": ExponentialReconnectionPolicy,
-    "RetryPolicy": RetryPolicy,
-    "IdentityTranslator": IdentityTranslator,
-    "NoSpeculativeExecutionPlan": NoSpeculativeExecutionPlan,
-    "NoSpeculativeExecutionPolicy": NoSpeculativeExecutionPolicy,
-}
 
 
 def __virtual__():
