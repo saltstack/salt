@@ -125,7 +125,6 @@ def _deprecation_message(function):
     return wrapped
 
 
-@_deprecation_message
 def get_configured_provider():
     """
     Return the first configured instance.
