@@ -10,7 +10,7 @@ Control the kernel object attributes exported by sysfs
     sysfs.present:
       - value: never
 
-.. versionadded: TBD
+.. versionadded:: 3006
 """
 
 import re

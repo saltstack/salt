@@ -1,8 +1,8 @@
 """
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
-
 import pytest
+
 import salt.states.sysfs as sysfs
 from tests.support.mock import MagicMock, patch
 
