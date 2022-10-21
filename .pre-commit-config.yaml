@@ -1149,7 +1149,7 @@ repos:
                 salt/ext/.*|
                 tests/.*
             )$
-            additional_dependencies: ['importlib_metadata<5']
+        additional_dependencies: ['importlib_metadata<5']
   - repo: https://github.com/PyCQA/bandit
     rev: "1.7.4"
     hooks:
