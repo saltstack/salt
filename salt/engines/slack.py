@@ -166,11 +166,12 @@ import salt.utils.slack
 import salt.utils.yaml
 
 try:
-    import slackclient
+    from slack_bolt import App
+    from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-    HAS_SLACKCLIENT = True
+    HAS_SLACKBOLT = True
 except ImportError:
-    HAS_SLACKCLIENT = False
+    HAS_SLACKBOLT = False
 
 log = logging.getLogger(__name__)
 
@@ -178,17 +179,20 @@ __virtualname__ = "slack"
 
 
 def __virtual__():
-    if not HAS_SLACKCLIENT:
+    if not HAS_SLACKBOLT:
         return (False, "The 'slackclient' Python module could not be loaded")
     return __virtualname__
 
 
 class SlackClient:
-    def __init__(self, token):
+    def __init__(self, app_token, bot_token):
         self.master_minion = salt.minion.MasterMinion(__opts__)
 
-        self.sc = slackclient.SlackClient(token)
-        self.slack_connect = self.sc.rtm_connect()
+        self.app = App(token=bot_token)
+        self.handler = SocketModeHandler(self.app, app_token)
+        self.handler.connect()
+
+        self.app.message(re.compile("(^!.*)"))(self.message_trigger)
 
     def get_slack_users(self, token):
         """
@@ -932,11 +936,13 @@ def start(
         log.error("Slack bot token not found, bailing...")
         raise UserWarning("Slack Engine bot token not configured")
 
+    app_token = "xapp-1-A047F7H80DC-4245337892359-e26770884d0e159372cdeb768fa44ca62523f144c7082d4d56d76127e3619456"
+    bot_token = "xoxb-2848035968-4245469590103-ZE5uptNNYhffMiM8rND5iX01"
     try:
-        client = SlackClient(token=token)
-        message_generator = client.generate_triggered_messages(
-            token, trigger, groups, groups_pillar_name
-        )
-        client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
+        client = SlackClient(app_token=app_token, bot_token=bot_token)
+        # message_generator = client.generate_triggered_messages(
+        #        token, trigger, groups, groups_pillar_name
+        #        )
+        # client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
     except Exception:  # pylint: disable=broad-except
         raise Exception("{}".format(traceback.format_exc()))
