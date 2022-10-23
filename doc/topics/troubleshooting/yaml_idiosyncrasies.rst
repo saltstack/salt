@@ -404,6 +404,33 @@ strings:
 There is currently no way to force Salt to produce a Python
 ``datetime.datetime`` object from a timestamp in a YAML file.
 
+Ordered Dictionaries
+====================
+
+The YAML specification defines an `ordered mapping type
+<https://yaml.org/type/omap>`_ which is equivalent to a plain mapping except
+iteration order is preserved.  (YAML makes no guarantees about iteration order
+for entries loaded from a plain mapping.)
+
+Ordered mappings are represented as an ``!!omap`` tagged sequence of
+single-entry mappings:
+
+.. code-block:: yaml
+
+    !!omap
+    - key1: value1
+    - key2: value2
+
+Starting with Python 3.6, plain ``dict`` objects iterate in insertion order so
+there is no longer a strong need for the ``!!omap`` type.  However, some users
+may prefer the ``!!omap`` type over the plain ``!!map`` type because (1) it
+makes it obvious that the order of entries is significant, and (2) it provides a
+stronger guarantee of iteration order (plain mapping iteration order can be
+thought of as a Salt implementation detail that may change in the future).
+
+Unfortunately, ``!!omap`` nodes should be avoided due to bugs in the way Salt
+processes such nodes.
+
 Keys Limited to 1024 Characters
 ===============================
 
