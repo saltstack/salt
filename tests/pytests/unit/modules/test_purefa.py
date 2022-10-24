@@ -1,5 +1,6 @@
 # pylint: disable=unexpected-keyword-arg
 import pytest
+
 import salt.modules.purefa as purefa
 from tests.support.mock import MagicMock, call, create_autospec, patch
 
@@ -36,9 +37,7 @@ def fake_delete_host(patch_get_system):
     yield fake_delete_host
 
 
-@pytest.mark.parametrize(
-    "nqn", [None, "", [], ()],
-)
+@pytest.mark.parametrize("nqn", [None, "", [], ()])
 def test_when_nqn_is_not_anything_set_host_should_not_have_addnqnlist_called(
     nqn, fake_set_host
 ):
@@ -79,9 +78,7 @@ def test_when_nqn_is_provided_but_set_host_fails_then_creation_should_be_rolled_
     fake_delete_host.assert_called_with(expected_host)
 
 
-@pytest.mark.parametrize(
-    "nqn", [None, "", [], ()],
-)
+@pytest.mark.parametrize("nqn", [None, "", [], ()])
 def test_when_nqn_is_not_then_host_update_should_not_call_set_host(fake_set_host, nqn):
     # if _get_host is None then there's no host to update, is there?
     purefa._get_host.return_value = True
