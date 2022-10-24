@@ -90,7 +90,7 @@ def _parse_xfs_info(data):
     spr = re.compile(r"\s+")
     entry = None
     for line in [spr.sub(" ", l).strip().replace(", ", " ") for l in data.split("\n")]:
-        if not line:
+        if not line or "=" not in line:
             continue
         nfo = _xfs_info_get_kv(line)
         if not line.startswith("="):
@@ -288,7 +288,7 @@ def _xfs_prune_output(out, uuid):
             cnt.append(line)
 
     for kset in [e for e in cnt[1:] if ":" in e]:
-        key, val = [t.strip() for t in kset.split(":", 1)]
+        key, val = (t.strip() for t in kset.split(":", 1))
         data[key.lower().replace(" ", "_")] = val
 
     return data.get("uuid") == uuid and data or {}

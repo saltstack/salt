@@ -317,7 +317,6 @@ class Key:
         self.event = salt.utils.event.get_event(
             kind,
             opts["sock_dir"],
-            opts["transport"],
             opts=opts,
             listen=False,
             io_loop=io_loop,

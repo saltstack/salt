@@ -3,9 +3,8 @@ import sys
 
 import attr
 import pytest
-import salt.transport.client
+
 import salt.transport.ipc
-import salt.transport.server
 import salt.utils.platform
 from salt.ext.tornado import locks
 
@@ -123,7 +122,7 @@ async def test_send_many(channel):
 
 
 async def test_very_big_message(channel):
-    long_str = "".join([str(num) for num in range(10 ** 5)])
+    long_str = "".join([str(num) for num in range(10**5)])
     msg = {"long_str": long_str, "stop": True}
     await channel.send(msg)
     assert channel.payloads[0] == msg

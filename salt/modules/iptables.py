@@ -94,6 +94,7 @@ def _conf(family="ipv4"):
         else:
             return "/etc/iptables/iptables.rules"
     elif __grains__["os_family"] == "Debian":
+        # This assumes the iptables-persistent package is installed
         if family == "ipv6":
             return "/etc/iptables/rules.v6"
         else:
@@ -743,7 +744,8 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
 
     if _has_option("--check", family):
         cmd = "{} -t {} -C {} {}".format(ipt_cmd, table, chain, rule)
-        out = __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
+        __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
+        return not __context__["retcode"]
     else:
         _chain_name = hex(uuid.getnode())
 
