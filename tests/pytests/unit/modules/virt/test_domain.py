@@ -1271,6 +1271,15 @@ def test_update_cpu_simple(make_mock_vm):
     assert domain_mock.setVcpusFlags.call_args[0][0] == 2
 
 
+def test_update_autostart(make_mock_vm):
+    """
+    Test virt.update(), simple autostart update
+    """
+    domain_mock = make_mock_vm()
+    virt.update("my_vm", autostart=True)
+    domain_mock.setAutostart.assert_called_with(1)
+
+
 def test_update_add_cpu_topology(make_mock_vm):
     """
     Test virt.update(), add cpu topology settings

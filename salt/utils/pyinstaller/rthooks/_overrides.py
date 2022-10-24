@@ -17,7 +17,7 @@ def clean_pyinstaller_vars(environ):
     Restore or cleanup PyInstaller specific environent variable behavior.
     """
     if environ is None:
-        environ = {}
+        environ = dict(os.environ)
     # When Salt is bundled with tiamat, it MUST NOT contain LD_LIBRARY_PATH
     # when shelling out, or, at least the value of LD_LIBRARY_PATH set by
     # pyinstaller.
