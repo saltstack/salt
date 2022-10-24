@@ -57,9 +57,6 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, "LGPO_REG Util: Only available on Windows"
 
-    if "lgpo_reg.get_value" not in __salt__:
-        return False, "LGPO_REG Util: lgpo_reg module not available"
-
     return __virtualname__
 
 
