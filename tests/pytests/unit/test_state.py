@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import pytest
+
 import salt.state
 from tests.support.mock import patch
 
@@ -14,7 +15,7 @@ def test_state():
         with patch("salt.state.State._gather_pillar", autospec=True), patch(
             "salt.state.State.load_modules", autospec=True
         ), patch("salt.state.State.functions", create=True, side_effect=[]), patch(
-            "salt.state.State.check_requisite", autospec=True,
+            "salt.state.State.check_requisite", autospec=True
         ), patch(
             "salt.state.State.states", create=True, side_effect=[]
         ):
@@ -326,7 +327,7 @@ def test_if_status_is_change_and_prereq_not_in_lowdata_and_call_changes_or_skip_
 
 
 @pytest.mark.parametrize(
-    "call_ret", [{"changes": False}, {"changes": False, "skip_watch": False}],
+    "call_ret", [{"changes": False}, {"changes": False, "skip_watch": False}]
 )
 def test_if_status_is_change_and_prereq_not_in_lowdata_and_no_call_changes_nor_skip_watch_then_saltfunc_should_be_state_modwatch(
     change_status, low_data, chunks, call_ret
