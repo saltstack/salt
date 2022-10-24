@@ -32,3 +32,17 @@ def test_62058_whitespace(lgpo):
             )
             return
     assert False
+
+
+def test_61859(lgpo):
+    expected = (
+        'ADMX policy name/id "Pol_CipherSuiteOrder" is used in multiple ADMX files.\n'
+        "Try one of the following names:\n"
+        " - Lanman Server\\Network\\Cipher suite order\n"
+        " - Lanman Workstation\\Network\\Cipher suite order"
+    )
+    result = lgpo.get_policy_info(
+        policy_name="Pol_CipherSuiteOrder",
+        policy_class="machine",
+    )
+    assert result["message"] == expected
