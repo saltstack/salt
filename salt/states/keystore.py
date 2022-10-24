@@ -9,8 +9,6 @@ State management of a java keystore
 import logging
 import os
 
-import salt.utils.stringutils
-
 __virtualname__ = "keystore"
 
 # Init logger
