@@ -508,3 +508,125 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                     keystore.managed(name, passphrase, entries, force_remove=True),
                     state_return,
                 )
+
+    def test_case_insensitive_alias(self):
+
+        cert_return = [
+            {
+                "valid_until": "August 21 2017",
+                "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5".encode(
+                    __salt_system_encoding__
+                ),
+                "valid_start": "August 22 2012",
+                "type": "TrustedCertEntry",
+                "alias": "aliasname",
+                "expired": True,
+            }
+        ]
+        x509_return = {
+            "Not After": "2017-08-21 05:26:54",
+            "Subject Hash": "97:95:14:4F",
+            "Serial Number": "0D:FA",
+            "SHA1 Finger Print": (
+                "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5".encode(
+                    __salt_system_encoding__
+                )
+            ),
+            "SHA-256 Finger Print": "5F:0F:B5:16:65:81:AA:E6:4A:10:1C:15:83:B1:BE:BE:74:E8:14:A9:1E:7A:8A:14:BA:1E:83:5D:78:F6:E9:E7".encode(
+                __salt_system_encoding__
+            ),
+            "MD5 Finger Print": "80:E6:17:AF:78:D8:E4:B8:FB:5F:41:3A:27:1D:CC:F2".encode(
+                __salt_system_encoding__
+            ),
+            "Version": 1,
+            "Key Size": 512,
+            "Public Key": (
+                "-----BEGIN PUBLIC"
+                " KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END"
+                " PUBLIC KEY-----\n"
+            ),
+            "Issuer": {
+                "C": "JP",
+                "organizationName": "Frank4DD",
+                "CN": "Frank4DD Web CA",
+                "SP": "Tokyo",
+                "L": "Chuo-ku",
+                "emailAddress": "support@frank4dd.com",
+                "OU": "WebCert Support",
+            },
+            "Issuer Hash": "92:DA:45:6B",
+            "Not Before": "2012-08-22 05:26:54",
+            "Subject": {
+                "C": "JP",
+                "SP": "Tokyo",
+                "organizationName": "Frank4DD",
+                "CN": "www.example.com",
+            },
+        }
+
+        name = "keystore.jks"
+        passphrase = "changeit"
+        updated_entry = [
+            {
+                "alias": "ALIASNAME",
+                "certificate": """-----BEGIN CERTIFICATE-----
+                    MIIDMjCCAhoCCQDqiafRfHR74zANBgkqhkiG9w0BAQsFADBbMQswCQYDVQQGEwJV
+                    UzEOMAwGA1UECAwFVGV4YXMxEDAOBgNVBAcMB0hvdXN0b24xEjAQBgNVBAoMCVNh
+                    bHRzdGFjazEWMBQGA1UEAwwNSktTIFRlc3QgQ2VydDAeFw0yMjEwMjQxNjA2Mjha
+                    Fw0yMzEwMjQxNjA2MjhaMFsxCzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVUZXhhczEQ
+                    MA4GA1UEBwwHSG91c3RvbjESMBAGA1UECgwJU2FsdHN0YWNrMRYwFAYDVQQDDA1K
+                    S1MgVGVzdCBDZXJ0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA17n1
+                    O+fhXCx2N0QI5MFEm2d76FaHgT+FJ5C4ynrVMCPsezFgrcvX7N2shPxwejTbot27
+                    rntu4EHcSmnBJszJJseXGIS6kzpSnF0zrAOIP2Aw2vKKZq8Nafo/eZM/KvPttXqI
+                    J4g4/hjZTjcIOeCJLuW/3nSpTOUWQN4VLXYGcpmtNsM7esu3viKpMYP3JbDAmIAB
+                    2/jstPCHonrLzX1NUWK2saJ/dDHoOQB03SoU8ZeKkjACwImwHFYHKUuORYrlNQsH
+                    5W2EYziyyMRKtPRrQ/C5lkMtxCkBawAUk8mcVXxyXu4IVJUYCRpaO/FaKII0AGxy
+                    d4ccPHCCDQwVKEqzvQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQDAw1uMlVhCjSkE
+                    JPfqkNVmsYQP+94b5I5HspG9TXDWPcMZAEgKXGeMlFL0s9hXhgSZHNhkbuiP5uHr
+                    OEH5hvDJj15LnIjGYILWoIvFkXZrc4yvLqHSaWSRDjgTQBayHkdGFOQl/GMhvUz0
+                    q9A3w2YXSfwwbdS7DJ5tlbpfjHdL609ljFO2nOuUulL2PyYZn1cRDVKcpnZyw/uk
+                    pHb+wd7sN8jw8G2AFMg2pzgrVJD/ezxEn7NYhA2j7JuAgrNbFKg2alTFnM4FK8DH
+                    1VxEduyeU+esVrogMiYHudKVuGRKGoSxEc2U6NdRdrHYqgn/5BXF3rvL4y5deERS
+                    ETuWTQmR
+                    -----END CERTIFICATE-----"""
+            }
+        ]
+
+        test_return = {
+            "name": name,
+            "changes": {},
+            "result": None,
+            "coment": "Alias aliasname would have been updated.\n",
+        }
+
+        state_return = {
+            "name": name,
+            "changes": {"aliasname": "Updated"},
+            "result": True,
+            "comment": "Alias aliasname updated.\n",
+        }
+
+        with patch.dict(keystore.__opts__, {"test": True}):
+            with patch("os.path.exists", return_value=True):
+                with patch.dict(
+                    keystore.__salt__,
+                    {
+                        "keystore.list": MagicMock(return_value=cert_return),
+                        "x509.read_certificate": MagicMock(return_value=x509_return),
+                    }
+                ):
+                    self.assertDictEqual(
+                        keystore.managed(name, passphrase, updated_entry), test_return
+                    )
+
+        with patch("os.path.exists", return_value=True):
+            with patch.dict(
+                keystore.__salt__,
+                {
+                    "keystore.list": MagicMock(return_value=cert_return),
+                    "x509.read_certificate": MagicMock(return_value=x509_return),
+                }
+            ):
+                self.assertDictEqual(
+                    keystore.managed(name, passphrase, updated_entry), state_return
+                )
