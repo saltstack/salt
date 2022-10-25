@@ -33,6 +33,13 @@ for any OS with a Bourne shell:
 
     curl -L https://bootstrap.saltstack.com | sudo sh -
 
+.. note::
+    
+    Alternatively, to download the bash script and run it immediately, use:
+
+    .. code-block:: bash
+
+        curl -L https://bootstrap.saltproject.io | sudo sh -s --
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
 to test out salt, the `Vagrant salt provisioner`_ will provision the VM for you.
