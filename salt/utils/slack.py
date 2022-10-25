@@ -46,7 +46,7 @@ def query(
     ret = {"message": "", "res": True}
 
     slack_functions = {
-        "rooms": {"request": "channels.list", "response": "channels"},
+        "rooms": {"request": "conversations.list", "response": "channels"},
         "users": {"request": "users.list", "response": "members"},
         "message": {"request": "chat.postMessage", "response": "channel"},
     }
