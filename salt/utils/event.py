@@ -427,7 +427,7 @@ class SaltEvent:
                     self.pusher.connect(timeout=timeout)
                     self.cpush = True
                 except Exception as exc:  # pylint: disable=broad-except
-                    log.error(
+                    log.debug(
                         "Unable to connect pusher: %s",
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
