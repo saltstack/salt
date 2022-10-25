@@ -31,7 +31,8 @@ for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.com | sudo sh -
+    curl -L https://bootstrap.saltstack.com -o bootstrap_salt.sh
+    sudo sh bootstrap_salt.sh
 
 .. note::
     
