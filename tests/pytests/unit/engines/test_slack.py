@@ -9,9 +9,31 @@ from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.skipif(
-        slack.HAS_SLACKCLIENT is False, reason="The SlackClient is not installed"
+        slack.HAS_SLACKBOLT is False, reason="The slack_bolt is not installed"
     )
 ]
+
+
+class MockSlackBoltSocketMode:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def connect(self, *args, **kwargs):
+        return True
+
+
+class MockSlackBoltApp:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+        self.client = None
+        self.logger = None
+        self.proxy = None
+
+    def message(self, *args, **kwargs):
+        return MagicMock(return_value=True)
 
 
 @pytest.fixture
@@ -22,12 +44,20 @@ def configure_loader_modules():
 @pytest.fixture
 def slack_client():
     mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    token = "xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+    app_token = "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    bot_token = "xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+    trigger = "!"
 
     with patch.dict(slack.__opts__, mock_opts):
-        with patch("slackclient.SlackClient.rtm_connect", MagicMock(return_value=True)):
-            slack_client = slack.SlackClient(token)
-            yield slack_client
+        with patch(
+            "slack_bolt.App", MagicMock(autospec=True, return_value=MockSlackBoltApp())
+        ):
+            with patch(
+                "slack_bolt.adapter.socket_mode.SocketModeHandler",
+                MagicMock(autospec=True, return_value=MockSlackBoltSocketMode()),
+            ):
+                slack_client = slack.SlackClient(app_token, bot_token, trigger)
+                yield slack_client
 
 
 def test_control_message_target(slack_client):
