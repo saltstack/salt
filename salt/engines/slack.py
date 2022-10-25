@@ -3,21 +3,43 @@ An engine that reads messages from Slack and can act on them
 
 .. versionadded:: 2016.3.0
 
-:depends: `slackclient <https://pypi.org/project/slackclient/>`_ Python module
+:depends: `slack_bolt <https://pypi.org/project/slack_bolt/>`_ Python module
 
 .. important::
-    This engine requires a bot user. To create a bot user, first go to the
-    **Custom Integrations** page in your Slack Workspace. Copy and paste the
-    following URL, and replace ``myworkspace`` with the proper value for your
-    workspace:
+    This engine requires a Slack app and a Slack Bot user. To create a
+    bot user, first go to the **Custom Integrations** page in your
+    Slack Workspace. Copy and paste the following URL, and log in with
+    account credentials with administrative privileges:
 
-    ``https://myworkspace.slack.com/apps/manage/custom-integrations``
+    ``https://api.slack.com/apps/new``
 
-    Next, click on the ``Bots`` integration and request installation. Once
-    approved by an admin, you will be able to proceed with adding the bot user.
-    Once the bot user has been added, you can configure it by adding an avatar,
-    setting the display name, etc. You will also at this time have access to
-    your API token, which will be needed to configure this engine.
+    Next, click on the ``From scratch`` option from the ``Create an app`` popup.
+    Give your new app a unique name, eg. ``SaltSlackEngine``, select the workspace
+    where your app will be running, and click ``Create App``.
+
+    Next, click on ``Socket Mode`` and then click on the toggle button for
+    ``Enable Socket Mode``. In the dialog give your Socket Mode Token a unique
+    name and then copy and save the app level token.  This will be used
+    as the ``app_token`` parameter in the Slack engine configuration.
+
+    Next, click on ``OAuth & Permissions`` and then under ``Bot Token Scope``, click
+    on ``Add an OAuth Scope``.  Ensure the following scopes are included:
+
+        - ``channels:history``
+        - ``channels:read``
+        - ``chat:write``
+        - ``commands``
+        - ``files:read``
+        - ``files:write``
+        - ``im:history``
+        - ``mpim:history``
+        - ``usergroups:read``
+        - ``users:read``
+
+    Once all the scopes have been added, click the ``Install to Workspace`` button
+    under ``OAuth Tokens for Your Workspace``, then click ``Allow``.  Copy and save
+    the ``Bot User OAuth Token``, this will be used as the ``bot_token`` parameter
+    in the Slack engine configuration.
 
     Finally, add this bot user to a channel by switching to the channel and
     using ``/invite @mybotuser``. Keep in mind that this engine will process
@@ -74,6 +96,9 @@ Configuration Examples
 .. versionchanged:: 2017.7.0
     Access control group support added
 
+.. versionchanged:: 3006.0
+    Updated to use slack_bolt Python library.
+
 This example uses a single group called ``default``. In addition, other groups
 are being loaded from pillar data. The group names do not have any
 significance, it is the users and commands defined within them that are used to
@@ -83,7 +108,8 @@ determine whether the Slack user has permission to run the desired command.
 
     engines:
       - slack:
-          token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+          app_token: "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          bot_token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
           control: True
           fire_all: False
           groups_pillar_name: 'slack_engine:groups_pillar'
@@ -121,7 +147,8 @@ must be quoted, or else PyYAML will fail to load the configuration.
     engines:
       - slack:
           groups_pillar: slack_engine_pillar
-          token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+          app_token: "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          bot_token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
           control: True
           fire_all: True
           tag: salt/engines/slack
