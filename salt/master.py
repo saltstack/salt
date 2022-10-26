@@ -950,7 +950,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
-        self.context = {}
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -1138,7 +1137,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.key,
         )
         self.clear_funcs.connect()
-        self.aes_funcs = AESFuncs(self.opts, context=self.context)
+        self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
 
@@ -1201,7 +1200,7 @@ class AESFuncs(TransportMethods):
         "_file_envs",
     )
 
-    def __init__(self, opts, context=None):
+    def __init__(self, opts):
         """
         Create a new AESFuncs
 
@@ -1211,7 +1210,6 @@ class AESFuncs(TransportMethods):
         :returns: Instance for handling AES operations
         """
         self.opts = opts
-        self.context = context
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
@@ -1599,7 +1597,6 @@ class AESFuncs(TransportMethods):
             pillarenv=load.get("pillarenv"),
             extra_minion_data=load.get("extra_minion_data"),
             clean_cache=load.get("clean_cache"),
-            context=self.context,
         )
         data = pillar.compile_pillar()
         self.fs_.update_opts()
