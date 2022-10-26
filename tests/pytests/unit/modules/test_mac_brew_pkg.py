@@ -115,6 +115,52 @@ def custom_call_brew(*cmd, failhard=True):
                       "tap": "custom/tap",
                       "url": "https://iterm2.com/downloads/stable/iTerm2-3_4_3.zip",
                       "version": "3.4.3"
+                    },
+                    {
+                      "token": "discord",
+                      "full_token": "discord",
+                      "tap": null,
+                      "name": [
+                        "Discord"
+                      ],
+                      "desc": "Voice and text chat software",
+                      "homepage": "https://discord.com/",
+                      "url": "https://dl.discordapp.net/apps/osx/0.0.268/Discord.dmg",
+                      "appcast": null,
+                      "version": "0.0.268",
+                      "versions": {
+                      },
+                      "installed": "0.0.266",
+                      "outdated": false,
+                      "sha256": "dfe12315b717ed06ac24d3eaacb700618e96cbb449ed63d2afadcdb70ad09c55",
+                      "artifacts": [
+                        {
+                          "app": [
+                            "Discord.app"
+                          ]
+                        },
+                        {
+                          "zap": [
+                            {
+                              "trash": [
+                                "~/Library/Application Support/discord",
+                                "~/Library/Caches/com.hnc.Discord",
+                                "~/Library/Caches/com.hnc.Discord.ShipIt",
+                                "~/Library/Cookies/com.hnc.Discord.binarycookies",
+                                "~/Library/Preferences/com.hnc.Discord.helper.plist",
+                                "~/Library/Preferences/com.hnc.Discord.plist",
+                                "~/Library/Saved Application State/com.hnc.Discord.savedState"
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "caveats": null,
+                      "depends_on": {
+                      },
+                      "conflicts_with": null,
+                      "container": null,
+                      "auto_updates": true
                     }
                   ],
                   "formulae": [
@@ -318,14 +364,14 @@ def custom_add_pkg(ret, name, newest_version):
 # '_list_taps' function tests: 1
 
 
-def test_list_taps(TAPS_STRING, TAPS_LIST):
+def test_list_taps(TAPS_STRING, TAPS_LIST, HOMEBREW_BIN):
     """
     Tests the return of the list of taps
     """
     mock_taps = MagicMock(return_value={"stdout": TAPS_STRING, "retcode": 0})
     mock_user = MagicMock(return_value="foo")
     mock_cmd = MagicMock(return_value="")
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch.dict(
             mac_brew.__salt__,
             {"file.get_user": mock_user, "cmd.run_all": mock_taps, "cmd.run": mock_cmd},
@@ -346,14 +392,14 @@ def test_tap_installed(TAPS_LIST):
         assert mac_brew._tap("homebrew/science")
 
 
-def test_tap_failure():
+def test_tap_failure(HOMEBREW_BIN):
     """
     Tests if the tap installation failed
     """
     mock_failure = MagicMock(return_value={"stdout": "", "stderr": "", "retcode": 1})
     mock_user = MagicMock(return_value="foo")
     mock_cmd = MagicMock(return_value="")
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch.dict(
             mac_brew.__salt__,
             {
@@ -365,14 +411,14 @@ def test_tap_failure():
             assert not mac_brew._tap("homebrew/test")
 
 
-def test_tap(TAPS_LIST):
+def test_tap(TAPS_LIST, HOMEBREW_BIN):
     """
     Tests adding unofficial GitHub repos to the list of brew taps
     """
     mock_failure = MagicMock(return_value={"retcode": 0})
     mock_user = MagicMock(return_value="foo")
     mock_cmd = MagicMock(return_value="")
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch.dict(
             mac_brew.__salt__,
             {
@@ -389,13 +435,13 @@ def test_tap(TAPS_LIST):
 # '_homebrew_bin' function tests: 1
 
 
-def test_homebrew_bin():
+def test_homebrew_bin(HOMEBREW_BIN):
     """
     Tests the path to the homebrew binary
     """
     mock_path = MagicMock(return_value="/usr/local")
     with patch.dict(mac_brew.__salt__, {"cmd.run": mock_path}):
-        assert mac_brew._homebrew_bin() == "/usr/local/bin/brew"
+        assert mac_brew._homebrew_bin() == HOMEBREW_BIN
 
 
 # 'list_pkgs' function tests: 2
@@ -426,6 +472,8 @@ def test_list_pkgs_homebrew_cask_pakages():
     expected_pkgs = {
         "homebrew/cask/day-o": "3.0.1",
         "day-o": "3.0.1",
+        "homebrew/cask/discord": "0.0.266",
+        "discord": "0.0.266",
         "custom/tap/iterm2": "3.4.3",
         "iterm2": "3.4.3",
         "jq": "1.6",
@@ -526,7 +574,7 @@ def test_refresh_db(HOMEBREW_BIN):
     """
     mock_user = MagicMock(return_value="foo")
     mock_success = MagicMock(return_value={"retcode": 0})
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch.dict(
             mac_brew.__salt__, {"file.get_user": mock_user, "cmd.run_all": mock_success}
         ), patch(
@@ -556,7 +604,7 @@ def test_install():
 # Full functionality should be tested in integration phase
 
 
-def test_hold():
+def test_hold(HOMEBREW_BIN):
     """
     Tests holding if package is installed
     """
@@ -575,7 +623,7 @@ def test_hold():
     }
 
     mock_params = MagicMock(return_value=({"foo": None}, "repository"))
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch(
             "salt.modules.mac_brew_pkg.list_pkgs", return_value={"foo": "0.1.5"}
         ), patch.dict(
@@ -590,7 +638,7 @@ def test_hold():
             assert mac_brew.hold("foo") == _expected
 
 
-def test_hold_not_installed():
+def test_hold_not_installed(HOMEBREW_BIN):
     """
     Tests holding if package is not installed
     """
@@ -609,7 +657,7 @@ def test_hold_not_installed():
     }
 
     mock_params = MagicMock(return_value=({"foo": None}, "repository"))
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch.dict(
             mac_brew.__salt__,
             {
@@ -660,7 +708,7 @@ def test_hold_pinned():
 # "unhold" function tests: 2
 # Only tested a few basics
 # Full functionality should be tested in integration phase
-def test_unhold():
+def test_unhold(HOMEBREW_BIN):
     """
     Tests unholding if package is installed
     """
@@ -679,7 +727,7 @@ def test_unhold():
     }
 
     mock_params = MagicMock(return_value=({"foo": None}, "repository"))
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/local/bin/brew")):
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch(
             "salt.modules.mac_brew_pkg.list_pkgs", return_value={"foo": "0.1.5"}
         ), patch(
@@ -761,71 +809,73 @@ def test_unhold_not_pinned():
     ):
         assert mac_brew.unhold("foo") == _expected
 
-    def test_info_installed(self):
-        """
-        Tests info_installed method
-        """
-        mock_user = MagicMock(return_value="foo")
-        mock_cmd = MagicMock(return_value="")
-        mock_cmd_all = MagicMock(
-            return_value={
-                "pid": 12345,
-                "retcode": 0,
-                "stderr": "",
-                "stdout": textwrap.dedent(
-                    """\
+
+def test_info_installed(HOMEBREW_BIN):
+    """
+    Tests info_installed method
+    """
+    mock_user = MagicMock(return_value="foo")
+    mock_cmd = MagicMock(return_value="")
+    mock_cmd_all = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
                     {
-                      "formulae": [
-                        {
-                          "name": "salt",
-                          "full_name": "cdalvaro/tap/salt",
-                          "tap": "cdalvaro/tap",
-                          "aliases": []
-                        },
-                        {
-                          "name": "vim",
-                          "full_name": "vim",
-                          "tap": "homebrew/core",
-                          "aliases": []
-                        }
-                      ],
-                      "casks": [
-                        {
-                          "token": "visual-studio-code",
-                          "full_token": "visual-studio-code",
-                          "tap": "homebrew/cask",
-                          "name": [
-                            "MicrosoftVisualStudioCode",
-                            "VSCode"
-                          ]
-                        }
+                      "name": "salt",
+                      "full_name": "cdalvaro/tap/salt",
+                      "tap": "cdalvaro/tap",
+                      "aliases": []
+                    },
+                    {
+                      "name": "vim",
+                      "full_name": "vim",
+                      "tap": "homebrew/core",
+                      "aliases": []
+                    }
+                  ],
+                  "casks": [
+                    {
+                      "token": "visual-studio-code",
+                      "full_token": "visual-studio-code",
+                      "tap": null,
+                      "name": [
+                        "MicrosoftVisualStudioCode",
+                        "VSCode"
                       ]
                     }
-                 """
-                ),
-            }
-        )
-        _expected = {
-            "cdalvaro/tap/salt": {
-                "name": "salt",
-                "full_name": "cdalvaro/tap/salt",
-                "tap": "cdalvaro/tap",
-                "aliases": [],
-            },
-            "vim": {
-                "name": "vim",
-                "full_name": "vim",
-                "tap": "homebrew/core",
-                "aliases": [],
-            },
-            "visual-studio-code": {
-                "token": "visual-studio-code",
-                "full_token": "visual-studio-code",
-                "tap": "homebrew/cask",
-                "name": ["MicrosoftVisualStudioCode", "VSCode"],
-            },
+                  ]
+                }
+             """
+            ),
         }
+    )
+    _expected = {
+        "cdalvaro/tap/salt": {
+            "name": "salt",
+            "full_name": "cdalvaro/tap/salt",
+            "tap": "cdalvaro/tap",
+            "aliases": [],
+        },
+        "vim": {
+            "name": "vim",
+            "full_name": "vim",
+            "tap": "homebrew/core",
+            "aliases": [],
+        },
+        "visual-studio-code": {
+            "token": "visual-studio-code",
+            "full_token": "visual-studio-code",
+            "tap": None,
+            "name": ["MicrosoftVisualStudioCode", "VSCode"],
+        },
+    }
 
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
             "salt.modules.mac_brew_pkg._list_pinned", return_value=["foo"]
         ), patch.dict(
@@ -836,61 +886,63 @@ def test_unhold_not_pinned():
                 "cmd.run": mock_cmd,
             },
         ):
-            self.assertEqual(
+            assert (
                 mac_brew.info_installed(
                     "cdalvaro/tap/salt", "vim", "visual-studio-code"
-                ),
-                _expected,
+                )
+                == _expected
             )
 
-    def test_list_upgrades(self):
-        """
-        Tests list_upgrades method
-        """
-        mock_user = MagicMock(return_value="foo")
-        mock_cmd = MagicMock(return_value="")
-        mock_cmd_all = MagicMock(
-            return_value={
-                "pid": 12345,
-                "retcode": 0,
-                "stderr": "",
-                "stdout": textwrap.dedent(
-                    """\
-                    {
-                      "formulae": [
-                        {
-                          "name": "cmake",
-                          "installed_versions": ["3.19.3"],
-                          "current_version": "3.19.4",
-                          "pinned": false,
-                          "pinned_version": null
-                        },
-                        {
-                          "name": "fzf",
-                          "installed_versions": ["0.25.0"],
-                          "current_version": "0.25.1",
-                          "pinned": false,
-                          "pinned_version": null
-                        }
-                      ],
-                      "casks": [
-                        {
-                          "name": "ksdiff",
-                          "installed_versions": "2.2.0,122",
-                          "current_version": "2.3.6,123-jan-18-2021"
-                        }
-                      ]
-                    }
-                    """
-                ),
-            }
-        )
-        _expected = {
-            "cmake": "3.19.4",
-            "fzf": "0.25.1",
-            "ksdiff": "2.3.6,123-jan-18-2021",
-        }
 
+def test_list_upgrades(HOMEBREW_BIN):
+    """
+    Tests list_upgrades method
+    """
+    mock_user = MagicMock(return_value="foo")
+    mock_cmd = MagicMock(return_value="")
+    mock_cmd_all = MagicMock(
+        return_value={
+            "pid": 12345,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": textwrap.dedent(
+                """\
+                {
+                  "formulae": [
+                    {
+                      "name": "cmake",
+                      "installed_versions": ["3.19.3"],
+                      "current_version": "3.19.4",
+                      "pinned": false,
+                      "pinned_version": null
+                    },
+                    {
+                      "name": "fzf",
+                      "installed_versions": ["0.25.0"],
+                      "current_version": "0.25.1",
+                      "pinned": false,
+                      "pinned_version": null
+                    }
+                  ],
+                  "casks": [
+                    {
+                      "name": "ksdiff",
+                      "installed_versions": "2.2.0,122",
+                      "current_version": "2.3.6,123-jan-18-2021"
+                    }
+                  ]
+                }
+                """
+            ),
+        }
+    )
+    _expected = {
+        "cmake": "3.19.4",
+        "fzf": "0.25.1",
+        "ksdiff": "2.3.6,123-jan-18-2021",
+    }
+
+    with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
             "salt.modules.mac_brew_pkg._list_pinned", return_value=["foo"]
         ), patch.dict(
@@ -901,6 +953,6 @@ def test_unhold_not_pinned():
                 "cmd.run": mock_cmd,
             },
         ):
-            self.assertEqual(
-                mac_brew.list_upgrades(refresh=False, include_casks=True), _expected
+            assert (
+                mac_brew.list_upgrades(refresh=False, include_casks=True) == _expected
             )

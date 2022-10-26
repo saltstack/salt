@@ -299,6 +299,7 @@ import salt.loader
 import salt.payload
 import salt.utils.data
 import salt.utils.dateutils
+import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.hashutils
@@ -667,32 +668,18 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
-    case_keep = None
-    if salt.utils.files.case_insensitive_filesystem():
-        # Create a case-sensitive dict before doing comparisons
-        # if file system is case sensitive
-        case_keep = keep
-
     root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
     def _delete_not_kept(nfn):
-        if nfn not in real_keep:
+        if os.path.normcase(nfn) not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to
             # check include_pat
             if not salt.utils.stringutils.check_include_exclude(
                 os.path.relpath(nfn, root), None, exclude_pat
             ):
                 return
-            # Before we can accurately assess the removal of a file, we must
-            # check for systems with case sensitive files. If we originally
-            # meant to keep a file, but due to case sensitivity python would
-            # otherwise remove the file, check against the original list.
-            if case_keep:
-                for item in case_keep:
-                    if item.casefold() == nfn.casefold():
-                        return
             removed.add(nfn)
             if not __opts__["test"]:
                 try:
@@ -759,9 +746,17 @@ def _check_directory(
                     fchange = {}
                     path = os.path.join(root, fname)
                     stats = __salt__["file.stats"](path, None, follow_symlinks)
-                    if user is not None and user != stats.get("user"):
+                    if (
+                        user is not None
+                        and not user == stats.get("user")
+                        and not user == stats.get("uid")
+                    ):
                         fchange["user"] = user
-                    if group is not None and group != stats.get("group"):
+                    if (
+                        group is not None
+                        and not group == stats.get("group")
+                        and not group == stats.get("gid")
+                    ):
                         fchange["group"] = group
                     smode = salt.utils.files.normalize_mode(stats.get("mode"))
                     file_mode = salt.utils.files.normalize_mode(file_mode)
@@ -1541,6 +1536,7 @@ def symlink(
     win_deny_perms=None,
     win_inheritance=None,
     atomic=False,
+    disallow_copy_and_unlink=False,
     **kwargs
 ):
     """
@@ -1622,6 +1618,17 @@ def symlink(
 
     atomic
         Use atomic file operation to create the symlink.
+
+        .. versionadded:: 3006.0
+
+    disallow_copy_and_unlink
+        Only used if ``backupname`` is used and the name of the symlink exists
+        and is not a symlink. If set to ``True``, the operation is offloaded to
+        the ``file.rename`` execution module function. This will use
+        ``os.rename`` underneath, which will fail in the event that ``src`` and
+        ``dst`` are on different filesystems. If ``False`` (the default),
+        ``shutil.move`` will be used in order to fall back on a "copy then
+        unlink" approach, which is required for moving across filesystems.
 
         .. versionadded:: 3006.0
     """
@@ -1825,7 +1832,9 @@ def symlink(
                 else:
                     __salt__["file.remove"](backupname)
             try:
-                __salt__["file.move"](name, backupname)
+                __salt__["file.move"](
+                    name, backupname, disallow_copy_and_unlink=disallow_copy_and_unlink
+                )
             except Exception as exc:  # pylint: disable=broad-except
                 ret["changes"] = {}
                 log.debug(
@@ -1903,10 +1912,7 @@ def absent(name, **kwargs):
             ret["comment"] = "File {} is set for removal".format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__["file.remove"](name, force=True)
-            else:
-                __salt__["file.remove"](name)
+            __salt__["file.remove"](name, force=True)
             ret["comment"] = "Removed file {}".format(name)
             ret["changes"]["removed"] = name
             return ret
@@ -1920,10 +1926,7 @@ def absent(name, **kwargs):
             ret["comment"] = "Directory {} is set for removal".format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__["file.remove"](name, force=True)
-            else:
-                __salt__["file.remove"](name)
+            __salt__["file.remove"](name, force=True)
             ret["comment"] = "Removed directory {}".format(name)
             ret["changes"]["removed"] = name
             return ret
@@ -2154,11 +2157,7 @@ def tidied(
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__["file.remove"](path, force=True)
-                else:
-                    __salt__["file.remove"](path)
-                # Remember what we've removed, will appear in the summary
+                __salt__["file.remove"](path, force=True)
                 ret["changes"]["removed"].append(path)
         except CommandExecutionError as exc:
             return _error(ret, "{}".format(exc))
@@ -2765,7 +2764,7 @@ def managed(
                     seuser: system_u
                     serole: object_r
                     setype: system_conf_t
-                    seranage: s0
+                    serange: s0
 
         .. versionadded:: 3000
 
@@ -7494,7 +7493,7 @@ def copy_(
         elif not __opts__["test"] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__["file.remove"](name)
+                __salt__["file.remove"](name, force=True)
             except OSError:
                 return _error(
                     ret,
@@ -8034,6 +8033,7 @@ def serialize(
             salt.utils.data.repack_dictlist(deserializer_opts)
         )
 
+    existing_data = None
     if merge_if_exists:
         if os.path.isfile(name):
             if deserializer_name not in __serializers__:
@@ -8124,27 +8124,33 @@ def serialize(
         else:
             ret["result"] = True
             ret["comment"] = "The file {} is in the correct state".format(name)
-        return ret
+    else:
+        ret = __salt__["file.manage_file"](
+            name=name,
+            sfn="",
+            ret=ret,
+            source=None,
+            source_sum={},
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=None,
+            saltenv=__env__,
+            backup=backup,
+            makedirs=makedirs,
+            template=None,
+            show_changes=show_changes,
+            encoding=encoding,
+            encoding_errors=encoding_errors,
+            contents=contents,
+        )
 
-    return __salt__["file.manage_file"](
-        name=name,
-        sfn="",
-        ret=ret,
-        source=None,
-        source_sum={},
-        user=user,
-        group=group,
-        mode=mode,
-        attrs=None,
-        saltenv=__env__,
-        backup=backup,
-        makedirs=makedirs,
-        template=None,
-        show_changes=show_changes,
-        encoding=encoding,
-        encoding_errors=encoding_errors,
-        contents=contents,
-    )
+    if isinstance(existing_data, dict) and isinstance(merged_data, dict):
+        ret["changes"]["diff"] = salt.utils.dictdiffer.recursive_diff(
+            existing_data, merged_data
+        ).diffs
+
+    return ret
 
 
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):

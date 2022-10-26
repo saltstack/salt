@@ -1,4 +1,4 @@
-"""
+r"""
 Redis
 =====
 
@@ -6,6 +6,13 @@ Redis plugin for the Salt caching subsystem.
 
 .. versionadded:: 2017.7.0
 .. versionchanged:: 3005
+
+To enable this cache plugin, the master will need the python client for redis installed.
+This can be easily installed with pip:
+
+.. code-block:: bash
+
+    salt \* pip.install redis
 
 As Redis provides a simple mechanism for very fast key-value store, in order to
 provide the necessary features for the Salt caching subsystem, the following
