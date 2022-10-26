@@ -1512,9 +1512,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(cron.__grains__, {"os_family": "AIX"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
-        ), patch(
-            "salt.utils.files.fpopen", mock_open()
-        ), patch.dict(
+        ), patch("salt.utils.files.fpopen", mock_open()), patch.dict(
             cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
         ), patch(
             "salt.utils.files.mkstemp", MagicMock(return_value=temp_path)
@@ -1537,9 +1535,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(cron.__grains__, {"os_family": "AIX"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
-        ), patch(
-            "salt.utils.files.fpopen", mock_open()
-        ), patch.dict(
+        ), patch("salt.utils.files.fpopen", mock_open()), patch.dict(
             cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
         ), patch(
             "salt.utils.files.mkstemp", MagicMock(return_value=temp_path)
