@@ -125,25 +125,3 @@ def jid_dir(jid, job_dir=None, hash_type="sha256"):
         parts.append(job_dir)
     parts.extend([jhash[:2], jhash[2:]])
     return os.path.join(*parts)
-
-
-def return_obj_string_safe(response, to_encoding="utf-8"):
-    """
-    Cleans jid returned response for non-binary-storable returners
-
-    response
-        A response dict to be cleaned for returners.
-
-    return_obj_string_safe
-        encoding type to use, defaulted to "utf-8"
-    """
-    if (
-        isinstance(response, dict)
-        and "return" in response.keys()
-        and "return" in response["return"].keys()
-    ):
-        if isinstance(response["return"]["return"], (bytes, bytearray)):
-            response["return"]["return"] = response["return"]["return"].decode(
-                to_encoding, "strict"
-            )
-    return response
