@@ -198,7 +198,7 @@ class SaltCacheLoader(BaseLoader):
             }
             environment.globals.update(tpldata)
 
-        if _template in self.cached:
+        if _template in self.cached or os.path.exists(_template):
             # pylint: disable=cell-var-from-loop
             for spath in self.searchpath:
                 filepath = os.path.join(spath, _template)
@@ -805,7 +805,7 @@ class SerializerExtension(Extension):
     .. code-block:: jinja
 
         {%- set yaml_src = "{foo: it works}"|load_yaml %}
-        {%- set json_src = "{'bar': 'for real'}"|load_json %}
+        {%- set json_src = '{"bar": "for real"}'|load_json %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
     will be rendered as::
