@@ -1533,7 +1533,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         temp_path = "some_temp_path"
         crontab_cmd = "crontab {}".format(temp_path)
 
-        with patch.dict(cron.__grains__, {"os_family": "AIX"}), patch.dict(
+        with patch.dict(cron.__grains__, {"os_family": "Solaris"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
         ), patch("salt.utils.files.fpopen", mock_open()), patch.dict(
             cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
