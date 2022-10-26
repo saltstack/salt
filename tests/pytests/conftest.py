@@ -621,6 +621,9 @@ def delta_proxy_minion_ids():
 
 @pytest.fixture
 def timeout_interrupt():
+    if sys.platform.startswith("win"):
+        pytest.skip("SIGALRM is not available on Windows.")
+
     def raiser(*args):
         """
         Simply raise TimeoutError. Only exists because we can't raise in a
