@@ -589,3 +589,22 @@ def test_stats():
         ret = filemod.stats("dummy", None, True)
         assert ret["mode"] == "0644"
         assert ret["type"] == "file"
+
+
+def test_file_move_disallow_copy_and_unlink():
+    mock_shutil_move = MagicMock()
+    mock_os_rename = MagicMock()
+    with patch("os.path.expanduser", MagicMock(side_effect=lambda path: path)), patch(
+        "os.path.isabs", MagicMock(return_value=True)
+    ), patch("shutil.move", mock_shutil_move), patch("os.rename", mock_os_rename):
+        ret = filemod.move("source", "dest", disallow_copy_and_unlink=False)
+        mock_shutil_move.assert_called_once()
+        mock_os_rename.assert_not_called()
+        assert ret["result"] is True
+
+        mock_shutil_move.reset_mock()
+
+        ret = filemod.move("source", "dest", disallow_copy_and_unlink=True)
+        mock_os_rename.assert_called_once()
+        mock_shutil_move.assert_not_called()
+        assert ret is True
