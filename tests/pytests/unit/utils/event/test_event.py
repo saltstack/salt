@@ -11,14 +11,11 @@ import salt.utils.event
 import salt.utils.stringutils
 from salt.utils.event import SaltEvent
 from tests.support.events import eventpublisher_process, eventsender_process
-from tests.support.mock import MagicMock, patch, call
+from tests.support.mock import patch
 
 NO_LONG_IPC = False
 if getattr(zmq, "IPC_PATH_MAX_LEN", 103) <= 103:
     NO_LONG_IPC = True
-
-# TODO: Remove me
-NO_LONG_IPC = False
 
 pytestmark = [
     pytest.mark.skipif(
@@ -299,8 +296,12 @@ def test_send_master_event(sock_dir):
 def test_connect_pull_should_debug_log_on_StreamClosedError():
     event = SaltEvent(node=None)
     with patch.object(event, "pusher") as mock_pusher:
-        with patch.object(salt.utils.event.log, "debug", auto_spec=True) as mock_log_debug:
-            mock_pusher.connect.side_effect = salt.ext.tornado.iostream.StreamClosedError
+        with patch.object(
+            salt.utils.event.log, "debug", auto_spec=True
+        ) as mock_log_debug:
+            mock_pusher.connect.side_effect = (
+                salt.ext.tornado.iostream.StreamClosedError
+            )
             event.connect_pull()
             call = mock_log_debug.mock_calls[0]
             assert call.args[0] == "Unable to connect pusher: %s"
@@ -312,11 +313,17 @@ def test_connect_pull_should_debug_log_on_StreamClosedError():
 def test_connect_pull_should_error_log_on_other_errors(error):
     event = SaltEvent(node=None)
     with patch.object(event, "pusher") as mock_pusher:
-        with patch.object(salt.utils.event.log, "debug", auto_spec=True) as mock_log_debug:
-            with patch.object(salt.utils.event.log, "error", auto_spec=True) as mock_log_error:
+        with patch.object(
+            salt.utils.event.log, "debug", auto_spec=True
+        ) as mock_log_debug:
+            with patch.object(
+                salt.utils.event.log, "error", auto_spec=True
+            ) as mock_log_error:
                 mock_pusher.connect.side_effect = error
                 event.connect_pull()
                 mock_log_debug.assert_not_called()
                 call = mock_log_error.mock_calls[0]
                 assert call.args[0] == "Unable to connect pusher: %s"
-                assert not isinstance(call.args[1], salt.ext.tornado.iostream.StreamClosedError)
+                assert not isinstance(
+                    call.args[1], salt.ext.tornado.iostream.StreamClosedError
+                )
