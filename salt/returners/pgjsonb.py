@@ -167,7 +167,7 @@ from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
-import salt.utils.jid
+import salt.utils.data
 
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
@@ -300,7 +300,7 @@ def returner(ret):
                     (fun, jid, return, id, success, full_ret, alter_time)
                     VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))"""
 
-            cleaned_return = salt.utils.jid.return_obj_string_safe(ret)
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
@@ -343,7 +343,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     """
     with _get_serv(commit=True) as cur:
-        load = salt.utils.jid.return_obj_string_safe(load)
+        load = salt.utils.data.decode(load)
         try:
             cur.execute(
                 PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}

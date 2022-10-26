@@ -144,7 +144,7 @@ from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
-import salt.utils.jid
+import salt.utils.data
 import salt.utils.json
 
 # Let's not allow PyLint complain about string substitution
@@ -307,7 +307,7 @@ def returner(ret):
                      (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
                      VALUES (%s, %s, %s, %s, %s, %s)"""
 
-            cleaned_return = salt.utils.jid.return_obj_string_safe(ret)
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
@@ -350,7 +350,7 @@ def save_load(jid, load, minions=None):
 
         sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
 
-        json_data = salt.utils.json.dumps(salt.utils.jid.return_obj_string_safe(load))
+        json_data = salt.utils.json.dumps(salt.utils.data.decode(load))
         try:
             cur.execute(sql, (jid, json_data))
         except MySQLdb.IntegrityError:
