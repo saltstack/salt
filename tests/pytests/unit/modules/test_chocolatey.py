@@ -6,6 +6,7 @@ Test for the chocolatey module
 import os
 
 import pytest
+
 import salt.modules.chocolatey as chocolatey
 import salt.utils
 import salt.utils.platform
@@ -199,3 +200,44 @@ def test_version_check_remote_true_not_available():
         expected = {"ack": {"installed": ["3.1.1"]}}
         result = chocolatey.version("ack", check_remote=True)
         assert result == expected
+
+
+def test_add_source(choco_path):
+    """
+    Test add_source when remote is False
+    """
+    cmd_run_all_mock = MagicMock(return_value={"retcode": 0, "stdout": "data"})
+    cmd_run_which_mock = MagicMock(return_value=choco_path)
+    with patch.dict(
+        chocolatey.__salt__,
+        {"cmd.which": cmd_run_which_mock, "cmd.run_all": cmd_run_all_mock},
+    ):
+        expected_call = [
+            choco_path,
+            "sources",
+            "add",
+            "--name",
+            "source_name",
+            "--source",
+            "source_location",
+        ]
+
+        result = chocolatey.add_source("source_name", "source_location")
+        cmd_run_all_mock.assert_called_with(expected_call, python_shell=False)
+
+        expected_call = [
+            choco_path,
+            "sources",
+            "add",
+            "--name",
+            "source_name",
+            "--source",
+            "source_location",
+            "--priority",
+            "priority",
+        ]
+
+        result = chocolatey.add_source(
+            "source_name", "source_location", priority="priority"
+        )
+        cmd_run_all_mock.assert_called_with(expected_call, python_shell=False)

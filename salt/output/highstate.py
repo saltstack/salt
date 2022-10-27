@@ -347,6 +347,7 @@ def _format_host(host, data, indent_level=1):
     tabular = __opts__.get("state_tabular", False)
     rcounts = {}
     rdurations = []
+    pdurations = []
     hcolor = colors["GREEN"]
     hstrs = []
     nchanges = 0
@@ -409,17 +410,32 @@ def _format_host(host, data, indent_level=1):
                     compressed_count = int(count_match.group(1))
 
             rcounts[ret["result"]] += compressed_count
-            rduration = ret.get("duration", 0)
-            try:
-                rdurations.append(float(rduration))
-            except ValueError:
-                rduration, _, _ = rduration.partition(" ms")
+            if "__parallel__" in ret:
+                pduration = ret.get("duration", 0)
+                try:
+                    pdurations.append(float(pduration))
+                except ValueError:
+                    pduration, _, _ = pduration.partition(" ms")
+                    try:
+                        pdurations.append(float(pduration))
+                    except ValueError:
+                        log.error(
+                            "Cannot parse a float from duration %s",
+                            ret.get("duration", 0),
+                        )
+            else:
+                rduration = ret.get("duration", 0)
                 try:
                     rdurations.append(float(rduration))
                 except ValueError:
-                    log.error(
-                        "Cannot parse a float from duration %s", ret.get("duration", 0)
-                    )
+                    rduration, _, _ = rduration.partition(" ms")
+                    try:
+                        rdurations.append(float(rduration))
+                    except ValueError:
+                        log.error(
+                            "Cannot parse a float from duration %s",
+                            ret.get("duration", 0),
+                        )
 
             tcolor = colors["GREEN"]
             if ret.get("name") in ["state.orch", "state.orchestrate", "state.sls"]:
@@ -708,6 +724,9 @@ def _format_host(host, data, indent_level=1):
 
         if __opts__.get("state_output_profile"):
             sum_duration = sum(rdurations)
+            if pdurations:
+                max_pduration = max(pdurations)
+                sum_duration = sum_duration + max_pduration
             duration_unit = "ms"
             # convert to seconds if duration is 1000ms or more
             if sum_duration > 999:

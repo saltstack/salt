@@ -3,6 +3,7 @@ import logging
 import os
 
 import pytest
+
 import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.testing
@@ -85,6 +86,9 @@ def test_send_req_fires_completion_event(event):
             load = {"load": "value"}
             timeout = 60
 
+            # XXX This is buggy because "async" in event[0] will never evaluate
+            # to True and if it *did* evaluate to true the test would fail
+            # because you Mock isn't a co-routine.
             if "async" in event[0]:
                 rtn = minion._send_req_async(load, timeout).result()
             else:
@@ -113,6 +117,29 @@ def test_send_req_fires_completion_event(event):
 
             assert fire_event_called
             assert rtn
+
+
+async def test_send_req_async_regression_62453():
+    event_enter = MagicMock()
+    event_enter.send.side_effect = (
+        lambda data, tag, cb=None, timeout=60: salt.ext.tornado.gen.maybe_future(True)
+    )
+    event = MagicMock()
+    event.__enter__.return_value = event_enter
+
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    opts["random_startup_delay"] = 0
+    opts["return_retry_tries"] = 30
+    opts["grains"] = {}
+    with patch("salt.loader.grains"):
+        minion = salt.minion.Minion(opts)
+
+        load = {"load": "value"}
+        timeout = 60
+
+        # We are just validating no exception is raised
+        rtn = await minion._send_req_async(load, timeout)
+        assert rtn is False
 
 
 @patch("salt.channel.client.ReqChannel.factory")
@@ -1062,3 +1089,35 @@ def test_valid_ipv4_master_address_ipv6_enabled():
             "master_ip": "127.0.0.1",
         }
         assert salt.minion.resolve_dns(opts) == expected
+
+
+async def test_master_type_disable():
+    """
+    Tests master_type "disable" to not even attempt connecting to a master.
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts.update(
+        {
+            "master_type": "disable",
+            "master": None,
+            "__role": "",
+            "pub_ret": False,
+            "file_client": "local",
+        }
+    )
+
+    minion = salt.minion.Minion(mock_opts)
+    try:
+
+        try:
+            minion_man = salt.minion.MinionManager(mock_opts)
+            minion_man._connect_minion(minion)
+        except RuntimeError:
+            pytest.fail("_connect_minion(minion) threw an error, This was not expected")
+
+        # Make sure beacons and sheduler are initialized
+        assert "beacons" in minion.periodic_callbacks
+        assert "schedule" in minion.periodic_callbacks
+        assert minion.connected is False
+    finally:
+        minion.destroy()

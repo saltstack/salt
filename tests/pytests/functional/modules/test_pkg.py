@@ -6,10 +6,11 @@ import tempfile
 import time
 
 import pytest
+from saltfactories.utils.functional import Loaders
+
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
-from tests.support.helpers import requires_system_grains
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +38,7 @@ def preserve_rhel_yum_conf():
     os.remove(tmp_file)
 
 
-@pytest.fixture(autouse=True)
-@requires_system_grains
+@pytest.fixture
 def refresh_db(ctx, grains, modules):
     if "refresh" not in ctx:
         modules.pkg.refresh_db()
@@ -56,7 +56,6 @@ def refresh_db(ctx, grains, modules):
 
 
 @pytest.fixture(autouse=True)
-@requires_system_grains
 def test_pkg(grains):
     _pkg = "figlet"
     if salt.utils.platform.is_windows():
@@ -73,7 +72,7 @@ def test_pkg(grains):
 
 @pytest.mark.requires_salt_modules("pkg.list_pkgs")
 @pytest.mark.slow_test
-def test_list(modules):
+def test_list(modules, refresh_db):
     """
     verify that packages are installed
     """
@@ -82,7 +81,6 @@ def test_list(modules):
 
 
 @pytest.mark.requires_salt_modules("pkg.version_cmp")
-@requires_system_grains
 @pytest.mark.slow_test
 def test_version_cmp(grains, modules):
     """
@@ -108,17 +106,17 @@ def test_version_cmp(grains, modules):
 
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_mod_del_repo(grains, modules):
+def test_mod_del_repo(grains, modules, refresh_db):
     """
     test modifying and deleting a software repository
     """
     repo = None
 
     try:
-        if grains["os"] == "Ubuntu":
+        # ppa:otto-kesselgulasch/gimp-edge has no Ubuntu 22.04 repo
+        if grains["os"] == "Ubuntu" and grains["osmajorrelease"] != 22:
             repo = "ppa:otto-kesselgulasch/gimp-edge"
             uri = "http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu"
             ret = modules.pkg.mod_repo(repo, "comps=main")
@@ -160,7 +158,7 @@ def test_mod_del_repo(grains, modules):
 
 
 @pytest.mark.slow_test
-def test_mod_del_repo_multiline_values(modules):
+def test_mod_del_repo_multiline_values(modules, refresh_db):
     """
     test modifying and deleting a software repository defined with multiline values
     """
@@ -236,7 +234,7 @@ def test_which(modules):
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_install_remove(modules, test_pkg):
+def test_install_remove(modules, test_pkg, refresh_db):
     """
     successfully install and uninstall a package
     """
@@ -274,11 +272,10 @@ def test_install_remove(modules, test_pkg):
     "pkg.remove",
     "pkg.list_pkgs",
 )
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
 @pytest.mark.requires_salt_states("pkg.installed")
-def test_hold_unhold(grains, modules, states, test_pkg):
+def test_hold_unhold(grains, modules, states, test_pkg, refresh_db):
     """
     test holding and unholding a package
     """
@@ -322,10 +319,9 @@ def test_hold_unhold(grains, modules, states, test_pkg):
 
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.refresh_db")
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_refresh_db(grains, modules, tmp_path, minion_opts):
+def test_refresh_db(grains, tmp_path, minion_opts, refresh_db):
     """
     test refreshing the package database
     """
@@ -333,7 +329,8 @@ def test_refresh_db(grains, modules, tmp_path, minion_opts):
     salt.utils.pkg.write_rtag(minion_opts)
     assert os.path.isfile(rtag) is True
 
-    ret = modules.pkg.refresh_db()
+    loader = Loaders(minion_opts)
+    ret = loader.modules.pkg.refresh_db()
     if not isinstance(ret, dict):
         pytest.skip("Upstream repo did not return coherent results: {}".format(ret))
 
@@ -350,9 +347,8 @@ def test_refresh_db(grains, modules, tmp_path, minion_opts):
 
 
 @pytest.mark.requires_salt_modules("pkg.info_installed")
-@requires_system_grains
 @pytest.mark.slow_test
-def test_pkg_info(grains, modules, test_pkg):
+def test_pkg_info(grains, modules, test_pkg, refresh_db):
     """
     Test returning useful information on Ubuntu systems.
     """
@@ -386,10 +382,9 @@ def test_pkg_info(grains, modules, test_pkg):
     "pkg.list_repo_pkgs",
     "pkg.list_upgrades",
 )
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
+def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg, refresh_db):
     """
     Test running a system upgrade when there are packages that need upgrading
     """
@@ -466,10 +461,9 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
     " unrunnable",
 )
 @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
-@requires_system_grains
 @pytest.mark.slow_test
 @pytest.mark.requires_salt_states("pkg.removed")
-def test_pkg_latest_version(grains, modules, states, test_pkg):
+def test_pkg_latest_version(grains, modules, states, test_pkg, refresh_db):
     """
     Check that pkg.latest_version returns the latest version of the uninstalled package.
     The package is not installed. Only the package version is checked.
@@ -510,7 +504,6 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.list_repos")
 @pytest.mark.slow_test
-@requires_system_grains
 def test_list_repos_duplicate_entries(preserve_rhel_yum_conf, grains, modules):
     """
     test duplicate entries in /etc/yum.conf

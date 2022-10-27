@@ -1,4 +1,5 @@
 import pytest
+
 import salt.pillar.sql_base as sql_base
 from tests.support.mock import MagicMock
 

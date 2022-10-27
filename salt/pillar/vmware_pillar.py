@@ -149,8 +149,8 @@ import salt.utils.vmware
 
 try:
     # pylint: disable=no-name-in-module
-    from pyVmomi import vim
     from pyVim.connect import Disconnect
+    from pyVmomi import vim
 
     HAS_LIBS = True
     # pylint: enable=no-name-in-module

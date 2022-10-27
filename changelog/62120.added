@@ -1,0 +1,4 @@
+Config option pass_variable_prefix allows to distinguish variables that contain paths to pass secrets.
+Config option pass_strict_fetch allows to error out when a secret cannot be fetched from pass.
+Config option pass_dir allows setting the PASSWORD_STORE_DIR env for pass.
+Config option pass_gnupghome allows setting the $GNUPGHOME env for pass.

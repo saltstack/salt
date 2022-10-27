@@ -4,6 +4,7 @@
 """
 
 import pytest
+
 import salt.states.btrfs as btrfs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError

@@ -9,6 +9,7 @@ import ast
 import pathlib
 
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
+
 from salt.loader import SALT_INTERNAL_LOADERS_PATHS
 from tasks import utils
 

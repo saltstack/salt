@@ -1,7 +1,8 @@
 import pytest
+
 import salt.modules.pillar as pillarmod
 from salt.utils.odict import OrderedDict
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -34,6 +35,16 @@ def test_obfuscate_inner_more_types():
 def test_obfuscate(pillar_value):
     with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
         assert pillarmod.obfuscate() == dict(a="<int>", b="<str>")
+
+
+def test_obfuscate_with_kwargs(pillar_value):
+    with patch(
+        "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
+    ) as pillar_items_mock:
+        ret = pillarmod.obfuscate(saltenv="saltenv")
+        # ensure the kwargs are passed along to pillar.items
+        assert call(saltenv="saltenv") in pillar_items_mock.mock_calls
+        assert ret == dict(a="<int>", b="<str>")
 
 
 def test_ls(pillar_value):
