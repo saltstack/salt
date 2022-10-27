@@ -168,7 +168,7 @@ module they are using.
 Requisites Types
 ----------------
 
-All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`_in <requisites-in>` form:
 
 * :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
 * :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
@@ -185,8 +185,10 @@ Several requisite types have a corresponding :ref:`requisite_any <requisites-any
 * ``onchanges_any``
 * ``onfail_any``
 
-Lastly, onfail has one special ``onfail_all`` form to account for when `AND`
-logic is desired instead of the default `OR` logic of onfail/onfail_any (which
+There is no combined form of :ref:`_any <requisites-any>` and :ref:`_in <requisites-in>` requisites, such as ``require_any_in``!
+
+Lastly, onfail has one special ``onfail_all`` form to account for when ``AND``
+logic is desired instead of the default ``OR`` logic of onfail/onfail_any (which
 are equivalent).
 
 All requisites define specific relationships and always work with the dependency
@@ -797,8 +799,8 @@ from ``all()`` to ``any()``.
       cmd.run:
         - name: /bin/false
 
-In this example `A` will run because at least one of the requirements specified,
-`B` or `C`, will succeed.
+In this example ``A`` will run because at least one of the requirements specified,
+``B`` or ``C``, will succeed.
 
 .. code-block:: yaml
 

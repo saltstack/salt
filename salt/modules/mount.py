@@ -1312,9 +1312,9 @@ def mount(
 
     cmd = "mount "
     if device:
-        cmd += "{} {} {} ".format(args, device, name)
+        cmd += "{} '{}' '{}' ".format(args, device, name)
     else:
-        cmd += "{} ".format(name)
+        cmd += "'{}' ".format(name)
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
@@ -1374,9 +1374,9 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
                 args += " -t {}".format(fstype)
 
         if __grains__["os"] not in ["OpenBSD", "MacOS", "Darwin"] or force_mount:
-            cmd = "mount {} {} {} ".format(args, device, name)
+            cmd = "mount {} '{}' '{}' ".format(args, device, name)
         else:
-            cmd = "mount -u {} {} {} ".format(args, device, name)
+            cmd = "mount -u {} '{}' '{}' ".format(args, device, name)
         out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
         if out["retcode"]:
             return out["stderr"]
@@ -1416,9 +1416,9 @@ def umount(name, device=None, user=None, util="mount"):
         return "{} does not have anything mounted".format(name)
 
     if not device:
-        cmd = "umount {}".format(name)
+        cmd = "umount '{}'".format(name)
     else:
-        cmd = "umount {}".format(device)
+        cmd = "umount '{}'".format(device)
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
@@ -1535,11 +1535,11 @@ def swapon(name, priority=None):
 
     if __grains__["kernel"] == "SunOS":
         if __grains__["virtual"] != "zone":
-            __salt__["cmd.run"]("swap -a {}".format(name), python_shell=False)
+            __salt__["cmd.run"]("swap -a '{}'".format(name), python_shell=False)
         else:
             return False
     else:
-        cmd = "swapon {}".format(name)
+        cmd = "swapon '{}'".format(name)
         if priority and "AIX" not in __grains__["kernel"]:
             cmd += " -p {}".format(priority)
         __salt__["cmd.run"](cmd, python_shell=False)
@@ -1569,13 +1569,13 @@ def swapoff(name):
     if name in on_:
         if __grains__["kernel"] == "SunOS":
             if __grains__["virtual"] != "zone":
-                __salt__["cmd.run"]("swap -a {}".format(name), python_shell=False)
+                __salt__["cmd.run"]("swap -a '{}'".format(name), python_shell=False)
             else:
                 return False
         elif __grains__["os"] != "OpenBSD":
-            __salt__["cmd.run"]("swapoff {}".format(name), python_shell=False)
+            __salt__["cmd.run"]("swapoff '{}'".format(name), python_shell=False)
         else:
-            __salt__["cmd.run"]("swapctl -d {}".format(name), python_shell=False)
+            __salt__["cmd.run"]("swapctl -d '{}'".format(name), python_shell=False)
         on_ = swaps()
         if name in on_:
             return False
