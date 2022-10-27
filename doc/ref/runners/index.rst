@@ -125,4 +125,4 @@ responding to Salt calls could look like this:
         client = salt.client.LocalClient(__opts__["conf_file"])
         minions = client.cmd("*", "test.version", timeout=1)
         for minion in sorted(minions):
-            print minion
+            print(minion)

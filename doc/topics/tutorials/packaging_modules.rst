@@ -25,11 +25,11 @@ function:
     from setuptools import setup, find_packages
 
     setup(
-        name=<NAME>,
-        version=<VERSION>,
-        description=<DESC>,
-        author=<AUTHOR>,
-        author_email=<AUTHOR-EMAIL>,
+        name=THE_NAME,
+        version=THE_VERSION,
+        description=THE_DESCRIPTION,
+        author=THE_AUTHOR_NAME,
+        author_email=THE_AUTHOR_EMAIL,
         url=" ... ",
         packages=find_packages(),
         entry_points="""
@@ -39,7 +39,7 @@ function:
         pillar_dirs = <package>.<loader-module>:pillar_dirs
         returner_dirs = <package>.<loader-module>:returner_dirs
         roster_dirs = <package>.<loader-module>:roster_dirs
-        """
+        """,
     )
 
 
@@ -57,36 +57,36 @@ how `<package>/<loader-module>.py` it should look:
 
 
     def engines_dirs():
-	'''
-	yield one path per parent directory of where engines can be found
-	'''
-	yield os.path.join(PKG_DIR, 'engines_1')
-	yield os.path.join(PKG_DIR, 'engines_2')
+        """
+        yield one path per parent directory of where engines can be found
+        """
+        yield os.path.join(PKG_DIR, "engines_1")
+        yield os.path.join(PKG_DIR, "engines_2")
 
 
     def fileserver_dirs():
-	'''
-	yield one path per parent directory of where fileserver modules can be found
-	'''
-	yield os.path.join(PKG_DIR, 'fileserver')
+        """
+        yield one path per parent directory of where fileserver modules can be found
+        """
+        yield os.path.join(PKG_DIR, "fileserver")
 
 
     def pillar_dirs():
-	'''
-	yield one path per parent directory of where external pillar modules can be found
-	'''
-	yield os.path.join(PKG_DIR, 'pillar')
+        """
+        yield one path per parent directory of where external pillar modules can be found
+        """
+        yield os.path.join(PKG_DIR, "pillar")
 
 
     def returner_dirs():
-	'''
-	yield one path per parent directory of where returner modules can be found
-	'''
-	yield os.path.join(PKG_DIR, 'returners')
+        """
+        yield one path per parent directory of where returner modules can be found
+        """
+        yield os.path.join(PKG_DIR, "returners")
 
 
     def roster_dirs():
-	'''
-	yield one path per parent directory of where roster modules can be found
-	'''
-	yield os.path.join(PKG_DIR, 'roster')
+        """
+        yield one path per parent directory of where roster modules can be found
+        """
+        yield os.path.join(PKG_DIR, "roster")

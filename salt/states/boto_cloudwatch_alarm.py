@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Cloudwatch alarms
 
@@ -53,14 +52,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.data
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -111,15 +104,15 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
     # AWS type transformations
     difference = []
     if alarm_details:
-        for k, v in six.iteritems(attributes):
+        for k, v in attributes.items():
             if k not in alarm_details:
-                difference.append("{0}={1} (new)".format(k, v))
+                difference.append("{}={} (new)".format(k, v))
                 continue
             v = salt.utils.data.decode(v)
             v2 = salt.utils.data.decode(alarm_details[k])
             if v == v2:
                 continue
-            if isinstance(v, six.string_types) and v == v2:
+            if isinstance(v, str) and v == v2:
                 continue
             if isinstance(v, float) and v == float(v2):
                 continue
@@ -127,7 +120,7 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
                 continue
             if isinstance(v, list) and sorted(v) == sorted(v2):
                 continue
-            difference.append("{0}='{1}' was: '{2}'".format(k, v, v2))
+            difference.append("{}='{}' was: '{}'".format(k, v, v2))
     else:
         difference.append("new alarm")
     create_or_update_alarm_args = {
@@ -141,10 +134,10 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
     if alarm_details:  # alarm is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
         if len(difference) == 0:
-            ret["comment"] = "alarm {0} present and matching".format(name)
+            ret["comment"] = "alarm {} present and matching".format(name)
             return ret
         if __opts__["test"]:
-            msg = "alarm {0} is to be created/updated.".format(name)
+            msg = "alarm {} is to be created/updated.".format(name)
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -155,10 +148,10 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["diff"] = difference
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {0} alarm".format(name)
+            ret["comment"] = "Failed to create {} alarm".format(name)
     else:  # alarm is absent. create it.
         if __opts__["test"]:
-            msg = "alarm {0} is to be created/updated.".format(name)
+            msg = "alarm {} is to be created/updated.".format(name)
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -169,7 +162,7 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["new"] = attributes
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {0} alarm".format(name)
+            ret["comment"] = "Failed to create {} alarm".format(name)
     return ret
 
 
@@ -201,7 +194,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
 
     if is_present:
         if __opts__["test"]:
-            ret["comment"] = "alarm {0} is set to be removed.".format(name)
+            ret["comment"] = "alarm {} is set to be removed.".format(name)
             ret["result"] = None
             return ret
         deleted = __salt__["boto_cloudwatch.delete_alarm"](
@@ -212,8 +205,8 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["new"] = None
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {0} alarm.".format(name)
+            ret["comment"] = "Failed to delete {} alarm.".format(name)
     else:
-        ret["comment"] = "{0} does not exist in {1}.".format(name, region)
+        ret["comment"] = "{} does not exist in {}.".format(name, region)
 
     return ret

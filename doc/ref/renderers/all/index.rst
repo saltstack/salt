@@ -4,6 +4,8 @@
 renderer modules
 ================
 
+.. include:: ../../../_incl/jinja_security.rst
+
 .. currentmodule:: salt.renderers
 
 .. autosummary::
@@ -27,7 +29,7 @@ renderer modules
     pydsl
     pyobjects
     stateconf
-    toml
+    tomlmod
     wempy
     yaml
     yamlex

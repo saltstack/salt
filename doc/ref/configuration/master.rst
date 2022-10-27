@@ -14,8 +14,8 @@ of the Salt system each have a respective configuration file. The
     :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at ``/etc/salt/master``
-by default. Atomic included configuration files can be placed in 
-``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will 
+by default. Atomic included configuration files can be placed in
+``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will
 not be included. A notable exception is FreeBSD, where the configuration file is
 located at ``/usr/local/etc/salt``. The available options are as follows:
 
@@ -180,9 +180,14 @@ The path to the master's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/master``
+Default: ``<LIB_STATE_DIR>/pki/master``
 
 The directory to store the pki authentication keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -847,6 +852,39 @@ that does not send executions to minions.
 
     presence_events: False
 
+``detect_remote_minions``
+-------------------------
+
+Default: False
+
+When checking the minions connected to a master, also include the master's
+connections to minions on the port specified in the setting `remote_minions_port`.
+This is particularly useful when checking if the master is connected to any Heist-Salt
+minions. If this setting is set to True, the master will check all connections on port 22
+by default unless a user also configures a different port with the setting
+`remote_minions_port`.
+
+Changing this setting will check the remote minions the master is connected to when using
+presence events, the manage runner, and any other parts of the code that call the
+`connected_ids` method to check the status of connected minions.
+
+.. code-block:: yaml
+
+    detect_remote_minions: True
+
+``remote_minions_port``
+-----------------------
+
+Default: 22
+
+The port to use when checking for remote minions when `detect_remote_minions` is set
+to True.
+
+.. code-block:: yaml
+
+    remote_minions_port: 2222
+
+
 .. conf_master:: ping_on_rotate
 
 ``ping_on_rotate``
@@ -969,6 +1007,23 @@ is set to ``tcp`` by default on Windows.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_master:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_master:: tcp_master_pub_port
 
@@ -1853,7 +1908,7 @@ Default: ``False``
 
 Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. code-block:: yaml
 
@@ -1941,7 +1996,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -2022,7 +2077,7 @@ Each minion connecting to the master uses AT LEAST one file descriptor, the
 master subscription connection. If enough minions connect you might start
 seeing on the console(and then salt-master crashes):
 
-.. code-block:: bash
+.. code-block:: text
 
     Too many open files (tcp_listener.cpp:335)
     Aborted (core dumped)
@@ -2518,6 +2573,48 @@ states is cluttering the logs. Set it to True to ignore them.
 
     state_output_diff: False
 
+.. conf_master:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
+.. conf_master:: state_output_pct
+
+``state_output_pct``
+--------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
+.. conf_master:: state_compress_ids
+
+``state_compress_ids``
+----------------------
+
+Default: ``False``
+
+The ``state_compress_ids`` setting aggregates information about states which
+have multiple "names" under the same state ID in the highstate output.
+
+.. code-block:: yaml
+
+    state_compress_ids: False
+
 .. conf_master:: state_aggregate
 
 ``state_aggregate``
@@ -2525,18 +2622,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
 Default: ``False``
 
-Automatically aggregate all states that have support for mod_aggregate by
-setting to ``True``. Or pass a list of state module names to automatically
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
 aggregate just those types.
 
 .. code-block:: yaml
 
     state_aggregate:
       - pkg
-
-.. code-block:: yaml
-
-    state_aggregate: True
 
 .. conf_master:: state_events
 
@@ -2569,14 +2668,14 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 ``runner_returns``
 ------------------
 
-Default: ``False``
+Default: ``True``
 
-If set to ``True``, runner jobs will be saved to job cache (defined by
+If set to ``False``, runner jobs will not be saved to job cache (defined by
 :conf_master:`master_job_cache`).
 
 .. code-block:: yaml
 
-    runner_returns: True
+    runner_returns: False
 
 
 .. _master-file-server-settings:
@@ -2643,32 +2742,6 @@ Master will not be returned to the Minion.
 .. code-block:: yaml
 
     fileserver_ignoresymlinks: False
-
-.. conf_master:: fileserver_limit_traversal
-
-``fileserver_limit_traversal``
-------------------------------
-
-.. versionadded:: 2014.1.0
-.. deprecated:: 2018.3.4
-   This option is now ignored. Firstly, it only traversed
-   :conf_master:`file_roots`, which means it did not work for the other
-   fileserver backends. Secondly, since this option was added we have added
-   caching to the code that traverses the file_roots (and gitfs, etc.), which
-   greatly reduces the amount of traversal that is done.
-
-Default: ``False``
-
-By default, the Salt fileserver recurses fully into all defined environments
-to attempt to find files. To limit this behavior so that the fileserver only
-traverses directories with SLS files and special Salt directories like _modules,
-set ``fileserver_limit_traversal`` to ``True``. This might be useful for
-installations where a file root has a very large number of files and performance
-is impacted.
-
-.. code-block:: yaml
-
-    fileserver_limit_traversal: False
 
 .. conf_master:: fileserver_list_cache_time
 
@@ -2820,6 +2893,8 @@ roots: Master's Local File Server
 ``file_roots``
 **************
 
+.. versionchanged:: 3005
+
 Default:
 
 .. code-block:: yaml
@@ -2853,6 +2928,30 @@ Example:
         - /srv/salt/prod/states
       __env__:
         - /srv/salt/default
+
+Taking dynamic environments one step further, ``__env__`` can also be used in
+the ``file_roots`` filesystem path as of version 3005. It will be replaced with
+the actual ``saltenv`` and searched for states and data to provide to the
+minion. Note this substitution ONLY occurs for the ``__env__`` environment. For
+instance, this configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      __env__:
+        - /srv/__env__/salt
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      dev:
+        - /srv/dev/salt
+      test:
+        - /srv/test/salt
+      prod:
+        - /srv/prod/salt
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -3959,6 +4058,8 @@ Pillar Configuration
 ``pillar_roots``
 ----------------
 
+.. versionchanged:: 3005
+
 Default:
 
 .. code-block:: yaml
@@ -3984,6 +4085,30 @@ Example:
         - /srv/pillar/prod
       __env__:
         - /srv/pillar/others
+
+Taking dynamic environments one step further, ``__env__`` can also be used in
+the ``pillar_roots`` filesystem path as of version 3005. It will be replaced
+with the actual ``pillarenv`` and searched for Pillar data to provide to the
+minion. Note this substitution ONLY occurs for the ``__env__`` environment. For
+instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/__env__/pillar
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      dev:
+        - /srv/dev/pillar
+      test:
+        - /srv/test/pillar
+      prod:
+        - /srv/prod/pillar
 
 .. conf_master:: on_demand_ext_pillar
 
@@ -4086,6 +4211,32 @@ List of renderers which are permitted to be used for pillar decryption.
     decrypt_pillar_renderers:
       - gpg
       - my_custom_renderer
+
+.. conf_master:: gpg_decrypt_must_succeed
+
+``gpg_decrypt_must_succeed``
+----------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+If this is ``True`` and the ciphertext could not be decrypted, then an error is
+raised.
+
+Sending the ciphertext through basically is *never* desired, for example if a
+state is setting a database password from pillar and gpg rendering fails, then
+the state will update the password to the ciphertext, which by definition is
+not encrypted.
+
+.. warning::
+
+    The value defaults to ``False`` for backwards compatibility.  In the
+    ``Chlorine`` release, this option will default to ``True``.
+
+.. code-block:: yaml
+
+    gpg_decrypt_must_succeed: False
 
 .. conf_master:: pillar_opts
 
@@ -4659,7 +4810,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       foo: 42
       bar: !aggregate {
         element1: True
@@ -4668,7 +4818,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       bar: !aggregate {
         element2: True
       }
@@ -4685,6 +4834,11 @@ strategy between different sources. It accepts 5 values:
       baz:
         - quux
         - quux2
+
+  .. note::
+      This requires that the :ref:`render pipeline <renderers-composing>`
+      defined in the :conf_master:`renderer` master configuration ends in
+      ``yamlex``.
 
 * ``overwrite``:
 

@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+import pytest
 
 import salt.modules.guestfs as guestfs
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -77,12 +75,13 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(guestfs.mount("/srv/images/fedora.qcow"))
             run_mock.assert_called_once_with(
-                "guestmount -i -a /srv/images/fedora.qcow --rw /tmp/guest/fedora.qcowabc",
+                "guestmount -i -a /srv/images/fedora.qcow --rw"
+                " /tmp/guest/fedora.qcowabc",
                 python_shell=False,
             )
             makedirs_mock.assert_called_once()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_umount(self):
         """
         Test the guestfs.unmount function

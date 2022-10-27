@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Venafi
 
@@ -24,11 +23,8 @@ Support for Venafi
       trust_bundle: "/opt/venafi/bundle.pem"
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Salt libs
 import sys
 import time
 
@@ -38,9 +34,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import vcert
@@ -116,7 +109,7 @@ def request(
 
     log.info("Requesting Venafi certificate")
     if zone is None:
-        log.error(msg=str("Missing zone parameter"))
+        log.error("Missing zone parameter")
         sys.exit(1)
 
     if key_password is not None:
@@ -244,7 +237,7 @@ def del_cached_domain(domains):
         salt-run venafi.del_cached_domain domain1.example.com,domain2.example.com
     """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    if isinstance(domains, six.string_types):
+    if isinstance(domains, str):
         domains = domains.split(",")
     if not isinstance(domains, list):
         raise CommandExecutionError(

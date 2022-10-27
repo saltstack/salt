@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """
 Stores eauth tokens in the filesystem of the master. Location is configured by the master config option 'token_dir'
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
@@ -14,7 +11,6 @@ import salt.payload
 import salt.utils.files
 import salt.utils.path
 import salt.utils.verify
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -32,20 +28,19 @@ def mk_token(opts, tdata):
     :returns: tdata with token if successful. Empty dict if failed.
     """
     hash_type = getattr(hashlib, opts.get("hash_type", "md5"))
-    tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
+    tok = str(hash_type(os.urandom(512)).hexdigest())
     t_path = os.path.join(opts["token_dir"], tok)
     temp_t_path = "{}.tmp".format(t_path)
     while os.path.isfile(t_path):
-        tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
+        tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(opts["token_dir"], tok)
     tdata["token"] = tok
-    serial = salt.payload.Serial(opts)
     try:
         with salt.utils.files.set_umask(0o177):
             with salt.utils.files.fopen(temp_t_path, "w+b") as fp_:
-                fp_.write(serial.dumps(tdata))
+                fp_.write(salt.payload.dumps(tdata))
         os.rename(temp_t_path, t_path)
-    except (IOError, OSError):
+    except OSError:
         log.warning('Authentication failure: can not write token file "%s".', t_path)
         return {}
     return tdata
@@ -64,12 +59,11 @@ def get_token(opts, tok):
         return {}
     if not os.path.isfile(t_path):
         return {}
-    serial = salt.payload.Serial(opts)
     try:
         with salt.utils.files.fopen(t_path, "rb") as fp_:
-            tdata = serial.loads(fp_.read())
+            tdata = salt.payload.loads(fp_.read())
             return tdata
-    except (IOError, OSError):
+    except OSError:
         log.warning('Authentication failure: can not read token file "%s".', t_path)
         return {}
 
@@ -86,7 +80,7 @@ def rm_token(opts, tok):
     try:
         os.remove(t_path)
         return {}
-    except (IOError, OSError):
+    except OSError:
         log.warning("Could not remove token %s", tok)
 
 

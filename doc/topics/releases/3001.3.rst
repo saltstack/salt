@@ -1,0 +1,15 @@
+.. _release-3001-3:
+
+=========================
+Salt 3001.3 Release Notes
+=========================
+
+Version 3001.3 is a CVE fix release for :ref:`3001 <release-3001>`.
+
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)

@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
 import salt.utils.azurearm as azurearm
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # Azure libs

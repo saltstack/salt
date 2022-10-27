@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 runit service module
 (http://smarden.org/runit)
@@ -45,19 +44,14 @@ Service's alias:
     XBPS package management uses a service's alias to provides service
     alternative(s), such as chrony and openntpd both aliased to ntpd.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import logging
-
-# Import python libs
 import os
 import time
 
 import salt.utils.files
 import salt.utils.path
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -128,7 +122,7 @@ def start(name):
 
         salt '*' runit.start <service name>
     """
-    cmd = "sv start {0}".format(_service_path(name))
+    cmd = "sv start {}".format(_service_path(name))
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -146,7 +140,7 @@ def stop(name):
 
         salt '*' runit.stop <service name>
     """
-    cmd = "sv stop {0}".format(_service_path(name))
+    cmd = "sv stop {}".format(_service_path(name))
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -164,7 +158,7 @@ def reload_(name):
 
         salt '*' runit.reload <service name>
     """
-    cmd = "sv reload {0}".format(_service_path(name))
+    cmd = "sv reload {}".format(_service_path(name))
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -182,7 +176,7 @@ def restart(name):
 
         salt '*' runit.restart <service name>
     """
-    cmd = "sv restart {0}".format(_service_path(name))
+    cmd = "sv restart {}".format(_service_path(name))
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -232,7 +226,7 @@ def status(name, sig=None):
 
     # sv return code is not relevant to get a service status.
     # Check its output instead.
-    cmd = "sv status {0}".format(svc_path)
+    cmd = "sv status {}".format(svc_path)
     try:
         out = __salt__["cmd.run_stdout"](cmd)
         return out.startswith("run: ")
@@ -353,7 +347,10 @@ def _get_svc_path(name="*", status=None):
     ena = set()
     for el in glob.glob(os.path.join(SERVICE_DIR, name)):
         if _is_svc(el):
-            ena.add(os.readlink(el))
+            if os.path.islink(el):
+                ena.add(os.readlink(el))
+            else:
+                ena.add(el)
             log.trace("found enabled service path: %s", el)
 
     if status == "ENABLED":
@@ -389,7 +386,7 @@ def _get_svc_list(name="*", status=None):
         'DISABLED' : available service that is not enabled
         'ENABLED'  : enabled service (whether started on boot or not)
     """
-    return sorted([os.path.basename(el) for el in _get_svc_path(name, status)])
+    return sorted(os.path.basename(el) for el in _get_svc_path(name, status))
 
 
 def get_svc_alias():
@@ -529,6 +526,8 @@ def show(name):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' service.show <service name>
     """
     ret = {}
@@ -610,17 +609,17 @@ def enable(name, start=False, **kwargs):
                 # pylint: disable=resource-leakage
                 salt.utils.files.fopen(down_file, "w").close()
                 # pylint: enable=resource-leakage
-            except IOError:
-                log.error("Unable to create file {0}".format(down_file))
+            except OSError:
+                log.error("Unable to create file %s", down_file)
                 return False
 
     # enable the service
     try:
         os.symlink(svc_realpath, _service_path(name))
 
-    except IOError:
+    except OSError:
         # (attempt to) remove temp down_file anyway
-        log.error("Unable to create symlink {0}".format(down_file))
+        log.error("Unable to create symlink %s", down_file)
         if not start:
             os.unlink(down_file)
         return False
@@ -629,7 +628,7 @@ def enable(name, start=False, **kwargs):
     # if not, down_file might be removed too quickly,
     # before 'sv' have time to take care about it.
     # Documentation indicates that a change is handled within 5 seconds.
-    cmd = "sv status {0}".format(_service_path(name))
+    cmd = "sv status {}".format(_service_path(name))
     retcode_sv = 1
     count_sv = 0
     while retcode_sv != 0 and count_sv < 10:
@@ -687,7 +686,7 @@ def disable(name, stop=False, **kwargs):
             # pylint: disable=resource-leakage
             salt.utils.files.fopen(down_file, "w").close()
             # pylint: enable=resource-leakage
-        except IOError:
+        except OSError:
             log.error("Unable to create file %s", down_file)
             return False
 
@@ -723,7 +722,7 @@ def remove(name):
         return False
     try:
         os.remove(svc_path)
-    except IOError:
+    except OSError:
         log.error("Unable to remove symlink %s", svc_path)
         return False
     return True

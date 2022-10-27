@@ -12,7 +12,11 @@ Statistics
 - Total Issue References: **23**
 - Total PR References: **80**
 
-- Contributors: **32** (`BenoitKnecht`_, `Ch3LL`_, `DmitryKuzmenko`_, `Enquier`_, `SolarisYan`_, `UtahDave`_, `alexproca`_, `benediktwerner`_, `bobrik`_, `brd`_, `cachedout`_, `clinta`_, `corywright`_, `cro`_, `danlsgiga`_, `drawsmcgraw`_, `ezh`_, `gtmanfred`_, `isbm`_, `jf`_, `jleproust`_, `lorengordon`_, `nevins-b`_, `oeuftete`_, `peter-funktionIT`_, `rallytime`_, `rkgrunt`_, `senthilkumar-e`_, `sjorge`_, `skizunov`_, `terminalmage`_, `twangboy`_)
+- Contributors: **32** (`BenoitKnecht`_, `Ch3LL`_, `DmitryKuzmenko`_, `Enquier`_, `SolarisYan`_,
+  `UtahDave`_, `alexproca`_, `benediktwerner`_, `bobrik`_, `brd`_, `cachedout`_, `clinta`_,
+  `corywright`_, `cro`_, `danlsgiga`_, `drawsmcgraw`_, `ezh`_, `gtmanfred`_, `isbm`_, `jf`_,
+  `jleproust`_, `lorengordon`_, `nevins-b`_, `oeuftete`_, `peter-funktionIT`_, `rallytime`_,
+  `rkgrunt`_, `senthilkumar-e`_, `sjorge`_, `skizunov`_, `terminalmage`_, `twangboy`_)
 
 
 Patched Packages

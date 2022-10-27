@@ -1,6 +1,3 @@
-# encoding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
-
 # pylint: disable=3rd-party-module-not-gated
 import cherrypy
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
@@ -26,7 +23,7 @@ class SynchronizingWebsocket(WebSocket):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SynchronizingWebsocket, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # This pipe needs to represent the parent end of a pipe.
         # Clients need to ensure that the pipe assigned to ``self.pipe`` is

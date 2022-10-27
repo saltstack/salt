@@ -2,18 +2,18 @@ import itertools
 import os
 import re
 
-import salt
 from docutils import nodes
 from docutils.parsers.rst import Directive
 from docutils.statemachine import ViewList
 from sphinx import addnodes
-from sphinx.directives import ObjectDescription
-from sphinx.domains import Domain, ObjType
+from sphinx.domains import ObjType
 from sphinx.domains import python as python_domain
 from sphinx.domains.python import PyObject
 from sphinx.locale import _
 from sphinx.roles import XRefRole
 from sphinx.util.nodes import make_refnode, nested_parse_with_titles, set_source_info
+
+import salt
 
 
 class Event(PyObject):
@@ -53,7 +53,7 @@ class LiterateCoding(Directive):
             comment; False designates code.
         """
         comment_char = "#"  # TODO: move this into a directive option
-        comment = re.compile(r"^\s*{0}[ \n]".format(comment_char))
+        comment = re.compile(r"^\s*{}[ \n]".format(comment_char))
         section_test = lambda val: bool(comment.match(val))
 
         sections = []
@@ -70,7 +70,7 @@ class LiterateCoding(Directive):
     def run(self):
         try:
             lines = self.parse_lit(self.parse_file(self.arguments[0]))
-        except IOError as exc:
+        except OSError as exc:
             document = self.state.document
             return [document.reporter.warning(str(exc), line=self.lineno)]
 
@@ -136,7 +136,7 @@ class LiterateFormula(LiterateCoding):
         formulas_dirs = config.formulas_dirs
         fpath = sls_path.replace(".", "/")
 
-        name_options = ("{0}.sls".format(fpath), os.path.join(fpath, "init.sls"))
+        name_options = ("{}.sls".format(fpath), os.path.join(fpath, "init.sls"))
 
         paths = [
             os.path.join(fdir, fname)
@@ -148,10 +148,10 @@ class LiterateFormula(LiterateCoding):
             try:
                 with open(i, "rb") as f:
                     return f.readlines()
-            except IOError:
+            except OSError:
                 pass
 
-        raise IOError("Could not find sls file '{0}'".format(sls_path))
+        raise OSError("Could not find sls file '{}'".format(sls_path))
 
 
 class CurrentFormula(Directive):
@@ -196,7 +196,7 @@ class Formula(Directive):
         targetnode = nodes.target("", "", ids=["module-" + formname], ismod=True)
         self.state.document.note_explicit_target(targetnode)
 
-        indextext = u"{0}-formula)".format(formname)
+        indextext = "{}-formula)".format(formname)
         inode = addnodes.index(
             entries=[("single", indextext, "module-" + formname, "")]
         )
@@ -221,9 +221,9 @@ class State(Directive):
 
         formula = env.temp_data.get("salt:formula")
 
-        indextext = u"{1} ({0}-formula)".format(formula, statename)
+        indextext = "{1} ({0}-formula)".format(formula, statename)
         inode = addnodes.index(
-            entries=[("single", indextext, "module-{0}".format(statename), ""),]
+            entries=[("single", indextext, "module-{}".format(statename), "")]
         )
 
         return [targetnode, inode]
@@ -245,9 +245,7 @@ class SaltDomain(python_domain.PythonDomain):
     data_version = 2
 
     object_types = python_domain.PythonDomain.object_types
-    object_types.update(
-        {"state": ObjType(_("state"), "state"),}
-    )
+    object_types.update({"state": ObjType(_("state"), "state")})
 
     directives = python_domain.PythonDomain.directives
     directives.update(
@@ -261,14 +259,10 @@ class SaltDomain(python_domain.PythonDomain):
     )
 
     roles = python_domain.PythonDomain.roles
-    roles.update(
-        {"formula": SLSXRefRole(),}
-    )
+    roles.update({"formula": SLSXRefRole()})
 
     initial_data = python_domain.PythonDomain.initial_data
-    initial_data.update(
-        {"formulas": {},}
-    )
+    initial_data.update({"formulas": {}})
 
     indices = [
         SaltModuleIndex,
@@ -280,7 +274,7 @@ class SaltDomain(python_domain.PythonDomain):
             if doc:
                 return make_refnode(builder, fromdocname, doc, target, contnode, target)
         else:
-            super(SaltDomain, self).resolve_xref(
+            super().resolve_xref(
                 env, fromdocname, builder, type, target, node, contnode
             )
 

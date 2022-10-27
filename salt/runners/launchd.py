@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Manage launchd plist files
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import sys
 
@@ -51,7 +48,7 @@ def write_launchd_plist(program):
     supported_programs = ["salt-master", "salt-minion"]
 
     if program not in supported_programs:
-        sys.stderr.write("Supported programs: '{0}'\n".format(supported_programs))
+        sys.stderr.write("Supported programs: '{}'\n".format(supported_programs))
         sys.exit(-1)
 
         return plist_sample_text.format(

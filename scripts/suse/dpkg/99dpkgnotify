@@ -1,0 +1,1 @@
+DPkg::Post-Invoke {"if [ -x /usr/bin/dpkgnotify ]; then /usr/bin/dpkgnotify; fi;";};

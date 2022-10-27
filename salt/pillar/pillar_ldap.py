@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use LDAP data as a Pillar source
 
@@ -122,16 +121,11 @@ Result
     }
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
-# Import third party libs
 import jinja2
 
-# Import salt libs
 import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
@@ -334,13 +328,9 @@ def ext_pillar(
         opts = salt.utils.yaml.safe_load(config_template) or {}
         opts["conf_file"] = config_file
     except Exception as err:  # pylint: disable=broad-except
-        import salt.log
-
-        msg = "pillar_ldap: error parsing configuration file: {0} - {1}"
-        if salt.log.is_console_configured():
-            log.warning(msg.format(config_file, err))
-        else:
-            print(msg.format(config_file, err))
+        log.warning(
+            "pillar_ldap: error parsing configuration file: %s - %s", config_file, err
+        )
         return {}
     else:
         if not isinstance(opts, dict):

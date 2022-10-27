@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Allows you to manage extended attributes on files or directories
 ================================================================
@@ -13,13 +12,12 @@ Install, enable and disable assistive access on macOS minions
             - com.file.attr=test
             - com.apple.quarantine=0x00001111
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = "xattr"
 
 
