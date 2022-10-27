@@ -452,8 +452,7 @@ class VM:
         ssh_connection_timeout_progress = 0
 
         network_interfaces = None
-        if key_name is None:
-            key_name = "github-actions"
+        if os.environ.get("RUNNER_NAME") is not None:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
