@@ -398,7 +398,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
                 )
             except Exception as exc:
                 raise CommandExecutionError(
-                    "Failed to cache {0}: {1}".format(
+                    "Failed to cache {}: {}".format(
                         salt.utils.url.redact_http_basic_auth(kwargs["admin_source"]),
                         exc.__str__(),
                     )
@@ -407,7 +407,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
                 adminfile = __salt__["cp.is_cached"](kwargs["admin_source"], saltenv)
             else:
                 raise CommandExecutionError(
-                    "Failed to download %s",
+                    "Failed to download %s" %
                     salt.utils.url.redact_http_basic_auth(kwargs["admin_source"]),
                 )
         else:
@@ -427,7 +427,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
                 )
             except Exception as exc:
                 raise CommandExecutionError(
-                    "Failed to cache {0}: {1}".format(
+                    "Failed to cache {}: {}".format(
                         salt.utils.url.redact_http_basic_auth(
                             kwargs["response_source"]
                         ),
@@ -441,7 +441,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
                 cmd_prefix = cmd_prefix + ["-r", responsefile]
             else:
                 raise CommandExecutionError(
-                    "Failed to download %s",
+                    "Failed to download %s" %
                     salt.utils.url.redact_http_basic_auth(kwargs["response_source"]),
                 )
 
