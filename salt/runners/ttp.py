@@ -2,7 +2,7 @@
 Template Text Parser runner
 ===========================
 
-.. versionadded:: v3001
+.. versionadded:: 3006
 
 :codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
 :maturity:   new
@@ -158,7 +158,6 @@ Sample template::
     index = "intf_counters_test"
     </output>
 """
-# Import python libs
 import logging
 import sys
 import traceback
@@ -180,6 +179,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = "ttp"
 log = logging.getLogger(__name__)
 client = LocalClient()
+
 
 def __virtual__():
     """

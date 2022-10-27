@@ -2,7 +2,7 @@
 Template Text Parser module
 ===========================
 
-.. versionadded:: v3001
+.. versionadded:: 3006
 
 :codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
 :maturity:   new
@@ -153,10 +153,10 @@ Sample template::
     index = "intf_counters_test"
     </output>
 """
-# Import python libs
 import logging
 import sys
 import traceback
+
 from salt.exceptions import CommandExecutionError
 
 # Import third party modules
@@ -276,7 +276,7 @@ def _get_text_from_run_result(run_results, function_name=None):
 
 def run(*args, **kwargs):
     """
-    .. versionadded:: v3001
+    .. versionadded:: 3006
 
     Function to run TTP Templates retrieving data using SALT execution modules.
 
