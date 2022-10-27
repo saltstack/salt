@@ -3,9 +3,6 @@
 
 Function DownloadFileWithProgress {
 
-    # Code for this function borrowed from http://poshcode.org/2461
-    # Thanks Crazy Dave
-
     # This function downloads the passed file and shows a progress bar
     # It receives two parameters:
     #    $url - the file source
@@ -14,10 +11,10 @@ Function DownloadFileWithProgress {
     param(
         [Parameter(Mandatory=$true)]
         [String] $url,
+
         [Parameter(Mandatory=$false)]
         [String] $localFile = (Join-Path $pwd.Path $url.SubString($url.LastIndexOf('/')))
     )
-
 
     begin {
         Write-Host -ForegroundColor DarkGreen "  download-module.DownloadFileWithProgress  $url"
@@ -30,6 +27,7 @@ Function DownloadFileWithProgress {
             -SourceIdentifier WebClient.DownloadProgressChanged `
             -Action { $Global:DPCEventArgs = $EventArgs }
     }
+
     process {
         Write-Progress -Activity 'Downloading file' -Status $url
         $client.DownloadFileAsync($url, $localFile)
@@ -58,6 +56,5 @@ Function DownloadFileWithProgress {
             Write-Error "Exiting because download missing or zero-length:    $localfile"
             exit 2
         }
-
     }
 }
