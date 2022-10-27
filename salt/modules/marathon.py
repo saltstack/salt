@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module providing a simple management interface to a marathon cluster.
 
@@ -7,12 +6,9 @@ Currently this only works when run through a proxy minion.
 .. versionadded:: 2015.8.2
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.http
 import salt.utils.json
 import salt.utils.platform
@@ -48,7 +44,7 @@ def _app_id(app_id):
     Make sure the app_id is in the correct format.
     """
     if app_id[0] != "/":
-        app_id = "/{0}".format(app_id)
+        app_id = "/{}".format(app_id)
     return app_id
 
 
@@ -63,7 +59,9 @@ def apps():
         salt marathon-minion-id marathon.apps
     """
     response = salt.utils.http.query(
-        "{0}/v2/apps".format(_base_url()), decode_type="json", decode=True,
+        "{}/v2/apps".format(_base_url()),
+        decode_type="json",
+        decode=True,
     )
     return {"apps": [app["id"] for app in response["dict"]["apps"]]}
 
@@ -92,7 +90,9 @@ def app(id):
         salt marathon-minion-id marathon.app my-app
     """
     response = salt.utils.http.query(
-        "{0}/v2/apps/{1}".format(_base_url(), id), decode_type="json", decode=True,
+        "{}/v2/apps/{}".format(_base_url(), id),
+        decode_type="json",
+        decode=True,
     )
     return response["dict"]
 
@@ -116,7 +116,7 @@ def update_app(id, config):
     data = salt.utils.json.dumps(config)
     try:
         response = salt.utils.http.query(
-            "{0}/v2/apps/{1}?force=true".format(_base_url(), id),
+            "{}/v2/apps/{}?force=true".format(_base_url(), id),
             method="PUT",
             decode_type="json",
             decode=True,
@@ -144,7 +144,7 @@ def rm_app(id):
         salt marathon-minion-id marathon.rm_app my-app
     """
     response = salt.utils.http.query(
-        "{0}/v2/apps/{1}".format(_base_url(), id),
+        "{}/v2/apps/{}".format(_base_url(), id),
         method="DELETE",
         decode_type="json",
         decode=True,
@@ -163,7 +163,9 @@ def info():
         salt marathon-minion-id marathon.info
     """
     response = salt.utils.http.query(
-        "{0}/v2/info".format(_base_url()), decode_type="json", decode=True,
+        "{}/v2/info".format(_base_url()),
+        decode_type="json",
+        decode=True,
     )
     return response["dict"]
 
@@ -200,7 +202,7 @@ def restart_app(id, restart=False, force=True):
         return ret
     try:
         response = salt.utils.http.query(
-            "{0}/v2/apps/{1}/restart?force={2}".format(_base_url(), _app_id(id), force),
+            "{}/v2/apps/{}/restart?force={}".format(_base_url(), _app_id(id), force),
             method="POST",
             decode_type="json",
             decode=True,

@@ -181,9 +181,7 @@ password may be passed in as ``username`` and ``password``, respectively.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        "http://example.com", username="larry", password="5700g3543v4r",
-    )
+    salt.utils.http.query("http://example.com", username="larry", password="5700g3543v4r")
 
 Cookies and Sessions
 ````````````````````
@@ -327,9 +325,7 @@ debugging purposes, SSL verification can be turned off.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        "https://example.com", verify_ssl=False,
-    )
+    salt.utils.http.query("https://example.com", verify_ssl=False)
 
 CA Bundles
 ~~~~~~~~~~
@@ -343,9 +339,7 @@ using the ``ca_bundle`` variable.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        "https://example.com", ca_bundle="/path/to/ca_bundle.pem",
-    )
+    salt.utils.http.query("https://example.com", ca_bundle="/path/to/ca_bundle.pem")
 
 Updating CA Bundles
 ```````````````````
@@ -469,8 +463,9 @@ value of match in the return text. In Python terms this looks like:
 
 .. code-block:: python
 
-    if match in html_text:
-        return True
+   def myfunc():
+       if match in html_text:
+           return True
 
 If more complex pattern matching is required, a regular expression can be used
 by specifying a ``match_type``. By default this is set to ``string``, but it

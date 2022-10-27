@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.utils.msgpack
-from salt.ext import six
 
 
 def render(msgpack_data, saltenv="base", sls="", **kws):
@@ -19,7 +14,7 @@ def render(msgpack_data, saltenv="base", sls="", **kws):
 
     :rtype: A Python data structure
     """
-    if not isinstance(msgpack_data, six.string_types):
+    if not isinstance(msgpack_data, str):
         msgpack_data = msgpack_data.read()
 
     if msgpack_data.startswith("#!"):

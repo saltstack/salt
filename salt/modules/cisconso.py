@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for Cisco Network Services Orchestrator Proxy minions
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
-from salt.ext import six
 
 __proxyenabled__ = ["cisconso"]
 __virtualname__ = "cisconso"
@@ -56,7 +53,7 @@ def get_data(datastore, path):
 
         salt cisco-nso cisconso.get_data running 'devices/ex0'
     """
-    if isinstance(path, six.string_types):
+    if isinstance(path, str):
         path = "/".split(path)
     return _proxy_cmd("get_data", datastore, path)
 
@@ -83,7 +80,7 @@ def set_data_value(datastore, path, data):
 
         salt cisco-nso cisconso.set_data_value running 'devices/ex0/routes' 10.0.0.20/24
     """
-    if isinstance(path, six.string_types):
+    if isinstance(path, str):
         path = "/".split(path)
     return _proxy_cmd("set_data_value", datastore, path, data)
 

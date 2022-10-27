@@ -1,0 +1,1 @@
+Fixed salt-cloud cloning a proxmox VM with a specified new vmid.

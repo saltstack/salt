@@ -1,0 +1,1 @@
+Fix unnecessarily complex gce metadata grains code to use googles metadata service more effectively.

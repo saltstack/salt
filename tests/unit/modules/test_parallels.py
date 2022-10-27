@@ -1,18 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import
-
 import textwrap
 
-# Import Salt Libs
 import salt.modules.parallels as parallels
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -37,10 +26,13 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             """
             self.assertTrue(isinstance(ret, list))
             for arg in ret:
-                self.assertTrue(isinstance(arg, six.string_types))
+                self.assertTrue(isinstance(arg, str))
 
         # Validate string arguments
-        str_args = "electrolytes --aqueous --anion hydroxide --cation=ammonium free radicals -- hydrogen"
+        str_args = (
+            "electrolytes --aqueous --anion hydroxide --cation=ammonium free radicals"
+            " -- hydrogen"
+        )
         _validate_ret(parallels._normalize_args(str_args))
 
         # Validate list arguments
@@ -237,12 +229,12 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         runas = "macdev"
 
         # Validate exists
-        mock_list = MagicMock(return_value="Name: {0}\nState: running".format(name))
+        mock_list = MagicMock(return_value="Name: {}\nState: running".format(name))
         with patch.object(parallels, "list_vms", mock_list):
             self.assertTrue(parallels.exists(name, runas=runas))
 
         # Validate not exists
-        mock_list = MagicMock(return_value="Name: {0}\nState: running".format(name))
+        mock_list = MagicMock(return_value="Name: {}\nState: running".format(name))
         with patch.object(parallels, "list_vms", mock_list):
             self.assertFalse(parallels.exists("winvm", runas=runas))
 
@@ -410,30 +402,30 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
 
         # Validate singly-valued name
         with patch.object(parallels, "prlctl", mock_guids):
-            mock_one_name = MagicMock(side_effect=[u"", u"ν_e"])
+            mock_one_name = MagicMock(side_effect=["", "ν_e"])
             with patch.object(parallels, "snapshot_id_to_name", mock_one_name):
                 self.assertEqual(
-                    parallels.snapshot_name_to_id(name, u"ν_e"), snap_ids[1]
+                    parallels.snapshot_name_to_id(name, "ν_e"), snap_ids[1]
                 )
 
         # Validate multiply-valued name
         with patch.object(parallels, "prlctl", mock_guids):
-            mock_many_names = MagicMock(side_effect=[u"J/Ψ", u"J/Ψ"])
+            mock_many_names = MagicMock(side_effect=["J/Ψ", "J/Ψ"])
             with patch.object(parallels, "snapshot_id_to_name", mock_many_names):
                 self.assertEqual(
-                    sorted(parallels.snapshot_name_to_id(name, u"J/Ψ")),
+                    sorted(parallels.snapshot_name_to_id(name, "J/Ψ")),
                     sorted(snap_ids),
                 )
 
         # Raise error for multiply-valued name
         with patch.object(parallels, "prlctl", mock_guids):
-            mock_many_names = MagicMock(side_effect=[u"J/Ψ", u"J/Ψ"])
+            mock_many_names = MagicMock(side_effect=["J/Ψ", "J/Ψ"])
             with patch.object(parallels, "snapshot_id_to_name", mock_many_names):
                 self.assertRaises(
                     SaltInvocationError,
                     parallels.snapshot_name_to_id,
                     name,
-                    u"J/Ψ",
+                    "J/Ψ",
                     strict=True,
                 )
 
@@ -450,8 +442,8 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate an unicode name
         mock_snap_symb = MagicMock(return_value=snap_id)
         with patch.object(parallels, "snapshot_name_to_id", mock_snap_symb):
-            self.assertEqual(parallels._validate_snap_name(name, u"π"), snap_id)
-            mock_snap_symb.assert_called_once_with(name, u"π", strict=True, runas=None)
+            self.assertEqual(parallels._validate_snap_name(name, "π"), snap_id)
+            mock_snap_symb.assert_called_once_with(name, "π", strict=True, runas=None)
 
         # Validate an ascii name
         mock_snap_name = MagicMock(return_value=snap_id)
@@ -466,17 +458,17 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(parallels, "snapshot_name_to_id", mock_snap_numb):
             self.assertEqual(parallels._validate_snap_name(name, "3.14159"), snap_id)
             mock_snap_numb.assert_called_once_with(
-                name, u"3.14159", strict=True, runas=None
+                name, "3.14159", strict=True, runas=None
             )
 
         # Validate not strict (think neutrino oscillation)
         mock_snap_non_strict = MagicMock(return_value=snap_id)
         with patch.object(parallels, "snapshot_name_to_id", mock_snap_non_strict):
             self.assertEqual(
-                parallels._validate_snap_name(name, u"e_ν", strict=False), snap_id
+                parallels._validate_snap_name(name, "e_ν", strict=False), snap_id
             )
             mock_snap_non_strict.assert_called_once_with(
-                name, u"e_ν", strict=False, runas=None
+                name, "e_ν", strict=False, runas=None
             )
 
     def test_list_snapshots(self):
@@ -553,7 +545,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate creating a snapshot with a name and a description
         snap_name = "h_0"
         snap_desc = textwrap.dedent(
-            "The ground state particle of the higgs " "multiplet family of bosons"
+            "The ground state particle of the higgs multiplet family of bosons"
         )
         mock_snap_name = MagicMock(return_value="")
         with patch.object(parallels, "prlctl", mock_snap_name):
@@ -569,7 +561,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         Test parallels.delete_snapshot
         """
         delete_message = (
-            "Delete the snapshot...\n" "The snapshot has been successfully deleted."
+            "Delete the snapshot...\nThe snapshot has been successfully deleted."
         )
 
         # Validate single ID

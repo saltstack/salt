@@ -122,7 +122,7 @@ Note how the module encapsulates all of the logic around finding the storage ser
             ]
 
         colo = __pillar__.get("inventory", {}).get("colo", "Unknown")
-        return __pillar__.get("storage_servers", {}).get(colo, ["unknown",])
+        return __pillar__.get("storage_servers", {}).get(colo, ["unknown"])
 
 
     def ip():

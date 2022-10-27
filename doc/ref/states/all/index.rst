@@ -77,6 +77,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     cryptdev
     csf
@@ -109,7 +110,6 @@ state modules
     gem
     git
     github
-    glance
     glance_image
     glassfish
     glusterfs
@@ -277,6 +277,7 @@ state modules
     rdp
     redismod
     reg
+    restconf
     rsync
     rvm
     salt_proxy
@@ -302,6 +303,7 @@ state modules
     supervisord
     svn
     sysctl
+    sysfs
     syslog_ng
     sysrc
     telemetry_alert
@@ -328,12 +330,14 @@ state modules
     win_firewall
     win_iis
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_path
     win_pki
     win_powercfg
     win_servermanager
+    win_shortcut
     win_smtp_server
     win_snmp
     win_system

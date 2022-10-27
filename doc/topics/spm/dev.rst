@@ -41,9 +41,10 @@ connection object, then that connection object is returned. For instance, the
 
 .. code-block:: python
 
-    conn = sqlite3.connect(__opts__["spm_db"], isolation_level=None)
-    ...
-    return conn
+   def myfunc():
+       conn = sqlite3.connect(__opts__["spm_db"], isolation_level=None)
+       ...
+       return conn
 
 SPM itself will not use this connection object; it will be passed in as-is to
 the other functions in the module. Therefore, when you set up this object, make

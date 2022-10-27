@@ -19,11 +19,13 @@ Two Kinds of Renderers
 ----------------------
 
 Renderers fall into one of two categories, based on what they output: text or
-data. The one exception to this would be the :mod:`pure python
-<salt.renderers.py>` renderer, which can be used in either capacity.
+data. Some exceptions to this would be the :mod:`pure python
+<salt.renderers.py>` and :mod:`gpg <salt.renderers.gpg>` renderers which could be used in either capacity.
 
 Text Renderers
 **************
+
+.. include:: ../../_incl/jinja_security.rst
 
 A text renderer returns text. These include templating engines such as
 :mod:`jinja <salt.renderers.jinja>`, :mod:`mako <salt.renderers.mako>`, and
@@ -57,7 +59,7 @@ following are all data renderers:
 - :mod:`stateconf <salt.renderers.stateconf>`
 - :mod:`yamlex <salt.renderers.yamlex>`
 - :mod:`yaml <salt.renderers.yaml>`
-
+- :mod:`gpg <salt.renderers.gpg>`
 
 Overriding the Default Renderer
 -------------------------------
@@ -80,7 +82,7 @@ to install a package:
         """
         return {
             "include": ["python"],
-            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"},]},
+            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"}]},
         }
 
 This would be equivalent to the following:

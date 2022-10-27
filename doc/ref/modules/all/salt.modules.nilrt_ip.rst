@@ -1,5 +1,5 @@
-salt.modules.nilrt_ip module
-============================
+salt.modules.nilrt_ip
+=====================
 
 .. automodule:: salt.modules.nilrt_ip
     :members:

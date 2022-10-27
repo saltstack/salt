@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """
 Test generic roster matching utility.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.config
 import salt.loader
 import salt.utils.roster_matcher
-
-# Import Salt Testing Libs
 from tests.support import mixins
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf

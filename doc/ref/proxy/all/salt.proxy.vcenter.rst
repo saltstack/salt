@@ -1,5 +1,5 @@
-salt.proxy.vcenter module
-=========================
+salt.proxy.vcenter
+==================
 
 .. automodule:: salt.proxy.vcenter
     :members:

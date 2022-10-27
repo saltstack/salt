@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
+
 import salt.modules.kubeadm as kubeadm
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -226,6 +221,18 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(kubeadm.__salt__, salt_mock):
             with pytest.raises(CommandExecutionError):
                 assert kubeadm.token_generate()
+
+    def test_token_empty(self):
+        """
+        Test kuebadm.token_list when no outout
+        """
+        result = {"retcode": 0, "stdout": ""}
+        salt_mock = {
+            "cmd.run_all": MagicMock(return_value=result),
+        }
+        with patch.dict(kubeadm.__salt__, salt_mock):
+            assert kubeadm.token_list() == []
+            salt_mock["cmd.run_all"].assert_called_with(["kubeadm", "token", "list"])
 
     def test_token_list(self):
         """
@@ -676,8 +683,7 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = {
             "retcode": 0,
-            "stdout": "[config/images] Pulled image1\n"
-            "[config/images] Pulled image2\n",
+            "stdout": "[config/images] Pulled image1\n[config/images] Pulled image2\n",
         }
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),
@@ -694,8 +700,7 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = {
             "retcode": 0,
-            "stdout": "[config/images] Pulled image1\n"
-            "[config/images] Pulled image2\n",
+            "stdout": "[config/images] Pulled image1\n[config/images] Pulled image2\n",
         }
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),

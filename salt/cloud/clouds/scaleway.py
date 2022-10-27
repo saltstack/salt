@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scaleway Cloud Module
 =====================
@@ -22,9 +21,6 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import pprint
@@ -40,10 +36,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-
-# Import Salt Libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -61,17 +53,22 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
-    """ Return the first configured instance.
-    """
+    """Return the first configured instance."""
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("token",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
 
 
 def avail_images(call=None):
-    """ Return a list of the images that are on the provider.
-    """
+    """Return a list of the images that are on the provider."""
     if call == "action":
         raise SaltCloudSystemExit(
             "The avail_images function must be called with "
@@ -83,14 +80,13 @@ def avail_images(call=None):
     for image in items["images"]:
         ret[image["id"]] = {}
         for item in image:
-            ret[image["id"]][item] = six.text_type(image[item])
+            ret[image["id"]][item] = str(image[item])
 
     return ret
 
 
 def list_nodes(call=None):
-    """ Return a list of the BareMetal servers that are on the provider.
-    """
+    """Return a list of the BareMetal servers that are on the provider."""
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_nodes function must be called with -f or --function."
@@ -125,8 +121,7 @@ def list_nodes(call=None):
 
 
 def list_nodes_full(call=None):
-    """ Return a list of the BareMetal servers that are on the provider.
-    """
+    """Return a list of the BareMetal servers that are on the provider."""
     if call == "action":
         raise SaltCloudSystemExit(
             "list_nodes_full must be called with -f or --function"
@@ -145,32 +140,32 @@ def list_nodes_full(call=None):
 
 
 def list_nodes_select(call=None):
-    """ Return a list of the BareMetal servers that are on the provider, with
+    """Return a list of the BareMetal servers that are on the provider, with
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
 def get_image(server_):
-    """ Return the image object to use.
-    """
+    """Return the image object to use."""
     images = avail_images()
-    server_image = six.text_type(
+    server_image = str(
         config.get_cloud_config_value("image", server_, __opts__, search_global=False)
     )
     for image in images:
         if server_image in (images[image]["name"], images[image]["id"]):
             return images[image]["id"]
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(server_image)
+        "The specified image, '{}', could not be found.".format(server_image)
     )
 
 
 def create_node(args):
-    """ Create a node.
-    """
+    """Create a node."""
     node = query(method="servers", args=args, http_method="POST")
 
     action = query(
@@ -193,7 +188,7 @@ def create(server_):
             server_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "scaleway",
+                _get_active_provider_name() or "scaleway",
                 server_["profile"],
                 vm_=server_,
             )
@@ -206,7 +201,7 @@ def create(server_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(server_["name"]),
+        "salt/cloud/{}/creating".format(server_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", server_, ["name", "profile", "provider", "driver"]
         ),
@@ -230,7 +225,7 @@ def create(server_):
 
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{0}' does not exist".format(key_filename)
+            "The defined key_filename '{}' does not exist".format(key_filename)
         )
 
     ssh_password = config.get_cloud_config_value("ssh_password", server_, __opts__)
@@ -245,7 +240,7 @@ def create(server_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(server_["name"]),
+        "salt/cloud/{}/requesting".format(server_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -270,8 +265,7 @@ def create(server_):
         return False
 
     def __query_node_data(server_name):
-        """ Called to check if the server has a public IP address.
-        """
+        """Called to check if the server has a public IP address."""
         data = show_instance(server_name, "action")
         if data and data.get("public_ip"):
             return data
@@ -295,7 +289,7 @@ def create(server_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     server_["ssh_host"] = data["public_ip"]["address"]
     server_["ssh_password"] = ssh_password
@@ -314,7 +308,7 @@ def create(server_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(server_["name"]),
+        "salt/cloud/{}/created".format(server_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", server_, ["name", "profile", "provider", "driver"]
         ),
@@ -333,8 +327,7 @@ def query(
     http_method="GET",
     root="api_root",
 ):
-    """ Make a call to the Scaleway API.
-    """
+    """Make a call to the Scaleway API."""
 
     if root == "api_root":
         default_url = "https://cp-par1.scaleway.com"
@@ -343,16 +336,20 @@ def query(
 
     vm_ = get_configured_provider()
 
-    base_path = six.text_type(
+    base_path = str(
         config.get_cloud_config_value(
-            root, vm_, __opts__, search_global=False, default=default_url,
+            root,
+            vm_,
+            __opts__,
+            search_global=False,
+            default=default_url,
         )
     )
 
-    path = "{0}/{1}/".format(base_path, method)
+    path = "{}/{}/".format(base_path, method)
 
     if server_id:
-        path += "{0}/".format(server_id)
+        path += "{}/".format(server_id)
 
     if command:
         path += command
@@ -376,8 +373,8 @@ def query(
     )
     if request.status_code > 299:
         raise SaltCloudSystemExit(
-            "An error occurred while querying Scaleway. HTTP Code: {0}  "
-            "Error: '{1}'".format(request.status_code, request.text)
+            "An error occurred while querying Scaleway. HTTP Code: {}  "
+            "Error: '{}'".format(request.status_code, request.text)
         )
 
     # success without data
@@ -388,8 +385,7 @@ def query(
 
 
 def script(server_):
-    """ Return the script deployment object.
-    """
+    """Return the script deployment object."""
     return salt.utils.cloud.os_script(
         config.get_cloud_config_value("script", server_, __opts__),
         server_,
@@ -401,14 +397,13 @@ def script(server_):
 
 
 def show_instance(name, call=None):
-    """ Show the details from a Scaleway BareMetal server.
-    """
+    """Show the details from a Scaleway BareMetal server."""
     if call != "action":
         raise SaltCloudSystemExit(
             "The show_instance action must be called with -a or --action."
         )
     node = _get_node(name)
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -418,7 +413,7 @@ def _get_node(name):
             return list_nodes_full()[name]
         except KeyError:
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempt,
             )
@@ -428,22 +423,23 @@ def _get_node(name):
 
 
 def destroy(name, call=None):
-    """ Destroy a node. Will check termination protection and warn if enabled.
+    """Destroy a node. Will check termination protection and warn if enabled.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud --destroy mymachine
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -461,7 +457,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -469,7 +465,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return node

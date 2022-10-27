@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Support for modifying make.conf under Gentoo
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 
@@ -19,7 +15,8 @@ def __virtual__():
         return "makeconf"
     return (
         False,
-        "The makeconf execution module cannot be loaded: only available on Gentoo systems.",
+        "The makeconf execution module cannot be loaded: only available on Gentoo"
+        " systems.",
     )
 
 
@@ -45,13 +42,13 @@ def _add_var(var, value):
     """
     makeconf = _get_makeconf()
     layman = "source /var/lib/layman/make.conf"
-    fullvar = '{0}="{1}"'.format(var, value)
+    fullvar = '{}="{}"'.format(var, value)
     if __salt__["file.contains"](makeconf, layman):
         # TODO perhaps make this a function in the file module?
         cmd = [
             "sed",
             "-i",
-            r"/{0}/ i\{1}".format(layman.replace("/", "\\/"), fullvar),
+            r"/{}/ i\{}".format(layman.replace("/", "\\/"), fullvar),
             makeconf,
         ]
         __salt__["cmd.run"](cmd)
@@ -81,7 +78,7 @@ def set_var(var, value):
     # If var already in file, replace its value
     if old_value is not None:
         __salt__["file.sed"](
-            makeconf, "^{0}=.*".format(var), '{0}="{1}"'.format(var, value)
+            makeconf, "^{}=.*".format(var), '{}="{}"'.format(var, value)
         )
     else:
         _add_var(var, value)
@@ -111,7 +108,7 @@ def remove_var(var):
 
     # If var is in file
     if old_value is not None:
-        __salt__["file.sed"](makeconf, "^{0}=.*".format(var), "")
+        __salt__["file.sed"](makeconf, "^{}=.*".format(var), "")
 
     new_value = get_var(var)
     return {var: {"old": old_value, "new": new_value}}
@@ -138,9 +135,9 @@ def append_var(var, value):
 
     # If var already in file, add to its value
     if old_value is not None:
-        appended_value = "{0} {1}".format(old_value, value)
+        appended_value = "{} {}".format(old_value, value)
         __salt__["file.sed"](
-            makeconf, "^{0}=.*".format(var), '{0}="{1}"'.format(var, appended_value)
+            makeconf, "^{}=.*".format(var), '{}="{}"'.format(var, appended_value)
         )
     else:
         _add_var(var, value)

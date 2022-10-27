@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State modules to interact with Junos devices.
 ==============================================
@@ -13,8 +12,6 @@ State modules to interact with Junos devices.
 
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from functools import wraps
@@ -98,7 +95,7 @@ def set_hostname(name, **kwargs):
 
     Parameters:
      Required
-        * hostname: The name to be set. (default = None)
+        * name: The name to be set. (default = None)
      Optional
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
@@ -161,7 +158,7 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id, **kwargs):
+def rollback(name, d_id, **kwargs):
     """
     Rollbacks the committed changes.
 
@@ -174,7 +171,11 @@ def rollback(name, id, **kwargs):
     Parameters:
       Optional
         * id:
+        * d_id:
           The rollback id value [0-49]. (default = 0)
+          (this variable cannot be named `id`, it conflicts
+          with the state compiler's internal id)
+
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
@@ -190,7 +191,7 @@ def rollback(name, id, **kwargs):
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.rollback"](id=id, **kwargs)
+    ret["changes"] = __salt__["junos.rollback"](d_id=d_id, **kwargs)
     return ret
 
 
@@ -237,7 +238,7 @@ def cli(name, **kwargs):
     Parameters:
       Required
         * name:
-          The command that need to be executed on Junos CLI.
+          The command that need to be executed on Junos CLI. (default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
             * format:
@@ -385,7 +386,7 @@ def install_os(name, **kwargs):
 
     Parameters:
       Required
-        * path:
+        * name:
           Path where the image file is present on the pro\
           xy minion.
       Optional
@@ -418,7 +419,7 @@ def file_copy(name, dest=None, **kwargs):
 
     Parameters:
       Required
-        * src:
+        * name:
           The sorce path where the file is kept.
         * dest:
           The destination path where the file will be copied.
