@@ -76,13 +76,15 @@ vm.add_argument("--region", help="The AWS region.", default="eu-central-1")
 def create(
     ctx: Context,
     name: str,
-    key_name: str = None,
+    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
     instance_type: str = None,
     destroy_on_failure: bool = False,
 ):
     """
     Create VM.
     """
+    if key_name is None:
+        ctx.exit(1, "We need a key name to spin a VM")
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
     created = vm.create(key_name=key_name, instance_type=instance_type)
     if created is not True and destroy_on_failure:
