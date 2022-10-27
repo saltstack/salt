@@ -11,6 +11,7 @@ import pytest
 import salt.modules.seed as seed
 import salt.utils.files
 import salt.utils.odict
+import salt.utils.yaml
 from tests.support.mock import MagicMock, patch
 
 
@@ -28,7 +29,7 @@ def test_mkconfig_odict():
         data = seed.mkconfig(ddd, approve_key=False)
         with salt.utils.files.fopen(data["config"]) as fic:
             fdata = fic.read()
-            assert fdata == "b: b\na: b\nmaster: foo\n"
+            assert fdata == salt.utils.yaml.safe_dump(ddd, default_flow_style=False)
 
 
 def test_prep_bootstrap():
