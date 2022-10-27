@@ -6,7 +6,7 @@
 #
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
     # via -r requirements/static/pkg/linux.in
-certifi==2021.5.30
+certifi==2022.5.18.1
     # via requests
 cffi==1.14.6
     # via cryptography
@@ -43,6 +43,8 @@ jaraco.text==3.5.1
     # via jaraco.collections
 jinja2==3.0.3
     # via -r requirements/base.txt
+jmespath==0.10.0
+    # via -r requirements/base.txt
 markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
@@ -67,9 +69,9 @@ pyopenssl==19.1.0
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-pytz==2021.1
+pytz==2022.1
     # via tempora
 pyyaml==5.4.1
     # via -r requirements/base.txt

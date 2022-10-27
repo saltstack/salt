@@ -598,7 +598,7 @@ Avoid heavy logic and programming
 `````````````````````````````````
 
 Jinja is not Python. It was made by Python programmers and shares many
-semantics and some syntax but it does not allow for abitrary Python function
+semantics and some syntax but it does not allow for arbitrary Python function
 calls or Python imports. Jinja is a fast and efficient templating language but
 the syntax can be verbose and visually noisy.
 

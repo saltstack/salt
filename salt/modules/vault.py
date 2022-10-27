@@ -163,6 +163,14 @@ Functions to interact with Hashicorp Vault.
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.
 
+    config_location
+        Where to get the connection details for calling vault. By default,
+        vault will try to determine if it needs to request the connection
+        details from the master or from the local config. This optional option
+        will force vault to use the connection details from the master or the
+        local config. Can only be either ``master`` or ``local``.
+
+          .. versionadded:: 3006
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:
@@ -178,12 +186,13 @@ Functions to interact with Hashicorp Vault.
 import logging
 import os
 
+from salt.defaults import NOT_SET
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False, default=None):
+def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -211,7 +220,7 @@ def read_secret(path, key=None, metadata=False, default=None):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     """
-    if default is None:
+    if default == NOT_SET:
         default = CommandExecutionError
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
@@ -358,7 +367,7 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path, default=None):
+def list_secrets(path, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -374,7 +383,7 @@ def list_secrets(path, default=None):
 
             salt '*' vault.list_secrets "secret/my/"
     """
-    if default is None:
+    if default == NOT_SET:
         default = CommandExecutionError
     log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
     version2 = __utils__["vault.is_v2"](path)

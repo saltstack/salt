@@ -150,12 +150,16 @@ def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs)
 
         salt-run state.orchestrate_single fun=salt.wheel name=key.list_all
     """
-    if pillar is not None and not isinstance(pillar, dict):
-        raise SaltInvocationError("Pillar data must be formatted as a dictionary")
+    if pillar is not None:
+        if isinstance(pillar, dict):
+            kwargs["pillar"] = pillar
+        else:
+            raise SaltInvocationError("Pillar data must be formatted as a dictionary")
+
     __opts__["file_client"] = "local"
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions["state.single"](
-        fun, name, test=None, queue=False, pillar=pillar, **kwargs
+        fun, name, test=None, queue=False, **kwargs
     )
     ret = {minion.opts["id"]: running}
     __jid_event__.fire_event({"data": ret, "outputter": "highstate"}, "progress")

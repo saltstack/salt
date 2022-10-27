@@ -26,8 +26,8 @@ def test_minion_hangs_on_master_failure_50814(
         ret = mm_master_2_salt_cli.run(
             "event.send", event_tag, minion_tgt=salt_mm_minion_1.id
         )
-        assert ret.exitcode == 0
-        assert ret.json is True
+        assert ret.returncode == 0
+        assert ret.data is True
         # Let's make sure we get the event back
         expected_patterns = [
             (salt_mm_master_1.id, event_tag),
@@ -48,8 +48,10 @@ def test_minion_hangs_on_master_failure_50814(
     def wait_for_minion(salt_cli, tgt, timeout=30):
         start = time.time()
         while True:
-            ret = salt_cli.run("test.ping", "--timeout=5", minion_tgt=tgt)
-            if ret.exitcode == 0 and ret.json is True:
+            ret = salt_cli.run(
+                "test.ping", "--timeout=5", minion_tgt=tgt, _timeout=timeout
+            )
+            if ret.returncode == 0 and ret.data is True:
                 break
             if time.time() - start > timeout:
                 raise TimeoutError("Minion failed to respond top ping after timeout")
@@ -71,8 +73,8 @@ def test_minion_hangs_on_master_failure_50814(
             ret = mm_master_2_salt_cli.run(
                 "event.send", event_tag, minion_tgt=salt_mm_minion_1.id
             )
-            assert ret.exitcode == 0
-            assert ret.json is True
+            assert ret.returncode == 0
+            assert ret.data is True
 
             # Let's make sure we get the event back
             expected_patterns = [

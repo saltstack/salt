@@ -1,6 +1,8 @@
 """
 Module for managing the Salt schedule on a minion
 
+Requires that python-dateutil is installed on the minion.
+
 .. versionadded:: 2014.7.0
 
 """
@@ -11,11 +13,12 @@ import datetime
 import logging
 import os
 
+import yaml
+
 import salt.utils.event
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.yaml
-import yaml
 
 try:
     import dateutil.parser as dateutil_parser
@@ -85,6 +88,9 @@ def _get_schedule_config_file():
         ),
     )
 
+    if not os.path.isdir(config_dir):
+        os.makedirs(config_dir)
+
     if not os.path.isdir(minion_d_dir):
         os.makedirs(minion_d_dir)
 
@@ -111,8 +117,8 @@ def list_(
 
     """
 
-    schedule = {}
-    if offline:
+    def _get_saved():
+        schedule = {}
         schedule_config = _get_schedule_config_file()
         if os.path.exists(schedule_config):
             with salt.utils.files.fopen(schedule_config) as fp_:
@@ -120,6 +126,12 @@ def list_(
                 if schedule_yaml:
                     schedule_contents = yaml.safe_load(schedule_yaml)
                     schedule = schedule_contents.get("schedule", {})
+        return schedule
+
+    schedule = {}
+    if offline:
+        schedule = _get_saved()
+        saved_schedule = pycopy.deepcopy(schedule)
     else:
         try:
             with salt.utils.event.get_event("minion", opts=__opts__) as event_bus:
@@ -139,6 +151,8 @@ def list_(
             ret["result"] = True
             log.debug("Event module not available. Schedule list failed.")
             return ret
+
+        saved_schedule = _get_saved()
 
     _hidden = ["enabled", "skip_function", "skip_during_range"]
     for job in list(schedule.keys()):  # iterate over a copy since we will mutate it
@@ -178,6 +192,14 @@ def list_(
             del schedule[job]["_seconds"]
 
     if return_yaml:
+        # Indicate whether the scheduled job is saved
+        # to the minion configuration.
+        for item in schedule:
+            if isinstance(schedule[item], dict):
+                if item in saved_schedule:
+                    schedule[item]["saved"] = True
+                else:
+                    schedule[item]["saved"] = False
         tmp = {"schedule": schedule}
         return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:

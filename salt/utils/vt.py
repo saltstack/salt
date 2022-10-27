@@ -14,7 +14,7 @@
     get us into.
 
     .. __: http://code.activestate.com/recipes/440554/
-    .. __: https://github.com/python-mirror/python/blob/3.3/Lib/pty.py
+    .. __: https://github.com/python/cpython/blob/3.3/Lib/pty.py
     .. __: https://github.com/pexpect/pexpect
 
 """
@@ -32,23 +32,24 @@ import time
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.stringutils
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 mswindows = sys.platform == "win32"
 
 try:
     # pylint: disable=F0401,W0611
-    from win32file import ReadFile, WriteFile
-    from win32pipe import PeekNamedPipe
     import msvcrt
+
     import win32api
     import win32con
     import win32process
+    from win32file import ReadFile, WriteFile
+    from win32pipe import PeekNamedPipe
 
     # pylint: enable=F0401,W0611
 except ImportError:
-    import pty
     import fcntl
+    import pty
     import struct
     import termios
 
@@ -117,6 +118,7 @@ class Terminal:
         log_stdout_level="debug",
         log_stderr=None,
         log_stderr_level="debug",
+        log_sanitize=None,
         # sys.stdXYZ streaming options
         stream_stdout=None,
         stream_stderr=None,
@@ -221,7 +223,16 @@ class Terminal:
             self.child_fd,
             self.child_fde,
         )
+        if log_sanitize:
+            if not isinstance(log_sanitize, str):
+                raise RuntimeError("'log_sanitize' needs to be a str type")
+            self.log_sanitize = log_sanitize
+        else:
+            self.log_sanitize = None
+
         terminal_command = " ".join(self.args)
+        if self.log_sanitize:
+            terminal_command = terminal_command.replace(self.log_sanitize, ("*" * 6))
         if (
             'decode("base64")' in terminal_command
             or "base64.b64decode(" in terminal_command
@@ -579,6 +590,10 @@ class Terminal:
 
                         if self.stderr_logger:
                             stripped = stderr.rstrip()
+                            if self.log_sanitize:
+                                stripped = stripped.replace(
+                                    self.log_sanitize, ("*" * 6)
+                                )
                             if stripped.startswith(os.linesep):
                                 stripped = stripped[len(os.linesep) :]
                             if stripped:
@@ -612,6 +627,10 @@ class Terminal:
 
                         if self.stdout_logger:
                             stripped = stdout.rstrip()
+                            if self.log_sanitize:
+                                stripped = stripped.replace(
+                                    self.log_sanitize, ("*" * 6)
+                                )
                             if stripped.startswith(os.linesep):
                                 stripped = stripped[len(os.linesep) :]
                             if stripped:

@@ -62,14 +62,22 @@ def __virtual__():
             " grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
     return (
         False,
         "The rpm execution module failed to load: only available on redhat/suse type"
-        " systems or amazon, xcp or xenserver.",
+        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx or openeuler.",
     )
 
 
@@ -607,17 +615,9 @@ def info(*packages, **kwargs):
         output_loglevel="trace",
         env={"TZ": "UTC"},
         clean_env=True,
+        ignore_retcode=True,
     )
-    if call["retcode"] != 0:
-        comment = ""
-        if "stderr" in call:
-            comment += call["stderr"] or call["stdout"]
-        raise CommandExecutionError(comment)
-    elif "error" in call["stderr"]:
-        raise CommandExecutionError(call["stderr"])
-    else:
-        out = call["stdout"]
-
+    out = call["stdout"]
     _ret = list()
     for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
