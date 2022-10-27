@@ -2,7 +2,6 @@
     :codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
 """
 import salt.modules.ttp as ttp_module
-
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
