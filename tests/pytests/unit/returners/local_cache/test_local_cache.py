@@ -156,7 +156,8 @@ def test_empty_jid_dir(jobs_dir):
     empty_jid_dir = []
     new_jid_dir = jobs_dir / "z0"
     new_jid_dir.mkdir(parents=True, exist_ok=True)
-    empty_jid_dir.append(str(new_jid_dir))
+    new_jid_dir = str(new_jid_dir)
+    empty_jid_dir.append(new_jid_dir)
 
     # This needed due to a race condition in Windows
     # `os.makedirs` hasn't released the handle before

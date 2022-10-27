@@ -143,7 +143,7 @@ def test_clean_old_jobs_jid_file_corrupted(make_tmp_jid_dirs, tmp_jid_dir):
     jid_dir, jid_file = make_tmp_jid_dirs()
 
     # Make sure there is a jid file in a new job cache director
-    jid_dir_name = jid_file.rpartition("/")[2]
+    jid_dir_name = jid_file.rpartition(os.sep)[2]
     assert jid_dir_name == "jid"
 
     # Even though we created a valid jid file in the _make_tmp_jid_dirs call to get
@@ -173,7 +173,7 @@ def test_clean_old_jobs_jid_file_is_cleaned(make_tmp_jid_dirs, tmp_jid_dir):
         time.sleep(0.01)
 
     # Make sure there is a jid directory
-    jid_dir_name = jid_file.rpartition("/")[2]
+    jid_dir_name = jid_file.rpartition(os.sep)[2]
     assert jid_dir_name == "jid"
 
     # Call clean_old_jobs function, patching the keep_jobs value with a
