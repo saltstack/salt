@@ -233,6 +233,9 @@ class SlackClient:
         # with the trigger string
         self.app.message(re.compile(trigger_pattern))(self.message_trigger)
 
+    def _run_until(self):
+        return True
+
     def message_trigger(self, message):
         # Add the received message to the queue
         self.msg_queue.append(message)
@@ -607,7 +610,7 @@ class SlackClient:
                     self.handler
                 )
             )  # Boom!
-        while True:
+        while self._run_until():
             while self.msg_queue:
                 msg = self.msg_queue.popleft()
                 try:
@@ -816,7 +819,7 @@ class SlackClient:
 
         outstanding = {}  # set of job_id that we need to check for
 
-        while True:
+        while self._run_until():
             log.trace("Sleeping for interval of %s", interval)
             time.sleep(interval)
             # Drain the slack messages, up to 10 messages at a clip
