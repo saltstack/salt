@@ -8,8 +8,8 @@
 import logging
 
 import salt.utils.json
+import salt.utils.vt_helper
 from salt.utils.vt import TerminalException
-from salt.utils.vt_helper import SSHConnection
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ["ssh_sample"]
@@ -34,7 +34,7 @@ def init(opts):
     Can be used to initialize the server connection.
     """
     try:
-        __context__["server"] = SSHConnection(
+        __context__["server"] = salt.utils.vt_helper.SSHConnection(
             host=__opts__["proxy"]["host"],
             username=__opts__["proxy"]["username"],
             password=__opts__["proxy"]["password"],
