@@ -735,7 +735,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     attr = kwargs.get("attr")
-    if attr is not None:
+    if attr is not None and attr != "all":
         attr = salt.utils.args.split_input(attr)
 
     contextkey = "pkg.list_pkgs"
@@ -1411,6 +1411,12 @@ def install(
 
         .. versionadded:: 2014.7.0
 
+    split_arch : True
+        If set to False it prevents package name normalization more strict way
+        than ``normalize`` set to ``False`` does.
+
+        .. versionadded:: 3006
+
     diff_attr:
         If a list of package attributes is specified, returned value will
         contain them, eg.::
@@ -1458,7 +1464,12 @@ def install(
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, sources, saltenv=saltenv, normalize=normalize, **kwargs
+            name,
+            pkgs,
+            sources,
+            saltenv=saltenv,
+            normalize=normalize and kwargs.get("split_arch", True),
+            **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1610,7 +1621,10 @@ def install(
                 except ValueError:
                     pass
                 else:
-                    if archpart in salt.utils.pkg.rpm.ARCHES:
+                    if archpart in salt.utils.pkg.rpm.ARCHES and (
+                        archpart != __grains__["osarch"]
+                        or kwargs.get("split_arch", True)
+                    ):
                         arch = "." + archpart
                         pkgname = namepart
 
@@ -1834,6 +1848,7 @@ def upgrade(
     normalize=True,
     minimal=False,
     obsoletes=True,
+    diff_attr=None,
     **kwargs
 ):
     """
@@ -1968,6 +1983,26 @@ def upgrade(
 
         .. versionadded:: 2019.2.0
 
+    diff_attr:
+        If a list of package attributes is specified, returned value will
+        contain them, eg.::
+
+            {'<package>': {
+                'old': {
+                    'version': '<old-version>',
+                    'arch': '<old-arch>'},
+
+                'new': {
+                    'version': '<new-version>',
+                    'arch': '<new-arch>'}}}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+        .. versionadded:: 3006.0
+
     .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
         word arguments. For arguments without assignments, pass ``True``
@@ -1990,7 +2025,7 @@ def upgrade(
     if salt.utils.data.is_true(refresh):
         refresh_db(**kwargs)
 
-    old = list_pkgs()
+    old = list_pkgs(attr=diff_attr)
 
     targets = []
     if name or pkgs:
@@ -2022,7 +2057,7 @@ def upgrade(
     cmd.extend(targets)
     result = _call_yum(cmd)
     __context__.pop("pkg.list_pkgs", None)
-    new = list_pkgs()
+    new = list_pkgs(attr=diff_attr)
     ret = salt.utils.data.compare_dicts(old, new)
 
     if result["retcode"] != 0:
@@ -2093,6 +2128,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     .. versionadded:: 0.16.0
 
+    split_arch : True
+        If set to False it prevents package name normalization by removing arch.
+
+        .. versionadded:: 3006
+
 
     Returns a dict containing the changes.
 
@@ -2141,11 +2181,13 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
             arch = ""
             pkgname = target
             try:
-                namepart, archpart = target.rsplit(".", 1)
+                namepart, archpart = pkgname.rsplit(".", 1)
             except ValueError:
                 pass
             else:
-                if archpart in salt.utils.pkg.rpm.ARCHES:
+                if archpart in salt.utils.pkg.rpm.ARCHES and (
+                    archpart != __grains__["osarch"] or kwargs.get("split_arch", True)
+                ):
                     arch = "." + archpart
                     pkgname = namepart
             # Since we don't always have the arch info, epoch information has to parsed out. But

@@ -303,6 +303,7 @@ state modules
     supervisord
     svn
     sysctl
+    sysfs
     syslog_ng
     sysrc
     telemetry_alert
@@ -329,6 +330,7 @@ state modules
     win_firewall
     win_iis
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_path

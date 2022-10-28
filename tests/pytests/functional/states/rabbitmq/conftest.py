@@ -100,3 +100,16 @@ def docker_cmd_run_all_wrapper(rabbitmq_container):
         return res
 
     return run_command
+
+
+@pytest.fixture(scope="package")
+def docker_cmd_run_wrapper(rabbitmq_container):
+    def run_command(cmd, **kwargs):
+        # Update rabbitmqctl location
+        if cmd[0] is None:
+            cmd[0] = "/opt/rabbitmq/sbin/rabbitmqctl"
+
+        ret = rabbitmq_container.run(cmd)
+        return ret.stdout
+
+    return run_command
