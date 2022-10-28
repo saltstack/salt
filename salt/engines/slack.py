@@ -22,6 +22,10 @@ An engine that reads messages from Slack and can act on them
     name and then copy and save the app level token.  This will be used
     as the ``app_token`` parameter in the Slack engine configuration.
 
+    Next, click on ``Event Subscriptions`` and ensure that ``Enable Events`` is in
+    the on position.  Then  add the following bot events, ``message.channel``
+    and ``message.im`` to the ``Subcribe to bot events`` list.
+
     Next, click on ``OAuth & Permissions`` and then under ``Bot Token Scope``, click
     on ``Add an OAuth Scope``.  Ensure the following scopes are included:
 
