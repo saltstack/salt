@@ -5,8 +5,10 @@ import logging
 import time
 
 import pytest
-import salt.modules.mysql as mysqlmod
 from pytestshellutils.utils import format_callback_to_string
+
+import salt.modules.mysql as mysqlmod
+from salt.utils.versions import version_cmp
 from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 log = logging.getLogger(__name__)
@@ -281,6 +283,426 @@ def test_grant_add_revoke(mysql):
     # Check the grant does not exist
     ret = mysql.grant_exists(
         grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="localhost",
+    )
+    assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="localhost")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_grant_replication_replica_add_revoke(mysql, mysql_container):
+    # The REPLICATION REPLICA grant is only available for mariadb
+    if "mariadb" not in mysql_container.mysql_name:
+        pytest.skip(
+            "The REPLICATION REPLICA grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # The REPLICATION REPLICA grant was added in mariadb 10.5.1
+    if version_cmp(mysql_container.mysql_version, "10.5.1") < 0:
+        pytest.skip(
+            "The REPLICATION REPLICA grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="localhost",
+        password="badpassword",
+    )
+    assert ret
+
+    # Grant privileges to user to specific table
+    ret = mysql.grant_add(
+        grant="REPLICATION REPLICA",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant exists
+    ret = mysql.grant_exists(
+        grant="REPLICATION REPLICA",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Revoke the global grant
+    ret = mysql.grant_revoke(
+        grant="REPLICATION REPLICA",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant does not exist
+    ret = mysql.grant_exists(
+        grant="REPLICATION REPLICA",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="localhost")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_grant_replication_slave_add_revoke(mysql, mysql_container):
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="localhost",
+        password="badpassword",
+    )
+    assert ret
+
+    # Grant privileges to user to specific table
+    ret = mysql.grant_add(
+        grant="REPLICATION SLAVE",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant exists
+    ret = mysql.grant_exists(
+        grant="REPLICATION SLAVE",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Revoke the global grant
+    ret = mysql.grant_revoke(
+        grant="REPLICATION SLAVE",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant does not exist
+    ret = mysql.grant_exists(
+        grant="REPLICATION SLAVE",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="localhost")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_grant_replication_client_add_revoke(mysql, mysql_container):
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="localhost",
+        password="badpassword",
+    )
+    assert ret
+
+    # Grant privileges to user to specific table
+    ret = mysql.grant_add(
+        grant="REPLICATION CLIENT",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant exists
+    ret = mysql.grant_exists(
+        grant="REPLICATION CLIENT",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Revoke the global grant
+    ret = mysql.grant_revoke(
+        grant="REPLICATION CLIENT",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant does not exist
+    ret = mysql.grant_exists(
+        grant="REPLICATION CLIENT",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="localhost")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_grant_binlog_monitor_add_revoke(mysql, mysql_container):
+    # The BINLOG MONITOR grant is only available for mariadb
+    if "mariadb" not in mysql_container.mysql_name:
+        pytest.skip(
+            "The BINLOG MONITOR grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # The BINLOG MONITOR grant was added in mariadb 10.5.2
+    if version_cmp(mysql_container.mysql_version, "10.5.2") < 0:
+        pytest.skip(
+            "The BINLOG_MONITOR grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="localhost",
+        password="badpassword",
+    )
+    assert ret
+
+    # Grant privileges to user to specific table
+    ret = mysql.grant_add(
+        grant="BINLOG MONITOR",
+        database="salt.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant exists
+    ret = mysql.grant_exists(
+        grant="BINLOG MONITOR",
+        database="salt.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Revoke the global grant
+    ret = mysql.grant_revoke(
+        grant="BINLOG MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant does not exist
+    ret = mysql.grant_exists(
+        grant="BINLOG MONITOR",
+        database="salt.*",
+        user="george",
+        host="localhost",
+    )
+    assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="localhost")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_grant_replica_monitor_add_revoke(mysql, mysql_container):
+    # The REPLICA MONITOR grant is only available for mariadb
+    if "mariadb" not in mysql_container.mysql_name:
+        pytest.skip(
+            "The REPLICA MONITOR grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # The REPLICA MONITOR grant was added in mariadb 10.5.9
+    if version_cmp(mysql_container.mysql_version, "10.5.9") < 0:
+        pytest.skip(
+            "The REPLICA MONITOR grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="localhost",
+        password="badpassword",
+    )
+    assert ret
+
+    # Grant privileges to user to specific table
+    ret = mysql.grant_add(
+        grant="REPLICA MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant exists
+    ret = mysql.grant_exists(
+        grant="REPLICA MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Revoke the global grant
+    ret = mysql.grant_revoke(
+        grant="REPLICA MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant does not exist
+    ret = mysql.grant_exists(
+        grant="REPLICA MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert not ret
+
+    # Remove the user
+    ret = mysql.user_remove("george", host="localhost")
+    assert ret
+
+    # Remove the database
+    ret = mysql.db_remove("salt")
+    assert ret
+
+
+def test_grant_slave_monitor_add_revoke(mysql, mysql_container):
+    # The SLAVE MONITOR grant is only available for mariadb
+    if "mariadb" not in mysql_container.mysql_name:
+        pytest.skip(
+            "The SLAVE MONITOR grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # The SLAVE MONITOR grant was added in mariadb 10.5.9
+    if version_cmp(mysql_container.mysql_version, "10.5.9") < 0:
+        pytest.skip(
+            "The SLAVE MONITOR grant is unavailable "
+            "for the {}:{} docker image.".format(
+                mysql_container.mysql_name, mysql_container.mysql_version
+            )
+        )
+
+    # Create the database
+    ret = mysql.db_create("salt")
+    assert ret
+
+    # Create a user
+    ret = mysql.user_create(
+        "george",
+        host="localhost",
+        password="badpassword",
+    )
+    assert ret
+
+    # Grant privileges to user to specific table
+    ret = mysql.grant_add(
+        grant="SLAVE MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant exists
+    ret = mysql.grant_exists(
+        grant="SLAVE MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Revoke the global grant
+    ret = mysql.grant_revoke(
+        grant="SLAVE MONITOR",
+        database="*.*",
+        user="george",
+        host="localhost",
+    )
+    assert ret
+
+    # Check the grant does not exist
+    ret = mysql.grant_exists(
+        grant="SLAVE MONITOR",
         database="salt.*",
         user="george",
         host="localhost",

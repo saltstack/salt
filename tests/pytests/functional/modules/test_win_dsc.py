@@ -4,6 +4,7 @@ import subprocess
 
 import psutil
 import pytest
+
 import salt.exceptions
 
 pytestmark = [
@@ -14,7 +15,14 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def dsc(modules):
-    return modules.dsc
+    # We seem to be hitting an issue where there is a consistency check in
+    # progress during some of the tests. When this happens, the test fails
+    # This should disabled background refreshes
+    # https://github.com/saltstack/salt/issues/62714
+    existing_config_mode = modules.dsc.get_lcm_config()["ConfigurationMode"]
+    modules.dsc.set_lcm_config(config_mode="ApplyOnly")
+    yield modules.dsc
+    modules.dsc.set_lcm_config(config_mode=existing_config_mode)
 
 
 @pytest.fixture(scope="function")

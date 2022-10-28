@@ -7,6 +7,7 @@ import threading
 from copy import copy
 
 import pytest
+
 import salt.utils.files
 import salt.utils.vault as vault
 from tests.support.mock import ANY, MagicMock, Mock, patch
@@ -543,3 +544,35 @@ def test_get_secret_path_metadata_no_cache(metadata_v2, cache_uses, cache_secret
                 assert function_result == metadata_v2
                 mock_write_cache.assert_called_with(cache_object)
                 assert cache_object == expected_cache_object
+
+
+@pytest.mark.parametrize(
+    "conf_location,called",
+    [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
+)
+def test_get_vault_connection_config_location(tmp_path, conf_location, called, caplog):
+    """
+    test the get_vault_connection function when
+    config_location is set in opts
+    """
+    token_url = {
+        "url": "http://127.0.0.1",
+        "namespace": None,
+        "token": "test",
+        "verify": None,
+        "issued": 1666100373,
+        "ttl": 3600,
+    }
+
+    opts = {"config_location": conf_location, "pki_dir": tmp_path / "pki"}
+    with patch.object(vault, "_get_token_and_url_from_master") as patch_token:
+        patch_token.return_vaule = token_url
+        with patch.dict(vault.__opts__["vault"], opts):
+            vault.get_vault_connection()
+
+    if called:
+        patch_token.assert_called()
+    else:
+        patch_token.assert_not_called()
+    if conf_location == "doesnotexist":
+        assert "config_location must be either local or master" in caplog.text

@@ -858,13 +858,16 @@ class State:
         Aggregate the requisites
         """
         requisites = {}
-        low_state = low["state"]
         for chunk in chunks:
             # if the state function in the chunk matches
             # the state function in the low we're looking at
             # and __agg__ is True, add the requisites from the
             # chunk to those in the low.
-            if chunk["state"] == low["state"] and chunk.get("__agg__"):
+            if (
+                chunk["state"] == low["state"]
+                and chunk.get("__agg__")
+                and low["name"] != chunk["name"]
+            ):
                 for req in frozenset.union(
                     *[STATE_REQUISITE_KEYWORDS, STATE_REQUISITE_IN_KEYWORDS]
                 ):
@@ -889,13 +892,23 @@ class State:
             return low
         if low["state"] in agg_opt and not low.get("__agg__"):
             agg_fun = "{}.mod_aggregate".format(low["state"])
+            if "loader_cache" not in self.state_con:
+                self.state_con["loader_cache"] = {}
+            if (
+                agg_fun in self.state_con["loader_cache"]
+                and not self.state_con["loader_cache"][agg_fun]
+            ):
+                return low
             if agg_fun in self.states:
+                self.state_con["loader_cache"][agg_fun] = True
                 try:
-                    low = self.states[agg_fun](low, chunks, running)
-                    low = self._aggregate_requisites(low, chunks)
                     low["__agg__"] = True
+                    low = self._aggregate_requisites(low, chunks)
+                    low = self.states[agg_fun](low, chunks, running)
                 except TypeError:
                     log.error("Failed to execute aggregate for state %s", low["state"])
+            else:
+                self.state_con["loader_cache"][agg_fun] = False
         return low
 
     def _run_check(self, low_data):
@@ -1671,6 +1684,25 @@ class State:
                         continue
                     else:
                         name = ids[0][0]
+
+                sls_excludes = []
+                # excluded sls are plain list items or dicts with an "sls" key
+                for exclude in high.get("__exclude__", []):
+                    if isinstance(exclude, str):
+                        sls_excludes.append(exclude)
+                    elif exclude.get("sls"):
+                        sls_excludes.append(exclude["sls"])
+
+                if body.get("__sls__") in sls_excludes:
+                    log.debug(
+                        "Cannot extend ID '%s' in '%s:%s' because '%s:%s' is excluded.",
+                        name,
+                        body.get("__env__", "base"),
+                        body.get("__sls__", "base"),
+                        body.get("__env__", "base"),
+                        body.get("__sls__", "base"),
+                    )
+                    continue
 
                 for state, run in body.items():
                     if state.startswith("__"):
@@ -2772,11 +2804,11 @@ class State:
                         req = {"id": req}
                     req = trim_req(req)
                     found = False
+                    req_key = next(iter(req))
+                    req_val = req[req_key]
+                    if req_val is None:
+                        continue
                     for chunk in chunks:
-                        req_key = next(iter(req))
-                        req_val = req[req_key]
-                        if req_val is None:
-                            continue
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(chunk["__sls__"], req_val):
@@ -3115,6 +3147,13 @@ class State:
             # if the requisite that failed was due to a prereq on this low state
             # show the normal error
             if tag in self.pre:
+                # This is the previous run of the state with the prereq
+                # which was run with test=True, so it will include
+                # the proposed changes not actual changes.
+                # So we remove them from the final output
+                # since the prereq requisite failed.
+                if self.pre[tag].get("changes"):
+                    self.pre[tag]["changes"] = {}
                 running[tag] = self.pre[tag]
                 running[tag]["__run_num__"] = self.__run_num
                 running[tag]["__sls__"] = low["__sls__"]

@@ -324,6 +324,16 @@ def is_ipv6(ip_addr):
         return False
 
 
+def is_loopback(ip_addr):
+    """
+    Returns a bool telling if the value passed to it is a loopback address
+    """
+    try:
+        return ipaddress.ip_address(ip_addr).is_loopback
+    except ValueError:
+        return False
+
+
 def is_subnet(cidr):
     """
     Returns a bool telling if the passed string is an IPv4 or IPv6 subnet
@@ -1918,11 +1928,11 @@ def _openbsd_remotes_on(port, which_end):
         data = subprocess.check_output(
             ["netstat", "-nf", "inet"]
         )  # pylint: disable=minimum-python-version
-    except subprocess.CalledProcessError:
-        log.error("Failed netstat")
+    except subprocess.CalledProcessError as exc:
+        log.error('Failed "netstat" with returncode = %s', exc.returncode)
         raise
 
-    lines = data.split("\n")
+    lines = salt.utils.stringutils.to_str(data).split("\n")
     for line in lines:
         if "ESTABLISHED" not in line:
             continue
@@ -2403,6 +2413,25 @@ def filter_by_networks(values, networks):
             raise ValueError("Do not know how to filter a {}".format(type(values)))
     else:
         return values
+
+
+@jinja_filter("ipwrap")
+def ipwrap(data):
+    """
+    Returns any input (string, list, tuple) as a string or a list with any IPv6 addresses wrapped in square brackets ([]).
+    """
+
+    if isinstance(data, (list, tuple)):
+        ret = []
+        for element in data:
+            if _is_ipv(element, 6, options=None):
+                element = ip_bracket(element)
+            ret.append(element)
+    else:
+        if _is_ipv(data, 6, options=None):
+            data = ip_bracket(data)
+        ret = data
+    return ret
 
 
 def ip_bracket(addr, strip=False):

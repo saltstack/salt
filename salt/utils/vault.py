@@ -14,6 +14,7 @@ import tempfile
 import time
 
 import requests
+
 import salt.crypt
 import salt.exceptions
 import salt.utils.json
@@ -170,6 +171,16 @@ def get_vault_connection():
                 err
             )
             raise salt.exceptions.CommandExecutionError(errmsg)
+
+    config = __opts__["vault"].get("config_location")
+    if config:
+        if config not in ["local", "master"]:
+            log.error("config_location must be either local or master")
+            return False
+        if config == "local":
+            return _use_local_config()
+        elif config == "master":
+            return _get_token_and_url_from_master()
 
     if "vault" in __opts__ and __opts__.get("__role", "minion") == "master":
         if "id" in __grains__:

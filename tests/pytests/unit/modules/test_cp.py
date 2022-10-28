@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.channel.client
 import salt.modules.cp as cp
 import salt.utils.files

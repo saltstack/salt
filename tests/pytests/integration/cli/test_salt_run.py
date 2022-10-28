@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.platform

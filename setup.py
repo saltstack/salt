@@ -4,10 +4,11 @@ The setup script for salt
 """
 
 # pylint: disable=file-perms,resource-leakage
+import setuptools  # isort:skip
+
 import contextlib
 import distutils.dist
 import glob
-import operator
 import os
 import platform
 import sys
@@ -175,77 +176,6 @@ exec(compile(open(SALT_VERSION).read(), SALT_VERSION, "exec"))
 # ----- Helper Functions -------------------------------------------------------------------------------------------->
 
 
-def _parse_op(op):
-    """
-    >>> _parse_op('>')
-    'gt'
-    >>> _parse_op('>=')
-    'ge'
-    >>> _parse_op('=>')
-    'ge'
-    >>> _parse_op('=> ')
-    'ge'
-    >>> _parse_op('<')
-    'lt'
-    >>> _parse_op('<=')
-    'le'
-    >>> _parse_op('==')
-    'eq'
-    >>> _parse_op(' <= ')
-    'le'
-    """
-    op = op.strip()
-    if ">" in op:
-        if "=" in op:
-            return "ge"
-        else:
-            return "gt"
-    elif "<" in op:
-        if "=" in op:
-            return "le"
-        else:
-            return "lt"
-    elif "!" in op:
-        return "ne"
-    else:
-        return "eq"
-
-
-def _parse_ver(ver):
-    """
-    >>> _parse_ver("'3.4'  # pyzmq 17.1.0 stopped building wheels for python3.4")
-    '3.4'
-    >>> _parse_ver('"3.4"')
-    '3.4'
-    >>> _parse_ver('"2.6.17"')
-    '2.6.17'
-    """
-    if "#" in ver:
-        ver, _ = ver.split("#", 1)
-        ver = ver.strip()
-    return ver.strip("'").strip('"')
-
-
-def _check_ver(pyver, op, wanted):
-    """
-    >>> _check_ver('2.7.15', 'gt', '2.7')
-    True
-    >>> _check_ver('2.7.15', 'gt', '2.7.15')
-    False
-    >>> _check_ver('2.7.15', 'ge', '2.7.15')
-    True
-    >>> _check_ver('2.7.15', 'eq', '2.7.15')
-    True
-    """
-    pyver = distutils.version.LooseVersion(pyver)
-    wanted = distutils.version.LooseVersion(wanted)
-    if not isinstance(pyver, str):
-        pyver = str(pyver)
-    if not isinstance(wanted, str):
-        wanted = str(wanted)
-    return getattr(operator, "__{}__".format(op))(pyver, wanted)
-
-
 def _parse_requirements_file(requirements_file):
     parsed_requirements = []
     with open(requirements_file) as rfh:
@@ -255,19 +185,6 @@ def _parse_requirements_file(requirements_file):
                 continue
             if IS_WINDOWS_PLATFORM:
                 if "libcloud" in line:
-                    continue
-            try:
-                pkg, pyverspec = line.rsplit(";", 1)
-            except ValueError:
-                pkg, pyverspec = line, ""
-            pyverspec = pyverspec.strip()
-            if pyverspec and (
-                not pkg.startswith("pycrypto") or pkg.startswith("pycryptodome")
-            ):
-                _, op, ver = pyverspec.split(" ", 2)
-                if not _check_ver(
-                    platform.python_version(), _parse_op(op), _parse_ver(ver)
-                ):
                     continue
             parsed_requirements.append(line)
     return parsed_requirements
@@ -353,6 +270,7 @@ class GenerateSaltSyspaths(Command):
                 base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
                 base_thorium_roots_dir=self.distribution.salt_base_thorium_roots_dir,
+                lib_state_dir=self.distribution.salt_lib_state_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
                 spm_parent_path=self.distribution.salt_spm_parent_dir,
@@ -750,6 +668,7 @@ BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
 BASE_THORIUM_ROOTS_DIR = {base_thorium_roots_dir!r}
+LIB_STATE_DIR = {lib_state_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
 SPM_PARENT_PATH = {spm_parent_path!r}
@@ -945,6 +864,11 @@ class SaltDistribution(distutils.dist.Distribution):
             ("salt-sock-dir=", None, "Salt's pre-configured socket directory"),
             ("salt-srv-root-dir=", None, "Salt's pre-configured service directory"),
             (
+                "salt-lib-state-dir=",
+                None,
+                "Salt's pre-configured variable state directory (used for storing pki data)",
+            ),
+            (
                 "salt-base-file-roots-dir=",
                 None,
                 "Salt's pre-configured file roots directory",
@@ -997,6 +921,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
+        self.salt_lib_state_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
         self.salt_spm_parent_dir = None

@@ -1198,7 +1198,6 @@ class AESFuncs(TransportMethods):
         "_dir_list",
         "_symlink_list",
         "_file_envs",
-        "_ext_nodes",  # To be removed in 3006 (Sulfur) #60980
     )
 
     def __init__(self, opts):
@@ -1396,10 +1395,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    # To be removed in 3006 (Sulfur) #60980
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """

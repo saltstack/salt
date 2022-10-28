@@ -5,6 +5,7 @@ import threading
 import time
 
 import pytest
+
 import salt.loader
 import salt.utils.atomicfile
 import salt.utils.files

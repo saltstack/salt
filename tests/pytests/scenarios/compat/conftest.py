@@ -9,9 +9,10 @@ import os
 import shutil
 
 import pytest
-import salt.utils.path
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
+
+import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 

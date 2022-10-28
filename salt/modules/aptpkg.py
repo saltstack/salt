@@ -47,6 +47,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.modules.cmdmod import _parse_env
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -54,10 +55,7 @@ log = logging.getLogger(__name__)
 try:
     import apt.cache
     import apt.debfile
-    from aptsources.sourceslist import (
-        SourceEntry,
-        SourcesList,
-    )
+    from aptsources.sourceslist import SourceEntry, SourcesList
 
     HAS_APT = True
 except ImportError:
@@ -149,7 +147,15 @@ def _invalid(line):
         comment = line[idx + 1 :]
         line = line[:idx]
 
-    repo_line = line.strip().split()
+    cdrom_match = re.match(r"(.*)(cdrom:.*/)(.*)", line.strip())
+    if cdrom_match:
+        repo_line = (
+            [p.strip() for p in cdrom_match.group(1).split()]
+            + [cdrom_match.group(2).strip()]
+            + [p.strip() for p in cdrom_match.group(3).split()]
+        )
+    else:
+        repo_line = line.strip().split()
     if (
         not repo_line
         or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
@@ -184,6 +190,9 @@ if not HAS_APT:
             if not self.file:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
             self._parse_sources(line)
+
+        def str(self):
+            return self.repo_line()
 
         def repo_line(self):
             """
@@ -267,7 +276,7 @@ if not HAS_APT:
             opts_count = []
             opts_line = ""
             if architectures:
-                architectures = "arch={}".format(" ".join(architectures))
+                architectures = "arch={}".format(",".join(architectures))
                 opts_count.append(architectures)
             if signedby:
                 signedby = "signed-by={}".format(signedby)
@@ -361,7 +370,7 @@ def _call_apt(args, scope=True, **kwargs):
     while "Could not get lock" in cmd_ret.get("stderr", "") and count < 10:
         count += 1
         log.warning("Waiting for dpkg lock release: retrying... %s/100", count)
-        time.sleep(2 ** count)
+        time.sleep(2**count)
         cmd_ret = __salt__["cmd.run_all"](cmd, **params)
     return cmd_ret
 
@@ -1719,7 +1728,7 @@ def _get_opts(line):
     """
     Return all opts in [] for a repo line
     """
-    get_opts = re.search(r"\[.*\]", line)
+    get_opts = re.search(r"\[(.*=.*)\]", line)
     ret = {
         "arch": {"full": "", "value": "", "index": 0},
         "signedby": {"full": "", "value": "", "index": 0},
@@ -1851,7 +1860,6 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
 
     ret = {}
     pkg_name = None
-    skip_pkg = False
     new_pkg = re.compile("^Package: (.+)")
     for line in salt.utils.itertools.split(out["stdout"], "\n"):
         if not line.strip():
@@ -2287,13 +2295,11 @@ def _decrypt_key(key):
                         key,
                     )
                     return False
-                encrypted_key = key
-                if not pathlib.Path(key).suffix:
-                    encrypted_key = key + ".gpg"
-                cmd = ["gpg", "--yes", "--output", encrypted_key, "--dearmor", key]
+                decrypted_key = str(key) + ".decrypted"
+                cmd = ["gpg", "--yes", "--output", decrypted_key, "--dearmor", key]
                 if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
                     log.error("Failed to decrypt the key %s", key)
-                return encrypted_key
+                return decrypted_key
     except UnicodeDecodeError:
         log.debug("Key is not ASCII Armored. Do not need to decrypt")
     return key
@@ -2363,7 +2369,13 @@ def add_repo_key(
     cmd = ["apt-key"]
     kwargs = {}
 
-    current_repo_keys = get_repo_keys(aptkey=aptkey, keydir=keydir)
+    # If the keyid is provided or determined, check it against the existing
+    # repo key ids to determine whether it needs to be imported.
+    if keyid:
+        for current_keyid in get_repo_keys(aptkey=aptkey, keydir=keydir):
+            if current_keyid[-(len(keyid)) :] == keyid:
+                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
+                return True
 
     if path:
         cached_source_path = __salt__["cp.cache_file"](path, saltenv)
@@ -2376,7 +2388,13 @@ def add_repo_key(
             key = _decrypt_key(cached_source_path)
             if not key:
                 return False
-            cmd = ["cp", key, str(keydir)]
+            key = pathlib.Path(str(key))
+            if not keyfile:
+                keyfile = key.name
+                if keyfile.endswith(".decrypted"):
+                    keyfile = keyfile[:-10]
+            shutil.copyfile(str(key), str(keydir / keyfile))
+            return True
         else:
             cmd.extend(["add", cached_source_path])
     elif text:
@@ -2416,14 +2434,6 @@ def add_repo_key(
         raise TypeError(
             "{}() takes at least 1 argument (0 given)".format(add_repo_key.__name__)
         )
-
-    # If the keyid is provided or determined, check it against the existing
-    # repo key ids to determine whether it needs to be imported.
-    if keyid:
-        for current_keyid in current_repo_keys:
-            if current_keyid[-(len(keyid)) :] == keyid:
-                log.debug("The keyid '%s' already present: %s", keyid, current_keyid)
-                return True
 
     cmd_ret = _call_apt(cmd, **kwargs)
 
@@ -2949,7 +2959,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if mod_source.uri != repo_uri:
         mod_source.uri = repo_uri
-        mod_source.line = mod_source.repo_line()
+        mod_source.line = mod_source.str()
 
     sources.save()
     # on changes, explicitly refresh
@@ -3009,7 +3019,7 @@ def file_dict(*packages, **kwargs):
     return __salt__["lowpkg.file_dict"](*packages)
 
 
-def expand_repo_def(**kwargs):
+def _expand_repo_def(os_name, lsb_distrib_codename=None, **kwargs):
     """
     Take a repository definition and expand it to the full pkg repository dict
     that can be used for comparison.  This is a helper function to make
@@ -3023,8 +3033,8 @@ def expand_repo_def(**kwargs):
 
     sanitized = {}
     repo = kwargs["repo"]
-    if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
-        dist = __grains__["lsb_distrib_codename"]
+    if repo.startswith("ppa:") and os_name in ("Ubuntu", "Mint", "neon"):
+        dist = lsb_distrib_codename
         owner_name, ppa_name = repo[4:].split("/", 1)
         if "ppa_auth" in kwargs:
             auth_info = "{}@".format(kwargs["ppa_auth"])
@@ -3091,17 +3101,54 @@ def expand_repo_def(**kwargs):
         if signedby not in sanitized["line"]:
             line = sanitized["line"].split()
             repo_opts = _get_opts(repo)
-            opts_order = [x for x in repo_opts.keys()]
+            opts_order = [
+                opt_type
+                for opt_type, opt_def in repo_opts.items()
+                if opt_def["full"] != ""
+            ]
             for opt in repo_opts:
                 if "index" in repo_opts[opt]:
                     idx = repo_opts[opt]["index"]
                     opts_order[idx] = repo_opts[opt]["full"]
 
             opts = "[" + " ".join(opts_order) + "]"
-            line[1] = opts
+            if line[1].startswith("["):
+                line[1] = opts
+            else:
+                line.insert(1, opts)
             sanitized["line"] = " ".join(line)
 
     return sanitized
+
+
+def expand_repo_def(**kwargs):
+    """
+    Take a repository definition and expand it to the full pkg repository dict
+    that can be used for comparison.  This is a helper function to make
+    the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
+
+    This is designed to be called from pkgrepo states and will have little use
+    being called on the CLI.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        NOT USABLE IN THE CLI
+    """
+    warn_until_date(
+        "20240101",
+        "The pkg.expand_repo_def function is deprecated and set for removal "
+        "after {date}. This is only unsed internally by the apt pkg state "
+        "module. If that's not the case, please file an new issue requesting "
+        "the removal of this deprecation warning",
+        stacklevel=3,
+    )
+    if "os_name" not in kwargs:
+        kwargs["os_name"] = __grains__["os"]
+    if "lsb_distrib_codename" not in kwargs:
+        kwargs["lsb_distrib_codename"] = __grains__.get("lsb_distrib_codename")
+    return _expand_repo_def(**kwargs)
 
 
 def _parse_selections(dpkgselection):

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.postgres_schema as postgres_schema
 from tests.support.mock import MagicMock, Mock, patch
 

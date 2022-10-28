@@ -35,9 +35,9 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
-    import win32gui
     import win32api
     import win32con
+    import win32gui
 
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -114,6 +114,7 @@ class Registry:  # pylint: disable=R0903
             "HKU": win32con.HKEY_USERS,
         }
         self.vtype = {
+            "REG_NONE": 0,
             "REG_BINARY": win32con.REG_BINARY,
             "REG_DWORD": win32con.REG_DWORD,
             "REG_EXPAND_SZ": win32con.REG_EXPAND_SZ,
@@ -124,6 +125,7 @@ class Registry:  # pylint: disable=R0903
         self.opttype = {"REG_OPTION_NON_VOLATILE": 0, "REG_OPTION_VOLATILE": 1}
         # Return Unicode due to from __future__ import unicode_literals
         self.vtype_reverse = {
+            0: "REG_NONE",
             win32con.REG_BINARY: "REG_BINARY",
             win32con.REG_DWORD: "REG_DWORD",
             win32con.REG_EXPAND_SZ: "REG_EXPAND_SZ",

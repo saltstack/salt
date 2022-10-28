@@ -84,15 +84,17 @@ from salt.utils.odict import OrderedDict as _OrderedDict
 _repack_pkgs = namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.platform.is_windows():
-    from salt.modules.win_pkg import _get_package_info
-    from salt.modules.win_pkg import get_repo_data
-    from salt.modules.win_pkg import _get_repo_details
-    from salt.modules.win_pkg import _refresh_db_conditional
-    from salt.modules.win_pkg import refresh_db
-    from salt.modules.win_pkg import genrepo
-    from salt.modules.win_pkg import _repo_process_pkg_sls
-    from salt.modules.win_pkg import _get_latest_pkg_version
-    from salt.modules.win_pkg import _reverse_cmp_pkg_versions
+    from salt.modules.win_pkg import (
+        _get_latest_pkg_version,
+        _get_package_info,
+        _get_repo_details,
+        _refresh_db_conditional,
+        _repo_process_pkg_sls,
+        _reverse_cmp_pkg_versions,
+        genrepo,
+        get_repo_data,
+        refresh_db,
+    )
 
     _get_package_info = namespaced_function(_get_package_info, globals())
     get_repo_data = namespaced_function(get_repo_data, globals())
@@ -1044,8 +1046,8 @@ def installed(
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
-        :mod:`yumpkg <salt.modules.yumpkg>`, and
-        :mod:`zypper <salt.modules.zypper>`. The version number includes the
+        :mod:`yum <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypperpkg>`. The version number includes the
         release designation where applicable, to allow Salt to target a
         specific release of a given version. When in doubt, using the
         ``pkg.latest_version`` function for an uninstalled package will tell
@@ -1277,14 +1279,15 @@ def installed(
 
         .. versionadded:: 2014.7.0
 
-        For requested packages that are already installed and would not be
-        targeted for upgrade or downgrade, use pkg.verify to determine if any
-        of the files installed by the package have been altered. If files have
-        been altered, the reinstall option of pkg.install is used to force a
-        reinstall. Types to ignore can be passed to pkg.verify. Additionally,
-        ``verify_options`` can be used to modify further the behavior of
-        pkg.verify. See examples below.  Currently, this option is supported
-        for the following pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+        Use pkg.verify to check if already installed packages require
+        reinstallion. Requested packages that are already installed and not
+        targeted for up- or downgrade are verified with pkg.verify to determine
+        if any file installed by the package have been modified or if package
+        dependencies are not fulfilled. ``ignore_types`` and ``verify_options``
+        can be passed to pkg.verify. See examples below. Currently, this option
+        is supported for the following pkg providers:
+        :mod:`yum <salt.modules.yumpkg>`,
+        :mod:`zypperpkg <salt.modules.zypperpkg>`.
 
         Examples:
 
@@ -1389,8 +1392,8 @@ def installed(
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`winrepo <salt.modules.win_pkg>`,
-        :mod:`yumpkg <salt.modules.yumpkg>`, and
-        :mod:`zypper <salt.modules.zypper>`,
+        :mod:`yum <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypperpkg>`,
         version numbers can be specified
         in the ``pkgs`` argument. For example:
 
@@ -1404,7 +1407,7 @@ def installed(
                   - baz
 
         Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
-        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypper>`,
+        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypperpkg>`,
         :mod:`yum/dnf <salt.modules.yumpkg>`, and :mod:`apt
         <salt.modules.aptpkg>` support the ``<``, ``<=``, ``>=``, and ``>``
         operators for more control over what versions will be installed. For
@@ -1798,7 +1801,7 @@ def installed(
         )
 
     comment = []
-    changes = {"installed": {}}
+    changes = {}
     if __opts__["test"]:
         if targets:
             if sources:
@@ -1806,9 +1809,7 @@ def installed(
             else:
                 _targets = [_get_desired_pkg(x, targets) for x in targets]
             summary = ", ".join(targets)
-            changes["installed"].update(
-                {x: {"new": "installed", "old": ""} for x in targets}
-            )
+            changes.update({x: {"new": "installed", "old": ""} for x in targets})
             comment.append(
                 "The following packages would be installed/updated: {}".format(summary)
             )
@@ -1817,9 +1818,7 @@ def installed(
                 "The following packages would have their selection status "
                 "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
             )
-            changes["installed"].update(
-                {x: {"new": "installed", "old": ""} for x in to_unpurge}
-            )
+            changes.update({x: {"new": "installed", "old": ""} for x in to_unpurge})
         if to_reinstall:
             # Add a comment for each package in to_reinstall with its
             # pkg.verify output
@@ -1832,7 +1831,7 @@ def installed(
                         reinstall_targets.append(
                             _get_desired_pkg(reinstall_pkg, to_reinstall)
                         )
-                    changes["installed"].update(
+                    changes.update(
                         {x: {"new": "installed", "old": ""} for x in reinstall_targets}
                     )
                 msg = "The following packages would be reinstalled: "
@@ -1848,7 +1847,7 @@ def installed(
                         "Package '{}' would be reinstalled because the "
                         "following files have been altered:".format(pkgstr)
                     )
-                    changes["installed"].update({reinstall_pkg: {}})
+                    changes.update({reinstall_pkg: {}})
                     comment.append(_nested_output(altered_files[reinstall_pkg]))
         ret = {
             "name": name,
@@ -1877,6 +1876,7 @@ def installed(
                 normalize=normalize,
                 update_holds=update_holds,
                 ignore_epoch=ignore_epoch,
+                split_arch=False,
                 **kwargs
             )
         except CommandExecutionError as exc:
@@ -1900,7 +1900,7 @@ def installed(
             refresh = False
 
         if isinstance(pkg_ret, dict):
-            changes["installed"].update(pkg_ret)
+            changes.update(pkg_ret)
         elif isinstance(pkg_ret, str):
             comment.append(pkg_ret)
             # Code below will be looking for a dictionary. If this is a string
@@ -1957,7 +1957,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes["installed"] if x in targets]
+        modified = [x for x in changes if x in targets]
         not_modified = [
             x for x in desired if x not in targets and x not in to_reinstall
         ]
@@ -1979,11 +1979,6 @@ def installed(
         modified = [x for x in _ok if x in targets]
         not_modified = [x for x in _ok if x not in targets and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
-
-    # If there was nothing unpurged, just set the changes dict to the contents
-    # of changes['installed'].
-    if not changes.get("purge_desired"):
-        changes = changes["installed"]
 
     if modified:
         if sources:
@@ -2180,7 +2175,7 @@ def downloaded(
         is not defined for that function, will be silently ignored.
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
+    :mod:`yum <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypperpkg>` and :mod:`apt <salt.modules.aptpkg>`
 
     :param str name:
         The name of the package to be downloaded. This parameter is ignored if
@@ -2340,7 +2335,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         is not defined for that function, will be silently ignored.
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yum <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypperpkg>`
 
     CLI Example:
 
@@ -2423,7 +2418,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
     Ensure that packages related to certain advisory ids are downloaded.
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yum <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypperpkg>`
 
     CLI Example:
 
@@ -2949,7 +2944,7 @@ def _uninstall(
         }
 
     changes = __salt__["pkg.{}".format(action)](
-        name, pkgs=pkgs, version=version, **kwargs
+        name, pkgs=pkgs, version=version, split_arch=False, **kwargs
     )
     new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     failed = []
@@ -3195,36 +3190,25 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
 
     Verify that the system is completely up to date.
 
-    name
+    :param str name
         The name has no functional value and is only used as a tracking
         reference
 
-    refresh
+    :param bool refresh
         refresh the package database before checking for new upgrades
 
-    pkgs
+    :param list pkgs
         list of packages to upgrade
-
-    :param str cache_valid_time:
-        This parameter sets the value in seconds after which cache marked as invalid,
-        and cache update is necessary. This overwrite ``refresh`` parameter
-        default behavior.
-
-        In this case cache_valid_time is set, refresh will not take place for
-        amount in seconds since last ``apt-get update`` executed on the system.
-
-        .. note::
-
-            This parameter available only on Debian based distributions, and
-            have no effect on the rest.
 
     :param bool resolve_capabilities:
         Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
         .. versionadded:: 2018.3.0
 
-    kwargs
-        Any keyword arguments to pass through to ``pkg.upgrade``.
+    :param kwargs
+        Any keyword arguments to pass through to the ``pkg`` module.
+
+        For example, for apt systems: `dist_upgrade`, `cache_valid_time`, `force_conf_new`
 
         .. versionadded:: 2015.5.0
     """

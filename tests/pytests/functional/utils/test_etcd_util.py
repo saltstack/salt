@@ -4,6 +4,7 @@ import threading
 import time
 
 import pytest
+
 from salt.utils.etcd_util import EtcdClient, EtcdClientV3, get_conn
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 

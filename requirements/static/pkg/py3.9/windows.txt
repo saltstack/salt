@@ -51,11 +51,13 @@ jaraco.text==3.5.0
     # via jaraco.collections
 jinja2==3.1.0
     # via -r requirements/base.txt
+jmespath==1.0.1
+    # via -r requirements/base.txt
 libnacl==1.8.0
     # via -r requirements/windows.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
-mako==1.1.4
+mako==1.2.2
     # via -r requirements/windows.txt
 markupsafe==2.0.1
     # via
@@ -76,7 +78,7 @@ psutil==5.8.0
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
@@ -112,7 +114,7 @@ requests==2.25.1
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/windows.txt
 six==1.15.0
     # via

@@ -2,6 +2,7 @@ import hashlib
 import urllib.parse
 
 import pytest
+
 import salt.netapi.rest_tornado as rest_tornado
 import salt.utils.json
 import salt.utils.yaml

@@ -13,11 +13,12 @@ import datetime
 import logging
 import os
 
+import yaml
+
 import salt.utils.event
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.yaml
-import yaml
 
 try:
     import dateutil.parser as dateutil_parser
@@ -86,6 +87,9 @@ def _get_schedule_config_file():
             )
         ),
     )
+
+    if not os.path.isdir(config_dir):
+        os.makedirs(config_dir)
 
     if not os.path.isdir(minion_d_dir):
         os.makedirs(minion_d_dir)
@@ -191,10 +195,11 @@ def list_(
         # Indicate whether the scheduled job is saved
         # to the minion configuration.
         for item in schedule:
-            if item in saved_schedule:
-                schedule[item]["saved"] = True
-            else:
-                schedule[item]["saved"] = False
+            if isinstance(schedule[item], dict):
+                if item in saved_schedule:
+                    schedule[item]["saved"] = True
+                else:
+                    schedule[item]["saved"] = False
         tmp = {"schedule": schedule}
         return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
