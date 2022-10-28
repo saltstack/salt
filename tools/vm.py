@@ -50,6 +50,7 @@ with REPO_ROOT.joinpath("cicd", "images.yml").open() as rfh:
 REPO_CHECKOUT_ID = hashlib.sha256(
     "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
 ).hexdigest()
+LAUNCH_TEMPLATE_NAME_FMT = "spb-{}-salt-project-golden-image-launch-template"
 
 # Define the command group
 vm = command_group(name="vm", help="VM Related Commands", description=__doc__)
@@ -462,7 +463,7 @@ class VM:
             # Grab the public subnet of the vpc used on the template
             client = boto3.client("ec2", region_name=self.region_name)
             data = client.describe_launch_template_versions(
-                LaunchTemplateName=self.config.ami
+                LaunchTemplateName=LAUNCH_TEMPLATE_NAME_FMT.format(self.config.ami)
             )
             # The newest template comes first
             template_data = data["LaunchTemplateVersions"][0]["LaunchTemplateData"]
@@ -572,7 +573,6 @@ class VM:
         with progress:
             start = time.time()
             create_kwargs = dict(
-                ImageId=self.config.ami,
                 MinCount=1,
                 MaxCount=1,
                 KeyName=key_name,
@@ -582,7 +582,11 @@ class VM:
                         "Tags": tags,
                     }
                 ],
-                LaunchTemplate={"LaunchTemplateName": self.config.ami},
+                LaunchTemplate={
+                    "LaunchTemplateName": LAUNCH_TEMPLATE_NAME_FMT.format(
+                        self.config.ami
+                    )
+                },
             )
             if instance_type:
                 # The user provided a custom instance type
