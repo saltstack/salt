@@ -26,6 +26,7 @@ try:
     import attr
     import boto3
     import yaml
+    from botocore.exceptions import ClientError
     from rich.progress import Progress
 except ImportError:
     print(
@@ -591,7 +592,11 @@ class VM:
                 create_kwargs["NetworkInterfaces"] = network_interfaces
 
             # Create the VM
-            response = self.ec2.create_instances(**create_kwargs)
+            try:
+                response = self.ec2.create_instances(**create_kwargs)
+            except ClientError as exc:
+                progress.stop()
+                self.ctx.exit(1, str(exc))
             for _instance in response:
                 self.instance = _instance
             stop = time.time()
