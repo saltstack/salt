@@ -646,7 +646,13 @@ class VM:
                     stderr = None
                     proc = subprocess.Popen(
                         self.ssh_command_args(
-                            "exit", "0", log_command_level=logging.DEBUG
+                            "exit",
+                            "0",
+                            log_command_level=logging.DEBUG,
+                            ssh_options=[
+                                "-oConnectTimeout=5",
+                                "-oConnectionAttempts=1",
+                            ],
                         ),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
@@ -972,6 +978,7 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
+        ssh_options: list[str] | None = None,
     ) -> list[str]:
         ssh = shutil.which("ssh")
         if TYPE_CHECKING:
@@ -982,6 +989,8 @@ class VM:
             "-F",
             str(self.ssh_config_file.relative_to(REPO_ROOT)),
         ]
+        if ssh_options:
+            _ssh_command_args.extend(ssh_options)
         if pseudo_terminal is True:
             _ssh_command_args.append("-t")
         if include_vm_target:
