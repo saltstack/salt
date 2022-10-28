@@ -106,15 +106,21 @@ def test_remove_pkgs(salt_cli, proxy_id):
     ret = salt_cli.run("pkg.remove", "apache", minion_tgt=proxy_id)
     assert "apache" not in ret.data
 
+    # reinstall
+    ret = salt_cli.run("pkg.install", "apache", minion_tgt=proxy_id)
+
 
 def test_remove_pkgs_all(salt_cli, proxy_ids):
     """
     Ensure the proxy can ping (all proxy minions)
     """
-    ret = salt_cli.run("-L", "pkg.remove", "apache", minion_tgt=",".join(proxy_ids))
+    ret = salt_cli.run("-L", "pkg.remove", "coreutils", minion_tgt=",".join(proxy_ids))
 
     for _id in proxy_ids:
-        assert "apache" not in ret.data[_id]
+        assert "coreutils" not in ret.data[_id]
+
+    # reinstall
+    salt_cli.run("-L", "pkg.install", "coreutils", minion_tgt=",".join(proxy_ids))
 
 
 def test_upgrade(salt_cli, proxy_id):
@@ -242,6 +248,9 @@ def test_schedule_add_list(salt_cli, proxy_id):
     ret = salt_cli.run("schedule.list", minion_tgt=proxy_id)
     assert ret.data == _expected
 
+    # clean out the scheduler
+    salt_cli.run("schedule.purge", minion_tgt=proxy_id)
+
 
 def test_schedule_add_list_all(salt_cli, proxy_ids):
     """
@@ -249,7 +258,7 @@ def test_schedule_add_list_all(salt_cli, proxy_ids):
     and that the others are not affected.
     """
     ret = salt_cli.run(
-        "schedule.add", name="job1", function="test.ping", minion_tgt=proxy_ids[0]
+        "schedule.add", name="job2", function="test.ping", minion_tgt=proxy_ids[0]
     )
     assert "result" in ret.data
     assert ret.data["result"]
@@ -259,3 +268,6 @@ def test_schedule_add_list_all(salt_cli, proxy_ids):
     # check every proxy except the first one
     for _id in proxy_ids[1:]:
         assert ret.data[_id] == "schedule: {}\n"
+
+    # clean out the scheduler
+    salt_cli.run("-L", "schedule.purge", minion_tgt=",".join(proxy_ids))
