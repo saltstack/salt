@@ -12,7 +12,6 @@ import re
 import time
 import types
 
-import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
@@ -1077,6 +1076,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         return {}
     grains_deep_merge = opts.get("grains_deep_merge", False) is True
     if "conf_file" in opts:
+        import salt.config
         pre_opts = {}
         pre_opts.update(
             salt.config.load_config(

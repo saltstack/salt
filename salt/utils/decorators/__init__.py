@@ -12,7 +12,6 @@ import time
 from collections import defaultdict
 from functools import wraps
 
-import salt.utils.args
 import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError,
@@ -116,6 +115,7 @@ class Depends:
 
     @staticmethod
     def run_command(dependency, mod_name, func_name):
+        import salt.utils.args
         full_name = "{}.{}".format(mod_name, func_name)
         log.trace("Running '%s' for '%s'", dependency, full_name)
         if IS_WINDOWS:
@@ -255,6 +255,7 @@ def timing(function):
 
     @wraps(function)
     def wrapped(*args, **kwargs):
+        import salt.utils.args
         start_time = time.time()
         ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
         end_time = time.time()

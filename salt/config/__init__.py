@@ -27,7 +27,6 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.versions
 import salt.utils.xdg
-import salt.utils.yaml
 from salt._logging import (
     DFLT_LOG_DATEFMT,
     DFLT_LOG_DATEFMT_LOGFILE,
@@ -979,6 +978,7 @@ VALID_OPTS = immutabletypes.freeze(
         "pass_gnupghome": str,
         # pass renderer: Set PASSWORD_STORE_DIR env for Pass
         "pass_dir": str,
+        "yaml_compatibility": (type(None), str, int),
     }
 )
 
@@ -1283,6 +1283,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "global_state_conditions": None,
         "reactor_niceness": None,
         "fips_mode": False,
+        "yaml_compatibility": None,
     }
 )
 
@@ -1626,6 +1627,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_gnupghome": "",
         "pass_dir": "",
         "netapi_enable_clients": [],
+        "yaml_compatibility": None,
     }
 )
 
@@ -1995,6 +1997,7 @@ def _read_conf_file(path):
     """
     Read in a config file from a given path and process it into a dictionary
     """
+    import salt.utils.yaml
     log.debug("Reading configuration from %s", path)
     append_file_suffix_YAMLError = False
     with salt.utils.files.fopen(path, "r") as conf_file:

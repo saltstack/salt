@@ -13,7 +13,6 @@ from collections import namedtuple
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
-import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -134,6 +133,7 @@ def yamlify_arg(arg):
     """
     yaml.safe_load the arg
     """
+    import salt.utils.yaml
     if not isinstance(arg, str):
         return arg
 

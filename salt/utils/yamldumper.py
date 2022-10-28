@@ -13,6 +13,7 @@ import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils._yaml_common as _yaml_common
 import salt.utils.context
+from salt.utils.decorators import classproperty
 from salt.utils.odict import OrderedDict
 
 try:
@@ -35,16 +36,47 @@ __all__ = [
 class _InheritedRepresentersMixin(
     _yaml_common.InheritMapMixin,
     inherit_map_attrs={
-        "yaml_representers": "yaml_representers",
-        "yaml_multi_representers": "yaml_multi_representers",
+        # The ChainMap used for yaml_representers is not saved directly to
+        # cls.yaml_representers because _yaml_common.VersionedSubclassesMixin is
+        # used to automatically switch between versioned variants of the
+        # ChainMap, and we still need access to the unversioned ChainMap (for
+        # add_representer(), and for subclasses to chain off of).
+        "_reps": "yaml_representers",
+        # Same goes for _mreps.
+        "_mreps": "yaml_multi_representers",
     },
+):
+    @classproperty
+    def yaml_representers(cls):  # pylint: disable=no-self-argument
+        return cls._reps
+
+    @classproperty
+    def yaml_multi_representers(cls):  # pylint: disable=no-self-argument
+        return cls._mreps
+
+    @classmethod
+    def add_representer(cls, data_type, rep):
+        cls._reps[data_type] = rep
+
+    @classmethod
+    def add_multi_representer(cls, data_type, rep):
+        cls._mreps[data_type] = rep
+
+
+class _VersionedRepresentersMixin(
+    _yaml_common.VersionedSubclassesMixin,
+    versioned_properties=(
+        "yaml_implicit_resolvers",
+        "yaml_multi_representers",
+        "yaml_representers",
+    ),
 ):
     pass
 
 
 class _CommonMixin(
+    _VersionedRepresentersMixin,
     _InheritedRepresentersMixin,
-    yaml.representer.BaseRepresenter,
 ):
     def _rep_ordereddict(self, data):
         return self.represent_dict(list(data.items()))

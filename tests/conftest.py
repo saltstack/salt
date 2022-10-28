@@ -73,7 +73,12 @@ else:
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace"]
+pytest_plugins = [
+    "tempdir",
+    "helpers_namespace",
+    # Suppress YAML compatibility warnings by default.
+    "tests.support.pytest.yaml",
+]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]

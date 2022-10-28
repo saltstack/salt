@@ -16,7 +16,6 @@ from collections.abc import Mapping, MutableMapping, Sequence
 
 import salt.utils.dictupdate
 import salt.utils.stringutils
-import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
@@ -1042,6 +1041,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
     repacks into a single dictionary.
     """
     if isinstance(data, str):
+        import salt.utils.yaml
         try:
             data = salt.utils.yaml.safe_load(data)
         except salt.utils.yaml.parser.ParserError as err:

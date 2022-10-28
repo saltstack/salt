@@ -13,6 +13,11 @@ unexpected times.
 
 .. _`YAML`: https://yaml.org/spec/1.1/
 
+.. versionchanged:: 3006.0
+
+    All of the behavior changes slated for Salt v3007.0 can be previewed by
+    setting the ``yaml_compatibility`` option to 3007.
+
 Spaces vs Tabs
 ==============
 

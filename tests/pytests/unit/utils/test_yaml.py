@@ -1,12 +1,81 @@
+import re
 import textwrap
+import warnings
 
 import pytest
 import yaml
 from yaml.constructor import ConstructorError
 
+import salt.utils._yaml_common as _yc
 import salt.utils.files
 import salt.utils.yaml as salt_yaml
+from salt.version import SaltStackVersion
 from tests.support.mock import mock_open, patch
+
+
+@pytest.mark.parametrize(
+    "yaml_compatibility,want",
+    [
+        (None, SaltStackVersion(3006)),
+        (3005, SaltStackVersion(3006)),
+        (3006, SaltStackVersion(3006)),
+        ("3006", SaltStackVersion(3006)),
+        ("3006.0", SaltStackVersion(3006)),
+        ("v3006.0", SaltStackVersion(3006)),
+        ("sulfur", SaltStackVersion(3006)),
+        ("Sulfur", SaltStackVersion(3006)),
+        ("SULFUR", SaltStackVersion(3006)),
+        (3007, SaltStackVersion(3007)),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_compat_ver(yaml_compatibility, want):
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", category=_yc.UnsupportedValueWarning, module=_yc.__name__
+        )
+        got = _yc.compat_ver()
+    assert got == want
+
+
+@pytest.mark.show_yaml_compatibility_warnings
+@pytest.mark.parametrize(
+    "yaml_compatibility,want",
+    [
+        (None, [(FutureWarning, r"behavior will change in version 3007(?:\.0)?")]),
+        (
+            3005,
+            [
+                (FutureWarning, r"less than 3007(?:\.0)? will be removed in Salt 3011(?:\.0)?"),
+                (_yc.UnsupportedValueWarning, r"minimum supported value 3006(?:\.0)?"),
+                (_yc.OverrideNotice, r"3006(?:\.0)?"),
+            ],
+        ),
+        (
+            3006,
+            [
+                (FutureWarning, r"less than 3007(?:\.0)? will be removed in Salt 3011(?:\.0)?"),
+                (_yc.OverrideNotice, r"3006(?:\.0)?"),
+            ],
+        ),
+        (3007, [(_yc.OverrideNotice, r"3007(?:\.0)?")]),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_compat_ver_warnings(yaml_compatibility, want):
+    with warnings.catch_warnings(record=True) as got:
+        _yc.compat_ver()
+    for category, regexp in want:
+        found = False
+        for warn in got:
+            if warn.category is not category:
+                continue
+            if not re.search(regexp, str(warn.message)):
+                continue
+            found = True
+            break
+        assert found, f"no {category.__name__} warning with message matching {regexp!r}; all warnings: {[warn.message for warn in got]!r}"
+    assert len(got) == len(want)
 
 
 def test_dump():

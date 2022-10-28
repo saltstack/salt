@@ -9,6 +9,7 @@ from yaml.nodes import MappingNode, SequenceNode
 
 import salt.utils._yaml_common as _yaml_common
 import salt.utils.stringutils
+from salt.utils.decorators import classproperty
 
 # prefer C bindings over python when available
 BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
@@ -20,15 +21,50 @@ __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
 class _InheritedConstructorsMixin(
     _yaml_common.InheritMapMixin,
     inherit_map_attrs={
-        "yaml_constructors": "yaml_constructors",
-        "yaml_multi_constructors": "yaml_multi_constructors",
+        # The ChainMap used for yaml_constructors is not saved directly to
+        # cls.yaml_constructors because _yaml_common.VersionedSubclassesMixin is
+        # used to automatically switch between versioned variants of the
+        # ChainMap, and we still need access to the unversioned ChainMap (for
+        # add_constructor(), and for subclasses to chain off of).
+        "_ctors": "yaml_constructors",
+        # Same goes for _mctors.
+        "_mctors": "yaml_multi_constructors",
     },
+):
+    @classproperty
+    def yaml_constructors(cls):  # pylint: disable=no-self-argument
+        return cls._ctors
+
+    @classproperty
+    def yaml_multi_constructors(cls):  # pylint: disable=no-self-argument
+        return cls._mctors
+
+    @classmethod
+    def add_constructor(cls, tag, constructor):
+        cls._ctors[tag] = constructor
+
+    @classmethod
+    def add_multi_constructor(cls, tag_prefix, multi_constructor):
+        cls._mctors[tag_prefix] = multi_constructor
+
+
+class _VersionedConstructorsMixin(
+    _yaml_common.VersionedSubclassesMixin,
+    versioned_properties=(
+        "yaml_constructors",
+        "yaml_implicit_resolvers",
+        "yaml_multi_constructors",
+    ),
 ):
     pass
 
 
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(_InheritedConstructorsMixin, BaseLoader):
+class SaltYamlSafeLoader(
+    _VersionedConstructorsMixin,
+    _InheritedConstructorsMixin,
+    BaseLoader,
+):
     """
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt

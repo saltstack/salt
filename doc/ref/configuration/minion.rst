@@ -1687,6 +1687,46 @@ See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
 
     use_yamlloader_old: False
 
+.. conf_minion:: yaml_compatibility
+
+``yaml_compatibility``
+----------------------
+
+.. versionadded:: 3006.0
+
+Default: ``None``
+
+Force the behavior of the YAML loader (parser) and dumper (generator) to match
+the default behavior from a specific version of Salt.  Omitting this or setting
+it to ``None`` (in YAML: ``null``, ``~``, or an empty value) is equivalent to
+setting it to the current version of Salt.
+
+Changes that are expected in a future version of Salt can be previewed by
+setting this to that future version number.
+
+This setting does not take effect until after the config file is parsed (so
+setting this value does not change how the config file itself is parsed).
+
+Note that pillar `.sls` files are parsed on the master so setting this on the
+minion does not affect pillar YAML files.  State `.sls` files are parsed by the
+minions, so setting this on the minion does affect how state YAML files are
+parsed.
+
+.. code-block:: yaml
+
+    # Use the default behavior.
+    yaml_compatibility: null
+
+    # Any of the following will force the YAML loader/dumper to behave like
+    # it did in Salt v3006.0:
+    yaml_compatibility: 3006
+    yaml_compatibility: 3006.0
+    yaml_compatibility: v3006
+    yaml_compatibility: v3006.0
+    yaml_compatibility: sulfur
+    yaml_compatibility: Sulfur
+    yaml_compatibility: SULFUR
+
 Docker Configuration
 ====================
 
