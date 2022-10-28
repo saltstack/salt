@@ -205,9 +205,7 @@ def _elasticsearch_return(data, **kwargs):
     def post_to_elk(data):
         elc_kwargs["body"] = data
         post_result = __salt__["elasticsearch.document_create"](**elc_kwargs)
-        log.debug(
-            "TTP elasticsearch returner, server response: '{}'".format(post_result)
-        )
+        log.debug("TTP elasticsearch returner, server response: '%s'", post_result)
 
     elc_kwargs = {
         "doc_type": kwargs.get("doc_type", "default"),
