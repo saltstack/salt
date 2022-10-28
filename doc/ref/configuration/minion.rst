@@ -2477,7 +2477,7 @@ default configuration set up at install time.
 
 Default: ``None``
 
-If set, this parameter expects a dictionary of state module names as keys and
+If set, this parameter expects a dictionary of state module names as keys and a
 list of conditions which must be satisfied in order to run any functions in that
 state module.
 
