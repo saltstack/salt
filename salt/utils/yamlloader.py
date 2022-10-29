@@ -73,24 +73,20 @@ class SaltYamlSafeLoader(
 
     def __init__(self, stream, dictclass=dict):
         super().__init__(stream)
-        if dictclass is not dict:
-            # then assume ordered dict and use it for both !map and !omap
-            self.add_constructor("tag:yaml.org,2002:map", type(self).construct_yaml_map)
-            self.add_constructor(
-                "tag:yaml.org,2002:omap", type(self).construct_yaml_map
-            )
-        self.add_constructor("tag:yaml.org,2002:str", type(self).construct_yaml_str)
-        self.add_constructor(
-            "tag:yaml.org,2002:python/unicode", type(self).construct_unicode
-        )
-        self.add_constructor("tag:yaml.org,2002:timestamp", type(self).construct_scalar)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):
+        if self.dictclass is dict:
+            return (yield from super().construct_yaml_map(node))
         data = self.dictclass()
         yield data
         value = self.construct_mapping(node)
         data.update(value)
+
+    def construct_yaml_omap(self, node):
+        if self.dictclass is dict:
+            return (yield from super().construct_yaml_omap(node))
+        return (yield from self.construct_yaml_map(node))
 
     def construct_unicode(self, node):
         return node.value
@@ -200,6 +196,26 @@ class SaltYamlSafeLoader(
             mergeable_items = [x for x in merge if x[0].value not in existing_nodes]
 
             node.value = mergeable_items + node.value
+
+
+# The add_constructor() method is a class method, not an instance method, so
+# custom constructors should be registered at class creation time, not instance
+# creation time.
+SaltYamlSafeLoader.add_constructor(
+    "tag:yaml.org,2002:map", SaltYamlSafeLoader.construct_yaml_map
+)
+SaltYamlSafeLoader.add_constructor(
+    "tag:yaml.org,2002:omap", SaltYamlSafeLoader.construct_yaml_omap
+)
+SaltYamlSafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode", SaltYamlSafeLoader.construct_unicode
+)
+SaltYamlSafeLoader.add_constructor(
+    "tag:yaml.org,2002:str", SaltYamlSafeLoader.construct_yaml_str
+)
+SaltYamlSafeLoader.add_constructor(
+    "tag:yaml.org,2002:timestamp", SaltYamlSafeLoader.construct_scalar
+)
 
 
 def load(stream, Loader=SaltYamlSafeLoader):
