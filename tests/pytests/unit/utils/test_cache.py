@@ -8,12 +8,14 @@
 import time
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.payload
 import salt.utils.cache as cache
 import salt.utils.data
 import salt.utils.files
+from tests.support.mock import patch
 
 
 def test_sanity():
@@ -191,11 +193,11 @@ def test_refill_cache(minion_config, cache_mods_path):
     assert ret == context_copy
 
 
-def test_everything(tmp_path):
+def test_everything(cache_dir):
     """
     Make sure you can instantiate, add, update, remove, expire
     """
-    path = str(tmp_path / "cachedir")
+    path = str(cache_dir / "minion")
 
     # test instantiation
     cd = cache.CacheDisk(0.3, path)
@@ -219,3 +221,56 @@ def test_everything(tmp_path):
     time.sleep(0.5)
     assert "foo" not in cd
     assert "foo" not in cd2
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"PK\x03\x04\n\x00\x00\x00\x00\x00\xb6B\x05S\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\x00\x1c\x00test2/",
+        b"\xc3\x83\xc2\xa6\xc3\x83\xc2\xb8\xc3\x83\xc2\xa5",
+    ],
+)
+def test_unicode_error(cache_dir, data):
+    """
+    Test when the data in the cache raises a UnicodeDecodeError
+    we do not raise an error.
+    """
+    path = cache_dir / "minion"
+    path.touch()
+    cache_data = {
+        "CacheDisk_data": {
+            b"poc-minion": {
+                None: {
+                    b"secrets": {
+                        b"itsasecret": data,
+                        b"CacheDisk_cachetime": {b"poc-minion": 1649339137.1236317},
+                    }
+                }
+            }
+        }
+    }
+    with patch.object(salt.utils.msgpack, "load", return_value=cache_data):
+        cd = cache.CacheDisk(0.3, str(path))
+        assert cd._dict == cache_data
+
+
+def test_cache_corruption(cache_dir):
+    """
+    Tests if the CacheDisk can survive a corrupted cache file.
+    """
+    # Write valid cache file
+    cache_file = cache_dir / "minion"
+    cd = cache.CacheDisk(0.3, str(cache_file))
+    cd["test-key"] = "test-value"
+    del cd
+
+    # Add random string to the data to make the msgpack structure un-decodable
+    with cache_file.open("a") as f:
+        f.write("I am data that should corrupt the msgpack file")
+
+    # Reopen cache, try to fetch key
+    cd = cache.CacheDisk(0.3, str(cache_file))
+    # If the cache is unreadable, we want it to act like an empty cache (as
+    # if the file did not exist in the first place), and should raise a KeyError
+    with pytest.raises(KeyError):
+        assert cd["test-key"]

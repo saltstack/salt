@@ -344,7 +344,12 @@ def _get_docker_py_versioninfo():
     try:
         return docker.version_info
     except AttributeError:
-        pass
+        # docker 6.0.0+ exposes version from __version__ attribute
+        try:
+            docker_version = docker.__version__.split(".")
+            return tuple(int(n) for n in docker_version)
+        except AttributeError:
+            pass
 
 
 def _get_client(timeout=NOTSET, **kwargs):
@@ -1328,6 +1333,17 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
                         }
                 elif subval1 != subval2:
                     ret.setdefault("IPAM", {})[subkey] = {
+                        "old": subval1,
+                        "new": subval2,
+                    }
+        elif item == "Options":
+            for subkey in val1:
+                subval1 = val1[subkey]
+                subval2 = val2.get(subkey)
+                if subkey == "com.docker.network.bridge.name":
+                    continue
+                elif subval1 != subval2:
+                    ret.setdefault("Options", {})[subkey] = {
                         "old": subval1,
                         "new": subval2,
                     }
@@ -2505,11 +2521,11 @@ def version():
     if "Version" in ret:
         match = version_re.match(str(ret["Version"]))
         if match:
-            ret["VersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["VersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     if "ApiVersion" in ret:
         match = version_re.match(str(ret["ApiVersion"]))
         if match:
-            ret["ApiVersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["ApiVersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     return ret
 
 

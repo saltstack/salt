@@ -2,7 +2,6 @@ import sys
 
 import salt.client.ssh
 import salt.utils.parsers
-from salt.utils.verify import verify_log
 
 
 class SaltSSH(salt.utils.parsers.SaltSSHOptionParser):
@@ -15,8 +14,6 @@ class SaltSSH(salt.utils.parsers.SaltSSHOptionParser):
             sys.argv += ["x", "x"]  # Hack: pass a mandatory two options
             # that won't be used anyways with -H or --hosts
         self.parse_args()
-        self.setup_logfile_logger()
-        verify_log(self.config)
 
         ssh = salt.client.ssh.SSH(self.config)
         ssh.run()

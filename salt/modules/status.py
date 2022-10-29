@@ -7,6 +7,7 @@ import collections
 import copy
 import datetime
 import fnmatch
+import itertools
 import logging
 import os
 import re
@@ -68,21 +69,21 @@ def _get_boot_time_aix():
     case $t in *-*) d=${t%%-*}; t=${t#*-};; esac
     case $t in *:*:*) h=${t%%:*}; t=${t#*:};; esac
     s=$((d*86400 + h*3600 + ${t%%:*}*60 + ${t#*:}))
-
-    t is 7-20:46:46
     """
-    boot_secs = 0
     res = __salt__["cmd.run_all"]("ps -o etime= -p 1")
     if res["retcode"] > 0:
         raise CommandExecutionError("Unable to find boot_time for pid 1.")
     bt_time = res["stdout"]
-    days = bt_time.split("-")
-    hms = days[1].split(":")
+    match = re.match(r"\s*(?:(\d+)-)?(?:(\d\d):)?(\d\d):(\d\d)\s*", bt_time)
+    if not match:
+        raise CommandExecutionError("Unexpected time format.")
+
+    groups = match.groups(default="00")
     boot_secs = (
-        _number(days[0]) * 86400
-        + _number(hms[0]) * 3600
-        + _number(hms[1]) * 60
-        + _number(hms[2])
+        _number(groups[0]) * 86400
+        + _number(groups[1]) * 3600
+        + _number(groups[2]) * 60
+        + _number(groups[3])
     )
     return boot_secs
 
@@ -1369,7 +1370,9 @@ def netdev():
         """
         ret = {}
         ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
-        for dev in __grains__["ip4_interfaces"].keys() + __grains__["ip6_interfaces"]:
+        for dev in itertools.chain(
+            __grains__["ip4_interfaces"].keys(), __grains__["ip6_interfaces"].keys()
+        ):
             # fetch device info
             netstat_ipv4 = __salt__["cmd.run"](
                 "netstat -i -I {dev} -n -f inet".format(dev=dev)
@@ -1410,15 +1413,15 @@ def netdev():
         ret = {}
         fields = []
         procn = None
-        for dev in (
-            __grains__["ip4_interfaces"].keys() + __grains__["ip6_interfaces"].keys()
+        for dev in itertools.chain(
+            __grains__["ip4_interfaces"].keys(), __grains__["ip6_interfaces"].keys()
         ):
             # fetch device info
-            # root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -i -n -I en0 -f inet6
+            # root@la68pp002_pub:# netstat -i -n -I en0 -f inet
             # Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
             # en0   1500  link#3      e2.eb.32.42.84.c 10029668     0   446490     0     0
             # en0   1500  172.29.128  172.29.149.95    10029668     0   446490     0     0
-            # root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -i -n -I en0 -f inet6
+            # root@la68pp002_pub:# netstat -i -n -I en0 -f inet6
             # Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
             # en0   1500  link#3      e2.eb.32.42.84.c 10029731     0   446499     0     0
 

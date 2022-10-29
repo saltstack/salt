@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.pf as pf
 from tests.support.mock import MagicMock, patch
 

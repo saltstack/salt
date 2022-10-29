@@ -13,6 +13,7 @@ class MockFileClient:
         if loader:
             loader._file_client = self
         self.requests = []
+        self.opts = {}
 
     def get_file(self, template, dest="", makedirs=False, saltenv="base"):
         self.requests.append(

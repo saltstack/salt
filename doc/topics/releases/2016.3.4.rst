@@ -2530,7 +2530,7 @@ Changelog for v2016.3.3..v2016.3.4
 
   * eda2ae0add Merge pull request `#35781`_ from thatch45/ssh_deploy_more
 
-    * 2558dcc100 follow up on the re-deploy if there is a checksum missmatch
+    * 2558dcc100 follow up on the re-deploy if there is a checksum mismatch
 
   * 165237412c Merge pull request `#35815`_ from gtmanfred/2015.8
 

@@ -3,7 +3,13 @@ Azure (ARM) Network State Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -86,6 +92,9 @@ Azure (ARM) Network State Module
 
 """
 import logging
+from functools import wraps
+
+import salt.utils.azurearm
 
 __virtualname__ = "azurearm_network"
 
@@ -101,6 +110,28 @@ def __virtual__():
     return (False, "azurearm_network module could not be loaded")
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def virtual_network_present(
     name,
     address_prefixes,
@@ -261,6 +292,7 @@ def virtual_network_present(
     return ret
 
 
+@_deprecation_message
 def virtual_network_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -317,6 +349,7 @@ def virtual_network_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def subnet_present(
     name,
     address_prefix,
@@ -461,6 +494,7 @@ def subnet_present(
     return ret
 
 
+@_deprecation_message
 def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -524,6 +558,7 @@ def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def network_security_group_present(
     name, resource_group, tags=None, security_rules=None, connection_auth=None, **kwargs
 ):
@@ -666,6 +701,7 @@ def network_security_group_present(
     return ret
 
 
+@_deprecation_message
 def network_security_group_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -722,6 +758,7 @@ def network_security_group_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def security_rule_present(
     name,
     access,
@@ -1067,6 +1104,7 @@ def security_rule_present(
     return ret
 
 
+@_deprecation_message
 def security_rule_absent(name, security_group, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -1130,6 +1168,7 @@ def security_rule_absent(name, security_group, resource_group, connection_auth=N
     return ret
 
 
+@_deprecation_message
 def load_balancer_present(
     name,
     resource_group,
@@ -1506,6 +1545,7 @@ def load_balancer_present(
     return ret
 
 
+@_deprecation_message
 def load_balancer_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -1562,6 +1602,7 @@ def load_balancer_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def public_ip_address_present(
     name,
     resource_group,
@@ -1762,6 +1803,7 @@ def public_ip_address_present(
     return ret
 
 
+@_deprecation_message
 def public_ip_address_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -1818,6 +1860,7 @@ def public_ip_address_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def network_interface_present(
     name,
     ip_configurations,
@@ -2088,6 +2131,7 @@ def network_interface_present(
     return ret
 
 
+@_deprecation_message
 def network_interface_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -2144,6 +2188,7 @@ def network_interface_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def route_table_present(
     name,
     resource_group,
@@ -2294,6 +2339,7 @@ def route_table_present(
     return ret
 
 
+@_deprecation_message
 def route_table_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -2350,6 +2396,7 @@ def route_table_absent(name, resource_group, connection_auth=None):
     return ret
 
 
+@_deprecation_message
 def route_present(
     name,
     address_prefix,
@@ -2487,6 +2534,7 @@ def route_present(
     return ret
 
 
+@_deprecation_message
 def route_absent(name, route_table, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
