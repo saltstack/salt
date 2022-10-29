@@ -1438,7 +1438,9 @@ def _windows_os_release_grain(caption, product_type):
     release = ""
     if "Server" in caption:
         # Edge case here to handle MS Product that doesn't contain a year
-        if re.match(r"^Microsoft Hyper-V Server$", caption):
+        if re.match(
+            r"^Microsoft[^\d]+(Server|Datacenter|Standard|Essentials)$", caption
+        ):
             version = "2019"
         else:
             for item in caption.split(" "):
