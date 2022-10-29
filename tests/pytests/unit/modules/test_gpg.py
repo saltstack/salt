@@ -874,4 +874,4 @@ def test_gpg_sign(gpghome):
                     use_passphrase=True,
                     gnupghome=str(gpghome.path),
                 )
-                assert '-----BEGIN PGP SIGNATURE-----' in str(gpg_sign_output)
+                assert "-----BEGIN PGP SIGNATURE-----" in str(gpg_sign_output)
