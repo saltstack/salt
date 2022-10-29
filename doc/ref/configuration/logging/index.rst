@@ -4,7 +4,7 @@
 Logging
 =======
 
-The salt project tries to get the logging to work for you and help us solve any
+The Salt Project tries to get the logging to work for you and help us solve any
 issues you might find along the way.
 
 If you want to get some more information on the nitty-gritty of salt's logging
@@ -239,6 +239,11 @@ at the ``debug`` level, and sets a custom module to the ``all`` level:
     'salt.loader.saltmaster.ext.module.custom_module': 'all'
 
 .. conf_log:: log_fmt_jid
+
+You can determine what log call name to use here by adding ``%(module)s`` to the 
+log format. Typically, it is the path of the file which generates the log 
+without the trailing ``.py`` and with path separators replaced with ``.``
+
 
 ``log_fmt_jid``
 -------------------
