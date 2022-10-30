@@ -731,7 +731,7 @@ def test_export_public_key_to_file(gpghome):
         "name": "root",
     }
 
-    exported_keyfile = gpghome.path / "exported_key"
+    exported_keyfile = gpghome.path / "exported_pub_key"
     mock_opt = MagicMock(return_value="root")
     pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
 
