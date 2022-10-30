@@ -654,7 +654,9 @@ def test_export_secret_key_with_gpg_passphrase_in_pillar(gpghome):
                 "salt.modules.gpg.gnupg.GPG.export_keys",
                 MagicMock(return_value=GPG_TEST_PRIV_KEY),
             ) as gnupg_export_keys:
-                ret = gpg.export_key("xxxxxxxxxxxxxxxx", secret=True, use_passphrase=True, bare=True)
+                ret = gpg.export_key(
+                    "xxxxxxxxxxxxxxxx", secret=True, use_passphrase=True, bare=True
+                )
                 assert ret == GPG_TEST_PRIV_KEY
                 gnupg_export_keys.assert_called_with(
                     ["xxxxxxxxxxxxxxxx"],
