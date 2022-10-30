@@ -734,7 +734,9 @@ def test_export_public_key_to_file(gpghome):
                 "salt.modules.gpg.gnupg.GPG.export_keys",
                 MagicMock(return_value=GPG_TEST_PUB_KEY),
             ) as gnupg_export_keys:
-                ret = gpg.export_key(keyids="xxxxxxxxxxxxxxxx", output=exported_keyfile, bare=True)
+                ret = gpg.export_key(
+                    keyids="xxxxxxxxxxxxxxxx", output=exported_keyfile, bare=True
+                )
                 assert ret == GPG_TEST_PUB_KEY
                 keyfile_contents = pathlib.Path(exported_keyfile).read_text()
                 assert keyfile_contents == GPG_TEST_PUB_KEY
