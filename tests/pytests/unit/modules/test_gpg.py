@@ -15,7 +15,6 @@ import psutil
 import pytest
 
 import salt.modules.gpg as gpg
-from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 pytest.importorskip("gnupg")
@@ -297,7 +296,6 @@ def test_list_keys():
         with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
             with patch.object(gpg, "_list_keys", return_value=_list_result):
                 assert gpg.list_keys() == _expected_result
-
 
 
 def test_get_key():
@@ -663,6 +661,7 @@ def test_export_secret_key_with_gpg_passphrase_in_pillar(gpghome):
                     True,
                     passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
+
 
 def test_export_secret_key_to_file_with_gpg_passphrase_in_pillar(gpghome):
     """
