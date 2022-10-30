@@ -783,7 +783,13 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
 
 
 def export_key(
-    keyids=None, secret=False, user=None, gnupghome=None, output=None, use_passphrase=False, bare=False,
+    keyids=None,
+    secret=False,
+    user=None,
+    gnupghome=None,
+    output=None,
+    use_passphrase=False,
+    bare=False,
 ):
     """
     Export a key from the GPG keychain
@@ -849,7 +855,9 @@ def export_key(
     if result:
         if not bare:
             if output:
-                ret["comment"] = "Exported key data has been written to {}".format(output)
+                ret["comment"] = "Exported key data has been written to {}".format(
+                    output
+                )
             else:
                 ret["comment"] = result
         else:
