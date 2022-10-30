@@ -299,6 +299,7 @@ def test_list_keys():
                 assert gpg.list_keys() == _expected_result
 
 
+
 def test_get_key():
     """
     Test gpg.get_key
@@ -553,9 +554,9 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                     )
 
 
-def test_export_key_without_passphrase(gpghome):
+def test_export_public_key(gpghome):
     """
-    Test gpg.export_key without passphrase
+    Test gpg.export_key with single public key
     """
 
     _user_mock = {
@@ -588,9 +589,9 @@ def test_export_key_without_passphrase(gpghome):
                 )
 
 
-def test_export_multiple_keys_without_passphrase(gpghome):
+def test_export_multiple_public_keys(gpghome):
     """
-    Test gpg.export_key with multiple keys and without passphrase
+    Test gpg.export_key with multiple public keys
     """
 
     _user_mock = {
@@ -626,43 +627,9 @@ def test_export_multiple_keys_without_passphrase(gpghome):
                 )
 
 
-def test_export_key_with_passphrase_without_gpg_passphrase_in_pillar(gpghome):
+def test_export_secret_key_with_gpg_passphrase_in_pillar(gpghome):
     """
-    Test gpg.export_key with passphrase but without gpg_passphrase pillar
-    """
-
-    _user_mock = {
-        "shell": "/bin/bash",
-        "workphone": "",
-        "uid": 0,
-        "passwd": "x",
-        "roomnumber": "",
-        "gid": 0,
-        "groups": ["root"],
-        "home": str(gpghome.path),
-        "fullname": "root",
-        "homephone": "",
-        "name": "root",
-    }
-
-    mock_opt = MagicMock(return_value="root")
-    pillar_mock = MagicMock(return_value=None)
-    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
-        with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
-            gpg.__salt__, {"pillar.get": pillar_mock}
-        ):
-            with patch(
-                "salt.modules.gpg.gnupg.GPG.export_keys",
-                MagicMock(return_value=GPG_TEST_PUB_KEY),
-            ) as gnupg_export_keys:
-                with pytest.raises(SaltInvocationError):
-                    assert gpg.export_key("xxxxxxxxxxxxxxxx", secret=True, use_passphrase=True)
-                gnupg_export_keys.assert_not_called()
-
-
-def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
-    """
-    Test gpg.export_key with passphrase and gpg_passphrase pillar
+    Test gpg.export_key with gpg_passphrase in pillar
     """
 
     _user_mock = {
@@ -687,20 +654,60 @@ def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
         ):
             with patch(
                 "salt.modules.gpg.gnupg.GPG.export_keys",
-                MagicMock(return_value=GPG_TEST_PUB_KEY),
+                MagicMock(return_value=GPG_TEST_PRIV_KEY),
             ) as gnupg_export_keys:
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx", secret=True, use_passphrase=True, bare=True)
-                assert ret == GPG_TEST_PUB_KEY
-                # expected
+                assert ret == GPG_TEST_PRIV_KEY
                 gnupg_export_keys.assert_called_with(
                     ["xxxxxxxxxxxxxxxx"],
                     True,
                     passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
 
-def test_export_key_to_file_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
+def test_export_secret_key_to_file_with_gpg_passphrase_in_pillar(gpghome):
     """
-    Test gpg.export_key with passphrase and gpg_passphrase pillar
+    Test gpg.export_key output secret key to file with gpg_passphrase in pillar
+    """
+
+    _user_mock = {
+        "shell": "/bin/bash",
+        "workphone": "",
+        "uid": 0,
+        "passwd": "x",
+        "roomnumber": "",
+        "gid": 0,
+        "groups": ["root"],
+        "home": str(gpghome.path),
+        "fullname": "root",
+        "homephone": "",
+        "name": "root",
+    }
+
+    exported_keyfile = gpghome.path / "exported_priv_key"
+    mock_opt = MagicMock(return_value="root")
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
+        with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
+            gpg.__salt__, {"pillar.get": pillar_mock}
+        ):
+            with patch(
+                "salt.modules.gpg.gnupg.GPG.export_keys",
+                MagicMock(return_value=GPG_TEST_PRIV_KEY),
+            ) as gnupg_export_keys:
+                ret = gpg.export_key(keyids="xxxxxxxxxxxxxxxx", secret=True, output=exported_keyfile, use_passphrase=True, bare=True)
+                assert ret == GPG_TEST_PRIV_KEY
+                gnupg_export_keys.assert_called_with(
+                    ["xxxxxxxxxxxxxxxx"],
+                    True,
+                    passphrase=GPG_TEST_KEY_PASSPHRASE,
+                )
+                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
+                assert keyfile_contents == GPG_TEST_PRIV_KEY
+
+
+def test_export_public_key_to_file(gpghome):
+    """
+    Test gpg.export_key output public key to file
     """
 
     _user_mock = {
@@ -720,15 +727,14 @@ def test_export_key_to_file_with_passphrase_with_gpg_passphrase_in_pillar(gpghom
     exported_keyfile = gpghome.path / "exported_key"
     mock_opt = MagicMock(return_value="root")
     pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+
     with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
-        with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
-            gpg.__salt__, {"pillar.get": pillar_mock}
-        ):
+        with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
             with patch(
                 "salt.modules.gpg.gnupg.GPG.export_keys",
                 MagicMock(return_value=GPG_TEST_PUB_KEY),
             ) as gnupg_export_keys:
-                ret = gpg.export_key(keyids=GPG_TEST_KEY_ID, secret=True, output=exported_keyfile, use_passphrase=True, bare=True)
+                ret = gpg.export_key(keyids=GPG_TEST_KEY_ID, secret=True, output=exported_keyfile, bare=True)
                 assert ret == GPG_TEST_PUB_KEY
                 keyfile_contents = pathlib.Path(exported_keyfile).read_text()
                 assert keyfile_contents == GPG_TEST_PUB_KEY
