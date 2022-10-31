@@ -472,9 +472,15 @@ class VM:
 
             # Grab the public subnet of the vpc used on the template
             client = boto3.client("ec2", region_name=self.region_name)
-            data = client.describe_launch_template_versions(
-                LaunchTemplateName=LAUNCH_TEMPLATE_NAME_FMT.format(self.config.ami)
-            )
+            try:
+                data = client.describe_launch_template_versions(
+                    LaunchTemplateName=LAUNCH_TEMPLATE_NAME_FMT.format(self.config.ami)
+                )
+            except ClientError as exc:
+                if "InvalidLaunchTemplateName.NotFoundException" not in str(exc):
+                    raise
+                self.ctx.error(f"Could not find a launch template for {self.name!r}")
+                self.ctx.exit(1)
             # The newest template comes first
             template_data = data["LaunchTemplateVersions"][0]["LaunchTemplateData"]
             subnet_id = template_data["NetworkInterfaces"][0]["SubnetId"]
