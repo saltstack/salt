@@ -395,10 +395,16 @@ class VM:
         if instance_id_path.exists():
             instance_id = instance_id_path.read_text().strip()
             _instance = self.ec2.Instance(instance_id)
-
-            if _instance.state["Name"] == "running":
-                instance = _instance
-        else:
+            try:
+                if _instance.state["Name"] == "running":
+                    instance = _instance
+            except ClientError as exc:
+                if "InvalidInstanceID.NotFound" not in str(exc):
+                    # This machine no longer exists?!
+                    self.ctx.error(str(exc))
+                    self.ctx.exit(1)
+                instance_id_path.unlink()
+        if not instance_id_path.exists():
             filters = [
                 {"Name": "tag:vm-name", "Values": [self.name]},
                 {"Name": "tag:instance-client-id", "Values": [REPO_CHECKOUT_ID]},
