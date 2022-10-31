@@ -10,6 +10,7 @@ import logging
 import os
 import pathlib
 import platform
+import pprint
 import random
 import shutil
 import subprocess
@@ -499,6 +500,28 @@ class VM:
                         break
             # Randomly choose one of the subnets
             chosen_public_subnet = random.choice(public_subnets)
+            # Get the develpers security group
+            security_group_filters = [
+                {
+                    "Name": "vpc-id",
+                    "Values": [vpc.id],
+                },
+                {
+                    "Name": "tag:spb:environment",
+                    "Values": ["salt-project"],
+                },
+                {
+                    "Name": "tag:spb:developer",
+                    "Values": ["true"],
+                },
+            ]
+            response = client.describe_security_groups(Filters=security_group_filters)
+            if not response.get("SecurityGroups"):
+                self.ctx.error(
+                    "Could not find the right security group for developers. "
+                    f"Filters:\n{pprint.pformat(security_group_filters)}"
+                )
+                self.ctx.exit(1)
             # Override the launch template network interfaces config
             network_interfaces = [
                 {
@@ -506,6 +529,7 @@ class VM:
                     "DeleteOnTermination": True,
                     "DeviceIndex": 0,
                     "SubnetId": chosen_public_subnet.id,
+                    "Groups": [sg["GroupId"] for sg in response["SecurityGroups"]],
                 }
             ]
 
