@@ -200,23 +200,6 @@ run in.  But here are some general tuning tips for different situations:
 The Master is CPU bound
 -----------------------
 
-Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096
-bit key-pairs on first start. While the key-size for the Master is currently
-not configurable, the minions keysize can be configured with different
-key-sizes. For example with a 2048 bit key:
-
-.. code-block:: yaml
-
-    keysize: 2048
-
-With thousands of decryptions, the amount of time that can be saved on the
-masters end should not be neglected. See here for reference:
-`Pull Request 9235 <https://github.com/saltstack/salt/pull/9235>`_ how much
-influence the key-size can have.
-
-Downsizing the Salt Master's key is not that important, because the minions
-do not encrypt as many messages as the Master does.
-
 In installations with large or with complex pillar files, it is possible
 for the master to exhibit poor performance as a result of having to render
 many pillar files at once. This exhibit itself in a number of ways, both

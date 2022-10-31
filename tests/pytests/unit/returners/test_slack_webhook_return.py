@@ -1,30 +1,37 @@
 """
     :codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
 
-    tests.unit.returners.test_slack_webhook_return
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     Unit tests for the Slack Webhook Returner.
 """
-
+import pytest
 
 import salt.returners.slack_webhook_return as slack_webhook
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
 
 
-class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
-    """
-    Test slack_webhook returner
-    """
+@pytest.fixture
+def webhook():
+    return "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
 
-    _WEBHOOK = "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
-    _AUTHOR_ICON = "https://platform.slack-edge.com/img/default_application_icon.png"
-    _SHOW_TASKS = True
-    _MINION_NAME = "MacPro"
 
-    _RET = {
+@pytest.fixture
+def author_icon():
+    return "https://platform.slack-edge.com/img/default_application_icon.png"
+
+
+@pytest.fixture
+def show_tasks():
+    return True
+
+
+@pytest.fixture
+def minion_name():
+    return "MacPro"
+
+
+@pytest.fixture
+def ret(minion_name):
+    return {
         "fun_args": ["config.vim"],
         "jid": "20181227105933129338",
         "return": {
@@ -91,11 +98,14 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         "retcode": 2,
         "success": True,
         "fun": "state.apply",
-        "id": _MINION_NAME,
+        "id": minion_name,
         "out": "highstate",
     }
 
-    _EVNT_RET = [
+
+@pytest.fixture
+def evnt_ret(minion_name):
+    return [
         {
             "data": {
                 "fun_args": ["config.vim"],
@@ -155,13 +165,16 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "retcode": 2,
                 "success": True,
                 "fun": "state.apply",
-                "id": _MINION_NAME,
+                "id": minion_name,
                 "out": "highstate",
             }
         }
     ]
 
-    _EXPECTED_PAYLOAD = {
+
+@pytest.fixture
+def expected_payload(minion_name, author_icon):
+    return {
         "attachments": [
             {
                 "title": "Success: False",
@@ -170,10 +183,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                     "Function: state.apply\nFunction Args: ['config.vim']\nJID:"
                     " 20181227105933129338\nTotal: 4\nDuration: 27.03 secs"
                 ),
-                "author_link": "{}".format(_MINION_NAME),
-                "author_name": "{}".format(_MINION_NAME),
-                "fallback": "{} | Failed".format(_MINION_NAME),
-                "author_icon": _AUTHOR_ICON,
+                "author_link": "{}".format(minion_name),
+                "author_name": "{}".format(minion_name),
+                "fallback": "{} | Failed".format(minion_name),
+                "author_icon": author_icon,
             },
             {"color": "good", "title": "Unchanged: 2"},
             {
@@ -196,99 +209,108 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         ]
     }
 
-    def setup_loader_modules(self):
-        return {
-            slack_webhook: {
-                "__opts__": {
-                    "slack_webhook.webhook": self._WEBHOOK,
-                    "slack_webhook.author_icon": self._AUTHOR_ICON,
-                    "slack_webhook.success_title": "{id} | Succeeded",
-                    "slack_webhook.failure_title": "{id} | Failed",
-                    "slack_webhook.show_tasks": self._SHOW_TASKS,
-                }
+
+@pytest.fixture
+def configure_loader_modules(webhook, author_icon, show_tasks):
+    return {
+        slack_webhook: {
+            "__opts__": {
+                "slack_webhook.webhook": webhook,
+                "slack_webhook.author_icon": author_icon,
+                "slack_webhook.success_title": "{id} | Succeeded",
+                "slack_webhook.failure_title": "{id} | Failed",
+                "slack_webhook.show_tasks": show_tasks,
             }
         }
+    }
 
-    def test_no_webhook(self):
-        """
-        Test returner stops if no webhook is defined
-        """
-        with patch.dict(slack_webhook.__opts__, {"slack_webhook.webhook": ""}):
-            self.assertEqual(slack_webhook.returner(self._RET), None)
 
-    def test_returner(self):
-        """
-        Test to see if the Slack Webhook returner sends a message
-        """
-        query_ret = {"body": "ok", "status": 200}
-        with patch("salt.utils.http.query", return_value=query_ret):
-            self.assertTrue(slack_webhook.returner(self._RET))
+def test_no_webhook(ret):
+    """
+    Test returner stops if no webhook is defined
+    """
+    with patch.dict(slack_webhook.__opts__, {"slack_webhook.webhook": ""}):
+        assert slack_webhook.returner(ret) is None
 
-    def test_event_return(self):
-        """
-        Test to see if the Slack Webhook event_return sends a message
-        """
-        query_ret = {"body": "ok", "status": 200}
-        with patch("salt.utils.http.query", return_value=query_ret):
-            self.assertTrue(slack_webhook.event_return(self._EVNT_RET))
 
-    def test_generate_payload_for_state_apply(self):
-        """
-        Test _generate_payload private method
-        """
-        test_title = "{} | Failed".format(self._MINION_NAME)
-        test_report = slack_webhook._generate_report(self._RET, self._SHOW_TASKS)
+def test_returner(ret):
+    """
+    Test to see if the Slack Webhook returner sends a message
+    """
+    query_ret = {"body": "ok", "status": 200}
+    with patch("salt.utils.http.query", return_value=query_ret):
+        assert slack_webhook.returner(ret)
 
-        custom_grains = slack_webhook.__grains__
-        custom_grains["id"] = self._MINION_NAME
-        custom_grains["localhost"] = self._MINION_NAME
 
-        with patch.dict(slack_webhook.__grains__, custom_grains):
-            test_payload = slack_webhook._generate_payload(
-                self._AUTHOR_ICON, test_title, test_report
-            )
+def test_event_return(evnt_ret):
+    """
+    Test to see if the Slack Webhook event_return sends a message
+    """
+    query_ret = {"body": "ok", "status": 200}
+    with patch("salt.utils.http.query", return_value=query_ret):
+        assert slack_webhook.event_return(evnt_ret)
 
-        self.assertDictEqual(test_payload, self._EXPECTED_PAYLOAD)
 
-    def test_generate_payload_for_test_ping(self):
-        """
-        Test _generate_payload private method
-        """
+def test_generate_payload_for_state_apply(
+    ret, minion_name, show_tasks, expected_payload, author_icon
+):
+    """
+    Test _generate_payload private method
+    """
+    test_title = "{} | Failed".format(minion_name)
+    test_report = slack_webhook._generate_report(ret, show_tasks)
 
-        test_ping_ret = {
-            "jid": "20200124204109195206",
-            "return": True,
-            "retcode": 0,
-            "id": self._MINION_NAME,
-            "fun": "test.ping",
-            "fun_args": [],
-            "success": True,
-        }
-        expected_payload = {
-            "attachments": [
-                {
-                    "fallback": "{} | Succeeded".format(self._MINION_NAME),
-                    "color": "#272727",
-                    "author_name": self._MINION_NAME,
-                    "author_link": self._MINION_NAME,
-                    "author_icon": self._AUTHOR_ICON,
-                    "title": "Success: True",
-                    "text": "Function: test.ping\nJID: 20200124204109195206\n",
-                },
-                {"color": "good", "title": "Return: True"},
-            ]
-        }
+    custom_grains = slack_webhook.__grains__
+    custom_grains["id"] = minion_name
+    custom_grains["localhost"] = minion_name
 
-        test_title = "{} | Succeeded".format(self._MINION_NAME)
-        test_report = slack_webhook._generate_report(test_ping_ret, self._SHOW_TASKS)
+    with patch.dict(slack_webhook.__grains__, custom_grains):
+        test_payload = slack_webhook._generate_payload(
+            author_icon, test_title, test_report
+        )
 
-        custom_grains = slack_webhook.__grains__
-        custom_grains["id"] = self._MINION_NAME
-        custom_grains["localhost"] = self._MINION_NAME
+    assert test_payload == expected_payload
 
-        with patch.dict(slack_webhook.__grains__, custom_grains):
-            test_payload = slack_webhook._generate_payload(
-                self._AUTHOR_ICON, test_title, test_report
-            )
 
-        self.assertDictEqual(test_payload, expected_payload)
+def test_generate_payload_for_test_ping(minion_name, author_icon, show_tasks):
+    """
+    Test _generate_payload private method
+    """
+
+    test_ping_ret = {
+        "jid": "20200124204109195206",
+        "return": True,
+        "retcode": 0,
+        "id": minion_name,
+        "fun": "test.ping",
+        "fun_args": [],
+        "success": True,
+    }
+    expected_payload = {
+        "attachments": [
+            {
+                "fallback": "{} | Succeeded".format(minion_name),
+                "color": "#272727",
+                "author_name": minion_name,
+                "author_link": minion_name,
+                "author_icon": author_icon,
+                "title": "Success: True",
+                "text": "Function: test.ping\nJID: 20200124204109195206\n",
+            },
+            {"color": "good", "title": "Return: True"},
+        ]
+    }
+
+    test_title = "{} | Succeeded".format(minion_name)
+    test_report = slack_webhook._generate_report(test_ping_ret, show_tasks)
+
+    custom_grains = slack_webhook.__grains__
+    custom_grains["id"] = minion_name
+    custom_grains["localhost"] = minion_name
+
+    with patch.dict(slack_webhook.__grains__, custom_grains):
+        test_payload = slack_webhook._generate_payload(
+            author_icon, test_title, test_report
+        )
+
+    assert test_payload == expected_payload
