@@ -848,7 +848,7 @@ def export_key(
     else:
         result = gpg.export_keys(keyids, secret, expect_passphrase=False)
 
-    if output and result:
+    if result and output:
         with salt.utils.files.flopen(output, "w") as fout:
             fout.write(salt.utils.stringutils.to_str(result))
 
