@@ -428,6 +428,10 @@ class VM:
     def write_ssh_config(self):
         if self.ssh_config_file.exists():
             return
+        if os.environ.get("CI") is not None:
+            forward_agent = "no"
+        else:
+            forward_agent = "yes"
         ssh_config = textwrap.dedent(
             f"""\
             Host {self.name}
@@ -437,7 +441,7 @@ class VM:
               LogLevel=FATAL
               StrictHostKeyChecking=no
               UserKnownHostsFile=/dev/null
-              ForwardAgent=yes
+              ForwardAgent={forward_agent}
             """
         )
         self.ssh_config_file.write_text(ssh_config)
@@ -994,7 +998,6 @@ class VM:
             assert ssh
         _ssh_command_args = [
             ssh,
-            "-a",
             "-F",
             str(self.ssh_config_file.relative_to(REPO_ROOT)),
         ]
