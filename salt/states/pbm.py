@@ -430,7 +430,7 @@ def storage_policies_configured(name, policies):
                         service_instance=si,
                     )
                     comments.append(
-                        "Updated the storage policy '{}'in vCenter '{}'".format(
+                        "Updated the storage policy '{}' in vCenter '{}'".format(
                             policy["name"], vcenter
                         )
                     )

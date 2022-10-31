@@ -19,7 +19,8 @@ How do I add a changelog entry
 ------------------------------
 
 To add a changelog entry you will need to add a file in the `changelog` directory.
-The file name should follow the syntax ``<issue #>.<type>``.
+The file name should follow the syntax ``<issue #>.<type>``. If it is a security
+fix then the following syntax will need to be used ``cve-<cve-number>.security``.
 
 The types are in alignment with keepachangelog:
 
@@ -38,11 +39,17 @@ The types are in alignment with keepachangelog:
   added:
     any new features added
 
+  security:
+    any fixes for a cve
+
+
 For example if you are fixing a bug for issue number #1234 your filename would
 look like this: changelog/1234.fixed. The contents of the file should contain
 a summary of what you are fixing. If there is a legitimate reason to not include
 an issue number with a given contribution you can add the PR number as the file
 name (``<PR #>.<type>``).
+
+For a security fix your filename would look like this: changelog/cve-2021-25283.security.
 
 If your PR does not align with any of the types, then you do not need to add a
 changelog entry.
@@ -69,7 +76,7 @@ you can run towncrier in draft mode:
 
 .. code-block:: bash
 
-    nox -e 'changelog(draft=True)' -- 3000.1
+    nox -e 'changelog(force=False, draft=True)' -- 3000.1
 
 Version will need to be set to whichever version we are about to release. Once you are
 confident the draft output looks correct you can now generate the changelog by running:
@@ -80,9 +87,17 @@ confident the draft output looks correct you can now generate the changelog by r
 
 .. code-block:: bash
 
-    nox -e 'changelog(draft=False)' -- 3000.1
+    nox -e 'changelog(force=False, draft=False)' -- 3000.1
 
 After this is run towncrier will automatically remove all the files in the changelog directory.
+
+
+If you want to force towncrier to automatically remove all the files in the changelog directory
+without asking you to type yes, you can set force to True.
+
+.. code-block:: bash
+
+    nox -e 'changelog(force=True, draft=False)' -- 3000.1
 
 
 .. _`SEP 01`: https://github.com/saltstack/salt-enhancement-proposals/pull/2

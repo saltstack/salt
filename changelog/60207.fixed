@@ -1,1 +1,0 @@
-Inject the Ansible functions into Salt's ``ansiblegate`` module which was broken on the 3001 release.

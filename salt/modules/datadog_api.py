@@ -1,20 +1,25 @@
 """
 An execution module that interacts with the Datadog API
 
-The following parameters are required for all functions.
+:depends: datadog_ Python module
 
-api_key
-    The datadog API key
+.. _datadog: https://pypi.python.org/pypi/datadog
 
-app_key
-    The datadog application key
+.. note::
+    The following parameters are required for all functions:
+
+    api_key
+        The datadog API key
+
+    app_key
+        The datadog application key
 
 Full argument reference is available on the Datadog API reference page
 https://docs.datadoghq.com/api/
 """
 
-
 import requests
+
 from salt.exceptions import SaltInvocationError
 
 HAS_DATADOG = True

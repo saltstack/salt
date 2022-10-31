@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.ddns as ddns
 from tests.support.mock import MagicMock, patch
 

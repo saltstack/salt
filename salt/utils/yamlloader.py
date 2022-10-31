@@ -3,36 +3,21 @@ Custom YAML loading in Salt
 """
 
 
-import warnings
-
-import salt.utils.stringutils
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
 
-try:
-    yaml.Loader = yaml.CLoader
-    yaml.Dumper = yaml.CDumper
-    yaml.SafeLoader = yaml.CSafeLoader
-    yaml.SafeDumper = yaml.CSafeDumper
-except Exception:  # pylint: disable=broad-except
-    pass
+import salt.utils.stringutils
+
+# prefer C bindings over python when available
+BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
 
 
-class DuplicateKeyWarning(RuntimeWarning):
-    """
-    Warned when duplicate keys exist
-    """
-
-
-warnings.simplefilter("always", category=DuplicateKeyWarning)
-
-
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(yaml.SafeLoader):
+class SaltYamlSafeLoader(BaseLoader):
     """
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt

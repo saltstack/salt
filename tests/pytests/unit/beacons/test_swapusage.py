@@ -7,6 +7,7 @@
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.swapusage as swapusage
 from tests.support.mock import MagicMock, patch
 
@@ -54,7 +55,7 @@ def test_swapusage_match(stub_swap_usage):
         assert ret == [{"swapusage": 9.7}]
 
         # Test without the percent
-        config = [{"percent": "9"}, {"interval": 30}]
+        config = [{"percent": 9}, {"interval": 30}]
 
         ret = swapusage.validate(config)
         assert ret == (True, "Valid beacon configuration")

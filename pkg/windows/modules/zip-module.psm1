@@ -1,19 +1,19 @@
 Function Expand-ZipFile {
+    # A PowerShell 3.0 compatible function for unzipping files
 
     Param(
-        [Parameter(Mandatory = $true)] [string] $zipfile,
-        [Parameter(Mandatory = $true)] [string] $destination
+        [Parameter(Mandatory=$true)]
+        [string] $zipfile,
+
+        [Parameter(Mandatory=$true)]
+        [string] $destination
     )
-    # This function unzips a zip file
-    # Code obtained from:
-    # http://www.howtogeek.com/tips/how-to-extract-zip-files-using-powershell/
 
     Begin { Write-Host " - Unzipping '$zipfile' to '$destination'" }
 
     Process {
         # Create a new directory if it doesn't exist
-        If (!(Test-Path -Path $destination))
-        {
+        If (!(Test-Path -Path $destination)) {
             New-Item -ItemType directory -Path $destination
         }
 
@@ -24,8 +24,7 @@ Function Expand-ZipFile {
         $objZip = $objShell.NameSpace($zipfile)
 
         # Unzip each item in the zip file
-        ForEach ($item in $objZip.Items())
-        {
+        ForEach ($item in $objZip.Items()) {
             $objShell.Namespace($destination).CopyHere($item, 0x14)
         }
     }
