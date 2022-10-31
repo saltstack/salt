@@ -332,15 +332,16 @@ def post_master_init(self, master):
         sub_proxy_data = f.result()
         minion_id = sub_proxy_data["proxy_opts"].get("id")
 
-        self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
-        self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
+        if sub_proxy_data["proxy_minion"]:
+            self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
+            self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
-        if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-            self.deltaproxy_objs[
-                minion_id
-            ].req_channel = salt.transport.client.AsyncReqChannel.factory(
-                sub_proxy_data["proxy_opts"], io_loop=self.io_loop
-            )
+            if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
+                self.deltaproxy_objs[
+                    minion_id
+                ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                )
 
     self.ready = True
 
@@ -384,7 +385,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
         log.warning(
             "Pillar data for proxy minion %s could not be loaded, skipping.", minion_id
         )
-        return {"proxy_minion": None, "proxy_opts": None}
+        return {"proxy_minion": None, "proxy_opts": {}}
 
     # Remove ids
     proxyopts["proxy"].pop("ids", None)
