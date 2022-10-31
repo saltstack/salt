@@ -550,3 +550,31 @@ def test_tidied_age_size_args_AND_operator_size_and_age():
     }
     assert ret == exp
     assert remove.call_count == 3
+
+
+def test_tidied_filenotfound(tmp_path):
+    name = tmp_path / "not_found_test"
+    name.mkdir(parents=True, exist_ok=True)
+    name = str(tmp_path / "not_found_test")
+    walker = [
+        (os.path.join(name, "test1"), [], ["file1"]),
+        (os.path.join(name, "test2", "test3"), [], []),
+        (os.path.join(name, "test2"), ["test3"], ["file2"]),
+        (name, ["test1", "test2"], ["file3"]),
+    ]
+    # mock the walk, but files aren't there
+    with patch("os.walk", return_value=walker), patch(
+        "os.path.islink", return_value=False
+    ):
+        ret = filestate.tidied(
+            name=name,
+            age=1,
+            size=9,
+        )
+    exp = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Nothing to remove from directory {}".format(name),
+    }
+    assert ret == exp
