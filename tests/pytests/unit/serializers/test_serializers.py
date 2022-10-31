@@ -5,6 +5,7 @@ import pytest
 import yaml as _yaml
 
 import salt.serializers.configparser as configparser
+import salt.serializers.envfile as envfile
 import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
 import salt.serializers.plist as plist
@@ -397,3 +398,40 @@ def test_serialize_binary_plist():
 
     deserialized = plist.deserialize(serialized)
     assert deserialized == data, deserialized
+
+
+def test_serialize_envfile():
+    data = {"foo": "bar baz"}
+    serialized = envfile.serialize(data)
+    assert serialized == "foo=bar baz", serialized
+
+    deserialized = envfile.deserialize(serialized)
+    assert deserialized == data, deserialized
+
+
+def test_serialize_envfile_quoting():
+    data = {"foo": "bar baz"}
+    serialized = envfile.serialize(data, quoting=True)
+    assert serialized == "foo='bar baz'", serialized
+
+    deserialized = envfile.deserialize(serialized, quoting=False)
+    assert deserialized == data, deserialized
+
+
+def test_serialize_envfile_separator():
+    data = {"foo": "bar baz"}
+    serialized = envfile.serialize(data, separator=" = ")
+    assert serialized == "foo = bar baz", serialized
+
+    deserialized = envfile.deserialize(serialized, separator=" = ")
+    assert deserialized == data, deserialized
+
+
+def test_serialize_envfile_list_of_lists():
+    data = [["foo", "bar baz"], ["salt", "rocks"]]
+    expected = {"foo": "bar baz", "salt": "rocks"}
+    serialized = envfile.serialize(data)
+    assert serialized == "foo=bar baz\nsalt=rocks", serialized
+
+    deserialized = envfile.deserialize(serialized)
+    assert deserialized == expected, deserialized
