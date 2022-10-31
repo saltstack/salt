@@ -28,7 +28,14 @@ try:
     import boto3
     import yaml
     from botocore.exceptions import ClientError
-    from rich.progress import Progress
+    from rich.progress import (
+        BarColumn,
+        Column,
+        Progress,
+        TaskProgressColumn,
+        TextColumn,
+        TimeRemainingColumn,
+    )
 except ImportError:
     print(
         "\nPlease run 'python -m pip install -r "
@@ -533,18 +540,10 @@ class VM:
                 }
             ]
 
-        progress = Progress(
-            # transient=True,
-            expand=True,
-        )
+        progress = create_progress_bar()
         create_tast = progress.add_task(
             f"Starting {self!r} in {self.region_name!r} with ssh key named {key_name!r}...",
             total=create_timeout,
-        )
-        connect_task = progress.add_task(
-            "Waiting for ssh connection",
-            start=False,
-            total=ssh_connection_timeout,
         )
 
         tags = [
@@ -679,12 +678,13 @@ class VM:
 
             # Wait until we can SSH into the VM
             host = self.instance.public_ip_address or self.instance.private_ip_address
-            progress.update(
-                connect_task,
-                description=f"Waiting for SSH to become available at {host} ...",
-            )
-            progress.start_task(connect_task)
 
+        progress = create_progress_bar()
+        connect_task = progress.add_task(
+            f"Waiting for SSH to become available at {host} ...",
+            total=ssh_connection_timeout,
+        )
+        with progress:
             proc = None
             checks = 0
             last_error = None
@@ -712,7 +712,12 @@ class VM:
                 checks += 1
                 try:
                     wait_start = time.time()
-                    proc.wait(timeout=1)
+                    proc.wait(timeout=3)
+                    progress.update(
+                        connect_task,
+                        completed=ssh_connection_timeout_progress,
+                        description=f"Waiting for SSH to become available at {host} ...",
+                    )
                     if proc.returncode == 0:
                         progress.update(
                             connect_task,
@@ -720,6 +725,7 @@ class VM:
                             completed=ssh_connection_timeout,
                         )
                         return True
+                    proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
                     if stderr:
                         stderr = f" Last Error: {stderr}"
@@ -727,7 +733,9 @@ class VM:
                     proc = None
                     if time.time() - wait_start < 1:
                         # Process exited too fast, sleep a little longer
-                        time.sleep(3)
+                        time.sleep(5)
+                except KeyboardInterrupt:
+                    return
                 except subprocess.TimeoutExpired:
                     pass
 
@@ -754,10 +762,7 @@ class VM:
                 return
             timeout = self.config.terminate_timeout
             timeout_progress = 0
-            progress = Progress(
-                # transient=True,
-                expand=True,
-            )
+            progress = create_progress_bar()
             task = progress.add_task(f"Terminatting {self!r}...", total=timeout)
             self.instance.terminate()
             try:
@@ -990,7 +995,7 @@ class VM:
             ]
         )
         log.info(f"Running {' '.join(cmd)!r}")  # type: ignore[arg-type]
-        progress = Progress(transient=True, expand=True)
+        progress = create_progress_bar(transient=True)
         task = progress.add_task(description, total=100)
         with progress:
             proc = subprocess.Popen(cmd, bufsize=1, stdout=subprocess.PIPE, text=True)
@@ -1123,3 +1128,16 @@ class VM:
         if self.is_windows:
             return pathlib.PureWindowsPath(r"c:\Windows\Temp\testing")
         return pathlib.Path("/tmp/testing")
+
+
+def create_progress_bar(**kwargs):
+    return Progress(
+        TextColumn(
+            "[progress.description]{task.description}", table_column=Column(ratio=3)
+        ),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(),
+        expand=True,
+        **kwargs,
+    )
