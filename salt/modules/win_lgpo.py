@@ -2,9 +2,14 @@
 Manage Local Policy on Windows
 
 This module allows configuring local group policy (i.e. ``gpedit.msc``) on a
-Windows server.
+Windows machine.
 
 .. versionadded:: 2016.11.0
+
+.. warning::
+    Local Group Policy will always be superseded by Domain Group policy. If
+    policies are configured with Local Group Policy that are also configured
+    with Domain Group policy, the Domain Group policy will take precedence.
 
 Administrative Templates
 ========================
