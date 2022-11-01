@@ -1,8 +1,31 @@
 """
-    salt.serializers.envfile
-    ~~~~~~~~~~~~~~~~~~~~~~~~
+    salt.serializers.keyvalue
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Implements environment file serializer.
+    Implements keyvalue serializer which can be used for serializing or
+    deserializing any file which defines keys and values separated by a common
+    set of characters, such environment files, which are in "KEY=value" format.
+
+    A dataset such as:
+
+    .. code-block:: yaml
+
+        foo: bar
+        wang: chung
+
+    or
+
+    .. code-block:: yaml
+
+        - [foo, bar]
+        - [wang, chung]
+
+    can be represented as:
+
+    .. code-block:: text
+
+        foo=bar
+        wang=chung
 """
 
 import salt.utils.platform
