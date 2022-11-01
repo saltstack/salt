@@ -56,7 +56,9 @@ logging.getLogger("boto").setLevel(logging.INFO)
 try:
     # pylint: disable=unused-import
     import boto
+    import boto3  # pylint: disable=unused-import
     import boto.dynamodb2
+    import botocore
 
     # pylint: enable=unused-import
     from boto.dynamodb2.fields import (
@@ -69,8 +71,6 @@ try:
     )
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError
-    import botocore
-    import boto3  # pylint: disable=unused-import
 
     logging.getLogger("boto").setLevel(logging.INFO)
 
