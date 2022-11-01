@@ -485,7 +485,7 @@ class VM:
                     LaunchTemplateName=LAUNCH_TEMPLATE_NAME_FMT.format(self.config.ami)
                 )
             except ClientError as exc:
-                if "InvalidLaunchTemplateName.NotFoundException" not in str(exc):
+                if "InvalidLaunchTemplateName." not in str(exc):
                     raise
                 self.ctx.error(f"Could not find a launch template for {self.name!r}")
                 self.ctx.exit(1)
