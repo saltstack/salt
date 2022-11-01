@@ -320,28 +320,55 @@ def post_master_init(self, master):
     self.proxy_pillar = {}
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [
-            executor.submit(
-                subproxy_post_master_init, _id, uid, self.opts, self.proxy, self.utils
-            )
-            for _id in self.opts["proxy"].get("ids", [])
-        ]
 
-    for f in concurrent.futures.as_completed(futures):
-        sub_proxy_data = f.result()
-        minion_id = sub_proxy_data["proxy_opts"].get("id")
-
-        if sub_proxy_data["proxy_minion"]:
-            self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
-            self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
-
-            if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                self.deltaproxy_objs[
-                    minion_id
-                ].req_channel = salt.transport.client.AsyncReqChannel.factory(
-                    sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+    if self.opts["proxy"].get("parallel_startup"):
+        log.debug("Doing parallel startup")
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(
+                    subproxy_post_master_init,
+                    _id,
+                    uid,
+                    self.opts,
+                    self.proxy,
+                    self.utils,
                 )
+                for _id in self.opts["proxy"].get("ids", [])
+            ]
+
+        for f in concurrent.futures.as_completed(futures):
+            sub_proxy_data = f.result()
+            minion_id = sub_proxy_data["proxy_opts"].get("id")
+
+            if sub_proxy_data["proxy_minion"]:
+                self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
+                self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
+
+                if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
+                    self.deltaproxy_objs[
+                        minion_id
+                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                        sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                    )
+    else:
+        log.debug("Doing non-parallel startup")
+        for _id in self.opts["proxy"].get("ids", []):
+            sub_proxy_data = subproxy_post_master_init(
+                _id, uid, self.opts, self.proxy, self.utils
+            )
+
+            minion_id = sub_proxy_data["proxy_opts"].get("id")
+
+            if sub_proxy_data["proxy_minion"]:
+                self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
+                self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
+
+                if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
+                    self.deltaproxy_objs[
+                        minion_id
+                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                        sub_proxy_data["proxy_opts"], io_loop=self.io_loop
+                    )
 
     self.ready = True
 
@@ -1060,15 +1087,20 @@ def tune_in(self, start=True):
     Lock onto the publisher. This is the main event loop for the minion
     :rtype : None
     """
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [
-            executor.submit(subproxy_tune_in, self.deltaproxy_objs[proxy_minion])
-            for proxy_minion in self.deltaproxy_objs
-        ]
+    if self.opts["proxy"].get("parallel_startup"):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(subproxy_tune_in, self.deltaproxy_objs[proxy_minion])
+                for proxy_minion in self.deltaproxy_objs
+            ]
 
-    for f in concurrent.futures.as_completed(futures):
-        _proxy_minion = f.result()
-        log.debug("Tune in for sub proxy %r finished", _proxy_minion.opts.get("id"))
+        for f in concurrent.futures.as_completed(futures):
+            _proxy_minion = f.result()
+            log.debug("Tune in for sub proxy %r finished", _proxy_minion.opts.get("id"))
+    else:
+        for proxy_minion in self.deltaproxy_objs:
+            _proxy_minion = subproxy_tune_in(self.deltaproxy_objs[proxy_minion])
+            log.debug("Tune in for sub proxy %r finished", _proxy_minion.opts.get("id"))
     super(ProxyMinion, self).tune_in(start=start)
 
 
