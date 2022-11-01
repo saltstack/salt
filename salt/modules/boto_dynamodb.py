@@ -103,6 +103,8 @@ def list_tags_of_resource(
 
         salt myminion boto_dynamodb.list_tags_of_resource \
               resource_arn=arn:aws:dynamodb:us-east-1:012345678901:table/my-table
+
+    .. versionadded:: 3006
     """
     conn3 = __utils__["boto3.get_connection"](
         "dynamodb", region=region, key=key, keyid=keyid, profile=profile
@@ -132,7 +134,7 @@ def list_tags_of_resource(
             log.error(
                 "Failed to list tags for resource %s: %s", resource_arn, err.message
             )
-            return None
+            return False
 
 
 def tag_resource(resource_arn, tags, region=None, key=None, keyid=None, profile=None):
@@ -146,6 +148,8 @@ def tag_resource(resource_arn, tags, region=None, key=None, keyid=None, profile=
         salt myminion boto_dynamodb.tag_resource \
               resource_arn=arn:aws:dynamodb:us-east-1:012345678901:table/my-table \
               tags='{Name: my-table, Owner: Ops}'
+
+    .. versionadded:: 3006
     """
     conn3 = __utils__["boto3.get_connection"](
         "dynamodb", region=region, key=key, keyid=keyid, profile=profile
@@ -186,6 +190,8 @@ def untag_resource(
         salt myminion boto_dynamodb.untag_resource \
               resource_arn=arn:aws:dynamodb:us-east-1:012345678901:table/my-table \
               tag_keys='[Name, Owner]'
+
+    .. versionadded:: 3006
     """
     conn3 = __utils__["boto3.get_connection"](
         "dynamodb", region=region, key=key, keyid=keyid, profile=profile
