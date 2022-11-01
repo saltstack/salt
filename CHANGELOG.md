@@ -7,6 +7,31 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3005.1 (2022-09-26)
+========================
+
+Fixed
+-----
+
+- Fix arch parsing issue in apt source files (#62247)
+- Fixed parsing CDROM apt sources (#62474)
+- Use str() method instead of repo_line for when python3-apt is installed or not in aptpkg.py. (#62546)
+- Remove the connection_timeout from netmiko_connection_args before netmiko_connection_args is added to __context__["netmiko_device"]["args"] which is passed along to the Netmiko library. (#62547)
+- fixes #62553 by checking for disabled master_type before starting master connection and skipping it if set. (#62553)
+- Fix runas with cmd module when using the onedir bundled packages (#62565)
+- Fix the Pyinstaller hooks to preserve the environment if None is passed. (#62567, #62628)
+- pkgrepo.managed sets wrong permissions on keys installed to /etc/apt/keyring (#62569)
+- pkgrepo.managed creates zero byte gpg files when dearmoring contents to the same filename (#62570)
+- Ensure default values for IPC Buffers are correct type (#62591)
+- Fix a hang on salt-ssh when using sudo. (#62603)
+- Renderers now have access to the correct set of salt functions. (#62610, #62620)
+- Fix including Jinja template from absolute path (#62611)
+- include jmespath in package requirements (#62613)
+- Fix pkgrepo.managed signed-by in test=true mode (#62662)
+- Ensure the status of the service is captured when the beacon function is called, even when the event is not being emitted. (#62675)
+- The sub proxies controlled by Deltaproxy need to have their own req_channel otherwise there are timeout exceptions when the __master_req_channel_payload is fired and reacted on. (#62708)
+
+
 Salt 3005 (2022-08-22)
 ======================
 
@@ -908,7 +933,7 @@ Salt 3002.2 (2020-11-16)
 
 Fixed
 -----
-
+- Fix server core grains issue when running inside a windows container (#59611)
 - Change dict check to isinstance instead of type() for key_values in file.keyvalue. (#57758)
 - Fail when func_ret is False when using the new module.run syntax. (#57768)
 - Fix comparison of certificate values (#58296)

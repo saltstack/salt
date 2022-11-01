@@ -8,35 +8,6 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def test_opts_state_tree(base_env_state_tree_root_dir):
-    top_file = """
-    base:
-      'localhost':
-        - test_opts
-    """
-    state_file = """
-    {%- set is_test = salt['config.get']('test') %}
-
-    config.get check for is_test:
-      cmd.run:
-        - name: echo '{{ is_test }}'
-
-    opts.get check for test:
-      cmd.run:
-        - name: echo '{{ opts.get('test') }}'
-    """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_state_tree_root_dir
-    )
-    state_tempfile = pytest.helpers.temp_file(
-        "test_opts.sls", state_file, base_env_state_tree_root_dir
-    )
-
-    with top_tempfile, state_tempfile:
-        yield
-
-
-@pytest.fixture(scope="module")
 def state_tree(base_env_state_tree_root_dir):
     top_file = """
     base:
@@ -123,33 +94,6 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     )
     assert ret.returncode == 0
     assert ret.data
-
-
-@pytest.mark.slow_test
-def test_state_opts_test(salt_ssh_cli, test_opts_state_tree):
-    """
-    verify salt-ssh can get the value of test correctly
-    """
-
-    def _verify_output(ret):
-        assert ret.returncode == 0
-        assert (
-            ret.data["cmd_|-config.get check for is_test_|-echo 'True'_|-run"]["name"]
-            == "echo 'True'"
-        )
-        assert (
-            ret.data["cmd_|-opts.get check for test_|-echo 'True'_|-run"]["name"]
-            == "echo 'True'"
-        )
-
-    ret = salt_ssh_cli.run("state.apply", "test_opts", "test=True")
-    _verify_output(ret)
-
-    ret = salt_ssh_cli.run("state.highstate", "test=True")
-    _verify_output(ret)
-
-    ret = salt_ssh_cli.run("state.top", "top.sls", "test=True")
-    _verify_output(ret)
 
 
 @pytest.mark.slow_test

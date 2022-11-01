@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2022.08.12"
+__ScriptVersion="2022.10.04"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -584,7 +584,6 @@ fi
 echoinfo "Running version: ${__ScriptVersion}"
 echoinfo "Executed by: ${CALLER}"
 echoinfo "Command line: '${__ScriptFullName} ${__ScriptArgs}'"
-echowarn "Running the unstable version of ${__ScriptName}"
 
 # Define installation type
 if [ "$#" -gt 0 ];then
@@ -636,10 +635,10 @@ elif [ "$ITYPE" = "onedir" ]; then
     if [ "$#" -eq 0 ];then
         ONEDIR_REV="latest"
     else
-        if [ "$(echo "$1" | grep -E '^(latest)$')" != "" ]; then
+        if [ "$(echo "$1" | grep -E '^(latest|3005)$')" != "" ]; then
             ONEDIR_REV="$1"
             shift
-        elif [ "$(echo "$1" | grep -E '^([3-9][0-9]{3}(\.[0-9]*)?)$')" != "" ]; then
+        elif [ "$(echo "$1" | grep -E '^([3-9][0-9]{3}(\.[0-9]*)?)')" != "" ]; then
             # Handle the 3xxx.0 version as 3xxx archive (pin to minor) and strip the fake ".0" suffix
             ONEDIR_REV=$(echo "$1" | sed -E 's/^([3-9][0-9]{3})\.0$/\1/')
             ONEDIR_REV="minor/$ONEDIR_REV"
@@ -669,7 +668,7 @@ elif [ "$ITYPE" = "onedir_rc" ]; then
             ONEDIR_REV="minor/$1"
             shift
         else
-            echo "Unknown stable version: $1 (valid: 3005, latest.)"
+            echo "Unknown stable version: $1 (valid: 3005-1, latest.)"
             exit 1
         fi
     fi
@@ -1439,8 +1438,8 @@ __check_dpkg_architecture() {
                 warn_msg="Support for arm64 is experimental, make sure the custom repository used has the expected structure and contents."
             else
                 # Saltstack official repository does not yet have arm64 metadata,
-                # use amd64 repositories on arm64, since all pkgs are arch-independent
-                __REPO_ARCH="amd64"
+                # use arm64 repositories on arm64, since all pkgs are arch-independent
+                __REPO_ARCH="arm64"
                 __REPO_ARCH_DEB="deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=$__REPO_ARCH]"
                 warn_msg="Support for arm64 packages is experimental and might rely on architecture-independent packages from the amd64 repository."
             fi
@@ -4491,7 +4490,7 @@ enabled=1
 enabled_metadata=1
 _eof
 
-        fetch_url="${HTTP_VAL}://${_REPO_URL}/${_ONEDIR_DIR}/${__PY_VERSION_REPO}/redhat/${DISTRO_MAJOR_VERSION}/${CPU_ARCH_L}/"
+        fetch_url="${HTTP_VAL}://${_REPO_URL}/${_ONEDIR_DIR}/${__PY_VERSION_REPO}/redhat/${DISTRO_MAJOR_VERSION}/${CPU_ARCH_L}/${ONEDIR_REV}/"
         for key in $gpg_key; do
             __rpm_import_gpg "${fetch_url}${key}" || return 1
         done
@@ -5287,6 +5286,15 @@ install_red_hat_enterprise_workstation_testing_post() {
 #   Oracle Linux Install Functions
 #
 install_oracle_linux_stable_deps() {
+    # Install Oracle's EPEL.
+    if [ ${_EPEL_REPOS_INSTALLED} -eq $BS_FALSE ]; then
+        _EPEL_REPO=oracle-epel-release-el${DISTRO_MAJOR_VERSION}
+        if ! rpm -q "${_EPEL_REPO}" > /dev/null; then
+            __yum_install_noinput "${_EPEL_REPO}"
+        fi
+        _EPEL_REPOS_INSTALLED=$BS_TRUE
+    fi
+
     install_centos_stable_deps || return 1
     return 0
 }

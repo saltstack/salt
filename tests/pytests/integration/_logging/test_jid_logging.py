@@ -1,6 +1,6 @@
 import logging
 
-import salt.config
+from salt._logging import DFLT_LOG_FMT_JID
 from tests.support.helpers import PRE_PYTEST_SKIP
 
 # Using the PRE_PYTEST_SKIP decorator since this test still fails on some platforms.
@@ -12,7 +12,7 @@ def test_jid_in_logs(caplog, salt_call_cli):
     """
     Test JID in log_format
     """
-    jid_formatted_str = salt.config._DFLT_LOG_FMT_JID.split("%")[0]
+    jid_formatted_str = DFLT_LOG_FMT_JID.split("%")[0]
     formatter = logging.Formatter(fmt="%(jid)s %(message)s")
     with caplog.at_level(logging.DEBUG):
         previous_formatter = caplog.handler.formatter
