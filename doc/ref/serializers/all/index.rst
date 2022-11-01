@@ -11,8 +11,8 @@ serializer modules
     :template: autosummary.rst.tmpl
 
     configparser
-    envfile
     json
+    keyvalue
     msgpack
     plist
     python
