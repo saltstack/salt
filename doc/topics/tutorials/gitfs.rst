@@ -794,13 +794,12 @@ Use Case: Code Promotion (dev -> qa -> base)
 --------------------------------------------
 
 When running a :ref:`highstate <running-highstate>`, the ``top.sls`` files from
-different from all of the branches and tags will be merged into one. This does
-not work well with the use case where changes are tested in development
-branches before being merged upstream towards production, because if the same
-SLS file from multiple environments is part of the :ref:`highstate
-<running-highstate>`, it can result in non-unique state IDs, which will cause
-an error in the state compiler and not allow the :ref:`highstate
-<running-highstate>` to proceed.
+all of the different branches and tags will be merged into one. This does not
+work well with the use case where changes are tested in development branches
+before being merged upstream towards production, because if the same SLS file
+from multiple environments is part of the :ref:`highstate <running-highstate>`,
+it can result in non-unique state IDs, which will cause an error in the state
+compiler and not allow the :ref:`highstate <running-highstate>` to proceed.
 
 To accomplish this use case, you should do three things:
 
@@ -893,7 +892,7 @@ There are two ways of explicitly defining the :conf_minion:`saltenv`:
      _must_ specify it at runtime to avoid conflicting IDs.
 
 
-If you branched ``qa`` of of ``master``, and ``dev`` off of ``qa``, you can
+If you branched ``qa`` off of ``master``, and ``dev`` off of ``qa``, you can
 merge changes from ``dev`` into ``qa``, and then merge ``qa`` into master to
 promote your changes to from dev to qa to prod.
 
