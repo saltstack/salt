@@ -60,73 +60,6 @@ Requisites typically need two pieces of information for matching:
           - pkg: nginx
           - file: /etc/nginx/nginx.conf
 
-Glob matching in requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 0.9.8
-
-Glob matching is supported in requisites. This is mostly useful for file
-changes. In the example below, a change in ``/etc/apache2/httpd.conf`` or
-``/etc/apache2/sites-available/default.conf`` will reload/restart the service:
-
-.. code-block:: yaml
-
-    apache2:
-      service.running:
-        - watch:
-          - file: /etc/apache2/*
-
-Omitting state module in requisites
------------------------------------
-
-.. versionadded:: 2016.3.0
-
-In version 2016.3.0, the state module name was made optional. If the state module
-is omitted, all states matching the ID will be required, regardless of which
-module they are using.
-
-.. code-block:: yaml
-
-    - require:
-      - vim
-
-State target matching
-~~~~~~~~~~~~~~~~~~~~~
-
-In order to understand how state targets are matched, it is helpful to know
-:ref:`how the state compiler is working <compiler-ordering>`. Consider the following
-example:
-
-.. code-block:: yaml
-
-    Deploy server package:
-      file.managed:
-        - name: /usr/local/share/myapp.tar.xz
-        - source: salt://myapp.tar.xz
-
-    Extract server package:
-      archive.extracted:
-        - name: /usr/local/share/myapp
-        - source: /usr/local/share/myapp.tar.xz
-        - archive_format: tar
-        - onchanges:
-          - file: Deploy server package
-
-The first formula is converted to a dictionary which looks as follows (represented
-as YAML, some properties omitted for simplicity) as `High Data`:
-
-.. code-block:: yaml
-
-    Deploy server package:
-      file:
-        - managed
-        - name: /usr/local/share/myapp.tar.xz
-        - source: salt://myapp.tar.xz
-
-The ``file.managed`` format used in the formula is essentially syntactic sugar:
-at the end, the target is ``file``, which is used in the ``Extract server package``
-state above.
-
 Identifier matching
 ~~~~~~~~~~~~~~~~~~~
 
@@ -151,19 +84,54 @@ so either of the following versions for "Extract server package" is correct:
         - onchanges:
           - file: /usr/local/share/myapp.tar.xz
 
-Omitting state module in requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Wildcard matching in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.9.8
+
+Wildcard matching is supported for state identifiers.
+
+* ``*`` matches zero or more characters
+* ``?`` matches a single character
+* ``[]`` matches a single character from the enclosed set 
+
+Note that this does not follow glob rules - dots and slashes are not special, 
+and it is matching against state identifiers, not file paths.
+
+In the example below, a change in any state managing an apache config file 
+will reload/restart the service:
+
+.. code-block:: yaml
+
+    apache2:
+      service.running:
+        - watch:
+          - file: /etc/apache2/*
+
+A leading or bare ``*`` must be quoted to avoid confusion with YAML references:
+
+.. code-block:: yaml
+
+    /etc/letsencrypt/renewal-hooks/deploy/install.sh:
+      cmd.run:
+        - onchanges:
+          - acme: '*'
+
+
+Omitting state module
+~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 2016.3.0
 
 In version 2016.3.0, the state module name was made optional. If the state module
-is omitted, all states matching the ID will be required, regardless of which
+is omitted, all states matching the identifier will be required, regardless of which
 module they are using.
 
 .. code-block:: yaml
 
     - require:
       - vim
+
 
 Requisites Types
 ----------------
