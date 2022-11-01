@@ -6,6 +6,12 @@ immediately:
 
 Improvements to YAML processing that are expected to take effect in Salt 3007
 but can be previewed now by setting the option `yaml_compatibility` to `3007`:
+  * Loading a well-formed `!!omap` node (a sequence of single-entry mapping
+    nodes) with a `salt.utils.yaml.SaltYamlSafeLoader` that was constructed with
+    a non-`dict` mapping class will produce an object of that mapping type
+    instead of raise an exception.  Mapping nodes tagged with `!!omap` will
+    raise an exception due to invalid syntax (currently such nodes produce a
+    mapping object of the given type even though the syntax is invalid).
   * Loading an explicitly tagged `!!timestamp` node will produce a
     `datetime.datetime` object instead of a string.
   * `salt.utils.yaml.dump()` will default to `salt.utils.yaml.OrderedDumper`

@@ -1,5 +1,6 @@
 import collections
 import datetime
+import random
 import re
 import textwrap
 import warnings
@@ -13,6 +14,11 @@ import salt.utils.files
 import salt.utils.yaml as salt_yaml
 from salt.version import SaltStackVersion
 from tests.support.mock import mock_open, patch
+
+
+class _OrderedDictLoader(salt_yaml.SaltYamlSafeLoader):
+    def __init__(self, stream):
+        super().__init__(stream, dictclass=collections.OrderedDict)
 
 
 @pytest.mark.parametrize(
@@ -277,6 +283,152 @@ def test_load_dictclass(dictclass):
         l.dispose()
     assert isinstance(d, dictclass)
     assert d == dictclass([("k1", "v1"), ("k2", "v2")])
+
+
+@pytest.mark.parametrize(
+    # Parameters:
+    #   - yaml_compatibility: Force the YAML loader to be compatible with this
+    #     version of Salt.
+    #   - seq_input: Boolean.  True if the input YAML node should be a sequence
+    #     of single-entry mappings, False if it should be a mapping.
+    #   - Loader: YAML Loader class.
+    #   - wantclass: Expected return type.
+    "yaml_compatibility,seq_input,Loader,wantclass",
+    [
+        # Salt v3006 and earlier required !!omap nodes to be mapping nodes if
+        # the SaltYamlSafeLoader dictclass argument is not dict.  To preserve
+        # compatibility, that erroneous behavior is preserved if
+        # yaml_compatibility is set to 3006.
+        (3006, False, _OrderedDictLoader, collections.OrderedDict),
+        # However, with dictclass=dict (the default), an !!omap node was
+        # correctly required to be a sequence of mapping nodes.  Unfortunately,
+        # the return value was not a Mapping type -- it was a list of (key,
+        # value) tuples (PyYAML's default behavior for !!omap nodes).
+        (3006, True, None, list),
+        # Starting with Salt v3007, an !!omap node is always required to be a
+        # sequence of mapping nodes.
+        (3007, True, _OrderedDictLoader, collections.OrderedDict),
+        # Unfortunately, the return value is still a list of (key, value)
+        # tuples when dictclass=dict.
+        (3007, True, None, list),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_load_omap(yaml_compatibility, seq_input, Loader, wantclass):
+    """Test loading of `!!omap` YAML nodes.
+
+    This test uses random keys to ensure that iteration order does not
+    coincidentally match.  The generated items look like this:
+
+    .. code-block:: python
+
+        [
+            ("k3334244338", 0),
+            ("k3444116829", 1),
+            ("k2072366017", 2),
+            # ... omitted for brevity ...
+            ("k1638299831", 19),
+        ]
+    """
+    # Filter the random keys through a set to avoid duplicates.
+    keys = list({f"k{random.getrandbits(32)}" for _ in range(20)})
+    # Avoid unintended correlation with set()'s iteration order.
+    random.shuffle(keys)
+    items = [(k, i) for i, k in enumerate(keys)]
+    input_yaml = "!!omap\n"
+    if seq_input:
+        input_yaml += "".join(f"- {k}: {v}\n" for k, v in items)
+    else:
+        input_yaml += "".join(f"{k}: {v}\n" for k, v in items)
+    kwargs = {}
+    if Loader is not None:
+        kwargs["Loader"] = Loader
+    got = salt_yaml.load(input_yaml, **kwargs)
+    assert isinstance(got, wantclass)
+    if isinstance(got, list):
+        assert got == items
+    else:
+        assert got == collections.OrderedDict(items)
+        assert list(got.items()) == items
+
+
+@pytest.mark.parametrize(
+    "yaml_compatibility,input_yaml,Loader,want",
+    [
+        # See comments in test_load_omap() above for the differences in !!omap
+        # loading behavior between Salt v3006 and v3007.
+        (3006, "!!omap {}\n", _OrderedDictLoader, collections.OrderedDict()),
+        (3006, "!!omap []\n", None, []),
+        (3007, "!!omap []\n", _OrderedDictLoader, collections.OrderedDict()),
+        (3007, "!!omap []\n", None, []),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_load_omap_empty(yaml_compatibility, input_yaml, Loader, want):
+    kwargs = {}
+    if Loader is not None:
+        kwargs["Loader"] = Loader
+    got = salt_yaml.load(input_yaml, **kwargs)
+    assert isinstance(got, type(want))
+    assert got == want
+
+
+@pytest.mark.parametrize(
+    "yaml_compatibility,input_yaml,Loader",
+    [
+        # Buggy v3006 behavior kept for compatibility.  See comments in
+        # test_load_omap() above for details.
+        (3006, "!!omap []\n", _OrderedDictLoader),  # Not a mapping node.
+        (3006, "!!omap\ndup key: 0\ndup key: 1\n", _OrderedDictLoader),
+        # Invald because the !!omap node is not a sequence node.
+        (3006, "!!omap {}\n", None),
+        (3007, "!!omap {}\n", _OrderedDictLoader),
+        (3007, "!!omap {}\n", None),
+        # Invalid because a sequence entry is not a mapping node.
+        (3006, "!!omap\n- this is a str not a map\n", None),
+        (3007, "!!omap\n- this is a str not a map\n", _OrderedDictLoader),
+        (3007, "!!omap\n- this is a str not a map\n", None),
+        # Invalid because a sequence entry's mapping has multiple entries.
+        (3006, "!!omap\n- k1: v\n  k2: v\n", None),
+        (3007, "!!omap\n- k1: v\n  k2: v\n", _OrderedDictLoader),
+        (3007, "!!omap\n- k1: v\n  k2: v\n", None),
+        # Invalid because a sequence entry's mapping has no entries.
+        (3006, "!!omap [{}]\n", None),
+        (3007, "!!omap [{}]\n", _OrderedDictLoader),
+        (3007, "!!omap [{}]\n", None),
+        # Invalid because there are duplicate keys.  Note that the Loader=None
+        # cases for v3006 and v3007 are missing here; this is because the
+        # default Loader matches PyYAML's behavior, and PyYAML permits duplicate
+        # keys in !!omap nodes.
+        (3007, "!!omap\n- dup key: 0\n- dup key: 1\n", _OrderedDictLoader),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_load_omap_invalid(yaml_compatibility, input_yaml, Loader):
+    kwargs = {}
+    if Loader is not None:
+        kwargs["Loader"] = Loader
+    with pytest.raises(ConstructorError):
+        salt_yaml.load(input_yaml, **kwargs)
+
+
+@pytest.mark.parametrize("yaml_compatibility", [3006, 3007], indirect=True)
+@pytest.mark.parametrize("Loader", [_OrderedDictLoader, None])
+def test_load_untagged_omaplike_is_seq(yaml_compatibility, Loader):
+    # The YAML spec allows the loader to interpret something that looks like an
+    # !!omap but doesn't actually have an !!omap tag as an !!omap.  (If the user
+    # intends to express a sequence of single-entry maps and not an ordered map,
+    # the user must explicitly tag the sequence node with !seq.)  Out of concern
+    # for backwards compatibility, and to avoid ambiguity with an empty
+    # sequence, implicit !!omap behavior is currently not supported.  That may
+    # change in the future, but for now make sure that sequences are not
+    # interpreted as ordered maps.
+    kwargs = {}
+    if Loader is not None:
+        kwargs["Loader"] = Loader
+    got = salt_yaml.load("- a: 0\n- b: 1\n", **kwargs)
+    assert not isinstance(got, collections.OrderedDict)
+    assert got == [{"a": 0}, {"b": 1}]
 
 
 @pytest.mark.parametrize(
