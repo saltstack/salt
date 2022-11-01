@@ -1505,6 +1505,13 @@ def test__windows_os_release_grain(subtests):
         version = core._windows_os_release_grain(caption, 1)
         assert version == "2019Server"
 
+    # Microsoft Windows Server Datacenter
+    # Issue https://github.com/saltstack/salt/issue/59611
+    caption = "Microsoft Windows Server Datacenter"
+    with subtests.test(caption):
+        version = core._windows_os_release_grain(caption, 1)
+        assert version == "2019Server"
+
 
 @pytest.mark.skip_unless_on_linux
 def test_linux_memdata():
