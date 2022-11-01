@@ -8,6 +8,8 @@ Sign, encrypt and sign plus encrypt text and files.
 
     The ``python-gnupg`` library and ``gpg`` binary are required to be
     installed.
+    Be aware that the alternate ``gnupg`` and ``pretty-bad-protocol``
+    libraries are not supported.
 
 """
 
