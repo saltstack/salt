@@ -16,6 +16,14 @@ Module to provide Postgres compatibility to salt.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
 
+To prevent Postgres commands from running arbitrarily long, a timeout (in seconds) can be set
+
+    .. code-block:: yaml
+
+        postgres.timeout: 60
+
+    .. versionadded:: 3006.0
+
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 
@@ -68,7 +76,7 @@ log = logging.getLogger(__name__)
 
 
 _DEFAULT_PASSWORDS_ENCRYPTION = "md5"
-_DEFAULT_COMMAND_TIMEOUT_SECS = 60
+_DEFAULT_COMMAND_TIMEOUT_SECS = 0
 _EXTENSION_NOT_INSTALLED = "EXTENSION NOT INSTALLED"
 _EXTENSION_INSTALLED = "EXTENSION INSTALLED"
 _EXTENSION_TO_UPGRADE = "EXTENSION TO UPGRADE"
@@ -155,7 +163,9 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     kwargs = {
         "reset_system_locale": False,
         "clean_env": True,
-        "timeout": _DEFAULT_COMMAND_TIMEOUT_SECS,
+        "timeout": __salt__["config.option"](
+            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        ),
     }
     if runas is None:
         if not host:
@@ -256,7 +266,13 @@ def _run_initdb(
             __salt__["file.chown"](pgpassfile, runas, "")
         cmd.extend(["--pwfile={}".format(pgpassfile)])
 
-    kwargs = dict(runas=runas, clean_env=True, timeout=_DEFAULT_COMMAND_TIMEOUT_SECS)
+    kwargs = dict(
+        runas=runas,
+        clean_env=True,
+        timeout=__salt__["config.option"](
+            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        ),
+    )
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False, **kwargs)
 
@@ -1207,7 +1223,7 @@ def _verify_password(role, password, verifier, method):
 
 def _md5_password(role, password):
     return "md5{}".format(
-        hashlib.md5(
+        hashlib.md5(  # nosec
             salt.utils.stringutils.to_bytes("{}{}".format(password, role))
         ).hexdigest()
     )
