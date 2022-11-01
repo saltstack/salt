@@ -7,9 +7,14 @@ Function Start_Process_and_test_exitcode {
     #    $descr - the short description shown in the case of an error
 
     Param(
-        [Parameter(Mandatory=$true)] [String] $fun,
-        [Parameter(Mandatory=$true)] [String] $args,
-        [Parameter(Mandatory=$true)] [String] $descr
+        [Parameter(Mandatory=$true)]
+        [String] $fun,
+
+        [Parameter(Mandatory=$true)]
+        [String] $args,
+
+        [Parameter(Mandatory=$true)]
+        [String] $descr
     )
 
     Begin { Write-Host "Executing Command: $fun $args" }

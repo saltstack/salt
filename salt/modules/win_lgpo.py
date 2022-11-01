@@ -2,9 +2,14 @@
 Manage Local Policy on Windows
 
 This module allows configuring local group policy (i.e. ``gpedit.msc``) on a
-Windows server.
+Windows machine.
 
 .. versionadded:: 2016.11.0
+
+.. warning::
+    Local Group Policy will always be superseded by Domain Group policy. If
+    policies are configured with Local Group Policy that are also configured
+    with Domain Group policy, the Domain Group policy will take precedence.
 
 Administrative Templates
 ========================
@@ -493,6 +498,13 @@ class _policy_info:
             0: "This policy is disabled",
             1: "Users can't add Microsoft accounts",
             3: "Users can't add or log on with Microsoft accounts",
+            None: "Not Defined",
+            "(value not set)": "Not Defined",
+        }
+        self.ldap_server_binding_token_requirements = {
+            0: "Never",
+            1: "When supported",
+            2: "Always",
             None: "Not Defined",
             "(value not set)": "Not Defined",
         }
@@ -2697,6 +2709,48 @@ class _policy_info:
                             "Type": "REG_DWORD",
                         },
                         "Transform": self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    "VulnerableChannelAllowList": {
+                        "Policy": (
+                            "Domain controller: Allow vulnerable Netlogon "
+                            "secure channel connections"
+                        ),
+                        "lgpo_section": self.security_options_gpedit_path,
+                        "Registry": {
+                            "Hive": "HKEY_LOCAL_MACHINE",
+                            "Path": (
+                                "SYSTEM\\CurrentControlSet\\Services\\"
+                                "Netlogon\\Parameters"
+                            ),
+                            "Value": "VulnerableChannelAllowList",
+                            "Type": "REG_SZ",
+                        },
+                        "Transform": {"Put": "_string_put_transform"},
+                    },
+                    "LdapEnforceChannelBinding": {
+                        "Policy": "Domain controller: LDAP server channel binding token requirements",
+                        "Settings": self.ldap_server_binding_token_requirements.keys(),
+                        "lgpo_section": self.security_options_gpedit_path,
+                        "Registry": {
+                            "Hive": "HKEY_LOCAL_MACHINE",
+                            "Path": (
+                                "System\\CurrentControlSet\\Services\\NTDS\\Parameters"
+                            ),
+                            "Value": "LdapEnforceChannelBinding",
+                            "Type": "REG_DWORD",
+                        },
+                        "Transform": {
+                            "Get": "_dict_lookup",
+                            "Put": "_dict_lookup",
+                            "GetArgs": {
+                                "lookup": self.ldap_server_binding_token_requirements,
+                                "value_lookup": False,
+                            },
+                            "PutArgs": {
+                                "lookup": self.ldap_server_binding_token_requirements,
+                                "value_lookup": True,
+                            },
+                        },
                     },
                     "LDAPServerIntegrity": {
                         "Policy": "Domain controller: LDAP server signing requirements",
