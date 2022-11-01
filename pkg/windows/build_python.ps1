@@ -149,9 +149,11 @@ $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
 if ( $Architecture -eq "x64" ) {
     $SALT_DEP_URL = "$SALT_DEP_URL/64"
     $BUILD_DIR    = "$BUILD_DIR\amd64-win"
+    $ARCH         = "amd64"
 } else {
     $SALT_DEP_URL = "$SALT_DEP_URL/32"
     $BUILD_DIR    = "$BUILD_DIR\x86-win"
+    $ARCH         = "x86"
 }
 
 #-------------------------------------------------------------------------------
@@ -225,7 +227,7 @@ if ("relenv" -in $output.split()) {
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
 Write-Host "Building Python with Relenv (long-running): " -NoNewLine
-$output = python -m relenv build --clean
+$output = python -m relenv build --clean --arch $ARCH
 if ( Test-Path -Path "$BUILD_DIR\Scripts\python.exe") {
     Write-Host "Success" -ForegroundColor Green
 } else {
