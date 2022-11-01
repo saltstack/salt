@@ -36,7 +36,6 @@ def updates_summary():
 
 
 class Updates:
-
     @staticmethod
     def list():
         return {
