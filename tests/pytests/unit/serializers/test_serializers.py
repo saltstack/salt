@@ -5,14 +5,15 @@ import pytest
 import yaml as _yaml
 
 import salt.serializers.configparser as configparser
-import salt.serializers.envfile as envfile
 import salt.serializers.json as json
+import salt.serializers.keyvalue as keyvalue
 import salt.serializers.msgpack as msgpack
 import salt.serializers.plist as plist
 import salt.serializers.python as python
 import salt.serializers.tomlmod as tomlmod
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
+import salt.utils.platform
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
@@ -400,38 +401,42 @@ def test_serialize_binary_plist():
     assert deserialized == data, deserialized
 
 
-def test_serialize_envfile():
+def test_serialize_keyvalue():
     data = {"foo": "bar baz"}
-    serialized = envfile.serialize(data)
+    serialized = keyvalue.serialize(data)
     assert serialized == "foo=bar baz", serialized
 
-    deserialized = envfile.deserialize(serialized)
+    deserialized = keyvalue.deserialize(serialized)
     assert deserialized == data, deserialized
 
 
-def test_serialize_envfile_quoting():
+def test_serialize_keyvalue_quoting():
     data = {"foo": "bar baz"}
-    serialized = envfile.serialize(data, quoting=True)
+    serialized = keyvalue.serialize(data, quoting=True)
     assert serialized == "foo='bar baz'", serialized
 
-    deserialized = envfile.deserialize(serialized, quoting=False)
+    deserialized = keyvalue.deserialize(serialized, quoting=False)
     assert deserialized == data, deserialized
 
 
-def test_serialize_envfile_separator():
+def test_serialize_keyvalue_separator():
     data = {"foo": "bar baz"}
-    serialized = envfile.serialize(data, separator=" = ")
+    serialized = keyvalue.serialize(data, separator=" = ")
     assert serialized == "foo = bar baz", serialized
 
-    deserialized = envfile.deserialize(serialized, separator=" = ")
+    deserialized = keyvalue.deserialize(serialized, separator=" = ")
     assert deserialized == data, deserialized
 
 
-def test_serialize_envfile_list_of_lists():
+def test_serialize_keyvalue_list_of_lists():
+    if salt.utils.platform.is_windows():
+        linend = "\r\n"
+    else:
+        linend = "\n"
     data = [["foo", "bar baz"], ["salt", "rocks"]]
     expected = {"foo": "bar baz", "salt": "rocks"}
-    serialized = envfile.serialize(data)
-    assert serialized == "foo=bar baz\nsalt=rocks", serialized
+    serialized = keyvalue.serialize(data)
+    assert serialized == f"foo=bar baz{linend}salt=rocks", serialized
 
-    deserialized = envfile.deserialize(serialized)
+    deserialized = keyvalue.deserialize(serialized)
     assert deserialized == expected, deserialized
