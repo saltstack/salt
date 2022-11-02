@@ -14,8 +14,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Build onedir
-      run: CONTAINER_IMAGE=dwoz1/cicd:onedir-centos7-x86_64 ./pkg/onedir.sh
+    - name: Install relenv
+      run: pip3 install git+https://github.com/saltstack/relative-environment-for-python.git
+
+    - name: Create Onedir
+      run: |
+        python3 -m relenv toolchain fetch
+        python3 -m relenv create salt
+        salt/bin/pip3 install .
 
     - name: Artifact
       uses: actions/upload-artifact@v3
