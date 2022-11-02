@@ -1093,7 +1093,9 @@ def unzip(
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue
-                    zfile.extract(target, dest, password.encode())
+                    # if password:
+                    #     password = password.encode()
+                    zfile.extract(target, dest, password)
                     if extract_perms:
                         if not salt.utils.platform.is_windows():
                             perm = zfile.getinfo(target).external_attr >> 16
