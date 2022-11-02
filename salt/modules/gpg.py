@@ -1224,7 +1224,14 @@ def encrypt(
         gpg_passphrase = None
 
     if text:
-        result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase, sign=sign, output=output, always_trust=always_trust)
+        result = gpg.encrypt(
+            text,
+            recipients,
+            passphrase=gpg_passphrase,
+            sign=sign,
+            output=output,
+           always_trust=always_trust,
+        )
     elif filename:
         with salt.utils.files.flopen(filename, "rb") as _fp:
             if output:
@@ -1232,12 +1239,17 @@ def encrypt(
                     _fp,
                     recipients,
                     passphrase=gpg_passphrase,
-                    output=output,
                     sign=sign,
+                    always_trust=always_trust,
+                    output=output,
                 )
             else:
                 result = gpg.encrypt_file(
-                    _fp, recipients, passphrase=gpg_passphrase, sign=sign, always_trust=always_trust
+                    _fp,
+                    recipients,
+                    passphrase=gpg_passphrase,
+                    sign=sign,
+                    always_trust=always_trust,
                 )
     else:
         raise SaltInvocationError("filename or text must be passed.")
