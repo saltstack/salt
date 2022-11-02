@@ -2,7 +2,7 @@
 Functions to work with JSON
 """
 
-
+import datetime
 import json
 import logging
 
@@ -22,8 +22,11 @@ class DatetimeEncoder(json.JSONEncoder):
     def default(self, obj):
         try:
             return super().default(obj)
-        except TypeError:
-            return str(obj)
+        except TypeError as e:
+            if isinstance(obj, (datetime.date, datetime.datetime)):
+                return obj.isoformat()
+
+            raise TypeError(e)
 
 
 def __split(raw):
