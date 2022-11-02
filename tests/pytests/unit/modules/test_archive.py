@@ -378,7 +378,6 @@ def test_unzip():
         assert ["salt"] == ret
 
 
-@pytest.mark.xfail
 def test_unzip_password():
     mock = ZipFileMock()
     target = "/tmp/salt.zip"
