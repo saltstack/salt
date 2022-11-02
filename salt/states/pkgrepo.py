@@ -293,8 +293,9 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         ``keyid`` option must also be set for this option to work.
 
     key_url
-        URL to retrieve a GPG key from. Allows the usage of ``http://``,
-        ``https://`` as well as ``salt://``.
+        URL to retrieve a GPG key from. Allows the usage of
+        ``https://`` as well as ``salt://``.  If ``allow_insecure_key`` is True,
+        this also allows ``http://``.
 
         .. note::
 
