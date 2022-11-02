@@ -132,7 +132,19 @@ class _CommonMixin(
 # TODO: Why does this registration exist?  Isn't it better to raise an exception
 # for unsupported types?
 _CommonMixin.add_representer(None, _CommonMixin._rep_default)
-_CommonMixin.add_representer(OrderedDict, _CommonMixin._rep_ordereddict)
+_CommonMixin.V3006.add_representer(OrderedDict, _CommonMixin._rep_ordereddict)
+# This multi representer covers collections.OrderedDict and all of its
+# subclasses, including salt.utils.odict.OrderedDict.
+_CommonMixin.V3007.add_multi_representer(
+    collections.OrderedDict, _CommonMixin._rep_ordereddict
+)
+# This non-multi representer may seem redundant given the multi representer
+# registered above, but it is needed to override the non-multi representer
+# that exists in the ancestor Representer class.  (Non-multi representers
+# take priority over multi representers.)
+_CommonMixin.V3007.add_representer(
+    collections.OrderedDict, _CommonMixin._rep_ordereddict
+)
 _CommonMixin.add_representer(
     collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
 )

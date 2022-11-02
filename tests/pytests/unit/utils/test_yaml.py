@@ -12,6 +12,7 @@ from yaml.constructor import ConstructorError
 import salt.utils._yaml_common as _yc
 import salt.utils.files
 import salt.utils.yaml as salt_yaml
+from salt.utils.odict import OrderedDict
 from salt.version import SaltStackVersion
 from tests.support.mock import mock_open, patch
 
@@ -139,6 +140,45 @@ def test_dump_indented(yaml_compatibility, want):
         Dumper=salt_yaml.IndentedSafeOrderedDumper,
         default_flow_style=False,
     )
+    try:
+        assert want.fullmatch(got)
+    except AttributeError:
+        assert got == want
+
+
+@pytest.mark.parametrize("yaml_compatibility", [3006, 3007], indirect=True)
+@pytest.mark.parametrize("dictcls", [OrderedDict, collections.OrderedDict])
+@pytest.mark.parametrize(
+    "dumpercls",
+    [
+        salt_yaml.OrderedDumper,
+        salt_yaml.SafeOrderedDumper,
+        salt_yaml.IndentedSafeOrderedDumper,
+    ],
+)
+def test_dump_omap(yaml_compatibility, dictcls, dumpercls):
+    # The random keys are filtered through a set to avoid duplicates.
+    keys = list({f"random key {random.getrandbits(32)}" for _ in range(20)})
+    # Avoid unintended correlation with set()'s iteration order.
+    random.shuffle(keys)
+    items = [(k, i) for i, k in enumerate(keys)]
+    d = dictcls(items)
+    if yaml_compatibility == 3006 and dictcls is collections.OrderedDict:
+        # Buggy behavior preserved for backwards compatibility.
+        if dumpercls is salt_yaml.OrderedDumper:
+            want = (
+                "!!python/object/apply:collections.OrderedDict\n-"
+                + "".join(f"  - - {k}\n    - {v}\n" for k, v in items)[1:]
+            )
+        else:
+            # With v3006, sometimes it prints "..." on a new line as an end of
+            # document indicator depending on whether yaml.CSafeDumper is
+            # available on the system or not (yaml.CSafeDumper and
+            # yaml.SafeDumper do not always behave the same).
+            want = re.compile(r"NULL\n(?:\.\.\.\n)?")
+    else:
+        want = "".join(f"{k}: {v}\n" for k, v in items)
+    got = salt_yaml.dump(d, Dumper=dumpercls, default_flow_style=False)
     try:
         assert want.fullmatch(got)
     except AttributeError:

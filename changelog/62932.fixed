@@ -18,6 +18,8 @@ but can be previewed now by setting the option `yaml_compatibility` to `3007`:
     sometimes produces a `collections.OrderedDict` object, depending on the
     value of `salt.utils.yaml.SaltYamlSafeLoader`'s `dictclass` constructor
     parameter.)
+  * Dumping a `collections.OrderedMap` will consistently produce a plain mapping
+    node.
   * Loading an explicitly tagged `!!timestamp` node will produce a
     `datetime.datetime` object instead of a string.
   * Dumping a `datetime.datetime` object will explicitly tag the node with
