@@ -306,11 +306,9 @@ def test_load_dictclass(dictclass):
         # value) tuples (PyYAML's default behavior for !!omap nodes).
         (3006, True, None, list),
         # Starting with Salt v3007, an !!omap node is always required to be a
-        # sequence of mapping nodes.
+        # sequence of mapping nodes, and always returns an OrderedDict.
         (3007, True, _OrderedDictLoader, collections.OrderedDict),
-        # Unfortunately, the return value is still a list of (key, value)
-        # tuples when dictclass=dict.
-        (3007, True, None, list),
+        (3007, True, None, collections.OrderedDict),
     ],
     indirect=["yaml_compatibility"],
 )
@@ -360,7 +358,7 @@ def test_load_omap(yaml_compatibility, seq_input, Loader, wantclass):
         (3006, "!!omap {}\n", _OrderedDictLoader, collections.OrderedDict()),
         (3006, "!!omap []\n", None, []),
         (3007, "!!omap []\n", _OrderedDictLoader, collections.OrderedDict()),
-        (3007, "!!omap []\n", None, []),
+        (3007, "!!omap []\n", None, collections.OrderedDict()),
     ],
     indirect=["yaml_compatibility"],
 )
@@ -397,10 +395,11 @@ def test_load_omap_empty(yaml_compatibility, input_yaml, Loader, want):
         (3007, "!!omap [{}]\n", _OrderedDictLoader),
         (3007, "!!omap [{}]\n", None),
         # Invalid because there are duplicate keys.  Note that the Loader=None
-        # cases for v3006 and v3007 are missing here; this is because the
-        # default Loader matches PyYAML's behavior, and PyYAML permits duplicate
-        # keys in !!omap nodes.
+        # case for v3006 is missing here; this is because the default v3006
+        # Loader matches PyYAML's behavior, and PyYAML permits duplicate keys in
+        # !!omap nodes.
         (3007, "!!omap\n- dup key: 0\n- dup key: 1\n", _OrderedDictLoader),
+        (3007, "!!omap\n- dup key: 0\n- dup key: 1\n", None),
     ],
     indirect=["yaml_compatibility"],
 )

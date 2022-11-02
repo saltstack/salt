@@ -430,6 +430,14 @@ so ``!!timestamp`` nodes cannot be used in pillar SLS files.
 Ordered Dictionaries
 ====================
 
+.. versionchanged:: 3007.0
+
+    Loading a YAML ``!!omap`` node now reliably produces a
+    ``collections.OrderedDict`` object.  Previously, an ``!!omap`` node would
+    sometimes produce a ``list`` of ``tuple`` (key, value) pairs and sometimes
+    raise an exception.  Set the ``yaml_compatibility`` option to 3006 to revert
+    to the previous behavior.
+
 The YAML specification defines an `ordered mapping type
 <https://yaml.org/type/omap>`_ which is equivalent to a plain mapping except
 iteration order is preserved.  (YAML makes no guarantees about iteration order
@@ -451,8 +459,18 @@ makes it obvious that the order of entries is significant, and (2) it provides a
 stronger guarantee of iteration order (plain mapping iteration order can be
 thought of as a Salt implementation detail that may change in the future).
 
-Unfortunately, ``!!omap`` nodes should be avoided due to bugs in the way Salt
-processes such nodes.
+Salt produces a ``collections.OrderedDict`` object when it loads an ``!!omap``
+node.  (Salt's behavior differs from PyYAML's default behavior, which is to
+produce a ``list`` of (key, value) ``tuple`` objects.)  These objects are a
+subtype of ``dict``, so ``!!omap`` is a drop-in replacement for a plain mapping.
+
+Unfortunately, ``collections.OrderedDict`` objects should be avoided when
+creating YAML programmatically (such as with the ``yaml`` Jinja filter) due to
+bugs in the way ``collections.OrderedDict`` objects are converted to YAML.
+
+Beware that Salt currently serializes ``collections.OrderedDict`` objects the
+same way it serializes plain ``dict`` objects, so they become plain ``dict``
+objects when deserialized by the recipient.
 
 Keys Limited to 1024 Characters
 ===============================
