@@ -865,8 +865,8 @@ def test_gpg_sign(gpghome):
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
             with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
-                import_ret = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
-                assert import_ret["res"] is True
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
                 gpg_text_input = "The quick brown fox jumped over the lazy dog"
                 ret = gpg.sign(
                     keyid=GPG_TEST_KEY_ID,
@@ -885,8 +885,8 @@ def test_gpg_encrypt_message(gpghome):
     )
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
-            import_ret = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
-            assert import_ret["res"] is True
+            key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+            assert key["res"] is True
             gpg_text_input = "The quick brown fox jumped over the lazy dog"
             ret = gpg.encrypt(
                 recipients=GPG_TEST_KEY_ID,
@@ -908,8 +908,8 @@ def test_gpg_encrypt_and_sign_message_with_gpg_passphrase_in_pillar(gpghome):
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
             with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
-                import_ret = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
-                assert import_ret["res"] is True
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
                 gpg_text_input = "The quick brown fox jumped over the lazy dog"
                 ret = gpg.encrypt(
                     recipients=GPG_TEST_KEY_ID,
@@ -950,8 +950,8 @@ def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
             with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
-                import_ret = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
-                assert import_ret["res"] is True
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
                 ret = gpg.decrypt(
                     text=gpg_encrypted_message,
                     use_passphrase=True,
