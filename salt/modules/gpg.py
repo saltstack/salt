@@ -1229,8 +1229,8 @@ def encrypt(
             recipients,
             passphrase=gpg_passphrase,
             sign=sign,
-            output=output,
-           always_trust=always_trust,
+            always_trust=always_trust,
+            output=output,            
         )
     elif filename:
         with salt.utils.files.flopen(filename, "rb") as _fp:
