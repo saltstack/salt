@@ -640,6 +640,7 @@ def host_create(name, iqn=None, wwn=None, nqn=None):
         iSCSI IQN of host
     nqn : string
         NVMeF NQN of host
+        .. versionadded:: 3006.0
     wwn : string
         Fibre Channel WWN of host
 
@@ -697,6 +698,7 @@ def host_update(name, iqn=None, wwn=None, nqn=None):
         name of host
     nqn : string
         Additional NVMeF NQN of host
+        .. versionadded:: 3006.0
     iqn : string
         Additional iSCSI IQN of host
     wwn : string
