@@ -322,7 +322,7 @@ def post_master_init(self, master):
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
 
     if self.opts["proxy"].get("parallel_startup"):
-        log.debug("Doing parallel startup")
+        log.debug("Initiating parallel startup for proxies")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
                 executor.submit(
@@ -351,7 +351,7 @@ def post_master_init(self, master):
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
     else:
-        log.debug("Doing non-parallel startup")
+        log.debug("Initiating non-parallel startup for proxies")
         for _id in self.opts["proxy"].get("ids", []):
             sub_proxy_data = subproxy_post_master_init(
                 _id, uid, self.opts, self.proxy, self.utils
