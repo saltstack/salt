@@ -400,13 +400,14 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     # To be changed in version 3008: default to False and still log a warning
     allow_insecure_key = kwargs.pop("allow_insecure_key", True)
-    if allow_insecure_key:
-        salt.utils.versions.warn_until(
-            3008,
-            "allow_insecure_key will default to False starting in salt 3008.",
-        )
-    else:
-        if kwargs.get("key_url", "").strip().startswith("http:"):
+    key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
+    if key_is_insecure:
+        if allow_insecure_key:
+            salt.utils.versions.warn_until(
+                3008,
+                "allow_insecure_key will default to False starting in salt 3008.",
+            )
+        else:
             ret["result"] = False
             ret[
                 "comment"
