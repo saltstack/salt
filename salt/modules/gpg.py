@@ -1194,6 +1194,8 @@ def encrypt(
     always_trust
         Skip key validation and assume that used keys are fully trusted.
 
+        .. versionadded:: 3006.0
+
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
