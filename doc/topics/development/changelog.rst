@@ -54,6 +54,15 @@ For a security fix your filename would look like this: changelog/cve-2021-25283.
 If your PR does not align with any of the types, then you do not need to add a
 changelog entry.
 
+.. note::
+
+   Requirement Files:
+   Updates to package requirements files also require a changelog file. This will usually
+   be associated with `.fixed` if its resolving an issue or `.security` if it's resolving
+   a CVE issue in an upstream project. If updates are made to testing requirement files
+   it does not require a changelog.
+
+
 .. _generate-changelog:
 
 How to generate the changelog
