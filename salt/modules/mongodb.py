@@ -455,7 +455,7 @@ def user_create(
 
     except pymongo.errors.PyMongoError as err:
         log.error("Creating user %s failed with error: %s", name, err)
-        return str(err)
+        return False
     return True
 
 
@@ -499,8 +499,7 @@ def user_remove(
         mdb.command("dropUser", name)
     except pymongo.errors.PyMongoError as err:
         log.error("Removing user %s failed with error: %s", name, err)
-        return str(err)
-
+        return False
     return True
 
 

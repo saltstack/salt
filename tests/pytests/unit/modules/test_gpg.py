@@ -861,7 +861,7 @@ def test_gpg_sign(gpghome):
     user_info = MagicMock(
         return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
     )
-    pillar_mock = MagicMock(return_value={"gpg_passphrase": GPG_TEST_KEY_PASSPHRASE})
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
             with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
@@ -869,12 +869,9 @@ def test_gpg_sign(gpghome):
                 assert ret["res"] is True
                 gpg_text_input = "The quick brown fox jumped over the lazy dog"
                 gpg_sign_output = gpg.sign(
-                    config_user,
-                    GPG_TEST_KEY_ID,
-                    gpg_text_input,
-                    None,
-                    None,
-                    True,
-                    str(gpghome.path),
+                    keyid=GPG_TEST_KEY_ID,
+                    text=gpg_text_input,
+                    use_passphrase=True,
+                    gnupghome=str(gpghome.path),
                 )
-                assert gpg_sign_output is not None
+                assert "-----BEGIN PGP SIGNATURE-----" in str(gpg_sign_output)
