@@ -14,6 +14,44 @@ pytestmark = [
 ]
 
 
+class MockRunnerClient:
+    """
+    Mock RunnerClient class
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def asynchronous(self, *args, **kwargs):
+        """
+        Mock asynchronous method
+        """
+        return True
+
+
+class MockLocalClient:
+    """
+    Mock RunnerClient class
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def __enter__(self, *args, **kwargs):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
+
+    def cmd_async(self, *args, **kwargs):
+        """
+        Mock cmd_async method
+        """
+        return True
+
+
 class MockSlackBoltSocketMode:
     def __init__(self, *args, **kwargs):
         self.args = args
@@ -360,3 +398,116 @@ def test_run_commands_from_slack_async(slack_client):
         app_client_files_upload.asser_has_calls(upload_calls)
         app_client_chat_postMessage.asser_has_calls(chat_postMessage_calls)
         mock_event_send.asser_has_calls(event_send_calls)
+
+
+def test_run_command_async(slack_client):
+    """
+    Test slack engine: test_run_command_async
+    """
+
+    msg = {
+        "message_data": {
+            "client_msg_id": "6c71d7f9-a44d-402f-8f9f-d1bb5b650853",
+            "type": "message",
+            "text": '!test.ping target="minion"',
+            "user": "U02QY11UJ",
+            "ts": "1667427929.764169",
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "block_id": "AjL",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {"type": "text", "text": '!test.ping target="minion"'}
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "team": "T02QY11UG",
+            "channel": "C02QY11UQ",
+            "event_ts": "1667427929.764169",
+            "channel_type": "channel",
+        },
+        "channel": "C02QY11UQ",
+        "user": "U02QY11UJ",
+        "user_name": "garethgreenaway",
+        "cmdline": ["test.ping"],
+        "target": {"target": "minion", "tgt_type": "glob"},
+    }
+
+    local_client_mock = MagicMock(autospec=True, return_value=MockLocalClient())
+    patch_local_client = patch("salt.client.LocalClient", local_client_mock)
+
+    local_client_cmd_async_mock = MagicMock(
+        autospec=True, return_value={"jid": "20221027001127600438"}
+    )
+    patch_local_client_cmd_async = patch.object(
+        MockLocalClient, "cmd_async", local_client_cmd_async_mock
+    )
+
+    expected_calls = [call("minion", "test.ping", arg=[], kwarg={}, tgt_type="glob")]
+    with patch_local_client, patch_local_client_cmd_async as local_client_cmd_async:
+        ret = slack_client.run_command_async(msg)
+        local_client_cmd_async.assert_has_calls(expected_calls)
+
+    msg = {
+        "message_data": {
+            "client_msg_id": "35f4783f-8913-4687-8f04-21182bcacd5a",
+            "type": "message",
+            "text": "!test.arg arg1 arg2 arg3 key1=value1 key2=value2",
+            "user": "U02QY11UJ",
+            "ts": "1667429460.576889",
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "block_id": "EAzTy",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "!test.arg arg1 arg2 arg3 key1=value1 key2=value2",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "team": "T02QY11UG",
+            "channel": "C02QY11UQ",
+            "event_ts": "1667429460.576889",
+            "channel_type": "channel",
+        },
+        "channel": "C02QY11UQ",
+        "user": "U02QY11UJ",
+        "user_name": "garethgreenaway",
+        "cmdline": ["test.arg", "arg1", "arg2", "arg3", "key1=value1", "key2=value2"],
+        "target": {"target": "*", "tgt_type": "glob"},
+    }
+
+    runner_client_mock = MagicMock(autospec=True, return_value=MockRunnerClient())
+    patch_runner_client = patch("salt.runner.RunnerClient", runner_client_mock)
+
+    runner_client_asynchronous_mock = MagicMock(
+        autospec=True, return_value={"jid": "20221027001127600438"}
+    )
+    patch_runner_client_asynchronous = patch.object(
+        MockRunnerClient, "asynchronous", runner_client_asynchronous_mock
+    )
+
+    expected_calls = [
+        call(
+            "test.arg",
+            {
+                "arg": ["arg1", "arg2", "arg3"],
+                "kwarg": {"key1": "value1", "key2": "value2"},
+            },
+        )
+    ]
+    with patch_runner_client, patch_runner_client_asynchronous as runner_client_asynchronous:
+        ret = slack_client.run_command_async(msg)
+        runner_client_asynchronous.assert_has_calls(expected_calls)
