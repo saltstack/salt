@@ -820,8 +820,6 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-call
         * salt-cp
         * salt-minion
-        * salt-syndic
-        * spm
 
     When packaged for salt-ssh, the following scripts should be installed:
         * salt-call
@@ -1058,7 +1056,7 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_data_files(self):
         # Data files common to all scenarios
         data_files = [
-            ("share/man/man1", ["doc/man/salt-call.1", "doc/man/salt-run.1"]),
+            ("share/man/man1", ["doc/man/salt-call.1"]),
             ("share/man/man7", ["doc/man/salt.7"]),
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
@@ -1072,12 +1070,8 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(
                 [
-                    "doc/man/salt-api.1",
                     "doc/man/salt-cp.1",
-                    "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
-                    "doc/man/salt-syndic.1",
-                    "doc/man/spm.1",
                 ]
             )
             return data_files
@@ -1092,6 +1086,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "doc/man/salt-master.1",
                 "doc/man/salt-minion.1",
                 "doc/man/salt-proxy.1",
+                "doc/man/salt-run.1",
                 "doc/man/spm.1",
                 "doc/man/salt.1",
                 "doc/man/salt-ssh.1",
@@ -1143,7 +1138,7 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_scripts(self):
         # Scripts common to all scenarios
-        scripts = ["scripts/salt-call", "scripts/salt-run"]
+        scripts = ["scripts/salt-call"]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append("scripts/salt-ssh")
             if IS_WINDOWS_PLATFORM:
@@ -1154,12 +1149,8 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
                 [
-                    "scripts/salt-api",
                     "scripts/salt-cp",
-                    "scripts/salt-key",
                     "scripts/salt-minion",
-                    "scripts/salt-syndic",
-                    "scripts/spm",
                 ]
             )
             return scripts
@@ -1175,6 +1166,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "scripts/salt-master",
                 "scripts/salt-minion",
                 "scripts/salt-proxy",
+                "scripts/salt-run",
                 "scripts/salt-ssh",
                 "scripts/salt-syndic",
                 "scripts/spm",
@@ -1192,7 +1184,6 @@ class SaltDistribution(distutils.dist.Distribution):
         # console scripts common to all scenarios
         scripts = [
             "salt-call = salt.scripts:salt_call",
-            "salt-run = salt.scripts:salt_run",
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append("salt-ssh = salt.scripts:salt_ssh")
@@ -1205,12 +1196,8 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
                 [
-                    "salt-api = salt.scripts:salt_api",
                     "salt-cp = salt.scripts:salt_cp",
-                    "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
-                    "salt-syndic = salt.scripts:salt_syndic",
-                    "spm = salt.scripts:salt_spm",
                 ]
             )
             entrypoints["console_scripts"] = scripts
@@ -1226,6 +1213,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-key = salt.scripts:salt_key",
                 "salt-master = salt.scripts:salt_master",
                 "salt-minion = salt.scripts:salt_minion",
+                "salt-run = salt.scripts:salt_run",
                 "salt-ssh = salt.scripts:salt_ssh",
                 "salt-syndic = salt.scripts:salt_syndic",
                 "spm = salt.scripts:salt_spm",
