@@ -7,6 +7,23 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt v3005.1-2 (2022-11-04)
+===========================
+
+Note: This release is only impacting the packages not the Salt code base.
+
+Fixed
+-----
+
+- Updated pyzmq to version 22.0.3 on Windows builds because the old version was causing salt-minion/salt-call to hang (#62937)
+- Onedir Package Fix: Fix "No such file or directory" error on Rhel installs. (#62948)
+
+Security
+--------
+
+- Update the onedir packages Python version to 3.8.15 for Windows and 3.9.15 for Linux and Mac
+
+
 Salt 3005.1 (2022-09-26)
 ========================
 
