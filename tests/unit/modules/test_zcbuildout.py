@@ -199,7 +199,6 @@ class BuildoutTestCase(Base):
     def test_get_bootstrap_url(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
-            os.path.join(self.tdir, "var/ver/1/bootstrap"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
             self.assertEqual(
@@ -210,7 +209,6 @@ class BuildoutTestCase(Base):
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
-            os.path.join(self.tdir, "var/ver/2/bootstrap"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
             self.assertEqual(
@@ -223,7 +221,6 @@ class BuildoutTestCase(Base):
     def test_get_buildout_ver(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
-            os.path.join(self.tdir, "var/ver/1/bootstrap"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
             self.assertEqual(
@@ -232,7 +229,6 @@ class BuildoutTestCase(Base):
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
-            os.path.join(self.tdir, "var/ver/2/bootstrap"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
             self.assertEqual(
