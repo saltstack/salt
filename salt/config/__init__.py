@@ -25,6 +25,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
+import salt.utils.versions
 import salt.utils.xdg
 import salt.utils.yaml
 from salt._logging import (
@@ -490,7 +491,10 @@ VALID_OPTS = immutabletypes.freeze(
         # to send returns.
         "ret_port": int,
         # The number of hours to keep jobs around in the job cache on the master
+        # This option is deprecated by keep_jobs_seconds
         "keep_jobs": int,
+        # The number of seconds to keep jobs around in the job cache on the master
+        "keep_jobs_seconds": int,
         # If the returner supports `clean_old_jobs`, then at cleanup time,
         # archive the job data before deleting it.
         "archive_jobs": bool,
@@ -1296,6 +1300,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ret_port": 4506,
         "timeout": 5,
         "keep_jobs": 24,
+        "keep_jobs_seconds": 86400,
         "archive_jobs": False,
         "root_dir": salt.syspaths.ROOT_DIR,
         "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "master"),

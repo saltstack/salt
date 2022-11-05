@@ -24,7 +24,7 @@ def configure_loader_modules(tmp_cache_dir):
         local_cache: {
             "__opts__": {
                 "cachedir": str(tmp_cache_dir),
-                "keep_jobs": 0.0000000010,
+                "keep_jobs_seconds": 0.0000000010,
             }
         }
     }
@@ -139,7 +139,7 @@ def test_not_clean_new_jobs(add_job, job_cache_dir_files):
     """
     add_job()
 
-    with patch.dict(local_cache.__opts__, {"keep_jobs": 24}):
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 86400}):
         assert local_cache.clean_old_jobs() is None
 
         _check_dir_files(
