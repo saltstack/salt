@@ -587,6 +587,43 @@ def test_export_public_key(gpghome):
                 )
 
 
+def test_export_public_key_to_file(gpghome):
+    """
+    Test gpg.export_key output public key to file
+    """
+
+    _user_mock = {
+        "shell": "/bin/bash",
+        "workphone": "",
+        "uid": 0,
+        "passwd": "x",
+        "roomnumber": "",
+        "gid": 0,
+        "groups": ["root"],
+        "home": str(gpghome.path),
+        "fullname": "root",
+        "homephone": "",
+        "name": "root",
+    }
+
+    exported_keyfile = gpghome.path / "exported_pub_key"
+    mock_opt = MagicMock(return_value="root")
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+
+    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
+        with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+            with patch(
+                "salt.modules.gpg.gnupg.GPG.export_keys",
+                MagicMock(return_value=GPG_TEST_PUB_KEY),
+            ) as gnupg_export_keys:
+                ret = gpg.export_key(
+                    keyids="xxxxxxxxxxxxxxxx", output=exported_keyfile, bare=True
+                )
+                assert ret == GPG_TEST_PUB_KEY
+                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
+                assert keyfile_contents == GPG_TEST_PUB_KEY
+
+
 def test_export_multiple_public_keys(gpghome):
     """
     Test gpg.export_key with multiple public keys
@@ -627,7 +664,7 @@ def test_export_multiple_public_keys(gpghome):
 
 def test_export_secret_key_with_gpg_passphrase_in_pillar(gpghome):
     """
-    Test gpg.export_key with gpg_passphrase in pillar
+    Test gpg.export_key with secret key and gpg_passphrase in pillar
     """
 
     _user_mock = {
@@ -710,43 +747,6 @@ def test_export_secret_key_to_file_with_gpg_passphrase_in_pillar(gpghome):
                 )
                 keyfile_contents = pathlib.Path(exported_keyfile).read_text()
                 assert keyfile_contents == GPG_TEST_PRIV_KEY
-
-
-def test_export_public_key_to_file(gpghome):
-    """
-    Test gpg.export_key output public key to file
-    """
-
-    _user_mock = {
-        "shell": "/bin/bash",
-        "workphone": "",
-        "uid": 0,
-        "passwd": "x",
-        "roomnumber": "",
-        "gid": 0,
-        "groups": ["root"],
-        "home": str(gpghome.path),
-        "fullname": "root",
-        "homephone": "",
-        "name": "root",
-    }
-
-    exported_keyfile = gpghome.path / "exported_pub_key"
-    mock_opt = MagicMock(return_value="root")
-    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
-
-    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
-        with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
-            with patch(
-                "salt.modules.gpg.gnupg.GPG.export_keys",
-                MagicMock(return_value=GPG_TEST_PUB_KEY),
-            ) as gnupg_export_keys:
-                ret = gpg.export_key(
-                    keyids="xxxxxxxxxxxxxxxx", output=exported_keyfile, bare=True
-                )
-                assert ret == GPG_TEST_PUB_KEY
-                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
-                assert keyfile_contents == GPG_TEST_PUB_KEY
 
 
 def test_create_key_without_passphrase(gpghome):
@@ -910,6 +910,10 @@ def test_gpg_import_priv_key(gpghome):
 
 
 def test_gpg_sign(gpghome):
+    """
+    Test gpg.sign
+    """
+
     config_user = MagicMock(return_value="salt")
     user_info = MagicMock(
         return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
@@ -931,6 +935,10 @@ def test_gpg_sign(gpghome):
 
 
 def test_gpg_encrypt_message(gpghome):
+    """
+    Test gpg.encrypt
+    """
+
     config_user = MagicMock(return_value="salt")
 
     user_info = MagicMock(
@@ -952,6 +960,10 @@ def test_gpg_encrypt_message(gpghome):
 
 
 def test_gpg_encrypt_and_sign_message_with_gpg_passphrase_in_pillar(gpghome):
+    """
+    Test gpg.encrypt sign message with passphrase and gpg_passphrase in pillar
+    """
+
     config_user = MagicMock(return_value="salt")
 
     user_info = MagicMock(
@@ -977,8 +989,9 @@ def test_gpg_encrypt_and_sign_message_with_gpg_passphrase_in_pillar(gpghome):
 
 def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
     """
-    Test gpg.decrypt with passphrase and gpg_passphrase pillar
+    Test gpg.decrypt with passphrase and gpg_passphrase in pillar
     """
+
     gpg_encrypted_message = """-----BEGIN PGP MESSAGE-----
     hQGMA7z9rKs9ZvTOAQwAnMbwchCm1VXOD+Ml0rnNrhDhsRm+6O96FOq5lWY0ntkj
     vnXeFOgUf0wzK4hkQT/Yo4/ZpDkV3iwwSIjesqNDS1U/KWfbe2pFeph6w9fHFnXf
