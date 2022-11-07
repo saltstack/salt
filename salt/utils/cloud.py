@@ -1286,19 +1286,19 @@ def deploy_windows(
 
         salt.utils.smb.mkdirs("salttemp", conn=smb_conn)
         root_dir = "%PROGRAMDATA%\\Salt Project\\Salt"
-        salt.utils.smb.mkdirs(
-            "{}\\conf\\pki\\minion".format(root_dir), conn=smb_conn
-        )
+        salt.utils.smb.mkdirs("{}\\conf\\pki\\minion".format(root_dir), conn=smb_conn)
 
         if minion_pub:
             salt.utils.smb.put_str(
-                minion_pub, "{}\\conf\\pki\\minion\\minion.pub".format(root_dir),
+                minion_pub,
+                "{}\\conf\\pki\\minion\\minion.pub".format(root_dir),
                 conn=smb_conn,
             )
 
         if minion_pem:
             salt.utils.smb.put_str(
-                minion_pem, "{}\\conf\\pki\\minion\\minion.pem".format(root_dir),
+                minion_pem,
+                "{}\\conf\\pki\\minion\\minion.pem".format(root_dir),
                 conn=smb_conn,
             )
 
