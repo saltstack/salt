@@ -163,7 +163,6 @@ def test_build_install(setup_spm, f1_content, patch_local_client):
         assert len(ui._error) == 0
 
 
-@pytest.fixture()
 def test_repo_paths(setup_spm):
     _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
     ui._error = []
