@@ -1,8 +1,9 @@
 import time
 
+import pytest
+
 import salt.master
 from tests.support.mock import patch
-import pytest
 
 
 @pytest.fixture
