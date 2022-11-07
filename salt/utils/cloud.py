@@ -901,6 +901,7 @@ class Client:
         return self._client.connect()
 
     def disconnect(self):
+        self._client.cleanup()  # This removes the lingering PAExec binary
         return self._client.disconnect()
 
     def create_service(self):
