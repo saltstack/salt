@@ -278,7 +278,6 @@ class SystemModuleTest(ModuleCase):
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
-    @pytest.mark.flaky_jail
     def test_set_system_time(self):
         """
         Test setting the system time without adjusting the date.

@@ -14,7 +14,6 @@ from tests.support.helpers import VirtualEnv
         "pip>=21.0",
     ),
 )
-@pytest.mark.slow_test
 def test_list_available_packages(modules, pip_version, tmp_path):
     if sys.version_info < (3, 6) and pip_version == "pip>=21.0":
         pytest.skip("{} is not available on Py3.5".format(pip_version))
