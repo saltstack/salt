@@ -4,3 +4,7 @@
 pyzmq<=20.0.0 ; python_version < "3.6"
 pyzmq>=17.0.0 ; python_version < "3.9"
 pyzmq>19.0.2 ; python_version >= "3.9"
+
+# We can't use 23+ on Windows until they fix this:
+# https://github.com/zeromq/pyzmq/issues/1472
+pyzmq>=20.0.0, <=22.0.3 ; python_version < "3.9" and sys_platform == 'win32'

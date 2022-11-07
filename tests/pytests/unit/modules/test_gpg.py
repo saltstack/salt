@@ -243,7 +243,29 @@ def test_list_keys():
             "trust": "-",
             "type": "pub",
             "uids": ["GPG Person <person@example.com>"],
-        }
+        },
+        {
+            "dummy": "",
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "expires": "2011188692",
+            "sigs": [],
+            "subkeys": [
+                [
+                    "yyyyyyyyyyyyyyyy",
+                    "e",
+                    "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+                ]
+            ],
+            "length": "4096",
+            "ownertrust": "-",
+            "sig": "",
+            "algo": "1",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "date": "1506612692",
+            "trust": "r",
+            "type": "pub",
+            "uids": ["GPG Person <person@example.com>"],
+        },
     ]
 
     _expected_result = [
@@ -256,7 +278,17 @@ def test_list_keys():
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             "trust": "Unknown",
-        }
+        },
+        {
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "uids": ["GPG Person <person@example.com>"],
+            "created": "2017-09-28",
+            "expires": "2033-09-24",
+            "keyLength": "4096",
+            "ownerTrust": "Unknown",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "trust": "Revoked",
+        },
     ]
 
     mock_opt = MagicMock(return_value="root")
@@ -830,20 +862,100 @@ def test_gpg_sign(gpghome):
     user_info = MagicMock(
         return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
     )
-    pillar_mock = MagicMock(return_value={"gpg_passphrase": GPG_TEST_KEY_PASSPHRASE})
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
             with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
-                ret = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
-                assert ret["res"] is True
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
                 gpg_text_input = "The quick brown fox jumped over the lazy dog"
-                gpg_sign_output = gpg.sign(
-                    config_user,
-                    GPG_TEST_KEY_ID,
-                    gpg_text_input,
-                    None,
-                    None,
-                    True,
-                    str(gpghome.path),
+                ret = gpg.sign(
+                    keyid=GPG_TEST_KEY_ID,
+                    text=gpg_text_input,
+                    use_passphrase=True,
+                    gnupghome=str(gpghome.path),
                 )
-                assert gpg_sign_output is not None
+                assert "-----BEGIN PGP SIGNATURE-----" in str(ret)
+
+
+def test_gpg_encrypt_message(gpghome):
+    config_user = MagicMock(return_value="salt")
+
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
+    )
+    with patch.dict(gpg.__salt__, {"config.option": config_user}):
+        with patch.dict(gpg.__salt__, {"user.info": user_info}):
+            key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+            assert key["res"] is True
+            gpg_text_input = "The quick brown fox jumped over the lazy dog"
+            ret = gpg.encrypt(
+                recipients=GPG_TEST_KEY_ID,
+                text=gpg_text_input,
+                use_passphrase=True,
+                always_trust=True,
+                gnupghome=str(gpghome.path),
+            )
+            assert ret["res"] is True
+
+
+def test_gpg_encrypt_and_sign_message_with_gpg_passphrase_in_pillar(gpghome):
+    config_user = MagicMock(return_value="salt")
+
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
+    )
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+    with patch.dict(gpg.__salt__, {"config.option": config_user}):
+        with patch.dict(gpg.__salt__, {"user.info": user_info}):
+            with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
+                gpg_text_input = "The quick brown fox jumped over the lazy dog"
+                ret = gpg.encrypt(
+                    recipients=GPG_TEST_KEY_ID,
+                    text=gpg_text_input,
+                    sign=True,
+                    use_passphrase=True,
+                    always_trust=True,
+                    gnupghome=str(gpghome.path),
+                )
+                assert ret["res"] is True
+
+
+def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
+    """
+    Test gpg.decrypt with passphrase and gpg_passphrase pillar
+    """
+    gpg_encrypted_message = """-----BEGIN PGP MESSAGE-----
+    hQGMA7z9rKs9ZvTOAQwAnMbwchCm1VXOD+Ml0rnNrhDhsRm+6O96FOq5lWY0ntkj
+    vnXeFOgUf0wzK4hkQT/Yo4/ZpDkV3iwwSIjesqNDS1U/KWfbe2pFeph6w9fHFnXf
+    e8RJY8OGJHN8A9TlCIyKDVKGoXZEcSDZ4K0fNL/OxF3LxsSjJ894F+e2MCnoQZgq
+    3uxQFYb9Gec8iPpBcd7s74J8cX1To9rBKRNSP73NRwVvKbPgB0NjzrLVPmqHGO7Q
+    wFf9tZdGYmxV/AB9H0gCUITBCwnndissVqFpjUpVEIL1jOBus73oiL9Grn5QlZic
+    wDOZyKDlWR15jiiDaWvq4ES6O0j2Oj/FodItJhTbzeXEFOxn7cNbW2kAAc08Hs1u
+    zPI2LywaCSM/IOxrRI8n/ExXxtU0k48827AWTLYmhm+vDct7gQHEJ8Qu3/d5FsP/
+    f1qWrtl+E7TpIIlUIgtPL596LYiwQLisqh1JeqqleSnBESIzgg7teolYdYED606z
+    j9a1oTUHvSnKz6Q5Yh850mYBCBc/iEn0gJBgseGK6rXJF54f5duybkuTKrV+7hUd
+    euy/+K0mnQWPS0G9NhCdQAaydNBZywOyQU6Yv1gPHapRrHOkhZq51sBKmZRGdqH/
+    llX+Wd7pUetBV+vmZp75l8q9CNVpefA=
+    =WXYF
+    -----END PGP MESSAGE-----
+    """
+
+    config_user = MagicMock(return_value="salt")
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
+    )
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+    with patch.dict(gpg.__salt__, {"config.option": config_user}):
+        with patch.dict(gpg.__salt__, {"user.info": user_info}):
+            with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
+                ret = gpg.decrypt(
+                    text=gpg_encrypted_message,
+                    use_passphrase=True,
+                    gnupghome=str(gpghome.path),
+                )
+                assert ret["res"] is True

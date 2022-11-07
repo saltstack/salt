@@ -2053,6 +2053,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
+        assert "changes" in ret
+        assert "diff" in ret["changes"]
+        assert "foo" in ret["changes"]["diff"]
+        assert "abc" in ret["changes"]["diff"]["foo"]
+        assert "new" in ret["changes"]["diff"]["foo"]["abc"]
+        assert ret["changes"]["diff"]["foo"]["abc"]["new"], 123
 
         with salt.utils.files.fopen(name) as fp_:
             serialized_data = salt.serializers.configparser.deserialize(fp_)
@@ -2099,6 +2105,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
+        assert "changes" in ret
+        assert "diff" in ret["changes"]
+        assert "foo" in ret["changes"]["diff"]
+        assert "abc" in ret["changes"]["diff"]["foo"]
+        assert "new" in ret["changes"]["diff"]["foo"]["abc"]
+        assert ret["changes"]["diff"]["foo"]["abc"]["new"], 123
 
         with salt.utils.files.fopen(name, "rb") as fp_:
             serialized_data = salt.serializers.plist.deserialize(fp_)
@@ -2135,6 +2147,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
+        assert "changes" in ret
+        assert "diff" in ret["changes"]
+        assert "foo" in ret["changes"]["diff"]
+        assert "abc" in ret["changes"]["diff"]["foo"]
+        assert "new" in ret["changes"]["diff"]["foo"]["abc"]
+        assert ret["changes"]["diff"]["foo"]["abc"]["new"], 123
 
         with salt.utils.files.fopen(name, "rb") as fp_:
             serialized_data = salt.serializers.plist.deserialize(fp_)

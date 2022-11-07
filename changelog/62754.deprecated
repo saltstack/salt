@@ -1,0 +1,1 @@
+Deprecate core ESXi and associated states and modules, vcenter and vsphere support in favor of Salt VMware Extensions
