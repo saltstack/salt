@@ -3,6 +3,7 @@ import logging
 import os
 import random
 
+import salt.client.ssh
 import salt.config
 import salt.syspaths
 import salt.utils.args

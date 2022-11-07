@@ -1,4 +1,7 @@
+import os
+
 import pytest
+
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
@@ -29,8 +32,9 @@ def configure_loader_modules(minion_opts, modules):
 
 @pytest.fixture(scope="module")
 def enable_legacy_auditing():
-    # To test and use these policy settings we have to set one of the policies to Disabled
-    # Location: Windows Settings -> Security Settings -> Local Policies -> Security Options
+    # To test and use these policy settings we have to set one of the policies
+    # to Disabled Location:
+    # Windows Settings -> Security Settings -> Local Policies -> Security Options
     # Policy: "Audit: Force audit policy subcategory settings..."
     # Short Name: SceNoApplyLegacyAuditPolicy
     from tests.support.sminion import create_sminion
@@ -64,7 +68,26 @@ def enable_legacy_auditing():
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
+def clean_adv_audit():
+    # An `audit.csv` file will cause these tests to fail. Delete the `audit.csv`
+    # files from the following locations:
+    # - C:\Windows\security\audit
+    # - C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit
+    win_dir = os.environ.get("WINDIR")
+    audit_csv_files = [
+        r"{}\security\audit\audit.csv".format(win_dir),
+        r"{}\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv".format(
+            win_dir
+        ),
+    ]
+    for audit_file in audit_csv_files:
+        if os.path.exists(audit_file):
+            os.remove(audit_file)
+    yield
+
+
+@pytest.fixture
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No auditing"
@@ -79,7 +102,7 @@ def clear_policy():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def set_policy():
     # Ensure the policy is set
     test_setting = "Success"
@@ -108,17 +131,17 @@ def _test_auditing(setting):
     assert result == setting
 
 
-def test_no_auditing(enable_legacy_auditing, set_policy):
+def test_no_auditing(enable_legacy_auditing, set_policy, clean_adv_audit):
     _test_auditing("No auditing")
 
 
-def test_success(enable_legacy_auditing, clear_policy):
+def test_success(enable_legacy_auditing, clear_policy, clean_adv_audit):
     _test_auditing("Success")
 
 
-def test_failure(enable_legacy_auditing, clear_policy):
+def test_failure(enable_legacy_auditing, clear_policy, clean_adv_audit):
     _test_auditing("Failure")
 
 
-def test_success_and_failure(enable_legacy_auditing, clear_policy):
+def test_success_and_failure(enable_legacy_auditing, clear_policy, clean_adv_audit):
     _test_auditing("Success, Failure")

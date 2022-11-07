@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.modules.dockermod as docker_mod
 from tests.support.mock import MagicMock, patch
 

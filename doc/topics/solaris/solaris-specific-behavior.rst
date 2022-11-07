@@ -19,7 +19,7 @@ issue on github: #37027
 Grains
 =========================
 Not all grains are available or some have empty or 0 as value. Mostly grains 
-that are depenend on hardware discovery like:
+that are dependent on hardware discovery like:
 - num_gpus
 - gpus
 

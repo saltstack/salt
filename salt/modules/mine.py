@@ -6,9 +6,10 @@ import logging
 import time
 import traceback
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
+import salt.transport
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.event
@@ -66,7 +67,7 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get("transport", "") in ("zeromq", "tcp"):
+    if opts.get("transport", "") in salt.transport.TRANSPORTS:
         try:
             load["tok"] = _auth().gen_token(b"salt")
         except AttributeError:
@@ -74,7 +75,7 @@ def _mine_get(load, opts):
                 "Mine could not authenticate with master. Mine could not be retrieved."
             )
             return False
-    with salt.transport.client.ReqChannel.factory(opts) as channel:
+    with salt.channel.client.ReqChannel.factory(opts) as channel:
         return channel.send(load)
 
 
@@ -239,9 +240,9 @@ def send(name, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.ip_addrs eth0
-        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
-        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
+        salt '*' mine.send network.ip_addrs interface=eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs interface=eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs interface=eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     mine_function = kwargs.pop("mine_function", None)

@@ -20,9 +20,10 @@ import sys
 import tempfile
 from datetime import date
 
+from jinja2 import Template
+
 import salt.utils.files
 import salt.version
-from jinja2 import Template
 from salt.serializers.yaml import deserialize
 from salt.utils.odict import OrderedDict
 

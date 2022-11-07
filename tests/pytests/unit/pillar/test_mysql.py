@@ -1,0 +1,916 @@
+import pytest
+
+import salt.pillar.mysql as mysql
+
+pytestmark = [
+    pytest.mark.skipif(
+        mysql.MySQLdb is None, reason="MySQL-python module not installed"
+    )
+]
+
+
+def test_001_extract_queries_legacy():
+    return_data = mysql.MySQLExtPillar()
+    args, kwargs = ["SELECT blah"], {}
+    qbuffer = return_data.extract_queries(args, kwargs)
+    assert [
+        [
+            None,
+            {
+                "query": "SELECT blah",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ]
+    ] == qbuffer
+
+
+def test_002_extract_queries_list():
+    return_data = mysql.MySQLExtPillar()
+    args, kwargs = (
+        [
+            "SELECT blah",
+            "SELECT blah2",
+            ("SELECT blah3",),
+            ("SELECT blah4", 2),
+            {"query": "SELECT blah5"},
+            {"query": "SELECT blah6", "depth": 2},
+            {"query": "SELECT blah7", "as_list": True},
+            {"query": "SELECT blah8", "with_lists": "1"},
+            {"query": "SELECT blah9", "with_lists": "1,2"},
+            {"query": "SELECT json1", "as_json": True},
+        ],
+        {},
+    )
+    qbuffer = return_data.extract_queries(args, kwargs)
+    assert [
+        [
+            None,
+            {
+                "query": "SELECT blah",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah2",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah3",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah4",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah5",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah6",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah7",
+                "depth": 0,
+                "as_list": True,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah8",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": [1],
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah9",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": [1, 2],
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT json1",
+                "depth": 0,
+                "as_list": False,
+                "as_json": True,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+    ] == qbuffer
+
+
+def test_003_extract_queries_kwarg():
+    return_data = mysql.MySQLExtPillar()
+    args, kwargs = (
+        [],
+        {
+            "1": "SELECT blah",
+            "2": "SELECT blah2",
+            "3": ("SELECT blah3",),
+            "4": ("SELECT blah4", 2),
+            "5": {"query": "SELECT blah5"},
+            "6": {"query": "SELECT blah6", "depth": 2},
+            "7": {"query": "SELECT blah7", "as_list": True},
+            "8": {"query": "SELECT json1", "as_json": True},
+        },
+    )
+    qbuffer = return_data.extract_queries(args, kwargs)
+    assert [
+        [
+            "1",
+            {
+                "query": "SELECT blah",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "2",
+            {
+                "query": "SELECT blah2",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "3",
+            {
+                "query": "SELECT blah3",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "4",
+            {
+                "query": "SELECT blah4",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "5",
+            {
+                "query": "SELECT blah5",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "6",
+            {
+                "query": "SELECT blah6",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "7",
+            {
+                "query": "SELECT blah7",
+                "depth": 0,
+                "as_list": True,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "8",
+            {
+                "query": "SELECT json1",
+                "depth": 0,
+                "as_list": False,
+                "as_json": True,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+    ] == qbuffer
+
+
+def test_004_extract_queries_mixed():
+    return_data = mysql.MySQLExtPillar()
+    args, kwargs = (
+        [
+            "SELECT blah1",
+            ("SELECT blah2", 2),
+            {"query": "SELECT blah3", "as_list": True},
+        ],
+        {
+            "1": "SELECT blah1",
+            "2": ("SELECT blah2", 2),
+            "3": {"query": "SELECT blah3", "as_list": True},
+        },
+    )
+    qbuffer = return_data.extract_queries(args, kwargs)
+    assert [
+        [
+            None,
+            {
+                "query": "SELECT blah1",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah2",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah3",
+                "depth": 0,
+                "as_list": True,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "1",
+            {
+                "query": "SELECT blah1",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "2",
+            {
+                "query": "SELECT blah2",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "3",
+            {
+                "query": "SELECT blah3",
+                "depth": 0,
+                "as_list": True,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+    ] == qbuffer
+
+
+def test_005_extract_queries_bogus_list():
+    # This test is specifically checking that empty queries are dropped
+    return_data = mysql.MySQLExtPillar()
+    args, kwargs = (
+        [
+            "SELECT blah",
+            "",
+            "SELECT blah2",
+            ("SELECT blah3",),
+            ("",),
+            ("SELECT blah4", 2),
+            tuple(),
+            ("SELECT blah5",),
+            {"query": "SELECT blah6"},
+            {"query": ""},
+            {"query": "SELECT blah7", "depth": 2},
+            {"not_a_query": "in sight!"},
+            {"query": "SELECT blah8", "as_list": True},
+        ],
+        {},
+    )
+    qbuffer = return_data.extract_queries(args, kwargs)
+    assert [
+        [
+            None,
+            {
+                "query": "SELECT blah",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah2",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah3",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah4",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah5",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah6",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah7",
+                "depth": 2,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            None,
+            {
+                "query": "SELECT blah8",
+                "depth": 0,
+                "as_list": True,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+    ] == qbuffer
+
+
+def test_006_extract_queries_bogus_kwargs():
+    # this test is cut down as most of the path matches test_*_bogus_list
+    return_data = mysql.MySQLExtPillar()
+    args, kwargs = [], {"1": "SELECT blah", "2": "", "3": "SELECT blah2"}
+    qbuffer = return_data.extract_queries(args, kwargs)
+    assert [
+        [
+            "1",
+            {
+                "query": "SELECT blah",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+        [
+            "3",
+            {
+                "query": "SELECT blah2",
+                "depth": 0,
+                "as_list": False,
+                "as_json": False,
+                "with_lists": None,
+                "ignore_null": False,
+            },
+        ],
+    ] == qbuffer
+
+
+def test_011_enter_root():
+    return_data = mysql.MySQLExtPillar()
+    return_data.enter_root("test")
+    assert return_data.result["test"] == return_data.focus
+    return_data.enter_root(None)
+    assert return_data.result == return_data.focus
+
+
+def test_021_process_fields():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b"], 0)
+    assert return_data.num_fields == 2
+    assert return_data.depth == 1
+    return_data.process_fields(["a", "b"], 2)
+    assert return_data.num_fields == 2
+    assert return_data.depth == 1
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    assert return_data.num_fields == 4
+    assert return_data.depth == 3
+    return_data.process_fields(["a", "b", "c", "d"], 1)
+    assert return_data.num_fields == 4
+    assert return_data.depth == 1
+    return_data.process_fields(["a", "b", "c", "d"], 2)
+    assert return_data.num_fields == 4
+    assert return_data.depth == 2
+    return_data.process_fields(["a", "b", "c", "d"], 3)
+    assert return_data.num_fields == 4
+    assert return_data.depth == 3
+    return_data.process_fields(["a", "b", "c", "d"], 4)
+    assert return_data.num_fields == 4
+    assert return_data.depth == 3
+
+
+def test_111_process_results_legacy():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b"], 0)
+    return_data.with_lists = []
+    return_data.process_results([[1, 2]])
+    assert {1: 2} == return_data.result
+
+
+def test_112_process_results_legacy_multiple():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b"], 0)
+    return_data.with_lists = []
+    return_data.process_results([[1, 2], [3, 4], [5, 6]])
+    assert {1: 2, 3: 4, 5: 6} == return_data.result
+
+
+def test_121_process_results_depth_0():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert {1: {2: {3: 4}}, 5: {6: {7: 8}}} == return_data.result
+
+
+def test_122_process_results_depth_1():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 1)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert {
+        1: {"b": 2, "c": 3, "d": 4},
+        5: {"b": 6, "c": 7, "d": 8},
+    } == return_data.result
+
+
+def test_123_process_results_depth_2():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 2)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert {1: {2: {"c": 3, "d": 4}}, 5: {6: {"c": 7, "d": 8}}} == return_data.result
+
+
+def test_124_process_results_depth_3():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 3)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert {1: {2: {3: 4}}, 5: {6: {7: 8}}} == return_data.result
+
+
+def test_125_process_results_depth_4():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 4)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert {1: {2: {3: 4}}, 5: {6: {7: 8}}} == return_data.result
+
+
+def test_131_process_results_overwrite_legacy_multiple():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b"], 0)
+    return_data.with_lists = []
+    return_data.process_results([[1, 2], [3, 4], [1, 6]])
+    assert {1: 6, 3: 4} == return_data.result
+
+
+def test_132_process_results_merge_depth_0():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [1, 6, 7, 8]])
+    assert {1: {2: {3: 4}, 6: {7: 8}}} == return_data.result
+
+
+def test_133_process_results_overwrite_depth_0():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [1, 2, 3, 8]])
+    assert {1: {2: {3: 8}}} == return_data.result
+
+
+def test_134_process_results_deepmerge_depth_0():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [1, 2, 7, 8]])
+    assert {1: {2: {3: 4, 7: 8}}} == return_data.result
+
+
+def test_135_process_results_overwrite_depth_1():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 1)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [1, 6, 7, 8]])
+    assert {1: {"b": 6, "c": 7, "d": 8}} == return_data.result
+
+
+def test_136_process_results_merge_depth_2():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 2)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [1, 6, 7, 8]])
+    assert {1: {2: {"c": 3, "d": 4}, 6: {"c": 7, "d": 8}}} == return_data.result
+
+
+def test_137_process_results_overwrite_depth_2():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 2)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4], [1, 2, 7, 8]])
+    assert {1: {2: {"c": 7, "d": 8}}} == return_data.result
+
+
+def test_201_process_results_complexity_multiresults():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 2)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 7, 8]])
+    assert {1: {2: {"c": 7, "d": 8}}} == return_data.result
+
+
+def test_202_process_results_complexity_as_list():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 2)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.as_list = True
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 7, 8]])
+    assert {1: {2: {"c": [3, 7], "d": [4, 8]}}} == return_data.result
+
+
+def test_203_process_results_complexity_as_list_deeper():
+    return_data = mysql.MySQLExtPillar()
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.as_list = True
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 3, 8]])
+    assert {1: {2: {3: [4, 8]}}} == return_data.result
+
+
+def test_204_process_results_complexity_as_list_mismatch_depth():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = True
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 3, 5]])
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    assert {1: {2: {3: [4, 5, {6: 7}]}}} == return_data.result
+
+
+def test_205_process_results_complexity_as_list_mismatch_depth_reversed():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = True
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    return_data.process_results([[1, 2, 3, 8, 9]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 3, 5]])
+    assert {1: {2: {3: [{6: 7, 8: 9}, 4, 5]}}} == return_data.result
+
+
+def test_206_process_results_complexity_as_list_mismatch_depth_weird_order():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = True
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 8, 9]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 5]])
+    assert {1: {2: {3: [{6: 7}, 4, {8: 9}, 5]}}} == return_data.result
+
+
+def test_207_process_results_complexity_collision_mismatch_depth():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = False
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 3, 5]])
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    assert {1: {2: {3: {6: 7}}}} == return_data.result
+
+
+def test_208_process_results_complexity_collision_mismatch_depth_reversed():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = False
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    return_data.process_results([[1, 2, 3, 8, 9]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_results([[1, 2, 3, 5]])
+    assert {1: {2: {3: 5}}} == return_data.result
+
+
+def test_209_process_results_complexity_collision_mismatch_depth_weird_order():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = False
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 8, 9]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 5]])
+    assert {1: {2: {3: 5}}} == return_data.result
+
+
+def test_20A_process_results_complexity_as_list_vary():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = True
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e"], 0)
+    return_data.process_results([[1, 2, 3, 6, 7]])
+    return_data.process_results([[1, 2, 3, 8, 9]])
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.as_list = False
+    return_data.process_results([[1, 2, 3, 5]])
+    assert {1: {2: {3: 5}}} == return_data.result
+
+
+def test_207_process_results_complexity_roots_collision():
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = False
+    return_data.with_lists = []
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d"], 0)
+    return_data.process_results([[1, 2, 3, 4]])
+    return_data.enter_root(1)
+    return_data.process_results([[5, 6, 7, 8]])
+    assert {1: {5: {6: {7: 8}}}} == return_data.result
+
+
+def test_301_process_results_with_lists():
+    """
+    Validates the following results:
+
+        {'a': [
+            {'c': [
+                {'e': 1},
+                {'g': 2}
+                ]
+            },
+            {'h': [
+                {'j': 3, 'k': 4}
+                ]
+            }
+        ]}
+    """
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = False
+    return_data.with_lists = [1, 3]
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e", "v"], 0)
+    return_data.process_results(
+        [
+            ["a", "b", "c", "d", "e", 1],
+            ["a", "b", "c", "f", "g", 2],
+            ["a", "z", "h", "y", "j", 3],
+            ["a", "z", "h", "y", "k", 4],
+        ]
+    )
+    assert "a" in return_data.result
+    for x in return_data.result["a"]:
+        if "c" in x:
+            assert list(x.keys()) == ["c"], x.keys()
+            for y in x["c"]:
+                if "e" in y:
+                    assert list(y.keys()) == ["e"]
+                    assert y["e"] == 1
+                elif "g" in y:
+                    assert list(y.keys()) == ["g"]
+                    assert y["g"] == 2
+                else:
+                    raise ValueError("Unexpected value {}".format(y))
+        elif "h" in x:
+            assert len(x["h"]) == 1
+            for y in x["h"]:
+                if "j" in y:
+                    assert len(y.keys()) == 2
+                    assert y["j"] == 3
+                elif "h" in y:
+                    assert len(y.keys()) == 2
+                    assert y["k"] == 4
+                else:
+                    raise ValueError("Unexpected value {}".format(y))
+        else:
+            raise ValueError("Unexpected value {}".format(x))
+
+
+def test_302_process_results_with_lists_consecutive():
+    """
+    Validates the following results:
+
+        {'a': [
+            [[
+                {'e': 1},
+                {'g': 2}
+                ]
+            ],
+            [[
+                {'j': 3, 'k': 4}
+                ]
+            ]
+        ]}
+    """
+    return_data = mysql.MySQLExtPillar()
+    return_data.as_list = False
+    return_data.with_lists = [1, 2, 3]
+    return_data.enter_root(None)
+    return_data.process_fields(["a", "b", "c", "d", "e", "v"], 0)
+    return_data.process_results(
+        [
+            ["a", "b", "c", "d", "e", 1],
+            ["a", "b", "c", "f", "g", 2],
+            ["a", "z", "h", "y", "j", 3],
+            ["a", "z", "h", "y", "k", 4],
+        ]
+    )
+
+    assert "a" in return_data.result
+    for x in return_data.result["a"]:
+        assert len(x) == 1
+        if len(x[0][0]) == 1:
+            for y in x[0]:
+                if "e" in y:
+                    assert list(y.keys()) == ["e"]
+                    assert y["e"] == 1
+                elif "g" in y:
+                    assert list(y.keys()) == ["g"]
+                    assert y["g"] == 2
+                else:
+                    raise ValueError("Unexpected value {}".format(y))
+        elif len(x[0][0]) == 2:
+            for y in x[0]:
+                if "j" in y:
+                    assert len(y.keys()) == 2
+                    assert y["j"] == 3
+                elif "k" in y:
+                    assert len(y.keys()) == 2
+                    assert y["k"] == 4
+                else:
+                    raise ValueError("Unexpected value {}".format(len(x[0][0])))
+        else:
+            raise ValueError("Unexpected value {}".format(x))

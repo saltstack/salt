@@ -146,6 +146,11 @@ def sync_all(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         extmod_whitelist=extmod_whitelist,
         extmod_blacklist=extmod_blacklist,
     )
+    ret["roster"] = sync_roster(
+        saltenv=saltenv,
+        extmod_whitelist=extmod_whitelist,
+        extmod_blacklist=extmod_blacklist,
+    )
     return ret
 
 
