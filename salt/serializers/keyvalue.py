@@ -1,6 +1,7 @@
 """
     salt.serializers.keyvalue
     ~~~~~~~~~~~~~~~~~~~~~~~~~
+    .. versionadded:: 3006.0
 
     Implements keyvalue serializer which can be used for serializing or
     deserializing any file which defines keys and values separated by a common
@@ -15,11 +16,12 @@
 
     :param quoting:
         Boolean flag to determine if values should be quoted (``True``) during
-        serialization or dequoted (``False``) during deserialization.
+        serialization or dequoted (``False``) during deserialization. Defaults
+        to ``None`` (no action).
 
     :param separator:
         String representing the character(s) used when concatenating or reading
-        key/value pairs.
+        key/value pairs. Defaults to ``=``.
 
     A dataset such as:
 
