@@ -328,7 +328,6 @@ def wait(
     shell=None,
     env=(),
     stateful=False,
-    umask=None,
     output_loglevel="debug",
     hide_output=False,
     use_vt=False,
@@ -408,9 +407,6 @@ def wait(
             matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
-    umask
-         The umask (in octal) to use when running the command.
-
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
@@ -483,7 +479,6 @@ def wait_script(
     shell=None,
     env=None,
     stateful=False,
-    umask=None,
     use_vt=False,
     output_loglevel="debug",
     hide_output=False,
@@ -566,9 +561,6 @@ def wait_script(
             matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
-    umask
-         The umask (in octal) to use when running the command.
-
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
@@ -630,7 +622,6 @@ def run(
     env=None,
     prepend_path=None,
     stateful=False,
-    umask=None,
     output_loglevel="debug",
     hide_output=False,
     timeout=None,
@@ -728,9 +719,6 @@ def run(
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
-
-    umask
-        The umask (in octal) to use when running the command.
 
     output_loglevel : debug
         Control the loglevel at which the output from the command is logged to
@@ -850,7 +838,6 @@ def run(
             "shell": shell or __grains__["shell"],
             "env": env,
             "prepend_path": prepend_path,
-            "umask": umask,
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
             "success_retcodes": success_retcodes,
@@ -908,7 +895,6 @@ def script(
     shell=None,
     env=None,
     stateful=False,
-    umask=None,
     timeout=None,
     use_vt=False,
     output_loglevel="debug",
@@ -1020,9 +1006,6 @@ def script(
 
     saltenv : ``base``
         The Salt environment to use
-
-    umask
-         The umask (in octal) to use when running the command.
 
     stateful
         The command being executed is expected to return data about executing
@@ -1143,7 +1126,6 @@ def script(
             "env": env,
             "cwd": cwd,
             "template": template,
-            "umask": umask,
             "timeout": timeout,
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
@@ -1249,7 +1231,6 @@ def call(
         "use_vt": use_vt,
         "output_loglevel": output_loglevel,
         "hide_output": hide_output,
-        "umask": kwargs.get("umask"),
     }
 
     if not kws:

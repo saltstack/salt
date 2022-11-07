@@ -2102,49 +2102,52 @@ def tidied(
             mysize = 0
             deleteme = True
             path = os.path.join(root, elem)
-            if os.path.islink(path):
-                # Get timestamp of symlink (not symlinked file)
-                if time_comparison == "ctime":
-                    mytimestamp = os.lstat(path).st_ctime
-                elif time_comparison == "mtime":
-                    mytimestamp = os.lstat(path).st_mtime
+            try:
+                if os.path.islink(path):
+                    # Get timestamp of symlink (not symlinked file)
+                    if time_comparison == "ctime":
+                        mytimestamp = os.lstat(path).st_ctime
+                    elif time_comparison == "mtime":
+                        mytimestamp = os.lstat(path).st_mtime
+                    else:
+                        mytimestamp = os.lstat(path).st_atime
                 else:
-                    mytimestamp = os.lstat(path).st_atime
-            else:
-                # Get timestamp of file or directory
-                if time_comparison == "ctime":
-                    mytimestamp = os.path.getctime(path)
-                elif time_comparison == "mtime":
-                    mytimestamp = os.path.getmtime(path)
+                    # Get timestamp of file or directory
+                    if time_comparison == "ctime":
+                        mytimestamp = os.path.getctime(path)
+                    elif time_comparison == "mtime":
+                        mytimestamp = os.path.getmtime(path)
+                    else:
+                        mytimestamp = os.path.getatime(path)
+
+                    if elem in dirs:
+                        # Check if directories should be deleted at all
+                        deleteme = rmdirs
+                    else:
+                        # Get size of regular file
+                        mysize = os.path.getsize(path)
+
+                # Calculate the age and set the name to match
+                myage = abs(today - date.fromtimestamp(mytimestamp))
+                filename = elem
+                if full_path_match:
+                    filename = path
+
+                # Verify against given criteria, collect all elements that should be removed
+                if age_size_only and age_size_only.lower() in ["age", "size"]:
+                    if age_size_only.lower() == "age":
+                        compare_age_size = myage.days >= age
+                    else:
+                        compare_age_size = mysize >= size
+                elif age_size_logical_operator.upper() == "AND":
+                    compare_age_size = mysize >= size and myage.days >= age
                 else:
-                    mytimestamp = os.path.getatime(path)
+                    compare_age_size = mysize >= size or myage.days >= age
 
-                if elem in dirs:
-                    # Check if directories should be deleted at all
-                    deleteme = rmdirs
-                else:
-                    # Get size of regular file
-                    mysize = os.path.getsize(path)
-
-            # Calculate the age and set the name to match
-            myage = abs(today - date.fromtimestamp(mytimestamp))
-            filename = elem
-            if full_path_match:
-                filename = path
-
-            # Verify against given criteria, collect all elements that should be removed
-            if age_size_only and age_size_only.lower() in ["age", "size"]:
-                if age_size_only.lower() == "age":
-                    compare_age_size = myage.days >= age
-                else:
-                    compare_age_size = mysize >= size
-            elif age_size_logical_operator.upper() == "AND":
-                compare_age_size = mysize >= size and myage.days >= age
-            else:
-                compare_age_size = mysize >= size or myage.days >= age
-
-            if compare_age_size and _matches(name=filename) and deleteme:
-                todelete.append(path)
+                if compare_age_size and _matches(name=filename) and deleteme:
+                    todelete.append(path)
+            except FileNotFoundError:
+                continue
 
     # Now delete the stuff
     if todelete:
