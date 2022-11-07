@@ -6,6 +6,21 @@
     deserializing any file which defines keys and values separated by a common
     set of characters, such environment files, which are in "KEY=value" format.
 
+    Options:
+
+    :param line_ending:
+        String representation of LF or CRLF to be used for serialization to a
+        file. Defaults to ``\\r\\n`` on Windows and ``\\n`` on other operating
+        systems.
+
+    :param quoting:
+        Boolean flag to determine if values should be quoted (``True``) during
+        serialization or dequoted (``False``) during deserialization.
+
+    :param separator:
+        String representing the character(s) used when concatenating or reading
+        key/value pairs.
+
     A dataset such as:
 
     .. code-block:: yaml
@@ -77,10 +92,10 @@ def serialize(obj, **options):
     if not isinstance(obj, (dict, list, tuple, set)):
         raise SerializationError("Input validation failed. Iterable required.")
 
-    if salt.utils.platform.is_windows():
+    linend = options.get("line_ending", "\n")
+
+    if not options.get("line_ending") and salt.utils.platform.is_windows():
         linend = "\r\n"
-    else:
-        linend = "\n"
 
     separator = options.get("separator", "=")
 
