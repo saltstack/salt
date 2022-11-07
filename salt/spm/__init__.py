@@ -748,8 +748,6 @@ class SPMClient:
 
         if args[1] == ".":
             repo_path = os.getcwd()
-            if sys.version_info.major == 2:
-                repo_path = os.getcwdu()
         else:
             repo_path = args[1]
 
