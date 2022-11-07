@@ -175,7 +175,6 @@ def test_repo_paths(setup_spm):
     assert len(ui._error) == 0
 
 
-
 def test_failure_paths(setup_spm, patch_local_client):
     _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
     fail_args = (
