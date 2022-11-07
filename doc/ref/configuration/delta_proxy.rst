@@ -359,6 +359,15 @@ To create a control proxy configuration file:
 
 #. Repeat the previous steps for each control proxy if needed.
 
+#. In an editor, open the proxy config file: ``/etc/salt/proxy``.
+   Add a section for metaproxy and set it's value to deltaproxy.
+
+   .. code-block:: yaml
+
+        metaproxy: deltaproxy
+
+
+
 
 Now that you have created the necessary configurations, proceed to the next
 section.
@@ -386,7 +395,7 @@ configured correctly:
 
    .. code-block:: bash
 
-       sudo salt-proxy --proxyid=my_managed_device_minion_ID
+       sudo salt-proxy --proxyid=<control_proxy_id>
 
 
 #. To test the delta proxy minion, run the following ``test.version`` command

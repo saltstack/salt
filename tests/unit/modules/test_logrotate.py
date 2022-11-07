@@ -76,3 +76,28 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
         ):
             kwargs = {"key": "rotate", "value": "/var/log/wtmp", "setting": "2"}
             self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+
+    def test_get(self):
+        """
+        Test if get a value for a specific configuration line
+        """
+        with patch(
+            "salt.modules.logrotate._parse_conf", MagicMock(return_value=PARSE_CONF)
+        ):
+            # A single key returns the right value
+            self.assertEqual(logrotate.get("rotate"), 1)
+
+            # A single key returns the wrong value
+            self.assertNotEqual(logrotate.get("rotate"), 2)
+
+            # A single key returns the right stanza value
+            self.assertEqual(logrotate.get("/var/log/wtmp", "rotate"), 1)
+
+            # A single key returns the wrong stanza value
+            self.assertNotEqual(logrotate.get("/var/log/wtmp", "rotate"), 2)
+
+            # Ensure we're logging the message as debug not warn
+            with patch.object(logrotate, "_LOG") as log_mock:
+                res = logrotate.get("/var/log/utmp", "rotate")
+                self.assertTrue(log_mock.debug.called)
+                self.assertFalse(log_mock.warn.called)

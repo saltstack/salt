@@ -4,6 +4,8 @@ The setup script for salt
 """
 
 # pylint: disable=file-perms,resource-leakage
+import setuptools  # isort:skip
+
 import contextlib
 import distutils.dist
 import glob
@@ -268,6 +270,7 @@ class GenerateSaltSyspaths(Command):
                 base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
                 base_thorium_roots_dir=self.distribution.salt_base_thorium_roots_dir,
+                lib_state_dir=self.distribution.salt_lib_state_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
                 spm_parent_path=self.distribution.salt_spm_parent_dir,
@@ -665,6 +668,7 @@ BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
 BASE_THORIUM_ROOTS_DIR = {base_thorium_roots_dir!r}
+LIB_STATE_DIR = {lib_state_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
 SPM_PARENT_PATH = {spm_parent_path!r}
@@ -860,6 +864,11 @@ class SaltDistribution(distutils.dist.Distribution):
             ("salt-sock-dir=", None, "Salt's pre-configured socket directory"),
             ("salt-srv-root-dir=", None, "Salt's pre-configured service directory"),
             (
+                "salt-lib-state-dir=",
+                None,
+                "Salt's pre-configured variable state directory (used for storing pki data)",
+            ),
+            (
                 "salt-base-file-roots-dir=",
                 None,
                 "Salt's pre-configured file roots directory",
@@ -912,6 +921,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
+        self.salt_lib_state_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
         self.salt_spm_parent_dir = None

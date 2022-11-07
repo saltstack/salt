@@ -39,7 +39,7 @@ def test_render_error_on_invalid_requisite():
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
     """
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         high_data = {
             "git": OrderedDict(
                 [
@@ -96,8 +96,10 @@ def test_verify_onlyif_parse():
         "order": 10000,
     }
     expected_result = {"comment": "onlyif condition is true", "result": False}
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, "")
@@ -122,8 +124,10 @@ def test_verify_onlyif_parse_deep_return():
         "fun": "nop",
     }
     expected_result = {"comment": "onlyif condition is true", "result": False}
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, "")
@@ -151,8 +155,10 @@ def test_verify_onlyif_cmd_error():
         "result": True,
         "skip_watch": True,
     }
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         mock = MagicMock(side_effect=CommandExecutionError("Boom!"))
@@ -185,8 +191,10 @@ def test_verify_unless_cmd_error():
         "result": True,
         "skip_watch": True,
     }
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         mock = MagicMock(side_effect=CommandExecutionError("Boom!"))
@@ -217,7 +225,9 @@ def test_verify_unless_list_cmd():
         "comment": "unless condition is false",
         "result": False,
     }
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
@@ -243,7 +253,9 @@ def test_verify_unless_list_cmd_different_order():
         "comment": "unless condition is false",
         "result": False,
     }
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
@@ -266,7 +278,9 @@ def test_verify_onlyif_list_cmd_different_order():
         "result": True,
         "skip_watch": True,
     }
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
@@ -289,7 +303,9 @@ def test_verify_unless_list_cmd_valid():
         "fun": "run",
     }
     expected_result = {"comment": "unless condition is false", "result": False}
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
@@ -308,7 +324,9 @@ def test_verify_onlyif_list_cmd_valid():
         "fun": "run",
     }
     expected_result = {"comment": "onlyif condition is true", "result": False}
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
@@ -335,7 +353,9 @@ def test_verify_unless_list_cmd_invalid():
         "result": True,
         "skip_watch": True,
     }
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, {})
@@ -358,7 +378,9 @@ def test_verify_onlyif_list_cmd_invalid():
         "result": True,
         "skip_watch": True,
     }
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
@@ -384,8 +406,10 @@ def test_verify_unless_parse():
         "result": True,
         "skip_watch": True,
     }
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, "")
@@ -410,8 +434,10 @@ def test_verify_unless_parse_deep_return():
         "fun": "nop",
     }
     expected_result = {"comment": "unless condition is false", "result": False}
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, "")
@@ -430,7 +456,7 @@ def test_verify_creates():
         "fun": "run",
     }
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         with patch("os.path.exists") as path_mock:
@@ -440,6 +466,8 @@ def test_verify_creates():
                 "result": True,
                 "skip_watch": True,
             }
+            for key in ("__sls__", "__id__", "name"):
+                expected_result[key] = low_data.get(key)
             return_result = state_obj._run_check_creates(low_data)
             assert expected_result == return_result
 
@@ -448,6 +476,8 @@ def test_verify_creates():
                 "comment": "Creates files not found",
                 "result": False,
             }
+            for key in ("__sls__", "__id__", "name"):
+                expected_result[key] = low_data.get(key)
             return_result = state_obj._run_check_creates(low_data)
             assert expected_result == return_result
 
@@ -464,7 +494,7 @@ def test_verify_creates_list():
         "fun": "run",
     }
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         with patch("os.path.exists") as path_mock:
@@ -474,6 +504,8 @@ def test_verify_creates_list():
                 "result": True,
                 "skip_watch": True,
             }
+            for key in ("__sls__", "__id__", "name"):
+                expected_result[key] = low_data.get(key)
             return_result = state_obj._run_check_creates(low_data)
             assert expected_result == return_result
 
@@ -482,6 +514,8 @@ def test_verify_creates_list():
                 "comment": "Creates files not found",
                 "result": False,
             }
+            for key in ("__sls__", "__id__", "name"):
+                expected_result[key] = low_data.get(key)
             return_result = state_obj._run_check_creates(low_data)
             assert expected_result == return_result
 
@@ -524,7 +558,9 @@ def test_verify_onlyif_parse_slots(tmp_path):
         "order": 10000,
     }
     expected_result = {"comment": "onlyif condition is true", "result": False}
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, "")
@@ -547,7 +583,9 @@ def test_verify_onlyif_list_cmd():
         "result": True,
         "skip_watch": True,
     }
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_onlyif(low_data, {})
@@ -578,7 +616,7 @@ def test_verify_onlyif_cmd_args():
         "order": 10000,
     }
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         mock = MagicMock()
@@ -629,8 +667,10 @@ def test_verify_unless_parse_slots(tmp_path):
         "result": True,
         "skip_watch": True,
     }
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj._run_check_unless(low_data, "")
@@ -654,19 +694,18 @@ def test_verify_retry_parsing():
         "fun": "managed",
     }
     expected_result = {
-        "__id__": "download sample data",
         "__run_num__": 0,
-        "__sls__": "demo.download",
         "changes": {},
         "comment": "['unless condition is true']  The state would be retried every 5 "
         "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
         "until a result of True is returned",
-        "name": "/tmp/saltstack.README.rst",
         "result": True,
         "skip_watch": True,
     }
+    for key in ("__sls__", "__id__", "name"):
+        expected_result[key] = low_data.get(key)
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         minion_opts["test"] = True
         minion_opts["file_client"] = "local"
@@ -685,7 +724,7 @@ def test_render_requisite_require_disabled(tmp_path):
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
     """
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         high_data = {
             "step_one": OrderedDict(
                 [
@@ -726,7 +765,7 @@ def test_render_requisite_require_in_disabled(tmp_path):
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
     """
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         high_data = {
             "step_one": {
                 "test": ["succeed_with_changes", {"order": 10000}],
@@ -799,7 +838,7 @@ def test_call_chunk_sub_state_run():
     expected_sub_state_tag = (
         "external_state_|-external_state_id_|-external_state_name_|-external_function"
     )
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         with patch("salt.state.State.call", return_value=mock_call_return):
             minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             minion_opts["disabled_requisites"] = ["require"]
@@ -920,7 +959,7 @@ def test_aggregate_requisites():
         },
     ]
 
-    with patch("salt.state.State._gather_pillar") as state_patch:
+    with patch("salt.state.State._gather_pillar"):
         minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         state_obj = salt.state.State(minion_opts)
         low_ret = state_obj._aggregate_requisites(low, chunks)
@@ -934,3 +973,96 @@ def test_aggregate_requisites():
             "/tmp/install-tmux",
             "google-cloud-repo",
         ]
+
+
+def test_mod_aggregate():
+    """
+    Test to ensure that the requisites are included in the aggregated low state.
+    """
+    # The low that is returned from _mod_aggregrate
+    low = {
+        "state": "pkg",
+        "name": "sl",
+        "__sls__": "test.62439",
+        "__env__": "base",
+        "__id__": "sl",
+        "require_in": [OrderedDict([("file", "/tmp/foo")])],
+        "order": 10002,
+        "aggregate": True,
+        "fun": "installed",
+    }
+
+    # Chunks that have been processed through the pkg mod_aggregate function
+    chunks = [
+        {
+            "state": "file",
+            "name": "/tmp/foo",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "/tmp/foo",
+            "content": "This is some content",
+            "order": 10000,
+            "require": [{"pkg": "sl"}],
+            "fun": "managed",
+        },
+        {
+            "state": "pkg",
+            "name": "figlet",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "figlet",
+            "__agg__": True,
+            "require": [OrderedDict([("file", "/tmp/foo")])],
+            "order": 10001,
+            "aggregate": True,
+            "fun": "installed",
+        },
+        {
+            "state": "pkg",
+            "name": "sl",
+            "__sls__": "test.62439",
+            "__env__": "base",
+            "__id__": "sl",
+            "require_in": [OrderedDict([("file", "/tmp/foo")])],
+            "order": 10002,
+            "aggregate": True,
+            "fun": "installed",
+        },
+    ]
+
+    running = {}
+
+    mock_pkg_mod_aggregate = {
+        "state": "pkg",
+        "name": "sl",
+        "__sls__": "test.62439",
+        "__env__": "base",
+        "__id__": "sl",
+        "require_in": [OrderedDict([("file", "/tmp/foo")])],
+        "order": 10002,
+        "fun": "installed",
+        "__agg__": True,
+        "pkgs": ["figlet", "sl"],
+    }
+
+    with patch("salt.state.State._gather_pillar"):
+        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        state_obj = salt.state.State(minion_opts)
+        with patch.dict(
+            state_obj.states,
+            {"pkg.mod_aggregate": MagicMock(return_value=mock_pkg_mod_aggregate)},
+        ):
+            low_ret = state_obj._mod_aggregate(low, running, chunks)
+
+            # Ensure the low returned contains require
+            assert "require_in" in low_ret
+
+            # Ensure all the requires from pkg states are in low
+            assert low_ret["require_in"] == [OrderedDict([("file", "/tmp/foo")])]
+
+            # Ensure that the require requisite from the
+            # figlet state doesn't find its way into this state
+            assert "require" not in low_ret
+
+            # Ensure pkgs were aggregated
+            assert low_ret["pkgs"] == ["figlet", "sl"]

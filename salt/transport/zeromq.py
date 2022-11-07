@@ -326,9 +326,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
 
         log.info("Setting up the master communication server")
-        log.error("ReqServer clients %s", self.uri)
+        log.info("ReqServer clients %s", self.uri)
         self.clients.bind(self.uri)
-        log.error("ReqServer workers %s", self.w_uri)
+        log.info("ReqServer workers %s", self.w_uri)
         self.workers.bind(self.w_uri)
 
         while True:
