@@ -181,7 +181,7 @@ start hacking on Salt!
 .. _imagemagick-setup:
 
 Set up ``imagemagick``
----------------------
+----------------------
 One last prerequisite is to have ``imagemagick`` installed, as it is required
 by Sphinx for generating the HTML documentation.
 
