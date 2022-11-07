@@ -166,12 +166,14 @@ def test_build_install(setup_spm, f1_content, patch_local_client):
 @pytest.fixture()
 def test_repo_paths(setup_spm):
     _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
+    ui._error = []
     with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
         with patch(
             "salt.client.get_local_client", MagicMock(return_value=minion_opts["conf_file"])
         ):
             client.run(["create_repo", "."])
-    assert len(ui._status) == 1
+    assert len(ui._error) == 0
+
 
 
 def test_failure_paths(setup_spm, patch_local_client):
