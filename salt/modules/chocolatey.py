@@ -1126,7 +1126,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     return packages
 
 
-def add_source(name, source_location, username=None, password=None):
+def add_source(name, source_location, username=None, password=None, priority=None):
     """
     Instructs Chocolatey to add a source.
 
@@ -1144,11 +1144,18 @@ def add_source(name, source_location, username=None, password=None):
         Provide password for chocolatey sources that need authentication
         credentials.
 
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> priority=100
         salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
 
     """
@@ -1165,6 +1172,8 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(["--user", username])
     if password:
         cmd.extend(["--password", password])
+    if priority:
+        cmd.extend(["--priority", priority])
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:

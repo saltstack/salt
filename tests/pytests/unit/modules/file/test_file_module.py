@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import textwrap
 
@@ -361,6 +362,27 @@ def test_group_to_gid_int():
     assert ret == group
 
 
+def test__get_flags():
+    """
+    Test to ensure _get_flags returns a regex flag
+    """
+    flags = 10
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+    flags = "MULTILINE"
+    ret = filemod._get_flags(flags)
+    assert ret == re.MULTILINE
+
+    flags = ["IGNORECASE", "MULTILINE"]
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+    flags = re.IGNORECASE | re.MULTILINE
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+
 def test_patch():
     with patch("os.path.isdir", return_value=False) as mock_isdir, patch(
         "salt.utils.path.which", return_value="/bin/patch"
@@ -567,3 +589,22 @@ def test_stats():
         ret = filemod.stats("dummy", None, True)
         assert ret["mode"] == "0644"
         assert ret["type"] == "file"
+
+
+def test_file_move_disallow_copy_and_unlink():
+    mock_shutil_move = MagicMock()
+    mock_os_rename = MagicMock()
+    with patch("os.path.expanduser", MagicMock(side_effect=lambda path: path)), patch(
+        "os.path.isabs", MagicMock(return_value=True)
+    ), patch("shutil.move", mock_shutil_move), patch("os.rename", mock_os_rename):
+        ret = filemod.move("source", "dest", disallow_copy_and_unlink=False)
+        mock_shutil_move.assert_called_once()
+        mock_os_rename.assert_not_called()
+        assert ret["result"] is True
+
+        mock_shutil_move.reset_mock()
+
+        ret = filemod.move("source", "dest", disallow_copy_and_unlink=True)
+        mock_os_rename.assert_called_once()
+        mock_shutil_move.assert_not_called()
+        assert ret is True

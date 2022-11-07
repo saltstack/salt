@@ -189,7 +189,7 @@ libnacl==1.7.2
     # via -r requirements/static/pkg/py3.10/windows.txt
 lxml==4.9.1
     # via -r requirements/static/pkg/py3.10/windows.txt
-mako==1.1.4
+mako==1.2.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
@@ -271,7 +271,7 @@ pyrsistent==0.17.3
     # via jsonschema
 pytest-helpers-namespace==2019.1.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc17
+pytest-salt-factories==1.0.0rc21
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
