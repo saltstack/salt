@@ -69,6 +69,14 @@ warnings.filterwarnings(
     append=True,
 )
 
+# Filter the setuptools UserWarning until we stop relying on distutils
+warnings.filterwarnings(
+    "ignore",
+    message="Setuptools is replacing distutils.",
+    category=UserWarning,
+    module="_distutils_hack",
+)
+
 
 def __define_global_system_encoding_variable__():
     import sys

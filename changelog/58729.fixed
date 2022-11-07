@@ -1,0 +1,1 @@
+Fixed salt.utils.compat.cmp to work with dictionaries

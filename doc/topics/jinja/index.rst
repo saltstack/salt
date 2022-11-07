@@ -1889,6 +1889,28 @@ Returns:
   ["fe80::"]
 
 
+.. jinja_ref:: ipwrap
+
+``ipwrap``
+----------
+
+.. versionadded:: 3006.0
+
+From a string, list, or tuple, returns any IPv6 addresses wrapped in square brackets([])
+
+Example:
+
+.. code-block:: jinja
+
+  {{ ['192.0.2.1', 'foo', 'bar', 'fe80::', '2001:db8::1/64'] | ipwrap }}
+
+Returns:
+
+.. code-block:: python
+
+  ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
+
+
 .. jinja_ref:: network_hosts
 
 ``network_hosts``
