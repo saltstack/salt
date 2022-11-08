@@ -7253,8 +7253,11 @@ def patch(
                     )
 
 
-def touch(name, atime=None, mtime=None, makedirs=False):
+def touch(name, atime=None, mtime=None, makedirs=False, quiet=False):
     """
+    .. versionadded:: 0.9.5
+    .. versionchanged:: 3006.0
+
     Replicate the 'nix "touch" command to create a new empty
     file or update the atime and mtime of an existing file.
 
@@ -7277,6 +7280,11 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         whether we should create the parent directory/directories in order to
         touch the file
 
+    quiet
+        don't report changes unless a new file was created.
+
+        .. versionadded:: 3006.0
+
     Usage:
 
     .. code-block:: yaml
@@ -7284,7 +7292,6 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         /var/log/httpd/logrotate.empty:
           file.touch
 
-    .. versionadded:: 0.9.5
     """
     name = os.path.expanduser(name)
 
@@ -7319,7 +7326,8 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret["comment"] = "Updated times on {} {}".format(
             "directory" if os.path.isdir(name) else "file", name
         )
-        ret["changes"]["touched"] = name
+        if not quiet:
+            ret["changes"]["touched"] = name
 
     return ret
 

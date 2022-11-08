@@ -372,7 +372,7 @@ def test_blockreplace():
                     assert filestate.blockreplace(name) == ret
 
 
-# 'touch' function tests: 1
+# 'touch' function tests: 2
 def test_touch():
     """
     Test to replicate the 'nix "touch" command to create a new empty
@@ -413,6 +413,34 @@ def test_touch():
                         {"comment": comt, "result": True, "changes": {"new": name}}
                     )
                     assert filestate.touch(name) == ret
+
+
+def test_touch_quiet():
+    name = "/var/log/httpd/logrotate.empty"
+
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+
+    mock_t = MagicMock(return_value=True)
+    mock_f = MagicMock(return_value=False)
+    with patch.object(os.path, "isabs", mock_t):
+        with patch.object(os.path, "exists", mock_f):
+            with patch.dict(filestate.__opts__, {"test": True}):
+                comt = "File {} is set to be created".format(name)
+                ret.update({"comment": comt, "result": None, "changes": {"new": name}})
+                assert filestate.touch(name, quiet=True) == ret
+
+        with patch.dict(filestate.__opts__, {"test": False}):
+            with patch.object(os.path, "isdir", mock_t):
+                with patch.dict(filestate.__salt__, {"file.touch": mock_t}):
+                    comt = "Created empty file {}".format(name)
+                    ret.update(
+                        {"comment": comt, "result": True, "changes": {"new": name}}
+                    )
+                    assert filestate.touch(name, quiet=True) == ret
+                    with patch.object(os.path, "exists", mock_t):
+                        comt = "Updated times on directory {}".format(name)
+                        ret.update({"comment": comt, "result": True, "changes": {}})
+                        assert filestate.touch(name, quiet=True) == ret
 
 
 # 'accumulated' function tests: 1
