@@ -16,7 +16,6 @@ Useful documentation:
 . http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 """
 
-# Import python libs
 import contextlib
 import os
 import sys
