@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     Tests for xml module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
@@ -30,7 +28,7 @@ XML_STRING = """
 
 class XmlTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test cases for salt.modules.xml
+    Test cases for salt.modules.xml
     """
 
     def setup_loader_modules(self):
@@ -38,7 +36,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_value(self):
         """
-            Verify xml.get_value
+        Verify xml.get_value
         """
         with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
             xml_file.write(XML_STRING)
@@ -51,7 +49,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_value(self):
         """
-            Verify xml.set_value
+        Verify xml.set_value
         """
         with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
             xml_file.write(XML_STRING)
@@ -69,7 +67,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_attribute(self):
         """
-            Verify xml.get_attribute
+        Verify xml.get_attribute
         """
         with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
             xml_file.write(XML_STRING)
@@ -82,7 +80,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_attribute(self):
         """
-            Verify xml.set_value
+        Verify xml.set_value
         """
         with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
             xml_file.write(XML_STRING)

@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Execution module to work with etcd
 
-:depends:  - python-etcd
+:depends:  - python-etcd or etcd3-py
 
 Configuration
 -------------
@@ -25,6 +24,44 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
+In order to choose whether to use etcd API v2 or v3, you can put the following
+configuration option in the same place as your etcd configuration.  This option
+defaults to true, meaning you will use v2 unless you specify otherwise.
+
+.. code-block:: yaml
+
+    etcd.require_v2: True
+
+When using API v3, there are some specific options available to be configured
+within your etcd profile.  They are defaulted to the following...
+
+.. code-block:: yaml
+
+    etcd.encode_keys: False
+    etcd.encode_values: True
+    etcd.raw_keys: False
+    etcd.raw_values: False
+    etcd.unicode_errors: "surrogateescape"
+
+``etcd.encode_keys`` indicates whether you want to pre-encode keys using msgpack before
+adding them to etcd.
+
+.. note::
+
+    If you set ``etcd.encode_keys`` to ``True``, all recursive functionality will no longer work.
+    This includes ``tree`` and ``ls`` and all other methods if you set ``recurse``/``recursive`` to ``True``.
+    This is due to the fact that when encoding with msgpack, keys like ``/salt`` and ``/salt/stack`` will have
+    differing byte prefixes, and etcd v3 searches recursively using prefixes.
+
+``etcd.encode_values`` indicates whether you want to pre-encode values using msgpack before
+adding them to etcd.  This defaults to ``True`` to avoid data loss on non-string values wherever possible.
+
+``etcd.raw_keys`` determines whether you want the raw key or a string returned.
+
+``etcd.raw_values`` determines whether you want the raw value or a string returned.
+
+``etcd.unicode_errors`` determines what you policy to follow when there are encoding/decoding errors.
+
 .. note::
 
     The etcd configuration can also be set in the Salt Master config file,
@@ -37,18 +74,9 @@ or clusters are available.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import third party libs
-try:
-    import salt.utils.etcd_util  # pylint: disable=W0611
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
+import salt.utils.etcd_util
 
 __virtualname__ = "etcd"
 
@@ -64,7 +92,7 @@ def __virtual__():
     """
     Only return if python-etcd is installed
     """
-    if HAS_LIBS:
+    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
         return __virtualname__
     return (
         False,
@@ -89,10 +117,7 @@ def get_(key, recurse=False, profile=None, **kwargs):
         salt myminion etcd.get /path/to/key host=127.0.0.1 port=2379
     """
     client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
-    if recurse:
-        return client.tree(key)
-    else:
-        return client.get(key, recurse=recurse)
+    return client.get(key, recurse=recurse)
 
 
 def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
@@ -112,7 +137,6 @@ def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
         salt myminion etcd.set /path/to/dir '' directory=True
         salt myminion etcd.set /path/to/key value ttl=5
     """
-
     client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.set(key, value, ttl=ttl, directory=directory)
 
@@ -205,7 +229,6 @@ def ls_(path="/", profile=None, **kwargs):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion etcd.ls /path/to/dir/
@@ -225,7 +248,6 @@ def rm_(key, recurse=False, profile=None, **kwargs):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion etcd.rm /path/to/key
@@ -244,7 +266,6 @@ def tree(path="/", profile=None, **kwargs):
     Recurse through etcd and return all values.  Returns None on failure.
 
     CLI Example:
-
 
     .. code-block:: bash
 

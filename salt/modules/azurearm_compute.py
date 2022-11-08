@@ -1,10 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Compute Execution Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -47,9 +52,11 @@ Azure (ARM) Compute Execution Module
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
+from functools import wraps
+
+import salt.utils.azurearm
 
 # Azure libs
 HAS_LIBS = False
@@ -79,6 +86,28 @@ def __virtual__():
     return __virtualname__
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def availability_set_create_or_update(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -127,9 +156,7 @@ def availability_set_create_or_update(
             "compute", "AvailabilitySet", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -145,12 +172,13 @@ def availability_set_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
 
 
+@_deprecation_message
 def availability_set_delete(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -183,6 +211,7 @@ def availability_set_delete(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def availability_set_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -215,6 +244,7 @@ def availability_set_get(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def availability_sets_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -247,6 +277,7 @@ def availability_sets_list(resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def availability_sets_list_available_sizes(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -287,6 +318,7 @@ def availability_sets_list_available_sizes(
     return result
 
 
+@_deprecation_message
 def virtual_machine_capture(
     name, destination_name, resource_group, prefix="capture-", overwrite=False, **kwargs
 ):
@@ -341,6 +373,7 @@ def virtual_machine_capture(
     return result
 
 
+@_deprecation_message
 def virtual_machine_get(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -376,6 +409,7 @@ def virtual_machine_get(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machine_convert_to_managed_disks(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -413,6 +447,7 @@ def virtual_machine_convert_to_managed_disks(
     return result
 
 
+@_deprecation_message
 def virtual_machine_deallocate(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -447,6 +482,7 @@ def virtual_machine_deallocate(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machine_generalize(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -478,6 +514,7 @@ def virtual_machine_generalize(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machines_list(resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -509,6 +546,7 @@ def virtual_machines_list(resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machines_list_all(**kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -537,6 +575,7 @@ def virtual_machines_list_all(**kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machines_list_available_sizes(
     name, resource_group, **kwargs
 ):  # pylint: disable=invalid-name
@@ -575,6 +614,7 @@ def virtual_machines_list_available_sizes(
     return result
 
 
+@_deprecation_message
 def virtual_machine_power_off(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -609,6 +649,7 @@ def virtual_machine_power_off(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machine_restart(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -643,6 +684,7 @@ def virtual_machine_restart(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machine_start(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -677,6 +719,7 @@ def virtual_machine_start(name, resource_group, **kwargs):
     return result
 
 
+@_deprecation_message
 def virtual_machine_redeploy(name, resource_group, **kwargs):
     """
     .. versionadded:: 2019.2.0

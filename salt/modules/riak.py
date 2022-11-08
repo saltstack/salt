@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Riak Salt Module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 
 
@@ -24,7 +21,7 @@ def __execute_cmd(name, cmd):
     """
     Execute Riak commands
     """
-    return __salt__["cmd.run_all"]("{0} {1}".format(salt.utils.path.which(name), cmd))
+    return __salt__["cmd.run_all"]("{} {}".format(salt.utils.path.which(name), cmd))
 
 
 def start():
@@ -92,7 +89,7 @@ def cluster_join(username, hostname):
     """
     ret = {"comment": "", "success": False}
 
-    cmd = __execute_cmd("riak-admin", "cluster join {0}@{1}".format(username, hostname))
+    cmd = __execute_cmd("riak-admin", "cluster join {}@{}".format(username, hostname))
 
     if cmd["retcode"] != 0:
         ret["comment"] = cmd["stdout"]
@@ -120,9 +117,7 @@ def cluster_leave(username, hostname):
     """
     ret = {"comment": "", "success": False}
 
-    cmd = __execute_cmd(
-        "riak-admin", "cluster leave {0}@{1}".format(username, hostname)
-    )
+    cmd = __execute_cmd("riak-admin", "cluster leave {}@{}".format(username, hostname))
 
     if cmd["retcode"] != 0:
         ret["comment"] = cmd["stdout"]

@@ -27,4 +27,4 @@ Version 0.16.3 is another bugfix release for :ref:`0.16.0
   having set :conf_master:`file_recv` in the master config file
 - Fix scheduler configuration in pillar (:issue:`6201`)
 
-.. _Linaro: http://www.linaro.org/
+.. _Linaro: https://www.linaro.org/

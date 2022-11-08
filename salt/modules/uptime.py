@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Wrapper around uptime API
 =========================
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -47,15 +43,15 @@ def create(name, **params):
 
     """
     if check_exists(name):
-        msg = "Trying to create check that already exists : {0}".format(name)
+        msg = "Trying to create check that already exists : {}".format(name)
         log.error(msg)
         raise CommandExecutionError(msg)
     application_url = _get_application_url()
     log.debug("[uptime] trying PUT request")
     params.update(url=name)
-    req = requests.put("{0}/api/checks".format(application_url), data=params)
+    req = requests.put("{}/api/checks".format(application_url), data=params)
     if not req.ok:
-        raise CommandExecutionError("request to uptime failed : {0}".format(req.reason))
+        raise CommandExecutionError("request to uptime failed : {}".format(req.reason))
     log.debug("[uptime] PUT request successful")
     return req.json()["_id"]
 
@@ -71,16 +67,16 @@ def delete(name):
         salt '*' uptime.delete http://example.org
     """
     if not check_exists(name):
-        msg = "Trying to delete check that doesn't exists : {0}".format(name)
+        msg = "Trying to delete check that doesn't exists : {}".format(name)
         log.error(msg)
         raise CommandExecutionError(msg)
     application_url = _get_application_url()
     log.debug("[uptime] trying DELETE request")
-    jcontent = requests.get("{0}/api/checks".format(application_url)).json()
+    jcontent = requests.get("{}/api/checks".format(application_url)).json()
     url_id = [x["_id"] for x in jcontent if x["url"] == name][0]
-    req = requests.delete("{0}/api/checks/{1}".format(application_url, url_id))
+    req = requests.delete("{}/api/checks/{}".format(application_url, url_id))
     if not req.ok:
-        raise CommandExecutionError("request to uptime failed : {0}".format(req.reason))
+        raise CommandExecutionError("request to uptime failed : {}".format(req.reason))
     log.debug("[uptime] DELETE request successful")
     return True
 
@@ -110,7 +106,7 @@ def checks_list():
     """
     application_url = _get_application_url()
     log.debug("[uptime] get checks")
-    jcontent = requests.get("{0}/api/checks".format(application_url)).json()
+    jcontent = requests.get("{}/api/checks".format(application_url)).json()
     return [x["url"] for x in jcontent]
 
 

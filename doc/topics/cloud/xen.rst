@@ -12,7 +12,7 @@ Setup Dependencies
 This driver requires a copy of the freely available ``XenAPI.py`` Python module.
 
 Information about the Xen API Python module in the XenServer SDK
-can be found at https://xenserver.org/partners/developing-products-for-xenserver.html
+can be found at https://pypi.org/project/XenAPI/
 
 
 Place a copy of this module on your system. For example, it can

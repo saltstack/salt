@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions for SMB connections
 
 :depends: impacket
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 import uuid
 
-# Import python libs
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.versions
@@ -21,33 +18,22 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import impacket.smbconnection
-    from impacket.smbconnection import SessionError as smbSessionError
-    from impacket.smb3 import SessionError as smb3SessionError
-
-    HAS_IMPACKET = True
-except ImportError:
-    HAS_IMPACKET = False
-
-try:
     from smbprotocol.connection import Connection
-    from smbprotocol.session import Session
-    from smbprotocol.tree import TreeConnect
-    from smbprotocol.open import (
-        Open,
-        ImpersonationLevel,
-        FilePipePrinterAccessMask,
-        FileAttributes,
-        CreateDisposition,
-        CreateOptions,
-        ShareAccess,
-        DirectoryAccessMask,
-        FileInformationClass,
-    )
     from smbprotocol.create_contexts import (
         CreateContextName,
         SMB2CreateContextRequest,
         SMB2CreateQueryMaximalAccessRequest,
+    )
+    from smbprotocol.open import (
+        CreateDisposition,
+        CreateOptions,
+        DirectoryAccessMask,
+        FileAttributes,
+        FileInformationClass,
+        FilePipePrinterAccessMask,
+        ImpersonationLevel,
+        Open,
+        ShareAccess,
     )
     from smbprotocol.security_descriptor import (
         AccessAllowedAce,
@@ -57,6 +43,8 @@ try:
         SIDPacket,
         SMB2CreateSDBuffer,
     )
+    from smbprotocol.session import Session
+    from smbprotocol.tree import TreeConnect
 
     logging.getLogger("smbprotocol").setLevel(logging.WARNING)
     HAS_SMBPROTOCOL = True
@@ -64,10 +52,10 @@ except ImportError:
     HAS_SMBPROTOCOL = False
 
 
-class SMBProto(object):
+class SMBProto:
     def __init__(self, server, username, password, port=445):
         connection_id = uuid.uuid4()
-        addr = socket.gethostbyname(server)
+        addr = socket.getaddrinfo(server, None, 0, 0, socket.IPPROTO_TCP)[0][4][0]
         self.server = server
         connection = Connection(connection_id, addr, port, require_signing=True)
         self.session = Session(connection, username, password, require_encryption=False)
@@ -148,39 +136,6 @@ class SMBProto(object):
         return dir_open
 
 
-class StrHandle(object):
-    """
-    Fakes a file handle, so that raw strings may be uploaded instead of having
-    to write files first. Used by put_str()
-    """
-
-    def __init__(self, content):
-        """
-        Init
-        """
-        self.content = content
-        self.finished = False
-
-    def string(self, writesize=None):
-        """
-        Looks like a file handle
-        """
-        if not self.finished:
-            self.finished = True
-            return self.content
-        return ""
-
-
-def _get_conn_impacket(
-    host=None, username=None, password=None, client_name=None, port=445
-):
-    conn = impacket.smbconnection.SMBConnection(
-        remoteName=host, remoteHost=host, myName=client_name,
-    )
-    conn.login(user=username, password=password)
-    return conn
-
-
 def _get_conn_smbprotocol(host="", username="", password="", client_name="", port=445):
     conn = SMBProto(host, username, password, port)
     conn.connect()
@@ -191,46 +146,11 @@ def get_conn(host="", username=None, password=None, port=445):
     """
     Get an SMB connection
     """
-    if HAS_IMPACKET and not HAS_SMBPROTOCOL:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Support of impacket has been depricated and will be "
-            "removed in Sodium. Please install smbprotocol instead.",
-        )
     if HAS_SMBPROTOCOL:
         log.info("Get connection smbprotocol")
         return _get_conn_smbprotocol(host, username, password, port=port)
-    elif HAS_IMPACKET:
-        log.info("Get connection impacket")
-        return _get_conn_impacket(host, username, password, port=port)
-    return False
-
-
-def _mkdirs_impacket(
-    path, share="C$", conn=None, host=None, username=None, password=None
-):
-    """
-    Recursively create a directory structure on an SMB share
-
-    Paths should be passed in with forward-slash delimiters, and should not
-    start with a forward-slash.
-    """
-    if conn is None:
-        conn = get_conn(host, username, password)
-
-    if conn is False:
+    else:
         return False
-
-    comps = path.split("/")
-    pos = 1
-    for comp in comps:
-        cwd = "\\".join(comps[0:pos])
-        try:
-            conn.listPath(share, cwd)
-        except (smbSessionError, smb3SessionError):
-            log.exception("Encountered error running conn.listPath")
-            conn.createDirectory(share, cwd)
-        pos += 1
 
 
 def _mkdirs_smbprotocol(
@@ -269,24 +189,7 @@ def mkdirs(path, share="C$", conn=None, host=None, username=None, password=None)
         return _mkdirs_smbprotocol(
             path, share, conn=conn, host=host, username=username, password=password
         )
-    elif HAS_IMPACKET:
-        return _mkdirs_impacket(
-            path, share, conn=conn, host=host, username=username, password=password
-        )
     raise MissingSmb("SMB library required (impacket or smbprotocol)")
-
-
-def _put_str_impacket(
-    content, path, share="C$", conn=None, host=None, username=None, password=None
-):
-    if conn is None:
-        conn = get_conn(host, username, password)
-
-    if conn is False:
-        return False
-
-    fh_ = StrHandle(content)
-    conn.putFile(share, path, fh_.string)
 
 
 def _put_str_smbprotocol(
@@ -321,43 +224,7 @@ def put_str(
             username=username,
             password=password,
         )
-    elif HAS_IMPACKET:
-        return _put_str_impacket(
-            content,
-            path,
-            share,
-            conn=conn,
-            host=host,
-            username=username,
-            password=password,
-        )
     raise MissingSmb("SMB library required (impacket or smbprotocol)")
-
-
-def _put_file_impacket(
-    local_path, path, share="C$", conn=None, host=None, username=None, password=None
-):
-    """
-    Wrapper around impacket.smbconnection.putFile() that allows a file to be
-    uploaded
-
-    Example usage:
-
-        import salt.utils.smb
-        smb_conn = salt.utils.smb.get_conn('10.0.0.45', 'vagrant', 'vagrant')
-        salt.utils.smb.put_file('/root/test.pdf', 'temp\\myfiles\\test1.pdf', conn=smb_conn)
-    """
-    if conn is None:
-        conn = get_conn(host, username, password)
-
-    if conn is False:
-        return False
-
-    if hasattr(local_path, "read"):
-        conn.putFile(share, path, local_path)
-        return
-    with salt.utils.files.fopen(local_path, "rb") as fh_:
-        conn.putFile(share, path, fh_.read)
 
 
 def _put_file_smbprotocol(
@@ -413,27 +280,7 @@ def put_file(
             username=username,
             password=password,
         )
-    elif HAS_IMPACKET:
-        return _put_file_impacket(
-            local_path,
-            path,
-            share,
-            conn=conn,
-            host=host,
-            username=username,
-            password=password,
-        )
     raise MissingSmb("SMB library required (impacket or smbprotocol)")
-
-
-def _delete_file_impacket(
-    path, share="C$", conn=None, host=None, username=None, password=None
-):
-    if conn is None:
-        conn = get_conn(host, username, password)
-    if conn is False:
-        return False
-    conn.deleteFile(share, path)
 
 
 def _delete_file_smbprotocol(
@@ -475,21 +322,7 @@ def delete_file(path, share="C$", conn=None, host=None, username=None, password=
         return _delete_file_smbprotocol(
             path, share, conn=conn, host=host, username=username, password=password
         )
-    elif HAS_IMPACKET:
-        return _delete_file_impacket(
-            path, share, conn=conn, host=host, username=username, password=password
-        )
     raise MissingSmb("SMB library required (impacket or smbprotocol)")
-
-
-def _delete_directory_impacket(
-    path, share="C$", conn=None, host=None, username=None, password=None
-):
-    if conn is None:
-        conn = get_conn(host, username, password)
-    if conn is False:
-        return False
-    conn.deleteDirectory(share, path)
 
 
 def _delete_directory_smbprotocol(
@@ -531,10 +364,6 @@ def delete_directory(
 ):
     if HAS_SMBPROTOCOL:
         return _delete_directory_smbprotocol(
-            path, share, conn=conn, host=host, username=username, password=password
-        )
-    elif HAS_IMPACKET:
-        return _delete_directory_impacket(
             path, share, conn=conn, host=host, username=username, password=password
         )
     raise MissingSmb("SMB library required (impacket or smbprotocol)")

@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
-# Import Salt Testing libs
+import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
 class SysrcModuleTest(ModuleCase):
     def setUp(self):
-        super(SysrcModuleTest, self).setUp()
+        super().setUp()
         ret = self.run_function("cmd.has_exec", ["sysrc"])
         if not ret:
             self.skipTest("sysrc not found")
@@ -29,7 +24,7 @@ class SysrcModuleTest(ModuleCase):
         )
 
     @skipIf(not sys.platform.startswith("freebsd"), "FreeBSD specific")
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set(self):
         ret = self.run_function("sysrc.set", ["test_var", "1"])
         self.assertIsInstance(
@@ -47,7 +42,7 @@ class SysrcModuleTest(ModuleCase):
         self.assertEqual("test_var removed", ret)
 
     @skipIf(not sys.platform.startswith("freebsd"), "FreeBSD specific")
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_bool(self):
         ret = self.run_function("sysrc.set", ["test_var", True])
         self.assertIsInstance(

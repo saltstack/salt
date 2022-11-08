@@ -1,3 +1,7 @@
+.. meta::
+   :description: Network automation is a continuous process of automating the configuration, management and operations of a computer network. Most network devices can be managed via Salt Proxy Minions using Salt SSH. However, some vendors allow for a Salt Minion to be installed directly.
+   :keywords: network configuration automation, netops, juniper, configuration management, cisco, junos, napalm
+
 .. _network-automation:
 
 ==================
@@ -27,7 +31,7 @@ automation support is based on proxy minions.
 - :mod:`NAPALM proxy <salt.proxy.napalm>`
 - :mod:`Junos proxy<salt.proxy.junos>`
 - :mod:`Cisco NXOS <salt.proxy.nxos>`
-- :mod:`Cisco NOS <salt.proxy.cisconso>`
+- :mod:`Cisco NSO <salt.proxy.cisconso>`
 
 NAPALM
 ------
@@ -97,8 +101,8 @@ Getting started
 
 Install NAPALM - follow the notes_ and check the platform-specific dependencies_.
 
-.. _notes: http://napalm.readthedocs.io/en/latest/installation/index.html
-.. _dependencies: http://napalm.readthedocs.io/en/latest/installation/index.html#dependencies
+.. _notes: https://napalm.readthedocs.io/en/latest/installation/index.html
+.. _dependencies: https://napalm.readthedocs.io/en/latest/installation/index.html#dependencies
 
 Salt's Pillar system is ideally suited for configuring proxy-minions
 (though they can be configured in /etc/salt/proxy as well).  Proxies

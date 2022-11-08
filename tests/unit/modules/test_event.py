@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.event as event
 import salt.utils.event
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -37,7 +31,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         Test for Fire an event off up to the master server
         """
         with patch("salt.crypt.SAuth") as salt_crypt_sauth, patch(
-            "salt.transport.client.ReqChannel.factory"
+            "salt.channel.client.ReqChannel.factory"
         ) as salt_transport_channel_factory:
 
             preload = {
@@ -82,3 +76,25 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.object(event, "fire_master", return_value="B"):
             self.assertEqual(event.send("tag"), "B")
+
+    def test_send_use_master_when_local_false(self):
+        """
+        Test for Send an event when opts has use_master_when_local and its False
+        """
+        patch_master_opts = patch.dict(event.__opts__, {"use_master_when_local": False})
+        patch_file_client = patch.dict(event.__opts__, {"file_client": "local"})
+        with patch.object(event, "fire", return_value="B") as patch_send:
+            with patch_master_opts, patch_file_client, patch_send:
+                self.assertEqual(event.send("tag"), "B")
+                patch_send.assert_called_once()
+
+    def test_send_use_master_when_local_true(self):
+        """
+        Test for Send an event when opts has use_master_when_local and its True
+        """
+        patch_master_opts = patch.dict(event.__opts__, {"use_master_when_local": True})
+        patch_file_client = patch.dict(event.__opts__, {"file_client": "local"})
+        with patch.object(event, "fire_master", return_value="B") as patch_send:
+            with patch_master_opts, patch_file_client, patch_send:
+                self.assertEqual(event.send("tag"), "B")
+                patch_send.assert_called_once()

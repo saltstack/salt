@@ -11,6 +11,10 @@ DEVICE="{{name}}"
 {%endif%}{% if vlan_id %}VID="{{vlan_id}}"
 {%endif%}{% if phys_dev %}PHYSDEV="{{phys_dev}}"
 {%endif%}{%endif%}{% if devtype %}TYPE="{{devtype}}"
+{%endif%}{% if devicetype %}DEVICETYPE="{{devicetype}}"
+{%endif%}{% if team_config %}TEAM_CONFIG='{{team_config}}'
+{%endif%}{% if team_port_config %}TEAM_PORT_CONFIG='{{team_port_config}}'
+{%endif%}{% if team_master %}TEAM_MASTER="{{team_master}}"
 {%endif%}{% if proto %}BOOTPROTO="{{proto}}"
 {%endif%}{% if onboot %}ONBOOT="{{onboot}}"
 {%endif%}{% if onparent %}ONPARENT={{onparent}}
@@ -26,6 +30,7 @@ IPADDR{{loop.index}}="{{i['ipaddr']}}"
 PREFIX{{loop.index}}="{{i['prefix']}}"
 {% endfor -%}
 {%endif%}{% if gateway %}GATEWAY="{{gateway}}"
+{%endif%}{% if arpcheck %}ARPCHECK="{{arpcheck}}"
 {%endif%}{% if enable_ipv6 %}IPV6INIT="yes"
 {% if ipv6_autoconf %}IPV6_AUTOCONF="{{ipv6_autoconf}}"
 {%endif%}{% if dhcpv6c %}DHCPV6C="{{dhcpv6c}}"
@@ -47,8 +52,8 @@ PREFIX{{loop.index}}="{{i['prefix']}}"
 {%endif%}{% if zone %}ZONE="{{zone}}"
 {%endif%}{% if my_inner_ipaddr %}MY_INNER_IPADDR={{my_inner_ipaddr}}
 {%endif%}{% if my_outer_ipaddr %}MY_OUTER_IPADDR={{my_outer_ipaddr}}
-{%endif%}{% if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
-{%endif%}{% if ethtool %}ETHTOOL_OPTS="{%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}"
+{%endif%}{% if bonding %}BONDING_OPTS="{{bonding}}"
+{%endif%}{% if ethtool %}ETHTOOL_OPTS="{{ethtool}}"
 {%endif%}{% if domain %}DOMAIN="{{ domain|join(' ') }}"
 {%endif%}{% if nm_controlled %}NM_CONTROLLED="{{nm_controlled}}"
 {% endif %}{% for server in dns -%}

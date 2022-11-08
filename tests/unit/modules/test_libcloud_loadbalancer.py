@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.libcloud_loadbalancer as libcloud_loadbalancer
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm, Member
+    from libcloud.loadbalancer.base import Algorithm, BaseDriver, LoadBalancer, Member
 
     HAS_LIBCLOUD = True
 except ImportError:
@@ -82,7 +77,6 @@ if HAS_LIBCLOUD:
             assert balancer.id == "test_id"
             return [self._TEST_MEMBER]
 
-
 else:
     MockLBDriver = object
 
@@ -113,11 +107,6 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_module_creation(self):
         client = libcloud_loadbalancer._get_driver("test")
         self.assertFalse(client is None)
-
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_loadbalancer.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_loadbalancer")
 
     def _validate_balancer(self, balancer):
         self.assertEqual(balancer["name"], "test_balancer")

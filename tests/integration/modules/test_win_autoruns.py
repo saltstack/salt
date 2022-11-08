@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
@@ -15,7 +12,7 @@ class AutoRunsModuleTest(ModuleCase):
     Test the autoruns module
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_win_autoruns_list(self):
         """
         test win_autoruns.list module

@@ -4,7 +4,11 @@
   file.managed:
     - source: salt://git_pillar/ssh/server/files/sshd_config
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
     - template: jinja
 
@@ -12,7 +16,11 @@
   file.managed:
     - source: salt://git_pillar/ssh/server/files/ssh_host_rsa_key
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 600
     - template: jinja
 
@@ -20,7 +28,11 @@
   file.managed:
     - source: salt://git_pillar/ssh/server/files/ssh_host_rsa_key.pub
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
     - template: jinja
 

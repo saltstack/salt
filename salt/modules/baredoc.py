@@ -1,30 +1,26 @@
-# -*- coding: utf-8 -*-
 """
 Baredoc walks the installed module and state directories and generates
 dictionaries and lists of the function names and their arguments.
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
-
-# Import python libs
+import itertools
 import logging
 import os
+from typing import Dict, List
 
-# Import salt libs
+import salt.utils.doc
 import salt.utils.files
-from salt.ext.six.moves import zip_longest
-
-# Import 3rd-party libs
+from salt.exceptions import ArgumentValueError
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
 
-def _get_module_name(tree, filename):
+def _get_module_name(tree, filename: str) -> str:
     """
     Returns the value of __virtual__ if found.
     Otherwise, returns filename
@@ -40,7 +36,7 @@ def _get_module_name(tree, filename):
     return module_name
 
 
-def _get_func_aliases(tree):
+def _get_func_aliases(tree) -> Dict:
     """
     Get __func_alias__ dict for mapping function names
     """
@@ -49,14 +45,16 @@ def _get_func_aliases(tree):
     for assign in assignments:
         try:
             if assign.targets[0].id == "__func_alias__":
-                for key, value in zip_longest(assign.value.keys, assign.value.values):
+                for key, value in itertools.zip_longest(
+                    assign.value.keys, assign.value.values
+                ):
                     fun_aliases.update({key.s: value.s})
         except AttributeError:
             pass
     return fun_aliases
 
 
-def _get_args(function):
+def _get_args(function: str) -> Dict:
     """
     Given a function def, returns arguments and defaults
     """
@@ -82,7 +80,7 @@ def _get_args(function):
 
     # Since only some args may have default values, need to zip in reverse order
     backwards_args = OrderedDict(
-        zip_longest(reversed(arg_strings), reversed(arg_default_strings))
+        itertools.zip_longest(reversed(arg_strings), reversed(arg_default_strings))
     )
     ordered_args = OrderedDict(reversed(list(backwards_args.items())))
 
@@ -98,9 +96,42 @@ def _get_args(function):
     return ordered_args
 
 
-def _mods_with_args(module_py, names_only):
+def _parse_module_docs(module_path, mod_name=None):
     """
-    Start ast parsing of modules
+    Gather module docstrings or module.function doc string if requested
+    """
+    ret = {}
+    with salt.utils.files.fopen(module_path, "r", encoding="utf8") as cur_file:
+        tree = ast.parse(cur_file.read())
+        module_name = _get_module_name(tree, module_path)
+
+        if not mod_name or "." not in mod_name:
+            # Return top level docs for the module if a function is not requested
+            ret[module_name] = ast.get_docstring(tree)
+
+        fun_aliases = _get_func_aliases(tree)
+        functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)]
+        for fn in functions:
+            doc_string = ast.get_docstring(fn)
+            if not fn.name.startswith("_"):
+                function_name = fn.name
+                if fun_aliases:
+                    # Translate name to __func_alias__ version
+                    for k, v in fun_aliases.items():
+                        if fn.name == k:
+                            function_name = v
+                if mod_name and "." in mod_name:
+                    if function_name == mod_name.split(".")[1]:
+                        ret["{}.{}".format(module_name, function_name)] = doc_string
+                else:
+                    ret["{}.{}".format(module_name, function_name)] = doc_string
+    return salt.utils.doc.strip_rst(ret)
+
+
+def _parse_module_functions(module_py: str, return_type: str) -> Dict:
+    """
+    Parse module files for proper module_name and function name, then gather
+    functions and possibly arguments
     """
     ret = {}
     with salt.utils.files.fopen(module_py, "r", encoding="utf8") as cur_file:
@@ -119,9 +150,10 @@ def _mods_with_args(module_py, names_only):
                         if fn.name == k:
                             function_name = v
                 args = _get_args(fn)
-                if names_only:
+                if return_type == "names":
                     func_list.append(function_name)
                 else:
+                    # return_type == args so gather and return all args
                     fun_entry = {}
                     fun_entry[function_name] = args
                     func_list.append(fun_entry)
@@ -129,12 +161,16 @@ def _mods_with_args(module_py, names_only):
     return ret
 
 
-def _modules_and_args(name=False, type="states", names_only=False):
+def _get_files(name=False, type="states", return_type="args") -> List:
     """
     Determine if modules/states directories or files are requested
+
+    return_type = names ==  names_only=True
+    return_type = args == names_only=Fals
+    return_type = docs
     """
-    ret = {}
     dirs = []
+    found_files = []
 
     if type == "modules":
         dirs.append(os.path.join(__opts__["extension_modules"], "modules"))
@@ -144,22 +180,28 @@ def _modules_and_args(name=False, type="states", names_only=False):
         dirs.append(os.path.join(__grains__["saltpath"], "states"))
 
     if name:
+        if "." in name:
+            if return_type != "docs":
+                # Only docs support module.function syntax
+                raise ArgumentValueError("Function name given")
+            else:
+                name = name.split(".")[0]
         for dir in dirs:
             # Process custom dirs first so custom results are returned
-            if os.path.exists(os.path.join(dir, name + ".py")):
-                return _mods_with_args(os.path.join(dir, name + ".py"), names_only)
+            file_path = os.path.join(dir, name + ".py")
+            if os.path.exists(file_path):
+                found_files.append(file_path)
+                return found_files
     else:
         for dir in reversed(dirs):
             # Process custom dirs last so they are displayed
             try:
                 for module_py in os.listdir(dir):
                     if module_py.endswith(".py") and module_py != "__init__.py":
-                        ret.update(
-                            _mods_with_args(os.path.join(dir, module_py), names_only)
-                        )
+                        found_files.append(os.path.join(dir, module_py))
             except FileNotFoundError:
                 pass
-    return ret
+    return found_files
 
 
 def list_states(name=False, names_only=False):
@@ -171,11 +213,12 @@ def list_states(name=False, names_only=False):
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
 
     CLI Example:
+
     (example truncated for brevity)
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.list_states
 
         myminion:
             ----------
@@ -204,11 +247,15 @@ def list_states(name=False, names_only=False):
               kwargs: kwargs
         [...]
     """
-    ret = _modules_and_args(name, type="states", names_only=names_only)
+    ret = {}
     if names_only:
-        return OrderedDict(sorted(ret.items()))
+        return_type = "names"
     else:
-        return OrderedDict(sorted(ret.items()))
+        return_type = "args"
+    found_files = _get_files(name, type="states", return_type=return_type)
+    for file in found_files:
+        ret.update(_parse_module_functions(file, return_type=return_type))
+    return OrderedDict(sorted(ret.items()))
 
 
 def list_modules(name=False, names_only=False):
@@ -220,11 +267,10 @@ def list_modules(name=False, names_only=False):
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
 
     CLI Example:
-    (example truncated for brevity)
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.list_modules
 
         myminion:
             ----------
@@ -232,19 +278,79 @@ def list_modules(name=False, names_only=False):
           at:
         - atq:
             tag: null
-          - atrm:
+        - atrm:
             args: args
-          - at:
+        - at:
             args: args
             kwargs: kwargs
-          - atc:
+        - atc:
             jobid: null
-          - jobcheck:
+        - jobcheck:
             kwargs: kwargs
         [...]
     """
-    ret = _modules_and_args(name, type="modules", names_only=names_only)
+    ret = {}
     if names_only:
+        return_type = "names"
+    else:
+        return_type = "args"
+    found_files = _get_files(name, type="modules", return_type=return_type)
+    for file in found_files:
+        ret.update(_parse_module_functions(file, return_type=return_type))
+    return OrderedDict(sorted(ret.items()))
+
+
+def state_docs(*names):
+    """
+    Return the docstrings for all state modules. Optionally, specify a state module or a
+    function to narrow the selection.
+
+    :param name: specify a specific module to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion baredoc.state_docs at
+    """
+    return_type = "docs"
+    ret = {}
+    if names:
+        for name in names:
+            file = _get_files(name, type="states", return_type=return_type)[0]
+            ret.update(_parse_module_docs(file, name))
         return OrderedDict(sorted(ret.items()))
     else:
+        found_files = []
+        found_files.extend(_get_files(type="states", return_type=return_type))
+    for file in found_files:
+        ret.update(_parse_module_docs(file))
+    return OrderedDict(sorted(ret.items()))
+
+
+def module_docs(*names):
+    """
+    Return the docstrings for all modules. Optionally, specify a module or a
+    function to narrow the selection.
+
+    :param name: specify a specific module to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion baredoc.module_docs
+    """
+    return_type = "docs"
+    ret = {}
+    if names:
+        for name in names:
+            file = _get_files(name, type="modules", return_type=return_type)[0]
+            ret.update(_parse_module_docs(file, name))
         return OrderedDict(sorted(ret.items()))
+    else:
+        found_files = []
+        found_files.extend(_get_files(type="modules", return_type=return_type))
+    for file in found_files:
+        ret.update(_parse_module_docs(file))
+    return OrderedDict(sorted(ret.items()))

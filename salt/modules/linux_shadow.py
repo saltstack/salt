@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage the shadow file on Linux systems
 
@@ -8,22 +7,15 @@ Manage the shadow file on Linux systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import functools
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import range
 
 try:
     import spwd
@@ -93,7 +85,7 @@ def info(name, root=None):
             "inact": data.sp_inact,
             "expire": data.sp_expire,
         }
-    except KeyError:
+    except (KeyError, FileNotFoundError):
         return {
             "name": "",
             "passwd": "",
@@ -128,7 +120,7 @@ def _set_attrib(name, key, value, param, root=None, validate=True):
 
     cmd.extend((param, value, name))
 
-    ret = not __salt__["cmd.run"](cmd, python_shell=False)
+    ret = not __salt__["cmd.retcode"](cmd, python_shell=False)
     if validate:
         ret = info(name, root=root).get(key) == value
     return ret
@@ -385,7 +377,7 @@ def set_password(name, password, use_usermod=False, root=None):
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
         if __grains__["os"] == "ALT":
-            s_file = "/etc/tcb/{0}/shadow".format(name)
+            s_file = "/etc/tcb/{}/shadow".format(name)
         else:
             s_file = "/etc/shadow"
         if root:
@@ -396,14 +388,16 @@ def set_password(name, password, use_usermod=False, root=None):
             return ret
         lines = []
         user_found = False
-        lstchg = six.text_type(
-            (datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days
-        )
-        with salt.utils.files.fopen(s_file, "rb") as fp_:
+        lstchg = str((datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days)
+        with salt.utils.files.fopen(s_file, "r") as fp_:
             for line in fp_:
-                line = salt.utils.stringutils.to_unicode(line)
-                comps = line.strip().split(":")
+                # Fix malformed entry by first ignoring extra fields, then
+                # adding missing fields.
+                comps = line.strip().split(":")[:9]
                 if comps[0] == name:
+                    num_missing = 9 - len(comps)
+                    if num_missing:
+                        comps.extend([""] * num_missing)
                     user_found = True
                     comps[1] = password
                     comps[2] = lstchg
@@ -419,7 +413,6 @@ def set_password(name, password, use_usermod=False, root=None):
                 )
         else:
             with salt.utils.files.fopen(s_file, "w+") as fp_:
-                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
                 fp_.writelines(lines)
         uinfo = info(name, root=root)
         return uinfo["passwd"] == password
@@ -528,10 +521,7 @@ def list_users(root=None):
         getspall = functools.partial(spwd.getspall)
 
     return sorted(
-        [
-            user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam
-            for user in getspall()
-        ]
+        user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
     )
 
 
@@ -543,7 +533,6 @@ def _getspnam(name, root=None):
     passwd = os.path.join(root, "etc/shadow")
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
             comps = line.strip().split(":")
             if comps[0] == name:
                 # Generate a getspnam compatible output
@@ -561,7 +550,6 @@ def _getspall(root=None):
     passwd = os.path.join(root, "etc/shadow")
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
             comps = line.strip().split(":")
             # Generate a getspall compatible output
             for i in range(2, 9):

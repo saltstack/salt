@@ -1,5 +1,5 @@
-salt.states.esxcluster module
-=============================
+salt.states.esxcluster
+======================
 
 .. automodule:: salt.states.esxcluster
     :members:

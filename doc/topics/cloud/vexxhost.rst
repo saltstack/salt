@@ -2,8 +2,8 @@
 Getting Started with VEXXHOST
 =============================
 
-`VEXXHOST <http://vexxhost.com>`_ is a cloud computing host which provides
-`Canadian cloud computing <http://vexxhost.com/cloud-computing>`_ services
+`VEXXHOST <https://vexxhost.com/>`_ is a cloud computing host which provides
+`Canadian cloud computing <https://vexxhost.com//cloud-computing>`_ services
 which are based in Monteral and use the libcloud OpenStack driver.  VEXXHOST
 currently runs the Havana release of OpenStack.  When provisioning new
 instances, they automatically get a public IP and private IP address.

@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Functions for interacting with the job cache
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.minion
 import salt.utils.event
 import salt.utils.jid
@@ -38,48 +34,49 @@ def store_job(opts, load, event=None, mminion=None):
         load["tgt_type"] = "glob"
         load["tgt"] = load["id"]
 
-        prep_fstr = "{0}.prep_jid".format(opts["master_job_cache"])
+        prep_fstr = "{}.prep_jid".format(opts["master_job_cache"])
         try:
             load["jid"] = mminion.returners[prep_fstr](
                 nocache=load.get("nocache", False)
             )
         except KeyError:
-            emsg = "Returner '{0}' does not support function prep_jid".format(job_cache)
+            emsg = "Returner '{}' does not support function prep_jid".format(job_cache)
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace:\n",
+                job_cache,
                 exc_info=True,
             )
 
         # save the load, since we don't have it
-        saveload_fstr = "{0}.save_load".format(job_cache)
+        saveload_fstr = "{}.save_load".format(job_cache)
         try:
             mminion.returners[saveload_fstr](load["jid"], load)
         except KeyError:
-            emsg = "Returner '{0}' does not support function save_load".format(
-                job_cache
-            )
+            emsg = "Returner '{}' does not support function save_load".format(job_cache)
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace",
+                job_cache,
                 exc_info=True,
             )
     elif salt.utils.jid.is_jid(load["jid"]):
         # Store the jid
-        jidstore_fstr = "{0}.prep_jid".format(job_cache)
+        jidstore_fstr = "{}.prep_jid".format(job_cache)
         try:
             mminion.returners[jidstore_fstr](False, passed_jid=load["jid"])
         except KeyError:
-            emsg = "Returner '{0}' does not support function prep_jid".format(job_cache)
+            emsg = "Returner '{}' does not support function prep_jid".format(job_cache)
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace",
+                job_cache,
                 exc_info=True,
             )
 
@@ -106,10 +103,10 @@ def store_job(opts, load, event=None, mminion=None):
         return
 
     # otherwise, write to the master cache
-    savefstr = "{0}.save_load".format(job_cache)
-    getfstr = "{0}.get_load".format(job_cache)
-    fstr = "{0}.returner".format(job_cache)
-    updateetfstr = "{0}.update_endtime".format(job_cache)
+    savefstr = "{}.save_load".format(job_cache)
+    getfstr = "{}.get_load".format(job_cache)
+    fstr = "{}.returner".format(job_cache)
+    updateetfstr = "{}.update_endtime".format(job_cache)
     if "fun" not in load and load.get("return", {}):
         ret_ = load.get("return", {})
         if "fun" in ret_:
@@ -123,7 +120,7 @@ def store_job(opts, load, event=None, mminion=None):
         getfstr_func = mminion.returners[getfstr]
         fstr_func = mminion.returners[fstr]
     except KeyError as error:
-        emsg = "Returner '{0}' does not support function {1}".format(job_cache, error)
+        emsg = "Returner '{}' does not support function {}".format(job_cache, error)
         log.error(emsg)
         raise KeyError(emsg)
 
@@ -134,7 +131,8 @@ def store_job(opts, load, event=None, mminion=None):
             log.error("Load does not contain 'jid': %s", e)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace",
+                job_cache,
                 exc_info=True,
             )
 
@@ -142,8 +140,7 @@ def store_job(opts, load, event=None, mminion=None):
         mminion.returners[fstr](load)
     except Exception:  # pylint: disable=broad-except
         log.critical(
-            "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
-            exc_info=True,
+            "The specified '%s' returner threw a stack trace", job_cache, exc_info=True
         )
 
     if opts.get("job_cache_store_endtime") and updateetfstr in mminion.returners:
@@ -158,13 +155,13 @@ def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
     if mminion is None:
         mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
     job_cache = opts["master_job_cache"]
-    minions_fstr = "{0}.save_minions".format(job_cache)
+    minions_fstr = "{}.save_minions".format(job_cache)
 
     try:
         mminion.returners[minions_fstr](jid, minions, syndic_id=syndic_id)
     except KeyError:
         raise KeyError(
-            "Returner '{0}' does not support function save_minions".format(job_cache)
+            "Returner '{}' does not support function save_minions".format(job_cache)
         )
 
 

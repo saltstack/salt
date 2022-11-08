@@ -338,7 +338,7 @@ The output is:
     Total:     2
 
 
-.. _`pip`: https://pypi.python.org/pypi/pip
-.. _`pep8`: https://pypi.python.org/pypi/pep8
-.. _`setuptools`: https://pypi.python.org/pypi/setuptools
+.. _`pip`: https://pypi.org/project/pip/
+.. _`pep8`: https://pypi.org/project/pep8/
+.. _`setuptools`: https://pypi.org/project/setuptools/
 .. _`runners`: /ref/runners

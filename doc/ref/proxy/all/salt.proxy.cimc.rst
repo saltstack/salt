@@ -1,5 +1,5 @@
-salt.proxy.cimc module
-======================
+salt.proxy.cimc
+===============
 
 .. automodule:: salt.proxy.cimc
     :members:

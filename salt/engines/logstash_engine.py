@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 An engine that reads messages from the salt event bus and pushes
 them onto a logstash endpoint.
 
-.. versionadded: 2015.8.0
+.. versionadded:: 2015.8.0
 
 :configuration:
 
@@ -20,15 +19,10 @@ them onto a logstash endpoint.
 :depends: logstash
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.event
 
-# Import third-party libs
 try:
     import logstash
 except ImportError:
@@ -55,7 +49,6 @@ def event_bus_context(opts):
     else:
         event_bus = salt.utils.event.get_event(
             "minion",
-            transport=opts["transport"],
             opts=opts,
             sock_dir=opts["sock_dir"],
             listen=True,
