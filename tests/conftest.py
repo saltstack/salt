@@ -19,6 +19,7 @@ import shutil
 import ssl
 import stat
 import sys
+from dataclasses import dataclass
 from functools import partial, wraps
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
@@ -113,11 +114,26 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
     handler.close()
 
-
 # Reset the root logger to its default level(because salt changed it)
 logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger("salt.testsuite")
+
+
+def flaky_catcher(fun, exception, msg=None, exception_msg=None):
+    @wraps(fun)
+    def flaky_catcher_helper(*args, **kwargs):
+        try:
+            return fun(*args, **kwargs)
+        except exception as e:
+            pass
+
+    return flaky_catcher_helper
+
+
+@dataclass
+class Flaky:
+    catcher = flaky_catcher
 
 
 # ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
@@ -318,7 +334,6 @@ def pytest_configure(config):
 
 # ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
 def set_max_open_files_limits(min_soft=3072, min_hard=4096):
-
     # Get current limits
     if salt.utils.platform.is_windows():
         import win32file

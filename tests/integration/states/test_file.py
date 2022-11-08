@@ -4768,6 +4768,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
 
 @skipIf(not salt.utils.path.which("patch"), "patch is not installed")
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
     def _check_patch_version(self, min_version):
         """
@@ -5385,6 +5386,7 @@ WIN_TEST_FILE = "c:/testfile"
 @pytest.mark.destructive_test
 @skipIf(not IS_WINDOWS, "windows test only")
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test
 class WinFileTest(ModuleCase):
     """
     Test for the file state on Windows
