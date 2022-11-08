@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Install pkg, dmg and .app applications on macOS minions.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shlex
 
-# Import Salt libs
 import salt.utils.platform
 
 try:
@@ -69,7 +64,7 @@ def install(pkg, target="LocalSystem", store=False, allow_untrusted=False):
 
     target = _quote(target)
 
-    cmd = "installer -pkg {0} -target {1}".format(pkg, target)
+    cmd = "installer -pkg {} -target {}".format(pkg, target)
     if store:
         cmd += " -store"
     if allow_untrusted:
@@ -114,7 +109,7 @@ def install_app(app, target="/Applications/"):
     if not app[-1] == "/":
         app += "/"
 
-    cmd = 'rsync -a --delete "{0}" "{1}"'.format(app, target)
+    cmd = 'rsync -a --delete "{}" "{}"'.format(app, target)
     return __salt__["cmd.run"](cmd)
 
 
@@ -159,9 +154,7 @@ def mount(dmg):
 
     temp_dir = __salt__["temp.dir"](prefix="dmg-")
 
-    cmd = 'hdiutil attach -readonly -nobrowse -mountpoint {0} "{1}"'.format(
-        temp_dir, dmg
-    )
+    cmd = 'hdiutil attach -readonly -nobrowse -mountpoint {} "{}"'.format(temp_dir, dmg)
 
     return __salt__["cmd.run"](cmd), temp_dir
 
@@ -183,7 +176,7 @@ def unmount(mountpoint):
         salt '*' macpackage.unmount /dev/disk2
     """
 
-    cmd = 'hdiutil detach "{0}"'.format(mountpoint)
+    cmd = 'hdiutil detach "{}"'.format(mountpoint)
 
     return __salt__["cmd.run"](cmd)
 
@@ -231,13 +224,13 @@ def get_pkg_id(pkg):
 
     try:
         # List all of the PackageInfo files
-        cmd = "xar -t -f {0} | grep PackageInfo".format(pkg)
+        cmd = "xar -t -f {} | grep PackageInfo".format(pkg)
         out = __salt__["cmd.run"](cmd, python_shell=True, output_loglevel="quiet")
         files = out.split("\n")
 
         if "Error opening" not in out:
             # Extract the PackageInfo files
-            cmd = "xar -x -f {0} {1}".format(pkg, " ".join(files))
+            cmd = "xar -x -f {} {}".format(pkg, " ".join(files))
             __salt__["cmd.run"](cmd, cwd=temp_dir, output_loglevel="quiet")
 
             # Find our identifiers
@@ -276,7 +269,7 @@ def get_mpkg_ids(mpkg):
     base_path = os.path.dirname(mpkg)
 
     # List all of the .pkg files
-    cmd = "find {0} -name *.pkg".format(base_path)
+    cmd = "find {} -name *.pkg".format(base_path)
     out = __salt__["cmd.run"](cmd, python_shell=True)
 
     pkg_files = out.split("\n")
@@ -289,7 +282,7 @@ def get_mpkg_ids(mpkg):
 def _get_pkg_id_from_pkginfo(pkginfo):
     # Find our identifiers
     pkginfo = _quote(pkginfo)
-    cmd = "cat {0} | grep -Eo 'identifier=\"[a-zA-Z.0-9\\-]*\"' | cut -c 13- | tr -d '\"'".format(
+    cmd = "cat {} | grep -Eo 'identifier=\"[a-zA-Z.0-9\\-]*\"' | cut -c 13- | tr -d '\"'".format(
         pkginfo
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
@@ -302,7 +295,7 @@ def _get_pkg_id_from_pkginfo(pkginfo):
 
 def _get_pkg_id_dir(path):
     path = _quote(os.path.join(path, "Contents/Info.plist"))
-    cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" {0}'.format(path)
+    cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" {}'.format(path)
 
     # We can only use wildcards in python_shell which is
     # sent by the macpackage state

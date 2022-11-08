@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pkgutil support for Solaris
 
@@ -8,18 +7,14 @@ Pkgutil support for Solaris
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = "pkgutil"
@@ -64,7 +59,7 @@ def upgrade_available(name):
         salt '*' pkgutil.upgrade_available CSWpython
     """
     version_num = None
-    cmd = "/opt/csw/bin/pkgutil -c --parse --single {0}".format(name)
+    cmd = "/opt/csw/bin/pkgutil -c --parse --single {}".format(name)
     out = __salt__["cmd.run_stdout"](cmd)
     if out:
         version_num = out.split()[2].strip()
@@ -129,6 +124,18 @@ def upgrade(refresh=True):
     return salt.utils.data.compare_dicts(old, new)
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed as a dict::
@@ -147,13 +154,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     if salt.utils.data.is_true(kwargs.get("removed")):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     ret = {}
     cmd = "/usr/bin/pkginfo -x"
@@ -219,7 +221,7 @@ def latest_version(*names, **kwargs):
         refresh_db()
 
     pkgs = list_pkgs()
-    cmd = "/opt/csw/bin/pkgutil -a --parse {0}".format(" ".join(names))
+    cmd = "/opt/csw/bin/pkgutil -a --parse {}".format(" ".join(names))
     output = __salt__["cmd.run_all"](cmd).get("stdout", "").splitlines()
     for line in output:
         try:
@@ -292,13 +294,13 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     if pkgs is None and version and len(pkg_params) == 1:
         pkg_params = {name: version}
     targets = []
-    for param, pkgver in six.iteritems(pkg_params):
+    for param, pkgver in pkg_params.items():
         if pkgver is None:
             targets.append(param)
         else:
-            targets.append("{0}-{1}".format(param, pkgver))
+            targets.append("{}-{}".format(param, pkgver))
 
-    cmd = "/opt/csw/bin/pkgutil -yu {0}".format(" ".join(targets))
+    cmd = "/opt/csw/bin/pkgutil -yu {}".format(" ".join(targets))
     old = list_pkgs()
     __salt__["cmd.run_all"](cmd)
     __context__.pop("pkg.list_pkgs", None)
@@ -343,7 +345,7 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = "/opt/csw/bin/pkgutil -yr {0}".format(" ".join(targets))
+    cmd = "/opt/csw/bin/pkgutil -yr {}".format(" ".join(targets))
     __salt__["cmd.run_all"](cmd)
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()

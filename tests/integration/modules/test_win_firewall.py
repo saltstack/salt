@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
@@ -28,8 +24,8 @@ class FirewallTest(ModuleCase):
                 else:
                     self.assertTrue(self.run_function("firewall.disable", profile=net))
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_firewall_get_config(self):
         """
         test firewall.get_config
@@ -43,8 +39,8 @@ class FirewallTest(ModuleCase):
             self.assertTrue(ret[net])
         self._pre_firewall_status(pre_run)
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_firewall_disable(self):
         """
         test firewall.disable
@@ -61,8 +57,8 @@ class FirewallTest(ModuleCase):
         self.assertFalse(ret)
         self._pre_firewall_status(pre_run)
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_firewall_enable(self):
         """
         test firewall.enable
@@ -79,7 +75,7 @@ class FirewallTest(ModuleCase):
         self.assertTrue(ret)
         self._pre_firewall_status(pre_run)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_firewall_get_rule(self):
         """
         test firewall.get_rule
@@ -91,8 +87,8 @@ class FirewallTest(ModuleCase):
         for check in checks:
             self.assertIn(check, ret[rule])
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_firewall_add_delete_rule(self):
         """
         test firewall.add_rule and delete_rule
