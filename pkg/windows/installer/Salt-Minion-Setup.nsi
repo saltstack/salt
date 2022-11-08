@@ -1,7 +1,6 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_NAME_OTHER "Salt"
-!define PRODUCT_PUBLISHER "VMware, Inc"
-!define PRODUCT_WEB_SITE "http://saltstack.org"
+!define PRODUCT_PUBLISHER "SaltStack, Inc"
+!define PRODUCT_WEB_SITE "http://saltproject.io"
 !define PRODUCT_CALL_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-call.exe"
 !define PRODUCT_CP_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-cp.exe"
 !define PRODUCT_KEY_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-key.exe"
@@ -9,9 +8,7 @@
 !define PRODUCT_MINION_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
 !define PRODUCT_RUN_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-run.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
-!define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
-!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 !define /date TIME_STAMP "%Y-%m-%d-%H-%M-%S"
 
 # Request admin rights
@@ -39,19 +36,20 @@ ${StrStrAdv}
     !define PRODUCT_VERSION "Undefined Version"
 !endif
 
-!ifdef PythonVersion
-    !define PYTHON_VERSION "${PythonVersion}"
+!ifdef PythonArchitecture
+    !define PYTHON_ARCHITECTURE "${PythonArchitecture}"
 !else
-    !define PYTHON_VERSION "3"
+    !define PYTHON_ARCHITECTURE "x64"
 !endif
 
-!if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
-    !define CPUARCH "AMD64"
-!else if "$%PROCESSOR_ARCHITEW6432%" == "AMD64"
+!if "${PYTHON_ARCHITECTURE}" == "x64"
     !define CPUARCH "AMD64"
 !else
     !define CPUARCH "x86"
 !endif
+
+!define BUILD_TYPE "Python 3"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py3-${CPUARCH}-Setup.exe"
 
 # Part of the Trim function for Strings
 !define Trim "!insertmacro Trim"
@@ -181,6 +179,7 @@ Function pageCheckExistingInstall
         # Esc and Enter don't work. Nor can you use Alt+N and Alt+B. Setting
         # the focus to the Next button seems to fix this
         # Set focus on Next button (0x1)
+        # Next=1, cancel=2, back=3
         GetDlgItem $R1 $HWNDPARENT 1
         SendMessage $HWNDPARENT ${WM_NEXTDLGCTL} $R1 1
     ${EndIf}
@@ -223,8 +222,9 @@ Function pageMinionConfig
     ${NSD_OnChange} $ConfigType_DropList pageMinionConfig_OnChange
 
     # Add Existing Config Warning Label
-    ${NSD_CreateLabel} 0 75u 100% 50u "The values above are taken from an \
-        existing configuration found in `$RootDir\conf\minion`.$\n\
+    ${NSD_CreateLabel} 0 75u 100% 50u \
+        "The values above are taken from an existing configuration found in \
+        `$RootDir\conf\minion`.$\n\
         $\n\
         Clicking `Install` will leave the existing config unchanged."
     Pop $ExistingConfigWarning_Lbl
@@ -234,7 +234,7 @@ Function pageMinionConfig
 
     # Add Checkbox to move root_dir
     ${NSD_CreateCheckBox} 0 125u 100% 10u \
-        " Move &existing root directory (C:\salt) to %ProgramData%\Salt."
+        "Move &existing root directory (C:\salt) to %ProgramData%\Salt."
     Pop $MoveExistingConfig_ChkBox
     CreateFont $0 "Arial" 10 500
     SendMessage $MoveExistingConfig_ChkBox ${WM_SETFONT} $0 1
@@ -244,11 +244,11 @@ Function pageMinionConfig
 
     # Add Default Config Warning Label
     ${NSD_CreateLabel} 0 75u 100% 60u "Clicking `Install` will backup the \
-        the existing minion config file and minion.d directories. The values \
+        existing minion config file and minion.d directories. The values \
         above will be used in the new default config.$\n\
-            $\n\
-            NOTE: If Master IP is set to `salt` and Minion Name is set to \
-            `hostname` no changes will be made."
+        $\n\
+        NOTE: If Master IP is set to `salt` and Minion Name is set to \
+        `hostname` no changes will be made."
     Pop $DefaultConfigWarning_Lbl
     CreateFont $0 "Arial" 10 500 /ITALIC
     SendMessage $DefaultConfigWarning_Lbl ${WM_SETFONT} $0 1
@@ -262,15 +262,16 @@ Function pageMinionConfig
     ${NSD_OnClick} $CustomConfig_Btn pageCustomConfigBtn_OnClick
 
     ${If} $ExistingConfigFound == 0
-        ${NSD_CreateLabel} 0 75u 100% 60u "Values entered above will be used \
-            in the custom config.$\n\
+        ${NSD_CreateLabel} 0 75u 100% 60u \
+            "Values entered above will be used in the custom config.$\n\
             $\n\
             NOTE: If Master IP is set to `salt` and Minion Name is set to \
             `hostname` no changes will be made."
     ${Else}
-        ${NSD_CreateLabel} 0 75u 100% 60u "Clicking `Install` will backup the \
-            the existing minion config file and minion.d directories. The \
-            values above will be used in the custom config.$\n\
+        ${NSD_CreateLabel} 0 75u 100% 60u \
+            "Clicking `Install` will backup the the existing minion config \
+            file and minion.d directories. The values above will be used in \
+            the custom config.$\n\
             $\n\
             NOTE: If Master IP is set to `salt` and Minion Name is set to \
             `hostname` no changes will be made."
@@ -412,46 +413,42 @@ Function pageMinionConfig_Leave
 
     # Abort if config file not found
     ${If} $ConfigType == "Custom Config"
-        IfFileExists "$CustomConfig" continue 0
-            MessageBox MB_OK|MB_ICONEXCLAMATION "File not found: $CustomConfig" /SD IDOK
+        IfFileExists "$CustomConfig" done 0
+            MessageBox MB_OK|MB_ICONEXCLAMATION \
+                "File not found: $CustomConfig" \
+                /SD IDOK
             Abort
     ${EndIf}
 
     ${If} $MoveExistingConfig == 1
 
-        # This makes the $APPDATA variable point to the ProgramData folder instead
-        # of the current user's roaming AppData folder
+        # This makes the $APPDATA variable point to the ProgramData folder
+        # instead of the current user's roaming AppData folder
         SetShellVarContext all
 
         # Get directory status
+        # We don't want to overwrite data in the new location, so it needs to
+        # either be empty or not found. Otherwise, warn and abort
         ${DirState} "$APPDATA\Salt Project\Salt" $R0  # 0=Empty, 1=full, -1=Not Found
-        StrCmp $R0 "1" 0 move_files  # Move files if directory empty or missing
+        StrCmp $R0 "1" 0 done # Move files if directory empty or missing
         MessageBox MB_OKCANCEL \
             "The $APPDATA\Salt Project\Salt directory is not empty.$\n\
             These files will need to be moved manually." \
             /SD IDOK IDCANCEL cancel
+        # OK: We're continuing without moving existing config
         StrCpy $MoveExistingConfig 0
-        Goto continue
+        Goto done
 
         cancel:
+            # Cancel: We're unchecking the checkbox and returning the user to
+            # the dialog box
+            # Abort just returns the user back to the dialog box
             ${NSD_UNCHECK} $MoveExistingConfig_ChkBox
             Abort
 
-        move_files:
-            # Make sure the target directory exists
-            nsExec::Exec "md $APPDATA\Salt Project\Salt"
-            # Take ownership of the C:\salt directory
-            nsExec::Exec "takeown /F $RootDir /R"
-            # Move the C:\salt directory to the new location
-            StrCpy $switch_overwrite 0
-            !insertmacro MoveFolder "$RootDir" "$APPDATA\Salt Project\Salt" "*.*"
-            # Make RootDir the new location
-            StrCpy $RootDir "$APPDATA\Salt Project\Salt"
-
     ${EndIf}
 
-    continue:
-    Call BackupExistingConfig
+    done:
 
 FunctionEnd
 
@@ -505,7 +502,7 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (${BUILD_TYPE})"
 OutFile "${OutFile}"
 InstallDir "C:\Program Files\Salt Project\Salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
@@ -521,10 +518,10 @@ Section -copy_prereqs
     File /r "..\prereqs\"
 SectionEnd
 
-# Check if the  Windows 10 Universal C Runtime (KB2999226) is installed
-# Python 3 needs the updated ucrt on Windows 8.1 / 2012R2 and lower
-# They are installed via KB2999226, but we're not going to patch the system here
-# Instead, we're going to copy the .dll files to the \salt\bin directory
+# Check if the Windows 10 Universal C Runtime (KB2999226) is installed. Python
+# 3 needs the updated ucrt on Windows 8.1/2012R2 and lower. They are installed
+# via KB2999226, but we're not going to patch the system here. Instead, we're
+# going to copy the .dll files to the \salt\bin directory
 Section -install_ucrt
 
     Var /GLOBAL UcrtFileName
@@ -542,8 +539,8 @@ Section -install_ucrt
     goto lbl_done
 
     lbl_needs_ucrt:
-    # UCRT only needed on Windows Server 2012R2/Windows 8.1 and below
-    # The first ReadRegStr command above should have skipped to lbl_done if on
+    # UCRT only needed on Windows Server 2012R2/Windows 8.1 and below. The
+    # first ReadRegStr command above should have skipped to lbl_done if on
     # Windows 10 box
 
     # Is the update already installed
@@ -561,9 +558,8 @@ Section -install_ucrt
 
     detailPrint "UCRT (KB2999226) not found"
 
-    # Use RunningX64 here to get the Architecture for the system running the installer
-    # CPUARCH is defined when the installer is built and is based on the machine that
-    # built the installer, not the target system as we need here.
+    # Use RunningX64 here to get the Architecture for the system running the
+    # installer.
     ${If} ${RunningX64}
         StrCpy $UcrtFileName "ucrt_x64.zip"
     ${Else}
@@ -572,9 +568,9 @@ Section -install_ucrt
 
     ClearErrors
 
-    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin"
-    CreateDirectory $INSTDIR\bin
-    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin"
+    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin\Scripts"
+    CreateDirectory $INSTDIR\bin\Scripts
+    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin\Scripts"
 
     # Clean up the stack
     Pop $R0  # Get Error
@@ -599,7 +595,8 @@ Section -install_vcredist_2013
     Var /GLOBAL VcRedistGuid
     Var /GLOBAL NeedVcRedist
 
-    # GUIDs can be found by installing them and then running the following command:
+    # GUIDs can be found by installing them and then running the following
+    # command:
     # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
     !define VCREDIST_X86_NAME "vcredist_x86_2013"
     !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
@@ -607,58 +604,72 @@ Section -install_vcredist_2013
     !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
 
     # Only install 64bit VCRedist on 64bit machines
-    ${If} ${CPUARCH} == "AMD64"
+    # Use RunningX64 here to get the Architecture for the system running the
+    # installer.
+    ${If} ${RunningX64}
         StrCpy $VcRedistName ${VCREDIST_X64_NAME}
         StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
-        Call InstallVCRedist
     ${Else}
-        # Install 32bit VCRedist on all machines
         StrCpy $VcRedistName ${VCREDIST_X86_NAME}
         StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
-        Call InstallVCRedist
     ${EndIf}
+
+    # Detecting VCRedist Installation
+    !define INSTALLSTATE_DEFAULT "5"
+
+    StrCpy $NeedVcRedist "False"
+    detailPrint "Checking for $VcRedistName..."
+    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
+    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+    StrCpy $NeedVcRedist "True"
+
+    Call InstallVCRedist
 
 SectionEnd
 
 
 Function InstallVCRedist
     # Check to see if it's already installed
-    Call MsiQueryProductState
     ${If} $NeedVcRedist == "True"
         detailPrint "System requires $VcRedistName"
         MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-            "$VcRedistName is currently not installed. Would you like to install?" \
+            "$VcRedistName is currently not installed. Would you like to \
+            install?" \
             /SD IDYES IDNO endVCRedist
 
-        # If an output variable is specified ($0 in the case below),
-        # ExecWait sets the variable with the exit code (and only sets the
-        # error flag if an error occurs; if an error occurs, the contents
-        # of the user variable are undefined).
+        # If an output variable is specified ($0 in the case below), ExecWait
+        # sets the variable with the exit code (and only sets the error flag if
+        # an error occurs; if an error occurs, the contents of the user
+        # variable are undefined).
         # http://nsis.sourceforge.net/Reference/ExecWait
         ClearErrors
         detailPrint "Installing $VcRedistName..."
         ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+
         IfErrors 0 CheckVcRedistErrorCode
-            MessageBox MB_OK|MB_ICONEXCLAMATION \
-                "$VcRedistName failed to install. Try installing the package manually." \
-                /SD IDOK
-            detailPrint "An error occurred during installation of $VcRedistName"
+
+        detailPrint "An error occurred during installation of $VcRedistName"
+        MessageBox MB_OK|MB_ICONEXCLAMATION \
+            "$VcRedistName failed to install. Try installing the package \
+            manually." \
+            /SD IDOK
 
         CheckVcRedistErrorCode:
         # Check for Reboot Error Code (3010)
         ${If} $0 == 3010
+            detailPrint "Reboot and run Salt install again"
             MessageBox MB_OK|MB_ICONINFORMATION \
                 "$VcRedistName installed but requires a restart to complete." \
                 /SD IDOK
-            detailPrint "Reboot and run Salt install again"
 
         # Check for any other errors
         ${ElseIfNot} $0 == 0
-            MessageBox MB_OK|MB_ICONEXCLAMATION \
-                "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
-                /SD IDOK
             detailPrint "An error occurred during installation of $VcRedistName"
             detailPrint "Error: $0"
+            MessageBox MB_OK|MB_ICONEXCLAMATION \
+                "$VcRedistName failed with ErrorCode: $0. Try installing the \
+                package manually." \
+                /SD IDOK
         ${EndIf}
 
         endVCRedist:
@@ -670,33 +681,90 @@ FunctionEnd
 
 Section "MainSection" SEC01
 
+    ${If} $MoveExistingConfig == 1
+        # This makes the $APPDATA variable point to the ProgramData folder
+        # instead of the current user's roaming AppData folder
+        SetShellVarContext all
+
+        detailPrint "Moving existing config to $APPDATA\Salt Project\Salt"
+        # Make sure the target directory exists
+        nsExec::Exec "md $APPDATA\Salt Project\Salt"
+        # Take ownership of the C:\salt directory
+        detailPrint "Taking ownership: $RootDir"
+        nsExec::Exec "takeown /F $RootDir /R"
+        # Move the C:\salt directory to the new location
+        StrCpy $switch_overwrite 0
+        detailPrint "Moving $RootDir to $APPDATA"
+        IfFileExists "$RootDir\conf" 0 +2
+        !insertmacro MoveFolder "$RootDir\conf" "$APPDATA\Salt Project\Salt\conf" "*.*"
+        IfFileExists "$RootDir\srv" 0 +2
+        !insertmacro MoveFolder "$RootDir\srv" "$APPDATA\Salt Project\Salt\srv" "*.*"
+        IfFileExists "$RootDir\var" 0 +2
+        !insertmacro MoveFolder "$RootDir\var" "$APPDATA\Salt Project\Salt\var" "*.*"
+        # Make RootDir the new location
+        StrCpy $RootDir "$APPDATA\Salt Project\Salt"
+    ${EndIf}
+
+    ${If} $ConfigType != "Existing Config"
+        Call BackupExistingConfig
+    ${EndIf}
+
+
+    # Install files to the Installation Directory
     SetOutPath "$INSTDIR\"
     SetOverwrite off
+    File /r "..\buildenv\"
+
+    # Set up Root Directory
     CreateDirectory "$RootDir\conf\pki\minion"
     CreateDirectory "$RootDir\conf\minion.d"
     CreateDirectory "$RootDir\var\cache\salt\minion\extmods\grains"
     CreateDirectory "$RootDir\var\cache\salt\minion\proc"
     CreateDirectory "$RootDir\var\log\salt"
     CreateDirectory "$RootDir\var\run"
-    File /r "..\buildenv\"
     nsExec::Exec 'icacls $RootDir /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
 
 SectionEnd
 
 
 Function .onInit
+    # This function gets executed before any other. This is where we will
+    # detect existing installations and config to be used by the installer
+
+    # Make sure we do not allow 32-bit Salt on 64-bit systems
+    # This is the system the installer is running on
+    ${If} ${RunningX64}
+        # This is the Python architecture the installer was built with
+        ${If} ${CPUARCH} == "x86"
+            MessageBox MB_OK|MB_ICONEXCLAMATION  \
+                "Detected 64-bit Operating system.$\n$\n\
+                Please install the 64-bit version of Salt on this operating system." \
+                /SD IDOK
+            Abort
+        ${EndIf}
+    ${Else}
+        # This is the Python architecture the installer was built with
+        ${If} ${CPUARCH} == "AMD64"
+            MessageBox MB_OK|MB_ICONEXCLAMATION  \
+                "Detected 32-bit Operating system.$\n$\n\
+                Please install the 32-bit version of Salt on this operating system." \
+                /SD IDOK
+            Abort
+        ${EndIf}
+    ${EndIf}
 
     InitPluginsDir
     Call parseInstallerCommandLineSwitches
 
     # Uninstall msi-installed salt
     # Source: https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
-    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
+    # TODO: Add a message box here confirming the uninstall of the MSI
+    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}  # Salt upgrade code
     StrCpy $0 0
     loop:
     System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
     ${If} $2 = 0
-	# Now $1 contains the product code
+    # Now $1 contains the product code
         DetailPrint product:$1
         push $R0
           StrCpy $R0 $1
@@ -706,19 +774,43 @@ Function .onInit
         goto loop
     ${Endif}
 
-    # If custom config passed, verify its existence before continuing so we
-    # don't uninstall an existing installation and then fail
+    # If a custom config is passed on the CLI, verify its existence before
+    # continuing so we don't uninstall an existing installation and then fail
+    # NOTE: This handles custom config for silent installations where the
+    # NOTE: custom config is passed on the CLI. The GUI has its own checking
+    # NOTE: when the user selects a custom config.
     ${If} $ConfigType == "Custom Config"
-        IfFileExists "$CustomConfig" customConfigExists 0
+        IfFileExists "$CustomConfig" checkExistingInstallation 0
         Abort
     ${EndIf}
 
-    customConfigExists:
+    checkExistingInstallation:
         # Check for existing installation
+
+        # The NSIS installer is a 32bit application and will use the WOW6432Node
+        # in the registry by default. We need to look in the 64 bit location on
+        # 64 bit systems
+        ${If} ${RunningX64}
+            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+            SetRegView 64  # View the 64 bit portion of the registry
+        ${EndIf}
+
         ReadRegStr $R0 HKLM \
             "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
             "UninstallString"
-        StrCmp $R0 "" checkOther  # If it's empty, not installed
+
+        # Puts the nullsoft installer back to its default
+        SetRegView 32  # Set it back to the 32 bit portion of the registry
+
+        # If not found, look in 32 bit
+        ${If} $R0 == ""
+            ReadRegStr $R0 HKLM \
+                "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+                "UninstallString"
+        ${EndIf}
+
+        # If it's empty it's not installed
+        StrCmp $R0 "" skipUninstall
 
         # Set InstDir to the parent directory so that we can uninstall it
         ${GetParent} $R0 $INSTDIR
@@ -726,23 +818,6 @@ Function .onInit
         # Found existing installation, prompt to uninstall
         MessageBox MB_OKCANCEL|MB_USERICON \
             "${PRODUCT_NAME} is already installed.$\n$\n\
-            Click `OK` to remove the existing installation." \
-            /SD IDOK IDOK uninst
-        Abort
-
-    checkOther:
-        # Check for existing installation of full salt
-        ReadRegStr $R0 HKLM \
-            "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}" \
-            "UninstallString"
-        StrCmp $R0 "" skipUninstall  # If it's empty, not installed
-
-        # Set InstDir to the parent directory so that we can uninstall it
-        ${GetParent} $R0 $INSTDIR
-
-        # Found existing installation, prompt to uninstall
-        MessageBox MB_OKCANCEL|MB_USERICON \
-            "${PRODUCT_NAME_OTHER} is already installed.$\n$\n\
             Click `OK` to remove the existing installation." \
             /SD IDOK IDOK uninst
         Abort
@@ -783,100 +858,9 @@ Function .onInit
         StrCpy $ConfigType "Default Config"
     ${EndIf}
 
-    IfSilent 0 +2
-        ${If} $ConfigType ==  "Existing Config"
-        ${AndIf} $MoveExistingConfig == 0
-            Call BackupExistingConfig
-        ${EndIf}
-
-FunctionEnd
-
-Function getExistingInstallation
-    # Try to detect an existing installation. There are three possible scenarios
-    # 1. Existing New Method Installation
-    # 2. Existing Old Method Installation
-    # 3. New Installation
-    # The results of this function will determine if the user is allowed to set
-    # the install location in the GUI. If there is an existing installation
-    # present, the location picker will be grayed out
-    # This function also sets the RootDir and INSTDIR variables used by the
-    # installer.
-
-    # Reset ExistingInstallation
-    StrCpy $ExistingInstallation 0
-
-    # Get ProgramFiles
-    # Use RunningX64 here to get the Architecture for the system running the
-    # installer. CPUARCH is defined when the installer is built and is based on
-    # the machine that built the installer, not the target system
-    # There are 3 scenarios here:
-    ${If} ${RunningX64}
-        ${If} ${CPUARCH} == "AMD64"
-            # 64 bit Salt on 64 bit system (C:\Program Files)
-            StrCpy $INSTDIR "$ProgramFiles64\Salt Project\Salt"
-        ${Else}
-            # 32 bit Salt on 64 bit system (C:\Program Files (x86))
-            StrCpy $INSTDIR "$ProgramFiles32\Salt Project\Salt"
-        ${EndIf}
-    ${Else}
-        # 32 bit Salt on 32 bit system (C:\Program Files)
-        StrCpy $INSTDIR "$ProgramFiles\Salt Project\Salt"
-    ${EndIf}
-
-    # This makes the $APPDATA variable point to the ProgramData folder instead
-    # of the current user's roaming AppData folder
-    SetShellVarContext all
-
-    # Set default location of for salt config
-    StrCpy $RootDir "$APPDATA\Salt Project\Salt"
-
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64  # View the 64 bit portion of the registry
-        ${EndIf}
-    ${EndIf}
-
-    # Check for existing new method installation from registry
-    # Look for `install_dir` in HKLM\SOFTWARE\Salt Project\Salt
-    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
-    StrCmp $R0 "" checkOldInstallation
-    StrCpy $ExistingInstallation 1
-    # Set INSTDIR to the location in the registry
-    StrCpy $INSTDIR $R0
-    # Set RootDir, if defined
-    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
-    StrCmp $R0 "" finished
-    StrCpy $RootDir $R0
-    Goto finished
-
-    # Check for existing old method installation
-    # Look for `python.exe` in C:\salt\bin
-    checkOldInstallation:
-    IfFileExists "C:\salt\bin\python.exe" 0 newInstallation
-    StrCpy $ExistingInstallation 1
-    StrCpy $INSTDIR "C:\salt"
-    StrCpy $RootDir "C:\salt"
-    Goto finished
-
-    # This is a new installation
-    # Check if custom location was passed via command line
-    newInstallation:
-    ${IfNot} $CustomLocation == ""
-        StrCpy $INSTDIR $CustomLocation
-    ${EndIf}
-
-    finished:
-        SetRegView 32  # View the 32 bit portion of the registry
-
 FunctionEnd
 
 
-# Time Stamp Definition
 Function BackupExistingConfig
 
     ${If} $ExistingConfigFound == 1                     # If existing config found
@@ -889,8 +873,8 @@ Function BackupExistingConfig
 
     ${EndIf}
 
-    # By this point there should be no existing config
-    # It was either backed up or wasn't there to begin with
+    # By this point there should be no existing config. It was either backed up
+    # or wasn't there to begin with
     ${If} $ConfigType == "Custom Config"  # If we're using Custom Config
     ${AndIfNot} $CustomConfig == ""       # If a custom config is passed
 
@@ -917,6 +901,14 @@ Section -Post
 
     WriteUninstaller "$INSTDIR\uninst.exe"
 
+    # The NSIS installer is a 32bit application and will use the WOW6432Node in
+    # the registry by default. We need to look in the 64 bit location on 64 bit
+    # systems
+    ${If} ${RunningX64}
+        # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+        SetRegView 64  # View 64 bit portion of the registry
+    ${EndIf}
+
     # Write Uninstall Registry Entries
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "DisplayName" "$(^Name)"
@@ -934,27 +926,16 @@ Section -Post
         "DependOnService" "nsi"
 
     # Set the estimated size
-    ${GetSize} "$INSTDIR\bin" "/S=OK" $0 $1 $2
+    ${GetSize} "$INSTDIR" "/S=OK" $0 $1 $2
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "EstimatedSize" "$0"
 
     # Write Commandline Registry Entries
     WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
-    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\"
+    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\Scripts\"
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
-    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
-
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64  # View 64 bit portion of the registry
-        ${EndIf}
-    ${EndIf}
+    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\Scripts\"
 
     # Write Salt Configuration Registry Entries
     # We want to write EXPAND_SZ string types to allow us to use environment
@@ -966,12 +947,8 @@ Section -Post
     # Program Files
     StrCpy $RegInstDir $INSTDIR
 
-    # Check Program Files (x86) first
-    ${StrContains} $0 "Program Files (x86)" $INSTDIR
-    StrCmp $0 "" +2  # If it's empty, skip the next line
-        StrCpy $RegInstDir "%ProgramFiles(x86)%\Salt Project\Salt"
-
-    # Check normal Program Files next
+    # Program Files
+    # We want to use the environment variables instead of the hardcoded path
     ${StrContains} $0 "Program Files" $INSTDIR
     StrCmp $0 "" +2  # If it's empty, skip the next line
         StrCpy $RegInstDir "%ProgramFiles%\Salt Project\Salt"
@@ -981,7 +958,8 @@ Section -Post
     # ProgramData
     StrCpy $RegRootDir $RootDir
 
-    ${StrContains} $0 "ProgramData" $INSTDIR
+    # We want to use the environment variables instead of the hardcoded path
+    ${StrContains} $0 "ProgramData" $RootDir
     StrCmp $0 "" +2  # If it's empty, skip the next line
         StrCpy $RegRootDir "%ProgramData%\Salt Project\Salt"
 
@@ -992,36 +970,33 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
-    nsExec::Exec `$INSTDIR\bin\ssm.exe install salt-minion "$INSTDIR\bin\python.exe" -E -s """$INSTDIR\bin\Scripts\salt-minion""" -c """$RootDir\conf""" -l quiet`
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Start SERVICE_AUTO_START"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodConsole 24000"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodWindow 2000"
-    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppRestartDelay 60000"
+    nsExec::Exec `$INSTDIR\bin\Scripts\ssm.exe install salt-minion "$INSTDIR\bin\Scripts\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_AUTO_START"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodConsole 24000"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodWindow 2000"
+    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppRestartDelay 60000"
 
     # There is a default minion config laid down in the $INSTDIR directory
     ${Switch} $ConfigType
         ${Case} "Existing Config"
-            # If this is an Existing Config, we just remove it
-            RMDir /r "$INSTDIR\conf"
+            # If this is an Existing Config, we don't do anything
             ${Break}
         ${Case} "Custom Config"
-            # If this is a Custom Config, we remove it and update the custom config
-            RMDir /r "$INSTDIR\conf"
+            # If this is a Custom Config, update the custom config
             Call updateMinionConfig
             ${Break}
         ${Case} "Default Config"
-            # If this is the default config, we move it and update it
+            # If this is the Default Config, we move it and update it
             StrCpy $switch_overwrite 1
 
-            # This makes the $APPDATA variable point to the ProgramData folder instead
-            # of the current user's roaming AppData folder
-            SetShellVarContext all
-
-            !insertmacro MoveFolder "$INSTDIR\conf" "$APPDATA\Salt Project\Salt\conf" "*.*"
+            !insertmacro MoveFolder "$INSTDIR\configs" "$RootDir\conf" "*.*"
             Call updateMinionConfig
             ${Break}
     ${EndSwitch}
+
+    # Delete the configs directory that came with the installer
+    RMDir /r "$INSTDIR\configs"
 
     # Add $INSTDIR in the Path
     EnVar::SetHKLM
@@ -1034,7 +1009,7 @@ Function .onInstSuccess
 
     # If StartMinionDelayed is 1, then set the service to start delayed
     ${If} $StartMinionDelayed == 1
-        nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
+        nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
     ${EndIf}
 
     # If start-minion is 1, then start the service
@@ -1050,7 +1025,8 @@ Function un.onInit
     Call un.parseUninstallerCommandLineSwitches
 
     MessageBox MB_USERICON|MB_YESNO|MB_DEFBUTTON1 \
-        "Are you sure you want to completely remove $(^Name) and all of its components?" \
+        "Are you sure you want to completely remove $(^Name) and all of its \
+        components?" \
         /SD IDYES IDYES +2
     Abort
 
@@ -1072,12 +1048,12 @@ SectionEnd
 Function ${un}uninstallSalt
 
     # WARNING: Any changes made here need to be reflected in the MSI uninstaller
-
     # Make sure we're in the right directory
     ${If} $INSTDIR == "c:\salt\bin\Scripts"
       StrCpy $INSTDIR "C:\salt"
     ${EndIf}
     # $ProgramFiles is different depending on the CPU Architecture
+    # https://nsis.sourceforge.io/Reference/$PROGRAMFILES
     # x86 : C:\Program Files
     # x64 : C:\Program Files (x86)
     ${If} $INSTDIR == "$ProgramFiles\Salt Project\Salt\bin\Scripts"
@@ -1088,40 +1064,78 @@ Function ${un}uninstallSalt
       StrCpy $INSTDIR "$ProgramFiles64\Salt Project\Salt"
     ${EndIf}
 
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64  # View 64 bit portion of the registry
-        ${EndIf}
-    ${EndIf}
-
-    # Get Root Directory from the Registry
-    ReadRegStr $RootDir HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
-    SetRegView 32  # Set it back to the 32 bit portion (default)
-
     # Stop and Remove salt-minion service
-    nsExec::Exec 'net stop salt-minion'
-    nsExec::Exec 'sc delete salt-minion'
+    nsExec::Exec "net stop salt-minion"
+    nsExec::Exec "sc delete salt-minion"
 
     # Stop and remove the salt-master service
-    nsExec::Exec 'net stop salt-master'
-    nsExec::Exec 'sc delete salt-master'
+    nsExec::Exec "net stop salt-master"
+    nsExec::Exec "sc delete salt-master"
+
+    # We need to make sure the service is stopped and removed before deleting
+    # any files
+    StrCpy $0 1  # Tries
+    StrCpy $1 1  # Service Present
+    loop:
+        detailPrint "Verifying salt-minion deletion: try $0"
+        nsExec::ExecToStack 'net start | FIND /C /I "salt-minion"'
+        pop $2  # First on the stack is the return code
+        pop $1  # Next on the stack is standard out (service present)
+        ${If} $1 == 1
+            ${If} $0 < 5
+                IntOp $0 $0 + 1
+                Sleep 1000
+                goto loop
+            ${Else}
+                MessageBox MB_OK|MB_ICONEXCLAMATION \
+                    "Failed to remove salt-minion service" \
+                    /SD IDOK
+                Abort
+            ${EndIf}
+        ${EndIf}
 
     # Remove files
     Delete "$INSTDIR\uninst.exe"
-    # TODO: The service needs to be unregistered before removing SSM
     Delete "$INSTDIR\ssm.exe"
     Delete "$INSTDIR\salt*"
     Delete "$INSTDIR\vcredist.exe"
     RMDir /r "$INSTDIR\bin"
 
+    # Remove everything in the 64 bit registry
+
+    # The NSIS installer is a 32bit application and will use the WOW6432Node in
+    # the registry by default. We need to look in the 64 bit location on 64 bit
+    # systems
+    ${If} ${RunningX64}
+        # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+        SetRegView 64  # View the 64 bit portion of the registry
+
+        # Get Root Directory from the Registry (64 bit)
+        ReadRegStr $RootDir HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
+
+        # Remove Registry entries
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+
+        # Remove Command Line Registry entries
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CALL_REGKEY}"
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CP_REGKEY}"
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_KEY_REGKEY}"
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MASTER_REGKEY}"
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MINION_REGKEY}"
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_RUN_REGKEY}"
+        DeleteRegKey HKLM "SOFTWARE\Salt Project"
+    ${EndIf}
+
+    # Remove everything in the 32 bit registry
+    SetRegView 32  # Set it to 32 bit
+
+    ${If} $RootDir == ""
+        # Get Root Directory from the Registry (32 bit)
+        ReadRegStr $RootDir HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
+    ${EndIf}
+
     # Remove Registry entries
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
-    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY_OTHER}"
 
     # Remove Command Line Registry entries
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CALL_REGKEY}"
@@ -1130,20 +1144,7 @@ Function ${un}uninstallSalt
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MASTER_REGKEY}"
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MINION_REGKEY}"
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_RUN_REGKEY}"
-
-    # Remove Salt Configuration Registry entries
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64  # View 64 bit portion of the registry
-        ${EndIf}
-    ${EndIf}
     DeleteRegKey HKLM "SOFTWARE\Salt Project"
-    SetRegView 32  # Set it back to the 32 bit portion (default)
 
     # SystemDrive is not a built in NSIS constant, so we need to get it from
     # the environment variables
@@ -1201,11 +1202,20 @@ Function ${un}uninstallSalt
             RMDir /r $0
         ${EndIf}
 
+        # If RootDir is still empty, use C:\salt
+        ${If} $RootDir == ""
+            StrCpy $RootDir "C:\salt"
+        ${EndIf}
+
+        # Expand any environment variables
+        ExpandEnvStrings $RootDir $RootDir
+
         # Prompt for the removal of the Root Directory which contains the config
         # and pki directories
         ${IfNot} $DeleteRootDir == 1
             MessageBox MB_YESNO|MB_DEFBUTTON2|MB_USERICON \
-                "Would you like to completely remove the Root Directory ($RootDir) and all of its contents?" \
+                "Would you like to completely remove the Root Directory \
+                ($RootDir) and all of its contents?" \
                 /SD IDNO IDNO finished
         ${EndIf}
 
@@ -1241,16 +1251,6 @@ FunctionEnd
 ###############################################################################
 # Helper Functions
 ###############################################################################
-Function MsiQueryProductState
-    # Used for detecting VCRedist Installation
-    !define INSTALLSTATE_DEFAULT "5"
-
-    StrCpy $NeedVcRedist "False"
-    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
-    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
-    StrCpy $NeedVcRedist "True"
-
-FunctionEnd
 
 #------------------------------------------------------------------------------
 # Trim Function
@@ -1464,6 +1464,88 @@ FunctionEnd
 ###############################################################################
 # Specialty Functions
 ###############################################################################
+
+Function getExistingInstallation
+    # Try to detect an existing installation. There are three possible scenarios
+    # 1. Existing New Method Installation
+    # 2. Existing Old Method Installation
+    # 3. New Installation
+    # The results of this function will determine if the user is allowed to set
+    # the install location in the GUI. If there is an existing installation
+    # present, the location picker will be grayed out
+    # This function also sets the RootDir and INSTDIR variables used by the
+    # installer.
+
+    # Reset ExistingInstallation
+    StrCpy $ExistingInstallation 0
+
+    # Get ProgramFiles
+    # Use RunningX64 here to get the Architecture for the system running the
+    # installer.
+    # There are 3 scenarios here:
+    ${If} ${RunningX64}
+        StrCpy $INSTDIR "$ProgramFiles64\Salt Project\Salt"
+    ${Else}
+        # 32 bit Salt on 32 bit system (C:\Program Files)
+        StrCpy $INSTDIR "$ProgramFiles\Salt Project\Salt"
+    ${EndIf}
+
+    # This makes the $APPDATA variable point to the ProgramData folder instead
+    # of the current user's roaming AppData folder
+    SetShellVarContext all
+
+    # Set default location of for salt config
+    StrCpy $RootDir "$APPDATA\Salt Project\Salt"
+
+    # The NSIS installer is a 32bit application and will use the WOW6432Node in
+    # the registry by default. We need to look in the 64 bit location on 64 bit
+    # systems
+    ${If} ${RunningX64}
+        # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+        SetRegView 64  # View the 64 bit portion of the registry
+    ${EndIf}
+
+    # Check for existing new method installation from registry
+    # Look for `install_dir` in HKLM\SOFTWARE\Salt Project\Salt
+    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
+    StrCmp $R0 "" checkOldInstallation
+    StrCpy $ExistingInstallation 1
+
+    # Set INSTDIR to the location in the registry
+    StrCpy $INSTDIR $R0
+    # Expand any environment variables it contains
+    ExpandEnvStrings $INSTDIR $INSTDIR
+
+    # Set RootDir, if defined
+    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
+    StrCmp $R0 "" finished
+    StrCpy $RootDir $R0
+    # Expand any environment variables it contains
+    ExpandEnvStrings $RootDir $RootDir
+    Goto finished
+
+    # Check for existing old method installation
+    # Look for `python.exe` in C:\salt\bin
+    checkOldInstallation:
+        IfFileExists "C:\salt\bin\python.exe" 0 newInstallation
+        StrCpy $ExistingInstallation 1
+        StrCpy $INSTDIR "C:\salt"
+        StrCpy $RootDir "C:\salt"
+        Goto finished
+
+    # This is a new installation
+    # Check if custom location was passed via command line
+    newInstallation:
+        ${IfNot} $CustomLocation == ""
+            StrCpy $INSTDIR $CustomLocation
+        ${EndIf}
+
+    finished:
+        SetRegView 32  # View the 32 bit portion of the registry
+
+FunctionEnd
+
+
 Function getExistingMinionConfig
 
     # Set Config Found Default Value
@@ -1472,6 +1554,7 @@ Function getExistingMinionConfig
     # Find config, should be in $RootDir\conf\minion
     # Root dir is usually ProgramData\Salt Project\Salt\conf though it may be
     # C:\salt\conf if Salt was installed the old way
+
     IfFileExists "$RootDir\conf\minion" check_owner
     IfFileExists "C:\salt\conf\minion" old_location confNotFound
 
@@ -1517,10 +1600,11 @@ Function getExistingMinionConfig
         # Check for valid SIDs
         StrCmp $0 "S-1-5-32-544" correct_owner  # Administrators Group (NullSoft)
         StrCmp $0 "S-1-5-18" correct_owner      # Local System (MSI)
-        MessageBox MB_YESNO "Insecure config found at $RootDir\conf. If you \
-            continue, the config directory will be renamed to \
-            $RootDir\conf.insecure and the default config will be used. \
-            Continue?" /SD IDYES IDYES insecure_config
+        MessageBox MB_YESNO \
+                "Insecure config found at $RootDir\conf. If you continue, the \
+                config directory will be renamed to $RootDir\conf.insecure \
+                and the default config will be used. Continue?" \
+                /SD IDYES IDYES insecure_config
             Abort
 
     insecure_config:
@@ -1719,44 +1803,44 @@ Function un.parseUninstallerCommandLineSwitches
     ${GetOptions} $R0 "/?" $R1
     IfErrors display_un_help_not_found
 
-        # Using a message box here
-        # I couldn't get the console output to work with the uninstaller
-        MessageBox MB_OK "\
-            Help for Salt Minion Uninstallation\
-            $\n\
-            $\n==============================================\
-            $\n\
-            $\n/delete-install-dir$\tDelete the installation directory that contains the\
-            $\n$\t$\tconfig and pki directories. Default is to not delete\
-            $\n$\t$\tthe installation directory\
-            $\n\
-            $\n$\t$\tThis applies to old method installations where\
-            $\n$\t$\tthe root directory and the installation directory\
-            $\n$\t$\tare the same (C:\salt)\
-            $\n\
-            $\n/delete-root-dir$\tDelete the root directory that contains the config\
-            $\n$\t$\tand pki directories. Default is to not delete the root\
-            $\n$\t$\tdirectory\
-            $\n\
-            $\n$\t$\tThis applies to new method installations where the\
-            $\n$\t$\troot directory is in ProgramData and the installation\
-            $\n$\t$\tdirectory is user defined, usually Program Files\
-            $\n\
-            $\n/S$\t$\tUninstall Salt silently\
-            $\n\
-            $\n/?$\t$\tDisplay this help screen\
-            $\n\
-            $\n--------------------------------------------------------------------------------------------\
-            $\n\
-            $\nExamples:\
-            $\n\
-            $\n$\tuninst.exe /S\
-            $\n\
-            $\n$\tuninst.exe /S /delete-root-dir\
-            $\n\
-            $\n=============================================="
+    # Using a message box here
+    # I couldn't get the console output to work with the uninstaller
+    MessageBox MB_OK \
+        "Help for Salt Minion Uninstallation\
+        $\n\
+        $\n==============================================\
+        $\n\
+        $\n/delete-install-dir$\tDelete the installation directory that contains the\
+        $\n$\t$\tconfig and pki directories. Default is to not delete\
+        $\n$\t$\tthe installation directory\
+        $\n\
+        $\n$\t$\tThis applies to old method installations where\
+        $\n$\t$\tthe root directory and the installation directory\
+        $\n$\t$\tare the same (C:\salt)\
+        $\n\
+        $\n/delete-root-dir$\tDelete the root directory that contains the config\
+        $\n$\t$\tand pki directories. Default is to not delete the root\
+        $\n$\t$\tdirectory\
+        $\n\
+        $\n$\t$\tThis applies to new method installations where the\
+        $\n$\t$\troot directory is in ProgramData and the installation\
+        $\n$\t$\tdirectory is user defined, usually Program Files\
+        $\n\
+        $\n/S$\t$\tUninstall Salt silently\
+        $\n\
+        $\n/?$\t$\tDisplay this help screen\
+        $\n\
+        $\n--------------------------------------------------------------------------------------------\
+        $\n\
+        $\nExamples:\
+        $\n\
+        $\n$\tuninst.exe /S\
+        $\n\
+        $\n$\tuninst.exe /S /delete-root-dir\
+        $\n\
+        $\n=============================================="
 
-            Abort
+        Abort
 
     display_un_help_not_found:
 
@@ -1767,14 +1851,14 @@ Function un.parseUninstallerCommandLineSwitches
     ClearErrors
     ${GetOptions} $R0 "/delete-install-dir" $R1
     IfErrors delete_install_dir_not_found
-        StrCpy $DeleteInstallDir 1
+    StrCpy $DeleteInstallDir 1
     delete_install_dir_not_found:
 
     # Uninstaller: Remove Root Directory
     ClearErrors
     ${GetOptions} $R0 "/delete-root-dir" $R1
     IfErrors delete_root_dir_not_found
-        StrCpy $DeleteRootDir 1
+    StrCpy $DeleteRootDir 1
     delete_root_dir_not_found:
 
 FunctionEnd
@@ -1790,85 +1874,85 @@ Function parseInstallerCommandLineSwitches
     ${GetOptions} $R0 "/?" $R1
     IfErrors display_help_not_found
 
+    System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+    System::Call 'kernel32::AttachConsole(i -1)i.r1'
+    ${If} $0 = 0
+    ${OrIf} $1 = 0
+        System::Call 'kernel32::AllocConsole()'
         System::Call 'kernel32::GetStdHandle(i -11)i.r0'
-        System::Call 'kernel32::AttachConsole(i -1)i.r1'
-        ${If} $0 = 0
-        ${OrIf} $1 = 0
-            System::Call 'kernel32::AllocConsole()'
-            System::Call 'kernel32::GetStdHandle(i -11)i.r0'
-        ${EndIf}
-        FileWrite $0 "$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "Help for Salt Minion installation$\n"
-        FileWrite $0 "===============================================================================$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/minion-name=$\t$\tA string value to set the minion name. Default value is$\n"
-        FileWrite $0 "$\t$\t$\t'hostname'. Setting the minion name causes the installer$\n"
-        FileWrite $0 "$\t$\t$\tto use the default config or a custom config if defined$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/master=$\t$\tA string value to set the IP address or hostname of the$\n"
-        FileWrite $0 "$\t$\t$\tmaster. Default value is 'salt'. You may pass a single$\n"
-        FileWrite $0 "$\t$\t$\tmaster or a comma-separated list of masters. Setting$\n"
-        FileWrite $0 "$\t$\t$\tthe master will cause the installer to use the default$\n"
-        FileWrite $0 "$\t$\t$\tconfig or a custom config if defined$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/start-minion=$\t$\t1 will start the minion service, 0 will not.$\n"
-        FileWrite $0 "$\t$\t$\tDefault is 1$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/start-minion-delayed$\tSet the minion start type to 'Automatic (Delayed Start)'$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/default-config$\t$\tOverwrite the existing config if present with the$\n"
-        FileWrite $0 "$\t$\t$\tdefault config for salt. Default is to use the existing$\n"
-        FileWrite $0 "$\t$\t$\tconfig if present. If /master and/or /minion-name is$\n"
-        FileWrite $0 "$\t$\t$\tpassed, those values will be used to update the new$\n"
-        FileWrite $0 "$\t$\t$\tdefault config$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
-        FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
-        FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/custom-config=$\t$\tA string value specifying the name of a custom config$\n"
-        FileWrite $0 "$\t$\t$\tfile in the same path as the installer or the full path$\n"
-        FileWrite $0 "$\t$\t$\tto a custom config file. If /master and/or /minion-name$\n"
-        FileWrite $0 "$\t$\t$\tis passed, those values will be used to update the new$\n"
-        FileWrite $0 "$\t$\t$\tcustom config$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
-        FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
-        FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/install-dir=$\t$\tSpecify the installation location for the Salt binaries.$\n"
-        FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/S$\t$\t$\tInstall Salt silently$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "/?$\t$\t$\tDisplay this help screen$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "-------------------------------------------------------------------------------$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "Examples:$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "$\t$EXEFILE /S$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "$\t$EXEFILE /S /minion-name=myminion /master=master.mydomain.com /start-minion-delayed$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "$\t$EXEFILE /S /minion-name=myminion /master=master.mydomain.com /install-dir=$\"C:\Software\salt$\"$\n"
-        FileWrite $0 "$\n"
-        FileWrite $0 "===============================================================================$\n"
-        FileWrite $0 "$\n"
-        System::Free $0
-        System::Free $1
-        System::Call 'kernel32::FreeConsole()'
+    ${EndIf}
+    FileWrite $0 "$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "Help for Salt Minion installation$\n"
+    FileWrite $0 "===============================================================================$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/minion-name=$\t$\tA string value to set the minion name. Default value is$\n"
+    FileWrite $0 "$\t$\t$\t'hostname'. Setting the minion name causes the installer$\n"
+    FileWrite $0 "$\t$\t$\tto use the default config or a custom config if defined$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/master=$\t$\tA string value to set the IP address or hostname of the$\n"
+    FileWrite $0 "$\t$\t$\tmaster. Default value is 'salt'. You may pass a single$\n"
+    FileWrite $0 "$\t$\t$\tmaster or a comma-separated list of masters. Setting$\n"
+    FileWrite $0 "$\t$\t$\tthe master will cause the installer to use the default$\n"
+    FileWrite $0 "$\t$\t$\tconfig or a custom config if defined$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/start-minion=$\t$\t1 will start the minion service, 0 will not.$\n"
+    FileWrite $0 "$\t$\t$\tDefault is 1$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/start-minion-delayed$\tSet the minion start type to 'Automatic (Delayed Start)'$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/default-config$\t$\tOverwrite the existing config if present with the$\n"
+    FileWrite $0 "$\t$\t$\tdefault config for salt. Default is to use the existing$\n"
+    FileWrite $0 "$\t$\t$\tconfig if present. If /master and/or /minion-name is$\n"
+    FileWrite $0 "$\t$\t$\tpassed, those values will be used to update the new$\n"
+    FileWrite $0 "$\t$\t$\tdefault config$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
+    FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
+    FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/custom-config=$\t$\tA string value specifying the name of a custom config$\n"
+    FileWrite $0 "$\t$\t$\tfile in the same path as the installer or the full path$\n"
+    FileWrite $0 "$\t$\t$\tto a custom config file. If /master and/or /minion-name$\n"
+    FileWrite $0 "$\t$\t$\tis passed, those values will be used to update the new$\n"
+    FileWrite $0 "$\t$\t$\tcustom config$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
+    FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
+    FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/install-dir=$\t$\tSpecify the installation location for the Salt binaries.$\n"
+    FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/S$\t$\t$\tInstall Salt silently$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "/?$\t$\t$\tDisplay this help screen$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "-------------------------------------------------------------------------------$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "Examples:$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "    $EXEFILE /S$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "    $EXEFILE /S /minion-name=myminion /master=master.mydomain.com /start-minion-delayed$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "    $EXEFILE /S /minion-name=myminion /master=master.mydomain.com /install-dir=$\"C:\Software\salt$\"$\n"
+    FileWrite $0 "$\n"
+    FileWrite $0 "===============================================================================$\n"
+    FileWrite $0 "$\n"
+    System::Free $0
+    System::Free $1
+    System::Call 'kernel32::FreeConsole()'
 
-        # Give the user back the prompt
-        !define VK_RETURN 0x0D ; Enter Key
-        !define KEYEVENTF_EXTENDEDKEY 0x0001
-        !define KEYEVENTF_KEYUP 0x0002
-        System::Call "user32::keybd_event(i${VK_RETURN}, i0x45, i${KEYEVENTF_EXTENDEDKEY}|0, i0)"
-        System::Call "user32::keybd_event(i${VK_RETURN}, i0x45, i${KEYEVENTF_EXTENDEDKEY}|${KEYEVENTF_KEYUP}, i0)"
-        Abort
+    # Give the user back the prompt
+    !define VK_RETURN 0x0D ; Enter Key
+    !define KEYEVENTF_EXTENDEDKEY 0x0001
+    !define KEYEVENTF_KEYUP 0x0002
+    System::Call "user32::keybd_event(i${VK_RETURN}, i0x45, i${KEYEVENTF_EXTENDEDKEY}|0, i0)"
+    System::Call "user32::keybd_event(i${VK_RETURN}, i0x45, i${KEYEVENTF_EXTENDEDKEY}|${KEYEVENTF_KEYUP}, i0)"
+    Abort
 
     display_help_not_found:
 
@@ -1887,7 +1971,9 @@ Function parseInstallerCommandLineSwitches
     ${ElseIfNot} $R1 == ""
         # If start-service was passed something, then set StartMinion to that
         StrCpy $StartMinion $R1
-        MessageBox MB_OK|MB_ICONINFORMATION "`/start-service` is being deprecated. Please use `/start-minion` instead." /SD IDOK
+        MessageBox MB_OK|MB_ICONINFORMATION \
+            "`/start-service` is being deprecated. Please use `/start-minion` \
+            instead." /SD IDOK
     ${Else}
         # Otherwise default to 1
         StrCpy $StartMinion 1
@@ -1897,7 +1983,7 @@ Function parseInstallerCommandLineSwitches
     ClearErrors
     ${GetOptions} $R0 "/start-minion-delayed" $R1
     IfErrors start_minion_delayed_not_found
-        StrCpy $StartMinionDelayed 1
+    StrCpy $StartMinionDelayed 1
     start_minion_delayed_not_found:
 
     # Minion Config: Master IP/Name
@@ -1924,7 +2010,7 @@ Function parseInstallerCommandLineSwitches
     ClearErrors
     ${GetOptions} $R0 "/default-config" $R1
     IfErrors default_config_not_found
-        StrCpy $ConfigType "Default Config"
+    StrCpy $ConfigType "Default Config"
     default_config_not_found:
 
     # Use Custom Config
@@ -1950,7 +2036,7 @@ Function parseInstallerCommandLineSwitches
     ClearErrors
     ${GetOptions} $R0 "/move-config" $R1
     IfErrors move_config_not_found
-        StrCpy $MoveExistingConfig 1
+    StrCpy $MoveExistingConfig 1
     move_config_not_found:
 
 FunctionEnd
