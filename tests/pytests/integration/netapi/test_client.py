@@ -1,7 +1,8 @@
 import pytest
 
 import salt.netapi
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import EauthAuthenticationError, SaltInvocationError
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -30,6 +31,17 @@ def test_local_batch(client, auth_creds, salt_minion, salt_sub_minion):
     assert {salt_sub_minion.id: True} in ret
 
 
+def test_local_batch_disabled(client, auth_creds):
+    low = {"client": "local_batch", "tgt": "*", "fun": "test.ping", **auth_creds}
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_disable_clients": ["local_batch"]}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
+
+
 def test_local_async(client, auth_creds, salt_minion, salt_sub_minion):
     low = {"client": "local_async", "tgt": "*", "fun": "test.ping", **auth_creds}
 
@@ -43,6 +55,34 @@ def test_local_unauthenticated(client):
     low = {"client": "local", "tgt": "*", "fun": "test.ping"}
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
+
+
+def test_local_disabled(client, auth_creds):
+    low = {"client": "local", "tgt": "*", "fun": "test.ping", **auth_creds}
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_disable_clients": ["local"]}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
+
+
+def test_local_subset_disabled(client, auth_creds):
+    low = {
+        "client": "local_subset",
+        "tgt": "*",
+        "fun": "test.ping",
+        "subset": 1,
+        **auth_creds,
+    }
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_disable_clients": ["local_subset"]}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
 
 
 @pytest.mark.slow_test
@@ -76,7 +116,40 @@ def test_wheel_unauthenticated(client):
         client.run(low)
 
 
+def test_wheel_disabled(client, auth_creds):
+    low = {"client": "wheel", "tgt": "*", "fun": "test.ping", **auth_creds}
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_disable_clients": ["wheel"]}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
+
+
+def test_wheel_async_disabled(client, auth_creds):
+    low = {"client": "wheel_async", "tgt": "*", "fun": "test.ping", **auth_creds}
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_disable_clients": ["wheel_async"]}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
+
+
 def test_runner_unauthenticated(client):
     low = {"client": "runner", "tgt": "*", "fun": "test.ping"}
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
+
+
+def test_runner_disabled(client, auth_creds):
+    low = {"client": "runner", "tgt": "*", "fun": "test.ping", **auth_creds}
+
+    ret = None
+    with patch.dict(client.opts, {"netapi_disable_clients": ["runner"]}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
+
+    assert ret is None
