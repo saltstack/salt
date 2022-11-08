@@ -1,0 +1,1 @@
+Fix issue with archive.unzip where the password was not being encoded for the extract function
