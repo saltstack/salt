@@ -10,7 +10,6 @@ def configure_loader_modules():
     return {influx: {"__salt__": {}, "__opts__": {"test": False}}}
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "expected_kwargs",
     (
