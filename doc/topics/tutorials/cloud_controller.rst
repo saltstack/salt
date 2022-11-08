@@ -4,11 +4,11 @@
 Salt as a Cloud Controller
 ==========================
 
-In Salt 0.14.0, an advanced cloud control system were introduced, allow
-private cloud vms to be managed directly with Salt. This system is generally
+In Salt 0.14.0, an advanced cloud control system was introduced, allowing
+private cloud VMs to be managed directly with Salt. This system is generally
 referred to as :strong:`Salt Virt`.
 
-The Salt Virt system already exists and is installed within Salt itself, this
+The Salt Virt system already exists and is installed within Salt itself. This
 means that besides setting up Salt, no additional salt code needs to be
 deployed.
 
@@ -16,11 +16,10 @@ deployed.
 
     The ``libvirt`` python module and the ``certtool`` binary are required.
 
-The main goal of Salt Virt is to facilitate a very fast and simple cloud. The
-cloud that can scale and is fully featured. Salt Virt comes with the
-ability to set up and manage complex virtual machine networking, powerful
-image and disk management, as well as virtual machine migration with and without
-shared storage.
+The main goal of Salt Virt is to facilitate a very fast and simple cloud that
+can scale and is fully featured. Salt Virt comes with the ability to set up and
+manage complex virtual machine networking, powerful image and disk management,
+and virtual machine migration with and without shared storage.
 
 This means that Salt Virt can be used to create a cloud from a blade center
 and a SAN, but can also create a cloud out of a swarm of Linux Desktops
@@ -37,24 +36,24 @@ installed and setting up the hypervisor network interfaces.
 Installing Hypervisor Software
 ------------------------------
 
-Salt Virt is made to be hypervisor agnostic but currently the only fully
+Salt Virt is made to be hypervisor agnostic but currently, the only fully
 implemented hypervisor is KVM via libvirt.
 
 The required software for a hypervisor is libvirt and kvm. For advanced
-features install libguestfs or qemu-nbd.
+features, install libguestfs or qemu-nbd.
 
 .. note::
 
     Libguestfs and qemu-nbd allow for virtual machine images to be mounted
-    before startup and get pre-seeded with configurations and a salt minion
+    before startup and get pre-seeded with configurations and a salt minion.
 
 This sls will set up the needed software for a hypervisor, and run the routines
 to set up the libvirt pki keys.
 
 .. note::
 
-    Package names and setup used is Red Hat specific, different package names
-    will be required for different platforms
+    Package names and setup used is Red Hat specific. Different package names
+    will be required for different platforms.
 
 .. code-block:: yaml
 
@@ -90,7 +89,7 @@ Hypervisor Network Setup
 ------------------------
 
 The hypervisors will need to be running a network bridge to serve up network
-devices for virtual machines, this formula will set up a standard bridge on
+devices for virtual machines. This formula will set up a standard bridge on
 a hypervisor connecting the bridge to eth0:
 
 .. code-block:: yaml
@@ -114,7 +113,7 @@ Virtual Machine Network Setup
 -----------------------------
 
 Salt Virt comes with a system to model the network interfaces used by the
-deployed virtual machines; by default a single interface is created for the
+deployed virtual machines. By default, a single interface is created for the
 deployed virtual machine and is bridged to ``br0``. To get going with the
 default networking setup, ensure that the bridge interface named ``br0`` exists
 on the hypervisor and is bridged to an active network device.
@@ -133,7 +132,7 @@ One of the challenges of deploying a libvirt based cloud is the distribution
 of libvirt certificates. These certificates allow for virtual machine
 migration. Salt comes with a system used to auto deploy these certificates.
 Salt manages the signing authority key and generates keys for libvirt clients
-on the master, signs them with the certificate authority and uses pillar to
+on the master, signs them with the certificate authority, and uses pillar to
 distribute them. This is managed via the ``libvirt`` state. Simply execute this
 formula on the minion to ensure that the certificate is in place and up to
 date:
@@ -150,7 +149,7 @@ date:
 Getting Virtual Machine Images Ready
 ====================================
 
-Salt Virt, requires that virtual machine images be provided as these are not
+Salt Virt requires that virtual machine images be provided as these are not
 generated on the fly. Generating these virtual machine images differs greatly
 based on the underlying platform.
 
@@ -223,17 +222,16 @@ Start by running a Salt Virt hypervisor info command:
     salt-run virt.host_info
 
 This will query the running hypervisor(s) for stats and display useful
-information such as the number of cpus and amount of memory.
+information such as the number of CPUs and amount of memory.
 
-You can also list all VMs and their current states on all hypervisor
-nodes:
+You can also list all VMs and their current states on all hypervisor nodes:
 
 .. code-block:: bash
 
     salt-run virt.list
 
-Now that hypervisors are available a virtual machine can be provisioned.
-The ``virt.init`` routine will create a new virtual machine:
+Now that hypervisors are available a virtual machine can be provisioned, the
+``virt.init`` routine will create a new virtual machine:
 
 .. code-block:: bash
 
@@ -242,14 +240,15 @@ The ``virt.init`` routine will create a new virtual machine:
 The Salt Virt runner will now automatically select a hypervisor to deploy
 the new virtual machine on. Using ``salt://`` assumes that the CentOS virtual
 machine image is located in the root of the :ref:`file-server` on the master.
-When images are cloned (i.e. copied locatlly after retrieval from the file server)
-the destination directory on the hypervisor minion is determined by the ``virt:images``
-config option; by default this is ``/srv/salt-images/``.
+When images are cloned (i.e. copied locally after retrieval from the file
+server), the destination directory on the hypervisor minion is determined by the
+``virt:images`` config option; by default this is ``/srv/salt-images/``.
 
-When a VM is initialized using ``virt.init`` the image is copied to the hypervisor
-using ``cp.cache_file`` and will be mounted and seeded with a minion. Seeding includes
-setting pre-authenticated keys on the new machine. A minion will only be installed if
-one can not be found on the image using the default arguments to ``seed.apply``.
+When a VM is initialized using ``virt.init``, the image is copied to the
+hypervisor using ``cp.cache_file`` and will be mounted and seeded with a minion.
+Seeding includes setting pre-authenticated keys on the new machine. A minion
+will only be installed if one can not be found on the image using the default
+arguments to ``seed.apply``.
 
 .. note::
 
@@ -258,7 +257,8 @@ one can not be found on the image using the default arguments to ``seed.apply``.
     installed will GREATLY speed up virtual machine deployment.
 
 You can also deploy an image on a particular minion by directly calling the
-`virt` execution module with an absolute image path. This can be quite handy for testing:
+``virt`` execution module with an absolute image path. This can be quite handy for
+testing:
 
 .. code-block:: bash
 
@@ -274,14 +274,14 @@ command:
 This command will return data about all of the hypervisors and respective
 virtual machines.
 
-Now that the new VM is booted it should have contacted the Salt Master, a
-``test.version`` will reveal if the new VM is running.
+Now that the new VM is booted, it should have contacted the Salt Master. A
+``test.ping`` will reveal if the new VM is running.
 
 
-QEMU copy on write support
+QEMU Copy on Write Support
 ==========================
 
-For fast image cloning you can use the `qcow`_ disk image format.
+For fast image cloning, you can use the `qcow`_ disk image format.
 Pass the ``enable_qcow`` flag and a `.qcow2` image path to `virt.init`:
 
 .. code-block:: bash
@@ -291,7 +291,7 @@ Pass the ``enable_qcow`` flag and a `.qcow2` image path to `virt.init`:
 .. note::
     Beware that attempting to boot a qcow image too quickly after cloning
     can result in a race condition where libvirt may try to boot the machine
-    before image seeding has completed. For that reason it is recommended to
+    before image seeding has completed. For that reason, it is recommended to
     also pass ``start=False`` to ``virt.init``.
 
     Also know that you **must not** modify the original base image without
@@ -301,13 +301,13 @@ Pass the ``enable_qcow`` flag and a `.qcow2` image path to `virt.init`:
 Migrating Virtual Machines
 ==========================
 
-Salt Virt comes with full support for virtual machine migration, and using
+Salt Virt comes with full support for virtual machine migration. Using
 the libvirt state in the above formula makes migration possible.
 
 A few things need to be available to support migration. Many operating systems
-turn on firewalls when originally set up, the firewall needs to be opened up
+turn on firewalls when originally set up; the firewall needs to be opened up
 to allow for libvirt and kvm to cross communicate and execution migration
-routines. On Red Hat based hypervisors in particular port 16514 needs to be
+routines. On Red Hat based hypervisors in particular, port 16514 needs to be
 opened on hypervisors:
 
 .. code-block:: bash
@@ -316,16 +316,16 @@ opened on hypervisors:
 
 .. note::
 
-    More in-depth information regarding distribution specific firewall settings can read in:
+    More in-depth information regarding distribution specific firewall settings can be found in:
 
     :ref:`Opening the Firewall up for Salt <firewall>`
 
-Salt also needs the ``virt:tunnel`` option to be turned on.
-This flag tells Salt to run migrations securely via the libvirt TLS tunnel and to
-use port 16514. Without ``virt:tunnel`` libvirt tries to bind to random ports when
-running migrations.
+Salt also needs the ``virt:tunnel`` option to be turned on. This flag tells Salt
+to run migrations securely via the libvirt TLS tunnel and to use port 16514.
+Without ``virt:tunnel``, libvirt tries to bind to random ports when running
+migrations.
 
-To turn on ``virt:tunnel`` simply apply it to the master config file:
+To turn on ``virt:tunnel``, simply apply it to the master config file:
 
 .. code-block:: yaml
 
@@ -342,18 +342,20 @@ to the minions to refresh the pillar to pick up on the change:
 Now, migration routines can be run! To migrate a VM, simply run the Salt Virt
 migrate routine:
 
-.. code-block:: bash
+.. code-block:: console
 
     salt-run virt.migrate centos <new hypervisor>
 
 VNC Consoles
 ============
 
-Although not enabled by default, Salt Virt can also set up VNC consoles allowing for remote visual
-consoles to be opened up. When creating a new VM using ``virt.init`` pass the ``enable_vnc=True``
-parameter to have a console configured for the new VM.
+Although not enabled by default, Salt Virt can also set up VNC consoles allowing
+for remote visual consoles to be opened up. When creating a new VM using
+``virt.init``, pass the ``enable_vnc=True`` parameter to have a console
+configured for the new VM.
 
-The information from a ``virt.query`` routine will display the vnc console port for the specific vms:
+The information from a ``virt.query`` routine will display the VNC console port
+for the specific VMs:
 
 .. code-block:: yaml
 
@@ -381,8 +383,8 @@ Once the port is open, then the console can be easily opened via vncviewer:
 By default there is no VNC security set up on these ports, which suggests that
 keeping them firewalled and mandating that SSH tunnels be used to access these
 VNC interfaces. Keep in mind that activity on a VNC interface that is accessed
-can be viewed by any other user that accesses that same VNC interface, and any other
-user logging in can also operate with the logged in user on the virtual
+can be viewed by any other user that accesses that same VNC interface, and any
+other user logging in can also operate with the logged in user on the virtual
 machine.
 
 Conclusion

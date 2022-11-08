@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 External Nodes Classifier
 =========================
@@ -45,14 +44,17 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import logging
+import shlex
 import subprocess
 
-# Import Salt libs
+import salt.utils.platform
 import salt.utils.yaml
+
+if salt.utils.platform.is_windows():
+    from salt.utils.win_functions import escape_argument as _cmd_quote
+else:
+    _cmd_quote = shlex.quote
 
 log = logging.getLogger(__name__)
 
@@ -72,10 +74,19 @@ def top(**kwargs):
     """
     if "id" not in kwargs["opts"]:
         return {}
-    cmd = "{0} {1}".format(__opts__["master_tops"]["ext_nodes"], kwargs["opts"]["id"])
-    ndata = salt.utils.yaml.safe_load(
-        subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+    proc = subprocess.run(
+        [
+            _cmd_quote(part)
+            for part in shlex.split(
+                __opts__["master_tops"]["ext_nodes"],
+                posix=salt.utils.platform.is_windows() is False,
+            )
+            + [_cmd_quote(kwargs["opts"]["id"])]
+        ],
+        stdout=subprocess.PIPE,
+        check=True,
     )
+    ndata = salt.utils.yaml.safe_load(proc.stdout)
     if not ndata:
         log.info("master_tops ext_nodes call did not return any data")
     ret = {}

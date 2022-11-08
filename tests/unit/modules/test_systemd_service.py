@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 import pytest
 
-# Import Salt Libs
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 _SYSTEMCTL_STATUS = {
@@ -52,12 +46,30 @@ _SYSTEMCTL_STATUS_GTE_231 = {
 }
 
 _LIST_UNIT_FILES = """\
-service1.service                           enabled
-service2.service                           disabled
-service3.service                           static
-timer1.timer                               enabled
-timer2.timer                               disabled
-timer3.timer                               static"""
+service1.service                           enabled              -
+service2.service                           disabled             -
+service3.service                           static               -
+timer1.timer                               enabled              -
+timer2.timer                               disabled             -
+timer3.timer                               static               -
+service4.service                           enabled              enabled
+service5.service                           disabled             enabled
+service6.service                           static               enabled
+timer4.timer                               enabled              enabled
+timer5.timer                               disabled             enabled
+timer6.timer                               static               enabled
+service7.service                           enabled              disabled
+service8.service                           disabled             disabled
+service9.service                           static               disabled
+timer7.timer                               enabled              disabled
+timer8.timer                               disabled             disabled
+timer9.timer                               static               disabled
+service10.service                          enabled
+service11.service                          disabled
+service12.service                          static
+timer10.timer                              enabled
+timer11.timer                              disabled
+timer12.timer                              static"""
 
 
 class SystemdTestCase(TestCase, LoaderModuleMockMixin):
@@ -70,7 +82,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_systemctl_reload(self):
         """
-            Test to Reloads systemctl
+        Test to Reloads systemctl
         """
         mock = MagicMock(
             side_effect=[
@@ -93,7 +105,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         cmd_mock = MagicMock(return_value=_LIST_UNIT_FILES)
         listdir_mock = MagicMock(return_value=["foo", "bar", "baz", "README"])
         sd_mock = MagicMock(
-            return_value=set([x.replace(".service", "") for x in _SYSTEMCTL_STATUS])
+            return_value={x.replace(".service", "") for x in _SYSTEMCTL_STATUS}
         )
         access_mock = MagicMock(
             side_effect=lambda x, y: x
@@ -108,7 +120,17 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
                             self.assertListEqual(
                                 systemd.get_enabled(),
-                                ["baz", "service1", "timer1.timer"],
+                                [
+                                    "baz",
+                                    "service1",
+                                    "service10",
+                                    "service4",
+                                    "service7",
+                                    "timer1.timer",
+                                    "timer10.timer",
+                                    "timer4.timer",
+                                    "timer7.timer",
+                                ],
                             )
 
     def test_get_disabled(self):
@@ -124,7 +146,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         # only 'baz' will be considered an enabled sysv service).
         listdir_mock = MagicMock(return_value=["foo", "bar", "baz", "README"])
         sd_mock = MagicMock(
-            return_value=set([x.replace(".service", "") for x in _SYSTEMCTL_STATUS])
+            return_value={x.replace(".service", "") for x in _SYSTEMCTL_STATUS}
         )
         access_mock = MagicMock(
             side_effect=lambda x, y: x
@@ -139,7 +161,57 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
                             self.assertListEqual(
                                 systemd.get_disabled(),
-                                ["bar", "service2", "timer2.timer"],
+                                [
+                                    "bar",
+                                    "service11",
+                                    "service2",
+                                    "service5",
+                                    "service8",
+                                    "timer11.timer",
+                                    "timer2.timer",
+                                    "timer5.timer",
+                                    "timer8.timer",
+                                ],
+                            )
+
+    def test_get_static(self):
+        """
+        Test to return a list of all disabled services
+        """
+        cmd_mock = MagicMock(return_value=_LIST_UNIT_FILES)
+        # 'foo' should collide with the systemd services (as returned by
+        # sd_mock) and thus not be returned by _get_sysv_services(). It doesn't
+        # matter that it's not part of the _LIST_UNIT_FILES output, we just
+        # want to ensure that 'foo' isn't identified as a disabled initscript
+        # even though below we are mocking it to show as not enabled (since
+        # only 'baz' will be considered an enabled sysv service).
+        listdir_mock = MagicMock(return_value=["foo", "bar", "baz", "README"])
+        sd_mock = MagicMock(
+            return_value={x.replace(".service", "") for x in _SYSTEMCTL_STATUS}
+        )
+        access_mock = MagicMock(
+            side_effect=lambda x, y: x
+            != os.path.join(systemd.INITSCRIPT_PATH, "README")
+        )
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == "baz")
+
+        with patch.dict(systemd.__salt__, {"cmd.run": cmd_mock}):
+            with patch.object(os, "listdir", listdir_mock):
+                with patch.object(systemd, "_get_systemd_services", sd_mock):
+                    with patch.object(os, "access", side_effect=access_mock):
+                        with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
+                            self.assertListEqual(
+                                systemd.get_static(),
+                                [
+                                    "service12",
+                                    "service3",
+                                    "service6",
+                                    "service9",
+                                    "timer12.timer",
+                                    "timer3.timer",
+                                    "timer6.timer",
+                                    "timer9.timer",
+                                ],
                             )
 
     def test_get_all(self):
@@ -172,47 +244,59 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
         # systemd < 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 230}):
-            with patch.object(systemd, "_systemctl_status", mock):
+            with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                systemd, "offline", MagicMock(return_value=False)
+            ):
                 self.assertTrue(systemd.available("sshd.service"))
                 self.assertFalse(systemd.available("foo.service"))
 
         # systemd >= 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 231}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertTrue(systemd.available("sshd.service"))
                     self.assertFalse(systemd.available("bar.service"))
 
         # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 219}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertTrue(systemd.available("sshd.service"))
                     self.assertFalse(systemd.available("bar.service"))
 
     def test_missing(self):
         """
-            Test to the inverse of service.available.
+        Test to the inverse of service.available.
         """
         mock = MagicMock(side_effect=lambda x: _SYSTEMCTL_STATUS[x])
 
         # systemd < 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 230}):
-            with patch.object(systemd, "_systemctl_status", mock):
+            with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                systemd, "offline", MagicMock(return_value=False)
+            ):
                 self.assertFalse(systemd.missing("sshd.service"))
                 self.assertTrue(systemd.missing("foo.service"))
 
         # systemd >= 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 231}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertFalse(systemd.missing("sshd.service"))
                     self.assertTrue(systemd.missing("bar.service"))
 
         # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 219}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertFalse(systemd.missing("sshd.service"))
                     self.assertTrue(systemd.missing("bar.service"))
 
@@ -247,8 +331,8 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
 class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test case for salt.modules.systemd, for functions which use systemd
-        scopes
+    Test case for salt.modules.systemd, for functions which use systemd
+    scopes
     """
 
     def setup_loader_modules(self):
@@ -277,116 +361,72 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
         func = getattr(systemd, action)
         # Remove trailing _ in "reload_"
         action = action.rstrip("_").replace("_", "-")
-        systemctl_command = ["systemctl"]
+        systemctl_command = ["/bin/systemctl"]
         if no_block:
             systemctl_command.append("--no-block")
         systemctl_command.extend([action, self.unit_name + ".service"])
-        scope_prefix = ["systemd-run", "--scope"]
+        scope_prefix = ["/bin/systemd-run", "--scope"]
 
         assert_kwargs = {"python_shell": False}
         if action in ("enable", "disable"):
             assert_kwargs["ignore_retcode"] = True
 
-        with patch.object(systemd, "_check_for_unit_changes", self.mock_none):
-            with patch.object(systemd, "_unit_file_changed", self.mock_none):
-                with patch.object(systemd, "_check_unmask", self.mock_none):
-                    with patch.object(
-                        systemd, "_get_sysv_services", self.mock_empty_list
-                    ):
-
-                        # Has scopes available
+        with patch("salt.utils.path.which", lambda x: "/bin/" + x):
+            with patch.object(systemd, "_check_for_unit_changes", self.mock_none):
+                with patch.object(systemd, "_unit_file_changed", self.mock_none):
+                    with patch.object(systemd, "_check_unmask", self.mock_none):
                         with patch.object(
-                            salt.utils.systemd, "has_scope", self.mock_true
+                            systemd, "_get_sysv_services", self.mock_empty_list
                         ):
 
-                            # Scope enabled, successful
-                            with patch.dict(
-                                systemd.__salt__,
-                                {
-                                    "config.get": self.mock_true,
-                                    "cmd.run_all": self.mock_run_all_success,
-                                },
+                            # Has scopes available
+                            with patch.object(
+                                salt.utils.systemd, "has_scope", self.mock_true
                             ):
-                                ret = func(self.unit_name, no_block=no_block)
-                                self.assertTrue(ret)
-                                self.mock_run_all_success.assert_called_with(
-                                    scope_prefix + systemctl_command, **assert_kwargs
-                                )
 
-                            # Scope enabled, failed
-                            with patch.dict(
-                                systemd.__salt__,
-                                {
-                                    "config.get": self.mock_true,
-                                    "cmd.run_all": self.mock_run_all_failure,
-                                },
-                            ):
-                                if action in ("stop", "disable"):
-                                    ret = func(self.unit_name, no_block=no_block)
-                                    self.assertFalse(ret)
-                                else:
-                                    self.assertRaises(
-                                        CommandExecutionError,
-                                        func,
-                                        self.unit_name,
-                                        no_block=no_block,
-                                    )
-                                self.mock_run_all_failure.assert_called_with(
-                                    scope_prefix + systemctl_command, **assert_kwargs
-                                )
-
-                            # Scope disabled, successful
-                            with patch.dict(
-                                systemd.__salt__,
-                                {
-                                    "config.get": self.mock_false,
-                                    "cmd.run_all": self.mock_run_all_success,
-                                },
-                            ):
-                                ret = func(self.unit_name, no_block=no_block)
-                                self.assertTrue(ret)
-                                self.mock_run_all_success.assert_called_with(
-                                    systemctl_command, **assert_kwargs
-                                )
-
-                            # Scope disabled, failed
-                            with patch.dict(
-                                systemd.__salt__,
-                                {
-                                    "config.get": self.mock_false,
-                                    "cmd.run_all": self.mock_run_all_failure,
-                                },
-                            ):
-                                if action in ("stop", "disable"):
-                                    ret = func(self.unit_name, no_block=no_block)
-                                    self.assertFalse(ret)
-                                else:
-                                    self.assertRaises(
-                                        CommandExecutionError,
-                                        func,
-                                        self.unit_name,
-                                        no_block=no_block,
-                                    )
-                                self.mock_run_all_failure.assert_called_with(
-                                    systemctl_command, **assert_kwargs
-                                )
-
-                        # Does not have scopes available
-                        with patch.object(
-                            salt.utils.systemd, "has_scope", self.mock_false
-                        ):
-
-                            # The results should be the same irrespective of
-                            # whether or not scope is enabled, since scope is not
-                            # available, so we repeat the below tests with it both
-                            # enabled and disabled.
-                            for scope_mock in (self.mock_true, self.mock_false):
-
-                                # Successful
+                                # Scope enabled, successful
                                 with patch.dict(
                                     systemd.__salt__,
                                     {
-                                        "config.get": scope_mock,
+                                        "config.get": self.mock_true,
+                                        "cmd.run_all": self.mock_run_all_success,
+                                    },
+                                ):
+                                    ret = func(self.unit_name, no_block=no_block)
+                                    self.assertTrue(ret)
+                                    self.mock_run_all_success.assert_called_with(
+                                        scope_prefix + systemctl_command,
+                                        **assert_kwargs
+                                    )
+
+                                # Scope enabled, failed
+                                with patch.dict(
+                                    systemd.__salt__,
+                                    {
+                                        "config.get": self.mock_true,
+                                        "cmd.run_all": self.mock_run_all_failure,
+                                    },
+                                ):
+                                    if action in ("stop", "disable"):
+                                        ret = func(self.unit_name, no_block=no_block)
+                                        self.assertFalse(ret)
+                                    else:
+                                        self.assertRaises(
+                                            CommandExecutionError,
+                                            func,
+                                            self.unit_name,
+                                            no_block=no_block,
+                                        )
+                                    self.mock_run_all_failure.assert_called_with(
+                                        scope_prefix + systemctl_command,
+                                        **assert_kwargs
+                                    )
+
+                                # Scope disabled, successful
+                                with patch.dict(
+                                    systemd.__salt__,
+                                    {
+                                        "config.get": self.mock_false,
                                         "cmd.run_all": self.mock_run_all_success,
                                     },
                                 ):
@@ -396,11 +436,11 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                         systemctl_command, **assert_kwargs
                                     )
 
-                                # Failed
+                                # Scope disabled, failed
                                 with patch.dict(
                                     systemd.__salt__,
                                     {
-                                        "config.get": scope_mock,
+                                        "config.get": self.mock_false,
                                         "cmd.run_all": self.mock_run_all_failure,
                                     },
                                 ):
@@ -418,6 +458,55 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                         systemctl_command, **assert_kwargs
                                     )
 
+                            # Does not have scopes available
+                            with patch.object(
+                                salt.utils.systemd, "has_scope", self.mock_false
+                            ):
+
+                                # The results should be the same irrespective of
+                                # whether or not scope is enabled, since scope is not
+                                # available, so we repeat the below tests with it both
+                                # enabled and disabled.
+                                for scope_mock in (self.mock_true, self.mock_false):
+
+                                    # Successful
+                                    with patch.dict(
+                                        systemd.__salt__,
+                                        {
+                                            "config.get": scope_mock,
+                                            "cmd.run_all": self.mock_run_all_success,
+                                        },
+                                    ):
+                                        ret = func(self.unit_name, no_block=no_block)
+                                        self.assertTrue(ret)
+                                        self.mock_run_all_success.assert_called_with(
+                                            systemctl_command, **assert_kwargs
+                                        )
+
+                                    # Failed
+                                    with patch.dict(
+                                        systemd.__salt__,
+                                        {
+                                            "config.get": scope_mock,
+                                            "cmd.run_all": self.mock_run_all_failure,
+                                        },
+                                    ):
+                                        if action in ("stop", "disable"):
+                                            ret = func(
+                                                self.unit_name, no_block=no_block
+                                            )
+                                            self.assertFalse(ret)
+                                        else:
+                                            self.assertRaises(
+                                                CommandExecutionError,
+                                                func,
+                                                self.unit_name,
+                                                no_block=no_block,
+                                            )
+                                        self.mock_run_all_failure.assert_called_with(
+                                            systemctl_command, **assert_kwargs
+                                        )
+
     def _mask_unmask(self, action, runtime):
         """
         Common code for mask/unmask tests
@@ -428,110 +517,75 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
         func = getattr(systemd, action)
         # Remove trailing _ in "unmask_"
         action = action.rstrip("_").replace("_", "-")
-        systemctl_command = ["systemctl", action]
+        systemctl_command = ["/bin/systemctl", action]
         if runtime:
             systemctl_command.append("--runtime")
         systemctl_command.append(self.unit_name + ".service")
-        scope_prefix = ["systemd-run", "--scope"]
+        scope_prefix = ["/bin/systemd-run", "--scope"]
 
         args = [self.unit_name, runtime]
 
         masked_mock = self.mock_true if action == "unmask" else self.mock_false
 
-        with patch.object(systemd, "_check_for_unit_changes", self.mock_none):
-            if action == "unmask":
-                mock_not_run = MagicMock(
-                    return_value={
-                        "retcode": 0,
-                        "stdout": "",
-                        "stderr": "",
-                        "pid": 12345,
-                    }
-                )
-                with patch.dict(systemd.__salt__, {"cmd.run_all": mock_not_run}):
-                    with patch.object(systemd, "masked", self.mock_false):
-                        # Test not masked (should take no action and return True)
-                        self.assertTrue(systemd.unmask_(self.unit_name))
-                        # Also should not have called cmd.run_all
-                        self.assertTrue(mock_not_run.call_count == 0)
+        with patch("salt.utils.path.which", lambda x: "/bin/" + x):
+            with patch.object(systemd, "_check_for_unit_changes", self.mock_none):
+                if action == "unmask":
+                    mock_not_run = MagicMock(
+                        return_value={
+                            "retcode": 0,
+                            "stdout": "",
+                            "stderr": "",
+                            "pid": 12345,
+                        }
+                    )
+                    with patch.dict(systemd.__salt__, {"cmd.run_all": mock_not_run}):
+                        with patch.object(systemd, "masked", self.mock_false):
+                            # Test not masked (should take no action and return True)
+                            self.assertTrue(systemd.unmask_(self.unit_name))
+                            # Also should not have called cmd.run_all
+                            self.assertTrue(mock_not_run.call_count == 0)
 
-            with patch.object(systemd, "masked", masked_mock):
+                with patch.object(systemd, "masked", masked_mock):
 
-                # Has scopes available
-                with patch.object(salt.utils.systemd, "has_scope", self.mock_true):
+                    # Has scopes available
+                    with patch.object(salt.utils.systemd, "has_scope", self.mock_true):
 
-                    # Scope enabled, successful
-                    with patch.dict(
-                        systemd.__salt__,
-                        {
-                            "config.get": self.mock_true,
-                            "cmd.run_all": self.mock_run_all_success,
-                        },
-                    ):
-                        ret = func(*args)
-                        self.assertTrue(ret)
-                        self.mock_run_all_success.assert_called_with(
-                            scope_prefix + systemctl_command,
-                            python_shell=False,
-                            redirect_stderr=True,
-                        )
-
-                    # Scope enabled, failed
-                    with patch.dict(
-                        systemd.__salt__,
-                        {
-                            "config.get": self.mock_true,
-                            "cmd.run_all": self.mock_run_all_failure,
-                        },
-                    ):
-                        self.assertRaises(CommandExecutionError, func, *args)
-                        self.mock_run_all_failure.assert_called_with(
-                            scope_prefix + systemctl_command,
-                            python_shell=False,
-                            redirect_stderr=True,
-                        )
-
-                    # Scope disabled, successful
-                    with patch.dict(
-                        systemd.__salt__,
-                        {
-                            "config.get": self.mock_false,
-                            "cmd.run_all": self.mock_run_all_success,
-                        },
-                    ):
-                        ret = func(*args)
-                        self.assertTrue(ret)
-                        self.mock_run_all_success.assert_called_with(
-                            systemctl_command, python_shell=False, redirect_stderr=True
-                        )
-
-                    # Scope disabled, failed
-                    with patch.dict(
-                        systemd.__salt__,
-                        {
-                            "config.get": self.mock_false,
-                            "cmd.run_all": self.mock_run_all_failure,
-                        },
-                    ):
-                        self.assertRaises(CommandExecutionError, func, *args)
-                        self.mock_run_all_failure.assert_called_with(
-                            systemctl_command, python_shell=False, redirect_stderr=True
-                        )
-
-                # Does not have scopes available
-                with patch.object(salt.utils.systemd, "has_scope", self.mock_false):
-
-                    # The results should be the same irrespective of
-                    # whether or not scope is enabled, since scope is not
-                    # available, so we repeat the below tests with it both
-                    # enabled and disabled.
-                    for scope_mock in (self.mock_true, self.mock_false):
-
-                        # Successful
+                        # Scope enabled, successful
                         with patch.dict(
                             systemd.__salt__,
                             {
-                                "config.get": scope_mock,
+                                "config.get": self.mock_true,
+                                "cmd.run_all": self.mock_run_all_success,
+                            },
+                        ):
+                            ret = func(*args)
+                            self.assertTrue(ret)
+                            self.mock_run_all_success.assert_called_with(
+                                scope_prefix + systemctl_command,
+                                python_shell=False,
+                                redirect_stderr=True,
+                            )
+
+                        # Scope enabled, failed
+                        with patch.dict(
+                            systemd.__salt__,
+                            {
+                                "config.get": self.mock_true,
+                                "cmd.run_all": self.mock_run_all_failure,
+                            },
+                        ):
+                            self.assertRaises(CommandExecutionError, func, *args)
+                            self.mock_run_all_failure.assert_called_with(
+                                scope_prefix + systemctl_command,
+                                python_shell=False,
+                                redirect_stderr=True,
+                            )
+
+                        # Scope disabled, successful
+                        with patch.dict(
+                            systemd.__salt__,
+                            {
+                                "config.get": self.mock_false,
                                 "cmd.run_all": self.mock_run_all_success,
                             },
                         ):
@@ -543,11 +597,11 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                 redirect_stderr=True,
                             )
 
-                        # Failed
+                        # Scope disabled, failed
                         with patch.dict(
                             systemd.__salt__,
                             {
-                                "config.get": scope_mock,
+                                "config.get": self.mock_false,
                                 "cmd.run_all": self.mock_run_all_failure,
                             },
                         ):
@@ -557,6 +611,46 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                 python_shell=False,
                                 redirect_stderr=True,
                             )
+
+                    # Does not have scopes available
+                    with patch.object(salt.utils.systemd, "has_scope", self.mock_false):
+
+                        # The results should be the same irrespective of
+                        # whether or not scope is enabled, since scope is not
+                        # available, so we repeat the below tests with it both
+                        # enabled and disabled.
+                        for scope_mock in (self.mock_true, self.mock_false):
+
+                            # Successful
+                            with patch.dict(
+                                systemd.__salt__,
+                                {
+                                    "config.get": scope_mock,
+                                    "cmd.run_all": self.mock_run_all_success,
+                                },
+                            ):
+                                ret = func(*args)
+                                self.assertTrue(ret)
+                                self.mock_run_all_success.assert_called_with(
+                                    systemctl_command,
+                                    python_shell=False,
+                                    redirect_stderr=True,
+                                )
+
+                            # Failed
+                            with patch.dict(
+                                systemd.__salt__,
+                                {
+                                    "config.get": scope_mock,
+                                    "cmd.run_all": self.mock_run_all_failure,
+                                },
+                            ):
+                                self.assertRaises(CommandExecutionError, func, *args)
+                                self.mock_run_all_failure.assert_called_with(
+                                    systemctl_command,
+                                    python_shell=False,
+                                    redirect_stderr=True,
+                                )
 
     def test_start(self):
         self._change_state("start", no_block=False)
@@ -606,9 +700,10 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),
         }
-        with patch.dict(systemd.__salt__, salt_mock):
-            assert systemd.firstboot()
-            salt_mock["cmd.run_all"].assert_called_with(["systemd-firstboot"])
+        with patch("salt.utils.path.which", lambda x: "/bin/" + x):
+            with patch.dict(systemd.__salt__, salt_mock):
+                assert systemd.firstboot()
+                salt_mock["cmd.run_all"].assert_called_with(["/bin/systemd-firstboot"])
 
     def test_firstboot_params(self):
         """
@@ -618,35 +713,36 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),
         }
-        with patch.dict(systemd.__salt__, salt_mock):
-            assert systemd.firstboot(
-                locale="en_US.UTF-8",
-                locale_message="en_US.UTF-8",
-                keymap="jp",
-                timezone="Europe/Berlin",
-                hostname="node-001",
-                machine_id="1234567890abcdef",
-                root="/mnt",
-            )
-            salt_mock["cmd.run_all"].assert_called_with(
-                [
-                    "systemd-firstboot",
-                    "--locale",
-                    "en_US.UTF-8",
-                    "--locale-message",
-                    "en_US.UTF-8",
-                    "--keymap",
-                    "jp",
-                    "--timezone",
-                    "Europe/Berlin",
-                    "--hostname",
-                    "node-001",
-                    "--machine-ID",
-                    "1234567890abcdef",
-                    "--root",
-                    "/mnt",
-                ]
-            )
+        with patch("salt.utils.path.which", lambda x: "/bin/" + x):
+            with patch.dict(systemd.__salt__, salt_mock):
+                assert systemd.firstboot(
+                    locale="en_US.UTF-8",
+                    locale_message="en_US.UTF-8",
+                    keymap="jp",
+                    timezone="Europe/Berlin",
+                    hostname="node-001",
+                    machine_id="1234567890abcdef",
+                    root="/mnt",
+                )
+                salt_mock["cmd.run_all"].assert_called_with(
+                    [
+                        "/bin/systemd-firstboot",
+                        "--locale",
+                        "en_US.UTF-8",
+                        "--locale-message",
+                        "en_US.UTF-8",
+                        "--keymap",
+                        "jp",
+                        "--timezone",
+                        "Europe/Berlin",
+                        "--hostname",
+                        "node-001",
+                        "--machine-ID",
+                        "1234567890abcdef",
+                        "--root",
+                        "/mnt",
+                    ]
+                )
 
     def test_firstboot_error(self):
         """

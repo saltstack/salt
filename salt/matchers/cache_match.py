@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 This is the default cache matcher function.  It only exists for the master,
 this is why there is only a ``mmatch()`` but not ``match()``.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
-import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.data
+import salt.utils.minions
 
 log = logging.getLogger(__name__)
 

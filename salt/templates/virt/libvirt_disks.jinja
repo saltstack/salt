@@ -1,0 +1,12 @@
+{% macro network_source(disk) -%}
+                        <source protocol='{{ disk.protocol }}' name='{{ disk.volume }}'{% if disk.get('query') %} query='{{ disk.query }}'{% endif %}>
+                          {%- for host in disk.get('hosts') %}
+                          <host name='{{ host.name }}'{% if host.get("port") %} port='{{ host.port }}'{% endif %}/>
+                          {%- endfor %}
+                          {%- if disk.get("auth") %}
+                          <auth username='{{ disk.auth.username }}'>
+                            <secret type='{{ disk.auth.type }}' usage='{{ disk.auth.usage}}'/>
+                          </auth>
+                          {%- endif %}
+                        </source>
+{%- endmacro %}

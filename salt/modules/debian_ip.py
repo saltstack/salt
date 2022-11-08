@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The networking module for Debian-based distros
 
@@ -6,34 +5,24 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import functools
+import io
 import logging
 import os
 import os.path
 import re
 import time
 
-# Import third party libs
 import jinja2
 import jinja2.exceptions
 
-# Import salt libs
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
-from salt.ext import six
-from salt.ext.six.moves import (  # pylint: disable=import-error,no-name-in-module
-    StringIO,
-)
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
@@ -234,7 +223,7 @@ def _read_file(path):
             return [
                 salt.utils.stringutils.to_str(line) for line in contents.readlines()
             ]
-    except (OSError, IOError):
+    except OSError:
         return ""
 
 
@@ -376,9 +365,9 @@ def __within2(value, within=None, errmsg=None, dtype=None):
                 "__name__",
                 hasattr(dtype, "__class__") and getattr(dtype.__class__, "name", dtype),
             )
-            errmsg = "{0} within '{1}'".format(typename, within)
+            errmsg = "{} within '{}'".format(typename, within)
         else:
-            errmsg = "within '{0}'".format(within)
+            errmsg = "within '{}'".format(within)
     return (valid, _value, errmsg)
 
 
@@ -388,7 +377,7 @@ def __within(within=None, errmsg=None, dtype=None):
 
 def __space_delimited_list(value):
     """validate that a value contains one or more space-delimited values"""
-    if isinstance(value, six.string_types):
+    if isinstance(value, str):
         value = value.strip().split()
 
     if hasattr(value, "__iter__") and value != []:
@@ -397,7 +386,7 @@ def __space_delimited_list(value):
         return (
             False,
             value,
-            "{0} is not a valid space-delimited value.\n".format(value),
+            "{} is not a valid space-delimited value.\n".format(value),
         )
 
 
@@ -410,9 +399,7 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
 }
 
 
-DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
-    (v, k) for (k, v) in six.iteritems(SALT_ATTR_TO_DEBIAN_ATTR_MAP)
-)
+DEBIAN_ATTR_TO_SALT_ATTR_MAP = {v: k for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.items()}
 
 # TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP["address"] = "address"
@@ -421,7 +408,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP["hwaddress"] = "hwaddress"
 IPV4_VALID_PROTO = ["bootp", "dhcp", "static", "manual", "loopback", "ppp"]
 
 IPV4_ATTR_MAP = {
-    "proto": __within(IPV4_VALID_PROTO, dtype=six.text_type),
+    "proto": __within(IPV4_VALID_PROTO, dtype=str),
     # ipv4 static & manual
     "address": __ipv4_quad,
     "addresses": __anything,
@@ -432,7 +419,7 @@ IPV4_ATTR_MAP = {
     "pointopoint": __ipv4_quad,
     "hwaddress": __mac,
     "mtu": __int,
-    "scope": __within(["global", "link", "host"], dtype=six.text_type),
+    "scope": __within(["global", "link", "host"], dtype=str),
     # dhcp
     "hostname": __anything,
     "leasehours": __int,
@@ -444,7 +431,7 @@ IPV4_ATTR_MAP = {
     "server": __ipv4_quad,
     "hwaddr": __mac,
     # tunnel
-    "mode": __within(["gre", "GRE", "ipip", "IPIP", "802.3ad"], dtype=six.text_type),
+    "mode": __within(["gre", "GRE", "ipip", "IPIP", "802.3ad"], dtype=str),
     "endpoint": __ipv4_quad,
     "dstaddr": __ipv4_quad,
     "local": __ipv4_quad,
@@ -480,13 +467,13 @@ IPV6_ATTR_MAP = {
     "gateway": __ipv6,  # supports a colon-delimited list
     "hwaddress": __mac,
     "mtu": __int,
-    "scope": __within(["global", "site", "link", "host"], dtype=six.text_type),
+    "scope": __within(["global", "site", "link", "host"], dtype=str),
     # inet6 auto
     "privext": __within([0, 1, 2], dtype=int),
     "dhcp": __within([0, 1], dtype=int),
     # inet6 static & manual & dhcp
     "media": __anything,
-    "accept_ra": __within([0, 1], dtype=int),
+    "accept_ra": __within([0, 1, 2], dtype=int),
     "autoconf": __within([0, 1], dtype=int),
     "preferred-lifetime": __int,
     "dad-attempts": __int,  # 0 to disable
@@ -494,7 +481,7 @@ IPV6_ATTR_MAP = {
     # bond
     "slaves": __anything,
     # tunnel
-    "mode": __within(["gre", "GRE", "ipip", "IPIP", "802.3ad"], dtype=six.text_type),
+    "mode": __within(["gre", "GRE", "ipip", "IPIP", "802.3ad"], dtype=str),
     "endpoint": __ipv4_quad,
     "local": __ipv4_quad,
     "ttl": __int,
@@ -561,7 +548,7 @@ def _parse_interfaces(interface_files=None):
         # Add this later.
         if os.path.exists(_DEB_NETWORK_DIR):
             interface_files += [
-                "{0}/{1}".format(_DEB_NETWORK_DIR, dir)
+                "{}/{}".format(_DEB_NETWORK_DIR, dir)
                 for dir in os.listdir(_DEB_NETWORK_DIR)
             ]
 
@@ -664,7 +651,7 @@ def _parse_interfaces(interface_files=None):
                         "post-down",
                     ]:
                         cmd = valuestr
-                        cmd_key = "{0}_cmds".format(re.sub("-", "_", attr))
+                        cmd_key = "{}_cmds".format(re.sub("-", "_", attr))
                         if cmd_key not in iface_dict:
                             iface_dict[cmd_key] = []
                         iface_dict[cmd_key].append(cmd)
@@ -691,13 +678,18 @@ def _parse_interfaces(interface_files=None):
                         adapters["source"]["data"]["sources"] = []
                     adapters["source"]["data"]["sources"].append(line.split()[1])
 
+    adapters = _filter_malformed_interfaces(adapters=adapters)
+    return adapters
+
+
+def _filter_malformed_interfaces(*, adapters):
     # Return a sorted list of the keys for bond, bridge and ethtool options to
     # ensure a consistent order
-    for iface_name in adapters:
+    for iface_name in list(adapters):
         if iface_name == "source":
             continue
         if "data" not in adapters[iface_name]:
-            msg = "Interface file malformed for interface: {0}.".format(iface_name)
+            msg = "Interface file malformed for interface: {}.".format(iface_name)
             log.error(msg)
             adapters.pop(iface_name)
             continue
@@ -709,7 +701,6 @@ def _parse_interfaces(interface_files=None):
                             adapters[iface_name]["data"][inet][opt].keys()
                         )
                         adapters[iface_name]["data"][inet][opt + "_keys"] = opt_keys
-
     return adapters
 
 
@@ -739,7 +730,7 @@ def _parse_ethtool_opts(opts, iface):
 
     if "speed" in opts:
         valid = ["10", "100", "1000", "10000"]
-        if six.text_type(opts["speed"]) in valid:
+        if str(opts["speed"]) in valid:
             config.update({"speed": opts["speed"]})
         else:
             _raise_error_iface(iface, opts["speed"], valid)
@@ -847,7 +838,7 @@ def _parse_settings_bond(opts, iface):
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts["mode"] in ["802.3ad", "4"]:
         log.info(
-            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
+            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation", iface
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts["mode"] in ["balance-tlb", "5"]:
@@ -1210,7 +1201,7 @@ def _parse_bridge_opts(opts, iface):
             try:
                 port, cost_or_prio = opts[opt].split()
                 int(cost_or_prio)
-                config.update({opt: "{0} {1}".format(port, cost_or_prio)})
+                config.update({opt: "{} {}".format(port, cost_or_prio)})
             except ValueError:
                 _raise_error_iface(iface, opt, ["interface integer"])
 
@@ -1230,7 +1221,7 @@ def _parse_bridge_opts(opts, iface):
             waitport_time = values.pop(0)
             if waitport_time.isdigit() and values:
                 config.update(
-                    {"waitport": "{0} {1}".format(waitport_time, " ".join(values))}
+                    {"waitport": "{} {}".format(waitport_time, " ".join(values))}
                 )
             else:
                 _raise_error_iface(iface, opt, ["integer [interfaces]"])
@@ -1391,8 +1382,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     """
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
-    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
+    opts = {k.lower(): v for (k, v) in opts.items()}
+    current = {k.lower(): v for (k, v) in current.items()}
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -1437,7 +1428,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     """
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    opts = {k.lower(): v for (k, v) in opts.items()}
     result = {}
     if "routes" not in opts:
         _raise_error_routes(iface, "routes", "List of routes")
@@ -1497,9 +1488,9 @@ def _write_file_network(data, filename, create=False):
     argument is True
     """
     if not os.path.exists(filename) and not create:
-        msg = "{0} cannot be written. {0} does not exist\
-                and create is set to False"
-        msg = msg.format(filename)
+        msg = "{0} cannot be written. {0} does not exist and create is setto False".format(
+            filename
+        )
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, "w") as fout:
@@ -1510,7 +1501,7 @@ def _read_temp(data):
     """
     Return what would be written to disk
     """
-    tout = StringIO()
+    tout = io.StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.readlines()
@@ -1563,7 +1554,7 @@ def _write_file_ifaces(iface, data, **settings):
     _SEPARATE_FILE = False
     if "filename" in settings:
         if not settings["filename"].startswith("/"):
-            filename = "{0}/{1}".format(_DEB_NETWORK_DIR, settings["filename"])
+            filename = "{}/{}".format(_DEB_NETWORK_DIR, settings["filename"])
         else:
             filename = settings["filename"]
         _SEPARATE_FILE = True
@@ -1642,15 +1633,15 @@ def build_bond(iface, **settings):
     if "test" in settings and settings["test"]:
         return _read_temp(data)
 
-    _write_file(iface, data, _DEB_NETWORK_CONF_FILES, "{0}.conf".format(iface))
-    path = os.path.join(_DEB_NETWORK_CONF_FILES, "{0}.conf".format(iface))
+    _write_file(iface, data, _DEB_NETWORK_CONF_FILES, "{}.conf".format(iface))
+    path = os.path.join(_DEB_NETWORK_CONF_FILES, "{}.conf".format(iface))
     if deb_major == "5":
         for line_type in ("alias", "options"):
             cmd = [
                 "sed",
                 "-i",
                 "-e",
-                r"/^{0}\s{1}.*/d".format(line_type, iface),
+                r"/^{}\s{}.*/d".format(line_type, iface),
                 "/etc/modprobe.conf",
             ]
             __salt__["cmd.run"](cmd, python_shell=False)
@@ -1659,8 +1650,8 @@ def build_bond(iface, **settings):
     # Load kernel module
     __salt__["kmod.load"]("bonding")
 
-    # install ifenslave-2.6
-    __salt__["pkg.install"]("ifenslave-2.6")
+    # install ifenslave
+    __salt__["pkg.install"]("ifenslave")
 
     return _read_file(path)
 
@@ -1794,7 +1785,7 @@ def get_bond(iface):
 
         salt '*' ip.get_bond bond0
     """
-    path = os.path.join(_DEB_NETWORK_CONF_FILES, "{0}.conf".format(iface))
+    path = os.path.join(_DEB_NETWORK_CONF_FILES, "{}.conf".format(iface))
     return _read_file(path)
 
 
@@ -1900,10 +1891,10 @@ def get_routes(iface):
         salt '*' ip.get_routes eth0
     """
 
-    filename = os.path.join(_DEB_NETWORK_UP_DIR, "route-{0}".format(iface))
+    filename = os.path.join(_DEB_NETWORK_UP_DIR, "route-{}".format(iface))
     results = _read_file(filename)
 
-    filename = os.path.join(_DEB_NETWORK_DOWN_DIR, "route-{0}".format(iface))
+    filename = os.path.join(_DEB_NETWORK_DOWN_DIR, "route-{}".format(iface))
     results += _read_file(filename)
 
     return results
@@ -2044,20 +2035,20 @@ def build_network_settings(**settings):
 
         for item in _read_file(_DEB_RESOLV_FILE):
             if domain_prog.match(item):
-                item = "domain {0}".format(domainname)
+                item = "domain {}".format(domainname)
             elif search_prog.match(item):
-                item = "search {0}".format(searchdomain)
+                item = "search {}".format(searchdomain)
             new_contents.append(item)
 
         # A domain line didn't exist so we'll add one in
         # with the new domainname
         if "domain" not in resolve:
-            new_contents.insert(0, "domain {0}".format(domainname))
+            new_contents.insert(0, "domain {}".format(domainname))
 
         # A search line didn't exist so we'll add one in
         # with the new search domain
         if "search" not in resolve:
-            new_contents.insert("domain" in resolve, "search {0}".format(searchdomain))
+            new_contents.insert("domain" in resolve, "search {}".format(searchdomain))
 
         new_resolv = "\n".join(new_contents)
 

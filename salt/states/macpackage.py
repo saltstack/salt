@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installing of mac pkg files
 ===========================
@@ -23,18 +22,16 @@ Install any kind of pkg, dmg or app file on macOS:
         - version_check: xcodebuild -version=Xcode 7.1\\n.*7B91b
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = "macpackage"
 
 
@@ -116,10 +113,10 @@ def installed(
                 version_out = ""
 
             if re.match(expected_version, version_out) is not None:
-                ret["comment"] += "Version already matches {0}".format(expected_version)
+                ret["comment"] += "Version already matches {}".format(expected_version)
                 return ret
             else:
-                ret["comment"] += "Version {0} doesn't match {1}. ".format(
+                ret["comment"] += "Version {} doesn't match {}. ".format(
                     version_out, expected_version
                 )
 
@@ -132,7 +129,7 @@ def installed(
         out, mount_point = __salt__["macpackage.mount"](name)
         if "attach failed" in out:
             ret["result"] = False
-            ret["comment"] += "Unable to mount {0}".format(name)
+            ret["comment"] += "Unable to mount {}".format(name)
             return ret
 
         if app:
@@ -152,7 +149,7 @@ def installed(
 
                 if ".app" not in out:
                     ret["result"] = False
-                    ret["comment"] += "Unable to find .app in {0}".format(mount_point)
+                    ret["comment"] += "Unable to find .app in {}".format(mount_point)
                     return ret
                 else:
                     pkg_ids = out.split("\n")
@@ -193,7 +190,7 @@ def installed(
 
             def failed_pkg(f_pkg):
                 ret["result"] = False
-                ret["comment"] += "{0} failed to install: {1}".format(name, out)
+                ret["comment"] += "{} failed to install: {}".format(name, out)
 
                 if "failed" in ret["changes"]:
                     ret["changes"]["failed"].append(f_pkg)
@@ -202,7 +199,7 @@ def installed(
 
             for app in installing:
                 try:
-                    log.info("Copying {0} to {1}".format(app, target))
+                    log.info("Copying %s to %s", app, target)
 
                     out = __salt__["macpackage.install_app"](
                         os.path.join(mount_point, app), target
@@ -211,7 +208,7 @@ def installed(
                     if len(out) != 0:
                         failed_pkg(app)
                     else:
-                        ret["comment"] += "{0} installed".format(app)
+                        ret["comment"] += "{} installed".format(app)
                         if "installed" in ret["changes"]:
                             ret["changes"]["installed"].append(app)
                         else:
@@ -226,9 +223,9 @@ def installed(
 
             if out["retcode"] != 0:
                 ret["result"] = False
-                ret["comment"] += ". {0} failed to install: {1}".format(name, out)
+                ret["comment"] += ". {} failed to install: {}".format(name, out)
             else:
-                ret["comment"] += "{0} installed".format(name)
+                ret["comment"] += "{} installed".format(name)
                 ret["changes"]["installed"] = installing
 
     finally:

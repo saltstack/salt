@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon SSM
 
@@ -13,14 +12,9 @@ Connection module for Amazon SSM
 
 :depends: boto3
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 import salt.utils.json as json
-
-# Import Salt libs
 import salt.utils.versions
 
 log = logging.getLogger(__name__)

@@ -1,0 +1,1 @@
+Issue 62334: Displays a debug log message instead of an error log message when the publisher fails to connect

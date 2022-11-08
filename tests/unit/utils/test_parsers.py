@@ -1,30 +1,28 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Denys Havrysh <denys.gavrysh@gmail.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import logging
 import os
+import pprint
 import shutil
 import tempfile
 
+import salt._logging
 import salt.config
-
-# Import Salt Libs
-import salt.log.setup as log
 import salt.syspaths
+import salt.utils.jid
 import salt.utils.parsers
 import salt.utils.platform
-from tests.support.mock import MagicMock, patch
+from tests.support.helpers import TstSuiteLoggingHandler
+from tests.support.mock import ANY, MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase
 
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+log = logging.getLogger(__name__)
 
 
-class ErrorMock(object):  # pylint: disable=too-few-public-methods
+class ErrorMock:  # pylint: disable=too-few-public-methods
     """
     Error handling
     """
@@ -42,7 +40,7 @@ class ErrorMock(object):  # pylint: disable=too-few-public-methods
         self.msg = msg
 
 
-class LogSetupMock(object):
+class LogImplMock:
     """
     Logger setup
     """
@@ -51,60 +49,139 @@ class LogSetupMock(object):
         """
         init
         """
-        self.log_level = None
+        self.log_level_console = None
         self.log_file = None
         self.log_level_logfile = None
-        self.config = {}
+        self.config = self.original_config = None
+        logging_options = salt._logging.get_logging_options_dict()
+        if logging_options:
+            self.config = logging_options.copy()
+            self.original_config = self.config.copy()
         self.temp_log_level = None
+        self._console_handler_configured = False
+        self._extended_logging_configured = False
+        self._logfile_handler_configured = False
+        self._real_set_logging_options_dict = salt._logging.set_logging_options_dict
+        self._real_get_logging_options_dict = salt._logging.get_logging_options_dict
+        self._real_setup_logfile_handler = salt._logging.setup_logfile_handler
 
-    def setup_console_logger(
+    def _destroy(self):
+        salt._logging.set_logging_options_dict.__options_dict__ = self.original_config
+        salt._logging.shutdown_logfile_handler()
+
+    def setup_temp_handler(self, log_level=None):
+        """
+        Set temp handler loglevel
+        """
+        log.debug("Setting temp handler log level to: %s", log_level)
+        self.temp_log_level = log_level
+
+    def is_console_handler_configured(self):
+        log.debug("Calling is_console_handler_configured")
+        return self._console_handler_configured
+
+    def setup_console_handler(
         self, log_level="error", **kwargs
     ):  # pylint: disable=unused-argument
         """
         Set console loglevel
         """
-        self.log_level = log_level
+        log.debug("Setting console handler log level to: %s", log_level)
+        self.log_level_console = log_level
+        self._console_handler_configured = True
+
+    def shutdown_console_handler(self):
+        log.debug("Calling shutdown_console_handler")
+        self._console_handler_configured = False
+
+    def is_extended_logging_configured(self):
+        log.debug("Calling is_extended_logging_configured")
+        return self._extended_logging_configured
 
     def setup_extended_logging(self, opts):
         """
         Set opts
         """
-        self.config = opts
+        log.debug("Calling setup_extended_logging")
+        self._extended_logging_configured = True
 
-    def setup_logfile_logger(
-        self, logfile, loglevel, **kwargs
+    def shutdown_extended_logging(self):
+        log.debug("Calling shutdown_extended_logging")
+        self._extended_logging_configured = False
+
+    def is_logfile_handler_configured(self):
+        log.debug("Calling is_logfile_handler_configured")
+        return self._logfile_handler_configured
+
+    def setup_logfile_handler(
+        self, log_path, log_level=None, **kwargs
     ):  # pylint: disable=unused-argument
         """
         Set logfile and loglevel
         """
-        self.log_file = logfile
-        self.log_level_logfile = loglevel
+        log.debug("Setting log file handler path to: %s", log_path)
+        log.debug("Setting log file handler log level to: %s", log_level)
+        self.log_file = log_path
+        self.log_level_logfile = log_level
+        self._real_setup_logfile_handler(log_path, log_level=log_level, **kwargs)
+        self._logfile_handler_configured = True
 
-    @staticmethod
-    def get_multiprocessing_logging_queue():  # pylint: disable=invalid-name
-        """
-        Mock
-        """
-        import multiprocessing
+    def shutdown_logfile_handler(self):
+        log.debug("Calling shutdown_logfile_handler")
+        self._logfile_handler_configured = False
 
-        return multiprocessing.Queue()
+    def get_logging_options_dict(self):
+        log.debug("Calling get_logging_options_dict")
+        return self.config
 
-    def setup_multiprocessing_logging_listener(
-        self, opts, *args
-    ):  # pylint: disable=invalid-name,unused-argument
-        """
-        Set opts
-        """
-        self.config = opts
+    def set_logging_options_dict(self, opts):
+        log.debug("Calling set_logging_options_dict")
+        self._real_set_logging_options_dict(opts)
+        self.config = self._real_get_logging_options_dict()
+        log.debug("Logging options dict:\n%s", pprint.pformat(self.config))
 
-    def setup_temp_logger(self, log_level="error"):
-        """
-        Set temp loglevel
-        """
-        self.temp_log_level = log_level
+    def setup_log_granular_levels(self, opts):
+        log.debug("Calling setup_log_granular_levels")
+
+    def setup_logging(self):
+        log.debug("Mocked setup_logging called")
+        # Wether daemonizing or not, either on the main process or on a separate process
+        # The log file is going to be configured.
+        # The console is the only handler not configured if daemonizing
+
+        # These routines are what happens on salt._logging.setup_logging
+        opts = self.get_logging_options_dict()
+
+        if (
+            opts.get("configure_console_logger", True)
+            and not self.is_console_handler_configured()
+        ):
+            self.setup_console_handler(
+                log_level=opts["log_level"],
+                log_format=opts["log_fmt_console"],
+                date_format=opts["log_datefmt"],
+            )
+        if (
+            opts.get("configure_file_logger", True)
+            and not self.is_logfile_handler_configured()
+        ):
+            log_file_level = opts["log_level_logfile"] or opts["log_level"]
+            if log_file_level != "quiet":
+                self.setup_logfile_handler(
+                    log_path=opts[opts["log_file_key"]],
+                    log_level=log_file_level,
+                    log_format=opts["log_fmt_logfile"],
+                    date_format=opts["log_datefmt_logfile"],
+                    max_bytes=opts["log_rotate_max_bytes"],
+                    backup_count=opts["log_rotate_backup_count"],
+                    user=opts["user"],
+                )
+        if not self.is_extended_logging_configured():
+            self.setup_extended_logging(opts)
+        self.setup_log_granular_levels(opts["log_granular_levels"])
 
 
-class ObjectView(object):  # pylint: disable=too-few-public-methods
+class ObjectView:  # pylint: disable=too-few-public-methods
     """
     Dict object view
     """
@@ -113,16 +190,14 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
-class ParserBase(object):
+class ParserBase:
     """
     Unit Tests for Log Level Mixin with Salt parsers
     """
 
     args = []
 
-    skip_console_logging_config = False
-
-    log_setup = None
+    log_impl = None
 
     # Set config option names
     loglevel_config_setting_name = "log_level"
@@ -152,19 +227,22 @@ class ParserBase(object):
         )
         self.testing_config = testing_config
         self.addCleanup(setattr, self, "testing_config", None)
-        self.log_setup = LogSetupMock()
-        patcher = patch.multiple(
-            log,
-            setup_console_logger=self.log_setup.setup_console_logger,
-            setup_extended_logging=self.log_setup.setup_extended_logging,
-            setup_logfile_logger=self.log_setup.setup_logfile_logger,
-            get_multiprocessing_logging_queue=self.log_setup.get_multiprocessing_logging_queue,
-            setup_multiprocessing_logging_listener=self.log_setup.setup_multiprocessing_logging_listener,
-            setup_temp_logger=self.log_setup.setup_temp_logger,
-        )
+
+        self.log_impl = LogImplMock()
+        self.addCleanup(self.log_impl._destroy)
+        self.addCleanup(setattr, self, "log_impl", None)
+
+        mocked_functions = {}
+        for name in dir(self.log_impl):
+            if name.startswith("_"):
+                continue
+            func = getattr(self.log_impl, name)
+            if not callable(func):
+                continue
+            mocked_functions[name] = func
+        patcher = patch.multiple(salt._logging, **mocked_functions)
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.addCleanup(setattr, self, "log_setup", None)
 
     # log level configuration tests
 
@@ -182,21 +260,19 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         console_log_level = getattr(parser.options, self.loglevel_config_setting_name)
 
         # Check console log level setting
         self.assertEqual(console_log_level, log_level)
-        # Check console loggger log level
-        self.assertEqual(self.log_setup.log_level, log_level)
+        # Check console logger log level
+        self.assertEqual(self.log_impl.log_level_console, log_level)
         self.assertEqual(
-            self.log_setup.config[self.loglevel_config_setting_name], log_level
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
         )
-        self.assertEqual(self.log_setup.temp_log_level, log_level)
+        self.assertEqual(self.log_impl.temp_log_level, log_level)
         # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
+        self.assertEqual(self.log_impl.log_level_logfile, default_log_level)
 
     def test_get_log_level_config(self):
         """
@@ -212,21 +288,19 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         console_log_level = getattr(parser.options, self.loglevel_config_setting_name)
 
         # Check console log level setting
         self.assertEqual(console_log_level, log_level)
-        # Check console loggger log level
-        self.assertEqual(self.log_setup.log_level, log_level)
+        # Check console logger log level
+        self.assertEqual(self.log_impl.log_level_console, log_level)
         self.assertEqual(
-            self.log_setup.config[self.loglevel_config_setting_name], log_level
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
         )
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, log_level)
+        self.assertEqual(self.log_impl.log_level_logfile, log_level)
 
     def test_get_log_level_default(self):
         """
@@ -242,25 +316,23 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         console_log_level = getattr(parser.options, self.loglevel_config_setting_name)
 
         # Check log level setting
         self.assertEqual(console_log_level, log_level)
-        # Check console loggger log level
-        self.assertEqual(self.log_setup.log_level, log_level)
+        # Check console logger log level
+        self.assertEqual(self.log_impl.log_level_console, log_level)
         # Check extended logger
         self.assertEqual(
-            self.log_setup.config[self.loglevel_config_setting_name], log_level
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
         )
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file logger
-        self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
+        self.assertEqual(self.log_impl.log_level_logfile, default_log_level)
         # Check help message
         self.assertIn(
-            "Default: '{0}'.".format(default_log_level),
+            "Default: '{}'.".format(default_log_level),
             parser.get_option("--log-level").help,
         )
 
@@ -274,33 +346,30 @@ class ParserBase(object):
         log_level = self.testing_config[self.loglevel_config_setting_name]
 
         # Set log file in CLI
-        log_file = "{0}_cli.log".format(self.log_file)
+        log_file = "{}_cli.log".format(self.log_file)
         args = ["--log-file", log_file] + self.args
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_file_option = getattr(parser.options, self.logfile_config_setting_name)
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_config_setting_name], log_file
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_config_setting_name], log_file
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file setting
         self.assertEqual(log_file_option, log_file)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_file, log_file)
+        self.assertEqual(self.log_impl.log_file, log_file)
 
     def test_get_log_file_config(self):
         """
@@ -312,34 +381,31 @@ class ParserBase(object):
         args = self.args
 
         # Set log file in config
-        log_file = "{0}_config.log".format(self.log_file)
+        log_file = "{}_config.log".format(self.log_file)
         opts = self.testing_config.copy()
         opts.update({self.logfile_config_setting_name: log_file})
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_file_option = getattr(parser.options, self.logfile_config_setting_name)
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_config_setting_name], log_file
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_config_setting_name], log_file
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file setting
         self.assertEqual(log_file_option, log_file)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_file, log_file)
+        self.assertEqual(self.log_impl.log_file, log_file)
 
     def test_get_log_file_default(self):
         """
@@ -355,30 +421,27 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_file_option = getattr(parser.options, self.logfile_config_setting_name)
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_config_setting_name], log_file
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_config_setting_name], log_file
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file setting
         self.assertEqual(log_file_option, log_file)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_file, log_file)
+        self.assertEqual(self.log_impl.log_file, log_file)
         # Check help message
         self.assertIn(
-            "Default: '{0}'.".format(default_log_file),
+            "Default: '{}'.".format(default_log_file),
             parser.get_option("--log-file").help,
         )
 
@@ -398,31 +461,28 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_level_logfile_option = getattr(
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, default_log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name],
-                default_log_level,
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, default_log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name],
+            default_log_level,
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
         self.assertEqual(log_level_logfile_option, log_level_logfile)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
+        self.assertEqual(self.log_impl.log_level_logfile, log_level_logfile)
 
     def test_get_log_file_level_config(self):
         """
@@ -441,30 +501,27 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_level_logfile_option = getattr(
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
         self.assertEqual(log_level_logfile_option, log_level_logfile)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
+        self.assertEqual(self.log_impl.log_level_logfile, log_level_logfile)
 
     def test_get_log_file_level_default(self):
         """
@@ -481,33 +538,30 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_level_logfile_option = getattr(
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
         self.assertEqual(log_level_logfile_option, log_level_logfile)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
+        self.assertEqual(self.log_impl.log_level_logfile, log_level_logfile)
         # Check help message
         self.assertIn(
-            "Default: '{0}'.".format(default_log_level),
+            "Default: '{}'.".format(default_log_level),
             parser.get_option("--log-file-level").help,
         )
 
@@ -528,32 +582,28 @@ class ParserBase(object):
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
 
         log_level_logfile_option = getattr(
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_setup.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_setup.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_setup.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console logger
+        self.assertEqual(self.log_impl.log_level_console, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
+        self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
         self.assertEqual(log_level_logfile_option, log_level_logfile)
         # Check log file logger
-        self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
+        self.assertEqual(self.log_impl.log_level_logfile, log_level_logfile)
 
-    @skipIf(salt.utils.platform.is_windows(), "Windows uses a logging listener")
     def test_log_created(self):
         """
         Tests that log file is created
@@ -566,17 +616,14 @@ class ParserBase(object):
         if log_file_name != "log_file":
             opts.update({log_file_name: getattr(self, log_file_name)})
 
-        if log_file_name == "key_logfile":
-            self.skipTest("salt-key creates log file outside of parse_args.")
-
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
 
         if log_file_name == "log_file":
-            self.assertEqual(os.path.getsize(log_file), 0)
+            self.assertGreaterEqual(os.path.getsize(log_file), 0)
         else:
-            self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
+            self.assertGreaterEqual(os.path.getsize(getattr(self, log_file_name)), 0)
 
     def test_callbacks_uniqueness(self):
         """
@@ -603,8 +650,18 @@ class ParserBase(object):
             nums_2[cb_container] = len(obj)
         self.assertDictEqual(nums_1, nums_2)
 
+    def test_verify_log_warning_logged(self):
+        args = ["--log-level", "debug"] + self.args
+        with TstSuiteLoggingHandler(level=logging.DEBUG) as handler:
+            parser = self.parser()
+            with patch(self.config_func, MagicMock(return_value=self.testing_config)):
+                parser.parse_args(args)
+            self.assertIn(
+                "WARNING:Insecure logging configuration detected! Sensitive data may be logged.",
+                handler.messages,
+            )
 
-@skipIf(salt.utils.platform.is_windows(), "Windows uses a logging listener")
+
 class MasterOptionParserTestCase(ParserBase, TestCase):
     """
     Tests parsing Salt Master options
@@ -619,7 +676,16 @@ class MasterOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_master_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_master_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.master_config"
 
@@ -630,12 +696,7 @@ class MasterOptionParserTestCase(ParserBase, TestCase):
         self.parser = salt.utils.parsers.MasterOptionParser
         self.addCleanup(delattr, self, "parser")
 
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
-
-@skipIf(salt.utils.platform.is_windows(), "Windows uses a logging listener")
 class MinionOptionParserTestCase(ParserBase, TestCase):
     """
     Tests parsing Salt Minion options
@@ -650,7 +711,16 @@ class MinionOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_minion_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_minion_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.minion_config"
 
@@ -660,10 +730,6 @@ class MinionOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.MinionOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
 
 class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
@@ -681,7 +747,16 @@ class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_proxy_minion_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_proxy_minion_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.proxy_config"
 
@@ -692,12 +767,7 @@ class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
         self.parser = salt.utils.parsers.ProxyMinionOptionParser
         self.addCleanup(delattr, self, "parser")
 
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
-
-@skipIf(salt.utils.platform.is_windows(), "Windows uses a logging listener")
 class SyndicOptionParserTestCase(ParserBase, TestCase):
     """
     Tests parsing Salt Syndic options
@@ -715,8 +785,24 @@ class SyndicOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_syndic_parser_test"
-        self.syndic_log_file = "/tmp/salt_syndic_log"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_syndic_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
+        syndic_log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_syndic_log",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.syndic_log_file = syndic_log_file.name
+        syndic_log_file.close()
         # Function to patch
         self.config_func = "salt.config.syndic_config"
 
@@ -726,12 +812,6 @@ class SyndicOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SyndicOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
-        if os.path.exists(self.syndic_log_file):
-            os.unlink(self.syndic_log_file)
 
 
 class SaltCMDOptionParserTestCase(ParserBase, TestCase):
@@ -751,7 +831,16 @@ class SaltCMDOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_cmd_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_cmd_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.client_config"
 
@@ -761,10 +850,6 @@ class SaltCMDOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltCMDOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
 
 class SaltCPOptionParserTestCase(ParserBase, TestCase):
@@ -784,7 +869,16 @@ class SaltCPOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_cp_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_cp_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.master_config"
 
@@ -794,10 +888,6 @@ class SaltCPOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltCPOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
 
 class SaltKeyOptionParserTestCase(ParserBase, TestCase):
@@ -809,8 +899,6 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         """
         Setting up
         """
-        self.skip_console_logging_config = True
-
         # Set config option names
         self.logfile_config_setting_name = "key_logfile"
 
@@ -819,8 +907,24 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_key_parser_test"
-        self.key_logfile = "/tmp/key_logfile"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_key_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
+        key_logfile = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_key_logfile",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.key_logfile = key_logfile.name
+        key_logfile.close()
         # Function to patch
         self.config_func = "salt.config.client_config"
 
@@ -830,99 +934,6 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltKeyOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    # log level configuration tests
-
-    def test_get_log_level_cli(self):
-        """
-        Tests that console log level option is not recognized
-        """
-        # No console log level will be actually set
-        log_level = default_log_level = None
-
-        option = "--log-level"
-        args = self.args + [option, "error"]
-
-        parser = self.parser()
-        mock_err = ErrorMock()
-
-        with patch("salt.utils.parsers.OptionParser.error", mock_err.error):
-            parser.parse_args(args)
-
-        # Check error msg
-        self.assertEqual(mock_err.msg, "no such option: {0}".format(option))
-        # Check console loggger has not been set
-        self.assertEqual(self.log_setup.log_level, log_level)
-        self.assertNotIn(self.loglevel_config_setting_name, self.log_setup.config)
-        # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
-        # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
-
-    def test_get_log_level_config(self):
-        """
-        Tests that log level set in config is ignored
-        """
-        log_level = "info"
-        args = self.args
-
-        # Set log level in config and set additional mocked opts keys
-        opts = {
-            self.loglevel_config_setting_name: log_level,
-            self.logfile_config_setting_name: "key_logfile",
-            "log_fmt_logfile": None,
-            "log_datefmt_logfile": None,
-            "log_rotate_max_bytes": None,
-            "log_rotate_backup_count": None,
-        }
-
-        parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=opts)):
-            parser.parse_args(args)
-            with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-                parser.setup_logfile_logger()
-
-        # Check config name absence in options
-        self.assertNotIn(self.loglevel_config_setting_name, parser.options.__dict__)
-        # Check console loggger has not been set
-        self.assertEqual(self.log_setup.log_level, None)
-        self.assertNotIn(self.loglevel_config_setting_name, self.log_setup.config)
-        # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
-        # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, log_level)
-
-    def test_get_log_level_default(self):
-        """
-        Tests that log level default value is ignored
-        """
-        # Set defaults
-        default_log_level = self.testing_config[self.loglevel_config_setting_name]
-
-        log_level = None
-        args = self.args
-
-        parser = self.parser()
-        parser.parse_args(args)
-
-        with patch("salt.utils.parsers.is_writeable", MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
-
-        # Check config name absence in options
-        self.assertNotIn(self.loglevel_config_setting_name, parser.options.__dict__)
-        # Check console loggger has not been set
-        self.assertEqual(self.log_setup.log_level, log_level)
-        self.assertNotIn(self.loglevel_config_setting_name, self.log_setup.config)
-        # Check temp logger
-        self.assertEqual(self.log_setup.temp_log_level, "error")
-        # Check log file logger log level
-        self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
-        if os.path.exists(self.key_logfile):
-            os.unlink(self.key_logfile)
 
 
 class SaltCallOptionParserTestCase(ParserBase, TestCase):
@@ -942,7 +953,16 @@ class SaltCallOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_call_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_call_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.minion_config"
 
@@ -952,10 +972,6 @@ class SaltCallOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltCallOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
 
 class SaltRunOptionParserTestCase(ParserBase, TestCase):
@@ -975,7 +991,16 @@ class SaltRunOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_run_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_run_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.master_config"
 
@@ -985,10 +1010,6 @@ class SaltRunOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltRunOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
 
 class SaltSSHOptionParserTestCase(ParserBase, TestCase):
@@ -1011,8 +1032,24 @@ class SaltSSHOptionParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_ssh_parser_test"
-        self.ssh_log_file = "/tmp/ssh_logfile"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_ssh_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
+        ssh_log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_ssh_logfile",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.ssh_log_file = ssh_log_file.name
+        ssh_log_file.close()
         # Function to patch
         self.config_func = "salt.config.master_config"
 
@@ -1022,12 +1059,6 @@ class SaltSSHOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltSSHOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
-        if os.path.exists(self.ssh_log_file):
-            os.unlink(self.ssh_log_file)
 
 
 class SaltCloudParserTestCase(ParserBase, TestCase):
@@ -1051,7 +1082,16 @@ class SaltCloudParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_cloud_parser_test"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_cloud_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
         # Function to patch
         self.config_func = "salt.config.cloud_config"
 
@@ -1061,10 +1101,6 @@ class SaltCloudParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltCloudParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
 
 
 class SPMParserTestCase(ParserBase, TestCase):
@@ -1088,8 +1124,24 @@ class SPMParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/spm_parser_test"
-        self.spm_logfile = "/tmp/spm_logfile"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_spm_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
+        spm_logfile = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_spm_logfile",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.spm_logfile = spm_logfile.name
+        spm_logfile.close()
         # Function to patch
         self.config_func = "salt.config.spm_config"
 
@@ -1099,12 +1151,6 @@ class SPMParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SPMParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
-        if os.path.exists(self.spm_logfile):
-            os.unlink(self.spm_logfile)
 
 
 class SaltAPIParserTestCase(ParserBase, TestCase):
@@ -1128,8 +1174,24 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
         self.addCleanup(delattr, self, "default_config")
 
         # Log file
-        self.log_file = "/tmp/salt_api_parser_test"
-        self.api_logfile = "/tmp/api_logfile"
+        # We need to use NamedTemporaryFile because Windows won't allow deleting
+        # the log file even after it has been closed: WindowsError 32
+        log_file = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_salt_api_parser_test",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.log_file = log_file.name
+        log_file.close()
+        api_logfile = tempfile.NamedTemporaryFile(
+            prefix="test_parsers_",
+            suffix="_api_logfile",
+            dir=RUNTIME_VARS.TMP,
+            delete=True,
+        )
+        self.api_logfile = api_logfile.name
+        api_logfile.close()
         # Function to patch
         self.config_func = "salt.config.api_config"
 
@@ -1139,12 +1201,6 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltAPIParser
         self.addCleanup(delattr, self, "parser")
-
-    def tearDown(self):
-        if os.path.exists(self.log_file):
-            os.unlink(self.log_file)
-        if os.path.exists(self.api_logfile):
-            os.unlink(self.api_logfile)
 
 
 class DaemonMixInTestCase(TestCase):
@@ -1170,19 +1226,19 @@ class DaemonMixInTestCase(TestCase):
 
     @patch("os.unlink", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
-    @patch("salt.utils.parsers.logger", MagicMock())
+    @patch("salt.utils.parsers.log", MagicMock())
     def test_pid_file_deletion(self):
         """
         PIDfile deletion without exception.
         """
         self.daemon_mixin._mixin_before_exit()
         assert salt.utils.parsers.os.unlink.call_count == 1
-        salt.utils.parsers.logger.info.assert_not_called()
-        salt.utils.parsers.logger.debug.assert_not_called()
+        salt.utils.parsers.log.info.assert_not_called()
+        salt.utils.parsers.log.debug.assert_not_called()
 
     @patch("os.unlink", MagicMock(side_effect=OSError()))
     @patch("os.path.isfile", MagicMock(return_value=True))
-    @patch("salt.utils.parsers.logger", MagicMock())
+    @patch("salt.utils.parsers.log", MagicMock())
     def test_pid_deleted_oserror_as_root(self):
         """
         PIDfile deletion with exception, running as root.
@@ -1198,15 +1254,16 @@ class DaemonMixInTestCase(TestCase):
         with patch(*patch_args):
             self.daemon_mixin._mixin_before_exit()
             assert salt.utils.parsers.os.unlink.call_count == 1
-            salt.utils.parsers.logger.info.assert_called_with(
-                "PIDfile could not be deleted: %s",
-                format(self.daemon_mixin.config["pidfile"]),
+            salt.utils.parsers.log.info.assert_called_with(
+                "PIDfile(%s) could not be deleted: %s",
+                format(self.daemon_mixin.config["pidfile"], ""),
+                ANY,
+                exc_info_on_loglevel=logging.DEBUG,
             )
-            salt.utils.parsers.logger.debug.assert_called()
 
     @patch("os.unlink", MagicMock(side_effect=OSError()))
     @patch("os.path.isfile", MagicMock(return_value=True))
-    @patch("salt.utils.parsers.logger", MagicMock())
+    @patch("salt.utils.parsers.log", MagicMock())
     def test_pid_deleted_oserror_as_non_root(self):
         """
         PIDfile deletion with exception, running as non-root.
@@ -1222,5 +1279,5 @@ class DaemonMixInTestCase(TestCase):
         with patch(*patch_args):
             self.daemon_mixin._mixin_before_exit()
             assert salt.utils.parsers.os.unlink.call_count == 1
-            salt.utils.parsers.logger.info.assert_not_called()
-            salt.utils.parsers.logger.debug.assert_not_called()
+            salt.utils.parsers.log.info.assert_not_called()
+            salt.utils.parsers.log.debug.assert_not_called()

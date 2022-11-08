@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.at as at
-
-# Import Salt Libs
 import salt.utils.path
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -69,8 +62,9 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
         Tests the list all queued and running jobs.
         """
         with patch("salt.modules.at._cmd") as salt_modules_at__cmd_mock:
-            salt_modules_at__cmd_mock.return_value = "101\tThu Dec 11 \
-            19:48:47 2014 A B"
+            salt_modules_at__cmd_mock.return_value = (
+                "101\tThu Dec 11             19:48:47 2014 A B"
+            )
             with patch.dict(at.__grains__, {"os_family": "", "os": ""}):
                 self.assertDictEqual(
                     at.atq(),
@@ -88,8 +82,9 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
-            salt_modules_at__cmd_mock.return_value = "101\t2014-12-11 \
-            19:48:47 A B"
+            salt_modules_at__cmd_mock.return_value = (
+                "101\t2014-12-11             19:48:47 A B"
+            )
             with patch.dict(at.__grains__, {"os_family": "RedHat", "os": ""}):
                 self.assertDictEqual(
                     at.atq(),
@@ -107,8 +102,9 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
-            salt_modules_at__cmd_mock.return_value = "SALT: Dec 11, \
-            2014 19:48 A 101 B"
+            salt_modules_at__cmd_mock.return_value = (
+                "SALT: Dec 11,             2014 19:48 A 101 B"
+            )
             with patch.dict(at.__grains__, {"os_family": "", "os": "OpenBSD"}):
                 self.assertDictEqual(
                     at.atq(),
@@ -240,7 +236,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_atc(self):
         """
-            Tests for atc
+        Tests for atc
         """
         with patch.object(at, "_cmd", return_value=None):
             self.assertEqual(at.atc(101), "'at.atc' is not available.")

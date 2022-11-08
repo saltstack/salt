@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 macOS implementations of various commands in the "desktop" interface
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
@@ -51,7 +48,7 @@ def set_output_volume(volume):
 
         salt '*' desktop.set_output_volume <volume>
     """
-    cmd = 'osascript -e "set volume output volume {0}"'.format(volume)
+    cmd = 'osascript -e "set volume output volume {}"'.format(volume)
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
     _check_cmd(call)
 
@@ -85,7 +82,10 @@ def lock():
 
         salt '*' desktop.lock
     """
-    cmd = "/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend"
+    cmd = (
+        "/System/Library/CoreServices/Menu\\"
+        " Extras/User.menu/Contents/Resources/CGSession -suspend"
+    )
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
     _check_cmd(call)
 
@@ -105,7 +105,7 @@ def say(*words):
 
         salt '*' desktop.say <word0> <word1> ... <wordN>
     """
-    cmd = "say {0}".format(" ".join(words))
+    cmd = "say {}".format(" ".join(words))
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
     _check_cmd(call)
 
@@ -125,6 +125,6 @@ def _check_cmd(call):
         if std_out:
             comment += std_out
 
-        raise CommandExecutionError("Error running command: {0}".format(comment))
+        raise CommandExecutionError("Error running command: {}".format(comment))
 
     return call

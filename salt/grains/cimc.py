@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Generate baseline proxy minion grains for cimc hosts.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.proxy.cimc
-
-# Import Salt Libs
 import salt.utils.platform
 
 __proxyenabled__ = ["cimc"]

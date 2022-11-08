@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cache data in filesystem.
 
@@ -10,7 +9,6 @@ require any configuration.
 Expiration values can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -19,6 +17,7 @@ import os.path
 import shutil
 import tempfile
 
+import salt.payload
 import salt.utils.atomicfile
 import salt.utils.files
 from salt.exceptions import SaltCacheError
@@ -52,20 +51,20 @@ def store(bank, key, data, cachedir):
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise SaltCacheError(
-                "The cache directory, {0}, could not be created: {1}".format(base, exc)
+                "The cache directory, {}, could not be created: {}".format(base, exc)
             )
 
-    outfile = os.path.join(base, "{0}.p".format(key))
+    outfile = os.path.join(base, "{}.p".format(key))
     tmpfh, tmpfname = tempfile.mkstemp(dir=base)
     os.close(tmpfh)
     try:
         with salt.utils.files.fopen(tmpfname, "w+b") as fh_:
-            fh_.write(__context__["serial"].dumps(data))
+            salt.payload.dump(data, fh_)
         # On Windows, os.rename will fail if the destination file exists.
         salt.utils.atomicfile.atomic_rename(tmpfname, outfile)
-    except IOError as exc:
+    except OSError as exc:
         raise SaltCacheError(
-            "There was an error writing the cache file, {0}: {1}".format(base, exc)
+            "There was an error writing the cache file, {}: {}".format(base, exc)
         )
 
 
@@ -74,7 +73,7 @@ def fetch(bank, key, cachedir):
     Fetch information from a file.
     """
     inkey = False
-    key_file = os.path.join(cachedir, os.path.normpath(bank), "{0}.p".format(key))
+    key_file = os.path.join(cachedir, os.path.normpath(bank), "{}.p".format(key))
     if not os.path.isfile(key_file):
         # The bank includes the full filename, and the key is inside the file
         key_file = os.path.join(cachedir, os.path.normpath(bank) + ".p")
@@ -86,12 +85,12 @@ def fetch(bank, key, cachedir):
     try:
         with salt.utils.files.fopen(key_file, "rb") as fh_:
             if inkey:
-                return __context__["serial"].load(fh_)[key]
+                return salt.payload.load(fh_)[key]
             else:
-                return __context__["serial"].load(fh_)
-    except IOError as exc:
+                return salt.payload.load(fh_)
+    except OSError as exc:
         raise SaltCacheError(
-            'There was an error reading the cache file "{0}": {1}'.format(key_file, exc)
+            'There was an error reading the cache file "{}": {}'.format(key_file, exc)
         )
 
 
@@ -99,15 +98,15 @@ def updated(bank, key, cachedir):
     """
     Return the epoch of the mtime for this cache file
     """
-    key_file = os.path.join(cachedir, os.path.normpath(bank), "{0}.p".format(key))
+    key_file = os.path.join(cachedir, os.path.normpath(bank), "{}.p".format(key))
     if not os.path.isfile(key_file):
         log.warning('Cache file "%s" does not exist', key_file)
         return None
     try:
         return int(os.path.getmtime(key_file))
-    except IOError as exc:
+    except OSError as exc:
         raise SaltCacheError(
-            'There was an error reading the mtime for "{0}": {1}'.format(key_file, exc)
+            'There was an error reading the mtime for "{}": {}'.format(key_file, exc)
         )
 
 
@@ -125,14 +124,12 @@ def flush(bank, key=None, cachedir=None):
                 return False
             shutil.rmtree(target)
         else:
-            target = os.path.join(cachedir, os.path.normpath(bank), "{0}.p".format(key))
+            target = os.path.join(cachedir, os.path.normpath(bank), "{}.p".format(key))
             if not os.path.isfile(target):
                 return False
             os.remove(target)
     except OSError as exc:
-        raise SaltCacheError(
-            'There was an error removing "{0}": {1}'.format(target, exc)
-        )
+        raise SaltCacheError('There was an error removing "{}": {}'.format(target, exc))
     return True
 
 
@@ -147,7 +144,7 @@ def list_(bank, cachedir):
         items = os.listdir(base)
     except OSError as exc:
         raise SaltCacheError(
-            'There was an error accessing directory "{0}": {1}'.format(base, exc)
+            'There was an error accessing directory "{}": {}'.format(base, exc)
         )
     ret = []
     for item in items:
@@ -166,5 +163,5 @@ def contains(bank, key, cachedir):
         base = os.path.join(cachedir, os.path.normpath(bank))
         return os.path.isdir(base)
     else:
-        keyfile = os.path.join(cachedir, os.path.normpath(bank), "{0}.p".format(key))
+        keyfile = os.path.join(cachedir, os.path.normpath(bank), "{}.p".format(key))
         return os.path.isfile(keyfile)

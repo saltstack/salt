@@ -1,27 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 mac_utils tests
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
 
 import os
 import plistlib
+import subprocess
 import xml.parsers.expat
 
-# Import Salt libs
+import salt.modules.cmdmod as cmd
 import salt.utils.mac_utils as mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, call, mock_open, patch
-
-# Import Salt Testing Libs
+from tests.support.mock import MagicMock, MockTimedProc, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
 
@@ -273,7 +265,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
-    @patch("plistlib.readPlist" if six.PY2 else "plistlib.load")
+    @patch("plistlib.load")
     def test_available_services_broken_symlink(
         self, mock_read_plist, mock_exists, mock_os_walk
     ):
@@ -306,14 +298,10 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
-    @patch("plistlib.readPlist")
     @patch("salt.utils.mac_utils.__salt__")
-    @patch("plistlib.readPlistFromString", create=True)
     def test_available_services_binary_plist(
         self,
-        mock_read_plist_from_string,
         mock_run,
-        mock_read_plist,
         mock_exists,
         mock_os_walk,
     ):
@@ -332,25 +320,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         if salt.utils.platform.is_windows():
             file_path = "c:" + file_path
 
-        if six.PY2:
-            attrs = {"cmd.run": MagicMock()}
-
-            def getitem(name):
-                return attrs[name]
-
-            mock_run.__getitem__.side_effect = getitem
-            mock_run.configure_mock(**attrs)
-            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(file_path)
-            calls = [call.cmd.run(cmd)]
-
-            mock_read_plist.side_effect = xml.parsers.expat.ExpatError
-            mock_read_plist_from_string.side_effect = plists
-            ret = mac_utils._available_services()
-        else:
-            # Py3 plistlib knows how to handle binary plists without
-            # any extra work, so this test doesn't really do anything
-            # new.
-            ret = _run_available_services(plists)
+        ret = _run_available_services(plists)
 
         expected = {
             "com.apple.lla1": {
@@ -361,40 +331,32 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertEqual(ret, expected)
 
-        if six.PY2:
-            mock_run.assert_has_calls(calls, any_order=True)
-
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
     def test_available_services_invalid_file(self, mock_exists, mock_os_walk):
         """
         test available_services excludes invalid files.
-
         The py3 plistlib raises an InvalidFileException when a plist
-        file cannot be parsed. This test only asserts things for py3.
+        file cannot be parsed.
         """
-        if six.PY3:
-            results = {"/Library/LaunchAgents": ["com.apple.lla1.plist"]}
-            mock_os_walk.side_effect = _get_walk_side_effects(results)
-            mock_exists.return_value = True
+        results = {"/Library/LaunchAgents": ["com.apple.lla1.plist"]}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.return_value = True
 
-            plists = [{"Label": "com.apple.lla1"}]
+        plists = [{"Label": "com.apple.lla1"}]
 
-            mock_load = MagicMock()
-            mock_load.side_effect = plistlib.InvalidFileException
-            with patch("salt.utils.files.fopen", mock_open()):
-                with patch("plistlib.load", mock_load):
-                    ret = mac_utils._available_services()
+        mock_load = MagicMock()
+        mock_load.side_effect = plistlib.InvalidFileException
+        with patch("salt.utils.files.fopen", mock_open()):
+            with patch("plistlib.load", mock_load):
+                ret = mac_utils._available_services()
 
-            self.assertEqual(len(ret), 0)
+        self.assertEqual(len(ret), 0)
 
     @patch("salt.utils.mac_utils.__salt__")
-    @patch("plistlib.readPlist")
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
-    def test_available_services_expat_error(
-        self, mock_exists, mock_os_walk, mock_read_plist, mock_run
-    ):
+    def test_available_services_expat_error(self, mock_exists, mock_os_walk, mock_run):
         """
         test available_services excludes files with expat errors.
 
@@ -411,32 +373,114 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         if salt.utils.platform.is_windows():
             file_path = "c:" + file_path
 
-        if six.PY3:
-            mock_load = MagicMock()
-            mock_load.side_effect = xml.parsers.expat.ExpatError
-            with patch("salt.utils.files.fopen", mock_open()):
-                with patch("plistlib.load", mock_load):
-                    ret = mac_utils._available_services()
-        else:
-            attrs = {"cmd.run": MagicMock()}
-
-            def getitem(name):
-                return attrs[name]
-
-            mock_run.__getitem__.side_effect = getitem
-            mock_run.configure_mock(**attrs)
-            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(file_path)
-            calls = [call.cmd.run(cmd)]
-
-            mock_raise_expat_error = MagicMock(side_effect=xml.parsers.expat.ExpatError)
-
-            with patch("plistlib.readPlist", mock_raise_expat_error):
-                with patch("plistlib.readPlistFromString", mock_raise_expat_error):
-                    ret = mac_utils._available_services()
-
-            mock_run.assert_has_calls(calls, any_order=True)
+        mock_load = MagicMock()
+        mock_load.side_effect = xml.parsers.expat.ExpatError
+        with patch("salt.utils.files.fopen", mock_open()):
+            with patch("plistlib.load", mock_load):
+                ret = mac_utils._available_services()
 
         self.assertEqual(len(ret), 0)
+
+    @patch("salt.utils.mac_utils.__salt__")
+    @patch("salt.utils.path.os_walk")
+    @patch("os.path.exists")
+    def test_available_services_value_error(self, mock_exists, mock_os_walk, mock_run):
+        """
+        test available_services excludes files with ValueErrors.
+        """
+        results = {"/Library/LaunchAgents": ["com.apple.lla1.plist"]}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.return_value = True
+
+        file_path = os.sep + os.path.join(
+            "Library", "LaunchAgents", "com.apple.lla1.plist"
+        )
+        if salt.utils.platform.is_windows():
+            file_path = "c:" + file_path
+
+        mock_load = MagicMock()
+        mock_load.side_effect = ValueError
+        with patch("salt.utils.files.fopen", mock_open()):
+            with patch("plistlib.load", mock_load):
+                ret = mac_utils._available_services()
+
+        self.assertEqual(len(ret), 0)
+
+    def test_bootout_retcode_36_success(self):
+        """
+        Make sure that if we run a `launchctl bootout` cmd and it returns
+        36 that we treat it as a success.
+        """
+        proc = MagicMock(
+            return_value=MockTimedProc(stdout=None, stderr=None, returncode=36)
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                ret = mac_utils.launchctl("bootout", "org.salt.minion")
+        self.assertEqual(ret, True)
+
+    def test_bootout_retcode_99_fail(self):
+        """
+        Make sure that if we run a `launchctl bootout` cmd and it returns
+        something other than 0 or 36 that we treat it as a fail.
+        """
+        error = (
+            "Failed to bootout service:\n"
+            "stdout: failure\n"
+            "stderr: test failure\n"
+            "retcode: 99"
+        )
+        proc = MagicMock(
+            return_value=MockTimedProc(
+                stdout=b"failure", stderr=b"test failure", returncode=99
+            )
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                try:
+                    mac_utils.launchctl("bootout", "org.salt.minion")
+                except CommandExecutionError as exc:
+                    self.assertEqual(exc.message, error)
+
+    def test_not_bootout_retcode_36_fail(self):
+        """
+        Make sure that if we get a retcode 36 on non bootout cmds
+        that we still get a failure.
+        """
+        error = (
+            "Failed to bootstrap service:\n"
+            "stdout: failure\n"
+            "stderr: test failure\n"
+            "retcode: 36"
+        )
+        proc = MagicMock(
+            return_value=MockTimedProc(
+                stdout=b"failure", stderr=b"test failure", returncode=36
+            )
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                try:
+                    mac_utils.launchctl("bootstrap", "org.salt.minion")
+                except CommandExecutionError as exc:
+                    self.assertEqual(exc.message, error)
+
+    def test_git_is_stub(self):
+        mock_check_call = MagicMock(
+            side_effect=subprocess.CalledProcessError(cmd="", returncode=2)
+        )
+        with patch("salt.utils.mac_utils.subprocess.check_call", mock_check_call):
+            self.assertEqual(mac_utils.git_is_stub(), True)
+
+    @patch("salt.utils.mac_utils.subprocess.check_call")
+    def test_git_is_not_stub(self, mock_check_call):
+        self.assertEqual(mac_utils.git_is_stub(), False)
 
 
 def _get_walk_side_effects(results):
@@ -451,15 +495,9 @@ def _get_walk_side_effects(results):
 
 
 def _run_available_services(plists):
-    if six.PY2:
-        mock_read_plist = MagicMock()
-        mock_read_plist.side_effect = plists
-        with patch("plistlib.readPlist", mock_read_plist):
+    mock_load = MagicMock()
+    mock_load.side_effect = plists
+    with patch("salt.utils.files.fopen", mock_open()):
+        with patch("plistlib.load", mock_load):
             ret = mac_utils._available_services()
-    else:
-        mock_load = MagicMock()
-        mock_load.side_effect = plists
-        with patch("salt.utils.files.fopen", mock_open()):
-            with patch("plistlib.load", mock_load):
-                ret = mac_utils._available_services()
     return ret

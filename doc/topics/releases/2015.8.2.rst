@@ -12,7 +12,19 @@ Statistics
 - Total Issue References: **138**
 - Total PR References: **351**
 
-- Contributors: **83** (`DmitryKuzmenko`_, `JaseFace`_, `LoveIsGrief`_, `MasterNayru`_, `Oro`_, `SmithSamuelM`_, `The-Loeki`_, `TheBigBear`_, `aboe76`_, `ajacoutot`_, `anlutro`_, `avinassh`_, `basepi`_, `bdrung`_, `bechtoldt`_, `bernieke`_, `blueyed`_, `cachedout`_, `cbuechler`_, `cedwards`_, `clarkperkins`_, `cro`_, `dkiser`_, `douglas-vaz`_, `dr4Ke`_, `eguven`_, `eliasp`_, `erchn`_, `eyj`_, `favadi`_, `flavio`_, `garethgreenaway`_, `gravyboat`_, `gtmanfred`_, `hedinfaok`_, `hexedpackets`_, `hyn-salt`_, `isbm`_, `itsamenathan`_, `jacksontj`_, `jacobhammons`_, `jeffreyctang`_, `jejenone`_, `jfindlay`_, `johnsocp`_, `justinta`_, `keesbos`_, `lathama`_, `ldobson`_, `lomeroe`_, `martinhoefling`_, `mbarrien`_, `mbologna`_, `merll`_, `mrosedale`_, `msteed`_, `multani`_, `nasenbaer13`_, `nmadhok`_, `notpeter`_, `opdude`_, `papertigers`_, `pass-by-value`_, `plastikos`_, `quantonganh`_, `rallytime`_, `redmcg`_, `rowillia`_, `ruzarowski`_, `ryan-lane`_, `s0undt3ch`_, `sdm24`_, `sjansen`_, `skizunov`_, `srkunze`_, `techhat`_, `terminalmage`_, `ticosax`_, `tkwilliams`_, `toddtomkinson`_, `twangboy`_, `twellspring`_, `whiteinge`_)
+- Contributors: **83** (`DmitryKuzmenko`_, `JaseFace`_, `LoveIsGrief`_, `MasterNayru`_, `Oro`_,
+  `SmithSamuelM`_, `The-Loeki`_, `TheBigBear`_, `aboe76`_, `ajacoutot`_, `anlutro`_, `avinassh`_,
+  `basepi`_, `bdrung`_, `bechtoldt`_, `bernieke`_, `blueyed`_, `cachedout`_, `cbuechler`_,
+  `cedwards`_, `clarkperkins`_, `cro`_, `dkiser`_, `douglas-vaz`_, `dr4Ke`_, `eguven`_, `eliasp`_,
+  `erchn`_, `eyj`_, `favadi`_, `flavio`_, `garethgreenaway`_, `gravyboat`_, `gtmanfred`_,
+  `hedinfaok`_, `hexedpackets`_, `hyn-salt`_, `isbm`_, `itsamenathan`_, `jacksontj`_,
+  `jacobhammons`_, `jeffreyctang`_, `jejenone`_, `jfindlay`_, `johnsocp`_, `justinta`_, `keesbos`_,
+  `lathama`_, `ldobson`_, `lomeroe`_, `martinhoefling`_, `mbarrien`_, `mbologna`_, `merll`_,
+  `mrosedale`_, `msteed`_, `multani`_, `nasenbaer13`_, `nmadhok`_, `notpeter`_, `opdude`_,
+  `papertigers`_, `pass-by-value`_, `plastikos`_, `quantonganh`_, `rallytime`_, `redmcg`_,
+  `rowillia`_, `ruzarowski`_, `ryan-lane`_, `s0undt3ch`_, `sdm24`_, `sjansen`_, `skizunov`_,
+  `srkunze`_, `techhat`_, `terminalmage`_, `ticosax`_, `tkwilliams`_, `toddtomkinson`_,
+  `twangboy`_, `twellspring`_, `whiteinge`_)
 
 
 .. important::
@@ -837,65 +849,65 @@ Changelog for v2015.8.1..v2015.8.2
 
   * ec924e8410 Merge pull request `#28560`_ from bdrung/2015.8
 
-  * 89dcb66310 Fix the wrong "allow to do" phrase
+  * 89dcb66310 Fix "allow one to do" phrase
 
-  * 859b6b46a6 Fix typo an nonexistant -> nonexistent
+  * 859b6b46a6 Fix typo of nonexistent
 
-  * 66921cc61e Fix typo an succesfully -> successfully
+  * 66921cc61e Fix typo of successfully
 
-  * c1e3ef7c8d Fix typo an explicitely -> explicitly
+  * c1e3ef7c8d Fix typo of explicitly
 
-  * 029a95398c Fix typo an superflous -> superfluous
+  * 029a95398c Fix typo of superfluous
 
-  * 026c215933 Fix typo an unecessary -> unnecessary
+  * 026c215933 Fix typo of unnecessary
 
-  * 5f7fc5f94b Fix typo an edditable -> editable
+  * 5f7fc5f94b Fix typo of editable
 
-  * 0b768944c2 Fix typo an deamon -> daemon
+  * 0b768944c2 Fix typo of daemon
 
-  * 5af49881d7 Fix typo an completly -> completely
+  * 5af49881d7 Fix typo of completely
 
   * 14d2a16f74 Fix typos of compatibility
 
-  * 46a5a9b073 Fix typo an suppored -> supported
+  * 46a5a9b073 Fix typo of supported
 
-  * abc490a78e Fix typo an usefull -> useful
+  * abc490a78e Fix typo of useful
 
-  * ddd412180c Fix typo an targetting -> targeting
+  * ddd412180c Fix typo of targeting
 
-  * 610a6a77ae Fix typo an verison -> version
+  * 610a6a77ae Fix typo of version
 
-  * e0a5d46a1e Fix typo an seperated -> separated
+  * e0a5d46a1e Fix typo of separated
 
-  * 7f11cfd5e1 Fix typo an helpfull -> helpful
+  * 7f11cfd5e1 Fix typo of helpful
 
   * 2e9b520d84 Fix typos of omitted
 
-  * 3029f64481 Fix typo an compatbility -> compatibility
+  * 3029f64481 Fix typo of compatibility
 
-  * 470e82f17f Fix typo an dictionnary -> dictionary
+  * 470e82f17f Fix typo of dictionary
 
-  * 5843c7aa24 Fix typo an optionnal -> optional
+  * 5843c7aa24 Fix typo of optional
 
-  * 730d0f95e7 Fix typo an transfered -> transferred
+  * 730d0f95e7 Fix typo of transferred
 
-  * c7e7884de2 Fix typo an recieved -> received
+  * c7e7884de2 Fix typo of received
 
-  * 50eea287f3 Fix typo an managment -> management
+  * 50eea287f3 Fix typo of management
 
   * cb01da81c6 Fix typos of parameter
 
-  * 45fcc7d339 Fix typo an dont -> don't
+  * 45fcc7d339 Fix typo of don't
 
-  * 3624935d32 Fix typo an other -> another
+  * 3624935d32 Fix typo of another
 
-  * d16afe2607 Fix typo sofwares -> software
+  * d16afe2607 Fix typo of software
 
-  * b9b7cbe525 Fix typo sofware -> software
+  * b9b7cbe525 Fix typo of software
 
   * 8edd2c1add Fix typos of dependency
 
-  * 3a5e2e3437 Fix typo documention -> documentation
+  * 3a5e2e3437 Fix typo of documentation
 
 * **ISSUE** `#28528`_: (`schlagify`_) timezone.system error:  CommandExecutionError: Failed to parse timedatectl output, this is likely a bug (refs: `#28550`_)
 
@@ -1118,7 +1130,7 @@ Changelog for v2015.8.1..v2015.8.2
 
       * b1f4a2bdf4 i think i changed the wrong header, updated to fix
 
-      * 846b3aece1 I found you can not run the cp.push commands until after enabling the feature in the conf, so I wanted to update the docs so others who try these commands wont bump into the same issue I had.
+      * 846b3aece1 I found you can not run the cp.push commands until after enabling the feature in the conf, so I wanted to update the docs so others who try these commands won't bump into the same issue I had.
 
     * e3eff9b909 Merge pull request `#28280`_ from 0xf10e/patch-1
 
@@ -3045,7 +3057,7 @@ Changelog for v2015.8.1..v2015.8.2
 
     * 579f2646ba .. versionadded:: 2015.5.6
 
-    * cbaf46e066 python <2.7 compability (pylint issue)
+    * cbaf46e066 python <2.7 compatibility (pylint issue)
 
     * ecde499478 s/bin/b to avoid confusion with bin()
 

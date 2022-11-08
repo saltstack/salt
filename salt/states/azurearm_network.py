@@ -1,10 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Network State Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 in favor of
+    the `saltext.azurerm Salt Extension
+    <https://github.com/salt-extensions/saltext-azurerm>`_
+
+:maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
     * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
@@ -86,17 +91,10 @@ Azure (ARM) Network State Module
                 - connection_auth: {{ profile }}
 
 """
-
-# Python libs
-from __future__ import absolute_import
-
 import logging
+from functools import wraps
 
-# Salt libs
-try:
-    from salt.ext.six.moves import range as six_range
-except ImportError:
-    six_range = range
+import salt.utils.azurearm
 
 __virtualname__ = "azurearm_network"
 
@@ -112,6 +110,28 @@ def __virtual__():
     return (False, "azurearm_network module could not be loaded")
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'azurearm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3007 in favor of the "
+            "saltext.azurerm Salt Extension. "
+            "(https://github.com/salt-extensions/saltext-azurerm)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def virtual_network_present(
     name,
     address_prefixes,
@@ -222,12 +242,12 @@ def virtual_network_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Virtual network {0} is already present.".format(name)
+            ret["comment"] = "Virtual network {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Virtual network {0} would be updated.".format(name)
+            ret["comment"] = "Virtual network {} would be updated.".format(name)
             return ret
 
     else:
@@ -245,7 +265,7 @@ def virtual_network_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Virtual network {0} would be created.".format(name)
+        ret["comment"] = "Virtual network {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -263,15 +283,16 @@ def virtual_network_present(
 
     if "error" not in vnet:
         ret["result"] = True
-        ret["comment"] = "Virtual network {0} has been created.".format(name)
+        ret["comment"] = "Virtual network {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create virtual network {0}! ({1})".format(
+    ret["comment"] = "Failed to create virtual network {}! ({})".format(
         name, vnet.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def virtual_network_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -302,11 +323,11 @@ def virtual_network_absent(name, resource_group, connection_auth=None):
 
     if "error" in vnet:
         ret["result"] = True
-        ret["comment"] = "Virtual network {0} was not found.".format(name)
+        ret["comment"] = "Virtual network {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Virtual network {0} would be deleted.".format(name)
+        ret["comment"] = "Virtual network {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": vnet,
@@ -320,14 +341,15 @@ def virtual_network_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Virtual network {0} has been deleted.".format(name)
+        ret["comment"] = "Virtual network {} has been deleted.".format(name)
         ret["changes"] = {"old": vnet, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete virtual network {0}!".format(name)
+    ret["comment"] = "Failed to delete virtual network {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def subnet_present(
     name,
     address_prefix,
@@ -426,12 +448,12 @@ def subnet_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Subnet {0} is already present.".format(name)
+            ret["comment"] = "Subnet {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Subnet {0} would be updated.".format(name)
+            ret["comment"] = "Subnet {} would be updated.".format(name)
             return ret
 
     else:
@@ -446,7 +468,7 @@ def subnet_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Subnet {0} would be created.".format(name)
+        ret["comment"] = "Subnet {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -465,15 +487,14 @@ def subnet_present(
 
     if "error" not in snet:
         ret["result"] = True
-        ret["comment"] = "Subnet {0} has been created.".format(name)
+        ret["comment"] = "Subnet {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create subnet {0}! ({1})".format(
-        name, snet.get("error")
-    )
+    ret["comment"] = "Failed to create subnet {}! ({})".format(name, snet.get("error"))
     return ret
 
 
+@_deprecation_message
 def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -511,11 +532,11 @@ def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
 
     if "error" in snet:
         ret["result"] = True
-        ret["comment"] = "Subnet {0} was not found.".format(name)
+        ret["comment"] = "Subnet {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Subnet {0} would be deleted.".format(name)
+        ret["comment"] = "Subnet {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": snet,
@@ -529,14 +550,15 @@ def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Subnet {0} has been deleted.".format(name)
+        ret["comment"] = "Subnet {} has been deleted.".format(name)
         ret["changes"] = {"old": snet, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete subnet {0}!".format(name)
+    ret["comment"] = "Failed to delete subnet {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def network_security_group_present(
     name, resource_group, tags=None, security_rules=None, connection_auth=None, **kwargs
 ):
@@ -623,7 +645,7 @@ def network_security_group_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"security_rules" {0}'.format(comp_ret["comment"])
+                ret["comment"] = '"security_rules" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -631,14 +653,14 @@ def network_security_group_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Network security group {0} is already present.".format(
+            ret["comment"] = "Network security group {} is already present.".format(
                 name
             )
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Network security group {0} would be updated.".format(name)
+            ret["comment"] = "Network security group {} would be updated.".format(name)
             return ret
 
     else:
@@ -653,7 +675,7 @@ def network_security_group_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Network security group {0} would be created.".format(name)
+        ret["comment"] = "Network security group {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -670,15 +692,16 @@ def network_security_group_present(
 
     if "error" not in nsg:
         ret["result"] = True
-        ret["comment"] = "Network security group {0} has been created.".format(name)
+        ret["comment"] = "Network security group {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create network security group {0}! ({1})".format(
+    ret["comment"] = "Failed to create network security group {}! ({})".format(
         name, nsg.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def network_security_group_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -709,11 +732,11 @@ def network_security_group_absent(name, resource_group, connection_auth=None):
 
     if "error" in nsg:
         ret["result"] = True
-        ret["comment"] = "Network security group {0} was not found.".format(name)
+        ret["comment"] = "Network security group {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Network security group {0} would be deleted.".format(name)
+        ret["comment"] = "Network security group {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": nsg,
@@ -727,14 +750,15 @@ def network_security_group_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Network security group {0} has been deleted.".format(name)
+        ret["comment"] = "Network security group {} has been deleted.".format(name)
         ret["changes"] = {"old": nsg, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete network security group {0}!".format(name)
+    ret["comment"] = "Failed to delete network security group {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def security_rule_present(
     name,
     access,
@@ -864,7 +888,7 @@ def security_rule_present(
     for params in exclusive_params:
         # pylint: disable=eval-used
         if not eval(params[0]) and not eval(params[1]):
-            ret["comment"] = "Either the {0} or {1} parameter must be provided!".format(
+            ret["comment"] = "Either the {} or {} parameter must be provided!".format(
                 params[0], params[1]
             )
             return ret
@@ -872,10 +896,10 @@ def security_rule_present(
         if eval(params[0]):
             # pylint: disable=eval-used
             if not isinstance(eval(params[0]), list):
-                ret["comment"] = "The {0} parameter must be a list!".format(params[0])
+                ret["comment"] = "The {} parameter must be a list!".format(params[0])
                 return ret
             # pylint: disable=exec-used
-            exec("{0} = None".format(params[1]))
+            exec("{} = None".format(params[1]))
 
     rule = __salt__["azurearm_network.security_rule_get"](
         name,
@@ -978,8 +1002,8 @@ def security_rule_present(
                     sorted(destination_address_prefixes),
                     sorted(rule.get("destination_address_prefixes")),
                 )
-                for idx in six_range(0, len(local_dst_addrs)):
-                    if local_dst_addrs[idx].lower() != remote_dst_addrs[idx].lower():
+                for idx, val in enumerate(local_dst_addrs):
+                    if val.lower() != remote_dst_addrs[idx].lower():
                         ret["changes"]["destination_address_prefixes"] = {
                             "old": rule.get("destination_address_prefixes"),
                             "new": destination_address_prefixes,
@@ -1002,8 +1026,8 @@ def security_rule_present(
                     sorted(source_address_prefixes),
                     sorted(rule.get("source_address_prefixes")),
                 )
-                for idx in six_range(0, len(local_src_addrs)):
-                    if local_src_addrs[idx].lower() != remote_src_addrs[idx].lower():
+                for idx, val in enumerate(local_src_addrs):
+                    if val.lower() != remote_src_addrs[idx].lower():
                         ret["changes"]["source_address_prefixes"] = {
                             "old": rule.get("source_address_prefixes"),
                             "new": source_address_prefixes,
@@ -1012,12 +1036,12 @@ def security_rule_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Security rule {0} is already present.".format(name)
+            ret["comment"] = "Security rule {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Security rule {0} would be updated.".format(name)
+            ret["comment"] = "Security rule {} would be updated.".format(name)
             return ret
 
     else:
@@ -1042,7 +1066,7 @@ def security_rule_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Security rule {0} would be created.".format(name)
+        ret["comment"] = "Security rule {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -1071,15 +1095,16 @@ def security_rule_present(
 
     if "error" not in rule:
         ret["result"] = True
-        ret["comment"] = "Security rule {0} has been created.".format(name)
+        ret["comment"] = "Security rule {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create security rule {0}! ({1})".format(
+    ret["comment"] = "Failed to create security rule {}! ({})".format(
         name, rule.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def security_rule_absent(name, security_group, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -1117,11 +1142,11 @@ def security_rule_absent(name, security_group, resource_group, connection_auth=N
 
     if "error" in rule:
         ret["result"] = True
-        ret["comment"] = "Security rule {0} was not found.".format(name)
+        ret["comment"] = "Security rule {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Security rule {0} would be deleted.".format(name)
+        ret["comment"] = "Security rule {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": rule,
@@ -1135,14 +1160,15 @@ def security_rule_absent(name, security_group, resource_group, connection_auth=N
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Security rule {0} has been deleted.".format(name)
+        ret["comment"] = "Security rule {} has been deleted.".format(name)
         ret["changes"] = {"old": rule, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete security rule {0}!".format(name)
+    ret["comment"] = "Failed to delete security rule {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def load_balancer_present(
     name,
     resource_group,
@@ -1362,7 +1388,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"frontend_ip_configurations" {0}'.format(
+                ret["comment"] = '"frontend_ip_configurations" {}'.format(
                     comp_ret["comment"]
                 )
                 return ret
@@ -1377,7 +1403,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"backend_address_pools" {0}'.format(
+                ret["comment"] = '"backend_address_pools" {}'.format(
                     comp_ret["comment"]
                 )
                 return ret
@@ -1392,7 +1418,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"probes" {0}'.format(comp_ret["comment"])
+                ret["comment"] = '"probes" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -1407,9 +1433,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"load_balancing_rules" {0}'.format(
-                    comp_ret["comment"]
-                )
+                ret["comment"] = '"load_balancing_rules" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -1424,7 +1448,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"inbound_nat_rules" {0}'.format(comp_ret["comment"])
+                ret["comment"] = '"inbound_nat_rules" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -1439,7 +1463,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"inbound_nat_pools" {0}'.format(comp_ret["comment"])
+                ret["comment"] = '"inbound_nat_pools" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -1454,7 +1478,7 @@ def load_balancer_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"outbound_nat_rules" {0}'.format(comp_ret["comment"])
+                ret["comment"] = '"outbound_nat_rules" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -1462,12 +1486,12 @@ def load_balancer_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Load balancer {0} is already present.".format(name)
+            ret["comment"] = "Load balancer {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Load balancer {0} would be updated.".format(name)
+            ret["comment"] = "Load balancer {} would be updated.".format(name)
             return ret
 
     else:
@@ -1488,7 +1512,7 @@ def load_balancer_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Load balancer {0} would be created.".format(name)
+        ret["comment"] = "Load balancer {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -1512,15 +1536,16 @@ def load_balancer_present(
 
     if "error" not in load_bal:
         ret["result"] = True
-        ret["comment"] = "Load balancer {0} has been created.".format(name)
+        ret["comment"] = "Load balancer {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create load balancer {0}! ({1})".format(
+    ret["comment"] = "Failed to create load balancer {}! ({})".format(
         name, load_bal.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def load_balancer_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -1551,11 +1576,11 @@ def load_balancer_absent(name, resource_group, connection_auth=None):
 
     if "error" in load_bal:
         ret["result"] = True
-        ret["comment"] = "Load balancer {0} was not found.".format(name)
+        ret["comment"] = "Load balancer {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Load balancer {0} would be deleted.".format(name)
+        ret["comment"] = "Load balancer {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": load_bal,
@@ -1569,14 +1594,15 @@ def load_balancer_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Load balancer {0} has been deleted.".format(name)
+        ret["comment"] = "Load balancer {} has been deleted.".format(name)
         ret["changes"] = {"old": load_bal, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete load balancer {0}!".format(name)
+    ret["comment"] = "Failed to delete load balancer {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def public_ip_address_present(
     name,
     resource_group,
@@ -1724,12 +1750,12 @@ def public_ip_address_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Public IP address {0} is already present.".format(name)
+            ret["comment"] = "Public IP address {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Public IP address {0} would be updated.".format(name)
+            ret["comment"] = "Public IP address {} would be updated.".format(name)
             return ret
 
     else:
@@ -1747,7 +1773,7 @@ def public_ip_address_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Public IP address {0} would be created.".format(name)
+        ret["comment"] = "Public IP address {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -1768,15 +1794,16 @@ def public_ip_address_present(
 
     if "error" not in pub_ip:
         ret["result"] = True
-        ret["comment"] = "Public IP address {0} has been created.".format(name)
+        ret["comment"] = "Public IP address {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create public IP address {0}! ({1})".format(
+    ret["comment"] = "Failed to create public IP address {}! ({})".format(
         name, pub_ip.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def public_ip_address_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -1807,11 +1834,11 @@ def public_ip_address_absent(name, resource_group, connection_auth=None):
 
     if "error" in pub_ip:
         ret["result"] = True
-        ret["comment"] = "Public IP address {0} was not found.".format(name)
+        ret["comment"] = "Public IP address {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Public IP address {0} would be deleted.".format(name)
+        ret["comment"] = "Public IP address {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": pub_ip,
@@ -1825,14 +1852,15 @@ def public_ip_address_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Public IP address {0} has been deleted.".format(name)
+        ret["comment"] = "Public IP address {} has been deleted.".format(name)
         ret["changes"] = {"old": pub_ip, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete public IP address {0}!".format(name)
+    ret["comment"] = "Failed to delete public IP address {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def network_interface_present(
     name,
     ip_configurations,
@@ -2034,7 +2062,7 @@ def network_interface_present(
         )
 
         if comp_ret.get("comment"):
-            ret["comment"] = '"ip_configurations" {0}'.format(comp_ret["comment"])
+            ret["comment"] = '"ip_configurations" {}'.format(comp_ret["comment"])
             return ret
 
         if comp_ret.get("changes"):
@@ -2042,12 +2070,12 @@ def network_interface_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Network interface {0} is already present.".format(name)
+            ret["comment"] = "Network interface {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Network interface {0} would be updated.".format(name)
+            ret["comment"] = "Network interface {} would be updated.".format(name)
             return ret
 
     else:
@@ -2068,7 +2096,7 @@ def network_interface_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Network interface {0} would be created.".format(name)
+        ret["comment"] = "Network interface {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -2094,15 +2122,16 @@ def network_interface_present(
 
     if "error" not in iface:
         ret["result"] = True
-        ret["comment"] = "Network interface {0} has been created.".format(name)
+        ret["comment"] = "Network interface {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create network interface {0}! ({1})".format(
+    ret["comment"] = "Failed to create network interface {}! ({})".format(
         name, iface.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def network_interface_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -2133,11 +2162,11 @@ def network_interface_absent(name, resource_group, connection_auth=None):
 
     if "error" in iface:
         ret["result"] = True
-        ret["comment"] = "Network interface {0} was not found.".format(name)
+        ret["comment"] = "Network interface {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Network interface {0} would be deleted.".format(name)
+        ret["comment"] = "Network interface {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": iface,
@@ -2151,14 +2180,15 @@ def network_interface_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Network interface {0} has been deleted.".format(name)
+        ret["comment"] = "Network interface {} has been deleted.".format(name)
         ret["changes"] = {"old": iface, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete network interface {0}!)".format(name)
+    ret["comment"] = "Failed to delete network interface {}!)".format(name)
     return ret
 
 
+@_deprecation_message
 def route_table_present(
     name,
     resource_group,
@@ -2254,7 +2284,7 @@ def route_table_present(
             )
 
             if comp_ret.get("comment"):
-                ret["comment"] = '"routes" {0}'.format(comp_ret["comment"])
+                ret["comment"] = '"routes" {}'.format(comp_ret["comment"])
                 return ret
 
             if comp_ret.get("changes"):
@@ -2262,12 +2292,12 @@ def route_table_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Route table {0} is already present.".format(name)
+            ret["comment"] = "Route table {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Route table {0} would be updated.".format(name)
+            ret["comment"] = "Route table {} would be updated.".format(name)
             return ret
 
     else:
@@ -2282,7 +2312,7 @@ def route_table_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Route table {0} would be created.".format(name)
+        ret["comment"] = "Route table {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -2300,15 +2330,16 @@ def route_table_present(
 
     if "error" not in rt_tbl:
         ret["result"] = True
-        ret["comment"] = "Route table {0} has been created.".format(name)
+        ret["comment"] = "Route table {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create route table {0}! ({1})".format(
+    ret["comment"] = "Failed to create route table {}! ({})".format(
         name, rt_tbl.get("error")
     )
     return ret
 
 
+@_deprecation_message
 def route_table_absent(name, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -2339,11 +2370,11 @@ def route_table_absent(name, resource_group, connection_auth=None):
 
     if "error" in rt_tbl:
         ret["result"] = True
-        ret["comment"] = "Route table {0} was not found.".format(name)
+        ret["comment"] = "Route table {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Route table {0} would be deleted.".format(name)
+        ret["comment"] = "Route table {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": rt_tbl,
@@ -2357,14 +2388,15 @@ def route_table_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Route table {0} has been deleted.".format(name)
+        ret["comment"] = "Route table {} has been deleted.".format(name)
         ret["changes"] = {"old": rt_tbl, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete route table {0}!".format(name)
+    ret["comment"] = "Failed to delete route table {}!".format(name)
     return ret
 
 
+@_deprecation_message
 def route_present(
     name,
     address_prefix,
@@ -2445,8 +2477,9 @@ def route_present(
                 "new": next_hop_type,
             }
 
-        if next_hop_type.lower() == "virtualappliance" and next_hop_ip_address != route.get(
-            "next_hop_ip_address"
+        if (
+            next_hop_type.lower() == "virtualappliance"
+            and next_hop_ip_address != route.get("next_hop_ip_address")
         ):
             ret["changes"]["next_hop_ip_address"] = {
                 "old": route.get("next_hop_ip_address"),
@@ -2455,12 +2488,12 @@ def route_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Route {0} is already present.".format(name)
+            ret["comment"] = "Route {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Route {0} would be updated.".format(name)
+            ret["comment"] = "Route {} would be updated.".format(name)
             return ret
 
     else:
@@ -2475,7 +2508,7 @@ def route_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Route {0} would be created.".format(name)
+        ret["comment"] = "Route {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -2494,15 +2527,14 @@ def route_present(
 
     if "error" not in route:
         ret["result"] = True
-        ret["comment"] = "Route {0} has been created.".format(name)
+        ret["comment"] = "Route {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create route {0}! ({1})".format(
-        name, route.get("error")
-    )
+    ret["comment"] = "Failed to create route {}! ({})".format(name, route.get("error"))
     return ret
 
 
+@_deprecation_message
 def route_absent(name, route_table, resource_group, connection_auth=None):
     """
     .. versionadded:: 2019.2.0
@@ -2536,11 +2568,11 @@ def route_absent(name, route_table, resource_group, connection_auth=None):
 
     if "error" in route:
         ret["result"] = True
-        ret["comment"] = "Route {0} was not found.".format(name)
+        ret["comment"] = "Route {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Route {0} would be deleted.".format(name)
+        ret["comment"] = "Route {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": route,
@@ -2554,9 +2586,9 @@ def route_absent(name, route_table, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Route {0} has been deleted.".format(name)
+        ret["comment"] = "Route {} has been deleted.".format(name)
         ret["changes"] = {"old": route, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete route {0}!".format(name)
+    ret["comment"] = "Failed to delete route {}!".format(name)
     return ret

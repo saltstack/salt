@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return the results of a highstate (or any other state function that returns
 data in a compatible format) via an HTML email or HTML file.
@@ -77,9 +76,9 @@ values at the time of pillar generation, these will contain minion values at
 the time of execution.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-import cgi
+import html
+import io
 import logging
 import smtplib
 from email.mime.text import MIMEText
@@ -89,8 +88,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.ext import six
-from salt.ext.six.moves import StringIO, range
 
 log = logging.getLogger(__name__)
 
@@ -138,8 +135,7 @@ def _get_options(ret):
 #
 _STYLES = {
     "_table": "border-collapse:collapse;width:100%;",
-    "_td": "vertical-align:top;"
-    "font-family:Helvetica,Arial,sans-serif;font-size:9pt;",
+    "_td": "vertical-align:top;font-family:Helvetica,Arial,sans-serif;font-size:9pt;",
     "unchanged": "color:blue;",
     "changed": "color:green",
     "failed": "color:red;",
@@ -166,16 +162,14 @@ def _generate_html_table(data, out, level=0, extra_style=""):
     Generate a single table of data
     """
     print(
-        '<table style="{0}">'.format(
-            _lookup_style("table", ["table" + six.text_type(level)])
-        ),
+        '<table style="{}">'.format(_lookup_style("table", ["table" + str(level)])),
         file=out,
     )
 
     firstone = True
 
-    row_style = "row" + six.text_type(level)
-    cell_style = "cell" + six.text_type(level)
+    row_style = "row" + str(level)
+    cell_style = "cell" + str(level)
 
     for subdata in data:
         first_style = "first_first" if firstone else "notfirst_first"
@@ -188,13 +182,13 @@ def _generate_html_table(data, out, level=0, extra_style=""):
             else:
                 new_extra_style = extra_style
             if len(subdata) == 1:
-                name, value = next(six.iteritems(subdata))
+                name, value = next(iter(subdata.items()))
                 print(
-                    '<tr style="{0}">'.format(_lookup_style("tr", [row_style])),
+                    '<tr style="{}">'.format(_lookup_style("tr", [row_style])),
                     file=out,
                 )
                 print(
-                    '<td style="{0}">{1}</td>'.format(
+                    '<td style="{}">{}</td>'.format(
                         _lookup_style(
                             "td", [cell_style, first_style, "name", new_extra_style]
                         ),
@@ -204,7 +198,7 @@ def _generate_html_table(data, out, level=0, extra_style=""):
                 )
                 if isinstance(value, list):
                     print(
-                        '<td style="{0}">'.format(
+                        '<td style="{}">'.format(
                             _lookup_style(
                                 "td",
                                 [
@@ -221,20 +215,20 @@ def _generate_html_table(data, out, level=0, extra_style=""):
                     print("</td>", file=out)
                 else:
                     print(
-                        '<td style="{0}">{1}</td>'.format(
+                        '<td style="{}">{}</td>'.format(
                             _lookup_style(
                                 "td",
                                 [cell_style, second_style, "value", new_extra_style],
                             ),
-                            cgi.escape(six.text_type(value)),
+                            html.escape(str(value)),
                         ),
                         file=out,
                     )
                 print("</tr>", file=out)
         elif isinstance(subdata, list):
-            print('<tr style="{0}">'.format(_lookup_style("tr", [row_style])), file=out)
+            print('<tr style="{}">'.format(_lookup_style("tr", [row_style])), file=out)
             print(
-                '<td style="{0}">'.format(
+                '<td style="{}">'.format(
                     _lookup_style(
                         "td", [cell_style, first_style, "container", extra_style]
                     )
@@ -245,13 +239,13 @@ def _generate_html_table(data, out, level=0, extra_style=""):
             print("</td>", file=out)
             print("</tr>", file=out)
         else:
-            print('<tr style="{0}">'.format(_lookup_style("tr", [row_style])), file=out)
+            print('<tr style="{}">'.format(_lookup_style("tr", [row_style])), file=out)
             print(
-                '<td style="{0}">{1}</td>'.format(
+                '<td style="{}">{}</td>'.format(
                     _lookup_style(
                         "td", [cell_style, first_style, "value", extra_style]
                     ),
-                    cgi.escape(six.text_type(subdata)),
+                    html.escape(str(subdata)),
                 ),
                 file=out,
             )
@@ -409,7 +403,7 @@ def _sprinkle(config_str):
     """
     parts = [x for sub in config_str.split("{") for x in sub.split("}")]
     for i in range(1, len(parts), 2):
-        parts[i] = six.text_type(__grains__.get(parts[i], ""))
+        parts[i] = str(__grains__.get(parts[i], ""))
     return "".join(parts)
 
 
@@ -424,12 +418,12 @@ def _produce_output(report, failed, setup):
     if report_format == "json":
         report_text = salt.utils.json.dumps(report)
     elif report_format == "yaml":
-        string_file = StringIO()
+        string_file = io.StringIO()
         salt.utils.yaml.safe_dump(report, string_file, default_flow_style=False)
         string_file.seek(0)
         report_text = string_file.read()
     else:
-        string_file = StringIO()
+        string_file = io.StringIO()
         _generate_html(report, string_file)
         string_file.seek(0)
         report_text = string_file.read()
@@ -494,7 +488,7 @@ def __test_html():
         data_text = salt.utils.stringutils.to_unicode(input_file.read())
     data = salt.utils.yaml.safe_load(data_text)
 
-    string_file = StringIO()
+    string_file = io.StringIO()
     _generate_html(data, string_file)
     string_file.seek(0)
     result = string_file.read()

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Test the core grains
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
+
 import salt.loader
 import salt.utils.platform
 from tests.support.case import ModuleCase
@@ -62,7 +61,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
         return {salt.modules.reg: {"__opts__": opts, "__utils__": utils}}
 
     @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_win_cpu_model(self):
         """
         test grains['cpu_model']

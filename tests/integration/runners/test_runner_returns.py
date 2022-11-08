@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for runner_returns
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import os
@@ -10,6 +8,7 @@ import socket
 import tempfile
 
 import pytest
+
 import salt.payload
 import salt.utils.args
 import salt.utils.files
@@ -17,7 +16,6 @@ import salt.utils.jid
 import salt.utils.yaml
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -40,13 +38,20 @@ class RunnerReturnsTest(ShellCase):
                 raise
 
         self.conf = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".conf", dir=self.master_d_dir, delete=False,
+            mode="w",
+            suffix=".conf",
+            dir=self.master_d_dir,
+            delete=False,
         )
 
     def tearDown(self):
         """
         Close the tempfile.NamedTemporaryFile object, cleaning it up
         """
+        try:
+            self.conf.close()
+        except OSError:
+            pass
         salt.utils.files.rm_rf(self.master_d_dir)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
@@ -68,7 +73,6 @@ class RunnerReturnsTest(ShellCase):
         # Do not supply the default arguments because we want to know if we are
         # missing some aspect of the schema.
         data.pop("_stamp")
-        data.pop("pid")
 
     def write_conf(self, data):
         """
@@ -78,7 +82,7 @@ class RunnerReturnsTest(ShellCase):
         self.conf.flush()
         self.conf.close()
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_returns_disabled(self):
         """
         Test with runner_returns disabled
@@ -97,7 +101,7 @@ class RunnerReturnsTest(ShellCase):
         )
         self.assertFalse(os.path.isfile(serialized_return))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_returns_enabled(self):
         """
         Test with runner_returns enabled
@@ -114,19 +118,18 @@ class RunnerReturnsTest(ShellCase):
             "master",
             "return.p",
         )
-        serial = salt.payload.Serial(self.master_opts)
         with salt.utils.files.fopen(serialized_return, "rb") as fp_:
-            deserialized = serial.loads(fp_.read(), encoding="utf-8")
+            deserialized = salt.payload.loads(fp_.read(), encoding="utf-8")
 
         self.clean_return(deserialized["return"])
 
         # Now we have something sane we can reliably compare in an assert.
         if "SUDO_USER" in os.environ:
-            user = "sudo_{0}".format(os.environ["SUDO_USER"])
+            user = "sudo_{}".format(os.environ["SUDO_USER"])
         else:
             user = RUNTIME_VARS.RUNNING_TESTS_USER
         if salt.utils.platform.is_windows():
-            user = "sudo_{0}\\{1}".format(socket.gethostname(), user)
+            user = "sudo_{}\\{}".format(socket.gethostname(), user)
         self.assertEqual(
             deserialized,
             {

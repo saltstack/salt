@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A salt cloud provider that lets you use virtualbox on your machine
 and act as a cloud.
@@ -9,7 +8,7 @@ For now this will only clone existing VMs. It's best to create a template
 from which we will clone.
 
 Followed
-https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
+https://docs.saltproject.io/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
 to create this.
 
 Dicts provided by salt:
@@ -17,28 +16,23 @@ Dicts provided by salt:
         as well as a set of configuration and environment variables
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 import salt.config as config
-
-# Import salt libs
 from salt.exceptions import SaltCloudSystemExit
 
-# Import Third Party Libs
 try:
     import vboxapi  # pylint: disable=unused-import
+
     from salt.utils.virtualbox import (
-        vb_list_machines,
+        treat_machine_dict,
         vb_clone_vm,
-        vb_machine_exists,
         vb_destroy_machine,
         vb_get_machine,
-        vb_stop_vm,
-        treat_machine_dict,
+        vb_list_machines,
+        vb_machine_exists,
         vb_start_vm,
+        vb_stop_vm,
         vb_wait_for_network_address,
     )
 
@@ -78,12 +72,20 @@ def __virtual__():
     if get_configured_provider() is False:
         return (
             False,
-            "The virtualbox driver cannot be loaded: 'virtualbox' provider is not configured.",
+            "The virtualbox driver cannot be loaded: 'virtualbox' provider is not"
+            " configured.",
         )
 
     # If the name of the driver used does not match the filename,
     #  then that name should be returned instead of True.
     return __virtualname__
+
+
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
 
 
 def get_configured_provider():
@@ -92,7 +94,7 @@ def get_configured_provider():
     """
     configured = config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         (),  # keys we need from the provider configuration
     )
     return configured
@@ -153,7 +155,9 @@ def create(vm_info):
         if (
             vm_info["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "virtualbox", vm_info["profile"]
+                __opts__,
+                _get_active_provider_name() or "virtualbox",
+                vm_info["profile"],
             )
             is False
         ):
@@ -187,7 +191,7 @@ def create(vm_info):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_info["name"]),
+        "salt/cloud/{}/creating".format(vm_info["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_info, ["name", "profile", "provider", "driver"]
         ),
@@ -205,7 +209,7 @@ def create(vm_info):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_info["name"]),
+        "salt/cloud/{}/requesting".format(vm_info["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", request_kwargs, list(request_kwargs)
         ),
@@ -235,7 +239,7 @@ def create(vm_info):
     __utils__["cloud.fire_event"](
         "event",
         "created machine",
-        "salt/cloud/{0}/created".format(vm_info["name"]),
+        "salt/cloud/{}/created".format(vm_info["name"]),
         args=__utils__["cloud.filter_event"]("created", vm_result, list(vm_result)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -269,7 +273,7 @@ def list_nodes_full(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called " "with -f or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     machines = {}
@@ -314,7 +318,7 @@ def list_nodes(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called " "with -f or --function."
+            "The list_nodes function must be called with -f or --function."
         )
 
     attributes = [
@@ -326,7 +330,9 @@ def list_nodes(kwargs=None, call=None):
         "public_ips",
     ]
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), attributes, call,
+        list_nodes_full("function"),
+        attributes,
+        call,
     )
 
 
@@ -335,7 +341,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -360,12 +368,12 @@ def destroy(name, call=None):
     """
     log.info("Attempting to delete instance %s", name)
     if not vb_machine_exists(name):
-        return "{0} doesn't exist and can't be deleted".format(name)
+        return "{} doesn't exist and can't be deleted".format(name)
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -376,7 +384,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

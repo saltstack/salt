@@ -92,8 +92,8 @@ execution modules
     btrfs
     cabal
     capirca_acl
-    cassandra
     cassandra_cql
+    cassandra_mod
     celery
     ceph
     chassis
@@ -127,6 +127,7 @@ execution modules
     debian_service
     debuild_pkgbuild
     defaults
+    devinfo
     devmap
     dig
     disk
@@ -171,7 +172,6 @@ execution modules
     gentoolkitmod
     git
     github
-    glance
     glanceng
     glassfish
     glusterfs
@@ -193,6 +193,7 @@ execution modules
     hosts
     http
     icinga2
+    idem
     ifttt
     ilo
     incron
@@ -232,6 +233,7 @@ execution modules
     keystoneng
     keystore
     kmod
+    kubeadm
     kubernetesmod
     launchctl_service
     layman
@@ -391,12 +393,14 @@ execution modules
     rbac_solaris
     rbenv
     rdp
+    rebootmgr
     redismod
     reg
     rest_pkg
     rest_sample_utils
     rest_service
     restartcheck
+    restconf
     ret
     rh_ip
     rh_service
@@ -424,6 +428,7 @@ execution modules
     serverdensity_device
     servicenow
     slack_notify
+    slackware_service
     slsutil
     smartos_imgadm
     smartos_nictagadm
@@ -453,6 +458,7 @@ execution modules
     statuspage
     supervisord
     suse_apache
+    suse_ip
     svn
     swarm
     swift
@@ -475,6 +481,7 @@ execution modules
     tls
     tomcat
     trafficserver
+    transactional_update
     travisci
     tuned
     twilio_notify
@@ -503,12 +510,14 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_event
     win_file
     win_firewall
     win_groupadd
     win_iis
     win_ip
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_ntp
@@ -520,6 +529,7 @@ execution modules
     win_servermanager
     win_service
     win_shadow
+    win_shortcut
     win_smtp_server
     win_snmp
     win_status
@@ -537,6 +547,7 @@ execution modules
     xfs
     xml
     xmpp
+    yaml
     yumpkg
     zabbix
     zcbuildout
