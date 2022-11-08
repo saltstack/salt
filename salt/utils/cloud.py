@@ -1285,8 +1285,9 @@ def deploy_windows(
             return False
 
         salt.utils.smb.mkdirs("salttemp", conn=smb_conn)
-        root_dir = "%PROGRAMDATA%\\Salt Project\\Salt"
-        salt.utils.smb.mkdirs("{}\\conf\\pki\\minion".format(root_dir), conn=smb_conn)
+        root_dir = "ProgramData/Salt Project/Salt"
+        salt.utils.smb.mkdirs("{}/conf/pki/minion".format(root_dir), conn=smb_conn)
+        root_dir = "ProgramData\\Salt Project\\Salt"
 
         if minion_pub:
             salt.utils.smb.put_str(
@@ -1369,10 +1370,14 @@ def deploy_windows(
             # Add special windows minion configuration
             # that must be in the minion config file
             windows_minion_conf = {
-                "ipc_mode": "tcp",
-                "pki_dir": "/conf/pki/minion",
-                "multiprocessing": False,
+                "ipc_mode": minion_conf.pop("ipc_mode", "tcp"),
+                "pki_dir": minion_conf.pop("pki_dir", "/conf/pki/minion"),
+                "multiprocessing": minion_conf.pop("multiprocessing", True),
             }
+            if master and "master" not in minion_conf:
+                windows_minion_conf["master"] = master
+            if name and "id" not in minion_conf:
+                windows_minion_conf["id"] = name
             minion_conf = dict(minion_conf, **windows_minion_conf)
             salt.utils.smb.put_str(
                 salt_config_to_yaml(minion_conf, line_break="\r\n"),
