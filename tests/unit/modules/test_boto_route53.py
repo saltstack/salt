@@ -1,38 +1,29 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os.path
 import sys
 from collections import namedtuple
 
-import pkg_resources
+import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
-# Import Salt Libs
 import salt.config
 import salt.loader
-import salt.modules.boto_route53 as boto_route53
 import salt.utils.versions
-from boto.route53.exception import DNSServerError
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
+    from boto.route53.exception import DNSServerError
+
+    import salt.modules.boto_route53 as boto_route53
 
     boto.ENDPOINTS_PATH = os.path.join(
         RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
     )
-    from moto import mock_route53_deprecated
+    from moto import mock_route53_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
@@ -56,8 +47,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-required_moto = "0.3.7"
-required_moto_py3 = "1.0.1"
+required_moto = "1.0.1"
 
 
 def _has_required_moto():
@@ -73,23 +63,13 @@ def _has_required_moto():
         )
         if moto_version < salt.utils.versions.LooseVersion(required_moto):
             return False
-        elif six.PY3 and moto_version < salt.utils.versions.LooseVersion(
-            required_moto_py3
-        ):
-            return False
-
     return True
 
 
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
-    "The moto module must be >= to {0} for "
-    "PY2 or {1} for PY3.".format(required_moto, required_moto_py3),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+    "The moto module must be >= to {}".format(required_moto),
 )
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -121,6 +101,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.opts
 
+    @skipIf(sys.version_info >= (3, 10), "Fail with python 3.10")
     @mock_route53_deprecated
     def test_create_healthcheck(self):
         """
@@ -159,7 +140,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(healthcheck, expected)
 
 
-class DummyConn(object):
+class DummyConn:
     """
     Simple object housing a mock to simulate Error conditions. Each keyword
     argument passed into this will be set as MagicMock with the keyword value
@@ -167,7 +148,7 @@ class DummyConn(object):
     """
 
     def __init__(self, **kwargs):
-        for key, val in six.iteritems(kwargs):
+        for key, val in kwargs.items():
             setattr(self, key, MagicMock(side_effect=val))
 
 
@@ -215,7 +196,10 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         # Retryable error (max retries reached)
         conn = DummyConn(get_zone=[self._retryable_error, self._retryable_error])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.zone_exists("foo", error_retries=2,)
+            result = boto_route53.zone_exists(
+                "foo",
+                error_retries=2,
+            )
             assert conn.get_zone.call_count == 2
             assert result is False
 
@@ -247,7 +231,10 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
             create_health_check=[self._retryable_error, self._retryable_error]
         )
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.create_healthcheck("foo", error_retries=2,)
+            result = boto_route53.create_healthcheck(
+                "foo",
+                error_retries=2,
+            )
             assert conn.create_health_check.call_count == 2
             assert result is False
 
@@ -272,7 +259,12 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         # Retryable error (max retries reached)
         conn = DummyConn(get_zone=[self._retryable_error, self._retryable_error])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.get_record("foo", "bar", "baz", error_retries=2,)
+            result = boto_route53.get_record(
+                "foo",
+                "bar",
+                "baz",
+                error_retries=2,
+            )
             assert conn.get_zone.call_count == 2
             assert not result
 
@@ -309,7 +301,13 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         zone.id = "foo"
         conn = DummyConn(get_zone=[zone])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.add_record("a", "b", "c", "d", error_retries=2,)
+            result = boto_route53.add_record(
+                "a",
+                "b",
+                "c",
+                "d",
+                error_retries=2,
+            )
             assert zone.add_record.call_count == 2
             assert not result
 
@@ -344,7 +342,13 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         zone = DummyConn(find_records=[self._retryable_error, self._retryable_error])
         conn = DummyConn(get_zone=[zone])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.update_record("a", "b", "c", "d", error_retries=2,)
+            result = boto_route53.update_record(
+                "a",
+                "b",
+                "c",
+                "d",
+                error_retries=2,
+            )
             assert zone.find_records.call_count == 2
             assert not result
 
@@ -380,7 +384,13 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         zone = DummyConn(find_records=[self._retryable_error, self._retryable_error])
         conn = DummyConn(get_zone=[zone])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.delete_record("a", "b", "c", "d", error_retries=2,)
+            result = boto_route53.delete_record(
+                "a",
+                "b",
+                "c",
+                "d",
+                error_retries=2,
+            )
             assert zone.find_records.call_count == 2
             assert not result
 

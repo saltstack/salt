@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Configure ``portage(5)``
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 
-# Import salt libs
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import third party libs
-from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -64,7 +56,8 @@ def __virtual__():
         return "portage_config"
     return (
         False,
-        "portage_config execution module cannot be loaded: only available on Gentoo with portage installed.",
+        "portage_config execution module cannot be loaded: only available on Gentoo"
+        " with portage installed.",
     )
 
 
@@ -94,8 +87,8 @@ def _get_config_file(conf, atom):
         if parts.cp == "*/*":
             # parts.repo will be empty if there is no repo part
             relative_path = parts.repo or "gentoo"
-        elif six.text_type(parts.cp).endswith("/*"):
-            relative_path = six.text_type(parts.cp).split("/")[0] + "_"
+        elif str(parts.cp).endswith("/*"):
+            relative_path = str(parts.cp).split("/")[0] + "_"
         else:
             relative_path = os.path.join(
                 *[x for x in os.path.split(parts.cp) if x != "*"]
@@ -161,7 +154,6 @@ def enforce_nice_config():
        :py:func:`salt.modules.ebuild.ex_mod_init`
          for information on automatically running this when pkg is used.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -200,7 +192,7 @@ def _unify_keywords():
         if os.path.isdir(old_path):
             for triplet in salt.utils.path.os_walk(old_path):
                 for file_name in triplet[2]:
-                    file_path = "{0}/{1}".format(triplet[0], file_name)
+                    file_path = "{}/{}".format(triplet[0], file_name)
                     with salt.utils.files.fopen(file_path) as fh_:
                         for line in fh_:
                             line = salt.utils.stringutils.to_unicode(line).strip()
@@ -247,7 +239,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         for triplet in salt.utils.path.os_walk(path):
             for file_name in triplet[2]:
-                file_path = "{0}/{1}".format(triplet[0], file_name)
+                file_path = "{}/{}".format(triplet[0], file_name)
                 cp = triplet[0][len(path) + 1 :] + "/" + file_name
 
                 shutil.copy(file_path, file_path + ".bak")
@@ -324,7 +316,7 @@ def _merge_flags(new_flags, old_flags=None, conf="any"):
         else:
             flags[flag] = True
     tmp = []
-    for key, val in six.iteritems(flags):
+    for key, val in flags.items():
         if val:
             tmp.append(key)
         else:
@@ -356,14 +348,14 @@ def append_to_package_conf(conf, atom="", flags=None, string="", overwrite=False
                 atom = _p_to_cp(atom)
                 if not atom:
                     return
-            string = "{0} {1}".format(atom, " ".join(flags))
+            string = "{} {}".format(atom, " ".join(flags))
             new_flags = list(flags)
         else:
             atom = string.strip().split()[0]
             new_flags = [flag for flag in string.strip().split(" ") if flag][1:]
             if "/" not in atom:
                 atom = _p_to_cp(atom)
-                string = "{0} {1}".format(atom, " ".join(new_flags))
+                string = "{} {}".format(atom, " ".join(new_flags))
                 if not atom:
                     return
 
@@ -390,14 +382,14 @@ def append_to_package_conf(conf, atom="", flags=None, string="", overwrite=False
 
         try:
             shutil.copy(complete_file_path, complete_file_path + ".bak")
-        except IOError:
+        except OSError:
             pass
 
         try:
             # pylint: disable=resource-leakage
             file_handler = salt.utils.files.fopen(complete_file_path, "r+")
             # pylint: enable=resource-leakage
-        except IOError:
+        except OSError:
             # pylint: disable=resource-leakage
             file_handler = salt.utils.files.fopen(complete_file_path, "w+")
             # pylint: enable=resource-leakage
@@ -430,11 +422,11 @@ def append_to_package_conf(conf, atom="", flags=None, string="", overwrite=False
                                 continue
                         merged_flags = _merge_flags(new_flags, old_flags, conf)
                         if merged_flags:
-                            new_contents += "{0} {1}\n".format(
+                            new_contents += "{} {}\n".format(
                                 atom, " ".join(merged_flags)
                             )
                         else:
-                            new_contents += "{0}\n".format(atom)
+                            new_contents += "{}\n".format(atom)
                         added = True
                 else:
                     new_contents += l
@@ -521,7 +513,7 @@ def get_flags_from_package_conf(conf, atom):
                             flags.append("~ARCH")
 
             return _merge_flags(flags)
-        except IOError:
+        except OSError:
             return []
 
 
@@ -545,6 +537,7 @@ def has_flag(conf, atom, flag):
 def get_missing_flags(conf, atom, flags):
     """
     Find out which of the given flags are currently not set.
+
     CLI Example:
 
     .. code-block:: bash
@@ -591,7 +584,7 @@ def is_present(conf, atom):
             atom = portage.dep.Atom(atom, allow_wildcard=True)
         has_wildcard = "*" in atom
 
-        package_file = _get_config_file(conf, six.text_type(atom))
+        package_file = _get_config_file(conf, str(atom))
 
         # wildcards are valid in confs
         if has_wildcard:
@@ -606,13 +599,13 @@ def is_present(conf, atom):
                     line_package = line.split()[0]
 
                     if has_wildcard:
-                        if line_package == six.text_type(atom):
+                        if line_package == str(atom):
                             return True
                     else:
                         line_list = _porttree().dbapi.xmatch("match-all", line_package)
                         if match_list.issubset(line_list):
                             return True
-        except IOError:
+        except OSError:
             pass
         return False
 

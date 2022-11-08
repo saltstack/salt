@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling OpenStack Neutron calls
 
@@ -65,12 +64,8 @@ Module for handling OpenStack Neutron calls
     None to allow keystoneauth to search for the certificates on its own.(defaults to True)
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 try:
     import salt.utils.openstack.neutron as suoneu
 
@@ -91,9 +86,6 @@ def __virtual__():
     is installed on this minion.
     """
     return HAS_NEUTRON
-
-
-__opts__ = {}
 
 
 def _auth(profile=None):
@@ -1448,6 +1440,7 @@ def delete_ipsecpolicy(ipsecpolicy, profile=None):
 def list_firewall_rules(profile=None):
     """
     Fetches a list of all firewall rules for a tenant
+
     CLI Example:
 
     .. code-block:: bash
@@ -1591,6 +1584,7 @@ def update_firewall_rule(
 def list_firewalls(profile=None):
     """
     Fetches a list of all firewalls for a tenant
+
     CLI Example:
 
     .. code-block:: bash

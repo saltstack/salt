@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Splunk Search State Module
 
@@ -13,7 +12,6 @@ This state is used to ensure presence of splunk searches.
         - name: This is the splunk search name
         - search: index=main sourcetype=
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -46,7 +44,7 @@ def present(name, profile="splunk", **kwargs):
     target = __salt__["splunk_search.get"](name, profile=profile)
     if target:
         if __opts__["test"]:
-            ret["comment"] = "Would update {0}".format(name)
+            ret["comment"] = "Would update {}".format(name)
             return ret
         # found a search... updating
         result = __salt__["splunk_search.update"](name, profile=profile, **kwargs)
@@ -66,7 +64,7 @@ def present(name, profile="splunk", **kwargs):
             ret["changes"]["new"] = newvalues
     else:
         if __opts__["test"]:
-            ret["comment"] = "Would create {0}".format(name)
+            ret["comment"] = "Would create {}".format(name)
             return ret
         # creating a new search
         result = __salt__["splunk_search.create"](name, profile=profile, **kwargs)
@@ -76,7 +74,7 @@ def present(name, profile="splunk", **kwargs):
             ret["changes"]["new"] = kwargs
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {0}".format(name)
+            ret["comment"] = "Failed to create {}".format(name)
     return ret
 
 
@@ -98,7 +96,7 @@ def absent(name, profile="splunk"):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "{0} is absent.".format(name),
+        "comment": "{} is absent.".format(name),
     }
 
     target = __salt__["splunk_search.get"](name, profile=profile)
@@ -106,14 +104,14 @@ def absent(name, profile="splunk"):
         if __opts__["test"]:
             ret = {}
             ret["name"] = name
-            ret["comment"] = "Would delete {0}".format(name)
+            ret["comment"] = "Would delete {}".format(name)
             ret["result"] = None
             return ret
 
         result = __salt__["splunk_search.delete"](name, profile=profile)
         if result:
-            ret["comment"] = "{0} was deleted".format(name)
+            ret["comment"] = "{} was deleted".format(name)
         else:
-            ret["comment"] = "Failed to delete {0}".format(name)
+            ret["comment"] = "Failed to delete {}".format(name)
             ret["result"] = False
     return ret

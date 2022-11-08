@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managaging metadata in SmartOS Zones
 
@@ -9,14 +8,10 @@ Module for managaging metadata in SmartOS Zones
 :platform:      smartos
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.decorators as decorators
-
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 
@@ -74,7 +69,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{0} module can only be loaded on SmartOS zones".format(__virtualname__),
+        "{} module can only be loaded on SmartOS zones".format(__virtualname__),
     )
 
 
@@ -90,7 +85,7 @@ def list_():
     """
     mdata = _check_mdata_list()
     if mdata:
-        cmd = "{0}".format(mdata)
+        cmd = "{}".format(mdata)
         return __salt__["cmd.run"](cmd, ignore_retcode=True).splitlines()
     return {}
 
@@ -121,7 +116,7 @@ def get_(*keyname):
 
     for k in keyname:
         if mdata:
-            cmd = "{0} {1}".format(mdata, k)
+            cmd = "{} {}".format(mdata, k)
             res = __salt__["cmd.run_all"](cmd, ignore_retcode=True)
             ret[k] = res["stdout"] if res["retcode"] == 0 else ""
         else:
@@ -175,7 +170,7 @@ def delete_(*keyname):
 
     for k in keyname:
         if mdata and k in valid_keynames:
-            cmd = "{0} {1}".format(mdata, k)
+            cmd = "{} {}".format(mdata, k)
             ret[k] = __salt__["cmd.run_all"](cmd, ignore_retcode=True)["retcode"] == 0
         else:
             ret[k] = True
