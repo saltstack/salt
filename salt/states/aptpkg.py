@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Package management operations specific to APT- and DEB-based systems
 ====================================================================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+
 import logging
 
-# Import salt libs
 import salt.utils.data
 
 log = logging.getLogger(__name__)
@@ -35,22 +32,22 @@ def held(name):
         The name of the package, e.g., 'tmux'
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
-    state = __salt__["pkg.get_selections"](pattern=name,)
+    state = __salt__["pkg.get_selections"](
+        pattern=name,
+    )
     if not state:
-        ret.update(comment="Package {0} does not have a state".format(name))
+        ret.update(comment="Package {} does not have a state".format(name))
     elif not salt.utils.data.is_true(state.get("hold", False)):
         if not __opts__["test"]:
             result = __salt__["pkg.set_selections"](selection={"hold": [name]})
             ret.update(
                 changes=result[name],
                 result=True,
-                comment="Package {0} is now being held".format(name),
+                comment="Package {} is now being held".format(name),
             )
         else:
-            ret.update(
-                result=None, comment="Package {0} is set to be held".format(name)
-            )
+            ret.update(result=None, comment="Package {} is set to be held".format(name))
     else:
-        ret.update(result=True, comment="Package {0} is already held".format(name))
+        ret.update(result=True, comment="Package {} is already held".format(name))
 
     return ret

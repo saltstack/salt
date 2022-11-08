@@ -1,0 +1,2 @@
+linux_shadow: Fix cases where malformed shadow entries cause `user.present`
+states to fail.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor memory usage.
 
@@ -6,16 +5,11 @@ Beacon to monitor memory usage.
 
 :depends: python-psutil
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import re
 
-from salt.ext.six.moves import map
+import salt.utils.beacons
 
-# Import Third Party Libs
 try:
     import psutil
 
@@ -30,7 +24,9 @@ __virtualname__ = "memusage"
 
 def __virtual__():
     if HAS_PSUTIL is False:
-        return False
+        err_msg = "psutil library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     else:
         return __virtualname__
 
@@ -41,14 +37,12 @@ def validate(config):
     """
     # Configuration for memusage beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for memusage beacon must be a list.")
+        return False, "Configuration for memusage beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "percent" not in _config:
-            return False, ("Configuration for memusage beacon requires percent.")
-
+        if "percent" not in config:
+            return False, "Configuration for memusage beacon requires percent."
     return True, "Valid beacon configuration"
 
 
@@ -67,14 +61,13 @@ def beacon(config):
     """
     ret = []
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     _current_usage = psutil.virtual_memory()
 
     current_usage = _current_usage.percent
-    monitor_usage = _config["percent"]
-    if "%" in monitor_usage:
+    monitor_usage = config["percent"]
+    if isinstance(monitor_usage, str) and "%" in monitor_usage:
         monitor_usage = re.sub("%", "", monitor_usage)
     monitor_usage = float(monitor_usage)
     if current_usage >= monitor_usage:

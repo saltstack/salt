@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Access Salt's elemental release code-names.
 
@@ -31,16 +30,11 @@ A simple example might be something like the following:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.versions
 import salt.version
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -125,7 +119,7 @@ def greater_than(name):
 
     .. code-block:: bash
 
-        salt '*' salt_version.greater_than '3001'
+        salt '*' salt_version.greater_than 'Oxygen'
     """
     if _check_release_cmp(name) == 1:
         log.info("The minion's version code name is greater than '%s'.", name)
@@ -146,7 +140,7 @@ def less_than(name):
 
     .. code-block:: bash
 
-        salt '*' salt_version.less_than '3001'
+        salt '*' salt_version.less_than 'Oxygen'
     """
     if _check_release_cmp(name) == -1:
         log.info("The minion's version code name is less than '%s'.", name)
@@ -166,12 +160,10 @@ def _check_release_cmp(name):
     """
     map_version = get_release_number(name)
     if map_version is None:
-        log.info("Release codename %s was not found.", name)
+        log.info("Release code name %s was not found.", name)
         return None
 
-    current_version = six.text_type(
-        salt.version.SaltStackVersion(*salt.version.__version_info__)
-    )
+    current_version = str(salt.version.SaltStackVersion(*salt.version.__version_info__))
     current_version = current_version.rsplit(".", 1)[0]
     version_cmp = salt.utils.versions.version_cmp(current_version, map_version)
     return version_cmp

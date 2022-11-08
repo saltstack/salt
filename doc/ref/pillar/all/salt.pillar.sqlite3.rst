@@ -1,5 +1,5 @@
-salt.pillar.sqlite3 module
-==========================
+salt.pillar.sqlite3
+===================
 
 .. automodule:: salt.pillar.sqlite3
     :members:

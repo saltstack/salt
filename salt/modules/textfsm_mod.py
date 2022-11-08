@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TextFSM
 =======
@@ -14,18 +13,14 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 
 .. note::
 
-    For Python 2/3 compatibility, it is more recommended to
-    install the ``jtextfsm`` library: ``pip install jtextfsm``.
+    Install  ``textfsm`` library: ``pip install textfsm``.
 """
-from __future__ import absolute_import
 
-# Import python libs
 import logging
 import os
 
 from salt.utils.files import fopen
 
-# Import third party modules
 try:
     import textfsm
 
@@ -34,7 +29,7 @@ except ImportError:
     HAS_TEXTFSM = False
 
 try:
-    import clitable
+    from textfsm import clitable
 
     HAS_CLITABLE = True
 except ImportError:
@@ -63,17 +58,13 @@ def _clitable_to_dict(objects, fsm_handler):
     Converts TextFSM cli_table object to list of dictionaries.
     """
     objs = []
-    log.debug("Cli Table:")
-    log.debug(objects)
-    log.debug("FSM handler:")
-    log.debug(fsm_handler)
+    log.debug("Cli Table: %s; FSM handler: %s", objects, fsm_handler)
     for row in objects:
         temp_dict = {}
         for index, element in enumerate(row):
             temp_dict[fsm_handler.header[index].lower()] = element
         objs.append(temp_dict)
-    log.debug("Extraction result:")
-    log.debug(objs)
+    log.debug("Extraction result: %s", objs)
     return objs
 
 
@@ -102,7 +93,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         Supports the same URL schemes as the ``template_path`` argument.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``template_path`` is not a ``salt://`` URL.
 
     CLI Example:
@@ -182,8 +173,9 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         }
     """
     ret = {"result": False, "comment": "", "out": None}
-    log.debug("Using the saltenv: %s", saltenv)
-    log.debug("Caching %s using the Salt fileserver", template_path)
+    log.debug(
+        "Caching %s(saltenv: %s) using the Salt fileserver", template_path, saltenv
+    )
     tpl_cached_path = __salt__["cp.cache_file"](template_path, saltenv=saltenv)
     if tpl_cached_path is False:
         ret["comment"] = "Unable to read the TextFSM template from {}".format(
@@ -224,8 +216,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         ret["comment"] = "Please specify a valid input file or text."
         log.error(ret["comment"])
         return ret
-    log.debug("Processing the raw text:")
-    log.debug(raw_text)
+    log.debug("Processing the raw text:\n%s", raw_text)
     objects = fsm_handler.ParseText(raw_text)
     ret["out"] = _clitable_to_dict(objects, fsm_handler)
     ret["result"] = True
@@ -323,7 +314,7 @@ def index(
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
     include_empty: ``False``
@@ -417,17 +408,20 @@ def index(
             return ret
     if not textfsm_path:
         log.debug(
-            "No TextFSM templates path specified, trying to look into the opts and pillar"
+            "No TextFSM templates path specified, trying to look into the opts and"
+            " pillar"
         )
         textfsm_path = __opts__.get("textfsm_path") or __pillar__.get("textfsm_path")
         if not textfsm_path:
-            ret[
-                "comment"
-            ] = "No TextFSM templates path specified. Please configure in opts/pillar/function args."
+            ret["comment"] = (
+                "No TextFSM templates path specified. Please configure in"
+                " opts/pillar/function args."
+            )
             log.error(ret["comment"])
             return ret
-    log.debug("Using the saltenv: %s", saltenv)
-    log.debug("Caching %s using the Salt fileserver", textfsm_path)
+    log.debug(
+        "Caching %s(saltenv: %s) using the Salt fileserver", textfsm_path, saltenv
+    )
     textfsm_cachedir_ret = __salt__["cp.cache_dir"](
         textfsm_path,
         saltenv=saltenv,
@@ -435,8 +429,7 @@ def index(
         include_pat=include_pat,
         exclude_pat=exclude_pat,
     )
-    log.debug("Cache fun return:")
-    log.debug(textfsm_cachedir_ret)
+    log.debug("Cache fun return:\n%s", textfsm_cachedir_ret)
     if not textfsm_cachedir_ret:
         ret[
             "comment"
@@ -475,8 +468,7 @@ def index(
         ret["comment"] = "Please specify a valid output text or file"
         log.error(ret["comment"])
         return ret
-    log.debug("Processing the raw text:")
-    log.debug(output)
+    log.debug("Processing the raw text:\n%s", output)
     try:
         # Parse output through template
         textfsm_obj.ParseCmd(output, attrs)

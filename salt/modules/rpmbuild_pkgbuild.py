@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RPM Package builder system
 
@@ -10,8 +9,6 @@ environments. This also provides a function to generate yum repositories
 This module implements the pkgbuild interface
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import functools
@@ -22,23 +19,19 @@ import shutil
 import tempfile
 import time
 import traceback
+import urllib.parse
 
 import salt.utils.files
 import salt.utils.path
 import salt.utils.user
 import salt.utils.vt
-
-# Import salt libs
-from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 HAS_LIBS = False
 
 try:
     import gnupg  # pylint: disable=unused-import
+
     import salt.modules.gpg
 
     HAS_LIBS = True
@@ -79,7 +72,7 @@ def _create_rpmmacros(runas="root"):
     """
     Create the .rpmmacros file in user's home directory
     """
-    home = os.path.expanduser("~")
+    home = os.path.expanduser("~" + runas)
     rpmbuilddir = os.path.join(home, "rpmbuild")
     if not os.path.isdir(rpmbuilddir):
         __salt__["file.makedirs_perms"](name=rpmbuilddir, user=runas, group="mock")
@@ -90,7 +83,7 @@ def _create_rpmmacros(runas="root"):
 
     rpmmacros = os.path.join(home, ".rpmmacros")
     with salt.utils.files.fopen(rpmmacros, "w") as afile:
-        afile.write(salt.utils.stringutils.to_str("%_topdir {0}\n".format(rpmbuilddir)))
+        afile.write(salt.utils.stringutils.to_str("%_topdir {}\n".format(rpmbuilddir)))
         afile.write("%signature gpg\n")
         afile.write("%_source_filedigest_algorithm 8\n")
         afile.write("%_binary_filedigest_algorithm 8\n")
@@ -122,7 +115,7 @@ def _get_src(tree_base, source, saltenv="base", runas="root"):
     """
     Get the named sources and place them into the tree_base
     """
-    parsed = _urlparse(source)
+    parsed = urllib.parse.urlparse(source)
     sbase = os.path.basename(source)
     dest = os.path.join(tree_base, "SOURCES", sbase)
     if parsed.scheme:
@@ -139,10 +132,10 @@ def _get_distset(tgt):
     # Centos adds 'centos' string to rpm names, removing that to have
     # consistent naming on Centos and Redhat, and allow for Amazon naming
     tgtattrs = tgt.split("-")
-    if tgtattrs[0] == "amzn":
-        distset = '--define "dist .{0}1"'.format(tgtattrs[0])
-    elif tgtattrs[1] in ["6", "7"]:
-        distset = '--define "dist .el{0}"'.format(tgtattrs[1])
+    if tgtattrs[0] == "amzn2":
+        distset = '--define "dist .{}"'.format(tgtattrs[0])
+    elif tgtattrs[1] in ["6", "7", "8"]:
+        distset = '--define "dist .el{}"'.format(tgtattrs[1])
     else:
         distset = ""
 
@@ -161,7 +154,7 @@ def _get_deps(deps, tree_base, saltenv="base"):
             "'deps' must be a Python list or comma-separated string"
         )
     for deprpm in deps:
-        parsed = _urlparse(deprpm)
+        parsed = urllib.parse.urlparse(deprpm)
         depbase = os.path.basename(deprpm)
         dest = os.path.join(tree_base, depbase)
         if parsed.scheme:
@@ -169,9 +162,247 @@ def _get_deps(deps, tree_base, saltenv="base"):
         else:
             shutil.copy(deprpm, dest)
 
-        deps_list += " {0}".format(dest)
+        deps_list += " {}".format(dest)
 
     return deps_list
+
+
+def _check_repo_gpg_phrase_utils():
+    """
+    Check for /usr/libexec/gpg-preset-passphrase is installed
+    """
+    util_name = "/usr/libexec/gpg-preset-passphrase"
+    if __salt__["file.file_exists"](util_name):
+        return True
+    else:
+        raise CommandExecutionError(
+            "utility '{}' needs to be installed".format(util_name)
+        )
+
+
+def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
+    """
+    Obtain gpg key resource infomation to sign repo files with
+
+    keyid
+
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar data.
+
+    env
+
+        A dictionary of environment variables to be utilized in creating the
+        repository.
+
+    use_passphrase : False
+
+        Use a passphrase with the signing key presented in ``keyid``.
+        Passphrase is received from Pillar data which could be passed on the
+        command line with ``pillar`` parameter.
+
+    gnupghome : /etc/salt/gpgkeys
+
+        Location where GPG related files are stored, used with ``keyid``.
+
+    runas : root
+
+        User to create the repository as, and optionally sign packages.
+
+        .. note::
+
+            Ensure the user has correct permissions to any files and
+            directories which are to be utilized.
+
+
+    Returns:
+        tuple
+            use_gpg_agent       True | False, Redhat 8 now makes use of a gpg-agent similar ot Debian
+            local_keyid         key id to use in signing
+            define_gpg_name     string containing definition to use with addsign (use_gpg_agent False)
+            phrase              pass phrase (may not be used)
+
+    """
+    local_keygrip_to_use = None
+    local_key_fingerprint = None
+    local_keyid = None
+    local_uids = None
+    define_gpg_name = ""
+    phrase = ""
+    retrc = 0
+    use_gpg_agent = False
+
+    if (
+        __grains__.get("os_family") == "RedHat"
+        and __grains__.get("osmajorrelease") >= 8
+    ):
+        use_gpg_agent = True
+
+    if keyid is not None:
+        # import_keys
+        pkg_pub_key_file = "{}/{}".format(
+            gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None)
+        )
+        pkg_priv_key_file = "{}/{}".format(
+            gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None)
+        )
+
+        if pkg_pub_key_file is None or pkg_priv_key_file is None:
+            raise SaltInvocationError(
+                "Pillar data should contain Public and Private keys associated with"
+                " 'keyid'"
+            )
+        try:
+            __salt__["gpg.import_key"](
+                user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome
+            )
+            __salt__["gpg.import_key"](
+                user=runas, filename=pkg_priv_key_file, gnupghome=gnupghome
+            )
+
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                "Public and Private key files associated with Pillar data and 'keyid' "
+                "{} could not be found".format(keyid)
+            )
+
+        # gpg keys should have been loaded as part of setup
+        # retrieve specified key and preset passphrase
+        local_keys = __salt__["gpg.list_keys"](user=runas, gnupghome=gnupghome)
+        for gpg_key in local_keys:
+            if keyid == gpg_key["keyid"][8:]:
+                local_uids = gpg_key["uids"]
+                local_keyid = gpg_key["keyid"]
+                if use_gpg_agent:
+                    local_keygrip_to_use = gpg_key["fingerprint"]
+                    local_key_fingerprint = gpg_key["fingerprint"]
+                break
+
+        if use_gpg_agent:
+            cmd = "gpg --with-keygrip --list-secret-keys"
+            local_keys2_keygrip = __salt__["cmd.run"](cmd, runas=runas, env=env)
+            local_keys2 = iter(local_keys2_keygrip.splitlines())
+            try:
+                for line in local_keys2:
+                    if line.startswith("sec"):
+                        line_fingerprint = next(local_keys2).lstrip().rstrip()
+                        if local_key_fingerprint == line_fingerprint:
+                            lkeygrip = next(local_keys2).split("=")
+                            local_keygrip_to_use = lkeygrip[1].lstrip().rstrip()
+                            break
+            except StopIteration:
+                raise SaltInvocationError(
+                    "unable to find keygrip associated with fingerprint '{}' for keyid"
+                    " '{}'".format(local_key_fingerprint, local_keyid)
+                )
+
+        if local_keyid is None:
+            raise SaltInvocationError(
+                "The key ID '{}' was not found in GnuPG keyring at '{}'".format(
+                    keyid, gnupghome
+                )
+            )
+
+        if use_passphrase:
+            phrase = __salt__["pillar.get"]("gpg_passphrase")
+            if use_gpg_agent:
+                _check_repo_gpg_phrase_utils()
+                cmd = (
+                    "/usr/libexec/gpg-preset-passphrase --verbose --preset "
+                    '--passphrase "{}" {}'.format(phrase, local_keygrip_to_use)
+                )
+                retrc = __salt__["cmd.retcode"](cmd, runas=runas, env=env)
+                if retrc != 0:
+                    raise SaltInvocationError(
+                        "Failed to preset passphrase, error {1}, "
+                        "check logs for further details".format(retrc)
+                    )
+
+        if local_uids:
+            define_gpg_name = (
+                "--define='%_signature gpg' --define='%_gpg_name {}'".format(
+                    local_uids[0]
+                )
+            )
+
+        # need to update rpm with public key
+        cmd = "rpm --import {}".format(pkg_pub_key_file)
+        retrc = __salt__["cmd.retcode"](cmd, runas=runas, use_vt=True)
+        if retrc != 0:
+            raise SaltInvocationError(
+                "Failed to import public key from file {} with return "
+                "error {}, check logs for further details".format(
+                    pkg_pub_key_file, retrc
+                )
+            )
+
+    return (use_gpg_agent, local_keyid, define_gpg_name, phrase)
+
+
+def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
+    """
+    Sign file with provided key and definition
+    """
+    SIGN_PROMPT_RE = re.compile(r"Enter pass phrase: ", re.M)
+
+    # interval of 0.125 is really too fast on some systems
+    interval = 0.5
+    number_retries = timeout / interval
+    times_looped = 0
+    error_msg = "Failed to sign file {}".format(abs_file)
+
+    cmd = "rpm {} --addsign {}".format(define_gpg_name, abs_file)
+    preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
+    try:
+        stdout, stderr = None, None
+        proc = salt.utils.vt.Terminal(
+            cmd,
+            shell=True,
+            preexec_fn=preexec_fn,
+            stream_stdout=True,
+            stream_stderr=True,
+        )
+        while proc.has_unread_data:
+            stdout, stderr = proc.recv()
+            if stdout and SIGN_PROMPT_RE.search(stdout):
+                # have the prompt for inputting the passphrase
+                proc.sendline(phrase)
+            else:
+                times_looped += 1
+
+            if times_looped > number_retries:
+                raise SaltInvocationError(
+                    "Attemping to sign file {} failed, timed out after {} seconds".format(
+                        abs_file, int(times_looped * interval)
+                    )
+                )
+            time.sleep(interval)
+
+        proc_exitstatus = proc.exitstatus
+        if proc_exitstatus != 0:
+            raise SaltInvocationError(
+                "Signing file {} failed with proc.status {}".format(
+                    abs_file, proc_exitstatus
+                )
+            )
+    except salt.utils.vt.TerminalException as err:
+        trace = traceback.format_exc()
+        log.error(error_msg, err, trace)
+    finally:
+        proc.close(terminate=True, kill=True)
+
+
+def _sign_files_with_gpg_agent(runas, local_keyid, abs_file, repodir, env, timeout):
+    """
+    Sign file with provided key utilizing gpg-agent
+    """
+    cmd = "rpmsign --verbose  --key-id={} --addsign {}".format(local_keyid, abs_file)
+    retrc = __salt__["cmd.retcode"](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+    if retrc != 0:
+        raise SaltInvocationError(
+            "Signing encountered errors for command '{}', "
+            "return error {}, check logs for further details".format(cmd, retrc)
+        )
 
 
 def make_src_pkg(
@@ -230,20 +461,20 @@ def make_src_pkg(
     __salt__["file.chown"](path=spec_path, user=runas, group="mock")
     __salt__["file.chown"](path=tree_base, user=runas, group="mock")
 
-    if isinstance(sources, six.string_types):
+    if isinstance(sources, str):
         sources = sources.split(",")
     for src in sources:
         _get_src(tree_base, src, saltenv, runas)
 
     # make source rpms for dist el6 with SHA256, usable with mock on other dists
-    cmd = 'rpmbuild --verbose --define "_topdir {0}" -bs --define "dist .el6" {1}'.format(
+    cmd = 'rpmbuild --verbose --define "_topdir {}" -bs --define "dist .el6" {}'.format(
         tree_base, spec_path
     )
     retrc = __salt__["cmd.retcode"](cmd, runas=runas)
     if retrc != 0:
         raise SaltInvocationError(
-            "Make source package for destination directory {0}, spec {1}, sources {2}, failed "
-            "with return error {3}, check logs for further details".format(
+            "Make source package for destination directory {}, spec {}, sources {},"
+            " failed with return error {}, check logs for further details".format(
                 dest_dir, spec, sources, retrc
             )
         )
@@ -317,16 +548,16 @@ def build(
         try:
             __salt__["file.chown"](path=dbase, user=runas, group="mock")
             __salt__["file.chown"](path=results_dir, user=runas, group="mock")
-            cmd = "mock --root={0} --resultdir={1} --init".format(tgt, results_dir)
+            cmd = "mock --root={} --resultdir={} --init".format(tgt, results_dir)
             retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
             if deps_list and not deps_list.isspace():
-                cmd = "mock --root={0} --resultdir={1} --install {2} {3}".format(
+                cmd = "mock --root={} --resultdir={} --install {} {}".format(
                     tgt, results_dir, deps_list, noclean
                 )
                 retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
                 noclean += " --no-clean"
 
-            cmd = "mock --root={0} --resultdir={1} {2} {3} {4}".format(
+            cmd = "mock --root={} --resultdir={} {} {} {}".format(
                 tgt, results_dir, distset, noclean, srpm
             )
             retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
@@ -372,8 +603,8 @@ def build(
             shutil.rmtree(results_dir)
     if retrc != 0:
         raise SaltInvocationError(
-            "Building packages for destination directory {0}, spec {1}, sources {2}, failed "
-            "with return error {3}, check logs for further details".format(
+            "Building packages for destination directory {}, spec {}, sources {},"
+            " failed with return error {}, check logs for further details".format(
                 dest_dir, spec, sources, retrc
             )
         )
@@ -460,11 +691,16 @@ def make_repo(
 
         Use a passphrase with the signing key presented in ``keyid``.
         Passphrase is received from Pillar data which could be passed on the
-        command line with ``pillar`` parameter. For example:
+        command line with ``pillar`` parameter.
 
         .. code-block:: bash
 
             pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+        .. versionadded:: 3001.1
+
+        RHEL 8 and above leverages gpg-agent and gpg-preset-passphrase for
+        caching keys, etc.
 
     gnupghome : /etc/salt/gpgkeys
         .. versionadded:: 2016.3.0
@@ -493,125 +729,30 @@ def make_repo(
         salt '*' pkgbuild.make_repo /var/www/html/
 
     """
-    SIGN_PROMPT_RE = re.compile(r"Enter pass phrase: ", re.M)
+    home = os.path.expanduser("~" + runas)
+    rpmmacros = os.path.join(home, ".rpmmacros")
+    if not os.path.exists(rpmmacros):
+        _create_rpmmacros(runas)
 
-    define_gpg_name = ""
-    local_keyid = None
-    local_uids = None
-    phrase = ""
+    if gnupghome and env is None:
+        env = {}
+        env["GNUPGHOME"] = gnupghome
 
-    if keyid is not None:
-        # import_keys
-        pkg_pub_key_file = "{0}/{1}".format(
-            gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None)
-        )
-        pkg_priv_key_file = "{0}/{1}".format(
-            gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None)
-        )
+    use_gpg_agent, local_keyid, define_gpg_name, phrase = _get_gpg_key_resources(
+        keyid, env, use_passphrase, gnupghome, runas
+    )
 
-        if pkg_pub_key_file is None or pkg_priv_key_file is None:
-            raise SaltInvocationError(
-                "Pillar data should contain Public and Private keys associated with 'keyid'"
-            )
-        try:
-            __salt__["gpg.import_key"](
-                user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome
-            )
-            __salt__["gpg.import_key"](
-                user=runas, filename=pkg_priv_key_file, gnupghome=gnupghome
-            )
-
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                "Public and Private key files associated with Pillar data and 'keyid' "
-                "{0} could not be found".format(keyid)
-            )
-
-        # gpg keys should have been loaded as part of setup
-        # retrieve specified key and preset passphrase
-        local_keys = __salt__["gpg.list_keys"](user=runas, gnupghome=gnupghome)
-        for gpg_key in local_keys:
-            if keyid == gpg_key["keyid"][8:]:
-                local_uids = gpg_key["uids"]
-                local_keyid = gpg_key["keyid"]
-                break
-
-        if local_keyid is None:
-            raise SaltInvocationError(
-                "The key ID '{0}' was not found in GnuPG keyring at '{1}'".format(
-                    keyid, gnupghome
+    # sign_it_here
+    for fileused in os.listdir(repodir):
+        if fileused.endswith(".rpm"):
+            abs_file = os.path.join(repodir, fileused)
+            if use_gpg_agent:
+                _sign_files_with_gpg_agent(
+                    runas, local_keyid, abs_file, repodir, env, timeout
                 )
-            )
+            else:
+                _sign_file(runas, define_gpg_name, phrase, abs_file, timeout)
 
-        if use_passphrase:
-            phrase = __salt__["pillar.get"]("gpg_passphrase")
-
-        if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(
-                local_uids[0]
-            )
-
-        # need to update rpm with public key
-        cmd = "rpm --import {0}".format(pkg_pub_key_file)
-        retrc = __salt__["cmd.retcode"](cmd, runas=runas, use_vt=True)
-        if retrc != 0:
-            raise SaltInvocationError(
-                "Failed to import public key from file {0} with return "
-                "error {1}, check logs for further details".format(
-                    pkg_pub_key_file, retrc
-                )
-            )
-
-        # sign_it_here
-        # interval of 0.125 is really too fast on some systems
-        interval = 0.5
-        for fileused in os.listdir(repodir):
-            if fileused.endswith(".rpm"):
-                abs_file = os.path.join(repodir, fileused)
-                number_retries = timeout / interval
-                times_looped = 0
-                error_msg = "Failed to sign file {0}".format(abs_file)
-                cmd = "rpm {0} --addsign {1}".format(define_gpg_name, abs_file)
-                preexec_fn = functools.partial(
-                    salt.utils.user.chugid_and_umask, runas, None
-                )
-                try:
-                    stdout, stderr = None, None
-                    proc = salt.utils.vt.Terminal(
-                        cmd,
-                        shell=True,
-                        preexec_fn=preexec_fn,
-                        stream_stdout=True,
-                        stream_stderr=True,
-                    )
-                    while proc.has_unread_data:
-                        stdout, stderr = proc.recv()
-                        if stdout and SIGN_PROMPT_RE.search(stdout):
-                            # have the prompt for inputting the passphrase
-                            proc.sendline(phrase)
-                        else:
-                            times_looped += 1
-
-                        if times_looped > number_retries:
-                            raise SaltInvocationError(
-                                "Attemping to sign file {0} failed, timed out after {1} seconds".format(
-                                    abs_file, int(times_looped * interval)
-                                )
-                            )
-                        time.sleep(interval)
-
-                    proc_exitstatus = proc.exitstatus
-                    if proc_exitstatus != 0:
-                        raise SaltInvocationError(
-                            "Signing file {0} failed with proc.status {1}".format(
-                                abs_file, proc_exitstatus
-                            )
-                        )
-                except salt.utils.vt.TerminalException as err:
-                    trace = traceback.format_exc()
-                    log.error(error_msg, err, trace)
-                finally:
-                    proc.close(terminate=True, kill=True)
-
-    cmd = "createrepo --update {0}".format(repodir)
-    return __salt__["cmd.run_all"](cmd, runas=runas)
+    cmd = "createrepo --update {}".format(repodir)
+    retrc = __salt__["cmd.run_all"](cmd, runas=runas)
+    return retrc

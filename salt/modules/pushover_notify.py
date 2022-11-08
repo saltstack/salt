@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to Pushover (https://www.pushover.net)
 
@@ -16,22 +15,12 @@ Module for sending messages to Pushover (https://www.pushover.net)
           token: abAHuZyCLtdH8P4zhmFZmgUHUsv1ei8
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import urllib.parse
 
 import salt.utils.pushover
-
-# Import salt libs
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 __virtualname__ = "pushover"
@@ -123,7 +112,7 @@ def post_message(
         function="message",
         method="POST",
         header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-        data=_urlencode(parameters),
+        data=urllib.parse.urlencode(parameters),
         opts=__opts__,
     )
 

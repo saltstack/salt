@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Runner module to directly manage the git external pillar
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.pillar.git_pillar
 import salt.utils.gitfs
 from salt.exceptions import SaltRunnerError
@@ -90,7 +86,7 @@ def update(branch=None, repo=None):
                 result = remote.fetch()
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Exception '%s' caught while fetching git_pillar " "remote '%s'",
+                    "Exception '%s' caught while fetching git_pillar remote '%s'",
                     exc,
                     remote.id,
                     exc_info_on_loglevel=logging.DEBUG,

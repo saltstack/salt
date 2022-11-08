@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Support for LVS (Linux Virtual Server)
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.decorators as decorators
-
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import SaltException
-
-# Import python libs
-
 
 __func_alias__ = {"list_": "list"}
 
@@ -29,7 +22,8 @@ def __virtual__():
     if not __detect_os():
         return (
             False,
-            "The lvs execution module cannot be loaded: the ipvsadm binary is not in the path.",
+            "The lvs execution module cannot be loaded: the ipvsadm binary is not in"
+            " the path.",
         )
 
     return "lvs"
@@ -46,11 +40,11 @@ def _build_cmd(**kwargs):
         if kwargs["service_address"]:
             if "protocol" in kwargs:
                 if kwargs["protocol"] == "tcp":
-                    cmd += " -t {0}".format(kwargs["service_address"])
+                    cmd += " -t {}".format(kwargs["service_address"])
                 elif kwargs["protocol"] == "udp":
-                    cmd += " -u {0}".format(kwargs["service_address"])
+                    cmd += " -u {}".format(kwargs["service_address"])
                 elif kwargs["protocol"] == "fwmark":
-                    cmd += " -f {0}".format(kwargs["service_address"])
+                    cmd += " -f {}".format(kwargs["service_address"])
                 else:
                     raise SaltException(
                         "Error: Only support tcp, udp and fwmark service protocol"
@@ -60,7 +54,7 @@ def _build_cmd(**kwargs):
                 raise SaltException("Error: protocol should specified")
             if "scheduler" in kwargs:
                 if kwargs["scheduler"]:
-                    cmd += " -s {0}".format(kwargs["scheduler"])
+                    cmd += " -s {}".format(kwargs["scheduler"])
                     del kwargs["scheduler"]
         else:
             raise SaltException("Error: service_address should specified")
@@ -68,7 +62,7 @@ def _build_cmd(**kwargs):
 
     if "server_address" in kwargs:
         if kwargs["server_address"]:
-            cmd += " -r {0}".format(kwargs["server_address"])
+            cmd += " -r {}".format(kwargs["server_address"])
             if "packet_forward_method" in kwargs and kwargs["packet_forward_method"]:
                 if kwargs["packet_forward_method"] == "dr":
                     cmd += " -g"
@@ -80,7 +74,7 @@ def _build_cmd(**kwargs):
                     raise SaltException("Error: only support dr, tunnel and nat")
                 del kwargs["packet_forward_method"]
             if "weight" in kwargs and kwargs["weight"]:
-                cmd += " -w {0}".format(kwargs["weight"])
+                cmd += " -w {}".format(kwargs["weight"])
                 del kwargs["weight"]
         else:
             raise SaltException("Error: server_address should specified")
@@ -102,7 +96,6 @@ def add_service(protocol=None, service_address=None, scheduler="wlc"):
     scheduler
         Algorithm for allocating TCP connections and UDP datagrams to real servers.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -110,7 +103,7 @@ def add_service(protocol=None, service_address=None, scheduler="wlc"):
         salt '*' lvs.add_service tcp 1.1.1.1:80 rr
     """
 
-    cmd = "{0} -A {1}".format(
+    cmd = "{} -A {}".format(
         __detect_os(),
         _build_cmd(
             protocol=protocol, service_address=service_address, scheduler=scheduler
@@ -139,7 +132,6 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
     scheduler
         Algorithm for allocating TCP connections and UDP datagrams to real servers.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -147,7 +139,7 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
         salt '*' lvs.edit_service tcp 1.1.1.1:80 rr
     """
 
-    cmd = "{0} -E {1}".format(
+    cmd = "{} -E {}".format(
         __detect_os(),
         _build_cmd(
             protocol=protocol, service_address=service_address, scheduler=scheduler
@@ -174,7 +166,6 @@ def delete_service(protocol=None, service_address=None):
     service_address
         The LVS service address.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -182,7 +173,7 @@ def delete_service(protocol=None, service_address=None):
         salt '*' lvs.delete_service tcp 1.1.1.1:80
     """
 
-    cmd = "{0} -D {1}".format(
+    cmd = "{} -D {}".format(
         __detect_os(), _build_cmd(protocol=protocol, service_address=service_address)
     )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -222,7 +213,6 @@ def add_server(
     weight
         The capacity  of a server relative to the others in the pool.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -230,7 +220,7 @@ def add_server(
         salt '*' lvs.add_server tcp 1.1.1.1:80 192.168.0.11:8080 nat 1
     """
 
-    cmd = "{0} -a {1}".format(
+    cmd = "{} -a {}".format(
         __detect_os(),
         _build_cmd(
             protocol=protocol,
@@ -278,7 +268,6 @@ def edit_server(
     weight
         The capacity  of a server relative to the others in the pool.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -286,7 +275,7 @@ def edit_server(
         salt '*' lvs.edit_server tcp 1.1.1.1:80 192.168.0.11:8080 nat 1
     """
 
-    cmd = "{0} -e {1}".format(
+    cmd = "{} -e {}".format(
         __detect_os(),
         _build_cmd(
             protocol=protocol,
@@ -321,7 +310,6 @@ def delete_server(protocol=None, service_address=None, server_address=None):
     server_address
         The real server address.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -329,7 +317,7 @@ def delete_server(protocol=None, service_address=None, server_address=None):
         salt '*' lvs.delete_server tcp 1.1.1.1:80 192.168.0.11:8080
     """
 
-    cmd = "{0} -d {1}".format(
+    cmd = "{} -d {}".format(
         __detect_os(),
         _build_cmd(
             protocol=protocol,
@@ -359,7 +347,7 @@ def clear():
         salt '*' lvs.clear
     """
 
-    cmd = "{0} -C".format(__detect_os())
+    cmd = "{} -C".format(__detect_os())
 
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
@@ -383,7 +371,7 @@ def get_rules():
         salt '*' lvs.get_rules
     """
 
-    cmd = "{0} -S -n".format(__detect_os())
+    cmd = "{} -S -n".format(__detect_os())
 
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
@@ -402,12 +390,12 @@ def list_(protocol=None, service_address=None):
     """
 
     if service_address:
-        cmd = "{0} -L {1} -n".format(
+        cmd = "{} -L {} -n".format(
             __detect_os(),
             _build_cmd(protocol=protocol, service_address=service_address),
         )
     else:
-        cmd = "{0} -L -n".format(__detect_os())
+        cmd = "{} -L -n".format(__detect_os())
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
@@ -432,12 +420,12 @@ def zero(protocol=None, service_address=None):
     """
 
     if service_address:
-        cmd = "{0} -Z {1}".format(
+        cmd = "{} -Z {}".format(
             __detect_os(),
             _build_cmd(protocol=protocol, service_address=service_address),
         )
     else:
-        cmd = "{0} -Z".format(__detect_os())
+        cmd = "{} -Z".format(__detect_os())
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
@@ -460,7 +448,7 @@ def check_service(protocol=None, service_address=None, **kwargs):
         salt '*' lvs.check_service tcp 1.1.1.1:80
     """
 
-    cmd = "{0}".format(
+    cmd = "{}".format(
         _build_cmd(protocol=protocol, service_address=service_address, **kwargs)
     )
     # Exact match
@@ -489,7 +477,7 @@ def check_server(protocol=None, service_address=None, server_address=None, **kwa
          salt '*' lvs.check_server tcp 1.1.1.1:80 192.168.0.11:8080
     """
 
-    cmd = "{0}".format(
+    cmd = "{}".format(
         _build_cmd(
             protocol=protocol,
             service_address=service_address,

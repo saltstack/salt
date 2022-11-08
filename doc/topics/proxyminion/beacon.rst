@@ -69,4 +69,4 @@ re-start it.
 
     salt p8000 pkg.list_pkgs
 
-.. _Configure: https://docs.saltstack.com/en/latest/topics/beacons/#configuring-beacons
+.. _Configure: https://docs.saltproject.io/en/latest/topics/beacons/#configuring-beacons

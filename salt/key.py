@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 The Salt Key backend API and interface used by the CLI. The Key class can be
 used to manage salt keys directly without interfacing with the CLI.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import fnmatch
+import itertools
 import logging
 import os
 import shutil
+import sys
 
-# Import salt libs
 import salt.cache
 import salt.client
 import salt.crypt
@@ -31,12 +28,6 @@ import salt.utils.sdb
 import salt.utils.stringutils
 import salt.utils.user
 
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import input, zip_longest
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 log = logging.getLogger(__name__)
 
 
@@ -44,7 +35,7 @@ def get_key(opts):
     return Key(opts)
 
 
-class KeyCLI(object):
+class KeyCLI:
     """
     Manage key CLI operations
     """
@@ -124,7 +115,7 @@ class KeyCLI(object):
                         os.path.join(self.opts["cachedir"], ".root_key"), "r"
                     ) as fp_:
                         low["key"] = salt.utils.stringutils.to_unicode(fp_.readline())
-                except IOError:
+                except OSError:
                     low["token"] = self.opts["token"]
             #
             # If using eauth and a token hasn't already been loaded into
@@ -157,7 +148,7 @@ class KeyCLI(object):
             if argspec.args:
                 # Iterate in reverse order to ensure we get the correct default
                 # value for the positional argument.
-                for arg, default in zip_longest(
+                for arg, default in itertools.zip_longest(
                     reversed(argspec.args), reversed(argspec.defaults or ())
                 ):
                     args.append(self.opts.get(arg, default))
@@ -186,7 +177,7 @@ class KeyCLI(object):
 
         if cmd in ("accept", "reject", "delete") and args is None:
             args = self.opts.get("match_dict", {}).get("minions")
-        fstr = "key.{0}".format(cmd)
+        fstr = "key.{}".format(cmd)
         fun = self.client.functions[fstr]
         args, kwargs = self._get_args_kwargs(fun, args)
 
@@ -238,8 +229,8 @@ class KeyCLI(object):
         if len(statuses) == 1:
             stat_str = statuses[0]
         else:
-            stat_str = "{0} or {1}".format(", ".join(statuses[:-1]), statuses[-1])
-        msg = "The key glob '{0}' does not match any {1} keys.".format(match, stat_str)
+            stat_str = "{} or {}".format(", ".join(statuses[:-1]), statuses[-1])
+        msg = "The key glob '{}' does not match any {} keys.".format(match, stat_str)
         print(msg)
 
     def run(self):
@@ -262,7 +253,7 @@ class KeyCLI(object):
                     self._print_no_match(cmd, self.opts["match"])
                     return
                 print(
-                    "The following keys are going to be {0}ed:".format(cmd.rstrip("e"))
+                    "The following keys are going to be {}ed:".format(cmd.rstrip("e"))
                 )
                 salt.output.display_output(ret, "key", opts=self.opts)
 
@@ -291,7 +282,7 @@ class KeyCLI(object):
                     for minions in ret.values():
                         for minion in minions:
                             print(
-                                "Key for minion {0} {1}ed.".format(
+                                "Key for minion {} {}ed.".format(
                                     minion, cmd.rstrip("e")
                                 )
                             )
@@ -300,13 +291,13 @@ class KeyCLI(object):
                 else:
                     salt.output.display_output({"return": ret}, "key", opts=self.opts)
         except salt.exceptions.SaltException as exc:
-            ret = "{0}".format(exc)
+            ret = "{}".format(exc)
             if not self.opts.get("quiet", False):
                 salt.output.display_output(ret, "nested", self.opts)
         return ret
 
 
-class Key(object):
+class Key:
     """
     The object that encapsulates saltkey actions
     """
@@ -320,13 +311,12 @@ class Key(object):
         self.opts = opts
         kind = self.opts.get("__role", "")  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
-            emsg = "Invalid application kind = '{0}'.".format(kind)
+            emsg = "Invalid application kind = '{}'.".format(kind)
             log.error(emsg)
             raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
             kind,
             opts["sock_dir"],
-            opts["transport"],
             opts=opts,
             listen=False,
             io_loop=io_loop,
@@ -387,7 +377,7 @@ class Key(object):
         # check given pub-key
         if pub:
             if not os.path.isfile(pub):
-                return "Public-key {0} does not exist".format(pub)
+                return "Public-key {} does not exist".format(pub)
         # default to master.pub
         else:
             mpub = self.opts["pki_dir"] + "/" + "master.pub"
@@ -397,7 +387,7 @@ class Key(object):
         # check given priv-key
         if priv:
             if not os.path.isfile(priv):
-                return "Private-key {0} does not exist".format(priv)
+                return "Private-key {} does not exist".format(priv)
         # default to master_sign.pem
         else:
             mpriv = self.opts["pki_dir"] + "/" + "master_sign.pem"
@@ -456,7 +446,7 @@ class Key(object):
             preserve_minions = []
         keys = self.list_keys()
         minions = []
-        for key, val in six.iteritems(keys):
+        for key, val in keys.items():
             minions.extend(val)
         if not self.opts.get("preserve_minion_cache", False):
             m_cache = os.path.join(self.opts["cachedir"], self.ACC)
@@ -465,7 +455,7 @@ class Key(object):
                     if minion not in minions and minion not in preserve_minions:
                         try:
                             shutil.rmtree(os.path.join(m_cache, minion))
-                        except (OSError, IOError) as ex:
+                        except OSError as ex:
                             log.warning(
                                 "Key: Delete cache for %s got OSError/IOError: %s \n",
                                 minion,
@@ -477,7 +467,7 @@ class Key(object):
             if clist:
                 for minion in clist:
                     if minion not in minions and minion not in preserve_minions:
-                        cache.flush("{0}/{1}".format(self.ACC, minion))
+                        cache.flush("{}/{}".format(self.ACC, minion))
 
     def check_master(self):
         """
@@ -499,9 +489,9 @@ class Key(object):
         else:
             matches = self.list_keys()
         ret = {}
-        if "," in match and isinstance(match, six.string_types):
+        if "," in match and isinstance(match, str):
             match = match.split(",")
-        for status, keys in six.iteritems(matches):
+        for status, keys in matches.items():
             for key in salt.utils.data.sorted_ignorecase(keys):
                 if isinstance(match, list):
                     for match_item in match:
@@ -523,7 +513,7 @@ class Key(object):
         """
         ret = {}
         cur_keys = self.list_keys()
-        for status, keys in six.iteritems(match_dict):
+        for status, keys in match_dict.items():
             for key in salt.utils.data.sorted_ignorecase(keys):
                 for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
                     if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
@@ -561,7 +551,7 @@ class Key(object):
                             ret[os.path.basename(dir_)].append(
                                 salt.utils.stringutils.to_unicode(fn_)
                             )
-            except (OSError, IOError):
+            except OSError:
                 # key dir kind is not created yet, just skip
                 continue
         return ret
@@ -613,7 +603,7 @@ class Key(object):
         Return the specified public key or keys based on a glob
         """
         ret = {}
-        for status, keys in six.iteritems(self.name_match(match)):
+        for status, keys in self.name_match(match).items():
             ret[status] = {}
             for key in salt.utils.data.sorted_ignorecase(keys):
                 path = os.path.join(self.opts["pki_dir"], status, key)
@@ -626,7 +616,7 @@ class Key(object):
         Return all managed key strings
         """
         ret = {}
-        for status, keys in six.iteritems(self.list_keys()):
+        for status, keys in self.list_keys().items():
             ret[status] = {}
             for key in salt.utils.data.sorted_ignorecase(keys):
                 path = os.path.join(self.opts["pki_dir"], status, key)
@@ -652,17 +642,28 @@ class Key(object):
             keydirs.append(self.REJ)
         if include_denied:
             keydirs.append(self.DEN)
+        invalid_keys = []
         for keydir in keydirs:
             for key in matches.get(keydir, []):
+                key_path = os.path.join(self.opts["pki_dir"], keydir, key)
+                try:
+                    salt.crypt.get_rsa_pub_key(key_path)
+                except salt.exceptions.InvalidKeyError:
+                    log.error("Invalid RSA public key: %s", key)
+                    invalid_keys.append((keydir, key))
+                    continue
                 try:
                     shutil.move(
-                        os.path.join(self.opts["pki_dir"], keydir, key),
+                        key_path,
                         os.path.join(self.opts["pki_dir"], self.ACC, key),
                     )
                     eload = {"result": True, "act": "accept", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-                except (IOError, OSError):
+                except OSError:
                     pass
+        for keydir, key in invalid_keys:
+            matches[keydir].remove(key)
+            sys.stderr.write("Unable to accept invalid key for {}.\n".format(key))
         return self.name_match(match) if match is not None else self.dict_match(matches)
 
     def accept_all(self):
@@ -678,7 +679,7 @@ class Key(object):
                 )
                 eload = {"result": True, "act": "accept", "id": key}
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-            except (IOError, OSError):
+            except OSError:
                 pass
         return self.list_keys()
 
@@ -697,31 +698,34 @@ class Key(object):
             matches = match_dict
         else:
             matches = {}
-        for status, keys in six.iteritems(matches):
-            for key in keys:
-                try:
-                    if revoke_auth:
-                        if self.opts.get("rotate_aes_key") is False:
-                            print(
-                                "Immediate auth revocation specified but AES key rotation not allowed. "
-                                "Minion will not be disconnected until the master AES key is rotated."
-                            )
-                        else:
-                            try:
-                                client = salt.client.get_local_client(mopts=self.opts)
-                                client.cmd_async(key, "saltutil.revoke_auth")
-                            except salt.exceptions.SaltClientError:
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            for status, keys in matches.items():
+                for key in keys:
+                    try:
+                        if revoke_auth:
+                            if self.opts.get("rotate_aes_key") is False:
                                 print(
-                                    "Cannot contact Salt master. "
-                                    "Connection for {0} will remain up until "
-                                    "master AES key is rotated or auth is revoked "
-                                    "with 'saltutil.revoke_auth'.".format(key)
+                                    "Immediate auth revocation specified but AES key"
+                                    " rotation not allowed. Minion will not be"
+                                    " disconnected until the master AES key is rotated."
                                 )
-                    os.remove(os.path.join(self.opts["pki_dir"], status, key))
-                    eload = {"result": True, "act": "delete", "id": key}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-                except (OSError, IOError):
-                    pass
+                            else:
+                                try:
+                                    client.cmd_async(key, "saltutil.revoke_auth")
+                                except salt.exceptions.SaltClientError:
+                                    print(
+                                        "Cannot contact Salt master. "
+                                        "Connection for {} will remain up until "
+                                        "master AES key is rotated or auth is revoked "
+                                        "with 'saltutil.revoke_auth'.".format(key)
+                                    )
+                        os.remove(os.path.join(self.opts["pki_dir"], status, key))
+                        eload = {"result": True, "act": "delete", "id": key}
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="key")
+                        )
+                    except OSError:
+                        pass
         if self.opts.get("preserve_minions") is True:
             self.check_minion_cache(preserve_minions=matches.get("minions", []))
         else:
@@ -735,13 +739,13 @@ class Key(object):
         Delete all denied keys
         """
         keys = self.list_keys()
-        for status, keys in six.iteritems(self.list_keys()):
+        for status, keys in self.list_keys().items():
             for key in keys[self.DEN]:
                 try:
                     os.remove(os.path.join(self.opts["pki_dir"], status, key))
                     eload = {"result": True, "act": "delete", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-                except (OSError, IOError):
+                except OSError:
                     pass
         self.check_minion_cache()
         return self.list_keys()
@@ -750,13 +754,13 @@ class Key(object):
         """
         Delete all keys
         """
-        for status, keys in six.iteritems(self.list_keys()):
+        for status, keys in self.list_keys().items():
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts["pki_dir"], status, key))
                     eload = {"result": True, "act": "delete", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-                except (OSError, IOError):
+                except OSError:
                     pass
         self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
@@ -790,7 +794,7 @@ class Key(object):
                     )
                     eload = {"result": True, "act": "reject", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-                except (IOError, OSError):
+                except OSError:
                     pass
         self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
@@ -810,7 +814,7 @@ class Key(object):
                 )
                 eload = {"result": True, "act": "reject", "id": key}
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-            except (IOError, OSError):
+            except OSError:
                 pass
         self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
@@ -826,7 +830,7 @@ class Key(object):
 
         matches = self.name_match(match, True)
         ret = {}
-        for status, keys in six.iteritems(matches):
+        for status, keys in matches.items():
             ret[status] = {}
             for key in keys:
                 if status == "local":
@@ -844,7 +848,7 @@ class Key(object):
             hash_type = __opts__["hash_type"]
 
         ret = {}
-        for status, keys in six.iteritems(self.all_keys()):
+        for status, keys in self.all_keys().items():
             ret[status] = {}
             for key in keys:
                 if status == "local":
@@ -853,3 +857,9 @@ class Key(object):
                     path = os.path.join(self.opts["pki_dir"], status, key)
                 ret[status][key] = salt.utils.crypt.pem_finger(path, sum_type=hash_type)
         return ret
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.event.destroy()

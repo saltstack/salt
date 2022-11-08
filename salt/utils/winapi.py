@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python libs
 import logging
 import threading
 
@@ -26,7 +21,7 @@ def __virtual__():
         return True
 
 
-class Com(object):
+class Com:
     def __init__(self):
         self.need_com_init = not self._is_main_thread()
 

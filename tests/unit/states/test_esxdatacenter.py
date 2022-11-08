@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
     Tests for functions in salt.states.esxdatacenter
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.states.esxdatacenter as esxdatacenter
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -22,7 +15,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.modules.esxdatacenter.datacenter_configured"""
 
     def setup_loader_modules(self):
-        return {esxdatacenter: {"__virtual__": MagicMock(return_value="esxdatacenter")}}
+        return {esxdatacenter: {}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -66,8 +59,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 "name": "fake_dc",
                 "changes": {},
                 "result": True,
-                "comment": "Datacenter 'fake_dc' already "
-                "exists. Nothing to be done.",
+                "comment": "Datacenter 'fake_dc' already exists. Nothing to be done.",
             },
         )
 
@@ -88,8 +80,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 "name": "fake_dc",
                 "changes": {},
                 "result": True,
-                "comment": "Datacenter 'proxy_dc' "
-                "already exists. Nothing to be done.",
+                "comment": "Datacenter 'proxy_dc' already exists. Nothing to be done.",
             },
         )
 
@@ -147,7 +138,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 "name": "fake_dc",
                 "changes": {"new": {"name": "fake_dc"}},
                 "result": None,
-                "comment": "State will create " "datacenter 'fake_dc'.",
+                "comment": "State will create datacenter 'fake_dc'.",
             },
         )
 
@@ -164,8 +155,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 "name": "fake_dc",
                 "changes": {},
                 "result": True,
-                "comment": "Datacenter 'fake_dc' already "
-                "exists. Nothing to be done.",
+                "comment": "Datacenter 'fake_dc' already exists. Nothing to be done.",
             },
         )
 

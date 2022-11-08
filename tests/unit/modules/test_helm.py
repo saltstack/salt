@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.helm as helm
 
 # Import Exception
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -31,13 +23,22 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__prepare_cmd_commands(self):
         self.assertEqual(
-            helm._prepare_cmd(commands=["com1", "com2"]), ("helm", "com1", "com2",)
+            helm._prepare_cmd(commands=["com1", "com2"]),
+            (
+                "helm",
+                "com1",
+                "com2",
+            ),
         )
 
     def test__prepare_cmd_flags(self):
         self.assertEqual(
             helm._prepare_cmd(flags=["flag1", "--flag2"]),
-            ("helm", "--flag1", "--flag2",),
+            (
+                "helm",
+                "--flag1",
+                "--flag2",
+            ),
         )
 
     def test__prepare_cmd_kvflags(self):

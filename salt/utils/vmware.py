@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for VMware
 
@@ -7,7 +6,7 @@ Connection library for VMware
 This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
 Dependencies
@@ -73,33 +72,23 @@ You should see output related to the ESXi host's syslog configuration.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import atexit
 import errno
 import logging
 import ssl
-import sys
 import time
+from http.client import BadStatusLine
 
-import requests
-
-# Import Salt Libs
 import salt.exceptions
 import salt.modules.cmdmod
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 
-# Import Third Party Libs
-from salt.ext import six
-from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
-
 # pylint: disable=no-name-in-module
 try:
-    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, SoapStubAdapter
-    from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVim.connect import Disconnect, GetSi, GetStub, SmartConnect, SoapStubAdapter
+    from pyVmomi import VmomiSupport, vim, vmodl
 
     HAS_PYVMOMI = True
 except ImportError:
@@ -115,15 +104,15 @@ except ImportError:
     HAS_VSPHERE_SDK = False
 # pylint: enable=no-name-in-module
 try:
-    import gssapi
     import base64
+
+    import gssapi
 
     HAS_GSSAPI = True
 except ImportError:
     HAS_GSSAPI = False
 
 
-# Get Logging Started
 log = logging.getLogger(__name__)
 
 
@@ -170,24 +159,18 @@ def esxcli(
         protocol = "https"
 
     if credstore:
-        esx_cmd += " --credstore '{0}'".format(credstore)
+        esx_cmd += " --credstore '{}'".format(credstore)
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,
         # 'host' points at that server, and esxi_host is a reference to the
         # ESXi instance we are manipulating
-        esx_cmd += (
-            " -s {0} -u {1} -p '{2}' "
-            "--protocol={3} --portnumber={4} {5}".format(
-                host, user, pwd, protocol, port, cmd
-            )
+        esx_cmd += " -s {} -u {} -p '{}' --protocol={} --portnumber={} {}".format(
+            host, user, pwd, protocol, port, cmd
         )
     else:
-        esx_cmd += (
-            " -s {0} -h {1} -u {2} -p '{3}' "
-            "--protocol={4} --portnumber={5} {6}".format(
-                host, esxi_host, user, pwd, protocol, port, cmd
-            )
+        esx_cmd += " -s {} -h {} -u {} -p '{}' --protocol={} --portnumber={} {}".format(
+            host, esxi_host, user, pwd, protocol, port, cmd
         )
 
     ret = salt.modules.cmdmod.run_all(esx_cmd, output_loglevel="quiet")
@@ -195,7 +178,9 @@ def esxcli(
     return ret
 
 
-def get_vsphere_client(server, username, password, session=None):
+def get_vsphere_client(
+    server, username, password, session=None, verify_ssl=True, ca_bundle=None
+):
     """
     Internal helper method to create an instance of the vSphere API client.
     Please provide username and password to authenticate.
@@ -209,6 +194,10 @@ def get_vsphere_client(server, username, password, session=None):
     :param Session session:
         Request HTTP session instance. If not specified, one
         is automatically created and used
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
 
     :returns:
         Vsphere Client instance
@@ -217,9 +206,7 @@ def get_vsphere_client(server, username, password, session=None):
     """
     if not session:
         # Create an https session to be used for a vSphere client
-        session = requests.session()
-        # If client uses own SSL cert, session should not verify
-        session.verify = False
+        session = salt.utils.http.session(verify_ssl=verify_ssl, ca_bundle=ca_bundle)
     client = None
     try:
         client = create_vsphere_client(
@@ -231,7 +218,15 @@ def get_vsphere_client(server, username, password, session=None):
 
 
 def _get_service_instance(
-    host, username, password, protocol, port, mechanism, principal, domain
+    host,
+    username,
+    password,
+    protocol,
+    port,
+    mechanism,
+    principal,
+    domain,
+    verify_ssl=True,
 ):
     """
     Internal method to authenticate with a vCenter server or ESX/ESXi host
@@ -255,75 +250,82 @@ def _get_service_instance(
             try:
                 token = get_gssapi_token(principal, host, domain)
             except Exception as exc:  # pylint: disable=broad-except
-                raise salt.exceptions.VMwareConnectionError(six.text_type(exc))
+                raise salt.exceptions.VMwareConnectionError(str(exc))
         else:
             err_msg = (
-                "Login mechanism '{0}' was specified but the"
+                "Login mechanism '{}' was specified but the"
                 " mandatory parameters are missing".format(mechanism)
             )
             raise salt.exceptions.CommandExecutionError(err_msg)
     else:
         raise salt.exceptions.CommandExecutionError(
-            "Unsupported mechanism: '{0}'".format(mechanism)
+            "Unsupported mechanism: '{}'".format(mechanism)
         )
+
+    log.trace(
+        "Connecting using the '%s' mechanism, with username '%s'",
+        mechanism,
+        username,
+    )
+    default_msg = (
+        "Could not connect to host '{}'. "
+        "Please check the debug log for more information.".format(host)
+    )
+
     try:
-        log.trace(
-            "Connecting using the '%s' mechanism, with username '%s'",
-            mechanism,
-            username,
-        )
-        service_instance = SmartConnect(
-            host=host,
-            user=username,
-            pwd=password,
-            protocol=protocol,
-            port=port,
-            b64token=token,
-            mechanism=mechanism,
-        )
+        if verify_ssl:
+            service_instance = SmartConnect(
+                host=host,
+                user=username,
+                pwd=password,
+                protocol=protocol,
+                port=port,
+                b64token=token,
+                mechanism=mechanism,
+            )
     except TypeError as exc:
         if "unexpected keyword argument" in exc.message:
             log.error(
                 "Initial connect to the VMware endpoint failed with %s", exc.message
             )
             log.error(
-                "This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed."
+                "This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is"
+                " installed."
             )
             log.error("We recommend updating to that version or later.")
             raise
     except Exception as exc:  # pylint: disable=broad-except
         # pyVmomi's SmartConnect() actually raises Exception in some cases.
-        default_msg = (
-            "Could not connect to host '{0}'. "
-            "Please check the debug log for more information.".format(host)
-        )
+        if (
+            isinstance(exc, vim.fault.HostConnectFault)
+            and "[SSL: CERTIFICATE_VERIFY_FAILED]" in exc.msg
+        ) or "[SSL: CERTIFICATE_VERIFY_FAILED]" in str(exc):
+            err_msg = (
+                "Could not verify the SSL certificate. You can use "
+                "verify_ssl: False if you do not want to verify the "
+                "SSL certificate. This is not recommended as it is "
+                "considered insecure."
+            )
+        else:
+            log.exception(exc)
+            err_msg = exc.msg if hasattr(exc, "msg") else default_msg
+        raise salt.exceptions.VMwareConnectionError(err_msg)
 
+    if not verify_ssl:
         try:
-            if (
-                isinstance(exc, vim.fault.HostConnectFault)
-                and "[SSL: CERTIFICATE_VERIFY_FAILED]" in exc.msg
-            ) or "[SSL: CERTIFICATE_VERIFY_FAILED]" in six.text_type(exc):
-                service_instance = SmartConnect(
-                    host=host,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port,
-                    sslContext=getattr(
-                        ssl,
-                        "_create_unverified_context",
-                        getattr(ssl, "_create_stdlib_context"),
-                    )(),
-                    b64token=token,
-                    mechanism=mechanism,
-                )
-            else:
-                log.exception(exc)
-                err_msg = exc.msg if hasattr(exc, "msg") else default_msg
-                raise salt.exceptions.VMwareConnectionError(err_msg)
+            service_instance = SmartConnect(
+                host=host,
+                user=username,
+                pwd=password,
+                protocol=protocol,
+                port=port,
+                sslContext=ssl._create_unverified_context(),
+                b64token=token,
+                mechanism=mechanism,
+            )
         except Exception as exc:  # pylint: disable=broad-except
             # pyVmomi's SmartConnect() actually raises Exception in some cases.
-            if "certificate verify failed" in six.text_type(exc):
+            if "certificate verify failed" in str(exc):
                 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
                 context.verify_mode = ssl.CERT_NONE
                 try:
@@ -339,14 +341,15 @@ def _get_service_instance(
                     )
                 except Exception as exc:  # pylint: disable=broad-except
                     log.exception(exc)
-                    err_msg = exc.msg if hasattr(exc, "msg") else six.text_type(exc)
+                    err_msg = exc.msg if hasattr(exc, "msg") else str(exc)
                     raise salt.exceptions.VMwareConnectionError(
-                        "Could not connect to host '{0}': " "{1}".format(host, err_msg)
+                        "Could not connect to host '{}': {}".format(host, err_msg)
                     )
             else:
                 err_msg = exc.msg if hasattr(exc, "msg") else default_msg
                 log.trace(exc)
                 raise salt.exceptions.VMwareConnectionError(err_msg)
+
     atexit.register(Disconnect, service_instance)
     return service_instance
 
@@ -401,6 +404,7 @@ def get_service_instance(
     mechanism="userpass",
     principal=None,
     domain=None,
+    verify_ssl=True,
 ):
     """
     Authenticate with a vCenter server or ESX/ESXi host and return the service instance object.
@@ -433,6 +437,9 @@ def get_service_instance(
 
     domain
         Kerberos user domain. Required if mechanism is ``sspi``
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
     """
 
     if protocol is None:
@@ -444,7 +451,7 @@ def get_service_instance(
     if service_instance:
         stub = GetStub()
         if salt.utils.platform.is_proxy() or (
-            hasattr(stub, "host") and stub.host != ":".join([host, six.text_type(port)])
+            hasattr(stub, "host") and stub.host != ":".join([host, str(port)])
         ):
             # Proxies will fork and mess up the cached service instance.
             # If this is a proxy or we are connecting to a different host
@@ -452,12 +459,18 @@ def get_service_instance(
             # and reconnect
             Disconnect(service_instance)
             service_instance = None
-        else:
-            return service_instance
 
     if not service_instance:
         service_instance = _get_service_instance(
-            host, username, password, protocol, port, mechanism, principal, domain
+            host,
+            username,
+            password,
+            protocol,
+            port,
+            mechanism,
+            principal,
+            domain,
+            verify_ssl=verify_ssl,
         )
 
     # Test if data can actually be retrieved or connection has gone stale
@@ -468,12 +481,20 @@ def get_service_instance(
         log.trace("Session no longer authenticating. Reconnecting")
         Disconnect(service_instance)
         service_instance = _get_service_instance(
-            host, username, password, protocol, port, mechanism, principal, domain
+            host,
+            username,
+            password,
+            protocol,
+            port,
+            mechanism,
+            principal,
+            domain,
+            verify_ssl=verify_ssl,
         )
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -507,11 +528,9 @@ def get_new_service_instance_stub(service_instance, path, ns=None, version=None)
     # For python 2.7.9 and later, the default SSL context has more strict
     # connection handshaking rule. We may need turn off the hostname checking
     # and the client side cert verification.
-    context = None
-    if sys.version_info[:3] > (2, 7, 8):
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
 
     stub = service_instance._stub
     hostname = stub.host.split(":")[0]
@@ -555,7 +574,7 @@ def disconnect(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -578,7 +597,7 @@ def is_connection_to_a_vcenter(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -593,7 +612,7 @@ def is_connection_to_a_vcenter(service_instance):
         return False
     else:
         raise salt.exceptions.VMwareApiError(
-            "Unexpected api type '{0}' . Supported types: "
+            "Unexpected api type '{}' . Supported types: "
             "'VirtualCenter/HostAgent'".format(api_type)
         )
 
@@ -610,7 +629,7 @@ def get_service_info(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -708,7 +727,7 @@ def get_gssapi_token(principal, host, domain):
     if not HAS_GSSAPI:
         raise ImportError("The gssapi library is not imported.")
 
-    service = "{0}/{1}@{2}".format(principal, host, domain)
+    service = "{}/{}@{}".format(principal, host, domain)
     log.debug("Retrieving gsspi token for service %s", service)
     service_name = gssapi.Name(service, gssapi.C_NT_USER_NAME)
     ctx = gssapi.InitContext(service_name)
@@ -716,8 +735,6 @@ def get_gssapi_token(principal, host, domain):
     while not ctx.established:
         out_token = ctx.step(in_token)
         if out_token:
-            if six.PY2:
-                return base64.b64encode(out_token)
             return base64.b64encode(salt.utils.stringutils.to_bytes(out_token))
         if ctx.established:
             break
@@ -798,7 +815,7 @@ def get_hardware_grains(service_instance):
             hw_grain_data["domain"] = view.view[
                 0
             ].configManager.networkSystem.dnsConfig.domainName
-            hw_grain_data["fqdn"] = "{0}{1}{2}".format(
+            hw_grain_data["fqdn"] = "{}{}{}".format(
                 view.view[0].configManager.networkSystem.dnsConfig.hostName,
                 (
                     "."
@@ -841,7 +858,7 @@ def get_root_folder(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -906,8 +923,7 @@ def get_content(
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             log.exception(exc)
@@ -952,7 +968,7 @@ def get_content(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -968,8 +984,7 @@ def get_content(
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             log.exception(exc)
@@ -1017,7 +1032,7 @@ def get_mor_by_property(
     )
 
     for obj in object_list:
-        obj_id = six.text_type(obj.get("object", "")).strip("'\"")
+        obj_id = str(obj.get("object", "")).strip("'\"")
         if obj[property_name] == property_value or property_value == obj_id:
             return obj["object"]
 
@@ -1069,9 +1084,9 @@ def get_mors_with_properties(
         content = get_content(*content_args, **content_kwargs)
     except BadStatusLine:
         content = get_content(*content_args, **content_kwargs)
-    except IOError as exc:
+    except OSError as exc:
         if exc.errno != errno.EPIPE:
-            six.reraise(*sys.exc_info())
+            raise
         content = get_content(*content_args, **content_kwargs)
 
     object_list = []
@@ -1124,7 +1139,7 @@ def get_properties_of_managed_object(mo_ref, properties):
     )
     if not items:
         raise salt.exceptions.VMwareApiError(
-            "Properties of managed object '{0}' weren't " "retrieved".format(mo_name)
+            "Properties of managed object '{}' weren't retrieved".format(mo_name)
         )
     return items[0]
 
@@ -1248,7 +1263,7 @@ def get_network_folder(dc_ref):
     )
     if not entries:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Network folder in datacenter '{0}' wasn't retrieved" "".format(dc_name)
+            "Network folder in datacenter '{}' wasn't retrieved".format(dc_name)
         )
     return entries[0]["object"]
 
@@ -1281,7 +1296,7 @@ def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1289,7 +1304,7 @@ def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, dvs_name, six.text_type(task.__class__))
+    wait_for_task(task, dvs_name, str(task.__class__))
 
 
 def update_dvs(dvs_ref, dvs_config_spec):
@@ -1310,7 +1325,7 @@ def update_dvs(dvs_ref, dvs_config_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1318,7 +1333,7 @@ def update_dvs(dvs_ref, dvs_config_spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, dvs_name, six.text_type(task.__class__))
+    wait_for_task(task, dvs_name, str(task.__class__))
 
 
 def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
@@ -1333,7 +1348,7 @@ def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
     """
     dvs_name = get_managed_object_name(dvs_ref)
     log.trace(
-        "Setting network resource management enable to %s on " "dvs '%s'",
+        "Setting network resource management enable to %s on dvs '%s'",
         enabled,
         dvs_name,
     )
@@ -1342,7 +1357,7 @@ def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1368,12 +1383,11 @@ def get_dvportgroups(parent_ref, portgroup_names=None, get_all_portgroups=False)
     """
     if not isinstance(parent_ref, (vim.Datacenter, vim.DistributedVirtualSwitch)):
         raise salt.exceptions.ArgumentValueError(
-            "Parent has to be either a datacenter, " "or a distributed virtual switch"
+            "Parent has to be either a datacenter, or a distributed virtual switch"
         )
     parent_name = get_managed_object_name(parent_ref)
     log.trace(
-        "Retrieving portgroup in %s '%s', portgroups_names='%s', "
-        "get_all_portgroups=%s",
+        "Retrieving portgroup in %s '%s', portgroups_names='%s', get_all_portgroups=%s",
         type(parent_ref).__name__,
         parent_name,
         ",".join(portgroup_names) if portgroup_names else None,
@@ -1438,7 +1452,7 @@ def get_uplink_dvportgroup(dvs_ref):
     ]
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Uplink portgroup of DVS '{0}' wasn't found".format(dvs_name)
+            "Uplink portgroup of DVS '{}' wasn't found".format(dvs_name)
         )
     return items[0]
 
@@ -1462,7 +1476,7 @@ def create_dvportgroup(dvs_ref, spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1470,7 +1484,7 @@ def create_dvportgroup(dvs_ref, spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, dvs_name, six.text_type(task.__class__))
+    wait_for_task(task, dvs_name, str(task.__class__))
 
 
 def update_dvportgroup(portgroup_ref, spec):
@@ -1490,7 +1504,7 @@ def update_dvportgroup(portgroup_ref, spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1498,7 +1512,7 @@ def update_dvportgroup(portgroup_ref, spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, pg_name, six.text_type(task.__class__))
+    wait_for_task(task, pg_name, str(task.__class__))
 
 
 def remove_dvportgroup(portgroup_ref):
@@ -1515,7 +1529,7 @@ def remove_dvportgroup(portgroup_ref):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1523,7 +1537,7 @@ def remove_dvportgroup(portgroup_ref):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    wait_for_task(task, pg_name, six.text_type(task.__class__))
+    wait_for_task(task, pg_name, str(task.__class__))
 
 
 def get_networks(parent_ref, network_names=None, get_all_networks=False):
@@ -1546,7 +1560,7 @@ def get_networks(parent_ref, network_names=None, get_all_networks=False):
         raise salt.exceptions.ArgumentValueError("Parent has to be a datacenter.")
     parent_name = get_managed_object_name(parent_ref)
     log.trace(
-        "Retrieving network from %s '%s', network_names='%s', " "get_all_networks=%s",
+        "Retrieving network from %s '%s', network_names='%s', get_all_networks=%s",
         type(parent_ref).__name__,
         parent_name,
         ",".join(network_names) if network_names else None,
@@ -1616,7 +1630,7 @@ def get_license_manager(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1643,7 +1657,7 @@ def get_license_assignment_manager(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1678,7 +1692,7 @@ def get_licenses(service_instance, license_manager=None):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1716,7 +1730,7 @@ def add_license(service_instance, key, description, license_manager=None):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1769,8 +1783,7 @@ def get_assigned_licenses(
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{0}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             log.exception(exc)
@@ -1787,7 +1800,7 @@ def get_assigned_licenses(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1797,9 +1810,7 @@ def get_assigned_licenses(
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     if entity_type == "uuid" and len(assignments) > 1:
-        log.trace(
-            "Unexpectectedly retrieved more than one" " VCenter license assignment."
-        )
+        log.trace("Unexpectectedly retrieved more than one VCenter license assignment.")
         raise salt.exceptions.VMwareObjectRetrievalError(
             "Unexpected return. Expect only a single assignment"
         )
@@ -1863,8 +1874,7 @@ def assign_license(
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{0}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             raise salt.exceptions.VMwareApiError(exc.msg)
@@ -1884,7 +1894,7 @@ def assign_license(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -1942,7 +1952,7 @@ def get_datacenter(service_instance, datacenter_name):
     items = get_datacenters(service_instance, datacenter_names=[datacenter_name])
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Datacenter '{0}' was not found".format(datacenter_name)
+            "Datacenter '{}' was not found".format(datacenter_name)
         )
     return items[0]
 
@@ -1966,7 +1976,7 @@ def create_datacenter(service_instance, datacenter_name):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2013,8 +2023,7 @@ def get_cluster(dc_ref, cluster):
     ]
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Cluster '{0}' was not found in datacenter "
-            "'{1}'".format(cluster, dc_name)
+            "Cluster '{}' was not found in datacenter '{}'".format(cluster, dc_name)
         )
     return items[0]
 
@@ -2040,7 +2049,7 @@ def create_cluster(dc_ref, cluster_name, cluster_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2068,7 +2077,7 @@ def update_cluster(cluster_ref, cluster_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2147,8 +2156,7 @@ def get_datastore_files(
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             log.exception(exc)
@@ -2211,7 +2219,7 @@ def get_datastores(
         if backing_disk_ids and not isinstance(reference, vim.HostSystem):
 
             raise salt.exceptions.ArgumentValueError(
-                "Unsupported reference type '{0}' when backing disk filter "
+                "Unsupported reference type '{}' when backing disk filter "
                 "is set".format(reference.__class__.__name__)
             )
     if (not get_all_datastores) and backing_disk_ids:
@@ -2305,7 +2313,7 @@ def get_datastores(
         )
     else:
         raise salt.exceptions.ArgumentValueError(
-            "Unsupported reference type '{0}'" "".format(reference.__class__.__name__)
+            "Unsupported reference type '{}'".format(reference.__class__.__name__)
         )
 
     items = get_mors_with_properties(
@@ -2338,7 +2346,7 @@ def rename_datastore(datastore_ref, new_datastore_name):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2368,7 +2376,7 @@ def get_storage_system(service_instance, host_ref, hostname=None):
     )
     if not objs:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Host's '{0}' storage system was not retrieved" "".format(hostname)
+            "Host's '{}' storage system was not retrieved".format(hostname)
         )
     log.trace("[%s] Retrieved storage system", hostname)
     return objs[0]["object"]
@@ -2386,7 +2394,7 @@ def _get_partition_info(storage_system, device_path):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2413,8 +2421,9 @@ def _get_new_computed_partition_spec(storage_system, device_path, partition_info
     free_partitions = [p for p in partition_info.layout.partition if p.type == "none"]
     if not free_partitions:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Free partition was not found on device '{0}'"
-            "".format(partition_info.deviceName)
+            "Free partition was not found on device '{}'".format(
+                partition_info.deviceName
+            )
         )
     free_partition = free_partitions[0]
 
@@ -2434,7 +2443,7 @@ def _get_new_computed_partition_spec(storage_system, device_path, partition_info
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2460,8 +2469,9 @@ def _get_new_computed_partition_spec(storage_system, device_path, partition_info
     ]
     if not partition_numbers:
         raise salt.exceptions.VMwareNotFoundError(
-            "New partition was not found in computed partitions of device "
-            "'{0}'".format(partition_info.deviceName)
+            "New partition was not found in computed partitions of device '{}'".format(
+                partition_info.deviceName
+            )
         )
     log.trace("new partition number = %s", partition_numbers[0])
     return (partition_numbers[0], computed_partition_info.spec)
@@ -2489,7 +2499,7 @@ def create_vmfs_datastore(
     hostname = get_managed_object_name(host_ref)
     disk_id = disk_ref.canonicalName
     log.debug(
-        "Creating datastore '%s' on host '%s', scsi disk '%s', " "vmfs v%s",
+        "Creating datastore '%s' on host '%s', scsi disk '%s', vmfs v%s",
         datastore_name,
         hostname,
         disk_id,
@@ -2521,7 +2531,7 @@ def create_vmfs_datastore(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2559,7 +2569,7 @@ def get_host_datastore_system(host_ref, hostname=None):
     )
     if not objs:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Host's '{0}' datastore system was not retrieved" "".format(hostname)
+            "Host's '{}' datastore system was not retrieved".format(hostname)
         )
     log.trace("[%s] Retrieved datastore system", hostname)
     return objs[0]["object"]
@@ -2581,8 +2591,7 @@ def remove_datastore(service_instance, datastore_ref):
     ds_hosts = ds_props.get("host")
     if not ds_hosts:
         raise salt.exceptions.VMwareApiError(
-            "Datastore '{0}' can't be removed. No "
-            "attached hosts found".format(ds_name)
+            "Datastore '{}' can't be removed. No attached hosts found".format(ds_name)
         )
     hostname = get_managed_object_name(ds_hosts[0].key)
     host_ds_system = get_host_datastore_system(ds_hosts[0].key, hostname=hostname)
@@ -2591,7 +2600,7 @@ def remove_datastore(service_instance, datastore_ref):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2706,7 +2715,7 @@ def _get_scsi_address_to_lun_key_map(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2716,16 +2725,16 @@ def _get_scsi_address_to_lun_key_map(
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     if not device_info:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Host's '{0}' storage device " "info was not retrieved".format(hostname)
+            "Host's '{}' storage device info was not retrieved".format(hostname)
         )
     multipath_info = device_info.multipathInfo
     if not multipath_info:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Host's '{0}' multipath info was not retrieved" "".format(hostname)
+            "Host's '{}' multipath info was not retrieved".format(hostname)
         )
     if multipath_info.lun is None:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No luns were retrieved from host '{0}'".format(hostname)
+            "No luns were retrieved from host '{}'".format(hostname)
         )
     lun_key_by_scsi_addr = {}
     for l in multipath_info.lun:
@@ -2759,14 +2768,14 @@ def get_all_luns(host_ref, storage_system=None, hostname=None):
         storage_system = get_storage_system(si, host_ref, hostname)
         if not storage_system:
             raise salt.exceptions.VMwareObjectRetrievalError(
-                "Host's '{0}' storage system was not retrieved" "".format(hostname)
+                "Host's '{}' storage system was not retrieved".format(hostname)
             )
     try:
         device_info = storage_system.storageDeviceInfo
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -2776,7 +2785,7 @@ def get_all_luns(host_ref, storage_system=None, hostname=None):
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     if not device_info:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Host's '{0}' storage device info was not retrieved" "".format(hostname)
+            "Host's '{}' storage device info was not retrieved".format(hostname)
         )
 
     scsi_luns = device_info.scsiLun
@@ -2819,7 +2828,7 @@ def get_scsi_address_to_lun_map(host_ref, storage_system=None, hostname=None):
     }
     return {
         scsi_addr: luns_to_key_map[lun_key]
-        for scsi_addr, lun_key in six.iteritems(lun_ids_to_scsi_addr_map)
+        for scsi_addr, lun_key in lun_ids_to_scsi_addr_map.items()
     }
 
 
@@ -2849,7 +2858,7 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None, get_all_disks=False)
         log.trace("Retrieving all disks in host '%s'", hostname)
     else:
         log.trace(
-            "Retrieving disks in host '%s': ids = (%s); scsi " "addresses = (%s)",
+            "Retrieving disks in host '%s': ids = (%s); scsi addresses = (%s)",
             hostname,
             disk_ids,
             scsi_addresses,
@@ -2866,7 +2875,7 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None, get_all_disks=False)
         )
         disk_keys = [
             key
-            for scsi_addr, key in six.iteritems(lun_key_by_scsi_addr)
+            for scsi_addr, key in lun_key_by_scsi_addr.items()
             if scsi_addr in scsi_addresses
         ]
         log.trace("disk_keys based on scsi_addresses = %s", disk_keys)
@@ -2917,7 +2926,7 @@ def get_disk_partition_info(host_ref, disk_id, storage_system=None):
     )
     if not props.get("storageDeviceInfo.scsiLun"):
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No devices were retrieved in host '{0}'".format(hostname)
+            "No devices were retrieved in host '{}'".format(hostname)
         )
     log.trace(
         "[%s] Retrieved %s devices: %s",
@@ -2932,7 +2941,7 @@ def get_disk_partition_info(host_ref, disk_id, storage_system=None):
     ]
     if not disks:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Disk '{0}' was not found in host '{1}'" "".format(disk_id, hostname)
+            "Disk '{}' was not found in host '{}'".format(disk_id, hostname)
         )
     log.trace("[%s] device_path = %s", hostname, disks[0].devicePath)
     partition_info = _get_partition_info(storage_system, disks[0].devicePath)
@@ -2986,7 +2995,7 @@ def erase_disk_partitions(
     )
     if not results:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Host's '{0}' devices were not retrieved".format(hostname)
+            "Host's '{}' devices were not retrieved".format(hostname)
         )
     log.trace(
         "[%s] Retrieved %s devices: %s",
@@ -3003,7 +3012,7 @@ def erase_disk_partitions(
     ]
     if not disks:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "Disk '{0}' was not found in host '{1}'" "".format(disk_id, hostname)
+            "Disk '{}' was not found in host '{}'".format(disk_id, hostname)
         )
     log.trace("[%s] device_path = %s", hostname, disks[0].devicePath)
     # Erase the partitions by setting an empty partition spec
@@ -3014,7 +3023,7 @@ def erase_disk_partitions(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3049,7 +3058,7 @@ def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
         log.trace("Retrieving all disk groups on host '%s'", hostname)
     else:
         log.trace(
-            "Retrieving disk groups from host '%s', with cache disk " "ids : (%s)",
+            "Retrieving disk groups from host '%s', with cache disk ids : (%s)",
             hostname,
             cache_disk_ids,
         )
@@ -3060,7 +3069,7 @@ def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3070,12 +3079,12 @@ def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     if not vsan_host_config:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No host config found on host '{0}'".format(hostname)
+            "No host config found on host '{}'".format(hostname)
         )
     vsan_storage_info = vsan_host_config.storageInfo
     if not vsan_storage_info:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No vsan storage info found on host '{0}'".format(hostname)
+            "No vsan storage info found on host '{}'".format(hostname)
         )
     vsan_disk_mappings = vsan_storage_info.diskMapping
     if not vsan_disk_mappings:
@@ -3100,14 +3109,16 @@ def _check_disks_in_diskgroup(disk_group, cache_disk_id, capacity_disk_ids):
     """
     if not disk_group.ssd.canonicalName == cache_disk_id:
         raise salt.exceptions.ArgumentValueError(
-            "Incorrect diskgroup cache disk; got id: '{0}'; expected id: "
-            "'{1}'".format(disk_group.ssd.canonicalName, cache_disk_id)
+            "Incorrect diskgroup cache disk; got id: '{}'; expected id: '{}'".format(
+                disk_group.ssd.canonicalName, cache_disk_id
+            )
         )
     non_ssd_disks = [d.canonicalName for d in disk_group.nonSsd]
     if sorted(non_ssd_disks) != sorted(capacity_disk_ids):
         raise salt.exceptions.ArgumentValueError(
-            "Incorrect capacity disks; got ids: '{0}'; expected ids: '{1}'"
-            "".format(sorted(non_ssd_disks), sorted(capacity_disk_ids))
+            "Incorrect capacity disks; got ids: '{}'; expected ids: '{}'".format(
+                sorted(non_ssd_disks), sorted(capacity_disk_ids)
+            )
         )
     log.trace("Checked disks in diskgroup with cache disk id '%s'", cache_disk_id)
     return True
@@ -3188,11 +3199,11 @@ def configure_host_cache(
         )
         if not props.get("configManager.cacheConfigurationManager"):
             raise salt.exceptions.VMwareObjectRetrievalError(
-                "Host '{0}' has no host cache".format(hostname)
+                "Host '{}' has no host cache".format(hostname)
             )
         host_cache_manager = props["configManager.cacheConfigurationManager"]
     log.trace(
-        "Configuring the host cache on host '%s', datastore '%s', " "swap size=%s MiB",
+        "Configuring the host cache on host '%s', datastore '%s', swap size=%s MiB",
         hostname,
         datastore_ref.name,
         swap_size_MiB,
@@ -3207,7 +3218,7 @@ def configure_host_cache(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{0}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3385,7 +3396,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level="de
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.FileNotFound as exc:
         log.exception(exc)
@@ -3398,7 +3409,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level="de
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     while task_info.state == "running" or task_info.state == "queued":
         if time_counter % sleep_seconds == 0:
-            msg = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(
+            msg = "[ {} ] Waiting for {} task to finish [{} s]".format(
                 instance_name, task_type, time_counter
             )
             if log_level == "info":
@@ -3412,8 +3423,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level="de
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.FileNotFound as exc:
             log.exception(exc)
@@ -3425,7 +3435,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level="de
             log.exception(exc)
             raise salt.exceptions.VMwareRuntimeError(exc.msg)
     if task_info.state == "success":
-        msg = "[ {0} ] Successfully completed {1} task in {2} seconds".format(
+        msg = "[ {} ] Successfully completed {} task in {} seconds".format(
             instance_name, task_type, time_counter
         )
         if log_level == "info":
@@ -3441,8 +3451,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level="de
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.FileNotFound as exc:
             log.exception(exc)
@@ -3457,9 +3466,7 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level="de
             log.exception(exc)
             exc_message = exc.msg
             if exc.faultMessage:
-                exc_message = "{0} ({1})".format(
-                    exc_message, exc.faultMessage[0].message
-                )
+                exc_message = "{} ({})".format(exc_message, exc.faultMessage[0].message)
             raise salt.exceptions.VMwareApiError(exc_message)
 
 
@@ -3575,7 +3582,7 @@ def get_folder(service_instance, datacenter, placement, base_vm_name=None):
                 " ".join(
                     [
                         "Multiple instances are available of the",
-                        "specified folder {0}".format(placement["folder"]),
+                        "specified folder {}".format(placement["folder"]),
                     ]
                 )
             )
@@ -3620,7 +3627,7 @@ def get_placement(service_instance, datacenter, placement=None):
                 " ".join(
                     [
                         "The specified host",
-                        "{0} cannot be found.".format(placement["host"]),
+                        "{} cannot be found.".format(placement["host"]),
                     ]
                 )
             )
@@ -3651,7 +3658,7 @@ def get_placement(service_instance, datacenter, placement=None):
                 resourcepool_object = resourcepools[0]["object"]
             else:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The resource pool of host {0} cannot be found.".format(
+                    "The resource pool of host {} cannot be found.".format(
                         placement["host"]
                     )
                 )
@@ -3738,8 +3745,7 @@ def power_cycle_vm(virtual_machine, action="on"):
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             log.exception(exc)
@@ -3754,8 +3760,7 @@ def power_cycle_vm(virtual_machine, action="on"):
         except vim.fault.NoPermission as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(
-                "Not enough permissions. Required privilege: "
-                "{}".format(exc.privilegeId)
+                "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
             )
         except vim.fault.VimFault as exc:
             log.exception(exc)
@@ -3772,7 +3777,7 @@ def power_cycle_vm(virtual_machine, action="on"):
             " ".join(
                 [
                     "An error occurred during power",
-                    "operation, a file was not found: {0}".format(exc),
+                    "operation, a file was not found: {}".format(exc),
                 ]
             )
         )
@@ -3813,7 +3818,7 @@ def create_vm(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3861,7 +3866,7 @@ def register_vm(datacenter, name, vmx_path, resourcepool_object, host_object=Non
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3874,7 +3879,7 @@ def register_vm(datacenter, name, vmx_path, resourcepool_object, host_object=Non
     except salt.exceptions.VMwareFileNotFoundError as exc:
         raise salt.exceptions.VMwareVmRegisterError(
             "An error occurred during registration operation, the "
-            "configuration file was not found: {0}".format(exc)
+            "configuration file was not found: {}".format(exc)
         )
     return vm_ref
 
@@ -3896,7 +3901,7 @@ def update_vm(vm_ref, vm_config_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3922,7 +3927,7 @@ def delete_vm(vm_ref):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -3947,7 +3952,7 @@ def unregister_vm(vm_ref):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         raise salt.exceptions.VMwareApiError(exc.msg)
