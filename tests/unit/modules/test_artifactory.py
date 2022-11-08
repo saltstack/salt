@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.modules.artifactory as artifactory
-
-# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -255,3 +247,152 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                     packaging="war",
                     headers={},
                 )
+
+    def test_get_latest_snapshot_username_password(self):
+        with patch(
+            "salt.modules.artifactory._get_artifact_metadata",
+            return_value={"latest_version": "1.1"},
+        ), patch(
+            "salt.modules.artifactory._get_snapshot_url",
+            return_value=(
+                "http://artifactory.example.com/artifactory/snapshot",
+                "/path/to/file",
+            ),
+        ), patch(
+            "salt.modules.artifactory.__save_artifact", return_value={}
+        ) as save_artifact_mock:
+            artifactory.get_latest_snapshot(
+                artifactory_url="http://artifactory.example.com/artifactory",
+                repository="libs-snapshots",
+                group_id="com.company.sampleapp.web-module",
+                artifact_id="web",
+                packaging="war",
+                username="user",
+                password="password",
+            )
+            save_artifact_mock.assert_called_with(
+                "http://artifactory.example.com/artifactory/snapshot",
+                "/path/to/file",
+                {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            )
+
+    def test_get_snapshot_username_password(self):
+        with patch(
+            "salt.modules.artifactory._get_snapshot_url",
+            return_value=(
+                "http://artifactory.example.com/artifactory/snapshot",
+                "/path/to/file",
+            ),
+        ), patch(
+            "salt.modules.artifactory.__save_artifact", return_value={}
+        ) as save_artifact_mock:
+            artifactory.get_snapshot(
+                artifactory_url="http://artifactory.example.com/artifactory",
+                repository="libs-snapshots",
+                group_id="com.company.sampleapp.web-module",
+                artifact_id="web",
+                packaging="war",
+                version="1.1",
+                username="user",
+                password="password",
+            )
+            save_artifact_mock.assert_called_with(
+                "http://artifactory.example.com/artifactory/snapshot",
+                "/path/to/file",
+                {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            )
+
+    def test_get_latest_release_username_password(self):
+        with patch(
+            "salt.modules.artifactory.__find_latest_version",
+            return_value="1.1",
+        ), patch(
+            "salt.modules.artifactory._get_release_url",
+            return_value=(
+                "http://artifactory.example.com/artifactory/release",
+                "/path/to/file",
+            ),
+        ), patch(
+            "salt.modules.artifactory.__save_artifact", return_value={}
+        ) as save_artifact_mock:
+            artifactory.get_latest_release(
+                artifactory_url="http://artifactory.example.com/artifactory",
+                repository="libs-snapshots",
+                group_id="com.company.sampleapp.web-module",
+                artifact_id="web",
+                packaging="war",
+                username="user",
+                password="password",
+            )
+            save_artifact_mock.assert_called_with(
+                "http://artifactory.example.com/artifactory/release",
+                "/path/to/file",
+                {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            )
+
+    def test_get_release_username_password(self):
+        with patch(
+            "salt.modules.artifactory._get_release_url",
+            return_value=(
+                "http://artifactory.example.com/artifactory/release",
+                "/path/to/file",
+            ),
+        ), patch(
+            "salt.modules.artifactory.__save_artifact", return_value={}
+        ) as save_artifact_mock:
+            artifactory.get_release(
+                artifactory_url="http://artifactory.example.com/artifactory",
+                repository="libs-snapshots",
+                group_id="com.company.sampleapp.web-module",
+                artifact_id="web",
+                packaging="war",
+                version="1.1",
+                username="user",
+                password="password",
+            )
+            save_artifact_mock.assert_called_with(
+                "http://artifactory.example.com/artifactory/release",
+                "/path/to/file",
+                {"Authorization": "Basic dXNlcjpwYXNzd29yZA==\n"},
+            )
+
+    def test_save_artifact_file_exists_checksum_equal(self):
+        artifact_url = "http://artifactory.example.com/artifactory/artifact"
+        target_file = "/path/to/file"
+        sum_str = "0123456789abcdef0123456789abcdef01234567"
+        sum_bin = sum_str.encode()
+        with patch("os.path.isfile", return_value=True), patch.dict(
+            artifactory.__salt__, {"file.get_hash": MagicMock(return_value=sum_str)}
+        ):
+            with patch(
+                "salt.modules.artifactory.__download",
+                return_value=(True, sum_bin, None),
+            ):
+                result = getattr(artifactory, "__save_artifact")(
+                    artifact_url=artifact_url, target_file=target_file, headers={}
+                )
+                assert result == {
+                    "status": True,
+                    "changes": {},
+                    "target_file": target_file,
+                    "comment": (
+                        "File {} already exists, checksum matches with Artifactory.\n"
+                        "Checksum URL: {}.sha1".format(target_file, artifact_url)
+                    ),
+                }
+            with patch(
+                "salt.modules.artifactory.__download",
+                return_value=(True, sum_str, None),
+            ):
+                result = getattr(artifactory, "__save_artifact")(
+                    artifact_url=artifact_url, target_file=target_file, headers={}
+                )
+                assert result == {
+                    "status": True,
+                    "changes": {},
+                    "target_file": target_file,
+                    "comment": (
+                        "File {} already exists, checksum matches with Artifactory.\n"
+                        "Checksum URL: {}.sha1".format(target_file, artifact_url)
+                    ),
+                }

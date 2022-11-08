@@ -1,5 +1,5 @@
-salt.states.loop module
-=======================
+salt.states.loop
+================
 
 .. automodule:: salt.states.loop
     :members:

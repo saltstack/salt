@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 
@@ -15,8 +12,6 @@ from salt import auth
 from salt.exceptions import SaltDeserializationError
 from tests.support.case import ModuleCase
 from tests.support.mock import MagicMock, call, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -57,7 +52,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(side_effect=SaltDeserializationError("hi"))
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -70,7 +66,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(return_value={"no_expire_here": "Nope"})
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -83,7 +80,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(return_value={"expire": time.time() - 1})
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -97,7 +95,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(return_value=expected_token)
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -173,7 +172,7 @@ class MasterACLTestCase(ModuleCase):
             ("salt.auth.LoadAuth.time_auth", MagicMock(return_value=True)),
             ("salt.minion.MasterMinion", MagicMock()),
             ("salt.utils.verify.check_path_traversal", MagicMock()),
-            ("salt.client.get_local_client", MagicMock(return_value=opts["conf_file"])),
+            ("salt.client.get_local_client", MagicMock()),
         )
         for mod, mock in patches:
             patcher = patch(mod, mock)
@@ -225,6 +224,7 @@ class MasterACLTestCase(ModuleCase):
             ],
         }
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        self.addCleanup(self.clear.destroy)
         self.addCleanup(delattr, self, "clear")
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock
@@ -362,14 +362,14 @@ class MasterACLTestCase(ModuleCase):
             self.clear.publish(self.valid_clear_load)
         self.assertTrue(
             self.fire_event_mock.called,
-            "Did not fire {0} for minion tgt {1}".format(
+            "Did not fire {} for minion tgt {}".format(
                 requested_function, requested_tgt
             ),
         )
         self.assertEqual(
             self.fire_event_mock.call_args[0][0]["fun"],
             requested_function,
-            "Did not fire {0} for minion glob".format(requested_function),
+            "Did not fire {} for minion glob".format(requested_function),
         )
 
     def test_master_function_glob(self):
@@ -738,7 +738,7 @@ class AuthACLTestCase(ModuleCase):
             ("salt.utils.verify.check_path_traversal", MagicMock()),
             ("salt.utils.minions.CkMinions.auth_check", self.auth_check_mock),
             ("salt.auth.LoadAuth.time_auth", MagicMock(return_value=True)),
-            ("salt.client.get_local_client", MagicMock(return_value=opts["conf_file"])),
+            ("salt.client.get_local_client", MagicMock()),
         )
         for mod, mock in patches:
             patcher = patch(mod, mock)
@@ -755,6 +755,7 @@ class AuthACLTestCase(ModuleCase):
         opts["external_auth"]["pam"] = {"test_user": [{"alpha_minion": ["test.ping"]}]}
 
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        self.addCleanup(self.clear.destroy)
         self.addCleanup(delattr, self, "clear")
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock

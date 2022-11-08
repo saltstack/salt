@@ -136,7 +136,7 @@ order for the ESXi Proxy Minion to run and connect properly.
 Proxy Config File
 -----------------
 
-On the machine that will be running the Proxy Minon process(es), a proxy config
+On the machine that will be running the Proxy Minion process(es), a proxy config
 file must be in place. This file should be located in the ``/etc/salt/`` directory
 and should be named ``proxy``. If the file is not there by default, create it.
 

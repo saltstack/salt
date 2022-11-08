@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Netmiko Execution Module
 ========================
@@ -182,23 +181,15 @@ outside a ``netmiko`` Proxy, e.g.:
     Minion. If you want to use the :mod:`<salt.proxy.netmiko_px>`, please follow
     the documentation notes for a proper setup.
 """
-from __future__ import absolute_import
 
-import inspect
-
-# Import python stdlib
 import logging
 
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
 from salt.utils.args import clean_kwargs
 
-# Import third party libs
 try:
-    from netmiko import ConnectHandler
-    from netmiko import BaseConnection
+    from netmiko import BaseConnection, ConnectHandler
 
     HAS_NETMIKO = True
 except ImportError:
@@ -234,6 +225,15 @@ def __virtual__():
             False,
             "The netmiko execution module requires netmiko library to be installed.",
         )
+    if (
+        salt.utils.platform.is_proxy()
+        and __opts__["proxy"]["proxytype"] == "deltaproxy"
+    ):
+        return (
+            False,
+            "Unsupported proxy minion type.",
+        )
+
     return __virtualname__
 
 
@@ -251,11 +251,11 @@ def _prepare_connection(**kwargs):
     fun_kwargs = {}
     netmiko_kwargs = __salt__["config.get"]("netmiko", {})
     netmiko_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    netmiko_init_args, _, _, netmiko_defaults = inspect.getargspec(
+    netmiko_init_args, _, _, netmiko_defaults = __utils__["args.get_function_argspec"](
         BaseConnection.__init__
     )
     check_self = netmiko_init_args.pop(0)
-    for karg, warg in six.iteritems(netmiko_kwargs):
+    for karg, warg in netmiko_kwargs.items():
         if karg not in netmiko_init_args:
             if warg is not None:
                 fun_kwargs[karg] = warg
@@ -566,7 +566,7 @@ def send_config(
         if file_str is False:
             raise CommandExecutionError("Source file {} not found".format(config_file))
     elif config_commands:
-        if isinstance(config_commands, (six.string_types, six.text_type)):
+        if isinstance(config_commands, ((str,), str)):
             config_commands = [config_commands]
         file_str = "\n".join(config_commands)
         # unify all the commands in a single file, to render them in a go
@@ -579,6 +579,8 @@ def send_config(
     kwargs = clean_kwargs(**kwargs)
     if "netmiko.conn" in __proxy__:
         conn = __proxy__["netmiko.conn"]()
+        if not conn or not conn.is_alive():
+            conn, _ = _prepare_connection(**__proxy__["netmiko.args"]())
     else:
         conn, kwargs = _prepare_connection(**kwargs)
     if commit:

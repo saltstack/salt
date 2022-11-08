@@ -66,7 +66,7 @@ Install Salt (and dependencies) into the virtualenv:
 
 .. code-block:: bash
 
-    pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil futures tornado
+    pip install pyzmq PyYAML pycrypto msgpack jinja2 psutil futures tornado
     pip install -e ./salt   # the path to the salt git clone from above
 
 .. note:: Installing psutil
@@ -86,7 +86,9 @@ Install Salt (and dependencies) into the virtualenv:
 .. note:: Installing dependencies on macOS.
 
     You can install needed dependencies on macOS using homebrew or macports.
-    See :ref:`macOS Installation <macos-installation>`
+    See the
+    `Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_
+    for more information.
 
 .. warning:: Installing on RedHat-based Distros
 
@@ -172,7 +174,7 @@ If you would like to log to the console instead of to the log file, remove the
 
     Once the minion starts, you may see an error like the following:
 
-    .. code-block:: bash
+    .. code-block:: console
 
         zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/
         var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc"
@@ -203,8 +205,9 @@ If you would like to log to the console instead of to the log file, remove the
         # use 'limit descriptors 2047' for c-shell
         ulimit -n 2047
 
-    To set file descriptors on macOS, refer to the :ref:`macOS Installation
-    <macos-installation>` instructions.
+    To set file descriptors on macOS, see the
+    `Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_
+    instructions for macOS.
 
 
 Changing Default Paths

@@ -1,5 +1,5 @@
-salt.states.azurearm_dns module
-===============================
+salt.states.azurearm_dns
+========================
 
 .. automodule:: salt.states.azurearm_dns
     :members:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Microsoft IIS site management via WebAdministration powershell module
 
@@ -9,21 +8,16 @@ Microsoft IIS site management via WebAdministration powershell module
 
 .. versionadded:: 2016.3.0
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import decimal
 import logging
 import os
 import re
 
-# Import salt libs
+import yaml
+
 import salt.utils.json
 import salt.utils.platform
-import yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import map, range
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +63,7 @@ def _get_binding_info(host_header="", ip_address="*", port=80):
         str: A properly formatted bindingInformation string (IP:port:hostheader)
             eg: 192.168.0.12:80:www.contoso.com
     """
-    return ":".join([ip_address, six.text_type(port), host_header.replace(" ", "")])
+    return ":".join([ip_address, str(port), host_header.replace(" ", "")])
 
 
 def _list_certs(certificate_store="My"):
@@ -90,7 +84,7 @@ def _list_certs(certificate_store="My"):
     ps_cmd = [
         "Get-ChildItem",
         "-Path",
-        r"'Cert:\LocalMachine\{0}'".format(certificate_store),
+        r"'Cert:\LocalMachine\{}'".format(certificate_store),
         "|",
         "Select-Object DnsNameList, SerialNumber, Subject, Thumbprint, Version",
     ]
@@ -132,7 +126,7 @@ def _iisVersion():
         return -1
 
     return decimal.Decimal(
-        "{0}.{1}".format(items[0]["MajorVersion"], items[0]["MinorVersion"])
+        "{}.{}".format(items[0]["MajorVersion"], items[0]["MinorVersion"])
     )
 
 
@@ -152,15 +146,14 @@ def _srvmgr(cmd, return_json=False):
         cmd = " ".join(cmd)
 
     if return_json:
-        cmd = "ConvertTo-Json -Compress -Depth 4 -InputObject @({0})" "".format(cmd)
+        cmd = "ConvertTo-Json -Compress -Depth 4 -InputObject @({})".format(cmd)
 
-    cmd = "Import-Module WebAdministration; {0}".format(cmd)
+    cmd = "Import-Module WebAdministration; {}".format(cmd)
 
     ret = __salt__["cmd.run_all"](cmd, shell="powershell", python_shell=True)
 
     if ret["retcode"] != 0:
-        msg = "Unable to execute command: {0}\nError: {1}" "".format(cmd, ret["stderr"])
-        log.error(msg)
+        log.error("Unable to execute command: %s\nError: %s", cmd, ret["stderr"])
 
     return ret
 
@@ -186,10 +179,10 @@ def _prepare_settings(pspath, settings):
     prepared_settings = []
     for setting in settings:
         if setting.get("name", None) is None:
-            log.warning("win_iis: Setting has no name: {}".format(setting))
+            log.warning("win_iis: Setting has no name: %s", setting)
             continue
         if setting.get("filter", None) is None:
-            log.warning("win_iis: Setting has no filter: {}".format(setting))
+            log.warning("win_iis: Setting has no filter: %s", setting)
             continue
         match = re.search(r"Collection\[(\{.*\})\]", setting["name"])
         if match:
@@ -199,7 +192,7 @@ def _prepare_settings(pspath, settings):
                 pspath, setting["filter"], name, match_dict
             )
             if index == -1:
-                log.warning("win_iis: No match found for setting: {}".format(setting))
+                log.warning("win_iis: No match found for setting: %s", setting)
             else:
                 setting["name"] = setting["name"].replace(match.group(1), str(index))
                 prepared_settings.append(setting)
@@ -255,7 +248,7 @@ def list_sites():
                     filtered_binding.update({key.lower(): binding[key]})
 
             binding_info = binding["bindingInformation"].split(":", 2)
-            ipaddress, port, hostheader = [element.strip() for element in binding_info]
+            ipaddress, port, hostheader = (element.strip() for element in binding_info)
             filtered_binding.update(
                 {"hostheader": hostheader, "ipaddress": ipaddress, "port": port}
             )
@@ -312,8 +305,8 @@ def create_site(
 
         salt '*' win_iis.create_site name='My Test Site' sourcepath='c:\\stage' apppool='TestPool'
     """
-    protocol = six.text_type(protocol).lower()
-    site_path = r"IIS:\Sites\{0}".format(name)
+    protocol = str(protocol).lower()
+    site_path = r"IIS:\Sites\{}".format(name)
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_sites = list_sites()
 
@@ -322,7 +315,7 @@ def create_site(
         return True
 
     if protocol not in _VALID_PROTOCOLS:
-        message = ("Invalid protocol '{0}' specified. Valid formats:" " {1}").format(
+        message = "Invalid protocol '{}' specified. Valid formats: {}".format(
             protocol, _VALID_PROTOCOLS
         )
         raise SaltInvocationError(message)
@@ -330,12 +323,13 @@ def create_site(
     ps_cmd = [
         "New-Item",
         "-Path",
-        r"'{0}'".format(site_path),
+        r"'{}'".format(site_path),
         "-PhysicalPath",
-        r"'{0}'".format(sourcepath),
+        r"'{}'".format(sourcepath),
         "-Bindings",
-        "@{{ protocol='{0}'; bindingInformation='{1}' }};"
-        "".format(protocol, binding_info),
+        "@{{ protocol='{0}'; bindingInformation='{1}' }};".format(
+            protocol, binding_info
+        ),
     ]
 
     if apppool:
@@ -349,20 +343,18 @@ def create_site(
             [
                 "Set-ItemProperty",
                 "-Path",
-                "'{0}'".format(site_path),
+                "'{}'".format(site_path),
                 "-Name",
                 "ApplicationPool",
                 "-Value",
-                "'{0}'".format(apppool),
+                "'{}'".format(apppool),
             ]
         )
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create site: {0}\nError: {1}" "".format(
-            name, cmd_ret["stderr"]
-        )
+        msg = "Unable to create site: {}\nError: {}".format(name, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     log.debug("Site created successfully: %s", name)
@@ -394,11 +386,11 @@ def modify_site(name, sourcepath=None, apppool=None):
 
         salt '*' win_iis.modify_site name='My Test Site' sourcepath='c:\\new_path' apppool='NewTestPool'
     """
-    site_path = r"IIS:\Sites\{0}".format(name)
+    site_path = r"IIS:\Sites\{}".format(name)
     current_sites = list_sites()
 
     if name not in current_sites:
-        log.debug("Site '{0}' not defined.".format(name))
+        log.debug("Site '%s' not defined.", name)
         return False
 
     ps_cmd = list()
@@ -408,20 +400,20 @@ def modify_site(name, sourcepath=None, apppool=None):
             [
                 "Set-ItemProperty",
                 "-Path",
-                r"'{0}'".format(site_path),
+                r"'{}'".format(site_path),
                 "-Name",
                 "PhysicalPath",
                 "-Value",
-                r"'{0}'".format(sourcepath),
+                r"'{}'".format(sourcepath),
             ]
         )
 
     if apppool:
 
         if apppool in list_apppools():
-            log.debug("Utilizing pre-existing application pool: {0}" "".format(apppool))
+            log.debug("Utilizing pre-existing application pool: %s", apppool)
         else:
-            log.debug("Application pool will be created: {0}".format(apppool))
+            log.debug("Application pool will be created: %s", apppool)
             create_apppool(apppool)
 
         # If ps_cmd isn't empty, we need to add a semi-colon to run two commands
@@ -432,20 +424,18 @@ def modify_site(name, sourcepath=None, apppool=None):
             [
                 "Set-ItemProperty",
                 "-Path",
-                r"'{0}'".format(site_path),
+                r"'{}'".format(site_path),
                 "-Name",
                 "ApplicationPool",
                 "-Value",
-                r"'{0}'".format(apppool),
+                r"'{}'".format(apppool),
             ]
         )
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to modify site: {0}\nError: {1}" "".format(
-            name, cmd_ret["stderr"]
-        )
+        msg = "Unable to modify site: {}\nError: {}".format(name, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     log.debug("Site modified successfully: %s", name)
@@ -479,14 +469,12 @@ def remove_site(name):
         log.debug("Site already absent: %s", name)
         return True
 
-    ps_cmd = ["Remove-WebSite", "-Name", r"'{0}'".format(name)]
+    ps_cmd = ["Remove-WebSite", "-Name", r"'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove site: {0}\nError: {1}" "".format(
-            name, cmd_ret["stderr"]
-        )
+        msg = "Unable to remove site: {}\nError: {}".format(name, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     log.debug("Site removed successfully: %s", name)
@@ -511,7 +499,7 @@ def stop_site(name):
 
         salt '*' win_iis.stop_site name='My Test Site'
     """
-    ps_cmd = ["Stop-WebSite", r"'{0}'".format(name)]
+    ps_cmd = ["Stop-WebSite", r"'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -536,7 +524,7 @@ def start_site(name):
 
         salt '*' win_iis.start_site name='My Test Site'
     """
-    ps_cmd = ["Start-WebSite", r"'{0}'".format(name)]
+    ps_cmd = ["Start-WebSite", r"'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -626,11 +614,11 @@ def create_binding(
 
         salt '*' win_iis.create_binding site='site0' hostheader='example.com' ipaddress='*' port='80'
     """
-    protocol = six.text_type(protocol).lower()
+    protocol = str(protocol).lower()
     name = _get_binding_info(hostheader, ipaddress, port)
 
     if protocol not in _VALID_PROTOCOLS:
-        message = ("Invalid protocol '{0}' specified. Valid formats:" " {1}").format(
+        message = "Invalid protocol '{}' specified. Valid formats: {}".format(
             protocol, _VALID_PROTOCOLS
         )
         raise SaltInvocationError(message)
@@ -638,10 +626,11 @@ def create_binding(
     if sslflags:
         sslflags = int(sslflags)
         if sslflags not in _VALID_SSL_FLAGS:
-            message = (
-                "Invalid sslflags '{0}' specified. Valid sslflags range:" " {1}..{2}"
-            ).format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-            raise SaltInvocationError(message)
+            raise SaltInvocationError(
+                "Invalid sslflags '{}' specified. Valid sslflags range: {}..{}".format(
+                    sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1]
+                )
+            )
 
     current_bindings = list_bindings(site)
 
@@ -653,39 +642,37 @@ def create_binding(
         ps_cmd = [
             "New-WebBinding",
             "-Name",
-            "'{0}'".format(site),
+            "'{}'".format(site),
             "-HostHeader",
-            "'{0}'".format(hostheader),
+            "'{}'".format(hostheader),
             "-IpAddress",
-            "'{0}'".format(ipaddress),
+            "'{}'".format(ipaddress),
             "-Port",
-            "'{0}'".format(port),
+            "'{}'".format(port),
             "-Protocol",
-            "'{0}'".format(protocol),
+            "'{}'".format(protocol),
             "-SslFlags",
-            "{0}".format(sslflags),
+            "{}".format(sslflags),
         ]
     else:
         ps_cmd = [
             "New-WebBinding",
             "-Name",
-            "'{0}'".format(site),
+            "'{}'".format(site),
             "-HostHeader",
-            "'{0}'".format(hostheader),
+            "'{}'".format(hostheader),
             "-IpAddress",
-            "'{0}'".format(ipaddress),
+            "'{}'".format(ipaddress),
             "-Port",
-            "'{0}'".format(port),
+            "'{}'".format(port),
             "-Protocol",
-            "'{0}'".format(protocol),
+            "'{}'".format(protocol),
         ]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create binding: {0}\nError: {1}" "".format(
-            site, cmd_ret["stderr"]
-        )
+        msg = "Unable to create binding: {}\nError: {}".format(site, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     if name in list_bindings(site):
@@ -730,10 +717,11 @@ def modify_binding(
         salt '*' win_iis.modify_binding site='site0' binding='*:80:' hostheader='example.com'
     """
     if sslflags is not None and sslflags not in _VALID_SSL_FLAGS:
-        message = (
-            "Invalid sslflags '{0}' specified. Valid sslflags range:" " {1}..{2}"
-        ).format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-        raise SaltInvocationError(message)
+        raise SaltInvocationError(
+            "Invalid sslflags '{}' specified. Valid sslflags range: {}..{}".format(
+                sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1]
+            )
+        )
 
     current_sites = list_sites()
 
@@ -753,7 +741,7 @@ def modify_binding(
     new_binding = ":".join(
         [
             ipaddress if ipaddress is not None else i,
-            six.text_type(port) if port is not None else six.text_type(p),
+            str(port) if port is not None else str(p),
             hostheader if hostheader is not None else h,
         ]
     )
@@ -762,19 +750,19 @@ def modify_binding(
         ps_cmd = [
             "Set-WebBinding",
             "-Name",
-            "'{0}'".format(site),
+            "'{}'".format(site),
             "-BindingInformation",
-            "'{0}'".format(binding),
+            "'{}'".format(binding),
             "-PropertyName",
             "BindingInformation",
             "-Value",
-            "'{0}'".format(new_binding),
+            "'{}'".format(new_binding),
         ]
 
         cmd_ret = _srvmgr(ps_cmd)
 
         if cmd_ret["retcode"] != 0:
-            msg = "Unable to modify binding: {0}\nError: {1}" "".format(
+            msg = "Unable to modify binding: {}\nError: {}".format(
                 binding, cmd_ret["stderr"]
             )
             raise CommandExecutionError(msg)
@@ -786,19 +774,19 @@ def modify_binding(
         ps_cmd = [
             "Set-WebBinding",
             "-Name",
-            "'{0}'".format(site),
+            "'{}'".format(site),
             "-BindingInformation",
-            "'{0}'".format(new_binding),
+            "'{}'".format(new_binding),
             "-PropertyName",
             "sslflags",
             "-Value",
-            "'{0}'".format(sslflags),
+            "'{}'".format(sslflags),
         ]
 
         cmd_ret = _srvmgr(ps_cmd)
 
         if cmd_ret["retcode"] != 0:
-            msg = "Unable to modify binding SSL Flags: {0}\nError: {1}" "".format(
+            msg = "Unable to modify binding SSL Flags: {}\nError: {}".format(
                 sslflags, cmd_ret["stderr"]
             )
             raise CommandExecutionError(msg)
@@ -835,19 +823,17 @@ def remove_binding(site, hostheader="", ipaddress="*", port=80):
     ps_cmd = [
         "Remove-WebBinding",
         "-HostHeader",
-        "'{0}'".format(hostheader),
+        "'{}'".format(hostheader),
         "-IpAddress",
-        "'{0}'".format(ipaddress),
+        "'{}'".format(ipaddress),
         "-Port",
-        "'{0}'".format(port),
+        "'{}'".format(port),
     ]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove binding: {0}\nError: {1}" "".format(
-            site, cmd_ret["stderr"]
-        )
+        msg = "Unable to remove binding: {}\nError: {}".format(site, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     if name not in list_bindings(site):
@@ -921,20 +907,21 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
 
         salt '*' win_iis.create_cert_binding name='AAA000' site='site0' hostheader='example.com' ipaddress='*' port='443'
     """
-    name = six.text_type(name).upper()
+    name = str(name).upper()
     binding_info = _get_binding_info(hostheader, ipaddress, port)
 
     if _iisVersion() < 8:
         # IIS 7.5 and earlier don't support SNI for HTTPS, therefore cert bindings don't contain the host header
         binding_info = binding_info.rpartition(":")[0] + ":"
 
-    binding_path = r"IIS:\SslBindings\{0}".format(binding_info.replace(":", "!"))
+    binding_path = r"IIS:\SslBindings\{}".format(binding_info.replace(":", "!"))
 
     if sslflags not in _VALID_SSL_FLAGS:
-        message = (
-            "Invalid sslflags '{0}' specified. Valid sslflags range: " "{1}..{2}"
-        ).format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-        raise SaltInvocationError(message)
+        raise SaltInvocationError(
+            "Invalid sslflags '{}' specified. Valid sslflags range: {}..{}".format(
+                sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1]
+            )
+        )
 
     # Verify that the target binding exists.
     current_bindings = list_bindings(site)
@@ -975,25 +962,25 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
         ps_cmd = [
             "New-Item",
             "-Path",
-            "'{0}'".format(iis7path),
+            "'{}'".format(iis7path),
             "-Thumbprint",
-            "'{0}'".format(name),
+            "'{}'".format(name),
         ]
     else:
         ps_cmd = [
             "New-Item",
             "-Path",
-            "'{0}'".format(binding_path),
+            "'{}'".format(binding_path),
             "-Thumbprint",
-            "'{0}'".format(name),
+            "'{}'".format(name),
             "-SSLFlags",
-            "{0}".format(sslflags),
+            "{}".format(sslflags),
         ]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create certificate binding: {0}\nError: {1}" "".format(
+        msg = "Unable to create certificate binding: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1040,7 +1027,7 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
 
         salt '*' win_iis.remove_cert_binding name='AAA000' site='site0' hostheader='example.com' ipaddress='*' port='443'
     """
-    name = six.text_type(name).upper()
+    name = str(name).upper()
     binding_info = _get_binding_info(hostheader, ipaddress, port)
 
     # Child items of IIS:\SslBindings do not return populated host header info
@@ -1073,7 +1060,7 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove certificate binding: {0}\nError: {1}" "".format(
+        msg = "Unable to remove certificate binding: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1123,7 +1110,8 @@ def list_apppools():
     )
     ps_cmd.append(r"| ForEach-Object { $_.Value };")
     ps_cmd.append(
-        "Get-WebConfigurationProperty -Filter $FilterNonRoot -PsPath $AppPath -Name Path"
+        "Get-WebConfigurationProperty -Filter $FilterNonRoot -PsPath $AppPath -Name"
+        " Path"
     )
     ps_cmd.append(r"| ForEach-Object { $_.Value } | Where-Object { $_ -ne '/' }")
     ps_cmd.append("} }")
@@ -1180,18 +1168,18 @@ def create_apppool(name):
         salt '*' win_iis.create_apppool name='MyTestPool'
     """
     current_apppools = list_apppools()
-    apppool_path = r"IIS:\AppPools\{0}".format(name)
+    apppool_path = r"IIS:\AppPools\{}".format(name)
 
     if name in current_apppools:
         log.debug("Application pool '%s' already present.", name)
         return True
 
-    ps_cmd = ["New-Item", "-Path", r"'{0}'".format(apppool_path)]
+    ps_cmd = ["New-Item", "-Path", r"'{}'".format(apppool_path)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create application pool: {0}\nError: {1}" "".format(
+        msg = "Unable to create application pool: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1217,18 +1205,18 @@ def remove_apppool(name):
         salt '*' win_iis.remove_apppool name='MyTestPool'
     """
     current_apppools = list_apppools()
-    apppool_path = r"IIS:\AppPools\{0}".format(name)
+    apppool_path = r"IIS:\AppPools\{}".format(name)
 
     if name not in current_apppools:
         log.debug("Application pool already absent: %s", name)
         return True
 
-    ps_cmd = ["Remove-Item", "-Path", r"'{0}'".format(apppool_path), "-Recurse"]
+    ps_cmd = ["Remove-Item", "-Path", r"'{}'".format(apppool_path), "-Recurse"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove application pool: {0}\nError: {1}" "".format(
+        msg = "Unable to remove application pool: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1255,7 +1243,7 @@ def stop_apppool(name):
 
         salt '*' win_iis.stop_apppool name='MyTestPool'
     """
-    ps_cmd = ["Stop-WebAppPool", r"'{0}'".format(name)]
+    ps_cmd = ["Stop-WebAppPool", r"'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1280,7 +1268,7 @@ def start_apppool(name):
 
         salt '*' win_iis.start_apppool name='MyTestPool'
     """
-    ps_cmd = ["Start-WebAppPool", r"'{0}'".format(name)]
+    ps_cmd = ["Start-WebAppPool", r"'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1305,7 +1293,7 @@ def restart_apppool(name):
 
         salt '*' win_iis.restart_apppool name='MyTestPool'
     """
-    ps_cmd = ["Restart-WebAppPool", r"'{0}'".format(name)]
+    ps_cmd = ["Restart-WebAppPool", r"'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1337,7 +1325,7 @@ def get_container_setting(name, container, settings):
     ret = dict()
     ps_cmd = list()
     ps_cmd_validate = list()
-    container_path = r"IIS:\{0}\{1}".format(container, name)
+    container_path = r"IIS:\{}\{}".format(container, name)
 
     if not settings:
         log.warning("No settings provided")
@@ -1351,9 +1339,9 @@ def get_container_setting(name, container, settings):
             [
                 "Get-ItemProperty",
                 "-Path",
-                "'{0}'".format(container_path),
+                "'{}'".format(container_path),
                 "-Name",
-                "'{0}'".format(setting),
+                "'{}'".format(setting),
                 "-ErrorAction",
                 "Stop",
                 "|",
@@ -1364,20 +1352,23 @@ def get_container_setting(name, container, settings):
         # Some ItemProperties are Strings and others are ConfigurationAttributes.
         # Since the former doesn't have a Value property, we need to account
         # for this.
-        ps_cmd.append("$Property = Get-ItemProperty -Path '{0}'".format(container_path))
-        ps_cmd.append("-Name '{0}' -ErrorAction Stop;".format(setting))
+        ps_cmd.append("$Property = Get-ItemProperty -Path '{}'".format(container_path))
+        ps_cmd.append("-Name '{}' -ErrorAction Stop;".format(setting))
         ps_cmd.append(r"if (([String]::IsNullOrEmpty($Property) -eq $False) -and")
         ps_cmd.append(r"($Property.GetType()).Name -eq 'ConfigurationAttribute') {")
         ps_cmd.append(r"$Property = $Property | Select-Object")
         ps_cmd.append(r"-ExpandProperty Value };")
-        ps_cmd.append("$Settings['{0}'] = [String] $Property;".format(setting))
+        ps_cmd.append("$Settings['{}'] = [String] $Property;".format(setting))
         ps_cmd.append(r"$Property = $Null;")
 
     # Validate the setting names that were passed in.
     cmd_ret = _srvmgr(cmd=ps_cmd_validate, return_json=True)
 
     if cmd_ret["retcode"] != 0:
-        message = "One or more invalid property names were specified for the provided container."
+        message = (
+            "One or more invalid property names were specified for the provided"
+            " container."
+        )
         raise SaltInvocationError(message)
 
     ps_cmd.append("$Settings")
@@ -1435,7 +1426,7 @@ def set_container_setting(name, container, settings):
         "ApplicationPoolIdentity": "4",
     }
     ps_cmd = list()
-    container_path = r"IIS:\{0}\{1}".format(container, name)
+    container_path = r"IIS:\{}\{}".format(container, name)
 
     if not settings:
         log.warning("No settings provided")
@@ -1443,7 +1434,7 @@ def set_container_setting(name, container, settings):
 
     # Treat all values as strings for the purpose of comparing them to existing values.
     for setting in settings:
-        settings[setting] = six.text_type(settings[setting])
+        settings[setting] = str(settings[setting])
 
     current_settings = get_container_setting(
         name=name, container=container, settings=settings.keys()
@@ -1459,7 +1450,7 @@ def set_container_setting(name, container, settings):
             complex(settings[setting])
             value = settings[setting]
         except ValueError:
-            value = "'{0}'".format(settings[setting])
+            value = "'{}'".format(settings[setting])
 
         # Map to numeric to support server 2008
         if (
@@ -1472,18 +1463,18 @@ def set_container_setting(name, container, settings):
             [
                 "Set-ItemProperty",
                 "-Path",
-                "'{0}'".format(container_path),
+                "'{}'".format(container_path),
                 "-Name",
-                "'{0}'".format(setting),
+                "'{}'".format(setting),
                 "-Value",
-                "{0};".format(value),
+                "{};".format(value),
             ]
         )
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to set settings for {0}: {1}".format(container, name)
+        msg = "Unable to set settings for {}: {}".format(container, name)
         raise CommandExecutionError(msg)
 
     # Get the fields post-change so that we can verify tht all values
@@ -1502,7 +1493,7 @@ def set_container_setting(name, container, settings):
         ):
             settings[setting] = identityType_map2string[settings[setting]]
 
-        if six.text_type(settings[setting]) != six.text_type(new_settings[setting]):
+        if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
     if failed_settings:
@@ -1530,7 +1521,7 @@ def list_apps(site):
     """
     ret = dict()
     ps_cmd = list()
-    ps_cmd.append("Get-WebApplication -Site '{0}'".format(site))
+    ps_cmd.append("Get-WebApplication -Site '{}'".format(site))
     ps_cmd.append(
         r"| Select-Object applicationPool, path, PhysicalPath, preloadEnabled,"
     )
@@ -1614,20 +1605,20 @@ def create_app(name, site, sourcepath, apppool=None):
     ps_cmd = [
         "New-WebApplication",
         "-Name",
-        "'{0}'".format(name),
+        "'{}'".format(name),
         "-Site",
-        "'{0}'".format(site),
+        "'{}'".format(site),
         "-PhysicalPath",
-        "'{0}'".format(sourcepath),
+        "'{}'".format(sourcepath),
     ]
 
     if apppool:
-        ps_cmd.extend(["-ApplicationPool", "'{0}'".format(apppool)])
+        ps_cmd.extend(["-ApplicationPool", "'{}'".format(apppool)])
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create application: {0}\nError: {1}" "".format(
+        msg = "Unable to create application: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1668,15 +1659,15 @@ def remove_app(name, site):
     ps_cmd = [
         "Remove-WebApplication",
         "-Name",
-        "'{0}'".format(name),
+        "'{}'".format(name),
         "-Site",
-        "'{0}'".format(site),
+        "'{}'".format(site),
     ]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove application: {0}\nError: {1}" "".format(
+        msg = "Unable to remove application: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1714,12 +1705,12 @@ def list_vdirs(site, app=_DEFAULT_APP):
     ps_cmd = [
         "Get-WebVirtualDirectory",
         "-Site",
-        r"'{0}'".format(site),
+        r"'{}'".format(site),
         "-Application",
-        r"'{0}'".format(app),
+        r"'{}'".format(app),
         "|",
         "Select-Object PhysicalPath, @{ Name = 'name';",
-        r"Expression = { $_.path.Split('/')[-1] } }",
+        r"Expression = { $_.path.Trim('/') } }",
     ]
 
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
@@ -1778,20 +1769,20 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     ps_cmd = [
         "New-WebVirtualDirectory",
         "-Name",
-        r"'{0}'".format(name),
+        r"'{}'".format(name),
         "-Site",
-        r"'{0}'".format(site),
+        r"'{}'".format(site),
         "-PhysicalPath",
-        r"'{0}'".format(sourcepath),
+        r"'{}'".format(sourcepath),
     ]
 
     if app != _DEFAULT_APP:
-        ps_cmd.extend(["-Application", r"'{0}'".format(app)])
+        ps_cmd.extend(["-Application", r"'{}'".format(app)])
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create virtual directory: {0}\nError: {1}" "".format(
+        msg = "Unable to create virtual directory: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1828,8 +1819,8 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     app_path = os.path.join(*app.rstrip("/").split("/"))
 
     if app_path:
-        app_path = "{0}\\".format(app_path)
-    vdir_path = r"IIS:\Sites\{0}\{1}{2}".format(site, app_path, name)
+        app_path = "{}\\".format(app_path)
+    vdir_path = r"IIS:\Sites\{}\{}{}".format(site, app_path, name)
 
     if name not in current_vdirs:
         log.debug("Virtual directory already absent: %s", name)
@@ -1838,12 +1829,12 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     # We use Remove-Item here instead of Remove-WebVirtualDirectory, since the
     # latter has a bug that causes it to always prompt for user input.
 
-    ps_cmd = ["Remove-Item", "-Path", r"'{0}'".format(vdir_path), "-Recurse"]
+    ps_cmd = ["Remove-Item", "-Path", r"'{}'".format(vdir_path), "-Recurse"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove virtual directory: {0}\nError: {1}" "".format(
+        msg = "Unable to remove virtual directory: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1928,14 +1919,14 @@ def create_backup(name):
         salt '*' win_iis.create_backup good_config_20170209
     """
     if name in list_backups():
-        raise CommandExecutionError("Backup already present: {0}".format(name))
+        raise CommandExecutionError("Backup already present: {}".format(name))
 
-    ps_cmd = ["Backup-WebConfiguration", "-Name", "'{0}'".format(name)]
+    ps_cmd = ["Backup-WebConfiguration", "-Name", "'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to backup web configuration: {0}\nError: {1}" "".format(
+        msg = "Unable to backup web configuration: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1965,12 +1956,12 @@ def remove_backup(name):
         log.debug("Backup already removed: %s", name)
         return True
 
-    ps_cmd = ["Remove-WebConfigurationBackup", "-Name", "'{0}'".format(name)]
+    ps_cmd = ["Remove-WebConfigurationBackup", "-Name", "'{}'".format(name)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove web configuration: {0}\nError: {1}" "".format(
+        msg = "Unable to remove web configuration: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1997,7 +1988,7 @@ def list_worker_processes(apppool):
 
         salt '*' win_iis.list_worker_processes 'My App Pool'
     """
-    ps_cmd = ["Get-ChildItem", r"'IIS:\AppPools\{0}\WorkerProcesses'".format(apppool)]
+    ps_cmd = ["Get-ChildItem", r"'IIS:\AppPools\{}\WorkerProcesses'".format(apppool)]
 
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
@@ -2055,24 +2046,25 @@ def get_webapp_settings(name, site, settings):
         if setting in availableSettings:
             if setting == "userName" or setting == "password":
                 pscmd.append(
-                    " $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(
+                    " $Property = Get-WebConfigurationProperty -Filter"
+                    " \"system.applicationHost/sites/site[@name='{}']/application[@path='/{}']/virtualDirectory[@path='/']\"".format(
                         site, name
                     )
                 )
                 pscmd.append(
-                    r' -Name "{0}" -ErrorAction Stop | select Value;'.format(setting)
+                    r' -Name "{}" -ErrorAction Stop | select Value;'.format(setting)
                 )
                 pscmd.append(
                     r" $Property = $Property | Select-Object -ExpandProperty Value;"
                 )
-                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r" $Settings['{}'] = [String] $Property;".format(setting))
                 pscmd.append(r" $Property = $Null;")
 
             if setting == "physicalPath" or setting == "applicationPool":
                 pscmd.append(
-                    r" $Property = (get-webapplication {0}).{1};".format(name, setting)
+                    r" $Property = (get-webapplication {}).{};".format(name, setting)
                 )
-                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r" $Settings['{}'] = [String] $Property;".format(setting))
                 pscmd.append(r" $Property = $Null;")
 
         else:
@@ -2087,7 +2079,7 @@ def get_webapp_settings(name, site, settings):
 
     pscmd.append(" $Settings")
     # Run commands and return data as json
-    cmd_ret = _srvmgr(cmd=six.text_type().join(pscmd), return_json=True)
+    cmd_ret = _srvmgr(cmd="".join(pscmd), return_json=True)
 
     # Update dict var to return data
     try:
@@ -2100,8 +2092,11 @@ def get_webapp_settings(name, site, settings):
     except ValueError:
         log.error("Unable to parse return data as Json.")
 
-    if None in six.viewvalues(ret):
-        message = "Some values are empty - please validate site and web application names. Some commands are case sensitive"
+    if None in ret.values():
+        message = (
+            "Some values are empty - please validate site and web application names."
+            " Some commands are case sensitive"
+        )
         raise SaltInvocationError(message)
 
     return ret
@@ -2154,7 +2149,7 @@ def set_webapp_settings(name, site, settings):
     # Treat all values as strings for the purpose of comparing them to existing values & validate settings exists in predefined settings list
     for setting in settings.keys():
         if setting in availableSettings:
-            settings[setting] = six.text_type(settings[setting])
+            settings[setting] = str(settings[setting])
         else:
             availSetStr = ", ".join(availableSettings)
             log.error("Unexpected setting: %s ", setting)
@@ -2177,20 +2172,21 @@ def set_webapp_settings(name, site, settings):
             complex(settings[setting])
             value = settings[setting]
         except ValueError:
-            value = "'{0}'".format(settings[setting])
+            value = "'{}'".format(settings[setting])
 
         # Append relevant update command per setting key
         if setting == "userName" or setting == "password":
             pscmd.append(
-                " Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(
+                " Set-WebConfigurationProperty -Filter"
+                " \"system.applicationHost/sites/site[@name='{}']/application[@path='/{}']/virtualDirectory[@path='/']\"".format(
                     site, name
                 )
             )
-            pscmd.append(' -Name "{0}" -Value {1};'.format(setting, value))
+            pscmd.append(' -Name "{}" -Value {};'.format(setting, value))
 
         if setting == "physicalPath" or setting == "applicationPool":
             pscmd.append(
-                r' Set-ItemProperty "IIS:\Sites\{0}\{1}" -Name {2} -Value {3};'.format(
+                r' Set-ItemProperty "IIS:\Sites\{}\{}" -Name {} -Value {};'.format(
                     site, name, setting, value
                 )
             )
@@ -2204,7 +2200,7 @@ def set_webapp_settings(name, site, settings):
 
     # Verify commands completed successfully
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to set settings for web application {0}".format(name)
+        msg = "Unable to set settings for web application {}".format(name)
         raise SaltInvocationError(msg)
 
     # verify changes
@@ -2212,14 +2208,14 @@ def set_webapp_settings(name, site, settings):
     failed_settings = dict()
 
     for setting in settings:
-        if six.text_type(settings[setting]) != six.text_type(new_settings[setting]):
+        if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
     if failed_settings:
         log.error("Failed to change settings: %s", failed_settings)
         return False
 
-    log.debug("Settings configured successfully: {0}".format(settings.keys()))
+    log.debug("Settings configured successfully: %s", list(settings))
     return True
 
 
@@ -2257,11 +2253,11 @@ def get_webconfiguration_settings(name, settings):
             [
                 "Get-WebConfigurationProperty",
                 "-PSPath",
-                "'{0}'".format(name),
+                "'{}'".format(name),
                 "-Filter",
-                "'{0}'".format(setting["filter"]),
+                "'{}'".format(setting["filter"]),
                 "-Name",
-                "'{0}'".format(setting["name"]),
+                "'{}'".format(setting["name"]),
                 "-ErrorAction",
                 "Stop",
                 "|",
@@ -2273,24 +2269,23 @@ def get_webconfiguration_settings(name, settings):
         # Since the former doesn't have a Value property, we need to account
         # for this.
         ps_cmd.append(
-            "$Property = Get-WebConfigurationProperty -PSPath '{0}'".format(name)
+            "$Property = Get-WebConfigurationProperty -PSPath '{}'".format(name)
         )
         ps_cmd.append(
-            "-Name '{0}' -Filter '{1}' -ErrorAction Stop;".format(
+            "-Name '{}' -Filter '{}' -ErrorAction Stop;".format(
                 setting["name"], setting["filter"]
             )
         )
         if setting["name"].split(".")[-1] == "Collection":
             if "value" in setting:
                 ps_cmd.append(
-                    "$Property = $Property | select -Property {0} ;".format(
+                    "$Property = $Property | select -Property {} ;".format(
                         ",".join(list(setting["value"][0].keys()))
                     )
                 )
             ps_cmd.append(
-                "$Settings.add(@{{filter='{0}';name='{1}';value=[System.Collections.ArrayList] @($Property)}})| Out-Null;".format(
-                    setting["filter"], setting["name"]
-                )
+                "$Settings.add(@{{filter='{0}';name='{1}';value=[System.Collections.ArrayList]"
+                " @($Property)}})| Out-Null;".format(setting["filter"], setting["name"])
             )
         else:
             ps_cmd.append(r"if (([String]::IsNullOrEmpty($Property) -eq $False) -and")
@@ -2298,9 +2293,8 @@ def get_webconfiguration_settings(name, settings):
             ps_cmd.append(r"$Property = $Property | Select-Object")
             ps_cmd.append(r"-ExpandProperty Value };")
             ps_cmd.append(
-                "$Settings.add(@{{filter='{0}';name='{1}';value=[String] $Property}})| Out-Null;".format(
-                    setting["filter"], setting["name"]
-                )
+                "$Settings.add(@{{filter='{0}';name='{1}';value=[String] $Property}})|"
+                " Out-Null;".format(setting["filter"], setting["name"])
             )
         ps_cmd.append(r"$Property = $Null;")
 
@@ -2308,7 +2302,10 @@ def get_webconfiguration_settings(name, settings):
     cmd_ret = _srvmgr(cmd=ps_cmd_validate, return_json=True)
 
     if cmd_ret["retcode"] != 0:
-        message = "One or more invalid property names were specified for the provided container."
+        message = (
+            "One or more invalid property names were specified for the provided"
+            " container."
+        )
         raise SaltInvocationError(message)
 
     ps_cmd.append("$Settings")
@@ -2350,7 +2347,7 @@ def set_webconfiguration_settings(name, settings):
     # Treat all values as strings for the purpose of comparing them to existing values.
     for idx, setting in enumerate(settings):
         if setting["name"].split(".")[-1] != "Collection":
-            settings[idx]["value"] = six.text_type(setting["value"])
+            settings[idx]["value"] = str(setting["value"])
 
     current_settings = get_webconfiguration_settings(name=name, settings=settings)
 
@@ -2365,13 +2362,13 @@ def set_webconfiguration_settings(name, settings):
                 complex(setting["value"])
                 value = setting["value"]
             except ValueError:
-                value = "'{0}'".format(setting["value"])
+                value = "'{}'".format(setting["value"])
         else:
             configelement_list = []
             for value_item in setting["value"]:
                 configelement_construct = []
                 for key, value in value_item.items():
-                    configelement_construct.append("{0}='{1}'".format(key, value))
+                    configelement_construct.append("{}='{}'".format(key, value))
                 configelement_list.append(
                     "@{" + ";".join(configelement_construct) + "}"
                 )
@@ -2381,20 +2378,20 @@ def set_webconfiguration_settings(name, settings):
             [
                 "Set-WebConfigurationProperty",
                 "-PSPath",
-                "'{0}'".format(name),
+                "'{}'".format(name),
                 "-Filter",
-                "'{0}'".format(setting["filter"]),
+                "'{}'".format(setting["filter"]),
                 "-Name",
-                "'{0}'".format(setting["name"]),
+                "'{}'".format(setting["name"]),
                 "-Value",
-                "{0};".format(value),
+                "{};".format(value),
             ]
         )
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to set settings for {0}".format(name)
+        msg = "Unable to set settings for {}".format(name)
         raise CommandExecutionError(msg)
 
     # Get the fields post-change so that we can verify tht all values
@@ -2409,8 +2406,7 @@ def set_webconfiguration_settings(name, settings):
 
         if (
             not is_collection
-            and six.text_type(setting["value"])
-            != six.text_type(new_settings[idx]["value"])
+            and str(setting["value"]) != str(new_settings[idx]["value"])
         ) or (
             is_collection
             and list(map(dict, setting["value"]))

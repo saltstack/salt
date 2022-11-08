@@ -28,6 +28,13 @@ case of the peer system.
     index
     ../../ref/peer
 
+.. The two paragraphs below (in the "When to use each authentication system"
+   heading) are copied in the doc/ref/publisheracl.rst and doc/topics/eauth/index.rst
+   topics as a note, at the top of the document. If you update the below
+   content, update it in the other two files as well.
+
+.. _acl_types:
+
 When to Use Each Authentication System
 ======================================
 ``publisher_acl`` is useful for allowing local system users to run Salt

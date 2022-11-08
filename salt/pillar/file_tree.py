@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The ``file_tree`` external pillar allows values from all files in a directory
 tree to be imported as Pillar data.
@@ -142,14 +141,11 @@ will result in the following pillar tree for minion with ID ``test-host``:
 
     The leaf data in the example shown is the contents of the pillar files.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import fnmatch
 import logging
 import os
 
-# Import salt libs
 import salt.loader
 import salt.template
 import salt.utils.dictupdate
@@ -158,7 +154,6 @@ import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
 import salt.utils.stringutils
-from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -187,7 +182,7 @@ def _check_newline(prefix, file_name, keep_newline):
             if fnmatch.fnmatch(full_path, pattern):
                 return False
         except TypeError:
-            if fnmatch.fnmatch(full_path, six.text_type(pattern)):
+            if fnmatch.fnmatch(full_path, str(pattern)):
                 return False
     return True
 
@@ -246,7 +241,7 @@ def _construct_pillar(
                         prefix, file_name, keep_newline
                     ):
                         contents = contents[:-1]
-            except (IOError, OSError) as exc:
+            except OSError as exc:
                 log.error("file_tree: Error reading %s: %s", file_path, exc.strerror)
             else:
                 data = contents
@@ -500,9 +495,7 @@ def _ext_pillar(
                     )
                     match = _res["minions"]
                     if minion_id in match:
-                        ngroup_dir = os.path.join(
-                            nodegroups_dir, six.text_type(nodegroup)
-                        )
+                        ngroup_dir = os.path.join(nodegroups_dir, str(nodegroup))
                         ngroup_pillar = salt.utils.dictupdate.merge(
                             ngroup_pillar,
                             _construct_pillar(
@@ -519,7 +512,8 @@ def _ext_pillar(
         else:
             if debug is True:
                 log.debug(
-                    "file_tree: no nodegroups found in file tree directory %s, skipping...",
+                    "file_tree: no nodegroups found in file tree directory %s,"
+                    " skipping...",
                     ext_pillar_dirs,
                 )
     else:
@@ -530,7 +524,8 @@ def _ext_pillar(
     if not os.path.exists(host_dir):
         if debug is True:
             log.debug(
-                "file_tree: no pillar data for minion %s found in file tree directory %s",
+                "file_tree: no pillar data for minion %s found in file tree"
+                " directory %s",
                 minion_id,
                 host_dir,
             )

@@ -65,6 +65,7 @@ import errors and set a flag that the ``__virtual__`` function can use later.
 
     try:
         import weird_thing
+
         EXAMPLE_A_LOADED = True
     except ImportError:
         EXAMPLE_A_LOADED = False
@@ -80,7 +81,7 @@ things ``modulename.option``.
 
 .. code-block:: python
 
-    __opts__ = { 'example_a.someconfig': 137 }
+    __opts__ = {"example_a.someconfig": 137}
 
 
 Initialization
@@ -91,8 +92,9 @@ signature:
 
 .. code-block:: python
 
-    def __init__( __opts__ ):
+    def __init__(__opts__):
         # Do init work here
+        ...
 
 
 **Note**: The ``__init__`` function is ran every time a particular minion causes
@@ -127,7 +129,8 @@ installed.
 .. code-block:: python
 
     # This external pillar will be known as `something_else`
-    __virtualname__ = 'something_else'
+    __virtualname__ = "something_else"
+
 
     def __virtual__():
         if EXAMPLE_A_LOADED:
@@ -151,9 +154,9 @@ Using our example above:
 
 .. code-block:: python
 
-    ext_pillar( id, pillar, 'some argument' )                   # example_a
-    ext_pillar( id, pillar, 'argumentA', 'argumentB' )          # example_b
-    ext_pillar( id, pillar, keyA='valueA', keyB='valueB' )    # example_c
+    ext_pillar(id, pillar, "some argument")  # example_a
+    ext_pillar(id, pillar, "argumentA", "argumentB")  # example_b
+    ext_pillar(id, pillar, keyA="valueA", keyB="valueB")  # example_c
 
 
 In the ``example_a`` case, ``pillar`` will contain the items from the
@@ -168,11 +171,11 @@ is called once for each minion that fetches its pillar data.
 
 .. code-block:: python
 
-    def ext_pillar( minion_id, pillar, *args, **kwargs ):
+    def ext_pillar(minion_id, pillar, *args, **kwargs):
 
-        my_pillar = {'external_pillar': {}}
+        my_pillar = {"external_pillar": {}}
 
-        my_pillar['external_pillar'] = get_external_pillar_dictionary()
+        my_pillar["external_pillar"] = get_external_pillar_dictionary()
 
         return my_pillar
 

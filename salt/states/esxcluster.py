@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage VMware ESXi Clusters.
 
@@ -39,17 +38,13 @@ The 5.5.0.2014.1.1 is a known stable version that this original ESXi State
 Module was developed against.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
-import traceback
+from functools import wraps
 
-# Import Salt Libs
 import salt.exceptions
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, LicenseSchema
-from salt.ext import six
 from salt.utils import dictupdate
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
@@ -88,14 +83,34 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions of Python and pyVmomi"
+            " present. See Issue #29537.",
         )
     return True
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxcluster' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def mod_init(low):
     """
     Retrieves and adapt the login credentials from the proxy connection module
@@ -115,12 +130,12 @@ def _get_vsan_datastore(si, cluster_name):
 
     if not vsan_datastores:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "No vSAN datastores where retrieved for cluster "
-            "'{0}'".format(cluster_name)
+            "No vSAN datastores where retrieved for cluster '{}'".format(cluster_name)
         )
     return vsan_datastores[0]
 
 
+@_deprecation_message
 def cluster_configured(name, cluster_config):
     """
     Configures a cluster. Creates a new cluster, if it doesn't exist on the
@@ -137,7 +152,7 @@ def cluster_configured(name, cluster_config):
         Complex datastructure following the ESXClusterConfigSchema.
         Valid example is:
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         drs:
             default_vm_behavior: fullyAutomated
@@ -177,14 +192,16 @@ def cluster_configured(name, cluster_config):
         )
     else:
         raise salt.exceptions.CommandExecutionError(
-            "Unsupported proxy {0}" "".format(proxy_type)
+            "Unsupported proxy {}".format(proxy_type)
         )
     log.info(
-        "Running {0} for cluster '{1}' in datacenter "
-        "'{2}'".format(name, cluster_name, datacenter_name)
+        "Running %s for cluster '%s' in datacenter '%s'",
+        name,
+        cluster_name,
+        datacenter_name,
     )
     cluster_dict = cluster_config
-    log.trace("cluster_dict =  {0}".format(cluster_dict))
+    log.trace("cluster_dict = %s", cluster_dict)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
@@ -194,7 +211,7 @@ def cluster_configured(name, cluster_config):
     try:
         log.trace("Validating cluster_configured state input")
         schema = ESXClusterConfigSchema.serialize()
-        log.trace("schema = {0}".format(schema))
+        log.trace("schema = %s", schema)
         try:
             jsonschema.validate(cluster_dict, schema)
         except jsonschema.exceptions.ValidationError as exc:
@@ -209,24 +226,26 @@ def cluster_configured(name, cluster_config):
             changes_required = True
             if __opts__["test"]:
                 comments.append(
-                    "State {0} will create cluster "
-                    "'{1}' in datacenter '{2}'."
-                    "".format(name, cluster_name, datacenter_name)
+                    "State {} will create cluster '{}' in datacenter '{}'.".format(
+                        name, cluster_name, datacenter_name
+                    )
                 )
                 log.info(comments[-1])
                 __salt__["vsphere.disconnect"](si)
                 ret.update({"result": None, "comment": "\n".join(comments)})
                 return ret
             log.trace(
-                "Creating cluster '{0}' in datacenter '{1}'. "
-                "".format(cluster_name, datacenter_name)
+                "Creating cluster '%s' in datacenter '%s'.",
+                cluster_name,
+                datacenter_name,
             )
             __salt__["vsphere.create_cluster"](
                 cluster_dict, datacenter_name, cluster_name, service_instance=si
             )
             comments.append(
-                "Created cluster '{0}' in datacenter '{1}'"
-                "".format(cluster_name, datacenter_name)
+                "Created cluster '{}' in datacenter '{}'".format(
+                    cluster_name, datacenter_name
+                )
             )
             log.info(comments[-1])
             changes.update({"new": cluster_dict})
@@ -240,39 +259,39 @@ def cluster_configured(name, cluster_config):
                     cluster_dict.get("ha", {}).get("options", []),
                     "key",
                 )
-                log.trace("options diffs = {0}".format(ldiff.diffs))
+                log.trace("options diffs = %s", ldiff.diffs)
                 # Remove options if exist
                 del cluster_dict["ha"]["options"]
                 if "ha" in current and "options" in current["ha"]:
                     del current["ha"]["options"]
             diff = recursive_diff(current, cluster_dict)
-            log.trace("diffs = {0}".format(diff.diffs))
+            log.trace("diffs = %s", diff.diffs)
             if not (diff.diffs or (ldiff and ldiff.diffs)):
                 # No differences
                 comments.append(
-                    "Cluster '{0}' in datacenter '{1}' is up "
-                    "to date. Nothing to be done."
-                    "".format(cluster_name, datacenter_name)
+                    "Cluster '{}' in datacenter '{}' is up to date. Nothing to be done.".format(
+                        cluster_name, datacenter_name
+                    )
                 )
                 log.info(comments[-1])
             else:
                 changes_required = True
                 changes_str = ""
                 if diff.diffs:
-                    changes_str = "{0}{1}".format(changes_str, diff.changes_str)
+                    changes_str = "{}{}".format(changes_str, diff.changes_str)
                 if ldiff and ldiff.diffs:
-                    changes_str = "{0}\nha:\n  options:\n{1}".format(
+                    changes_str = "{}\nha:\n  options:\n{}".format(
                         changes_str,
                         "\n".join(
-                            ["  {0}".format(l) for l in ldiff.changes_str2.split("\n")]
+                            ["  {}".format(l) for l in ldiff.changes_str2.split("\n")]
                         ),
                     )
                 # Apply the changes
                 if __opts__["test"]:
                     comments.append(
-                        "State {0} will update cluster '{1}' "
-                        "in datacenter '{2}':\n{3}"
-                        "".format(name, cluster_name, datacenter_name, changes_str)
+                        "State {} will update cluster '{}' in datacenter '{}':\n{}".format(
+                            name, cluster_name, datacenter_name, changes_str
+                        )
                     )
                 else:
                     new_values = diff.new_values
@@ -285,13 +304,14 @@ def cluster_configured(name, cluster_config):
                         dictupdate.update(
                             old_values, {"ha": {"options": ldiff.old_values}}
                         )
-                    log.trace("new_values = {0}".format(new_values))
+                    log.trace("new_values = %s", new_values)
                     __salt__["vsphere.update_cluster"](
                         new_values, datacenter_name, cluster_name, service_instance=si
                     )
                     comments.append(
-                        "Updated cluster '{0}' in datacenter "
-                        "'{1}'".format(cluster_name, datacenter_name)
+                        "Updated cluster '{}' in datacenter '{}'".format(
+                            cluster_name, datacenter_name
+                        )
                     )
                     log.info(comments[-1])
                     changes.update({"new": new_values, "old": old_values})
@@ -304,13 +324,14 @@ def cluster_configured(name, cluster_config):
         )
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
-        ret.update({"result": False, "comment": six.text_type(exc)})
+        ret.update({"result": False, "comment": str(exc)})
         return ret
 
 
+@_deprecation_message
 def vsan_datastore_configured(name, datastore_name):
     """
     Configures the cluster's VSAN datastore
@@ -324,8 +345,8 @@ def vsan_datastore_configured(name, datastore_name):
         __salt__["esxcluster.get_details"]()["cluster"],
         __salt__["esxcluster.get_details"]()["datacenter"],
     )
-    display_name = "{0}/{1}".format(datacenter_name, cluster_name)
-    log.info("Running vsan_datastore_configured for " "'{0}'".format(display_name))
+    display_name = "{}/{}".format(datacenter_name, cluster_name)
+    log.info("Running vsan_datastore_configured for '%s'", display_name)
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
     changes = {}
@@ -337,8 +358,9 @@ def vsan_datastore_configured(name, datastore_name):
         vsan_ds = _get_vsan_datastore(si, cluster_name)
         if vsan_ds["name"] == datastore_name:
             comments.append(
-                "vSAN datastore is correctly named '{0}'. "
-                "Nothing to be done.".format(vsan_ds["name"])
+                "vSAN datastore is correctly named '{}'. Nothing to be done.".format(
+                    vsan_ds["name"]
+                )
             )
             log.info(comments[-1])
         else:
@@ -346,14 +368,16 @@ def vsan_datastore_configured(name, datastore_name):
             changes_required = True
             if __opts__["test"]:
                 comments.append(
-                    "State {0} will rename the vSAN datastore to "
-                    "'{1}'.".format(name, datastore_name)
+                    "State {} will rename the vSAN datastore to '{}'.".format(
+                        name, datastore_name
+                    )
                 )
                 log.info(comments[-1])
             else:
                 log.trace(
-                    "Renaming vSAN datastore '{0}' to '{1}'"
-                    "".format(vsan_ds["name"], datastore_name)
+                    "Renaming vSAN datastore '%s' to '%s'",
+                    vsan_ds["name"],
+                    datastore_name,
                 )
                 __salt__["vsphere.rename_datastore"](
                     datastore_name=vsan_ds["name"],
@@ -361,7 +385,7 @@ def vsan_datastore_configured(name, datastore_name):
                     service_instance=si,
                 )
                 comments.append(
-                    "Renamed vSAN datastore to '{0}'." "".format(datastore_name)
+                    "Renamed vSAN datastore to '{}'.".format(datastore_name)
                 )
                 changes = {
                     "vsan_datastore": {
@@ -385,13 +409,14 @@ def vsan_datastore_configured(name, datastore_name):
         )
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update({"result": False, "comment": exc.strerror})
         return ret
 
 
+@_deprecation_message
 def licenses_configured(name, licenses=None):
     """
     Configures licenses on the cluster entity
@@ -411,16 +436,14 @@ def licenses_configured(name, licenses=None):
         __salt__["esxcluster.get_details"]()["cluster"],
         __salt__["esxcluster.get_details"]()["datacenter"],
     )
-    display_name = "{0}/{1}".format(datacenter_name, cluster_name)
-    log.info("Running licenses configured for '{0}'".format(display_name))
-    log.trace("licenses = {0}".format(licenses))
+    display_name = "{}/{}".format(datacenter_name, cluster_name)
+    log.info("Running licenses configured for '%s'", display_name)
+    log.trace("licenses = %s", licenses)
     entity = {"type": "cluster", "datacenter": datacenter_name, "cluster": cluster_name}
-    log.trace("entity = {0}".format(entity))
+    log.trace("entity = %s", entity)
 
     comments = []
     changes = {}
-    old_licenses = []
-    new_licenses = []
     has_errors = False
     needs_changes = False
     try:
@@ -435,7 +458,6 @@ def licenses_configured(name, licenses=None):
         si = __salt__["vsphere.get_service_instance_via_proxy"]()
         # Retrieve licenses
         existing_licenses = __salt__["vsphere.list_licenses"](service_instance=si)
-        remaining_licenses = existing_licenses[:]
         # Cycle through licenses
         for license_name, license in licenses.items():
             # Check if license already exists
@@ -448,9 +470,9 @@ def licenses_configured(name, licenses=None):
                     # If it doesn't exist it clearly needs to be assigned as
                     # well so we can stop the check here
                     comments.append(
-                        "State {0} will add license '{1}', "
-                        "and assign it to cluster '{2}'."
-                        "".format(name, license_name, display_name)
+                        "State {} will add license '{}', and assign it to cluster '{}'.".format(
+                            name, license_name, display_name
+                        )
                     )
                     log.info(comments[-1])
                     continue
@@ -464,13 +486,14 @@ def licenses_configured(name, licenses=None):
                         log.error(comments[-1])
                         has_errors = True
                         continue
-                    comments.append("Added license '{0}'." "".format(license_name))
+                    comments.append("Added license '{}'.".format(license_name))
                     log.info(comments[-1])
             else:
                 # License exists let's check if it's assigned to the cluster
                 comments.append(
-                    "License '{0}' already exists. "
-                    "Nothing to be done.".format(license_name)
+                    "License '{}' already exists. Nothing to be done.".format(
+                        license_name
+                    )
                 )
                 log.info(comments[-1])
                 existing_license = filtered_licenses[0]
@@ -496,9 +519,9 @@ def licenses_configured(name, licenses=None):
 
                 # License is already assigned to entity
                 comments.append(
-                    "License '{0}' already assigned to "
-                    "cluster '{1}'. Nothing to be done."
-                    "".format(license_name, display_name)
+                    "License '{}' already assigned to cluster '{}'. Nothing to be done.".format(
+                        license_name, display_name
+                    )
                 )
                 log.info(comments[-1])
                 continue
@@ -509,9 +532,8 @@ def licenses_configured(name, licenses=None):
             if existing_license["capacity"] <= existing_license["used"]:
                 # License is already fully used
                 comments.append(
-                    "Cannot assign license '{0}' to cluster "
-                    "'{1}'. No free capacity available."
-                    "".format(license_name, display_name)
+                    "Cannot assign license '{}' to cluster '{}'. No free capacity"
+                    " available.".format(license_name, display_name)
                 )
                 log.error(comments[-1])
                 has_errors = True
@@ -520,8 +542,9 @@ def licenses_configured(name, licenses=None):
             # Assign license
             if __opts__["test"]:
                 comments.append(
-                    "State {0} will assign license '{1}' "
-                    "to cluster '{2}'.".format(name, license_name, display_name)
+                    "State {} will assign license '{}' to cluster '{}'.".format(
+                        name, license_name, display_name
+                    )
                 )
                 log.info(comments[-1])
             else:
@@ -539,8 +562,9 @@ def licenses_configured(name, licenses=None):
                     has_errors = True
                     continue
                 comments.append(
-                    "Assigned license '{0}' to cluster '{1}'."
-                    "".format(license_name, display_name)
+                    "Assigned license '{}' to cluster '{}'.".format(
+                        license_name, display_name
+                    )
                 )
                 log.info(comments[-1])
                 # Note: Because the already_assigned_license was retrieved
@@ -586,7 +610,7 @@ def licenses_configured(name, licenses=None):
 
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update({"result": False, "comment": exc.strerror})

@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import getpass
 import os
 import shutil
 import sys
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
@@ -61,7 +58,7 @@ class FileModuleTest(ModuleCase):
         if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         symlink("/nonexistentpath", self.mybadsymlink)
-        super(FileModuleTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         if os.path.isfile(self.myfile):
@@ -71,7 +68,7 @@ class FileModuleTest(ModuleCase):
         if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
-        super(FileModuleTest, self).tearDown()
+        super().tearDown()
 
     @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
     @requires_system_grains
@@ -244,6 +241,26 @@ class FileModuleTest(ModuleCase):
         )
         self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
 
+    def test_source_list_for_multiple_files_with_missing_files(self):
+        file_list = [
+            "salt://does/not/exist",
+            "file://" + self.myfile,
+            "http://localhost//does/not/exist",
+            "salt://http/httpd.conf",
+        ]
+        ret = self.run_function("file.source_list", [file_list, "filehash", "base"])
+        self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
+
+    def test_source_list_for_multiple_files_dict_with_missing_files(self):
+        file_list = [
+            {"salt://does/not/exist": "filehash"},
+            {"file://" + self.myfile: "filehash"},
+            {"http://localhost//does/not/exist": "filehash"},
+            {"salt://http/httpd.conf": "filehash"},
+        ]
+        ret = self.run_function("file.source_list", [file_list, "", "base"])
+        self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
+
     def test_file_line_changes_format(self):
         """
         Test file.line changes output formatting.
@@ -349,3 +366,29 @@ class FileModuleTest(ModuleCase):
         with salt.utils.files.fopen(self.myfile, "r") as fp:
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
+
+    def test_file_read_bytes(self):
+        """
+        Test that ``file.read`` reads and returns ``bytes`` data
+        """
+        # Write some random bytes
+        data = b"n\x1a\xf7S@tBI\xa9J"
+        with salt.utils.files.fopen(self.myfile, "wb") as fp:
+            fp.write(data)
+
+        ret = self.minion_run("file.read", self.myfile, binary=True)
+        self.assertEqual(type(ret), bytes)
+        self.assertEqual(ret, data)
+
+    def test_file_read_str(self):
+        """
+        Test that ``file.read`` reads and returns ``str`` data
+        """
+        # Write some str data
+        data = "printable characters"
+        with salt.utils.files.fopen(self.myfile, "w") as fp:
+            fp.write(data)
+
+        ret = self.minion_run("file.read", self.myfile)
+        self.assertEqual(type(ret), str)
+        self.assertEqual(ret, data)

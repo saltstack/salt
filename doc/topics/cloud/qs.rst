@@ -67,7 +67,7 @@ List Cloud Provider Options
 You can now query the cloud provider you configured for available locations,
 images, and sizes. This information is used when you set up VM profiles.
 
-.. code-block:: bash
+.. code-block:: console
 
     salt-cloud --list-locations <provider_name>  # my-ec2 in the previous example
     salt-cloud --list-images <provider_name>
@@ -109,7 +109,7 @@ Create VMs
 ----------
 VMs are created by calling ``salt-cloud`` with the following options:
 
-.. code-block:: bash
+.. code-block:: console
 
     salt-cloud -p <profile> <name1> <name2> ...
 

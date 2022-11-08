@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 React by calling asynchronous runners
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# import salt libs
 import salt.runner
 
 

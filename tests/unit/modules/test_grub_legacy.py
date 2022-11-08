@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 
-# Import Salt Libs
 import salt.modules.grub_legacy as grub_legacy
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase

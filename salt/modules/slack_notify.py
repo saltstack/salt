@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to Slack
 
@@ -16,25 +15,13 @@ Module for sending messages to Slack
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import urllib.parse
 
-import salt.ext.six.moves.http_client
-
-# Import Salt libs
 import salt.utils.json
 import salt.utils.slack
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-
-# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -137,9 +124,9 @@ def find_room(name, api_key=None):
     if ret["res"]:
         rooms = ret["message"]
         if rooms:
-            for room in range(0, len(rooms)):
-                if rooms[room]["name"] == name:
-                    return rooms[room]
+            for room in rooms:
+                if room["name"] == name:
+                    return room
     return False
 
 
@@ -166,21 +153,34 @@ def find_user(name, api_key=None):
     if ret["res"]:
         users = ret["message"]
         if users:
-            for user in range(0, len(users)):
-                if users[user]["name"] == name:
-                    return users[user]
+            for user in users:
+                if user["name"] == name:
+                    return user
     return False
 
 
-def post_message(channel, message, from_name, api_key=None, icon=None):
+def post_message(
+    channel,
+    message,
+    from_name,
+    api_key=None,
+    icon=None,
+    attachments=None,
+    blocks=None,
+):
     """
     Send a message to a Slack channel.
+
+    .. versionchanged:: 3003
+        Added `attachments` and `blocks` kwargs
 
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
     :param api_key:     The Slack api key, if not specified in the configuration.
     :param icon:        URL to an image to use as the icon for this message
+    :param attachments: Any attachments to be sent with the message.
+    :param blocks:      Any blocks to be sent with the message.
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
@@ -205,7 +205,7 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
             channel,
             channel,
         )
-        channel = "#{0}".format(channel)
+        channel = "#{}".format(channel)
 
     if not from_name:
         log.error("from_name is a required option.")
@@ -216,7 +216,13 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
     if not from_name:
         log.error("from_name is a required option.")
 
-    parameters = {"channel": channel, "username": from_name, "text": message}
+    parameters = {
+        "channel": channel,
+        "username": from_name,
+        "text": message,
+        "attachments": attachments or [],
+        "blocks": blocks or [],
+    }
 
     if icon is not None:
         parameters["icon_url"] = icon
@@ -227,7 +233,7 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
         api_key=api_key,
         method="POST",
         header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-        data=_urlencode(parameters),
+        data=urllib.parse.urlencode(parameters),
         opts=__opts__,
     )
 
@@ -251,7 +257,7 @@ def call_hook(
     Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
-    :param attachment:  The message to send to the Slacke WebHook.
+    :param attachment:  The message to send to the Slack WebHook.
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.
@@ -272,7 +278,7 @@ def call_hook(
     if not identifier:
         identifier = _get_hook_id()
 
-    url = _urljoin(base_url, identifier)
+    url = urllib.parse.urljoin(base_url, identifier)
 
     if not message:
         log.error("message is required option")
@@ -302,7 +308,7 @@ def call_hook(
     if icon_emoji:
         payload["icon_emoji"] = icon_emoji
 
-    data = _urlencode({"payload": salt.utils.json.dumps(payload)})
+    data = urllib.parse.urlencode({"payload": salt.utils.json.dumps(payload)})
     result = salt.utils.http.query(url, method="POST", data=data, status=True)
 
     if result["status"] <= 201:
