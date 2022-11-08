@@ -1,1 +1,0 @@
-Adding a check when a source is an HTTP or FTP URL to do a query to ensure the URL is valid before returning, then we know if we need to move onto to the next source in the list or not.

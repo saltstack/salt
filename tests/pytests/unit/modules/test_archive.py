@@ -1,6 +1,7 @@
 import os.path
 
 import pytest
+
 import salt.modules.archive as archive
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import MagicMock, patch
@@ -18,11 +19,9 @@ class ZipFileMock(MagicMock):
         return self._files
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {archive: {"__grains__": {"id": 0}}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {archive: {"__grains__": {"id": 0}}}
 
 
 def test_tar():
@@ -379,6 +378,48 @@ def test_unzip():
         assert ["salt"] == ret
 
 
+def test_unzip_password():
+    mock = ZipFileMock()
+    target = "/tmp/salt.zip"
+    dest = "/tmp/dest"
+    # This is the file inside target zip file, returned by ZipFileMock.namelist
+    expected_file_name = "salt"
+    with patch("zipfile.ZipFile", mock):
+        ret = archive.unzip(target, dest, password="spongebob", extract_perms=False)
+        assert [expected_file_name] == ret
+        # mock needs to be mock() because contextlib.closing appears to actually
+        # call the mock
+        mock().extract.assert_called_once_with(expected_file_name, dest, b"spongebob")
+
+
+def test_unzip_password_bytestring():
+    mock = ZipFileMock()
+    target = "/tmp/salt.zip"
+    dest = "/tmp/dest"
+    # This is the file inside target zip file, returned by ZipFileMock.namelist
+    expected_file_name = "salt"
+    with patch("zipfile.ZipFile", mock):
+        ret = archive.unzip(target, dest, password=b"spongebob", extract_perms=False)
+        assert [expected_file_name] == ret
+        # mock needs to be mock() because contextlib.closing appears to actually
+        # call the mock
+        mock().extract.assert_called_once_with(expected_file_name, dest, b"spongebob")
+
+
+def test_unzip_password_integer():
+    mock = ZipFileMock()
+    target = "/tmp/salt.zip"
+    dest = "/tmp/dest"
+    # This is the file inside target zip file, returned by ZipFileMock.namelist
+    expected_file_name = "salt"
+    with patch("zipfile.ZipFile", mock):
+        ret = archive.unzip(target, dest, password=12345, extract_perms=False)
+        assert [expected_file_name] == ret
+        # mock needs to be mock() because contextlib.closing appears to actually
+        # call the mock
+        mock().extract.assert_called_once_with(expected_file_name, dest, b"12345")
+
+
 def test_unzip_raises_exception_if_not_found():
     mock = MagicMock(return_value="salt")
     with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -448,7 +489,7 @@ def test_rar_raises_exception_if_not_found():
             assert not mock.called
 
 
-@pytest.mark.skip_if_binaries_missing("unrar", "rar", message="unrar not installed")
+@pytest.mark.skip_if_binaries_missing("unrar", "rar", reason="unrar not installed")
 def test_unrar():
     with patch(
         "salt.utils.path.which_bin",
@@ -513,7 +554,8 @@ def test_unrar_raises_exception_if_not_found():
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
             with pytest.raises(CommandNotFoundError):
                 archive.unrar(
-                    "/tmp/rarfile.rar", "/home/strongbad/",
+                    "/tmp/rarfile.rar",
+                    "/home/strongbad/",
                 )
             assert not mock.called
 

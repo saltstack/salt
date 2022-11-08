@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Store key/value pairs in a CSV file
 
@@ -45,7 +44,6 @@ Will produce the following Pillar values for a minion named "jerry":
         'env': 'prod',
     }
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import csv
 

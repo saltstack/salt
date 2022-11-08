@@ -4,6 +4,13 @@ Getting Started With Azure
 
 .. versionadded:: 2014.1.0
 
+.. warning::
+
+    This cloud provider will be removed from Salt in version 3007 due to
+    the deprecation of the "Classic" API for Azure. Please migrate to
+    `Azure Resource Manager by March 1, 2023
+    <https://docs.microsoft.com/en-us/azure/virtual-machines/classic-vm-deprecation>`_
+
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. This document describes how to use Salt Cloud to
 create a virtual machine on Azure, with Salt installed.
@@ -1095,7 +1102,7 @@ Name of existing container.
 
 signed_identifiers
 ``````````````````
-SignedIdentifers instance
+SignedIdentifiers instance
 
 blob_public_access
 ``````````````````

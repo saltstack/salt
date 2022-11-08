@@ -1,19 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 tests for host state
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -40,9 +37,9 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, "hosts"), self.hosts_file)
         self.addCleanup(self.__clear_hosts)
-        super(HostTest, self).setUp()
+        super().setUp()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present(self):
         """
         host.present
@@ -53,4 +50,4 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(self.hosts_file) as fp_:
             output = salt.utils.stringutils.to_unicode(fp_.read())
-            self.assertIn("{0}\t\t{1}".format(ip, name), output)
+            self.assertIn("{}\t\t{}".format(ip, name), output)

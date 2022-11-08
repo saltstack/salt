@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of logs using Solaris logadm.
 
@@ -7,7 +6,7 @@ Management of logs using Solaris logadm.
 :depends:       salt.modulus.logadm
 :platform:      Oracle Solaris, Sun Solaris, illumos
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 
@@ -16,12 +15,8 @@ Management of logs using Solaris logadm.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 
@@ -39,7 +34,7 @@ def __virtual__():
         return True
     return (
         False,
-        "{0} state module can only if the logadm execution module is present".format(
+        "{} state module can only if the logadm execution module is present".format(
             __virtualname__
         ),
     )

@@ -1,13 +1,12 @@
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.systemd
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, slowTest
-from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class ServiceModuleTest(ModuleCase):
     """
@@ -32,9 +31,7 @@ class ServiceModuleTest(ModuleCase):
             self.service_name = "syslog"
             cmd_name = "syslog-ng"
         elif os_family == "MacOS":
-            self.service_name = "org.ntp.ntpd"
-            if int(os_release.split(".")[1]) >= 13:
-                self.service_name = "com.apple.AirPlayXPCHelper"
+            self.service_name = "com.apple.AirPlayXPCHelper"
         elif salt.utils.platform.is_windows():
             self.service_name = "Spooler"
 
@@ -72,8 +69,8 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function("service.disable", [self.service_name])
         del self.service_name
 
-    @flaky
-    @slowTest
+    @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.slow_test
     def test_service_status_running(self):
         """
         test service.status execution module
@@ -83,7 +80,7 @@ class ServiceModuleTest(ModuleCase):
         check_service = self.run_function("service.status", [self.service_name])
         self.assertTrue(check_service)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_status_dead(self):
         """
         test service.status execution module
@@ -93,14 +90,14 @@ class ServiceModuleTest(ModuleCase):
         check_service = self.run_function("service.status", [self.service_name])
         self.assertFalse(check_service)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_restart(self):
         """
         test service.restart
         """
         self.assertTrue(self.run_function("service.restart", [self.service_name]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_enable(self):
         """
         test service.get_enabled and service.enable module
@@ -111,7 +108,7 @@ class ServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.enable", [self.service_name]))
         self.assertIn(self.service_name, self.run_function("service.get_enabled"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_disable(self):
         """
         test service.get_disabled and service.disable module
@@ -125,7 +122,7 @@ class ServiceModuleTest(ModuleCase):
         else:
             self.assertIn(self.service_name, self.run_function("service.get_disabled"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_disable_doesnot_exist(self):
         """
         test service.get_disabled and service.disable module
@@ -176,8 +173,8 @@ class ServiceModuleTest(ModuleCase):
         else:
             self.assertNotIn(srv_name, self.run_function("service.get_disabled"))
 
-    @skipIf(not salt.utils.platform.is_windows(), "Windows Only Test")
-    @slowTest
+    @pytest.mark.skip_unless_on_windows
+    @pytest.mark.slow_test
     def test_service_get_service_name(self):
         """
         test service.get_service_name

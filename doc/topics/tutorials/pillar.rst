@@ -68,7 +68,7 @@ pillar files. This makes global configuration of services and systems very easy,
 but note that this may not be desired or appropriate if sensitive data is stored
 in the master's configuration file. To enable the master configuration file to be
 available to minion as pillar, set ``pillar_opts: True`` in the master
-confugration file, and then for appropriate minions also set ``pillar_opts: True``
+configuration file, and then for appropriate minions also set ``pillar_opts: True``
 in the minion(s) configuration file.
 
 Similar to the state tree, the pillar is comprised of sls files and has a top file.

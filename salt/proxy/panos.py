@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing Palo Alto firewall devices
 =====================================================================
@@ -53,6 +52,7 @@ the device with username and password.
       host: <ip or dns name of panos host>
       username: <panos username>
       password: <panos password>
+      verify_ssl: True
 
 proxytype
 ^^^^^^^^^
@@ -203,17 +203,11 @@ apikey
 The generated XML API key for the Panorama server. Required.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python Libs
 import logging
+import xml.etree.ElementTree as ET
 
 import salt.exceptions
 import salt.utils.xmlutil as xml
-
-# Import Salt Libs
-from salt._compat import ElementTree as ET
-from salt.ext import six
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ["panos"]
@@ -270,10 +264,11 @@ def init(opts):
             log.critical("No 'passwords' key found in pillar for this proxy.")
             return False
 
-    DETAILS["url"] = "https://{0}/api/".format(opts["proxy"]["host"])
+    DETAILS["url"] = "https://{}/api/".format(opts["proxy"]["host"])
 
     # Set configuration details
     DETAILS["host"] = opts["proxy"]["host"]
+    DETAILS["verify_ssl"] = opts["proxy"].get("verify_ssl", True)
     if "serial" in opts["proxy"]:
         DETAILS["serial"] = opts["proxy"].get("serial")
         if "apikey" in opts["proxy"]:
@@ -321,7 +316,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -335,7 +330,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -352,7 +347,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -368,7 +363,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -382,21 +377,21 @@ def call(payload=None):
             "Did not receive a valid response from host."
         )
 
-    if six.text_type(r["status"]) not in ["200", "201", "204"]:
-        if six.text_type(r["status"]) == "400":
+    if str(r["status"]) not in ["200", "201", "204"]:
+        if str(r["status"]) == "400":
             raise salt.exceptions.CommandExecutionError(
                 "The server cannot process the request due to a client error."
             )
-        elif six.text_type(r["status"]) == "401":
+        elif str(r["status"]) == "401":
             raise salt.exceptions.CommandExecutionError(
-                "The server cannot process the request because it lacks valid authentication "
-                "credentials for the target resource."
+                "The server cannot process the request because it lacks valid"
+                " authentication credentials for the target resource."
             )
-        elif six.text_type(r["status"]) == "403":
+        elif str(r["status"]) == "403":
             raise salt.exceptions.CommandExecutionError(
                 "The server refused to authorize the request."
             )
-        elif six.text_type(r["status"]) == "404":
+        elif str(r["status"]) == "404":
             raise salt.exceptions.CommandExecutionError(
                 "The requested resource could not be found."
             )

@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Test wrapper for running all KitchenSalt tests
 
 All directories in 'tests/kitchen/' will be treated as a separate test under
 the KitchenTestCase.
 """
-from __future__ import absolute_import
 
 import os
 
@@ -35,7 +33,7 @@ class KitchenTestCase(TestCase):
         cls.env = {
             "KITCHEN_YAML": os.path.join(CURRENT_DIR, ".kitchen.yml"),
             "SALT_SDIST_PATH": os.path.join(
-                cls.topdir, "dist", "salt-{0}.tar.gz".format(setup.__version__)
+                cls.topdir, "dist", "salt-{}.tar.gz".format(setup.__version__)
             ),
         }
 
@@ -60,7 +58,7 @@ def func_builder(testdir):
         if "TESTS_XML_OUTPUT_DIR" in os.environ:
             self.env[
                 "TESTS_JUNIT_XML_PATH"
-            ] = "{0}/kitchen.tests.{1}.$KITCHEN_SUITE.$KITCHEN_PLATFORM.xml".format(
+            ] = "{}/kitchen.tests.{}.$KITCHEN_SUITE.$KITCHEN_PLATFORM.xml".format(
                 os.environ.get("TESTS_XML_OUTPUT_DIR"), self.testdir,
             )
         self.assertEqual(
@@ -86,4 +84,4 @@ def func_builder(testdir):
 
 
 for testdir in os.listdir(os.path.join(CURRENT_DIR, "tests")):
-    setattr(KitchenTestCase, "test_kitchen_{0}".format(testdir), func_builder(testdir))
+    setattr(KitchenTestCase, "test_kitchen_{}".format(testdir), func_builder(testdir))

@@ -1,5 +1,5 @@
-salt.modules.logmod module
-==========================
+salt.modules.logmod
+===================
 
 .. automodule:: salt.modules.logmod
     :members:

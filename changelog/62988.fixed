@@ -1,0 +1,1 @@
+Fixed bug where module.wait states were detected as running legacy module.run syntax

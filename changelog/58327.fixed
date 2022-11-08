@@ -1,1 +1,0 @@
-Return empty dict on win_pdh.get_counters rather than raising exception when no data are available

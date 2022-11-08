@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage client ssh components
 
@@ -9,9 +8,7 @@ Manage client ssh components
     or removed.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import base64
 import binascii
 import hashlib
 import logging
@@ -20,8 +17,6 @@ import re
 import subprocess
 
 import salt.utils.data
-
-# Import salt libs
 import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.path
@@ -29,15 +24,9 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
-
 log = logging.getLogger(__name__)
-DEFAULT_SSH_PORT = 22
 
-if six.PY3:
-    import base64
+DEFAULT_SSH_PORT = 22
 
 
 def __virtual__():
@@ -63,6 +52,21 @@ def _refine_enc(enc):
         "ecdsa-sha2-nistp256",
     ]
     ed25519 = ["ed25519", "ssh-ed25519"]
+    also_allowed = [
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "rsa-sha2-512-cert-v01@openssh.com",
+        "rsa-sha2-256-cert-v01@openssh.com",
+        "ssh-rsa-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp384-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp521-cert-v01@openssh.com",
+        "sk-ecdsa-sha2-nistp256@openssh.com",
+        "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "ssh-ed25519-cert-v01@openssh.com",
+        "sk-ssh-ed25519@openssh.com",
+        "sk-ssh-ed25519-cert-v01@openssh.com",
+    ]
 
     if enc in rsa:
         return "ssh-rsa"
@@ -76,8 +80,10 @@ def _refine_enc(enc):
         return enc
     elif enc in ed25519:
         return "ssh-ed25519"
+    elif enc in also_allowed:
+        return enc
     else:
-        raise CommandExecutionError("Incorrect encryption key type '{0}'.".format(enc))
+        raise CommandExecutionError("Incorrect encryption key type '{}'.".format(enc))
 
 
 def _format_auth_line(key, enc, comment, options):
@@ -86,8 +92,8 @@ def _format_auth_line(key, enc, comment, options):
     """
     line = ""
     if options:
-        line += "{0} ".format(",".join(options))
-    line += "{0} {1} {2}\n".format(enc, key, comment)
+        line += "{} ".format(",".join(options))
+    line += "{} {} {}\n".format(enc, key, comment)
     return line
 
 
@@ -107,7 +113,7 @@ def _expand_authorized_keys_path(path, user, home):
             elif char == "h":
                 converted_path += home
             else:
-                error = 'AuthorizedKeysFile path: unknown token character "%{0}"'.format(
+                error = 'AuthorizedKeysFile path: unknown token character "%{}"'.format(
                     char
                 )
                 raise CommandExecutionError(error)
@@ -128,7 +134,7 @@ def _get_config_file(user, config):
     """
     uinfo = __salt__["user.info"](user)
     if not uinfo:
-        raise CommandExecutionError("User '{0}' does not exist".format(user))
+        raise CommandExecutionError("User '{}' does not exist".format(user))
     home = uinfo["home"]
     config = _expand_authorized_keys_path(config, user, home)
     if not os.path.isabs(config):
@@ -163,7 +169,7 @@ def _replace_auth_key(
                     lines.append(line)
                     continue
                 comps = re.findall(
-                    r"((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?",
+                    r"((.*)\s)?((?:sk-)?(?:ssh|ecdsa)-[a-z0-9@.-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?",
                     line,
                 )
                 if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
@@ -176,9 +182,9 @@ def _replace_auth_key(
             with salt.utils.files.fopen(full, "wb") as _fh:
                 # Write out any changes
                 _fh.writelines(salt.utils.data.encode(lines))
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         raise CommandExecutionError(
-            "Problem reading or writing to key file: {0}".format(exc)
+            "Problem reading or writing to key file: {}".format(exc)
         )
 
 
@@ -187,7 +193,7 @@ def _validate_keys(key_file, fingerprint_hash_type):
     Return a dict containing validated keys in the passed file
     """
     ret = {}
-    linere = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+    linere = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
 
     try:
         with salt.utils.files.fopen(key_file, "r") as _fh:
@@ -234,8 +240,8 @@ def _validate_keys(key_file, fingerprint_hash_type):
                     "options": options,
                     "fingerprint": fingerprint,
                 }
-    except (IOError, OSError):
-        raise CommandExecutionError("Problem reading ssh key file {0}".format(key_file))
+    except OSError:
+        raise CommandExecutionError("Problem reading ssh key file {}".format(key_file))
 
     return ret
 
@@ -257,7 +263,9 @@ def _fingerprint(public_key, fingerprint_hash_type):
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0
+
+            default changed from ``md5`` to ``sha256``
 
     """
     if fingerprint_hash_type:
@@ -269,16 +277,11 @@ def _fingerprint(public_key, fingerprint_hash_type):
         hash_func = getattr(hashlib, hash_type)
     except AttributeError:
         raise CommandExecutionError(
-            "The fingerprint_hash_type {0} is not supported.".format(hash_type)
+            "The fingerprint_hash_type {} is not supported.".format(hash_type)
         )
 
     try:
-        if six.PY2:
-            raw_key = public_key.decode("base64")
-        else:
-            raw_key = base64.b64decode(
-                public_key, validate=True
-            )  # pylint: disable=E1123
+        raw_key = base64.b64decode(public_key, validate=True)  # pylint: disable=E1123
     except binascii.Error:
         return None
 
@@ -302,7 +305,7 @@ def _get_known_hosts_file(config=None, user=None):
             if not uinfo:
                 return {
                     "status": "error",
-                    "error": "User {0} does not exist".format(user),
+                    "error": "User {} does not exist".format(user),
                 }
             full = os.path.join(uinfo["home"], config)
         else:
@@ -340,9 +343,7 @@ def host_keys(keydir=None, private=True, certs=True):
         m = fnre.match(fn_)
         if m:
             if not m.group("pub") and private is False:
-                log.info(
-                    "Skipping private key file %s as " "private is set to False", fn_
-                )
+                log.info("Skipping private key file %s as private is set to False", fn_)
                 continue
             if m.group("cert") and certs is False:
                 log.info("Skipping key file %s as certs is set to False", fn_)
@@ -364,7 +365,7 @@ def host_keys(keydir=None, private=True, certs=True):
                     if keys[kname] != "SSH PRIVATE KEY FILE FORMAT 1.1\n":
                         keys[kname] += salt.utils.stringutils.to_unicode(_fh.read())
                     keys[kname] = keys[kname].strip()
-            except (IOError, OSError):
+            except OSError:
                 keys[kname] = ""
     return keys
 
@@ -432,7 +433,7 @@ def check_key_file(
         return {}
     s_keys = _validate_keys(keyfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {0}. Is file properly " "formatted?".format(source)
+        err = "No keys detected in {}. Is file properly formatted?".format(source)
         log.error(err)
         __context__["ssh_auth.error"] = err
         return {}
@@ -525,7 +526,7 @@ def rm_auth_key_from_file(
 
     s_keys = _validate_keys(lfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {0}. Is file properly formatted?".format(source)
+        err = "No keys detected in {}. Is file properly formatted?".format(source)
         log.error(err)
         __context__["ssh_auth.error"] = err
         return "fail"
@@ -560,14 +561,14 @@ def rm_auth_key(user, key, config=".ssh/authorized_keys", fingerprint_hash_type=
     current = auth_keys(
         user, config=config, fingerprint_hash_type=fingerprint_hash_type
     )
-    linere = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+    linere = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
     if key in current:
         # Remove the key
         full = _get_config_file(user, config)
 
         # Return something sensible if the file doesn't exist
         if not os.path.isfile(full):
-            return "Authorized keys file {0} not present".format(full)
+            return "Authorized keys file {} not present".format(full)
 
         lines = []
         try:
@@ -612,7 +613,7 @@ def rm_auth_key(user, key, config=".ssh/authorized_keys", fingerprint_hash_type=
             # re-open the file in write mode to save the changes out.
             with salt.utils.files.fopen(full, "wb") as _fh:
                 _fh.writelines(salt.utils.data.encode(lines))
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             log.warning("Could not read/write key file: %s", exc)
             return "Key not removed"
         return "Key removed"
@@ -643,7 +644,7 @@ def set_auth_key_from_file(
 
     s_keys = _validate_keys(lfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {0}. Is file properly formatted?".format(source)
+        err = "No keys detected in {}. Is file properly formatted?".format(source)
         log.error(err)
         __context__["ssh_auth.error"] = err
         return "fail"
@@ -767,7 +768,7 @@ def set_auth_key(
                         if _fh.read(1) != b"\n":
                             _fh.write(b"\n")
                 _fh.write(salt.utils.stringutils.to_bytes(auth_line))
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             msg = "Could not write to key file: {0}"
             raise CommandExecutionError(msg.format(exc))
 
@@ -874,8 +875,8 @@ def recv_known_host_entries(
         The name of the remote host (e.g. "github.com")
 
     enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     port
         Optional parameter, denoting the port of the remote host on which an
@@ -895,7 +896,9 @@ def recv_known_host_entries(
         originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0
+
+            default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -916,7 +919,7 @@ def recv_known_host_entries(
         cmd.extend(["-t", "rsa"])
     if hash_known_hosts:
         cmd.append("-H")
-    cmd.extend(["-T", six.text_type(timeout)])
+    cmd.extend(["-T", str(timeout)])
     cmd.append(hostname)
     lines = None
     attempts = 5
@@ -1006,7 +1009,7 @@ def rm_known_host(user=None, hostname=None, config=None, port=None):
     if not os.path.isfile(full):
         return {
             "status": "error",
-            "error": "Known hosts file {0} does not exist".format(full),
+            "error": "Known hosts file {} does not exist".format(full),
         }
 
     ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
@@ -1059,8 +1062,8 @@ def set_known_host(
         the port 22 is used.
 
     enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     config
         The location of the authorized keys file relative to the user's home
@@ -1084,7 +1087,9 @@ def set_known_host(
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0
+
+            default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -1098,8 +1103,10 @@ def set_known_host(
     if port is not None and port != DEFAULT_SSH_PORT and hash_known_hosts:
         return {
             "status": "error",
-            "error": "argument port can not be used in "
-            "conjunction with argument hash_known_hosts",
+            "error": (
+                "argument port can not be used in "
+                "conjunction with argument hash_known_hosts"
+            ),
         }
 
     update_required = False
@@ -1194,9 +1201,9 @@ def set_known_host(
                     ofile.writelines(
                         salt.utils.data.decode(known_hosts_lines, to_str=True)
                     )
-            except (IOError, OSError) as exception:
+            except OSError as exception:
                 raise CommandExecutionError(
-                    "Couldn't remove old entry(ies) from known hosts file: '{0}'".format(
+                    "Couldn't remove old entry(ies) from known hosts file: '{}'".format(
                         exception
                     )
                 )
@@ -1230,9 +1237,9 @@ def set_known_host(
         os.makedirs(ssh_dir)
     except OSError as exc:
         if exc.args[1] == "Permission denied":
-            log.error("Unable to create directory %s: " "%s", ssh_dir, exc.args[1])
+            log.error("Unable to create directory %s: %s", ssh_dir, exc.args[1])
         elif exc.args[1] == "File exists":
-            log.debug("%s already exists, no need to create " "it", ssh_dir)
+            log.debug("%s already exists, no need to create it", ssh_dir)
     else:
         # set proper ownership/permissions
         if user:
@@ -1243,9 +1250,9 @@ def set_known_host(
     try:
         with salt.utils.files.fopen(full, "ab") as ofile:
             ofile.writelines(salt.utils.data.encode(lines))
-    except (IOError, OSError) as exception:
+    except OSError as exception:
         raise CommandExecutionError(
-            "Couldn't append to known hosts file: '{0}'".format(exception)
+            "Couldn't append to known hosts file: '{}'".format(exception)
         )
 
     if not salt.utils.platform.is_windows():
@@ -1322,7 +1329,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
                 # if not full path, assume key is in .ssh
                 # in user's home directory
                 keyname = key
-                fn_ = "{0}/.ssh/{1}".format(userinfo["home"], key)
+                fn_ = "{}/.ssh/{}".format(userinfo["home"], key)
 
             if os.path.exists(fn_):
                 try:
@@ -1330,7 +1337,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
                         keys[u][keyname] = "".join(
                             salt.utils.data.decode(_fh.readlines())
                         ).strip()
-                except (IOError, OSError):
+                except OSError:
                     pass
 
     # clean up any empty items
@@ -1371,7 +1378,7 @@ def hash_known_hosts(user=None, config=None):
     if not os.path.isfile(full):
         return {
             "status": "error",
-            "error": "Known hosts file {0} does not exist".format(full),
+            "error": "Known hosts file {} does not exist".format(full),
         }
     origmode = os.stat(full).st_mode
     cmd = ["ssh-keygen", "-H", "-f", full]
@@ -1389,7 +1396,7 @@ def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
     if not port or port == DEFAULT_SSH_PORT:
         return hostname
     else:
-        return "[{0}]:{1}".format(hostname, port)
+        return "[{}]:{}".format(hostname, port)
 
 
 def key_is_encrypted(key):

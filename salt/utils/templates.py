@@ -12,9 +12,13 @@ import sys
 import tempfile
 import traceback
 from argparse import Namespace
+from pathlib import Path
 
 import jinja2
 import jinja2.ext
+import jinja2.sandbox
+
+import salt.modules.match
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
@@ -27,6 +31,7 @@ import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
+from salt.loader.context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
@@ -83,7 +88,81 @@ class AliasedModule:
         return getattr(self.wrapped, name)
 
 
+def generate_sls_context(tmplpath, sls):
+    """
+    Generate SLS/Template Context Items
+
+    Return values:
+
+    tplpath - full path to template on filesystem including filename
+    tplfile - relative path to template -- relative to file roots
+    tpldir - directory of the template relative to file roots. If none, "."
+    tpldot - tpldir using dots instead of slashes, if none, ""
+    slspath - directory containing current sls - (same as tpldir), if none, ""
+    sls_path - slspath with underscores separating parts, if none, ""
+    slsdotpath - slspath with dots separating parts, if none, ""
+    slscolonpath- slspath with colons separating parts, if none, ""
+
+    """
+
+    sls_context = {}
+
+    # Normalize SLS as path.
+    slspath = sls.replace(".", "/")
+
+    if tmplpath:
+        # Normalize template path
+        template = str(Path(tmplpath).as_posix())
+
+        # Determine proper template name without root
+        if not sls:
+            template = template.rsplit("/", 1)[-1]
+        elif template.endswith("{}.sls".format(slspath)):
+            template = template[-(4 + len(slspath)) :]
+        elif template.endswith("{}/init.sls".format(slspath)):
+            template = template[-(9 + len(slspath)) :]
+        else:
+            # Something went wrong
+            log.warning("Failed to determine proper template path")
+
+        slspath = template.rsplit("/", 1)[0] if "/" in template else ""
+
+        sls_context.update(
+            dict(
+                tplpath=tmplpath,
+                tplfile=template,
+                tpldir=slspath if slspath else ".",
+                tpldot=slspath.replace("/", "."),
+            )
+        )
+
+    # Should this be normalized?
+    sls_context.update(
+        dict(
+            slspath=slspath,
+            slsdotpath=slspath.replace("/", "."),
+            slscolonpath=slspath.replace("/", ":"),
+            sls_path=slspath.replace("/", "_"),
+        )
+    )
+
+    return sls_context
+
+
 def wrap_tmpl_func(render_str):
+    """
+    Each template processing function below, ``render_*_tmpl``, is wrapped by
+    ``render_tmpl`` before being inserted into the ``TEMPLATE_REGISTRY``.  Some
+    actions are taken here that are common to all renderers.  Perhaps a
+    standard decorator construct would have been more legible.
+
+    :param function render_str: Template rendering function to be wrapped.
+        Each function is responsible for rendering the source data for its
+        repective template language.
+
+    :returns function render_tmpl: The wrapper function
+    """
+
     def render_tmpl(
         tmplsrc, from_str=False, to_str=False, context=None, tmplpath=None, **kws
     ):
@@ -103,26 +182,8 @@ def wrap_tmpl_func(render_str):
         assert "saltenv" in context
 
         if "sls" in context:
-            slspath = context["sls"].replace(".", "/")
-            if tmplpath is not None:
-                context["tplpath"] = tmplpath
-                if not tmplpath.lower().replace("\\", "/").endswith("/init.sls"):
-                    slspath = os.path.dirname(slspath)
-                template = tmplpath.replace("\\", "/")
-                i = template.rfind(slspath.replace(".", "/"))
-                if i != -1:
-                    template = template[i:]
-                tpldir = os.path.dirname(template).replace("\\", "/")
-                tpldata = {
-                    "tplfile": template,
-                    "tpldir": "." if tpldir == "" else tpldir,
-                    "tpldot": tpldir.replace("/", "."),
-                }
-                context.update(tpldata)
-            context["slsdotpath"] = slspath.replace("/", ".")
-            context["slscolonpath"] = slspath.replace("/", ":")
-            context["sls_path"] = slspath.replace("/", "_")
-            context["slspath"] = slspath
+            sls_context = generate_sls_context(tmplpath, context["sls"])
+            context.update(sls_context)
 
         if isinstance(tmplsrc, str):
             if from_str:
@@ -162,6 +223,7 @@ def wrap_tmpl_func(render_str):
 
         except SaltRenderError as exc:
             log.exception("Rendering exception occurred")
+            # return dict(result=False, data=str(exc))
             raise
         except Exception:  # pylint: disable=broad-except
             return dict(result=False, data=traceback.format_exc())
@@ -267,6 +329,18 @@ def _get_jinja_error(trace, context=None):
 
 
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
+    """
+    Render a Jinja template.
+
+    :param str tmplstr: A string containing the source to be rendered.
+
+    :param dict context: Any additional context data used by the renderer.
+
+    :param str tmplpath: Base path from which ``tmplstr`` may load additional
+        template files.
+
+    :returns str: The string rendered by the template.
+    """
     opts = context["opts"]
     saltenv = context["saltenv"]
     loader = None
@@ -316,14 +390,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if opts.get("jinja_trim_blocks", False):
         log.debug("Jinja2 trim_blocks is enabled")
         log.warning(
-            "jinja_trim_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead"
+            "jinja_trim_blocks is deprecated and will be removed in a future release,"
+            " please use jinja_env and/or jinja_sls_env instead"
         )
         opt_jinja_env["trim_blocks"] = True
         opt_jinja_sls_env["trim_blocks"] = True
     if opts.get("jinja_lstrip_blocks", False):
         log.debug("Jinja2 lstrip_blocks is enabled")
         log.warning(
-            "jinja_lstrip_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead"
+            "jinja_lstrip_blocks is deprecated and will be removed in a future release,"
+            " please use jinja_env and/or jinja_sls_env instead"
         )
         opt_jinja_env["lstrip_blocks"] = True
         opt_jinja_sls_env["lstrip_blocks"] = True
@@ -343,17 +419,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         opt_jinja_env_helper(opt_jinja_env, "jinja_env")
 
     if opts.get("allow_undefined", False):
-        jinja_env = jinja2.Environment(**env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
     else:
-        jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined, **env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(
+            undefined=jinja2.StrictUndefined, **env_args
+        )
 
-    tojson_filter = jinja_env.filters.get("tojson")
     indent_filter = jinja_env.filters.get("indent")
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
-    if tojson_filter is not None:
-        # Use the existing tojson filter, if present (jinja2 >= 2.9)
-        jinja_env.filters["tojson"] = tojson_filter
     if salt.utils.jinja.JINJA_VERSION >= LooseVersion("2.11"):
         # Use the existing indent filter on Jinja versions where it's not broken
         jinja_env.filters["indent"] = indent_filter
@@ -368,7 +442,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     decoded_context = {}
     for key, value in context.items():
         if not isinstance(value, str):
-            decoded_context[key] = value
+            if isinstance(value, NamedLoaderContext):
+                decoded_context[key] = value.value()
+            else:
+                decoded_context[key] = value
             continue
 
         try:
@@ -382,20 +459,20 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             )
             decoded_context[key] = salt.utils.data.decode(value)
 
+    jinja_env.globals.update(decoded_context)
     try:
         template = jinja_env.from_string(tmplstr)
-        template.globals.update(decoded_context)
         output = template.render(**decoded_context)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        out = _get_jinja_error(trace, context=decoded_context)[1]
-        tmplstr = ""
-        # Don't include the line number, since it is misreported
-        # https://github.com/mitsuhiko/jinja2/issues/276
-        raise SaltRenderError("Jinja variable {}{}".format(exc, out), buf=tmplstr)
+        line, out = _get_jinja_error(trace, context=decoded_context)
+        if not line:
+            tmplstr = ""
+        raise SaltRenderError("Jinja variable {}{}".format(exc, out), line, tmplstr)
     except (
         jinja2.exceptions.TemplateRuntimeError,
         jinja2.exceptions.TemplateSyntaxError,
+        jinja2.exceptions.SecurityError,
     ) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
@@ -443,8 +520,21 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
 # pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
+    """
+    Render a Mako template.
+
+    :param str tmplstr: A string containing the source to be rendered.
+
+    :param dict context: Any additional context data used by the renderer.
+
+    :param str tmplpath: Base path from which ``tmplstr`` may load additional
+        template files.
+
+    :returns str: The string rendered by the template.
+    """
     import mako.exceptions  # pylint: disable=no-name-in-module
     from mako.template import Template  # pylint: disable=no-name-in-module
+
     from salt.utils.mako import SaltMakoTemplateLookup
 
     saltenv = context["saltenv"]
@@ -471,6 +561,17 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
 
 
 def render_wempy_tmpl(tmplstr, context, tmplpath=None):
+    """
+    Render a Wempy template.
+
+    :param str tmplstr: A string containing the source to be rendered.
+
+    :param dict context: Any additional context data used by the renderer.
+
+    :param str tmplpath: Unused.
+
+    :returns str: The string rendered by the template.
+    """
     from wemplate.wemplate import TemplateParser as Template
 
     return Template(tmplstr).render(**context)
@@ -521,7 +622,11 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     data = tclass(namespaces=[context])
 
     # Figure out which method to call based on the type of tmplstr
-    if isinstance(tmplstr, (str, bytes)):
+    if isinstance(tmplstr, str):
+        # This should call .__unicode__()
+        res = str(data)
+    elif isinstance(tmplstr, bytes):
+        # This should call .__str()
         res = str(data)
     else:
         raise SaltRenderError(

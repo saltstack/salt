@@ -112,6 +112,8 @@ Full Example
 
 """
 
+import os
+
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
@@ -122,6 +124,9 @@ def render(template, saltenv="base", sls="", tmplpath=None, **kws):
 
     :rtype: string
     """
+    template = tmplpath
+    if not os.path.isfile(template):
+        raise SaltRenderError("Template {} is not a file!".format(template))
 
     tmp_data = salt.utils.templates.py(
         template,

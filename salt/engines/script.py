@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Send events based on a script's stdout
 
@@ -20,20 +19,15 @@ Script engine configs:
 
 """
 
-from __future__ import absolute_import, print_function
-
 import logging
 import shlex
 import subprocess
 import time
 
 import salt.loader
-
-# import salt libs
 import salt.utils.event
 import salt.utils.process
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -42,8 +36,7 @@ def _read_stdout(proc):
     """
     Generator that returns stdout
     """
-    for line in iter(proc.stdout.readline, ""):
-        yield line
+    yield from iter(proc.stdout.readline, b"")
 
 
 def _get_serializer(output):
@@ -91,7 +84,7 @@ def start(cmd, output="json", interval=1):
     try:
         cmd = shlex.split(cmd)
     except AttributeError:
-        cmd = shlex.split(six.text_type(cmd))
+        cmd = shlex.split(str(cmd))
     log.debug("script engine using command %s", cmd)
 
     serializer = _get_serializer(output)

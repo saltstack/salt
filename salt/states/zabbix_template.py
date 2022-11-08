@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 .. versionadded:: 2017.7
 
@@ -6,19 +5,11 @@ Management of Zabbix Template object over Zabbix API.
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """
-from __future__ import absolute_import, unicode_literals
 
 import json
 import logging
 
-try:
-    from salt.ext import six
-    from salt.exceptions import SaltException
-
-    IMPORTS_OK = True
-except ImportError:
-    IMPORTS_OK = False
-
+from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
@@ -284,7 +275,7 @@ def __virtual__():
     Only make these states available if Zabbix module and run_query function is available
     and all 3rd party modules imported.
     """
-    if "zabbix.run_query" in __salt__ and IMPORTS_OK:
+    if "zabbix.run_query" in __salt__:
         return True
     return False, "Import zabbix or other needed modules failed."
 
@@ -299,16 +290,14 @@ def _diff_and_merge_host_list(defined, existing):
     :return: list to be updated (combinated or empty list)
     """
     try:
-        defined_host_ids = set([host["hostid"] for host in defined])
-        existing_host_ids = set([host["hostid"] for host in existing])
+        defined_host_ids = {host["hostid"] for host in defined}
+        existing_host_ids = {host["hostid"] for host in existing}
     except KeyError:
         raise SaltException("List of hosts in template not defined correctly.")
 
     diff = defined_host_ids - existing_host_ids
     return (
-        [{"hostid": six.text_type(hostid)} for hostid in diff | existing_host_ids]
-        if diff
-        else []
+        [{"hostid": str(hostid)} for hostid in diff | existing_host_ids] if diff else []
     )
 
 
@@ -381,8 +370,8 @@ def _manage_component(
     c_def = TEMPLATE_COMPONENT_DEF[component]
     compare_key = c_def["filter"]
 
-    defined_set = set([item[compare_key] for item in defined])
-    existing_set = set([item[compare_key] for item in existing])
+    defined_set = {item[compare_key] for item in defined}
+    existing_set = {item[compare_key] for item in existing}
 
     create_set = defined_set - existing_set
     update_set = defined_set & existing_set
@@ -498,10 +487,10 @@ def is_present(name, **kwargs):
 
     if not object_id:
         ret["result"] = False
-        ret["comment"] = 'Zabbix Template "{0}" does not exist.'.format(name)
+        ret["comment"] = 'Zabbix Template "{}" does not exist.'.format(name)
     else:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Template "{0}" exists.'.format(name)
+        ret["comment"] = 'Zabbix Template "{}" exists.'.format(name)
 
     return ret
 
@@ -649,10 +638,10 @@ def present(name, params, static_host_list=True, **kwargs):
     discovery_components = []
 
     for attr in params:
-        if attr in TEMPLATE_COMPONENT_ORDER and six.text_type(attr) != "discoveries":
+        if attr in TEMPLATE_COMPONENT_ORDER and str(attr) != "discoveries":
             template_components[attr] = params[attr]
 
-        elif six.text_type(attr) == "discoveries":
+        elif str(attr) == "discoveries":
             d_rules = []
             for d_rule in params[attr]:
                 d_rule_components = {
@@ -688,7 +677,7 @@ def present(name, params, static_host_list=True, **kwargs):
     defined_obj = __salt__["zabbix.substitute_params"](template_definition, **kwargs)
     log.info(
         "SUBSTITUTED template_definition: %s",
-        six.text_type(json.dumps(defined_obj, indent=4)),
+        str(json.dumps(defined_obj, indent=4)),
     )
 
     tmpl_get = __salt__["zabbix.run_query"](
@@ -703,7 +692,7 @@ def present(name, params, static_host_list=True, **kwargs):
         },
         **kwargs
     )
-    log.info("TEMPLATE get result: %s", six.text_type(json.dumps(tmpl_get, indent=4)))
+    log.info("TEMPLATE get result: %s", str(json.dumps(tmpl_get, indent=4)))
 
     existing_obj = (
         __salt__["zabbix.substitute_params"](tmpl_get[0], **kwargs)
@@ -753,7 +742,7 @@ def present(name, params, static_host_list=True, **kwargs):
             diff_params["old"][zabbix_id_mapper["template"]] = template_id
             log.info(
                 "TEMPLATE: update params: %s",
-                six.text_type(json.dumps(diff_params, indent=4)),
+                str(json.dumps(diff_params, indent=4)),
             )
 
             CHANGE_STACK.append(
@@ -767,7 +756,7 @@ def present(name, params, static_host_list=True, **kwargs):
                 tmpl_update = __salt__["zabbix.run_query"](
                     "template.update", diff_params["new"], **kwargs
                 )
-                log.info("TEMPLATE update result: %s", six.text_type(tmpl_update))
+                log.info("TEMPLATE update result: %s", str(tmpl_update))
 
     else:
         CHANGE_STACK.append(
@@ -777,7 +766,7 @@ def present(name, params, static_host_list=True, **kwargs):
             tmpl_create = __salt__["zabbix.run_query"](
                 "template.create", defined_obj, **kwargs
             )
-            log.info("TEMPLATE create result: %s", six.text_type(tmpl_create))
+            log.info("TEMPLATE create result: %s", str(tmpl_create))
             if tmpl_create:
                 template_id = tmpl_create["templateids"][0]
 
@@ -785,14 +774,12 @@ def present(name, params, static_host_list=True, **kwargs):
     log.info("\n\ndiscovery_components: %s", json.dumps(discovery_components, indent=4))
     log.info(
         "\n\nCurrent CHANGE_STACK: %s",
-        six.text_type(json.dumps(CHANGE_STACK, indent=4)),
+        str(json.dumps(CHANGE_STACK, indent=4)),
     )
 
     if existing_obj or not dry_run:
         for component in TEMPLATE_COMPONENT_ORDER:
-            log.info(
-                "\n\n\n\n\nCOMPONENT: %s\n\n", six.text_type(json.dumps(component))
-            )
+            log.info("\n\n\n\n\nCOMPONENT: %s\n\n", str(json.dumps(component)))
             # 1) query for components which belongs to the template
             existing_c_list = _get_existing_template_c_list(
                 component, template_id, **kwargs
@@ -825,7 +812,7 @@ def present(name, params, static_host_list=True, **kwargs):
 
         log.info(
             "\n\nCurrent CHANGE_STACK: %s",
-            six.text_type(json.dumps(CHANGE_STACK, indent=4)),
+            str(json.dumps(CHANGE_STACK, indent=4)),
         )
 
         for d_rule_component in discovery_components:
@@ -844,7 +831,7 @@ def present(name, params, static_host_list=True, **kwargs):
             for proto_name in DISCOVERYRULE_COMPONENT_ORDER:
                 log.info(
                     "\n\n\n\n\nPROTOTYPE_NAME: %s\n\n",
-                    six.text_type(json.dumps(proto_name)),
+                    str(json.dumps(proto_name)),
                 )
                 existing_p_list = _get_existing_template_c_list(
                     proto_name, parent_id, **kwargs
@@ -875,14 +862,14 @@ def present(name, params, static_host_list=True, **kwargs):
 
     log.info(
         "\n\nCurrent CHANGE_STACK: %s",
-        six.text_type(json.dumps(CHANGE_STACK, indent=4)),
+        str(json.dumps(CHANGE_STACK, indent=4)),
     )
 
     if not CHANGE_STACK:
         ret["result"] = True
         ret[
             "comment"
-        ] = 'Zabbix Template "{0}" already exists and corresponds to a definition.'.format(
+        ] = 'Zabbix Template "{}" already exists and corresponds to a definition.'.format(
             name
         )
     else:
@@ -897,42 +884,50 @@ def present(name, params, static_host_list=True, **kwargs):
         if tmpl_action:
             ret["result"] = True
             if dry_run:
-                ret["comment"] = 'Zabbix Template "{0}" would be created.'.format(name)
+                ret["comment"] = 'Zabbix Template "{}" would be created.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{0}" does not exist.'.format(name),
-                        "new": 'Zabbix Template "{0}" would be created '
-                        "according definition.".format(name),
+                        "old": 'Zabbix Template "{}" does not exist.'.format(name),
+                        "new": (
+                            'Zabbix Template "{}" would be created '
+                            "according definition.".format(name)
+                        ),
                     }
                 }
             else:
-                ret["comment"] = 'Zabbix Template "{0}" created.'.format(name)
+                ret["comment"] = 'Zabbix Template "{}" created.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{0}" did not exist.'.format(name),
-                        "new": 'Zabbix Template "{0}" created according definition.'.format(
-                            name
+                        "old": 'Zabbix Template "{}" did not exist.'.format(name),
+                        "new": (
+                            'Zabbix Template "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
         else:
             ret["result"] = True
             if dry_run:
-                ret["comment"] = 'Zabbix Template "{0}" would be updated.'.format(name)
+                ret["comment"] = 'Zabbix Template "{}" would be updated.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{0}" differs.'.format(name),
-                        "new": 'Zabbix Template "{0}" would be updated '
-                        "according definition.".format(name),
+                        "old": 'Zabbix Template "{}" differs.'.format(name),
+                        "new": (
+                            'Zabbix Template "{}" would be updated '
+                            "according definition.".format(name)
+                        ),
                     }
                 }
             else:
-                ret["comment"] = 'Zabbix Template "{0}" updated.'.format(name)
+                ret["comment"] = 'Zabbix Template "{}" updated.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{0}" differed.'.format(name),
-                        "new": 'Zabbix Template "{0}" updated according definition.'.format(
-                            name
+                        "old": 'Zabbix Template "{}" differed.'.format(name),
+                        "new": (
+                            'Zabbix Template "{}" updated according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -967,15 +962,15 @@ def absent(name, **kwargs):
 
     if not object_id:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Template "{0}" does not exist.'.format(name)
+        ret["comment"] = 'Zabbix Template "{}" does not exist.'.format(name)
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Template "{0}" would be deleted.'.format(name)
+            ret["comment"] = 'Zabbix Template "{}" would be deleted.'.format(name)
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Template "{0}" exists.'.format(name),
-                    "new": 'Zabbix Template "{0}" would be deleted.'.format(name),
+                    "old": 'Zabbix Template "{}" exists.'.format(name),
+                    "new": 'Zabbix Template "{}" would be deleted.'.format(name),
                 }
             }
         else:
@@ -984,11 +979,11 @@ def absent(name, **kwargs):
             )
             if tmpl_delete:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Template "{0}" deleted.'.format(name)
+                ret["comment"] = 'Zabbix Template "{}" deleted.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{0}" existed.'.format(name),
-                        "new": 'Zabbix Template "{0}" deleted.'.format(name),
+                        "old": 'Zabbix Template "{}" existed.'.format(name),
+                        "new": 'Zabbix Template "{}" deleted.'.format(name),
                     }
                 }
 

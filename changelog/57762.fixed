@@ -1,7 +1,0 @@
-The 2004 release of Windows 10 introduced a bug in the InstallationBehavior COM
-object where you can no longer get properties from that object. Calls to this
-object are now wrapped in a try/except block with sane defaults when it fails to
-read attributes.
-
-Additionally, some pre-flight checks have been added to the win_wua module to
-make sure Windows Update can actually run.
