@@ -7156,6 +7156,8 @@ def grep(path, pattern, *opts):
         This function's return value is slated for refinement in future
         versions of Salt
 
+        Windows does not support the ``grep`` functionality.
+
     path
         Path to the file to be searched
 
@@ -7414,9 +7416,19 @@ def join(*args):
     return os.path.join(*args)
 
 
-def move(src, dst):
+def move(src, dst, disallow_copy_and_unlink=False):
     """
     Move a file or directory
+
+    disallow_copy_and_unlink
+        If ``True``, the operation is offloaded to the ``file.rename`` execution
+        module function. This will use ``os.rename`` underneath, which will fail
+        in the event that ``src`` and ``dst`` are on different filesystems. If
+        ``False`` (the default), ``shutil.move`` will be used in order to fall
+        back on a "copy then unlink" approach, which is required for moving
+        across filesystems.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -7424,6 +7436,9 @@ def move(src, dst):
 
         salt '*' file.move /path/to/src /path/to/dst
     """
+    if disallow_copy_and_unlink:
+        return rename(src, dst)
+
     src = os.path.expanduser(src)
     dst = os.path.expanduser(dst)
 
