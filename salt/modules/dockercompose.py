@@ -570,7 +570,10 @@ def build(path, service_names=None):
         return project
     else:
         try:
-            project.build(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.build(services=service_names, quiet=True)
+            else:
+                project.build(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -600,12 +603,16 @@ def restart(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
+    # TODO: needs work
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.restart(service_names)
-            if debug:
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.restart(services=service_names, quiet=True)
+            else:
+                project.restart(service_names)
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in project.containers():
                     if (
                         service_names is None
@@ -642,11 +649,15 @@ def stop(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
+    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.stop(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.stop(services=service_names)
+            else:
+                project.stop(service_names)
             if debug:
                 for container in project.containers(stopped=True):
                     if (
@@ -684,11 +695,15 @@ def pause(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
+    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.pause(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.pause(services=service_names)
+            else:
+                project.pause(service_names)
             if debug:
                 for container in project.containers():
                     if (
@@ -726,11 +741,15 @@ def unpause(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
+    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.unpause(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.unpause(services=service_names)
+            else:
+                project.unpause(service_names)
             if debug:
                 for container in project.containers():
                     if (
@@ -768,11 +787,15 @@ def start(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
+    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.start(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.start(services=service_names)
+            else:
+                project.start(service_names)
             if debug:
                 for container in project.containers():
                     if (
@@ -814,7 +837,10 @@ def kill(path, service_names=None):
         return project
     else:
         try:
-            project.kill(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.kill(services=service_names)
+            else:
+                project.kill(service_names)
             if debug:
                 for container in project.containers(stopped=True):
                     if (
@@ -848,7 +874,7 @@ def rm(path, service_names=None):
         salt myminion dockercompose.rm /path/where/docker-compose/stored
         salt myminion dockercompose.rm /path/where/docker-compose/stored '[janus]'
     """
-
+    # TODO: needs adjustment for python on whales
     project = __load_project(path)
     if isinstance(project, dict):
         return project
