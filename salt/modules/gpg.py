@@ -787,8 +787,8 @@ def export_key(
     secret=False,
     user=None,
     gnupghome=None,
-    output=None,
     use_passphrase=False,
+    output=None,
     bare=False,
 ):
     """
@@ -810,18 +810,22 @@ def export_key(
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
-    output
-        The filename where the exported key data will be written to, default is standard out.
-
     use_passphrase
         Whether to use a passphrase to export the secret key.
         Passphrase is received from Pillar.
 
         .. versionadded:: 3003
 
+    output
+        The filename where the exported key data will be written to, default is standard out.
+
+        .. versionadded:: 3006.0
+
     bare
         If ``True``, return the (armored) exported key block as a string without the
         standard comment/res dict.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
