@@ -125,6 +125,13 @@ except ImportError:
     HAS_DOCKERCOMPOSE = False
 
 try:
+    from python_on_whales import DockerClient
+
+    HAS_PYTHON_ON_WHALES = True
+except ImportError:
+    HAS_PYTHON_ON_WHALES = False
+
+try:
     from compose.project import OneOffFilter
 
     USE_FILTERCLASS = True
@@ -148,10 +155,13 @@ def __virtual__():
             version = tuple(int(x) for x in match.group(1).split("."))
             if version >= MIN_DOCKERCOMPOSE:
                 return __virtualname__
+    if HAS_PYTHON_ON_WHALES:
+        version = "0.0.0"
+        return __virtualname__
     return (
         False,
         "The dockercompose execution module not loaded: "
-        "compose python library not available.",
+        "compose python library or python_on_whales library not available.",
     )
 
 
@@ -330,13 +340,16 @@ def __load_project_from_file_path(file_path):
     :param path:
     :return:
     """
-    try:
-        project = get_project(
-            project_dir=os.path.dirname(file_path),
-            config_path=[os.path.basename(file_path)],
-        )
-    except Exception as inst:  # pylint: disable=broad-except
-        return __handle_except(inst)
+    if HAS_PYTHON_ON_WHALES:
+        project = DockerClient(compose_files=[file_path])
+    else:
+        try:
+            project = get_project(
+                project_dir=os.path.dirname(file_path),
+                config_path=[os.path.basename(file_path)],
+            )
+        except Exception as inst:  # pylint: disable=broad-except
+            return __handle_except(inst)
     return project
 
 
@@ -475,6 +488,7 @@ def create(path, docker_compose):
 
         salt myminion dockercompose.create /path/where/docker-compose/stored content
     """
+    # TODO: needs adjustment for python on whales
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose, already_existed=False)
         if isinstance(ret, dict):
@@ -518,7 +532,10 @@ def pull(path, service_names=None):
         return project
     else:
         try:
-            project.pull(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.pull(services=service_names, quiet=True)
+            else:
+                project.pull(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
