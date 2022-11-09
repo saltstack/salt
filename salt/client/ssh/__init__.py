@@ -1099,102 +1099,47 @@ class Single:
 
         Returns tuple of (json_data, '')
         """
-        # Ensure that opts/grains are up to date
-        # Execute routine
-        data_cache = False
-        data = None
-        cdir = os.path.join(self.opts["cachedir"], "minions", self.id)
-        if not os.path.isdir(cdir):
-            os.makedirs(cdir)
-        datap = os.path.join(cdir, "ssh_data.p")
-        refresh = False
-        if not os.path.isfile(datap):
-            refresh = True
-        else:
-            passed_time = (time.time() - os.stat(datap).st_mtime) / 60
-            if passed_time > self.opts.get("cache_life", 60):
-                refresh = True
-
-        if self.opts.get("refresh_cache"):
-            refresh = True
-        conf_grains = {}
         # Save conf file grains before they get clobbered
+        conf_grains = {}
         if "ssh_grains" in self.opts:
             conf_grains = self.opts["ssh_grains"]
-        if not data_cache:
-            refresh = True
-        if refresh:
-            # Make the datap
-            # TODO: Auto expire the datap
-            pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
-                self.opts,
-                self.id,
-                fsclient=self.fsclient,
-                minion_opts=self.minion_opts,
-                **self.target
-            )
 
-            opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
-            if "_error" in opts_pkg:
-                # Refresh failed
-                retcode = opts_pkg["retcode"]
-                ret = salt.utils.json.dumps({"local": opts_pkg})
-                return ret, retcode
+        # Ensure that opts/grains are up to date
+        pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+            self.opts,
+            self.id,
+            fsclient=self.fsclient,
+            minion_opts=self.minion_opts,
+            **self.target
+        )
 
-            opts_pkg["file_roots"] = self.opts["file_roots"]
-            opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
-            opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
-            opts_pkg["extension_modules"] = self.opts["extension_modules"]
-            opts_pkg["module_dirs"] = self.opts["module_dirs"]
-            opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
-            opts_pkg["thin_dir"] = self.opts["thin_dir"]
-            opts_pkg["master_tops"] = self.opts["master_tops"]
-            opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
-            opts_pkg["__master_opts__"] = self.context["master_opts"]
-            if "known_hosts_file" in self.opts:
-                opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
-            if "_caller_cachedir" in self.opts:
-                opts_pkg["_caller_cachedir"] = self.opts["_caller_cachedir"]
-            else:
-                opts_pkg["_caller_cachedir"] = self.opts["cachedir"]
-            # Use the ID defined in the roster file
-            opts_pkg["id"] = self.id
+        opts = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
+        if "_error" in opts:
+            # Refresh failed
+            retcode = opts["retcode"]
+            ret = salt.utils.json.dumps({"local": opts})
+            return ret, retcode
 
-            retcode = 0
-
-            # Restore master grains
-            for grain in conf_grains:
-                opts_pkg["grains"][grain] = conf_grains[grain]
-            # Enable roster grains support
-            if "grains" in self.target:
-                for grain in self.target["grains"]:
-                    opts_pkg["grains"][grain] = self.target["grains"][grain]
-
-            popts = {}
-            popts.update(opts_pkg["__master_opts__"])
-            popts.update(opts_pkg)
-            pillar = salt.pillar.Pillar(
-                popts,
-                opts_pkg["grains"],
-                opts_pkg["id"],
-                opts_pkg.get("saltenv", "base"),
-            )
-            pillar_data = pillar.compile_pillar()
-
-            # TODO: cache minion opts in datap in master.py
-            data = {
-                "opts": opts_pkg,
-                "grains": opts_pkg["grains"],
-                "pillar": pillar_data,
-            }
-            if data_cache:
-                with salt.utils.files.fopen(datap, "w+b") as fp_:
-                    fp_.write(salt.payload.dumps(data))
-        if not data and data_cache:
-            with salt.utils.files.fopen(datap, "rb") as fp_:
-                data = salt.payload.load(fp_)
-        opts = data.get("opts", {})
-        opts["grains"] = data.get("grains")
+        opts["file_roots"] = self.opts["file_roots"]
+        opts["pillar_roots"] = self.opts["pillar_roots"]
+        opts["ext_pillar"] = self.opts["ext_pillar"]
+        opts["extension_modules"] = self.opts["extension_modules"]
+        opts["module_dirs"] = self.opts["module_dirs"]
+        opts["_ssh_version"] = self.opts["_ssh_version"]
+        opts["thin_dir"] = self.opts["thin_dir"]
+        opts["master_tops"] = self.opts["master_tops"]
+        opts["extra_filerefs"] = self.opts.get("extra_filerefs", "")
+        opts["__master_opts__"] = self.context["master_opts"]
+        if "known_hosts_file" in self.opts:
+            opts["known_hosts_file"] = self.opts["known_hosts_file"]
+        if "_caller_cachedir" in self.opts:
+            opts["_caller_cachedir"] = self.opts["_caller_cachedir"]
+        else:
+            opts["_caller_cachedir"] = self.opts["cachedir"]
+        # Use the ID defined in the roster file
+        opts["id"] = self.id
+        # Restore --wipe
+        opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
 
         # Restore master grains
         for grain in conf_grains:
@@ -1204,13 +1149,18 @@ class Single:
             for grain in self.target["grains"]:
                 opts["grains"][grain] = self.target["grains"][grain]
 
-        opts["pillar"] = data.get("pillar")
+        popts = {}
+        popts.update(opts["__master_opts__"])
+        popts.update(opts)
+        pillar = salt.pillar.Pillar(
+            popts,
+            opts["grains"],
+            opts["id"],
+            opts.get("saltenv", "base"),
+        )
+        pillar_data = pillar.compile_pillar()
 
-        # Restore --wipe. Note: Since it is also a CLI option, it should not
-        # be read from cache, hence it is restored here. This is currently only
-        # of semantic distinction since data_cache has been disabled, so refresh
-        # above always evaluates to True. TODO: cleanup?
-        opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
+        opts["pillar"] = pillar_data
 
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
@@ -1222,6 +1172,8 @@ class Single:
         wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
+
+        retcode = 0
 
         # We're running in the mine, need to fetch the arguments from the
         # roster, pillar, master config (in that order)
@@ -1259,6 +1211,7 @@ class Single:
                 self.args = mine_args
                 self.kwargs = {}
 
+        # Execute routine
         try:
             if self.mine:
                 result = wrapper[mine_fun](*self.args, **self.kwargs)
@@ -1310,7 +1263,7 @@ OPTIONS.config = \
 """
 {config}
 """
-OPTIONS.delimiter = '{delimeter}'
+OPTIONS.delimiter = '{delimiter}'
 OPTIONS.saltdir = '{saltdir}'
 OPTIONS.checksum = '{checksum}'
 OPTIONS.hashfunc = '{hashfunc}'
@@ -1322,7 +1275,7 @@ OPTIONS.cmd_umask = {cmd_umask}
 OPTIONS.code_checksum = {code_checksum}
 ARGS = {arguments}\n'''.format(
             config=self.minion_config,
-            delimeter=RSTR,
+            delimiter=RSTR,
             saltdir=self.thin_dir,
             checksum=thin_sum,
             hashfunc="sha1",
