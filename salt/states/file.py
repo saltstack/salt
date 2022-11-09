@@ -4617,6 +4617,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     Apply retention scheduling to backup storage directory.
 
     .. versionadded:: 2016.11.0
+    .. versionchanged:: 3006.0
 
     :param name:
         The filesystem path to the directory containing backups to be managed.
@@ -4679,7 +4680,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     name = os.path.expanduser(name)
     ret = {
         "name": name,
-        "changes": {"retained": [], "deleted": [], "ignored": []},
+        "changes": {},
         "result": True,
         "comment": "",
     }
@@ -4793,7 +4794,8 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         "deleted": deletable_files,
         "ignored": sorted(list(ignored_files), reverse=True),
     }
-    ret["changes"] = changes
+    if deletable_files:
+        ret["changes"] = changes
 
     # TODO: track and report how much space was / would be reclaimed
     if __opts__["test"]:
@@ -4808,7 +4810,6 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         ret["comment"] = "{} backups were removed from {}.\n".format(
             len(deletable_files), name
         )
-        ret["changes"] = changes
 
     return ret
 
