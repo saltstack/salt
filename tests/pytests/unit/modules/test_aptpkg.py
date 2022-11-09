@@ -947,6 +947,8 @@ def test_list_repos():
                 create=True,
             ):
                 repos = aptpkg.list_repos()
+                repos[source_uri][0]["disabled"] == False
+                repos[source_uri][0]["enabled"] == True
                 assert source_uri in repos
 
                 assert isinstance(repos[source_uri], list)
