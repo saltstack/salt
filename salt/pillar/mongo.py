@@ -57,21 +57,14 @@ Module Documentation
 import logging
 import re
 
+import salt.exceptions
+
 try:
     import pymongo
 
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
-
-
-__opts__ = {
-    "mongo.db": "salt",
-    "mongo.host": "salt",
-    "mongo.password": "",
-    "mongo.port": 27017,
-    "mongo.user": "",
-}
 
 
 def __virtual__():
@@ -116,20 +109,33 @@ def ext_pillar(
           careful with other fields in the document as they must be string
           serializable. Defaults to ``None``.
     """
-    host = __opts__["mongo.host"]
-    port = __opts__["mongo.port"]
-    log.info("connecting to %s:%s for mongo ext_pillar", host, port)
-    conn = pymongo.MongoClient(host, port)
 
-    log.debug("using database '%s'", __opts__["mongo.db"])
-    mdb = conn[__opts__["mongo.db"]]
-
+    uri = __opts__.get("mongo.uri")
+    host = __opts__.get("mongo.host")
+    port = __opts__.get("mongo.port")
     user = __opts__.get("mongo.user")
     password = __opts__.get("mongo.password")
+    db = __opts__.get("mongo.db")
 
-    if user and password:
-        log.debug("authenticating as '%s'", user)
-        mdb.authenticate(user, password)
+    if uri:
+        if uri and host:
+            raise salt.exceptions.SaltConfigurationError(
+                "Mongo ext_pillar expects either uri or host configuration. Both were"
+                " provided"
+            )
+        pymongo.uri_parser.parse_uri(uri)
+        conn = pymongo.MongoClient(uri)
+        log.info("connecting to %s for mongo ext_pillar", uri)
+        mdb = conn.get_database()
+
+    else:
+        log.info("connecting to %s:%s for mongo ext_pillar", host, port)
+        conn = pymongo.MongoClient(
+            host=host, port=port, username=user, password=password
+        )
+
+        log.debug("using database '%s'", db)
+        mdb = conn[db]
 
     # Do the regex string replacement on the minion id
     if re_pattern:
