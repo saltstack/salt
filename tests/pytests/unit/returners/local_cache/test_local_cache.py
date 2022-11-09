@@ -148,6 +148,37 @@ def test_not_clean_new_jobs(add_job, job_cache_dir_files):
 
 
 @pytest.mark.slow_test
+def test_override_clean_jobs(add_job, job_cache_dir_files):
+    """
+    test to ensure keep_jobs_seconds overrides keep_jobs if set
+    """
+    add_job()
+    time.sleep(1.5)
+
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 1, "keep_jobs": 4}):
+        assert local_cache.clean_old_jobs() is None
+
+        _check_dir_files(
+            "job cache was removed: ", job_cache_dir_files, status="removed"
+        )
+
+
+@pytest.mark.slow_test
+def test_override_clean_jobs_seconds(add_job, job_cache_dir_files):
+    """
+    test to ensure keep_jobs still works as long as keep_jobs_seconds is set to default
+    """
+    add_job()
+
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 86400, "keep_jobs": 1}):
+        assert local_cache.clean_old_jobs() is None
+
+        _check_dir_files(
+            "job cache was not removed: ", job_cache_dir_files, status="present"
+        )
+
+
+@pytest.mark.slow_test
 def test_empty_jid_dir(jobs_dir):
     """
     test to ensure removal of empty jid dir
