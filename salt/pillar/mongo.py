@@ -12,19 +12,39 @@ Salt Master Mongo Configuration
 ===============================
 
 The module shares the same base mongo connection variables as
-:py:mod:`salt.returners.mongo_return`. These variables go in your master
+:py:mod:`salt.returners.mongo_future_return`. These variables go in your master
 config file.
 
-   * ``mongo.db`` - The mongo database to connect to. Defaults to ``'salt'``.
-   * ``mongo.host`` - The mongo host to connect to. Supports replica sets by
-     specifying all hosts in the set, comma-delimited. Defaults to ``'salt'``.
-   * ``mongo.port`` - The port that the mongo database is running on. Defaults
-     to ``27017``.
-   * ``mongo.user`` - The username for connecting to mongo. Only required if
-     you are using mongo authentication. Defaults to ``''``.
-   * ``mongo.password`` - The password for connecting to mongo. Only required
-     if you are using mongo authentication. Defaults to ``''``.
+.. code-block:: yaml
 
+    mongo.db: <database name>
+    mongo.host: <server ip address>
+    mongo.user: <MongoDB username>
+    mongo.password: <MongoDB user password>
+    mongo.port: 27017
+
+Or single URI:
+
+.. code-block:: yaml
+
+    mongo.uri: URI
+
+where uri is in the format:
+
+.. code-block:: text
+
+    mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+Example:
+
+.. code-block:: text
+
+    mongodb://db1.example.net:27017/mydatabase
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test&connectTimeoutMS=300000
+
+More information on URI format can be found in
+https://docs.mongodb.com/manual/reference/connection-string/
 
 Configuring the Mongo ext_pillar
 ================================
