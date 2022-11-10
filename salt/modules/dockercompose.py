@@ -156,7 +156,7 @@ def __virtual__():
             if version >= MIN_DOCKERCOMPOSE:
                 return __virtualname__
     if HAS_PYTHON_ON_WHALES:
-        version = "0.0.0"
+        version = "0.0.0"  # TODO: make work
         return __virtualname__
     return (
         False,
@@ -833,6 +833,7 @@ def kill(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
+    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
@@ -904,6 +905,7 @@ def ps(path):
 
     project = __load_project(path)
     result = {}
+    # TODO: needs adjustment for python on whales
     if isinstance(project, dict):
         return project
     else:
@@ -958,8 +960,11 @@ def up(path, service_names=None):
         return project
     else:
         try:
-            result = _get_convergence_plans(project, service_names)
-            ret = project.up(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.up(services=service_names)
+            else:
+                result = _get_convergence_plans(project, service_names)
+                ret = project.up(service_names)
             if debug:
                 for container in ret:
                     if (
