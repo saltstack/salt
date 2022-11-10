@@ -88,10 +88,6 @@ for D in (SafeOrderedDumper, OrderedDumper):
     #
     # TODO: Why does this registration exist?  Isn't it better to raise an
     # exception for unsupported types?
-    #
-    # TODO: This representer could also be registered with OrderedDumper without
-    # changing its behavior because Dumper has a multi representer registered
-    # for `object` that takes priority.
     D.add_representer(None, represent_undefined)
     D.add_representer(OrderedDict, represent_ordereddict)
     D.add_representer(HashableOrderedDict, represent_ordereddict)
