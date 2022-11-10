@@ -61,20 +61,14 @@ def represent_undefined(dumper, data):
 # OrderedDumper does not inherit from SafeOrderedDumper, so any applicable
 # representers added to SafeOrderedDumper must also be explicitly added to
 # OrderedDumper.
-
-# This default registration matches types that don't match any other
-# registration, overriding PyYAML's default behavior of raising an exception.
-# This representer instead produces null nodes.
-#
-# TODO: Why does this registration exist?  Isn't it better to raise an exception
-# for unsupported types?
-#
-# TODO: This representer could also be registered with OrderedDumper without
-# changing its behavior because Dumper has a multi representer registered
-# for `object` that takes priority.
-SafeOrderedDumper.add_representer(None, represent_undefined)
-
 for D in (SafeOrderedDumper, OrderedDumper):
+    # This default registration matches types that don't match any other
+    # registration, overriding PyYAML's default behavior of raising an
+    # exception.  This representer instead produces null nodes.
+    #
+    # TODO: Why does this registration exist?  Isn't it better to raise an
+    # exception for unsupported types?
+    D.add_representer(None, represent_undefined)
     D.add_representer(OrderedDict, represent_ordereddict)
     D.add_representer(
         collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
