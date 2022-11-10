@@ -172,6 +172,14 @@ def _microtime():
     return "{:f}{}".format(val1, val2)
 
 
+def _context_or_config(key):
+    """
+    Return the value corresponding to the key in __context__ or if not present,
+    fallback to config.option.
+    """
+    return __context__.get(key, __salt__["config.option"](key))
+
+
 def cert_base_path(cacert_path=None):
     """
     Return the base path for certs from CLI or from options
@@ -185,16 +193,11 @@ def cert_base_path(cacert_path=None):
 
         salt '*' tls.cert_base_path
     """
-    if not cacert_path:
-        cacert_path = __context__.get(
-            "ca.contextual_cert_base_path",
-            __salt__["config.option"]("ca.contextual_cert_base_path"),
-        )
-    if not cacert_path:
-        cacert_path = __context__.get(
-            "ca.cert_base_path", __salt__["config.option"]("ca.cert_base_path")
-        )
-    return cacert_path
+    return (
+        cacert_path
+        or _context_or_config("ca.contextual_cert_base_path")
+        or _context_or_config("ca.cert_base_path")
+    )
 
 
 def _cert_base_path(cacert_path=None):
