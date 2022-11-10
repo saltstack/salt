@@ -1205,6 +1205,13 @@ class Single:
                 opts["grains"][grain] = self.target["grains"][grain]
 
         opts["pillar"] = data.get("pillar")
+
+        # Restore --wipe. Note: Since it is also a CLI option, it should not
+        # be read from cache, hence it is restored here. This is currently only
+        # of semantic distinction since data_cache has been disabled, so refresh
+        # above always evaluates to True. TODO: cleanup?
+        opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
+
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,

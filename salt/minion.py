@@ -3683,7 +3683,7 @@ class SyndicManager(MinionBase):
                 # __'s to make sure it doesn't print out on the master cli
                 jdict["__master_id__"] = master
             ret = {}
-            for key in "return", "retcode", "success":
+            for key in "return", "retcode", "success", "fun_args":
                 if key in data:
                     ret[key] = data[key]
             jdict[data["id"]] = ret

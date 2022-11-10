@@ -1,0 +1,1 @@
+Requisite state chunks now all consistently contain `__id__`, `__sls__` and `name`.

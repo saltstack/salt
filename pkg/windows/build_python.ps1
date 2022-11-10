@@ -1,14 +1,17 @@
 ﻿<#
 .SYNOPSIS
-Script that builds Python from source
+Script that builds Python from source using the Relative Environment for Python
+project (relenv):
+
+https://github.com/saltstack/relative-environment-for-python
 
 .DESCRIPTION
-This script builds python from Source. It then creates the directory
-structure as created by the Python installer in C:\Python##. This includes
-all header files, scripts, dlls, library files, and pip.
+This script builds python from Source. It then creates the directory structure
+as created by the Python installer. This includes all header files, scripts,
+dlls, library files, and pip.
 
 .EXAMPLE
-build_python.ps1 -Version 3.8.13
+build_python.ps1 -Version 3.8.14 -Architecture x86
 
 #>
 param(
@@ -21,6 +24,7 @@ param(
         #"3.9.13",
         #"3.9.12",
         #"3.9.11",
+        "3.8.15",
         "3.8.14",
         "3.8.13",
         "3.8.12",
@@ -31,12 +35,12 @@ param(
     # The version of Python to be built. Pythonnet only supports up to Python
     # 3.8 for now. Pycurl stopped building wheel files after 7.43.0.5 which
     # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
-    # We may have to drop support for pycurl.
-    # Default is: 3.8.14
-    [String] $Version = "3.8.14",
+    # We may have to drop support for pycurl or build it ourselves.
+    # Default is: 3.8.15
+    [String] $Version = "3.8.15",
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x86", "x64")]
+    [ValidateSet("x64", "x86")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
     # "x64" will build a 64-bit installer. Default is: x64
@@ -87,7 +91,7 @@ If (!(Get-IsAdministrator)) {
 #-------------------------------------------------------------------------------
 
 Write-Host $("=" * 80)
-Write-Host "Build Python with Mayflower" -ForegroundColor Cyan
+Write-Host "Build Python with Relenv" -ForegroundColor Cyan
 Write-Host "- Python Version: $Version"
 Write-Host "- Architecture:   $Architecture"
 Write-Host $("-" * 80)
@@ -136,34 +140,30 @@ Write-Host "Success" -ForegroundColor Green
 # Script Variables
 #-------------------------------------------------------------------------------
 
-# Script Variables
-$PROJ_DIR      = $(git rev-parse --show-toplevel)
-$MAYFLOWER_DIR = "$SCRIPT_DIR\Mayflower"
-$MAYFLOWER_URL = "https://github.com/saltstack/mayflower"
-
-# Python Variables
-
-$PY_DOT_VERSION = $Version
-$PY_VERSION     = [String]::Join(".", $Version.Split(".")[0..1])
-$BIN_DIR        = "$SCRIPT_DIR\buildenv\bin"
-$SCRIPTS_DIR    = "$BIN_DIR\Scripts"
+$RELENV_DIR   = "$SCRIPT_DIR\relative-environment-for-python"
+$RELENV_URL   = "https://github.com/saltstack/relative-environment-for-python"
+$BIN_DIR      = "$SCRIPT_DIR\buildenv\bin"
+$SCRIPTS_DIR  = "$BIN_DIR\Scripts"
+$BUILD_DIR    = "${env:LOCALAPPDATA}\relenv\build"
+$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
 
 if ( $Architecture -eq "x64" ) {
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/64"
-    $BUILD_DIR     = "$MAYFLOWER_DIR\mayflower\_build\x86_64-win"
+    $SALT_DEP_URL = "$SALT_DEP_URL/64"
+    $BUILD_DIR    = "$BUILD_DIR\amd64-win"
+    $ARCH         = "amd64"
 } else {
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/32"
-    # Not sure of the exact name here
-    $BUILD_DIR     = "$MAYFLOWER_DIR\mayflower\_build\x86_32-win"
+    $SALT_DEP_URL = "$SALT_DEP_URL/32"
+    $BUILD_DIR    = "$BUILD_DIR\x86-win"
+    $ARCH         = "x86"
 }
 
 #-------------------------------------------------------------------------------
 # Prepping Environment
 #-------------------------------------------------------------------------------
-if ( Test-Path -Path "$MAYFLOWER_DIR" ) {
-    Write-Host "Removing existing mayflower directory: " -NoNewline
-    Remove-Item -Path "$MAYFLOWER_DIR" -Recurse -Force
-    if ( Test-Path -Path "$MAYFLOWER_DIR" ) {
+if ( Test-Path -Path "$RELENV_DIR" ) {
+    Write-Host "Removing existing relenv directory: " -NoNewline
+    Remove-Item -Path "$RELENV_DIR" -Recurse -Force
+    if ( Test-Path -Path "$RELENV_DIR" ) {
         Write-Host "Failed" -ForegroundColor Red
         exit 1
     } else {
@@ -182,18 +182,29 @@ if ( Test-Path -Path "$BIN_DIR" ) {
     }
 }
 
+if ( Test-Path -Path "$BUILD_DIR" ) {
+    Write-Host "Removing existing build directory: " -NoNewline
+    Remove-Item -Path "$BUILD_DIR" -Recurse -Force
+    if ( Test-Path -Path "$BUILD_DIR" ) {
+        Write-Host "Failed" -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Host "Success" -ForegroundColor Green
+    }
+}
+
 #-------------------------------------------------------------------------------
-# Downloading Mayflower
+# Downloading Relenv
 #-------------------------------------------------------------------------------
 # TODO: Eventually we should just download the tarball from a release, but since
 # TODO: there is no release yet, we'll just clone the directory
 
-Write-Host "Cloning Mayflower: " -NoNewline
-$args = "clone", "--depth", "1", "$MAYFLOWER_URL", "$MAYFLOWER_DIR"
+Write-Host "Cloning Relenv: " -NoNewline
+$args = "clone", "--depth", "1", "$RELENV_URL", "$RELENV_DIR"
 Start-Process -FilePath git `
               -ArgumentList $args `
               -Wait -WindowStyle Hidden
-if ( Test-Path -Path "$MAYFLOWER_DIR\mayflower") {
+if ( Test-Path -Path "$RELENV_DIR\relenv") {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -201,12 +212,12 @@ if ( Test-Path -Path "$MAYFLOWER_DIR\mayflower") {
 }
 
 #-------------------------------------------------------------------------------
-# Installing Mayflower
+# Installing Relenv
 #-------------------------------------------------------------------------------
-Write-Host "Installing Mayflower: " -NoNewLine
-$output = pip install -e "$MAYFLOWER_DIR\." --disable-pip-version-check
+Write-Host "Installing Relenv: " -NoNewLine
+$output = pip install -e "$RELENV_DIR\." --disable-pip-version-check
 $output = pip list --disable-pip-version-check
-if ("mayflower" -in $output.split()) {
+if ("relenv" -in $output.split()) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -214,10 +225,10 @@ if ("mayflower" -in $output.split()) {
 }
 
 #-------------------------------------------------------------------------------
-# Building Python with Mayflower
+# Building Python with Relenv
 #-------------------------------------------------------------------------------
-Write-Host "Building Python with Mayflower (long-running): " -NoNewLine
-$output = python -m mayflower build --clean
+Write-Host "Building Python with Relenv (long-running): " -NoNewLine
+$output = python -m relenv build --clean --arch $ARCH
 if ( Test-Path -Path "$BUILD_DIR\Scripts\python.exe") {
     Write-Host "Success" -ForegroundColor Green
 } else {
@@ -239,7 +250,7 @@ if ( !( Test-Path -Path $BIN_DIR ) ) {
     }
 }
 
-Write-Host "Moving Python to bin directory: " -NoNewLine
+Write-Host "Moving Python to bin: " -NoNewLine
 Move-Item -Path "$BUILD_DIR\*" -Destination "$BIN_DIR"
 if ( Test-Path -Path "$SCRIPTS_DIR\python.exe") {
     Write-Host "Success" -ForegroundColor Green
@@ -325,7 +336,7 @@ if ( Test-Path -Path "$profile.salt_bak" ) {
 # Finished
 #-------------------------------------------------------------------------------
 Write-Host $("-" * 80)
-Write-Host "Build Python $Architecture with Mayflower Completed" `
+Write-Host "Build Python $Architecture with Relenv Completed" `
     -ForegroundColor Cyan
 Write-Host "Environment Location: $BIN_DIR"
 Write-Host $("=" * 80)
