@@ -18,7 +18,7 @@ def _get_key_api():
     return __context__["keyapi"]
 
 
-def timeout(name, delete=0, reject=0):
+def timeout(name, delete=0, reject=0, name_match=None):
     """
     If any minion's status is older than the timeout value then apply the
     given action to the timed out key. This example will remove keys to
@@ -36,6 +36,7 @@ def timeout(name, delete=0, reject=0):
             - require:
               - status: statreg
             - delete: 300
+            - name_match: test-salt-minion-1-*
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     now = time.time()
@@ -46,6 +47,12 @@ def timeout(name, delete=0, reject=0):
     reject_set = set()
     keyapi = _get_key_api()
     current = keyapi.list_status("acc")
+
+    if name_match:
+        current = keyapi.name_match(name_match)
+    else:
+        current = keyapi.list_status("acc")
+
     for id_ in current.get("minions", []):
         if id_ in __reg__["status"]["val"]:
             # minion is reporting, check timeout and mark for removal
