@@ -94,7 +94,7 @@ echo "**** Setting Variables"
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
 PY_VERSION=3.9
-PY_DOT_VERSION=3.9.12
+PY_DOT_VERSION=3.9.15
 
 ################################################################################
 # Make sure this is the Salt Repository
