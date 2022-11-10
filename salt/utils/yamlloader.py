@@ -7,6 +7,7 @@ import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
 
+import salt.utils._yaml_common as _yaml_common
 import salt.utils.stringutils
 
 # prefer C bindings over python when available
@@ -16,8 +17,18 @@ BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
 
 
+class _InheritedConstructorsMixin(
+    _yaml_common.InheritMapMixin,
+    inherit_map_attrs={
+        "yaml_constructors": "yaml_constructors",
+        "yaml_multi_constructors": "yaml_multi_constructors",
+    },
+):
+    pass
+
+
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(BaseLoader):
+class SaltYamlSafeLoader(_InheritedConstructorsMixin, BaseLoader):
     """
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt

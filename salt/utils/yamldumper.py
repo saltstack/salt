@@ -11,6 +11,7 @@ import collections
 
 import yaml  # pylint: disable=blacklisted-import
 
+import salt.utils._yaml_common as _yaml_common
 import salt.utils.context
 from salt.utils.odict import OrderedDict
 
@@ -31,13 +32,58 @@ __all__ = [
 ]
 
 
-class OrderedDumper(Dumper):
+class _InheritedRepresentersMixin(
+    _yaml_common.InheritMapMixin,
+    inherit_map_attrs={
+        "yaml_representers": "yaml_representers",
+        "yaml_multi_representers": "yaml_multi_representers",
+    },
+):
+    pass
+
+
+class _CommonMixin(
+    _InheritedRepresentersMixin,
+    yaml.representer.BaseRepresenter,
+):
+    def _rep_ordereddict(self, data):
+        return self.represent_dict(list(data.items()))
+
+    def _rep_default(self, data):
+        """Represent types that don't match any other registered representers.
+
+        PyYAML's default behavior for unsupported types is to raise an
+        exception.  This representer instead produces null nodes.
+
+        Note: This representer does not affect ``Dumper``-derived classes
+        because ``Dumper`` has a multi representer registered for ``object``
+        that will match every object before PyYAML falls back to this
+        representer.
+
+        """
+        return self.represent_scalar("tag:yaml.org,2002:null", "NULL")
+
+
+# TODO: Why does this registration exist?  Isn't it better to raise an exception
+# for unsupported types?
+_CommonMixin.add_representer(None, _CommonMixin._rep_default)
+_CommonMixin.add_representer(OrderedDict, _CommonMixin._rep_ordereddict)
+_CommonMixin.add_representer(
+    collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
+)
+_CommonMixin.add_representer(
+    salt.utils.context.NamespacedDictWrapper,
+    yaml.representer.SafeRepresenter.represent_dict,
+)
+
+
+class OrderedDumper(_CommonMixin, Dumper):
     """
     A YAML dumper that represents python OrderedDict as simple YAML map.
     """
 
 
-class SafeOrderedDumper(SafeDumper):
+class SafeOrderedDumper(_CommonMixin, SafeDumper):
     """
     A YAML safe dumper that represents python OrderedDict as simple YAML map.
     """
@@ -48,36 +94,6 @@ class IndentedSafeOrderedDumper(SafeOrderedDumper):
 
     def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
-
-
-def represent_ordereddict(dumper, data):
-    return dumper.represent_dict(list(data.items()))
-
-
-def represent_undefined(dumper, data):
-    return dumper.represent_scalar("tag:yaml.org,2002:null", "NULL")
-
-
-# OrderedDumper does not inherit from SafeOrderedDumper, so any applicable
-# representers added to SafeOrderedDumper must also be explicitly added to
-# OrderedDumper.
-for D in (SafeOrderedDumper, OrderedDumper):
-    # This default registration matches types that don't match any other
-    # registration, overriding PyYAML's default behavior of raising an
-    # exception.  This representer instead produces null nodes.
-    #
-    # TODO: Why does this registration exist?  Isn't it better to raise an
-    # exception for unsupported types?
-    D.add_representer(None, represent_undefined)
-    D.add_representer(OrderedDict, represent_ordereddict)
-    D.add_representer(
-        collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
-    )
-    D.add_representer(
-        salt.utils.context.NamespacedDictWrapper,
-        yaml.representer.SafeRepresenter.represent_dict,
-    )
-del D
 
 
 def get_dumper(dumper_name):
