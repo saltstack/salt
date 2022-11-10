@@ -221,17 +221,11 @@ def test_deploy_windows_programdata():
         mock_smb.put_file.return_value = None
         mock_smb.delete_file.return_value = None
         mock_smb.delete_directory.return_value = None
-        with patch(
-            "time.sleep", MagicMock()
-        ), patch.object(
+        with patch("time.sleep", MagicMock()), patch.object(
             cloud, "wait_for_port", mock_true
-        ), patch.object(
-            cloud, "fire_event", MagicMock()
-        ), patch.object(
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
             cloud, "wait_for_psexecsvc", mock_true
-        ), patch.object(
-            cloud, "run_psexec_command", mock_tuple
-        ):
+        ), patch.object(cloud, "run_psexec_command", mock_tuple):
             cloud.deploy_windows(host="test", win_installer="")
             expected = "ProgramData/Salt Project/Salt/conf/pki/minion"
             mock_smb.mkdirs.assert_called_with(expected, conn=mock_conn)
@@ -253,21 +247,13 @@ def test_deploy_windows_programdata_minion_pub():
         mock_smb.put_str.return_value = None
         mock_smb.delete_file.return_value = None
         mock_smb.delete_directory.return_value = None
-        with patch(
-            "time.sleep", MagicMock()
-        ), patch.object(
+        with patch("time.sleep", MagicMock()), patch.object(
             cloud, "wait_for_port", mock_true
-        ), patch.object(
-            cloud, "fire_event", MagicMock()
-        ), patch.object(
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
             cloud, "wait_for_psexecsvc", mock_true
-        ), patch.object(
-            cloud, "run_psexec_command", mock_tuple
-        ):
+        ), patch.object(cloud, "run_psexec_command", mock_tuple):
             cloud.deploy_windows(host="test", minion_pub="pub", win_installer="")
-            expected = (
-                "ProgramData\\Salt Project\\Salt\\conf\\pki\\minion\\minion.pub"
-            )
+            expected = "ProgramData\\Salt Project\\Salt\\conf\\pki\\minion\\minion.pub"
             mock_smb.put_str.assert_called_with("pub", expected, conn=mock_conn)
 
 
@@ -287,21 +273,13 @@ def test_deploy_windows_programdata_minion_pem():
         mock_smb.put_str.return_value = None
         mock_smb.delete_file.return_value = None
         mock_smb.delete_directory.return_value = None
-        with patch(
-            "time.sleep", MagicMock()
-        ), patch.object(
+        with patch("time.sleep", MagicMock()), patch.object(
             cloud, "wait_for_port", mock_true
-        ), patch.object(
-            cloud, "fire_event", MagicMock()
-        ), patch.object(
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
             cloud, "wait_for_psexecsvc", mock_true
-        ), patch.object(
-            cloud, "run_psexec_command", mock_tuple
-        ):
+        ), patch.object(cloud, "run_psexec_command", mock_tuple):
             cloud.deploy_windows(host="test", minion_pem="pem", win_installer="")
-            expected = (
-                "ProgramData\\Salt Project\\Salt\\conf\\pki\\minion\\minion.pem"
-            )
+            expected = "ProgramData\\Salt Project\\Salt\\conf\\pki\\minion\\minion.pem"
             mock_smb.put_str.assert_called_with("pem", expected, conn=mock_conn)
 
 
@@ -321,17 +299,11 @@ def test_deploy_windows_programdata_master_sign_pub_file():
         mock_smb.put_str.return_value = None
         mock_smb.delete_file.return_value = None
         mock_smb.delete_directory.return_value = None
-        with patch(
-            "time.sleep", MagicMock()
-        ), patch.object(
+        with patch("time.sleep", MagicMock()), patch.object(
             cloud, "wait_for_port", mock_true
-        ), patch.object(
-            cloud, "fire_event", MagicMock()
-        ), patch.object(
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
             cloud, "wait_for_psexecsvc", mock_true
-        ), patch.object(
-            cloud, "run_psexec_command", mock_tuple
-        ):
+        ), patch.object(cloud, "run_psexec_command", mock_tuple):
             cloud.deploy_windows(
                 host="test", master_sign_pub_file="test.txt", win_installer=""
             )
@@ -361,21 +333,13 @@ def test_deploy_windows_programdata_minion_conf_grains():
         mock_smb.put_str.return_value = None
         mock_smb.delete_file.return_value = None
         mock_smb.delete_directory.return_value = None
-        with patch(
-            "time.sleep", MagicMock()
-        ), patch.object(
+        with patch("time.sleep", MagicMock()), patch.object(
             cloud, "wait_for_port", mock_true
-        ), patch.object(
-            cloud, "fire_event", MagicMock()
-        ), patch.object(
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
             cloud, "wait_for_psexecsvc", mock_true
-        ), patch.object(
-            cloud, "run_psexec_command", mock_tuple
-        ):
+        ), patch.object(cloud, "run_psexec_command", mock_tuple):
             minion_conf = {"grains": {"spongebob": "squarepants"}}
-            cloud.deploy_windows(
-                host="test", minion_conf=minion_conf, win_installer=""
-            )
+            cloud.deploy_windows(host="test", minion_conf=minion_conf, win_installer="")
             expected = "ProgramData\\Salt Project\\Salt\\conf\\grains"
             called = False
             for call in mock_smb.put_str.mock_calls:
@@ -400,21 +364,13 @@ def test_deploy_windows_programdata_minion_conf():
         mock_smb.put_str.return_value = None
         mock_smb.delete_file.return_value = None
         mock_smb.delete_directory.return_value = None
-        with patch(
-            "time.sleep", MagicMock()
-        ), patch.object(
+        with patch("time.sleep", MagicMock()), patch.object(
             cloud, "wait_for_port", mock_true
-        ), patch.object(
-            cloud, "fire_event", MagicMock()
-        ), patch.object(
+        ), patch.object(cloud, "fire_event", MagicMock()), patch.object(
             cloud, "wait_for_psexecsvc", mock_true
-        ), patch.object(
-            cloud, "run_psexec_command", mock_tuple
-        ):
+        ), patch.object(cloud, "run_psexec_command", mock_tuple):
             minion_conf = {"master": "test-master"}
-            cloud.deploy_windows(
-                host="test", minion_conf=minion_conf, win_installer=""
-            )
+            cloud.deploy_windows(host="test", minion_conf=minion_conf, win_installer="")
             config = (
                 "ipc_mode: tcp\r\n"
                 "master: test-master\r\n"
