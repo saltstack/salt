@@ -237,6 +237,43 @@ def test_dump_tuple(mktuple, dumpercls):
     assert got == want
 
 
+@pytest.mark.parametrize("obj", [type("Generated", (), {})()])
+@pytest.mark.parametrize(
+    "yaml_compatibility,dumpercls,want",
+    [
+        (
+            3006,
+            salt_yaml.OrderedDumper,
+            "!!python/object:tests.pytests.unit.utils.test_yaml.Generated {}\n",
+        ),
+        # With v3006, sometimes it prints "..." on a new line as an end of
+        # document indicator depending on whether yaml.CSafeDumper is available
+        # on the system or not (yaml.CSafeDumper and yaml.SafeDumper do not
+        # always behave the same).
+        (3006, salt_yaml.SafeOrderedDumper, re.compile(r"NULL\n(?:\.\.\.\n)?")),
+        (3006, salt_yaml.IndentedSafeOrderedDumper, re.compile(r"NULL\n(?:\.\.\.\n)?")),
+        (
+            3007,
+            salt_yaml.OrderedDumper,
+            "!!python/object:tests.pytests.unit.utils.test_yaml.Generated {}\n",
+        ),
+        (3007, salt_yaml.SafeOrderedDumper, yaml.representer.RepresenterError),
+        (3007, salt_yaml.IndentedSafeOrderedDumper, yaml.representer.RepresenterError),
+    ],
+    indirect=["yaml_compatibility"],
+)
+def test_dump_unsupported(yaml_compatibility, dumpercls, obj, want):
+    if isinstance(want, type) and issubclass(want, Exception):
+        with pytest.raises(want):
+            salt_yaml.dump(obj, Dumper=dumpercls)
+    else:
+        got = salt_yaml.dump(obj, Dumper=dumpercls)
+        try:
+            assert want.fullmatch(got)
+        except AttributeError:
+            assert got == want
+
+
 def render_yaml(data):
     """
     Takes a YAML string, puts it into a mock file, passes that to the YAML

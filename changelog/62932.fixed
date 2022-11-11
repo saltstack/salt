@@ -31,3 +31,7 @@ but can be previewed now by setting the option `yaml_compatibility` to `3007`:
     instead of `yaml.Dumper`.
   * Dumping a YAML sequence with `salt.utils.yaml.IndentedSafeOrderedDumper`
     will be properly indented.
+  * Dumping an object with an unsupported type via `salt.utils.yaml.safe_dump()`
+    (or via `dump()` with the `SafeOrderedDumper` or `IndentedSafeOrderedDumper`
+    classes) will raise an exception.  (Currently such objects produce a null
+    node.)

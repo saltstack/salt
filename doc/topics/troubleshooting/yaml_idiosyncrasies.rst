@@ -23,6 +23,15 @@ unexpected times.
     YAML compatibility warnings can be disabled by setting the
     ``yaml_compatibility_warnings`` option to False.
 
+.. versionchanged:: 3007.0
+
+    Dumping an object of unsupported type to YAML with a one of the safe dumpers
+    (:py:func:`~salt.utils.yaml.safe_dump`, or :py:func:`~salt.utils.yaml.dump`
+    with the :py:class:`~salt.utils.yaml.SafeOrderedDumper` or
+    :py:class:`~salt.utils.yaml.IndentedSafeOrderedDumper` classes) now raises
+    an exception.  Previously it produced a YAML ``NULL`` node.  Set the
+    ``yaml_compatibility`` option to 3006 to revert to the previous behavior.
+
 Spaces vs Tabs
 ==============
 

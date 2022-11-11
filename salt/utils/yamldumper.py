@@ -133,9 +133,7 @@ class _CommonMixin(
         return self.represent_scalar("tag:yaml.org,2002:null", "NULL")
 
 
-# TODO: Why does this registration exist?  Isn't it better to raise an exception
-# for unsupported types?
-_CommonMixin.add_representer(None, _CommonMixin._rep_default)
+_CommonMixin.V3006.add_representer(None, _CommonMixin._rep_default)
 _CommonMixin.V3006.add_representer(
     OrderedDict, _CommonMixin._rep_ordereddict_as_plain_map
 )
