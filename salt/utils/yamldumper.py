@@ -110,8 +110,6 @@ for D in (SafeOrderedDumper, OrderedDumper):
     D.add_representer(
         MaskedList, yaml.representer.SafeRepresenter.represent_list
     )
-    # TODO: This seems wrong: the first argument should be a type, not a tag.
-    D.add_representer("tag:yaml.org,2002:timestamp", Dumper.represent_scalar)
 del D
 
 IndentedSafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
