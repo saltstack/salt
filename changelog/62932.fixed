@@ -20,6 +20,8 @@ but can be previewed now by setting the option `yaml_compatibility` to `3007`:
     parameter.)
   * Loading an explicitly tagged `!!timestamp` node will produce a
     `datetime.datetime` object instead of a string.
+  * Dumping a `datetime.datetime` object will explicitly tag the node with
+    `!!timestamp`.  (Currently the nodes are untagged.)
   * `salt.utils.yaml.dump()` will default to `salt.utils.yaml.OrderedDumper`
     instead of `yaml.Dumper`.
   * Dumping a YAML sequence with `salt.utils.yaml.IndentedSafeOrderedDumper`

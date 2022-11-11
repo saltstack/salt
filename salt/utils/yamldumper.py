@@ -75,7 +75,39 @@ class _VersionedRepresentersMixin(
     pass
 
 
+class _ExplicitTimestampMixin:
+    """Disables the implicit timestamp resolver for Salt 3007 and later.
+
+    Once support for ``yaml_compatibility`` less than 3007 is dropped, we can
+    instead remove the implicit resolver entirely:
+
+    .. code-block:: python
+
+        class _RemoveImplicitResolverMixin:
+            @classmethod
+            def remove_implicit_resolver(cls, tag):
+                cls.yaml_implicit_resolvers = {
+                    first_char: [r for r in resolver_list if r[0] != tag]
+                    for first_char, resolver_list in cls.yaml_implicit_resolvers.items()
+                }
+
+        _CommonMixin.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
+    """
+
+    def resolve(self, kind, value, implicit):
+        tag = super().resolve(kind, value, implicit)
+        if (
+            kind is yaml.ScalarNode
+            and implicit[0]
+            and tag == "tag:yaml.org,2002:timestamp"
+            and _yaml_common.compat_ver() >= SaltStackVersion(3007)
+        ):
+            return self.DEFAULT_SCALAR_TAG
+        return tag
+
+
 class _CommonMixin(
+    _ExplicitTimestampMixin,
     _VersionedRepresentersMixin,
     _InheritedRepresentersMixin,
 ):

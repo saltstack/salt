@@ -145,6 +145,31 @@ def test_dump_indented(yaml_compatibility, want):
         assert got == want
 
 
+@pytest.mark.parametrize(
+    "dumpercls",
+    [
+        salt_yaml.OrderedDumper,
+        salt_yaml.SafeOrderedDumper,
+        salt_yaml.IndentedSafeOrderedDumper,
+    ],
+)
+@pytest.mark.parametrize(
+    "yaml_compatibility,want_tag",
+    [(3006, False), (3007, True)],
+    indirect=["yaml_compatibility"],
+)
+def test_dump_timestamp(yaml_compatibility, want_tag, dumpercls):
+    dt = datetime.datetime(
+        *(2022, 10, 21, 18, 16, 3, 100000),
+        tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+    )
+    got = salt_yaml.dump(dt, Dumper=dumpercls)
+    want_re = r"""(['"]?)2022-10-21[T ]18:16:03.10*-04:00\1\n(?:\.\.\.\n)?"""
+    if want_tag:
+        want_re = f"!!timestamp {want_re}"
+    assert re.fullmatch(want_re, got)
+
+
 def render_yaml(data):
     """
     Takes a YAML string, puts it into a mock file, passes that to the YAML

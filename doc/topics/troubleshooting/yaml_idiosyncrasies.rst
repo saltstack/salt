@@ -406,6 +406,13 @@ Automatic ``datetime`` conversion
     Set the ``yaml_compatibility`` option to 3006 to revert to the previous
     behavior.
 
+.. versionchanged:: 3007.0
+
+    Dumping a ``datetime.datetime`` object to YAML now explicitly tags the node
+    with ``!!timestamp``.  Previously, the ``!!timestamp`` tag was omitted.
+    Set the ``yaml_compatibility`` option to 3006 to revert to the previous
+    behavior.
+
 Salt overrides PyYAML's default behavior and loads YAML nodes that look like
 timestamps as strings:
 
@@ -423,6 +430,10 @@ explicitly tag the node with ``!!timestamp``:
     >>> import salt.utils.yaml
     >>> salt.utils.yaml.safe_load("!!timestamp 2014-01-20 14:23:23")
     datetime.datetime(2014, 1, 20, 14, 23, 23)
+
+When dumping a ``datetime.datetime`` object to YAML, Salt tags the node with
+``!!timestamp`` so that it will be loaded back as a ``datetime.datetime``
+object.
 
 Beware that Salt is currently unable to serialize ``datetime.datetime`` objects,
 so ``!!timestamp`` nodes cannot be used in pillar SLS files.
