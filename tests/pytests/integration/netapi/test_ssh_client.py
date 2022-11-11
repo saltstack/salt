@@ -12,6 +12,12 @@ pytestmark = [
 
 
 @pytest.fixture
+def client_config(client_config):
+    client_config["netapi_enable_clients"] = ["ssh"]
+    return client_config
+
+
+@pytest.fixture
 def client(client_config, salt_minion):
     return salt.netapi.NetapiClient(client_config)
 
@@ -66,8 +72,7 @@ def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key
         **auth_creds,
     }
 
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
 
     assert "localhost" in ret
     assert "return" in ret["localhost"]
@@ -79,9 +84,8 @@ def test_ssh(client, auth_creds, salt_ssh_roster_file, rosters_dir, ssh_priv_key
 def test_ssh_unauthenticated(client):
     low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping"}
 
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with pytest.raises(EauthAuthenticationError):
-            client.run(low)
+    with pytest.raises(EauthAuthenticationError):
+        client.run(low)
 
 
 def test_ssh_unauthenticated_raw_shell_curl(client, webserver_root, webserver_handler):
@@ -89,9 +93,8 @@ def test_ssh_unauthenticated_raw_shell_curl(client, webserver_root, webserver_ha
     fun = "-o ProxyCommand curl {}".format(webserver_root)
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with pytest.raises(EauthAuthenticationError):
-            client.run(low)
+    with pytest.raises(EauthAuthenticationError):
+        client.run(low)
 
     assert webserver_handler.received_requests == []
 
@@ -102,9 +105,8 @@ def test_ssh_unauthenticated_raw_shell_touch(client, tmp_path):
     fun = "-o ProxyCommand touch {}".format(badfile)
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with pytest.raises(EauthAuthenticationError):
-            client.run(low)
+    with pytest.raises(EauthAuthenticationError):
+        client.run(low)
 
     assert badfile.exists() is False
 
@@ -115,10 +117,9 @@ def test_ssh_authenticated_raw_shell_disabled(client, tmp_path):
     fun = "-o ProxyCommand touch {}".format(badfile)
     low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with patch.dict(client.opts, {"netapi_allow_raw_shell": False}):
-            with pytest.raises(EauthAuthenticationError):
-                client.run(low)
+    with patch.dict(client.opts, {"netapi_allow_raw_shell": False}):
+        with pytest.raises(EauthAuthenticationError):
+            client.run(low)
 
     assert badfile.exists() is False
 
@@ -127,8 +128,9 @@ def test_ssh_disabled(client, auth_creds):
     low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping", **auth_creds}
 
     ret = None
-    with pytest.raises(SaltInvocationError):
-        ret = client.run(low)
+    with patch.dict(client.opts, {"netapi_enable_clients": []}):
+        with pytest.raises(SaltInvocationError):
+            ret = client.run(low)
 
     assert ret is None
 
@@ -155,8 +157,7 @@ def test_shell_inject_ssh_priv(
             "roster_file": str(salt_ssh_roster_file),
             "rosters": [rosters_dir],
         }
-        with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-            ret = client.run(low)
+        ret = client.run(low)
         if ret:
             break
     assert path.exists() is False
@@ -182,8 +183,7 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_acco
         "password": salt_auto_account.password,
         "ignore_host_keys": True,
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert path.exists() is False
     assert not ret["127.0.0.1"]["stdout"]
     assert ret["127.0.0.1"]["stderr"]
@@ -210,8 +210,7 @@ def test_shell_inject_ssh_options(
         "rosters": "/",
         "ssh_options": ["|id>{} #".format(path), "lol"],
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert path.exists() is False
     assert not ret["127.0.0.1"]["stdout"]
     assert ret["127.0.0.1"]["stderr"]
@@ -239,8 +238,7 @@ def test_shell_inject_ssh_port(
         "ssh_port": "hhhhh|id>{} #".format(path),
         "ignore_host_keys": True,
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert path.exists() is False
     assert not ret["127.0.0.1"]["stdout"]
     assert ret["127.0.0.1"]["stderr"]
@@ -268,8 +266,7 @@ def test_shell_inject_remote_port_forwards(
         "password": salt_auto_account.password,
         "ignore_host_keys": True,
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert path.exists() is False
     assert not ret["127.0.0.1"]["stdout"]
     assert ret["127.0.0.1"]["stderr"]
@@ -294,8 +291,7 @@ def test_extra_mods(client, ssh_priv_key, rosters_dir, tmp_path, salt_auth_accou
         "thin_extra_mods": "';touch {};'".format(path),
     }
 
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert path.exists() is False
     assert "localhost" in ret
     assert "return" in ret["localhost"]
@@ -317,9 +313,8 @@ def test_ssh_auth_bypass(client, salt_ssh_roster_file):
         "eauth": "xx",
         "ignore_host_keys": True,
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with pytest.raises(EauthAuthenticationError):
-            client.run(low)
+    with pytest.raises(EauthAuthenticationError):
+        client.run(low)
 
 
 def test_ssh_auth_valid(client, ssh_priv_key, rosters_dir, salt_auth_account_1):
@@ -337,8 +332,7 @@ def test_ssh_auth_valid(client, ssh_priv_key, rosters_dir, salt_auth_account_1):
         "username": salt_auth_account_1.username,
         "password": salt_auth_account_1.password,
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert "localhost" in ret
     assert "return" in ret["localhost"]
     assert ret["localhost"]["return"] is True
@@ -359,9 +353,8 @@ def test_ssh_auth_invalid(client, rosters_dir, ssh_priv_key, salt_auth_account_1
         "username": salt_auth_account_1.username,
         "password": "notvalidpassword",
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with pytest.raises(EauthAuthenticationError):
-            client.run(low)
+    with pytest.raises(EauthAuthenticationError):
+        client.run(low)
 
 
 def test_ssh_auth_invalid_acl(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
@@ -380,9 +373,8 @@ def test_ssh_auth_invalid_acl(client, rosters_dir, ssh_priv_key, salt_auth_accou
         "username": salt_auth_account_1.username,
         "password": "notvalidpassword",
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        with pytest.raises(EauthAuthenticationError):
-            client.run(low)
+    with pytest.raises(EauthAuthenticationError):
+        client.run(low)
 
 
 def test_ssh_auth_token(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
@@ -394,8 +386,7 @@ def test_ssh_auth_token(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
         "username": salt_auth_account_1.username,
         "password": salt_auth_account_1.password,
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.loadauth.mk_token(low)
+    ret = client.loadauth.mk_token(low)
     assert "token" in ret
     assert ret["token"]
 
@@ -408,8 +399,7 @@ def test_ssh_auth_token(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
         "ssh_priv": ssh_priv_key,
         "token": ret["token"],
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert "localhost" in ret
     assert "return" in ret["localhost"]
     assert ret["localhost"]["return"] is True
@@ -432,8 +422,7 @@ def test_ssh_cve_2021_3197_a(
         "roster_file": "roster",
         "rosters": [rosters_dir],
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert exploited_path.exists() is False
     assert "localhost" in ret
     assert ret["localhost"]["return"] is True
@@ -457,8 +446,7 @@ def test_ssh_cve_2021_3197_b(
         "roster_file": "roster",
         "rosters": [rosters_dir],
     }
-    with patch.dict(client.opts, {"netapi_enable_clients": ["ssh"]}):
-        ret = client.run(low)
+    ret = client.run(low)
     assert exploited_path.exists() is False
     assert "localhost" in ret
     assert "return" in ret["localhost"]
