@@ -5104,6 +5104,8 @@ Used by ``salt-api`` for the master requests timeout.
 ``netapi_enable_clients``
 --------------------------
 
+.. versionadded:: 3006.0
+
 Default: ``[]``
 
 Used by ``salt-api`` to enable access to the listed clients. Unless a
