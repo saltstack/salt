@@ -71,6 +71,86 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  almalinux-8:
+    name: Alma Linux 8
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: almalinux-8
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  almalinux-9:
+    name: Alma Linux 9
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: almalinux-9
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  amazonlinux-2:
+    name: Amazon Linux 2
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  archlinux-lts:
+    name: Arch Linux LTS
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: archlinux-lts
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  centos-7:
+    name: CentOS 7
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centos-7
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  centosstream-8:
+    name: CentOS Stream 8
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centosstream-8
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  centosstream-9:
+    name: CentOS Stream 9
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centosstream-9
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  debian-10:
+    name: Debian 10
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-10
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
   debian-11:
     name: Debian 11
     needs:
@@ -91,6 +171,76 @@ jobs:
       nox-session: ci-test-3
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  fedora-36:
+    name: Fedora 36
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-36
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  opensuse-15:
+    name: Opensuse 15
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: opensuse-15
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  photon-3:
+    name: Photon OS 3
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photon-3
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  photon-4:
+    name: Photon OS 4
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photon-4
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  ubuntu-1804:
+    name: Ubuntu 18.04
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-18.04
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  ubuntu-2004:
+    name: Ubuntu 20.04
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  ubuntu-2004-arm64:
+    name: Ubuntu 20.04 Arm64
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
   ubuntu-2204:
     name: Ubuntu 22.04
     needs:
@@ -101,6 +251,26 @@ jobs:
       nox-session: ci-test-3
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  ubuntu-2204-arm64:
+    name: Ubuntu 22.04 Arm64
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  windows-2016:
+    name: Windows 2016
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2016
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
   windows-2019:
     name: Windows 2019
     needs:
@@ -108,6 +278,16 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
+      nox-session: ci-test-3
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  windows-2022:
+    name: Windows 2022
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2022
       nox-session: ci-test-3
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
@@ -132,10 +312,28 @@ jobs:
       - pre-commit
       - docs
       - lint
+      - almalinux-8
+      - almalinux-9
+      - amazonlinux-2
+      - archlinux-lts
+      - centos-7
+      - centosstream-8
+      - centosstream-9
+      - debian-10
       - debian-11
       - debian-11-arm64
+      - fedora-36
+      - opensuse-15
+      - photon-3
+      - photon-4
+      - ubuntu-1804
+      - ubuntu-2004
+      - ubuntu-2004-arm64
       - ubuntu-2204
+      - ubuntu-2204-arm64
+      - windows-2016
       - windows-2019
+      - windows-2022
       - macos-12
     steps:
     - name: Download Exit Status Files
