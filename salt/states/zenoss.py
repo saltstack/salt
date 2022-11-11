@@ -94,7 +94,9 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
         ret["changes"] = {}
 
         if result:
-            ret["comment"] = "Failed to add {}: {}".format(name, result.get("msg", "unknown error"))
+            ret["comment"] = "Failed to add {}: {}".format(
+                name, result.get("msg", "unknown error")
+            )
         else:
             ret["comment"] = "Failed to add {} to Zenoss".format(name)
     return ret

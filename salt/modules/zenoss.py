@@ -71,10 +71,12 @@ def _session():
     if not config.get("hostname", None):
         raise Exception("zenoss.hostname config option is not set")
 
-    if not config.get('api_key') and not (config.get('username') and config.get('password')):
+    if not config.get("api_key") and not (
+        config.get("username") and config.get("password")
+    ):
         raise Exception("No api_key, nor username and passssword, configured")
 
-    if config.get('api_key'):
+    if config.get("api_key"):
         return salt.utils.http.session(
             verify_ssl=config.get("verify_ssl", True),
             ca_bundle=config.get("ca_bundle"),
@@ -91,6 +93,7 @@ def _session():
             ca_bundle=config.get("ca_bundle"),
             headers={"Content-type": "application/json; charset=utf-8"},
         )
+
 
 def _router_request(router, method, data=None):
     """
@@ -109,15 +112,16 @@ def _router_request(router, method, data=None):
     response = _session().post(url, data=req_data)
 
     # zenoss cloud always returns json, so we just display the error message
-    if config.get('api_key') and response.status_code != 200:
+    if config.get("api_key") and response.status_code != 200:
         try:
             data = salt.utils.json.loads(response.content)
         except ValueError:
             pass
         else:
-            if 'error' in data:
-                raise Exception("API (code {}): {}".format(response.status_code,
-                                                           data['error']))
+            if "error" in data:
+                raise Exception(
+                    "API (code {}): {}".format(response.status_code, data["error"])
+                )
 
         log.error("Request failed. Bad authentication")
         raise Exception("Request failed. Bad authentication")
@@ -156,15 +160,18 @@ def find_device(device=None):
     if not device:
         device = __salt__["grains.get"]("fqdn")
 
-    data = [{"uid": "/zport/dmd/Devices",
-             "params": {
+    data = [
+        {
+            "uid": "/zport/dmd/Devices",
+            "params": {
                 "name": device,
-             },
-             "dir": "DESC",
-             "sort": "name",
-             "start": 0,
-             "limit": 1,
-             }]
+            },
+            "dir": "DESC",
+            "sort": "name",
+            "start": 0,
+            "limit": 1,
+        }
+    ]
     all_devices = _router_request("DeviceRouter", "getDevices", data=data)
     for dev in all_devices["devices"]:
         if dev["name"] == device:
