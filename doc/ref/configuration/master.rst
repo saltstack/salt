@@ -5107,7 +5107,7 @@ Used by ``salt-api`` for the master requests timeout.
 Default: ``[]``
 
 Used by ``salt-api`` to enable access to the listed clients. Unless a
-client is addded to this list, equests to be rejected before
+client is addded to this list, requests will be rejected before
 authentication is attempted or processing of the low state occurs.
 
 This can be used to only expose the required functionality via
@@ -5130,8 +5130,8 @@ Configuration with all possible clients enabled:
 
 .. note::
 
-    Disabling all clients is not recommened as it will stop
-    the ``salt-api`` functioning.
+    Enabling all clients is not recommended - only enable the
+    clients that provide the functionality required.
 
 .. _syndic-server-settings:
 
