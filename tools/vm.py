@@ -1094,8 +1094,11 @@ class VM:
     def state(self) -> str | None:
         _state: str | None = None
         if self.instance:
-            self.instance.reload()
-            _state = self.instance.state["Name"]
+            try:
+                self.instance.reload()
+                _state = self.instance.state["Name"]
+            except ClientError:
+                pass
         return _state
 
     @property
