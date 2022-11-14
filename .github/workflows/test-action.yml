@@ -20,6 +20,8 @@ on:
 env:
   NOX_VERSION: "2022.8.7"
   COLUMNS: 160
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
 
 jobs:
 
