@@ -58,6 +58,10 @@ jobs:
         run: |
           tools --timestamps vm create --destroy-on-failure ${{ inputs.distro-slug }}
 
+      - name: List Free Space
+        run: |
+          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+
       - name: Upload Checkout To VM
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
@@ -140,6 +144,10 @@ jobs:
           TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
           tools --timestamps vm create --destroy-on-failure ${{ inputs.distro-slug }}
+
+      - name: List Free Space
+        run: |
+          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
       - name: Upload Checkout To VM
         run: |
