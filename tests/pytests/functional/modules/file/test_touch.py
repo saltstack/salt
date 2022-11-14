@@ -12,6 +12,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
+
 @pytest.fixture(scope="module")
 def file(modules):
     return modules.file
