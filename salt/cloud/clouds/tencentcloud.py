@@ -47,8 +47,8 @@ try:
     from tencentcloud.common.profile.client_profile import ClientProfile
     from tencentcloud.cvm.v20170312 import cvm_client
     from tencentcloud.cvm.v20170312 import models as cvm_models
-    from tencentcloud.vpc.v20170312 import vpc_client
     from tencentcloud.vpc.v20170312 import models as vpc_models
+    from tencentcloud.vpc.v20170312 import vpc_client
 
     # pylint: enable=no-name-in-module
 
@@ -379,7 +379,9 @@ def list_nodes_select(call=None):
         salt-cloud -S
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

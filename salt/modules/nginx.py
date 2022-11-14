@@ -3,10 +3,10 @@ Support for nginx
 """
 
 import re
+import urllib.request
 
 import salt.utils.decorators as decorators
 import salt.utils.path
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 
 # Cache the output of running which('nginx') so this module
@@ -148,7 +148,7 @@ def status(url="http://127.0.0.1/status"):
 
         salt '*' nginx.status
     """
-    resp = _urlopen(url)
+    resp = urllib.request.urlopen(url)
     status_data = resp.read()
     resp.close()
 

@@ -93,3 +93,27 @@ class VMWareTest(CloudTest):
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
         self.assertDestroyInstance()
+
+    def test_instant_clone(self):
+        """
+        Tests creating Instant Clone VM
+        """
+        # salt-cloud -p my-instant-clone IC3
+        profile_name = "vmware-test-instant-clone"
+        # create the instance
+        ret_val = self.run_cloud(
+            "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+        )
+
+        i_clone_str = "Instant Clone created successfully"
+
+        self.assertIn(i_clone_str, str(ret_val))
+
+        self.assertDestroyInstance()
+
+        # now clean up snapshots and make sure re get the proper response.
+        ret_val = self.run_cloud("-a remove_all_snapshots cloud-tests-instant-clone")
+
+        s_ret_str = "Removed all snapshots"
+
+        self.assertIn(s_ret_str, str(ret_val))

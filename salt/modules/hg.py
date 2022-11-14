@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Support for the Mercurial SCM
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.data
 import salt.utils.path
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -28,7 +23,7 @@ def __virtual__():
 
 
 def _ssh_flag(identity_path):
-    return ["--ssh", "ssh -i {0}".format(identity_path)]
+    return ["--ssh", "ssh -i {}".format(identity_path)]
 
 
 def revision(cwd, rev="tip", short=False, user=None):
@@ -53,7 +48,7 @@ def revision(cwd, rev="tip", short=False, user=None):
 
         salt '*' hg.revision /path/to/repo mybranch
     """
-    cmd = ["hg", "id", "-i", "--debug" if not short else "", "-r", "{0}".format(rev)]
+    cmd = ["hg", "id", "-i", "--debug" if not short else "", "-r", "{}".format(rev)]
 
     result = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
 
@@ -86,7 +81,7 @@ def describe(cwd, rev="tip", user=None):
         "hg",
         "log",
         "-r",
-        "{0}".format(rev),
+        "{}".format(rev),
         "--template",
         "'{{latesttag}}-{{latesttagdistance}}-{{node|short}}'",
     ]
@@ -130,16 +125,16 @@ def archive(cwd, output, rev="tip", fmt=None, prefix=None, user=None):
     cmd = [
         "hg",
         "archive",
-        "{0}".format(output),
+        "{}".format(output),
         "--rev",
-        "{0}".format(rev),
+        "{}".format(rev),
     ]
     if fmt:
         cmd.append("--type")
-        cmd.append("{0}".format(fmt))
+        cmd.append("{}".format(fmt))
     if prefix:
         cmd.append("--prefix")
-        cmd.append('"{0}"'.format(prefix))
+        cmd.append('"{}"'.format(prefix))
     return __salt__["cmd.run"](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
@@ -182,7 +177,7 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
     ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
     if ret["retcode"] != 0:
         raise CommandExecutionError(
-            "Hg command failed: {0}".format(ret.get("stderr", ret["stdout"]))
+            "Hg command failed: {}".format(ret.get("stderr", ret["stdout"]))
         )
 
     return ret["stdout"]
@@ -210,14 +205,14 @@ def update(cwd, rev, force=False, user=None):
 
         salt devserver1 hg.update /path/to/repo somebranch
     """
-    cmd = ["hg", "update", "{0}".format(rev)]
+    cmd = ["hg", "update", "{}".format(rev)]
     if force:
         cmd.append("-C")
 
     ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
     if ret["retcode"] != 0:
         raise CommandExecutionError(
-            "Hg command failed: {0}".format(ret.get("stderr", ret["stdout"]))
+            "Hg command failed: {}".format(ret.get("stderr", ret["stdout"]))
         )
 
     return ret["stdout"]
@@ -250,17 +245,17 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     """
-    cmd = ["hg", "clone", "{0}".format(repository), "{0}".format(cwd)]
+    cmd = ["hg", "clone", "{}".format(repository), "{}".format(cwd)]
     if opts:
         for opt in opts.split():
-            cmd.append("{0}".format(opt))
+            cmd.append("{}".format(opt))
     if identity:
         cmd.extend(_ssh_flag(identity))
 
     ret = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if ret["retcode"] != 0:
         raise CommandExecutionError(
-            "Hg command failed: {0}".format(ret.get("stderr", ret["stdout"]))
+            "Hg command failed: {}".format(ret.get("stderr", ret["stdout"]))
         )
 
     return ret["stdout"]
@@ -290,7 +285,7 @@ def status(cwd, opts=None, user=None):
         cmd = ["hg", "status"]
         if opts:
             for opt in opts.split():
-                cmd.append("{0}".format(opt))
+                cmd.append("{}".format(opt))
         out = __salt__["cmd.run_stdout"](cmd, cwd=cwd, runas=user, python_shell=False)
         types = {
             "M": "modified",
@@ -311,6 +306,6 @@ def status(cwd, opts=None, user=None):
         return ret
 
     if salt.utils.data.is_iter(cwd):
-        return dict((cwd, _status(cwd)) for cwd in cwd)
+        return {cwd: _status(cwd) for cwd in cwd}
     else:
         return _status(cwd)

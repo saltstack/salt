@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt states to create and manage VMware vSphere datacenters (datacenters).
 
@@ -49,15 +48,11 @@ State configuration:
       esxdatacenter.datacenter_configured
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+from functools import wraps
 
 import salt.exceptions
-
-# Import Salt Libs
-from salt.ext import six
 
 # Get Logging Started
 log = logging.getLogger(__name__)
@@ -68,10 +63,33 @@ def __virtual__():
     return "esxdatacenter"
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxdatacenter' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def mod_init(low):
     return True
 
 
+@_deprecation_message
 def datacenter_configured(name):
     """
     Makes sure a datacenter exists.
@@ -90,7 +108,7 @@ def datacenter_configured(name):
         dc_name = __salt__["esxdatacenter.get_details"]()["datacenter"]
     else:
         dc_name = name
-    log.info("Running datacenter_configured for datacenter '{0}'" "".format(dc_name))
+    log.info("Running datacenter_configured for datacenter '%s'", dc_name)
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
     si = None
@@ -101,19 +119,16 @@ def datacenter_configured(name):
         )
         if not dcs:
             if __opts__["test"]:
-                comments.append(
-                    "State will create " "datacenter '{0}'.".format(dc_name)
-                )
+                comments.append("State will create datacenter '{}'.".format(dc_name))
             else:
-                log.debug("Creating datacenter '{0}'. ".format(dc_name))
+                log.debug("Creating datacenter '%s'", dc_name)
                 __salt__["vsphere.create_datacenter"](dc_name, si)
-                comments.append("Created datacenter '{0}'.".format(dc_name))
+                comments.append("Created datacenter '{}'.".format(dc_name))
             log.info(comments[-1])
             ret["changes"].update({"new": {"name": dc_name}})
         else:
             comments.append(
-                "Datacenter '{0}' already exists. Nothing to be "
-                "done.".format(dc_name)
+                "Datacenter '{}' already exists. Nothing to be done.".format(dc_name)
             )
             log.info(comments[-1])
         __salt__["vsphere.disconnect"](si)
@@ -121,13 +136,10 @@ def datacenter_configured(name):
         ret["result"] = None if __opts__["test"] and ret["changes"] else True
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {}".format(exc))
+        log.error("Error: %s", exc)
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update(
-            {
-                "result": False if not __opts__["test"] else None,
-                "comment": six.text_type(exc),
-            }
+            {"result": False if not __opts__["test"] else None, "comment": str(exc)}
         )
         return ret

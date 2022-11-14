@@ -9,7 +9,7 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm, Member
+    from libcloud.loadbalancer.base import Algorithm, BaseDriver, LoadBalancer, Member
 
     HAS_LIBCLOUD = True
 except ImportError:
@@ -76,7 +76,6 @@ if HAS_LIBCLOUD:
             assert isinstance(balancer, LoadBalancer)
             assert balancer.id == "test_id"
             return [self._TEST_MEMBER]
-
 
 else:
     MockLBDriver = object

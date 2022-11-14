@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
@@ -73,32 +74,23 @@ class BrewModuleTest(ModuleCase):
             try:
                 self.assertTrue(
                     version,
-                    msg=(
-                        "version: {} is empty,\
-                                or other issue is present".format(
-                            version
-                        )
+                    msg="version: {} is empty, or other issue is present".format(
+                        version
                     ),
                 )
                 self.assertIn(
                     ADD_PKG,
                     pkg_list,
-                    msg=(
-                        "package: {} is not in\
-                              the list of installed packages: {}".format(
-                            ADD_PKG, pkg_list
-                        )
+                    msg="package: {} is not in the list of installed packages: {}".format(
+                        ADD_PKG, pkg_list
                     ),
                 )
                 # make sure the version is accurate and is listed in the pkg_list
                 self.assertIn(
                     version,
                     str(pkg_list[ADD_PKG]),
-                    msg=(
-                        "The {} version: {} is \
-                              not listed in the pkg_list: {}".format(
-                            ADD_PKG, version, pkg_list[ADD_PKG]
-                        )
+                    msg="The {} version: {} is not listed in the pkg_list: {}".format(
+                        ADD_PKG, version, pkg_list[ADD_PKG]
                     ),
                 )
             except AssertionError:

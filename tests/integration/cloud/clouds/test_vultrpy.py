@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for Vultr
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 
-# Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.unit import skipIf
 
@@ -25,7 +21,7 @@ class VultrTest(CloudTest):
         """
         Tests the return of running the --list-images command for Vultr
         """
-        image_list = self.run_cloud("--list-images {0}".format(self.PROVIDER))
+        image_list = self.run_cloud("--list-images {}".format(self.PROVIDER))
 
         self.assertIn("Debian 10 x64 (buster)", [i.strip() for i in image_list])
 
@@ -33,16 +29,16 @@ class VultrTest(CloudTest):
         """
         Tests the return of running the --list-locations command for Vultr
         """
-        location_list = self.run_cloud("--list-locations {0}".format(self.PROVIDER))
+        location_list = self.run_cloud("--list-locations {}".format(self.PROVIDER))
         self.assertIn("New Jersey", [i.strip() for i in location_list])
 
     def test_list_sizes(self):
         """
         Tests the return of running the --list-sizes command for Vultr
         """
-        size_list = self.run_cloud("--list-sizes {0}".format(self.PROVIDER))
+        size_list = self.run_cloud("--list-sizes {}".format(self.PROVIDER))
         self.assertIn(
-            "2048 MB RAM,64 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
+            "2048 MB RAM,55 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
         )
 
     # Commented for now, Vultr driver does not yet support key management
@@ -92,7 +88,7 @@ class VultrTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_val = self.run_cloud(
-            "-p vultr-test {0}".format(self.instance_name), timeout=TIMEOUT + 300
+            "-p vultr-test {}".format(self.instance_name), timeout=TIMEOUT + 300
         )
         self.assertInstanceExists(ret_val)
 

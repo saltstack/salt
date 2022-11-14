@@ -18,18 +18,18 @@ import random
 import time
 from collections.abc import Iterable, Mapping
 
+import salt.channel.client
 import salt.config
 import salt.exceptions
 import salt.loader
 import salt.payload
-import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
-import salt.utils.zeromq
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,6 @@ class LoadAuth:
     def __init__(self, opts, ckminions=None):
         self.opts = opts
         self.max_fail = 1.0
-        self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
@@ -453,8 +452,9 @@ class LoadAuth:
             if not self.authenticate_eauth(load):
                 ret["error"] = {
                     "name": "EauthAuthenticationError",
-                    "message": 'Authentication failure of type "eauth" occurred for '
-                    "user {}.".format(username),
+                    "message": 'Authentication failure of type "eauth" occurred for user {}.'.format(
+                        username
+                    ),
                 }
                 return ret
 
@@ -508,10 +508,10 @@ class Resolver:
 
     def _send_token_request(self, load):
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             return channel.send(load)
@@ -528,14 +528,13 @@ class Resolver:
         fstr = "{}.auth".format(eauth)
         if fstr not in self.auth:
             print(
-                (
-                    'The specified external authentication system "{}" is '
-                    "not available"
-                ).format(eauth)
+                'The specified external authentication system "{}" is not available'.format(
+                    eauth
+                )
             )
             print(
                 "Available eauth types: {}".format(
-                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
+                    ", ".join(sorted(k[:-5] for k in self.auth if k.endswith(".auth")))
                 )
             )
             return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use the "reclass" database as a Pillar source
 
@@ -51,14 +50,8 @@ setting the configuration option, like in the example above.
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.reclass import (
     filter_out_source_path_option,
     prepend_reclass_source_path,
@@ -84,7 +77,7 @@ def __virtual__(retry=False):
                 continue
 
             # each pillar entry is a single-key hash of name -> options
-            opts = next(six.itervalues(pillar))
+            opts = next(iter(pillar.values()))
             prepend_reclass_source_path(opts)
             break
 
@@ -119,19 +112,19 @@ def ext_pillar(minion_id, pillar, **kwargs):
         return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
     except TypeError as e:
-        if "unexpected keyword argument" in six.text_type(e):
-            arg = six.text_type(e).split()[-1]
+        if "unexpected keyword argument" in str(e):
+            arg = str(e).split()[-1]
             raise SaltInvocationError("ext_pillar.reclass: unexpected option: " + arg)
         else:
             raise
 
     except KeyError as e:
-        if "id" in six.text_type(e):
+        if "id" in str(e):
             raise SaltInvocationError(
-                "ext_pillar.reclass: __opts__ does not " "define minion ID"
+                "ext_pillar.reclass: __opts__ does not define minion ID"
             )
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError("ext_pillar.reclass: {0}".format(e))
+        raise SaltInvocationError("ext_pillar.reclass: {}".format(e))

@@ -56,7 +56,8 @@ def __virtual__():
         return "portage_config"
     return (
         False,
-        "portage_config execution module cannot be loaded: only available on Gentoo with portage installed.",
+        "portage_config execution module cannot be loaded: only available on Gentoo"
+        " with portage installed.",
     )
 
 

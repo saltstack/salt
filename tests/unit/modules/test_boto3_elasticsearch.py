@@ -10,7 +10,6 @@ import textwrap
 
 import salt.loader
 import salt.modules.boto3_elasticsearch as boto3_elasticsearch
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -40,9 +39,8 @@ def __virtual__():
     if LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION):
         return (
             False,
-            (
-                "The boto3 module must be greater or equal to version {}"
-                "".format(REQUIRED_BOTO3_VERSION)
+            "The boto3 module must be greater or equal to version {}".format(
+                REQUIRED_BOTO3_VERSION
             ),
         )
     return True
@@ -762,8 +760,10 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "describe_reserved_elasticsearch_instance_offerings"
             ),
         ):
-            result = boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
-                reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
+                    reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(
@@ -1135,10 +1135,12 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "purchase_reserved_elasticsearch_instance_offering"
             ),
         ):
-            result = boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
-                reserved_elasticsearch_instance_offering_id="foo",
-                reservation_name="bar",
-                **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
+                    reserved_elasticsearch_instance_offering_id="foo",
+                    reservation_name="bar",
+                    **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(

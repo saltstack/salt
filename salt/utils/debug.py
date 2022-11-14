@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Print a stacktrace when sent a SIGUSR1 for debugging
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
-
-# Import python libs
 import os
 import signal
 import sys
@@ -14,7 +10,6 @@ import tempfile
 import time
 import traceback
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
 
@@ -39,7 +34,7 @@ def _handle_sigusr1(sig, stack):
         output = sys.stderr
         _makepretty(output, stack)
     else:
-        filename = "salt-debug-{0}.log".format(int(time.time()))
+        filename = "salt-debug-{}.log".format(int(time.time()))
         destfile = os.path.join(tempfile.gettempdir(), filename)
         with salt.utils.files.fopen(destfile, "w") as output:
             _makepretty(output, stack)
@@ -55,11 +50,11 @@ def _handle_sigusr2(sig, stack):
         return
     if yappi.is_running():
         yappi.stop()
-        filename = "callgrind.salt-{0}-{1}".format(int(time.time()), os.getpid())
+        filename = "callgrind.salt-{}-{}".format(int(time.time()), os.getpid())
         destfile = os.path.join(tempfile.gettempdir(), filename)
         yappi.get_func_stats().save(destfile, type="CALLGRIND")
         if sys.stderr.isatty():
-            sys.stderr.write("Saved profiling data to: {0}\n".format(destfile))
+            sys.stderr.write("Saved profiling data to: {}\n".format(destfile))
         yappi.clear_stats()
     else:
         if sys.stderr.isatty():

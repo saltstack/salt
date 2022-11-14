@@ -342,7 +342,7 @@ def start(name, timeout=90):
             raise CommandExecutionError(
                 "Failed To Start {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{}" is running'.format(name))
+        log.debug('Service "%s" is running', name)
 
     srv_status = _status_wait(
         service_name=name,
@@ -383,7 +383,7 @@ def stop(name, timeout=90):
             raise CommandExecutionError(
                 "Failed To Stop {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{}" is not running'.format(name))
+        log.debug('Service "%s" is not running', name)
 
     srv_status = _status_wait(
         service_name=name,
@@ -447,7 +447,7 @@ def create_win_salt_restart_task():
     """
     # Updated to use full name for Nessus agent
     cmd = salt.utils.path.which("cmd")
-    args = "/c ping -n 3 127.0.0.1 && net stop salt-minion && net start " "salt-minion"
+    args = "/c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion"
     return __salt__["task.create_task"](
         name="restart-salt-minion",
         user_name="System",
@@ -1116,7 +1116,7 @@ def delete(name, timeout=90):
             raise CommandExecutionError(
                 "Failed to open {}. {}".format(name, exc.strerror)
             )
-        log.debug('Service "{}" is not present'.format(name))
+        log.debug('Service "%s" is not present', name)
         return True
 
     try:

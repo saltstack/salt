@@ -1,0 +1,1 @@
+The patch allows to boostrap kubernetes clusters in the version above 1.13 via salt module

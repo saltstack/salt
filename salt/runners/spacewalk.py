@@ -31,8 +31,7 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.c
 
 import atexit
 import logging
-
-from salt.ext import six
+import xmlrpc.client
 
 log = logging.getLogger(__name__)
 
@@ -99,9 +98,7 @@ def _get_client_and_key(url, user, password, verbose=0):
     Return the client object and session key for the client
     """
     session = {}
-    session["client"] = six.moves.xmlrpc_client.Server(
-        url, verbose=verbose, use_datetime=True
-    )
+    session["client"] = xmlrpc.client.Server(url, verbose=verbose, use_datetime=True)
     session["key"] = session["client"].auth.login(user, password)
 
     return session
@@ -170,8 +167,10 @@ def api(server, command, *args, **kwargs):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({}): {}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {call: err_msg}
@@ -205,8 +204,10 @@ def addGroupsToKey(server, activation_key, groups):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({}): {}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -231,8 +232,10 @@ def deleteAllGroups(server):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({}): {}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -268,8 +271,10 @@ def deleteAllSystems(server):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({}): {}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -302,8 +307,10 @@ def deleteAllActivationKeys(server):
     try:
         client, key = _get_session(server)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({}): {}".format(
-            server, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server, exc
+            )
         )
         log.error(err_msg)
         return {"Error": err_msg}
@@ -339,8 +346,10 @@ def unregister(name, server_url):
     try:
         client, key = _get_session(server_url)
     except Exception as exc:  # pylint: disable=broad-except
-        err_msg = "Exception raised when connecting to spacewalk server ({}): {}".format(
-            server_url, exc
+        err_msg = (
+            "Exception raised when connecting to spacewalk server ({}): {}".format(
+                server_url, exc
+            )
         )
         log.error(err_msg)
         return {name: err_msg}

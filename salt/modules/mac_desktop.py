@@ -82,7 +82,10 @@ def lock():
 
         salt '*' desktop.lock
     """
-    cmd = "/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend"
+    cmd = (
+        "/System/Library/CoreServices/Menu\\"
+        " Extras/User.menu/Contents/Resources/CGSession -suspend"
+    )
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
     _check_cmd(call)
 

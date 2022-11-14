@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Apache
 
@@ -6,14 +5,10 @@ Please note: The functions in here are Debian-specific. Placing them in this
 separate file will allow them to load only on Debian-based systems, while still
 loading under the ``apache`` namespace.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.decorators.path
 import salt.utils.path
 
@@ -64,11 +59,11 @@ def check_site_enabled(site):
     if site.endswith(".conf"):
         site_file = site
     else:
-        site_file = "{0}.conf".format(site)
-    if os.path.islink("{0}/{1}".format(SITE_ENABLED_DIR, site_file)):
+        site_file = "{}.conf".format(site)
+    if os.path.islink("{}/{}".format(SITE_ENABLED_DIR, site_file)):
         return True
     elif site == "default" and os.path.islink(
-        "{0}/000-{1}".format(SITE_ENABLED_DIR, site_file)
+        "{}/000-{}".format(SITE_ENABLED_DIR, site_file)
     ):
         return True
     else:
@@ -100,9 +95,9 @@ def a2ensite(site):
     ret["Site"] = site
 
     if status == 1:
-        ret["Status"] = "Site {0} Not found".format(site)
+        ret["Status"] = "Site {} Not found".format(site)
     elif status == 0:
-        ret["Status"] = "Site {0} enabled".format(site)
+        ret["Status"] = "Site {} enabled".format(site)
     else:
         ret["Status"] = status
 
@@ -134,9 +129,9 @@ def a2dissite(site):
     ret["Site"] = site
 
     if status == 256:
-        ret["Status"] = "Site {0} Not found".format(site)
+        ret["Status"] = "Site {} Not found".format(site)
     elif status == 0:
-        ret["Status"] = "Site {0} disabled".format(site)
+        ret["Status"] = "Site {} disabled".format(site)
     else:
         ret["Status"] = status
 
@@ -161,8 +156,8 @@ def check_mod_enabled(mod):
     if mod.endswith(".load") or mod.endswith(".conf"):
         mod_file = mod
     else:
-        mod_file = "{0}.load".format(mod)
-    return os.path.islink("/etc/apache2/mods-enabled/{0}".format(mod_file))
+        mod_file = "{}.load".format(mod)
+    return os.path.islink("/etc/apache2/mods-enabled/{}".format(mod_file))
 
 
 def a2enmod(mod):
@@ -190,9 +185,9 @@ def a2enmod(mod):
     ret["Mod"] = mod
 
     if status == 1:
-        ret["Status"] = "Mod {0} Not found".format(mod)
+        ret["Status"] = "Mod {} Not found".format(mod)
     elif status == 0:
-        ret["Status"] = "Mod {0} enabled".format(mod)
+        ret["Status"] = "Mod {} enabled".format(mod)
     else:
         ret["Status"] = status
 
@@ -224,9 +219,9 @@ def a2dismod(mod):
     ret["Mod"] = mod
 
     if status == 256:
-        ret["Status"] = "Mod {0} Not found".format(mod)
+        ret["Status"] = "Mod {} Not found".format(mod)
     elif status == 0:
-        ret["Status"] = "Mod {0} disabled".format(mod)
+        ret["Status"] = "Mod {} disabled".format(mod)
     else:
         ret["Status"] = status
 
@@ -252,8 +247,8 @@ def check_conf_enabled(conf):
     if conf.endswith(".conf"):
         conf_file = conf
     else:
-        conf_file = "{0}.conf".format(conf)
-    return os.path.islink("/etc/apache2/conf-enabled/{0}".format(conf_file))
+        conf_file = "{}.conf".format(conf)
+    return os.path.islink("/etc/apache2/conf-enabled/{}".format(conf_file))
 
 
 @salt.utils.decorators.path.which("a2enconf")
@@ -284,9 +279,9 @@ def a2enconf(conf):
     ret["Conf"] = conf
 
     if status == 1:
-        ret["Status"] = "Conf {0} Not found".format(conf)
+        ret["Status"] = "Conf {} Not found".format(conf)
     elif status == 0:
-        ret["Status"] = "Conf {0} enabled".format(conf)
+        ret["Status"] = "Conf {} enabled".format(conf)
     else:
         ret["Status"] = status
 
@@ -321,9 +316,9 @@ def a2disconf(conf):
     ret["Conf"] = conf
 
     if status == 256:
-        ret["Status"] = "Conf {0} Not found".format(conf)
+        ret["Status"] = "Conf {} Not found".format(conf)
     elif status == 0:
-        ret["Status"] = "Conf {0} disabled".format(conf)
+        ret["Status"] = "Conf {} disabled".format(conf)
     else:
         ret["Status"] = status
 

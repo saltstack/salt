@@ -554,9 +554,10 @@ def managed(name, enabled=True, **kwargs):
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm="")
                     ret["result"] = None
-                    ret["comment"] = (
-                        "Bond interface {} is set to be "
-                        "updated:\n{}".format(name, "\n".join(diff))
+                    ret[
+                        "comment"
+                    ] = "Bond interface {} is set to be updated:\n{}".format(
+                        name, "\n".join(diff)
                     )
             else:
                 if not old and new:
@@ -649,25 +650,31 @@ def managed(name, enabled=True, **kwargs):
             present_slaves = __salt__["cmd.run"](
                 ["cat", "/sys/class/net/{}/bonding/slaves".format(name)]
             ).split()
-            desired_slaves = kwargs["slaves"].split()
+            if isinstance(kwargs["slaves"], list):
+                desired_slaves = kwargs["slaves"]
+            else:
+                desired_slaves = kwargs["slaves"].split()
             missing_slaves = set(desired_slaves) - set(present_slaves)
 
             # Enslave only slaves missing in master
             if missing_slaves:
-                ifenslave_path = __salt__["cmd.run"](["which", "ifenslave"]).strip()
-                if ifenslave_path:
-                    log.info(
-                        "Adding slaves '%s' to the master %s",
-                        " ".join(missing_slaves),
-                        name,
+                if __grains__["os_family"] != "Suse":
+                    ifenslave_path = __salt__["cmd.run"](["which", "ifenslave"]).strip()
+                    if ifenslave_path:
+                        log.info(
+                            "Adding slaves '%s' to the master %s",
+                            " ".join(missing_slaves),
+                            name,
+                        )
+                        cmd = [ifenslave_path, name] + list(missing_slaves)
+                        __salt__["cmd.run"](cmd, python_shell=False)
+                    else:
+                        log.error("Command 'ifenslave' not found")
+                    ret["changes"][
+                        "enslave"
+                    ] = "Added slaves '{}' to master '{}'".format(
+                        " ".join(missing_slaves), name
                     )
-                    cmd = [ifenslave_path, name] + list(missing_slaves)
-                    __salt__["cmd.run"](cmd, python_shell=False)
-                else:
-                    log.error("Command 'ifenslave' not found")
-                ret["changes"]["enslave"] = "Added slaves '{}' to master '{}'".format(
-                    " ".join(missing_slaves), name
-                )
             else:
                 log.info(
                     "All slaves '%s' are already added to the master %s"
@@ -719,9 +726,10 @@ def routes(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret["comment"] = (
-                    "Interface {} routes are set to be "
-                    "updated:\n{}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Interface {} routes are set to be updated:\n{}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
         if not old and new:
@@ -783,9 +791,10 @@ def system(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret["comment"] = (
-                    "Global network settings are set to be "
-                    "updated:\n{}".format("\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Global network settings are set to be updated:\n{}".format(
+                    "\n".join(diff)
                 )
                 return ret
         if not old and new:

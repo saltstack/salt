@@ -2,8 +2,14 @@ name: Lint
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Salt:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Lint Salt's Source Code
     runs-on: ubuntu-latest
 
@@ -21,23 +27,12 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - name: Set Python Version Env Var
-      run: |
-        echo PY_VERSION=$(python -c 'import sys; print("{}.{}".format(*sys.version_info))') >> $GITHUB_ENV
-
     - name: Install Nox
+      env:
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run: |
         python -m pip install --upgrade pip
         pip install nox
-
-    - name: Set Lint Python Cache Key
-      run: echo "PY=$(python --version --version | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
-
-    - name: Setup Nox Cache
-      uses: pat-s/always-upload-cache@v2.1.3
-      with:
-        path: .nox/
-        key: lint-salt|${{ env.PY }}|${{ hashFiles(format('requirements/static/ci/py{0}/*.txt', env.PY_VERSION)) }}
 
     - id: changed-files
       name: Get Changed Files
@@ -52,6 +47,9 @@ jobs:
               - noxfile.py
               - salt/**/*.py
               - tasks/**/*.py
+          rcfile:
+            - added|modified:
+              - .pylintrc
 
     - name: Install Python Requirements
       env:
@@ -67,13 +65,16 @@ jobs:
         nox --forcecolor -e lint-salt -- ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }}
 
     - name: Lint ALL Files
-      if: steps.changed-files.outputs.salt == 'true'
+      if: steps.changed-files.outputs.salt == 'true' || steps.changed-files.outputs.rcfile == 'true'
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
         nox --forcecolor -e lint-salt
 
   Tests:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Lint Salt's Test Suite
     runs-on: ubuntu-latest
 
@@ -91,23 +92,12 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - name: Set Python Version Env Var
-      run: |
-        echo PY_VERSION=$(python -c 'import sys; print("{}.{}".format(*sys.version_info))') >> $GITHUB_ENV
-
     - name: Install Nox
+      env:
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run: |
         python -m pip install --upgrade pip
         pip install nox
-
-    - name: Set Lint Python Cache Key
-      run: echo "PY=$(python --version --version | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
-
-    - name: Setup Nox Cache
-      uses: pat-s/always-upload-cache@v2.1.3
-      with:
-        path: .nox/
-        key: lint-tests|${{ env.PY }}|${{ hashFiles(format('requirements/static/ci/py{0}/*.txt', env.PY_VERSION)) }}
 
     - id: changed-files
       name: Get Changed Files
@@ -119,6 +109,9 @@ jobs:
           tests:
             - added|modified:
               - tests/**/*.py
+          rcfile:
+            - added|modified:
+              - .pylintrc
 
     - name: Install Python Requirements
       env:
@@ -134,7 +127,7 @@ jobs:
         nox --forcecolor -e lint-tests -- ${{ join(fromJSON(steps.changed-files.outputs.tests_files), ' ') }}
 
     - name: Lint ALL Files
-      if: steps.changed-files.outputs.tests == 'true'
+      if: steps.changed-files.outputs.tests == 'true' || steps.changed-files.outputs.rcfile == 'true'
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
