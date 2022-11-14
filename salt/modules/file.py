@@ -3541,9 +3541,9 @@ def touch(name, atime=None, mtime=None):
     """
     name = os.path.expanduser(name)
 
-    if atime and atime.isdigit():
+    if atime and str(atime).isdigit():
         atime = int(atime)
-    if mtime and mtime.isdigit():
+    if mtime and str(mtime).isdigit():
         mtime = int(mtime)
     try:
         if not os.path.exists(name):
