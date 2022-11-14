@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Windows Object Access Control Lists
 
@@ -70,8 +69,6 @@ Ensure an object is not inheriting permissions
             - objectType: Registry
             - copy_inherited_acl: False
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "win_dacl"
 
@@ -98,7 +95,7 @@ def present(name, objectType, user, permission, acetype, propagation):
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] = "The ACE is set to be added."
-                ret["changes"]["Added ACEs"] = ("{0} {1} {2} on {3}").format(
+                ret["changes"]["Added ACEs"] = "{} {} {} on {}".format(
                     user, acetype, permission, propagation
                 )
                 return ret
@@ -134,7 +131,7 @@ def absent(name, objectType, user, permission, acetype, propagation):
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] = "The ACE is set to be removed."
-                ret["changes"]["Removed ACEs"] = ("{0} {1} {2} on {3}").format(
+                ret["changes"]["Removed ACEs"] = "{} {} {} on {}".format(
                     user, acetype, permission, propagation
                 )
                 return ret

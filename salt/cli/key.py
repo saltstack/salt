@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.parsers
-from salt.utils.verify import check_user, verify_log
+from salt.utils.verify import check_user
 
 
 class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
@@ -17,9 +14,6 @@ class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
         import salt.key
 
         self.parse_args()
-
-        self.setup_logfile_logger()
-        verify_log(self.config)
 
         key = salt.key.KeyCLI(self.config)
         if check_user(self.config["user"]):

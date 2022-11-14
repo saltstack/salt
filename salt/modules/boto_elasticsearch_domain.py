@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Elasticsearch Service
 
@@ -74,8 +73,6 @@ Connection module for Amazon Elasticsearch Service
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -84,12 +81,8 @@ import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 
 # pylint: disable=import-error
 try:
@@ -120,7 +113,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "es")
 
@@ -183,7 +175,7 @@ def status(DomainName, region=None, key=None, keyid=None, profile=None):
                 "ARN",
                 "ElasticsearchVersion",
             )
-            return {"domain": dict([(k, domain.get(k)) for k in keys if k in domain])}
+            return {"domain": {k: domain.get(k) for k in keys if k in domain}}
         else:
             return {"domain": None}
     except ClientError as e:
@@ -217,9 +209,9 @@ def describe(DomainName, region=None, key=None, keyid=None, profile=None):
                 "AdvancedOptions",
             )
             return {
-                "domain": dict(
-                    [(k, domain.get(k, {}).get("Options")) for k in keys if k in domain]
-                )
+                "domain": {
+                    k: domain.get(k, {}).get("Options") for k in keys if k in domain
+                }
             }
         else:
             return {"domain": None}
@@ -275,21 +267,19 @@ def create(
         ):
             if locals()[k] is not None:
                 val = locals()[k]
-                if isinstance(val, six.string_types):
+                if isinstance(val, str):
                     try:
                         val = salt.utils.json.loads(val)
                     except ValueError as e:
                         return {
                             "updated": False,
-                            "error": "Error parsing {0}: {1}".format(k, e.message),
+                            "error": "Error parsing {}: {}".format(k, e.message),
                         }
                 kwargs[k] = val
         if "AccessPolicies" in kwargs:
             kwargs["AccessPolicies"] = salt.utils.json.dumps(kwargs["AccessPolicies"])
         if "ElasticsearchVersion" in kwargs:
-            kwargs["ElasticsearchVersion"] = six.text_type(
-                kwargs["ElasticsearchVersion"]
-            )
+            kwargs["ElasticsearchVersion"] = str(kwargs["ElasticsearchVersion"])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
         if domain and "DomainStatus" in domain:
             return {"created": True}
@@ -368,13 +358,13 @@ def update(
     ):
         if locals()[k] is not None:
             val = locals()[k]
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 try:
                     val = salt.utils.json.loads(val)
                 except ValueError as e:
                     return {
                         "updated": False,
-                        "error": "Error parsing {0}: {1}".format(k, e.message),
+                        "error": "Error parsing {}: {}".format(k, e.message),
                     }
             call_args[k] = val
     if "AccessPolicies" in call_args:
@@ -412,14 +402,14 @@ def add_tags(
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith("__"):
+        for k, v in kwargs.items():
+            if str(k).startswith("__"):
                 continue
-            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
+            tagslist.append({"Key": str(k), "Value": str(v)})
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError(
-                    "One (but not both) of ARN or " "domain must be specified."
+                    "One (but not both) of ARN or domain must be specified."
                 )
             domaindata = status(
                 DomainName=DomainName,
@@ -434,7 +424,7 @@ def add_tags(
             ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
             raise SaltInvocationError(
-                "One (but not both) of ARN or " "domain must be specified."
+                "One (but not both) of ARN or domain must be specified."
             )
         conn.add_tags(ARN=ARN, TagList=tagslist)
         return {"tagged": True}
@@ -464,7 +454,7 @@ def remove_tags(
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError(
-                    "One (but not both) of ARN or " "domain must be specified."
+                    "One (but not both) of ARN or domain must be specified."
                 )
             domaindata = status(
                 DomainName=DomainName,
@@ -479,7 +469,7 @@ def remove_tags(
             ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
             raise SaltInvocationError(
-                "One (but not both) of ARN or " "domain must be specified."
+                "One (but not both) of ARN or domain must be specified."
             )
         conn.remove_tags(ARN=domaindata.get("domain", {}).get("ARN"), TagKeys=TagKeys)
         return {"tagged": True}
@@ -511,7 +501,7 @@ def list_tags(
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError(
-                    "One (but not both) of ARN or " "domain must be specified."
+                    "One (but not both) of ARN or domain must be specified."
                 )
             domaindata = status(
                 DomainName=DomainName,
@@ -526,7 +516,7 @@ def list_tags(
             ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
             raise SaltInvocationError(
-                "One (but not both) of ARN or " "domain must be specified."
+                "One (but not both) of ARN or domain must be specified."
             )
         ret = conn.list_tags(ARN=ARN)
         log.warning(ret)

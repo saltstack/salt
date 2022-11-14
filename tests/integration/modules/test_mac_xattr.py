@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_xattr
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_binaries_missing, slowTest
+from tests.support.helpers import runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("xattr")
+@pytest.mark.skip_if_binaries_missing("xattr")
 class MacXattrModuleTest(ModuleCase):
     """
     Validate the mac_xattr module
@@ -36,7 +36,7 @@ class MacXattrModuleTest(ModuleCase):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_no_xattr(self):
         """
         Make sure there are no attributes
@@ -50,10 +50,10 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.list", [self.no_file]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_write(self):
         """
         Write an attribute
@@ -83,10 +83,10 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.write", [self.no_file, "patrick", "jellyfish"]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_read(self):
         """
         Test xattr.read
@@ -110,7 +110,7 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.read", [self.no_file, "spongebob"]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
         # Test attribute not found
@@ -119,7 +119,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_delete(self):
         """
         Test xattr.delete
@@ -154,7 +154,7 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.delete", [self.no_file, "spongebob"]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
         # Test attribute not found
@@ -163,7 +163,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clear(self):
         """
         Test xattr.clear
@@ -190,5 +190,5 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.clear", [self.no_file]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )

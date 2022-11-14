@@ -74,7 +74,7 @@ command --list-sizes is run a default will be returned).
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud``
 command:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-cloud --list-images my-dimensiondata-config
     my-dimensiondata-config:

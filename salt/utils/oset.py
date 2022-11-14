@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Available at repository https://github.com/LuminosoInsight/ordered-set
@@ -21,7 +20,6 @@ Rob Speer's changes are as follows:
     - added a __getstate__ and __setstate__ so it can be pickled
     - added __getitem__
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from collections.abc import MutableSet
 
@@ -95,7 +93,7 @@ class OrderedSet(MutableSet):
         return OrderedSet(self)
 
     def __getstate__(self):
-        if len(self) == 0:
+        if not self.items:
             # The state can't be an empty list.
             # We need to return a truthy value, or else __setstate__ won't be run.
             #

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for Cisco NX OS Switches.
 
@@ -68,7 +67,7 @@ salt-call from the GuestShell environment as follows.
 
 .. code-block:: bash
 
-    salt-call --local nxos.show 'show lldp neighbors' raw_text
+    salt-call --local nxos.sendline 'show lldp neighbors' raw_text
 
 .. note::
 
@@ -78,25 +77,21 @@ salt-call from the GuestShell environment as follows.
     salt '*' nxos.get_user username=admin
 
     For backwards compatibility, the following syntax will be supported
-    until the Sodium release.
+    until the 3001 release.
 
     salt '*' nxos.cmd <function>
     salt '*' nxos.cmd get_user username=admin
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import ast
 import difflib
 import logging
 import re
 from socket import error as socket_error
 
-# Import Salt libs
 import salt.utils.nxos
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
-from salt.ext import six
 from salt.utils.args import clean_kwargs
 from salt.utils.pycrypto import gen_hash
 from salt.utils.versions import warn_until
@@ -179,7 +174,6 @@ def check_password(username, password, encrypted=False, **kwargs):
             crypt_salt=cur_salt,
             password=password,
             algorithm=hash_algorithms[hash_type],
-            force=True,
         )
     else:
         new_hash = password
@@ -201,7 +195,7 @@ def check_role(username, role, **kwargs):
 
 def cmd(command, *args, **kwargs):
     """
-    NOTE: This function is preserved for backwards compatibilty.  This allows
+    NOTE: This function is preserved for backwards compatibility.  This allows
     commands to be executed using either of the following syntactic forms.
 
     salt '*' nxos.cmd <function>
@@ -225,13 +219,13 @@ def cmd(command, *args, **kwargs):
         salt '*' nxos.cmd show_run
         salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
     """
-    warn_until("Silicon", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
+    warn_until("Argon", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
 
     for k in list(kwargs):
         if k.startswith("__pub_"):
             kwargs.pop(k)
     local_command = ".".join(["nxos", command])
-    log.info("local command: {}".format(local_command))
+    log.info("local command: %s", local_command)
     if local_command not in __salt__:
         return False
     return __salt__[local_command](*args, **kwargs)
@@ -264,8 +258,8 @@ def get_roles(username, **kwargs):
     user = get_user(username)
     if not user:
         return []
-    command = "show user-account {0}".format(username)
-    info = show(command, **kwargs)
+    command = "show user-account {}".format(username)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     roles = re.search(r"^\s*roles:(.*)$", info, re.MULTILINE)
@@ -284,8 +278,8 @@ def get_user(username, **kwargs):
 
         salt '*' nxos.get_user username=admin
     """
-    command = 'show run | include "^username {0} password 5 "'.format(username)
-    info = show(command, **kwargs)
+    command = 'show run | include "^username {} password 5 "'.format(username)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     return info
@@ -349,8 +343,8 @@ def sendline(command, method="cli_show_ascii", **kwargs):
     smethods = ["cli_show_ascii", "cli_show", "cli_conf"]
     if method not in smethods:
         msg = """
-        INPUT ERROR: Second argument 'method' must be one of {0}
-        Value passed: {1}
+        INPUT ERROR: Second argument 'method' must be one of {}
+        Value passed: {}
         Hint: White space separated commands should be wrapped by double quotes
         """.format(
             smethods, method
@@ -389,14 +383,14 @@ def show(commands, raw_text=True, **kwargs):
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     """
     warn_until(
-        "Silicon",
+        "Argon",
         "'nxos.show commands' is deprecated in favor of 'nxos.sendline commands'",
     )
 
     if not isinstance(raw_text, bool):
         msg = """
         INPUT ERROR: Second argument 'raw_text' must be either True or False
-        Value passed: {0}
+        Value passed: {}
         Hint: White space separated show commands should be wrapped by double quotes
         """.format(
             raw_text
@@ -427,7 +421,7 @@ def show_ver(**kwargs):
         salt '*' nxos.show_ver
     """
     command = "show version"
-    info = show(command, **kwargs)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     return info
@@ -442,7 +436,7 @@ def show_run(**kwargs):
         salt '*' nxos.show_run
     """
     command = "show running-config"
-    info = show(command, **kwargs)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     return info
@@ -456,7 +450,7 @@ def system_info(**kwargs):
 
         salt '*' nxos.system_info
     """
-    warn_until("Silicon", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
+    warn_until("Argon", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
     return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
 
 
@@ -483,7 +477,7 @@ def add_config(lines, **kwargs):
         For more than one config added per command, lines should be a list.
     """
     warn_until(
-        "Silicon",
+        "Argon",
         "'nxos.add_config lines' is deprecated in favor of 'nxos.config commands'",
     )
 
@@ -562,7 +556,7 @@ def config(
         salt '*' nxos.config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
     """
     kwargs = clean_kwargs(**kwargs)
-    initial_config = show("show running-config", **kwargs)
+    initial_config = sendline("show running-config", **kwargs)
     if isinstance(initial_config, list):
         initial_config = initial_config[0]
     if config_file:
@@ -570,7 +564,7 @@ def config(
         if file_str is False:
             raise CommandExecutionError("Source file {} not found".format(config_file))
     elif commands:
-        if isinstance(commands, (six.string_types, six.text_type)):
+        if isinstance(commands, str):
             commands = [commands]
         file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go
@@ -592,7 +586,7 @@ def config(
         return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
     config_result = _parse_config_result(config_result)
-    current_config = show("show running-config", **kwargs)
+    current_config = sendline("show running-config", **kwargs)
     if isinstance(current_config, list):
         current_config = current_config[0]
     diff = difflib.unified_diff(
@@ -670,7 +664,7 @@ def remove_user(username, **kwargs):
 
         salt '*' nxos.remove_user username=daniel
     """
-    user_line = "no username {0}".format(username)
+    user_line = "no username {}".format(username)
     kwargs = clean_kwargs(**kwargs)
     return config(user_line, **kwargs)
 
@@ -687,7 +681,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
         salt '*' nxos.replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
     """
     if full_match is False:
-        matcher = re.compile("^.*{0}.*$".format(re.escape(old_value)), re.MULTILINE)
+        matcher = re.compile("^.*{}.*$".format(re.escape(old_value)), re.MULTILINE)
         repl = re.compile(re.escape(old_value))
     else:
         matcher = re.compile(old_value, re.MULTILINE)
@@ -702,7 +696,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
     if lines["old"]:
         delete_config(lines["old"], **kwargs)
     if lines["new"]:
-        add_config(lines["new"], **kwargs)
+        config(lines["new"], **kwargs)
 
     return lines
 
@@ -748,7 +742,7 @@ def set_password(
         Configure crypt_salt setting
         Default: None
 
-    alogrithm
+    algorithm
         Encryption algorithm
         Default: sha256
 
@@ -769,13 +763,13 @@ def set_password(
     get_user(username, **kwargs)  # verify user exists
     if encrypted is False:
         hashed_pass = gen_hash(
-            crypt_salt=crypt_salt, password=password, algorithm=algorithm, force=True
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
         )
     else:
         hashed_pass = password
-    password_line = "username {0} password 5 {1}".format(username, hashed_pass)
+    password_line = "username {} password 5 {}".format(username, hashed_pass)
     if role is not None:
-        password_line += " role {0}".format(role)
+        password_line += " role {}".format(role)
     kwargs = clean_kwargs(**kwargs)
     return config(password_line, **kwargs)
 
@@ -799,7 +793,7 @@ def set_role(username, role, **kwargs):
 
         salt '*' nxos.set_role username=daniel role=vdc-admin.
     """
-    role_line = "username {0} role {1}".format(username, role)
+    role_line = "username {} role {}".format(username, role)
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 
@@ -823,7 +817,7 @@ def unset_role(username, role, **kwargs):
 
         salt '*' nxos.unset_role username=daniel role=vdc-admin
     """
-    role_line = "no username {0} role {1}".format(username, role)
+    role_line = "no username {} role {}".format(username, role)
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 

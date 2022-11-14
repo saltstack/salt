@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Generate roster data, this data is used by non-minion devices which need to be
 hit from the master rather than acting as an independent entity. This covers
 hitting minions without zeromq in place via an ssh agent, and connecting to
 systems that cannot or should not host a minion agent.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import salt libs
 import salt.loader
 import salt.syspaths
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +33,6 @@ def get_roster_file(options):
             if os.path.isfile(r_file):
                 template = r_file
                 break
-        del options["roster_file"]
 
     if not template:
         if options.get("roster_file"):
@@ -50,15 +45,15 @@ def get_roster_file(options):
             template = os.path.join(salt.syspaths.CONFIG_DIR, "roster")
 
     if not os.path.isfile(template):
-        raise IOError('Roster file "{0}" not found'.format(template))
+        raise OSError('Roster file "{}" not found'.format(template))
 
     if not os.access(template, os.R_OK):
-        raise IOError('Access denied to roster "{0}"'.format(template))
+        raise OSError('Access denied to roster "{}"'.format(template))
 
     return template
 
 
-class Roster(object):
+class Roster:
     """
     Used to manage a roster of minions allowing the master to become outwardly
     minion aware
@@ -68,7 +63,7 @@ class Roster(object):
         self.opts = opts
         if isinstance(backends, list):
             self.backends = backends
-        elif isinstance(backends, six.string_types):
+        elif isinstance(backends, str):
             self.backends = backends.split(",")
         else:
             self.backends = backends
@@ -85,7 +80,7 @@ class Roster(object):
         back = set()
         if self.backends:
             for backend in self.backends:
-                fun = "{0}.targets".format(backend)
+                fun = "{}.targets".format(backend)
                 if fun in self.rosters:
                     back.add(backend)
             return back
@@ -98,15 +93,14 @@ class Roster(object):
         """
         targets = {}
         for back in self._gen_back():
-            f_str = "{0}.targets".format(back)
+            f_str = "{}.targets".format(back)
             if f_str not in self.rosters:
                 continue
             try:
                 targets.update(self.rosters[f_str](tgt, tgt_type))
             except salt.exceptions.SaltRenderError as exc:
                 log.error("Unable to render roster file: %s", exc)
-            except IOError as exc:
+            except OSError as exc:
                 log.error("Can't access roster for backend %s: %s", back, exc)
 
-        log.debug("Matched minions: %s", targets)
         return targets

@@ -10,6 +10,14 @@ heavily on how you use Salt, where you use Salt, how your team is structured,
 where you get data from, and what kinds of access (internal and external) you
 require.
 
+.. important::
+   The guidance here should be taken in combination with :ref:`best-practices`.
+
+.. important::
+
+    Refer to the :ref:`saltstack_security_announcements` documentation in order to stay updated
+    and secure.
+
 .. warning::
 
     For historical reasons, Salt requires PyCrypto as a "lowest common
@@ -42,8 +50,13 @@ General hardening tips
 Salt hardening tips
 ===================
 
+.. include:: ../_incl/grains_passwords.rst
+
+.. include:: ../_incl/jinja_security.rst
+
 - Subscribe to `salt-users`_ or `salt-announce`_ so you know when new Salt
-  releases are available. Keep your systems up-to-date with the latest patches.
+  releases are available.
+- Keep your systems up-to-date with the latest patches.
 - Use Salt's Client :ref:`ACL system <acl>` to avoid having to give out root
   access in order to run Salt commands.
 - Use Salt's Client :ref:`ACL system <acl>` to restrict which users can run what commands.
@@ -72,10 +85,68 @@ Salt hardening tips
   particularly sensitive minions. There is also :ref:`salt-ssh` or the
   :mod:`modules.sudo <salt.modules.sudo>` if you need to further restrict
   a minion.
-- Monitor specific security releated log messages. Salt ``salt-master`` logs
+- Monitor specific security related log messages. Salt ``salt-master`` logs
   attempts to access methods which are not exposed to network clients. These log
   messages are logged at the ``error`` log level and start with ``Requested
   method not exposed``.
+
+.. _rotating-salt-keys:
+
+Rotating keys
+=============
+
+There are several reasons to rotate keys. One example is exposure or a
+compromised key. An easy way to rotate a key is to remove the existing keys and
+let the ``salt-master`` or ``salt-minion`` process generate new keys on
+restart.
+
+Rotate a minion key
+-------------------
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   salt-call saltutil.regen_keys
+   systemctl stop salt-minion
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   salt-key -d <minion-id>
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   systemctl start salt-minion
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   salt-key -a <minion-id>
+
+Rotate a master key
+-------------------
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   systemctl stop salt-master
+   rm <pki_dir>/master.{pem,pub}
+   systemctl start salt-master
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   systemctl stop salt-minion
+   rm <pki_dir>/minion_master.pub
+   systemctl start salt-minion
+
 
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce

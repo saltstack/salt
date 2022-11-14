@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 from salt.modules import tuned
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -88,13 +85,52 @@ Current active profile: virtual-guest
                 ],
             )
 
+    def test_v_2110_with_warnings(self):
+        """
+        Test the list_ function for newer tuned-adm (v2.11.0)
+        as shipped with CentOS-7.8 when warnings are emitted
+        """
+        tuned_list = """Available profiles:
+- balanced                    - General non-specialized tuned profile
+- desktop                     - Optmize for the desktop use-case
+- latency-performance         - Optimize for deterministic performance
+- network-latency             - Optimize for deterministic performance
+- network-throughput          - Optimize for streaming network throughput.
+- powersave                   - Optimize for low power-consumption
+- throughput-performance      - Broadly applicable tuning that provides--
+- virtual-guest               - Optimize for running inside a virtual-guest.
+- virtual-host                - Optimize for running KVM guests
+Current active profile: virtual-guest
+
+** COLLECTED WARNINGS **
+No SMBIOS nor DMI entry point found, sorry.
+** END OF WARNINGS **
+"""
+        mock_cmd = MagicMock(return_value=tuned_list)
+        with patch.dict(tuned.__salt__, {"cmd.run": mock_cmd}):
+            self.assertEqual(
+                tuned.list_(),
+                [
+                    "balanced",
+                    "desktop",
+                    "latency-performance",
+                    "network-latency",
+                    "network-throughput",
+                    "powersave",
+                    "throughput-performance",
+                    "virtual-guest",
+                    "virtual-host",
+                ],
+            )
+
     def test_none(self):
-        """
-        """
+        """ """
         ret = {
             "pid": 12345,
             "retcode": 1,
-            "stderr": "stderr: Cannot talk to Tuned daemon via DBus. Is Tuned daemon running?",
+            "stderr": (
+                "stderr: Cannot talk to Tuned daemon via DBus. Is Tuned daemon running?"
+            ),
             "stdout": "No current active profile.",
         }
         mock_cmd = MagicMock(return_value=ret)

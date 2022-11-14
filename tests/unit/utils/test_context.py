@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 """
-    tests.unit.context_test
-    ~~~~~~~~~~~~~~~~~~~~
+tests.unit.context_test
+~~~~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import
 
 import threading
 import time
 
+import pytest
+
 import salt.ext.tornado.gen
 import salt.ext.tornado.stack_context
 import salt.utils.json
-from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase, gen_test
 from salt.utils.context import ContextDict, NamespacedDictWrapper
-from tests.support.helpers import slowTest
 from tests.support.unit import TestCase
 
 
@@ -23,15 +21,14 @@ class ContextDictTests(AsyncTestCase):
     num_concurrent_tasks = 5
 
     def setUp(self):
-        super(ContextDictTests, self).setUp()
+        super().setUp()
         self.cd = ContextDict()
         # set a global value
         self.cd["foo"] = "global"
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_threads(self):
-        """Verify that ContextDict overrides properly within threads
-        """
+        """Verify that ContextDict overrides properly within threads"""
         rets = []
 
         def tgt(x, s):
@@ -62,10 +59,9 @@ class ContextDictTests(AsyncTestCase):
             self.assertEqual(r[2], r[3])
 
     @gen_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_coroutines(self):
-        """Verify that ContextDict overrides properly within coroutines
-        """
+        """Verify that ContextDict overrides properly within coroutines"""
 
         @salt.ext.tornado.gen.coroutine
         def secondary_coroutine(over):
@@ -114,41 +110,49 @@ class ContextDictTests(AsyncTestCase):
             )  # verify that the override sticks across coroutines
 
     def test_basic(self):
-        """Test that the contextDict is a dict
-        """
+        """Test that the contextDict is a dict"""
         # ensure we get the global value
         self.assertEqual(
-            dict(self.cd), {"foo": "global"},
+            dict(self.cd),
+            {"foo": "global"},
         )
 
     def test_override(self):
         over = self.cd.clone()
         over["bar"] = "global"
         self.assertEqual(
-            dict(over), {"foo": "global", "bar": "global"},
+            dict(over),
+            {"foo": "global", "bar": "global"},
         )
         self.assertEqual(
-            dict(self.cd), {"foo": "global"},
+            dict(self.cd),
+            {"foo": "global"},
         )
         with over:
             self.assertEqual(
-                dict(over), {"foo": "global", "bar": "global"},
+                dict(over),
+                {"foo": "global", "bar": "global"},
             )
             self.assertEqual(
-                dict(self.cd), {"foo": "global", "bar": "global"},
+                dict(self.cd),
+                {"foo": "global", "bar": "global"},
             )
             over["bar"] = "baz"
             self.assertEqual(
-                dict(over), {"foo": "global", "bar": "baz"},
+                dict(over),
+                {"foo": "global", "bar": "baz"},
             )
             self.assertEqual(
-                dict(self.cd), {"foo": "global", "bar": "baz"},
+                dict(self.cd),
+                {"foo": "global", "bar": "baz"},
             )
         self.assertEqual(
-            dict(over), {"foo": "global", "bar": "baz"},
+            dict(over),
+            {"foo": "global", "bar": "baz"},
         )
         self.assertEqual(
-            dict(self.cd), {"foo": "global"},
+            dict(self.cd),
+            {"foo": "global"},
         )
 
     def test_multiple_contexts(self):
@@ -159,7 +163,8 @@ class ContextDictTests(AsyncTestCase):
             self.assertNotIn("bar", self.cd)
             with cd:
                 self.assertEqual(
-                    dict(self.cd), {"bar": x, "foo": "global"},
+                    dict(self.cd),
+                    {"bar": x, "foo": "global"},
                 )
         self.assertNotIn("bar", self.cd)
 

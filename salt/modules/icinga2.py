@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide icinga2 compatibility to salt.
 
@@ -7,12 +6,9 @@ Module to provide icinga2 compatibility to salt.
 :depends:   - icinga2 server
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.icinga2 import get_certs_path
@@ -75,9 +71,9 @@ def generate_cert(domain):
             "--cn",
             domain,
             "--key",
-            "{0}{1}.key".format(get_certs_path(), domain),
+            "{}{}.key".format(get_certs_path(), domain),
             "--cert",
-            "{0}{1}.crt".format(get_certs_path(), domain),
+            "{}{}.crt".format(get_certs_path(), domain),
         ],
         python_shell=False,
     )
@@ -104,11 +100,11 @@ def save_cert(domain, master):
             "pki",
             "save-cert",
             "--key",
-            "{0}{1}.key".format(get_certs_path(), domain),
+            "{}{}.key".format(get_certs_path(), domain),
             "--cert",
-            "{0}{1}.cert".format(get_certs_path(), domain),
+            "{}{}.cert".format(get_certs_path(), domain),
             "--trustedcert",
-            "{0}trusted-master.crt".format(get_certs_path()),
+            "{}trusted-master.crt".format(get_certs_path()),
             "--host",
             master,
         ],
@@ -144,13 +140,13 @@ def request_cert(domain, master, ticket, port):
             "--ticket",
             ticket,
             "--key",
-            "{0}{1}.key".format(get_certs_path(), domain),
+            "{}{}.key".format(get_certs_path(), domain),
             "--cert",
-            "{0}{1}.crt".format(get_certs_path(), domain),
+            "{}{}.crt".format(get_certs_path(), domain),
             "--trustedcert",
-            "{0}trusted-master.crt".format(get_certs_path()),
+            "{}trusted-master.crt".format(get_certs_path()),
             "--ca",
-            "{0}ca.crt".format(get_certs_path()),
+            "{}ca.crt".format(get_certs_path()),
         ],
         python_shell=False,
     )
@@ -186,7 +182,7 @@ def node_setup(domain, master, ticket):
             "--master_host",
             master,
             "--trustedcert",
-            "{0}trusted-master.crt".format(get_certs_path()),
+            "{}trusted-master.crt".format(get_certs_path()),
         ],
         python_shell=False,
     )

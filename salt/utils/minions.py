@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 This module contains routines used to verify the matcher against the minions
 expected to return
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
 
 import fnmatch
 import logging
@@ -14,21 +11,17 @@ import re
 
 import salt.auth.ldap
 import salt.cache
-
-# Import salt libs
 import salt.payload
 import salt.roster
+import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.versions
-
-# Import 3rd-party libs
 from salt._compat import ipaddress
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
-from salt.ext import six
 
 HAS_RANGE = False
 try:
@@ -88,7 +81,7 @@ def _nodegroup_regex(nodegroup, words, opers):
 
 def parse_target(target_expression):
     """Parse `target_expressing` splitting it into `engine`, `delimiter`,
-     `pattern` - returns a dict"""
+    `pattern` - returns a dict"""
 
     match = TARGET_REX.match(target_expression)
     if not match:
@@ -116,11 +109,11 @@ def get_minion_data(minion, opts):
         cache = salt.cache.factory(opts)
         if minion is None:
             for id_ in cache.list("minions"):
-                data = cache.fetch("minions/{0}".format(id_), "data")
+                data = cache.fetch("minions/{}".format(id_), "data")
                 if data is None:
                     continue
         else:
-            data = cache.fetch("minions/{0}".format(minion), "data")
+            data = cache.fetch("minions/{}".format(minion), "data")
         if data is not None:
             grains = data.get("grains", None)
             pillar = data.get("pillar", None)
@@ -149,7 +142,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
         return ""
 
     nglookup = nodegroups[nodegroup]
-    if isinstance(nglookup, six.string_types):
+    if isinstance(nglookup, str):
         words = nglookup.split()
     elif isinstance(nglookup, (list, tuple)):
         words = nglookup
@@ -165,8 +158,8 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     ret = []
     opers = ["and", "or", "not", "(", ")"]
     for word in words:
-        if not isinstance(word, six.string_types):
-            word = six.text_type(word)
+        if not isinstance(word, str):
+            word = str(word)
         if word in opers:
             ret.append(word)
         elif len(word) >= 3 and word.startswith("N@"):
@@ -199,13 +192,13 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             return joined
 
         log.debug(
-            "No nested nodegroups detected. Using original nodegroup " "definition: %s",
+            "No nested nodegroups detected. Using original nodegroup definition: %s",
             nodegroups[nodegroup],
         )
         return ret
 
 
-class CkMinions(object):
+class CkMinions:
     """
     Used to check what minions should respond from a target
 
@@ -217,10 +210,9 @@ class CkMinions(object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
-        if self.opts.get("transport", "zeromq") in ("zeromq", "tcp"):
+        if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
         else:
             self.acc = "accepted"
@@ -245,7 +237,7 @@ class CkMinions(object):
         """
         Return the minions found by looking via a list
         """
-        if isinstance(expr, six.string_types):
+        if isinstance(expr, str):
             expr = [m for m in expr.split(",") if m]
         minions = self._pki_minions()
         return {
@@ -277,12 +269,8 @@ class CkMinions(object):
         try:
             if self.opts["key_cache"] and os.path.exists(pki_cache_fn):
                 log.debug("Returning cached minion list")
-                if six.PY2:
-                    with salt.utils.files.fopen(pki_cache_fn) as fn_:
-                        return self.serial.load(fn_)
-                else:
-                    with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
-                        return self.serial.load(fn_)
+                with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
+                    return salt.payload.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
@@ -337,7 +325,7 @@ class CkMinions(object):
             for id_ in cminions:
                 if greedy and id_ not in minions:
                     continue
-                mdata = self.cache.fetch("minions/{0}".format(id_), "data")
+                mdata = self.cache.fetch("minions/{}".format(id_), "data")
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -422,11 +410,11 @@ class CkMinions(object):
                 except Exception:  # pylint: disable=broad-except
                     log.error("Invalid IP/CIDR target: %s", tgt)
                     return {"minions": [], "missing": []}
-            proto = "ipv{0}".format(tgt.version)
+            proto = "ipv{}".format(tgt.version)
 
             minions = set(minions)
             for id_ in cminions:
-                mdata = self.cache.fetch("minions/{0}".format(id_), "data")
+                mdata = self.cache.fetch("minions/{}".format(id_), "data")
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -435,7 +423,7 @@ class CkMinions(object):
                 if grains is None or proto not in grains:
                     match = False
                 elif isinstance(tgt, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
-                    match = six.text_type(tgt) in grains[proto]
+                    match = str(tgt) in grains[proto]
                 else:
                     match = salt.utils.network.in_subnet(tgt, grains[proto])
 
@@ -489,9 +477,7 @@ class CkMinions(object):
         """
         Return the minions found by looking via compound matcher
         """
-        if not isinstance(expr, six.string_types) and not isinstance(
-            expr, (list, tuple)
-        ):
+        if not isinstance(expr, str) and not isinstance(expr, (list, tuple)):
             log.error("Compound target that is neither string, list nor tuple")
             return {"minions": [], "missing": []}
         minions = set(self._pki_minions())
@@ -520,7 +506,7 @@ class CkMinions(object):
             opers = ["and", "or", "not", "(", ")"]
             missing = []
 
-            if isinstance(expr, six.string_types):
+            if isinstance(expr, str):
                 words = expr.split()
             else:
                 # we make a shallow copy in order to not affect the passed in arg
@@ -540,7 +526,7 @@ class CkMinions(object):
                             if not results[-1] in ("&", "|", "("):
                                 results.append("&")
                             results.append("(")
-                            results.append(six.text_type(set(minions)))
+                            results.append(str(set(minions)))
                             results.append("-")
                             unmatched.append("-")
                         elif word == "and":
@@ -570,7 +556,7 @@ class CkMinions(object):
                         # seq start with oper, fail
                         if word == "not":
                             results.append("(")
-                            results.append(six.text_type(set(minions)))
+                            results.append(str(set(minions)))
                             results.append("-")
                             unmatched.append("-")
                         elif word == "(":
@@ -578,7 +564,7 @@ class CkMinions(object):
                             unmatched.append(word)
                         else:
                             log.error(
-                                "Expression may begin with" " binary operator: %s", word
+                                "Expression may begin with binary operator: %s", word
                             )
                             return {"minions": [], "missing": []}
 
@@ -611,7 +597,7 @@ class CkMinions(object):
                     if "L" == target_info["engine"]:
                         engine_args.append(results and results[-1] == "-")
                     _results = engine(*engine_args)
-                    results.append(six.text_type(set(_results["minions"])))
+                    results.append(str(set(_results["minions"])))
                     missing.extend(_results["missing"])
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
@@ -620,7 +606,7 @@ class CkMinions(object):
                 else:
                     # The match is not explicitly defined, evaluate as a glob
                     _results = self._check_glob_minions(word, True)
-                    results.append(six.text_type(set(_results["minions"])))
+                    results.append(str(set(_results["minions"])))
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
                         unmatched.pop()
@@ -639,31 +625,20 @@ class CkMinions(object):
 
         return {"minions": list(minions), "missing": []}
 
-    def connected_ids(
-        self, subset=None, show_ip=False, show_ipv4=None, include_localhost=None
-    ):
+    def connected_ids(self, subset=None, show_ip=False):
         """
         Return a set of all connected minion ids, optionally within a subset
         """
-        if include_localhost is not None:
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "The 'include_localhost' argument is no longer required; any"
-                "connected localhost minion will always be included.",
-            )
-        if show_ipv4 is not None:
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "The 'show_ipv4' argument has been renamed to 'show_ip' as"
-                "it now also includes IPv6 addresses for IPv6-connected"
-                "minions.",
-            )
         minions = set()
         if self.opts.get("minion_data_cache", False):
             search = self.cache.list("minions")
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
+            if self.opts.get("detect_remote_minions", False):
+                addrs = addrs.union(
+                    salt.utils.network.remote_port_tcp(self.opts["remote_minions_port"])
+                )
             if "127.0.0.1" in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("127.0.0.1")
@@ -676,7 +651,7 @@ class CkMinions(object):
                 search = subset
             for id_ in search:
                 try:
-                    mdata = self.cache.fetch("minions/{0}".format(id_), "data")
+                    mdata = self.cache.fetch("minions/{}".format(id_), "data")
                 except SaltCacheError:
                     # If a SaltCacheError is explicitly raised during the fetch operation,
                     # permission was denied to open the cached data.p file. Continue on as
@@ -729,7 +704,7 @@ class CkMinions(object):
         try:
             if expr is None:
                 expr = ""
-            check_func = getattr(self, "_check_{0}_minions".format(tgt_type), None)
+            check_func = getattr(self, "_check_{}_minions".format(tgt_type), None)
             if tgt_type in (
                 "grain",
                 "grain_pcre",
@@ -746,7 +721,7 @@ class CkMinions(object):
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
             _res["ssh_minions"] = False
             if self.opts.get("enable_ssh_minions", False) is True and isinstance(
-                "tgt", six.string_types
+                "tgt", str
             ):
                 roster = salt.roster.Roster(self.opts, self.opts.get("roster", "flat"))
                 ssh_minions = roster.targets(expr, tgt_type)
@@ -762,20 +737,27 @@ class CkMinions(object):
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         """
-        Return a Bool. This function returns if the expression sent in is
-        within the scope of the valid expression
+        Validate the target minions against the possible valid minions.
+
+        If ``minions`` is provided, they will be compared against the valid
+        minions. Otherwise, ``expr`` and ``tgt_type`` will be used to expand
+        to a list of target minions.
+
+        Return True if all of the requested minions are valid minions,
+        otherwise return False.
         """
 
         v_minions = set(self.check_minions(valid, "compound").get("minions", []))
+        if not v_minions:
+            # There are no valid minions, so it doesn't matter what we are
+            # targeting - this is a fail.
+            return False
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res["minions"])
         else:
             minions = set(minions)
-        d_bool = not bool(minions.difference(v_minions))
-        if len(v_minions) == len(minions) and d_bool:
-            return True
-        return d_bool
+        return minions.issubset(v_minions)
 
     def match_check(self, regex, fun):
         """
@@ -784,7 +766,7 @@ class CkMinions(object):
         functions
         """
         vals = []
-        if isinstance(fun, six.string_types):
+        if isinstance(fun, str):
             fun = [fun]
         for func in fun:
             try:
@@ -871,7 +853,7 @@ class CkMinions(object):
         # Also iterate through the entire auth_list and create a dictionary
         # so it's easy to look up what functions are permitted
         for auth_list_entry in auth_list:
-            if isinstance(auth_list_entry, six.string_types):
+            if isinstance(auth_list_entry, str):
                 for fun in funs:
                     # represents toplevel auth entry is a function.
                     # so this fn is permitted by all minions
@@ -899,7 +881,7 @@ class CkMinions(object):
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
         # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
+        if minions - allowed_minions_from_auth_list:
             return False
 
         try:
@@ -963,7 +945,7 @@ class CkMinions(object):
                 if whitelist and fun in whitelist:
                     return True
                 for ind in auth_list:
-                    if isinstance(ind, six.string_types):
+                    if isinstance(ind, str):
                         # Allowed for all minions
                         if self.match_check(ind, fun):
                             return True
@@ -971,7 +953,7 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = next(six.iterkeys(ind))
+                        valid = next(iter(ind.keys()))
                         # Check if minions are allowed
                         if self.validate_tgt(valid, tgt, tgt_type, minions=minions):
                             # Minions are allowed, verify function in allowed list
@@ -1067,25 +1049,25 @@ class CkMinions(object):
         else:
             fun_name = mod_name = fun
         for ind in auth_list:
-            if isinstance(ind, six.string_types):
+            if isinstance(ind, str):
                 if ind[0] == "@":
                     if (
                         ind[1:] == mod_name
                         or ind[1:] == form
-                        or ind == "@{0}s".format(form)
+                        or ind == "@{}s".format(form)
                     ):
                         return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(six.iterkeys(ind))
+                valid = next(iter(ind.keys()))
                 if valid[0] == "@":
                     if valid[1:] == mod_name:
                         if self.__fun_check(
                             ind[valid], fun_name, args.get("arg"), args.get("kwarg")
                         ):
                             return True
-                    if valid[1:] == form or valid == "@{0}s".format(form):
+                    if valid[1:] == form or valid == "@{}s".format(form):
                         if self.__fun_check(
                             ind[valid], fun, args.get("arg"), args.get("kwarg")
                         ):
@@ -1100,7 +1082,7 @@ class CkMinions(object):
             valid = [valid]
         for cond in valid:
             # Function name match
-            if isinstance(cond, six.string_types):
+            if isinstance(cond, str):
                 if self.match_check(cond, fun):
                     return True
             # Function and args match
@@ -1108,7 +1090,7 @@ class CkMinions(object):
                 if len(cond) != 1:
                     # Invalid argument
                     continue
-                fname_cond = next(six.iterkeys(cond))
+                fname_cond = next(iter(cond.keys()))
                 if self.match_check(
                     fname_cond, fun
                 ):  # check key that is function name match
@@ -1135,20 +1117,20 @@ class CkMinions(object):
                     break
                 if cond_arg is None:  # None == '.*' i.e. allow any
                     continue
-                if not self.match_check(cond_arg, six.text_type(args[i])):
+                if not self.match_check(cond_arg, str(args[i])):
                     good = False
                     break
             if not good:
                 continue
             # Check kwargs
             cond_kwargs = cond.get("kwargs", {})
-            for k, v in six.iteritems(cond_kwargs):
+            for k, v in cond_kwargs.items():
                 if kwargs is None or k not in kwargs:
                     good = False
                     break
                 if v is None:  # None == '.*' i.e. allow any
                     continue
-                if not self.match_check(v, six.text_type(kwargs[k])):
+                if not self.match_check(v, str(kwargs[k])):
                     good = False
                     break
             if good:

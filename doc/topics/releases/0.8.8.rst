@@ -11,7 +11,7 @@ to the salt website which is still under heavy development. The new sphinx
 documentation system has also been used to greatly clean up the salt manpages.
 The salt 7 manpage in particular now contains extensive information which was
 previously only in the wiki. The new documentation can be found at:
-http://docs.saltstack.com/
+https://docs.saltproject.io/
 We still have a lot to add, and when the domain is set up I will post another
 announcement.
 

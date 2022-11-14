@@ -1,22 +1,11 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_iot as boto_iot
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -25,8 +14,8 @@ from tests.support.unit import TestCase, skipIf
 try:
     import boto
     import boto3
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
+    from botocore.exceptions import ClientError
 
     HAS_BOTO = True
 except ImportError:
@@ -87,7 +76,10 @@ if _has_required_boto():
     error_content = {"Error": {"Code": 101, "Message": "Test-defined error"}}
     policy_ret = dict(
         policyName="testpolicy",
-        policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+        policyDocument=(
+            '{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"],'
+            ' "Resource": ["*"], "Effect": "Allow"}]}'
+        ),
         policyArn="arn:aws:iot:us-east-1:123456:policy/my_policy",
         policyVersionId=1,
         defaultVersionId=1,
@@ -123,8 +115,9 @@ if _has_required_boto():
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    "The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoIoTTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
@@ -137,7 +130,7 @@ class BotoIoTTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_iot: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoIoTTestCaseBase, self).setUp()
+        super().setUp()
         boto_iot.__init__(self.opts)
         del self.opts
 
@@ -160,7 +153,7 @@ class BotoIoTTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoIoTTestCaseMixin(object):
+class BotoIoTTestCaseMixin:
     pass
 
 
@@ -834,9 +827,9 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}.  The botocore"
+    " or equal to version {}.  The botocore"
     " module must be greater than or equal to"
-    " version {1}.".format(required_boto3_version, required_botocore_version),
+    " version {}.".format(required_boto3_version, required_botocore_version),
 )
 class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     """

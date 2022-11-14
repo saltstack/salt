@@ -1,5 +1,5 @@
-salt.states.nxos_upgrade module
-=======================
+salt.states.nxos_upgrade
+========================
 
 .. automodule:: salt.states.nxos_upgrade
     :members:

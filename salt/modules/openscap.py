@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Module for OpenSCAP Management
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shlex
 import shutil
 import tempfile
 from subprocess import PIPE, Popen
-
-# Import Salt libs
-from salt.ext import six
 
 ArgumentParser = object
 
@@ -44,7 +38,7 @@ def __virtual__():
 
 class _ArgumentParser(ArgumentParser):
     def __init__(self, action=None, *args, **kwargs):
-        super(_ArgumentParser, self).__init__(*args, prog="oscap", **kwargs)
+        super().__init__(*args, prog="oscap", **kwargs)
         self.add_argument("action", choices=["eval"])
         add_arg = None
         for params, kwparams in _XCCDF_MAP["eval"]["parser_arguments"]:
@@ -91,7 +85,7 @@ def xccdf(params):
         args, argv = _ArgumentParser(action=action).parse_known_args(args=params)
     except Exception as err:  # pylint: disable=broad-except
         success = False
-        error = six.text_type(err)
+        error = str(err)
 
     if success:
         cmd = _XCCDF_MAP[action]["cmd_pattern"].format(args.profile, policy)

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##
 # Copyright 2018 Pure Storage Inc
 #
@@ -47,25 +45,26 @@ Installation Prerequisites
 :requires: purity_fb
 :platform: all
 
-.. versionadded::  2019.2.0
+.. versionadded:: 2019.2.0
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 from datetime import datetime
 
 from salt.exceptions import CommandExecutionError
 
-# Import Salt libs
-from salt.ext import six
-
-# Import 3rd party modules
 try:
-    from purity_fb import PurityFb, FileSystem, FileSystemSnapshot, SnapshotSuffix
-    from purity_fb import rest, NfsRule, ProtocolRule
+    from purity_fb import (
+        FileSystem,
+        FileSystemSnapshot,
+        NfsRule,
+        ProtocolRule,
+        PurityFb,
+        SnapshotSuffix,
+        rest,
+    )
 
     HAS_PURITY_FB = True
 except ImportError:
@@ -100,7 +99,7 @@ def _get_blade():
     2) From environment (PUREFB_IP and PUREFB_API)
     3) From the pillar (PUREFB_IP and PUREFB_API)
 
-  """
+    """
 
     try:
         blade_name = __opts__["pure_tags"]["fb"].get("san_ip")
@@ -178,7 +177,7 @@ def snap_create(name, suffix=None):
 
     Will return False if filesystem selected to snap does not exist.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem to snapshot
@@ -195,7 +194,7 @@ def snap_create(name, suffix=None):
     """
     blade = _get_blade()
     if suffix is None:
-        suffix = "snap-" + six.text_type(
+        suffix = "snap-" + str(
             (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
         )
         suffix = suffix.replace(".", "")
@@ -220,7 +219,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     Will return False if selected snapshot does not exist.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -265,7 +264,7 @@ def snap_eradicate(name, suffix=None):
 
     Will return False if snapshot is not in a deleted state.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -300,7 +299,7 @@ def fs_create(
 
     Will return False if filesystem already exists.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem (truncated to 63 characters)
@@ -375,7 +374,7 @@ def fs_delete(name, eradicate=False):
 
     Will return False if filesystem doesn't exist or is already in a deleted state.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -422,7 +421,7 @@ def fs_eradicate(name):
 
     Will return False is filesystem is not in a deleted state.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -452,7 +451,7 @@ def fs_extend(name, size):
 
     Will return False if new size is less than or equal to existing size.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -493,7 +492,7 @@ def fs_update(name, rules, snapshot=False):
     Allows for change of NFS export rules and enabling/disabled
     of snapshotting capability.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem

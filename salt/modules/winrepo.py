@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Module to manage Windows software repo on a Standalone Minion
 
@@ -7,16 +6,10 @@ Module to manage Windows software repo on a Standalone Minion
 For documentation on Salt's Windows Repo feature, see :ref:`here
 <windows-package-manager>`.
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
 import salt.loader
-
-# Import salt libs
 import salt.output
 import salt.template
 import salt.utils.functools
@@ -24,14 +17,15 @@ import salt.utils.gitfs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltRenderError
-
-# All the "unused" imports here are needed for the imported winrepo runner code
-# pylint: disable=unused-import
-from salt.runners.winrepo import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.runners.winrepo import genrepo as _genrepo
 from salt.runners.winrepo import update_git_repos as _update_git_repos
 
 # pylint: enable=unused-import
+if salt.utils.platform.is_windows():
+    _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
+    _update_git_repos = salt.utils.functools.namespaced_function(
+        _update_git_repos, globals()
+    )
 
 log = logging.getLogger(__name__)
 
@@ -44,11 +38,6 @@ def __virtual__():
     Set the winrepo module if the OS is Windows
     """
     if salt.utils.platform.is_windows():
-        global _genrepo, _update_git_repos
-        _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
-        _update_git_repos = salt.utils.functools.namespaced_function(
-            _update_git_repos, globals()
-        )
         return __virtualname__
     return (False, "This module only works on Windows.")
 
@@ -175,15 +164,15 @@ def show_sls(name, saltenv="base"):
         repo.extend(definition)
 
         # Check for the sls file by name
-        sls_file = "{0}.sls".format(os.sep.join(repo))
+        sls_file = "{}.sls".format(os.sep.join(repo))
         if not os.path.exists(sls_file):
 
             # Maybe it's a directory with an init.sls
-            sls_file = "{0}\\init.sls".format(os.sep.join(repo))
+            sls_file = "{}\\init.sls".format(os.sep.join(repo))
             if not os.path.exists(sls_file):
 
                 # It's neither, return
-                return "Software definition {0} not found".format(name)
+                return "Software definition {} not found".format(name)
 
     # Load the renderer
     renderers = salt.loader.render(__opts__, __salt__)
@@ -203,7 +192,7 @@ def show_sls(name, saltenv="base"):
     except SaltRenderError as exc:
         log.debug("Failed to compile %s.", sls_file)
         log.debug("Error: %s.", exc)
-        config["Message"] = "Failed to compile {0}".format(sls_file)
-        config["Error"] = "{0}".format(exc)
+        config["Message"] = "Failed to compile {}".format(sls_file)
+        config["Error"] = "{}".format(exc)
 
     return config

@@ -1,19 +1,21 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for Package Management module 'module.opkg'
     :platform: Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import copy
+import os
+import textwrap
 
 import salt.modules.opkg as opkg
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, mock_open, patch
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(not salt.utils.platform.is_linux(), "Must be on Linux!")
 class OpkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.opkg
@@ -57,6 +59,55 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Tested modules
         """
         return {opkg: {}}
+
+    def test_virtual_ni_linux_rt_system(self):
+        """
+        Test - Module virtual name on NI Linux RT
+        """
+        with patch.dict(opkg.__grains__, {"os_family": "NILinuxRT"}):
+            with patch.object(os, "makedirs", MagicMock(return_value=True)):
+                with patch.object(os, "listdir", MagicMock(return_value=[])):
+                    with patch.object(opkg, "_update_nilrt_restart_state", MagicMock()):
+                        self.assertEqual("pkg", opkg.__virtual__())
+
+    def test_virtual_open_embedded_system(self):
+        """
+        Test - Module virtual name on Open Embedded
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=True)):
+            self.assertEqual("pkg", opkg.__virtual__())
+
+    def test_virtual_not_supported_system(self):
+        """
+        Test - Module not supported
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            expected = (False, "Module opkg only works on OpenEmbedded based systems")
+            self.assertEqual(expected, opkg.__virtual__())
+
+    def test_virtual_update_restart_state_called(self):
+        """
+        Test - Update restart state is called when empty dir
+        """
+        mock_cmd = MagicMock()
+        with patch.dict(opkg.__grains__, {"os_family": "NILinuxRT"}):
+            with patch.object(os, "makedirs", MagicMock(return_value=True)):
+                with patch.object(os, "listdir", MagicMock(return_value=[])):
+                    with patch.object(opkg, "_update_nilrt_restart_state", mock_cmd):
+                        opkg.__virtual__()
+                        mock_cmd.assert_called_once()
+
+    def test_virtual_update_restart_state_not_called(self):
+        """
+        Test - Update restart state is not called when dir contains files
+        """
+        mock_cmd = MagicMock()
+        with patch.dict(opkg.__grains__, {"os_family": "NILinuxRT"}):
+            with patch.object(os, "makedirs", MagicMock(return_value=True)):
+                with patch.object(os, "listdir", MagicMock(return_value=["test"])):
+                    with patch.object(opkg, "_update_nilrt_restart_state", mock_cmd):
+                        opkg.__virtual__()
+                        mock_cmd.assert_not_called()
 
     def test_version(self):
         """
@@ -136,7 +187,11 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Install packages.
         """
         with patch("salt.modules.opkg.list_pkgs", MagicMock(side_effect=({}, {}))):
-            std_out = "Downloading http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim (7.4) on root\n"
+            std_out = (
+                "Downloading"
+                " http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim"
+                " (7.4) on root\n"
+            )
             ret_value = {"retcode": 0, "stdout": std_out}
             mock = MagicMock(return_value=ret_value)
             patch_kwargs = {
@@ -228,3 +283,98 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Return the information of check_extra_requirements
         """
         self.assertEqual(opkg.check_extra_requirements("vim", "1.0.1"), True)
+
+    def _get_repo(self, enabled, compressed, name, uri, file, trusted=None):
+        feed = {
+            "enabled": enabled,
+            "compressed": compressed,
+            "name": name,
+            "uri": uri,
+            "file": file,
+        }
+        if trusted is not None:
+            feed["trusted"] = trusted
+        return feed
+
+    def test_list_repos(self):
+        feeds_content = textwrap.dedent(
+            """\
+            src/gz   name1     url1
+            src   name2     url2
+            #src/gz   name3     url3
+            src/gz   name4     url4 [trusted=yes]
+            src/gz   "name5 space"    url5 [trusted=no]
+            """
+        )
+        expected_feed1 = self._get_repo(
+            True, True, "name1", "url1", "/etc/opkg/test.conf"
+        )
+        expected_feed2 = self._get_repo(
+            True, False, "name2", "url2", "/etc/opkg/test.conf"
+        )
+        expected_feed3 = self._get_repo(
+            False, True, "name3", "url3", "/etc/opkg/test.conf"
+        )
+        expected_feed4 = self._get_repo(
+            True, True, "name4", "url4", "/etc/opkg/test.conf", True
+        )
+        expected_feed5 = self._get_repo(
+            True, True, "name5 space", "url5", "/etc/opkg/test.conf", False
+        )
+
+        file_mock = mock_open(read_data={"/etc/opkg/test.conf": feeds_content})
+        with patch.object(
+            opkg.os, "listdir", MagicMock(return_value=["test.conf", "test"])
+        ):
+            with patch.object(opkg.salt.utils.files, "fopen", file_mock):
+                repos = opkg.list_repos()
+                self.assertDictEqual(expected_feed1, repos["url1"][0])
+                self.assertDictEqual(expected_feed2, repos["url2"][0])
+                self.assertDictEqual(expected_feed3, repos["url3"][0])
+                self.assertDictEqual(expected_feed4, repos["url4"][0])
+                self.assertDictEqual(expected_feed5, repos["url5"][0])
+
+    def test_mod_repo_add_new_repo(self):
+        kwargs = {"uri": "url", "compressed": True, "enabled": True, "trusted": True}
+        file_mock = mock_open()
+        expected = "src/gz repo url [trusted=yes]\n"
+        with patch.object(opkg, "list_repos", MagicMock(return_value=[])):
+            with patch.object(opkg.salt.utils.files, "fopen", file_mock):
+                opkg.mod_repo("repo", **kwargs)
+                handle = file_mock.filehandles["/etc/opkg/repo.conf"][0]
+                handle.write.assert_called_once_with(expected)
+
+    def test_mod_repo_set_trusted(self):
+        file_content = textwrap.dedent(
+            """\
+            src/gz   repo     url
+            """
+        )
+        file_mock = mock_open(read_data={"/etc/opkg/repo.conf": file_content})
+        kwargs = {"trusted": True}
+        expected = "src/gz repo url [trusted=yes]\n"
+        with patch.object(opkg.os, "listdir", MagicMock(return_value=["repo.conf"])):
+            with patch.object(opkg.salt.utils.files, "fopen", file_mock):
+                opkg.mod_repo("repo", **kwargs)
+                handle = file_mock.filehandles["/etc/opkg/repo.conf"][2]
+                handle.writelines.assert_called_once_with([expected])
+
+    def test_mod_repo_repo_exists(self):
+        file_content = textwrap.dedent(
+            """\
+            src/gz   repo     url
+            """
+        )
+        file_mock = mock_open(read_data={"/etc/opkg/repo.conf": file_content})
+        kwargs = {"uri": "url"}
+        expected = "Repository 'url' already exists as 'repo'."
+        with patch.object(opkg.os, "listdir", MagicMock(return_value=["repo.conf"])):
+            with patch.object(opkg.salt.utils.files, "fopen", file_mock):
+                with self.assertRaisesRegex(opkg.CommandExecutionError, expected):
+                    opkg.mod_repo("repo2", **kwargs)
+
+    def test_mod_repo_uri_not_provided(self):
+        expected = "Repository 'repo' not found and no URI passed to create one."
+        with patch.object(opkg, "list_repos", MagicMock(return_value=[])):
+            with self.assertRaisesRegex(opkg.CommandExecutionError, expected):
+                opkg.mod_repo("repo")

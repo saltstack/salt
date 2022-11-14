@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The Saltutil module is used to manage the state of the salt minion itself. It
 is used to manage minion modules as well as automate updates to the salt
@@ -6,9 +5,7 @@ minion.
 
 :depends:   - esky Python module for update functionality
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import fnmatch
 import logging
@@ -17,9 +14,10 @@ import shutil
 import signal
 import sys
 import time
+import urllib.error
 
-# Import salt libs
 import salt
+import salt.channel.client
 import salt.client
 import salt.client.ssh.client
 import salt.config
@@ -27,7 +25,6 @@ import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -45,12 +42,6 @@ from salt.exceptions import (
     SaltReqTimeoutError,
 )
 
-# pylint: disable=no-name-in-module
-from salt.ext import six
-from salt.ext.six.moves.urllib.error import URLError
-
-# Import 3rd-party libs
-# pylint: disable=import-error
 try:
     import esky
     from esky import EskyVersionError
@@ -87,15 +78,17 @@ def _get_top_file_envs():
     try:
         return __context__["saltutil._top_file_envs"]
     except KeyError:
-        try:
-            st_ = salt.state.HighState(__opts__, initial_pillar=__pillar__)
-            top = st_.get_top()
-            if top:
-                envs = list(st_.top_matches(top).keys()) or "base"
-            else:
-                envs = "base"
-        except SaltRenderError as exc:
-            raise CommandExecutionError("Unable to render top file(s): {0}".format(exc))
+        with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as st_:
+            try:
+                top = st_.get_top()
+                if top:
+                    envs = list(st_.top_matches(top).keys()) or "base"
+                else:
+                    envs = "base"
+            except SaltRenderError as exc:
+                raise CommandExecutionError(
+                    "Unable to render top file(s): {}".format(exc)
+                )
         __context__["saltutil._top_file_envs"] = envs
         return envs
 
@@ -106,7 +99,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     """
     if saltenv is None:
         saltenv = _get_top_file_envs()
-    if isinstance(saltenv, six.string_types):
+    if isinstance(saltenv, str):
         saltenv = saltenv.split(",")
     ret, touched = salt.utils.extmods.sync(
         __opts__,
@@ -135,8 +128,8 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
 def update(version=None):
     """
     Update the salt minion from the URL defined in opts['update_url']
-    SaltStack, Inc provides the latest builds here:
-    update_url: https://repo.saltstack.com/windows/
+    VMware, Inc provides the latest builds here:
+    update_url: https://repo.saltproject.io/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -170,8 +163,8 @@ def update(version=None):
     if not version:
         try:
             version = app.find_update()
-        except URLError as exc:
-            ret["_error"] = "Could not connect to update_url. Error: {0}".format(exc)
+        except urllib.error.URLError as exc:
+            ret["_error"] = "Could not connect to update_url. Error: {}".format(exc)
             return ret
     if not version:
         ret["_error"] = "No updates available"
@@ -179,21 +172,21 @@ def update(version=None):
     try:
         app.fetch_version(version)
     except EskyVersionError as exc:
-        ret["_error"] = "Unable to fetch version {0}. Error: {1}".format(version, exc)
+        ret["_error"] = "Unable to fetch version {}. Error: {}".format(version, exc)
         return ret
     try:
         app.install_version(version)
     except EskyVersionError as exc:
-        ret["_error"] = "Unable to install version {0}. Error: {1}".format(version, exc)
+        ret["_error"] = "Unable to install version {}. Error: {}".format(version, exc)
         return ret
     try:
         app.cleanup()
     except Exception as exc:  # pylint: disable=broad-except
-        ret["_error"] = "Unable to cleanup. Error: {0}".format(exc)
+        ret["_error"] = "Unable to cleanup. Error: {}".format(exc)
     restarted = {}
     for service in __opts__["update_restart_services"]:
         restarted[service] = __salt__["service.restart"](service)
-    ret["comment"] = "Updated from {0} to {1}".format(oldversion, version)
+    ret["comment"] = "Updated from {} to {}".format(oldversion, version)
     ret["restarted"] = restarted
     return ret
 
@@ -1127,7 +1120,7 @@ def refresh_matchers():
     return ret
 
 
-def refresh_pillar(wait=False, timeout=30):
+def refresh_pillar(wait=False, timeout=30, clean_cache=True):
     """
     Signal the minion to refresh the in-memory pillar data. See :ref:`pillar-in-memory`.
 
@@ -1135,6 +1128,9 @@ def refresh_pillar(wait=False, timeout=30):
     :type wait:             bool, optional
     :param timeout:         How long to wait in seconds, only used when wait is True, defaults to 30.
     :type timeout:          int, optional
+    :param clean_cache:     Clean the pillar cache, only used when `pillar_cache` is True. Defaults to True
+    :type clean_cache:      bool, optional
+        .. versionadded:: 3005
     :return:                Boolean status, True when the pillar_refresh event was fired successfully.
 
     CLI Example:
@@ -1144,13 +1140,14 @@ def refresh_pillar(wait=False, timeout=30):
         salt '*' saltutil.refresh_pillar
         salt '*' saltutil.refresh_pillar wait=True timeout=60
     """
+    data = {"clean_cache": clean_cache}
     try:
         if wait:
             #  If we're going to block, first setup a listener
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
             ) as eventer:
-                ret = __salt__["event.fire"]({}, "pillar_refresh")
+                ret = __salt__["event.fire"](data, "pillar_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_pillar waiting for pillar refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
@@ -1159,11 +1156,11 @@ def refresh_pillar(wait=False, timeout=30):
                     wait=timeout,
                 )
                 if not event_ret or event_ret["complete"] is False:
-                    log.warn(
+                    log.warning(
                         "Pillar refresh did not complete within timeout %s", timeout
                     )
         else:
-            ret = __salt__["event.fire"]({}, "pillar_refresh")
+            ret = __salt__["event.fire"](data, "pillar_refresh")
     except KeyError:
         log.error("Event module not available. Pillar refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1264,8 +1261,7 @@ def clear_cache():
                 os.remove(os.path.join(root, name))
             except OSError as exc:
                 log.error(
-                    "Attempt to clear cache with saltutil.clear_cache "
-                    "FAILED with: %s",
+                    "Attempt to clear cache with saltutil.clear_cache FAILED with: %s",
                     exc,
                 )
                 return False
@@ -1299,7 +1295,8 @@ def clear_job_cache(hours=24):
                     shutil.rmtree(directory)
             except OSError as exc:
                 log.error(
-                    "Attempt to clear cache with saltutil.clear_job_cache FAILED with: %s",
+                    "Attempt to clear cache with saltutil.clear_job_cache FAILED"
+                    " with: %s",
                     exc,
                 )
                 return False
@@ -1369,9 +1366,8 @@ def find_cached_job(jid):
 
         salt '*' saltutil.find_cached_job <job id>
     """
-    serial = salt.payload.Serial(__opts__)
     proc_dir = os.path.join(__opts__["cachedir"], "minion_jobs")
-    job_dir = os.path.join(proc_dir, six.text_type(jid))
+    job_dir = os.path.join(proc_dir, str(jid))
     if not os.path.isdir(job_dir):
         if not __opts__.get("cache_jobs"):
             return (
@@ -1379,13 +1375,13 @@ def find_cached_job(jid):
                 " enable cache_jobs on this minion"
             )
         else:
-            return "Local jobs cache directory {0} not found".format(job_dir)
+            return "Local jobs cache directory {} not found".format(job_dir)
     path = os.path.join(job_dir, "return.p")
     with salt.utils.files.fopen(path, "rb") as fp_:
         buf = fp_.read()
     if buf:
         try:
-            data = serial.loads(buf)
+            data = salt.payload.loads(buf)
         except NameError:
             # msgpack error in salt-ssh
             pass
@@ -1424,16 +1420,16 @@ def signal_job(jid, sig):
                 if HAS_PSUTIL is False and "child_pids" in data:
                     for pid in data["child_pids"]:
                         os.kill(int(pid), sig)
-                return "Signal {0} sent to job {1} at pid {2}".format(
+                return "Signal {} sent to job {} at pid {}".format(
                     int(sig), jid, data["pid"]
                 )
             except OSError:
-                path = os.path.join(__opts__["cachedir"], "proc", six.text_type(jid))
+                path = os.path.join(__opts__["cachedir"], "proc", str(jid))
                 if os.path.isfile(path):
                     os.remove(path)
-                return (
-                    "Job {0} was not running and job data has been " " cleaned up"
-                ).format(jid)
+                return "Job {} was not running and job data has been cleaned up".format(
+                    jid
+                )
     return ""
 
 
@@ -1517,7 +1513,7 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         log.debug("Recreating channel to force key regen")
 
 
@@ -1545,7 +1541,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__["master_uri"])
 
     for master in masters:
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             __opts__, master_uri=master
         ) as channel:
             tok = channel.auth.gen_token(b"salt")
@@ -1570,45 +1566,41 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
     return client
 
 
-def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
+def _exec(
+    client,
+    tgt,
+    fun,
+    arg,
+    timeout,
+    tgt_type,
+    ret,
+    kwarg,
+    batch=False,
+    subset=False,
+    **kwargs
+):
     fcn_ret = {}
     seen = 0
-    if "batch" in kwargs:
+
+    cmd_kwargs = {
+        "tgt": tgt,
+        "fun": fun,
+        "arg": arg,
+        "timeout": timeout,
+        "tgt_type": tgt_type,
+        "ret": ret,
+        "kwarg": kwarg,
+    }
+
+    if batch:
         _cmd = client.cmd_batch
-        cmd_kwargs = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "kwarg": kwarg,
-            "batch": kwargs["batch"],
-        }
-        del kwargs["batch"]
-    elif "subset" in kwargs:
+        cmd_kwargs.update({"batch": batch})
+    elif subset:
         _cmd = client.cmd_subset
-        cmd_kwargs = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "cli": True,
-            "kwarg": kwarg,
-            "sub": kwargs["subset"],
-        }
-        del kwargs["subset"]
+        cmd_kwargs.update({"subset": subset, "cli": True})
     else:
         _cmd = client.cmd_iter
-        cmd_kwargs = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "timeout": timeout,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "kwarg": kwarg,
-        }
+
     cmd_kwargs.update(kwargs)
     for ret_comp in _cmd(**cmd_kwargs):
         fcn_ret.update(ret_comp)
@@ -1618,6 +1610,17 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             # do not wait for timeout when explicit list matching
             # and all results are there
             break
+
+    if batch:
+        old_ret, fcn_ret = fcn_ret, {}
+        for key, value in old_ret.items():
+            fcn_ret[key] = {
+                "out": value.get("out", "highstate")
+                if isinstance(value, dict)
+                else "highstate",
+                "ret": value,
+            }
+
     return fcn_ret
 
 
@@ -1646,29 +1649,21 @@ def cmd(
         salt '*' saltutil.cmd
     """
     cfgfile = __opts__["conf_file"]
-    client = _get_ssh_or_api_client(cfgfile, ssh)
-    fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
+    with _get_ssh_or_api_client(cfgfile, ssh) as client:
+        fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
     # if return is empty, we may have not used the right conf,
     # try with the 'minion relative master configuration counter part
     # if available
-    master_cfgfile = "{0}master".format(cfgfile[:-6])  # remove 'minion'
+    master_cfgfile = "{}master".format(cfgfile[:-6])  # remove 'minion'
     if (
         not fcn_ret
-        and cfgfile.endswith("{0}{1}".format(os.path.sep, "minion"))
+        and cfgfile.endswith("{}{}".format(os.path.sep, "minion"))
         and os.path.exists(master_cfgfile)
     ):
-        client = _get_ssh_or_api_client(master_cfgfile, ssh)
-        fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
-
-    if "batch" in kwargs:
-        old_ret, fcn_ret = fcn_ret, {}
-        for key, value in old_ret.items():
-            fcn_ret[key] = {
-                "out": value.get("out", "highstate")
-                if isinstance(value, dict)
-                else "highstate",
-                "ret": value,
-            }
+        with _get_ssh_or_api_client(master_cfgfile, ssh) as client:
+            fcn_ret = _exec(
+                client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs
+            )
 
     return fcn_ret
 
@@ -1783,7 +1778,7 @@ def wheel(name, *args, **kwargs):
         Any positional arguments to pass to the wheel function. A common example
         of this would be the ``match`` arg needed for key functions.
 
-        .. versionadded:: v2015.8.11
+        .. versionadded:: 2015.8.11
 
     kwargs
         Any keyword arguments to pass to the wheel function
@@ -1818,7 +1813,7 @@ def wheel(name, *args, **kwargs):
     # the "normal" kwargs structure, which at this point contains __pub_x keys.
     pub_data = {}
     valid_kwargs = {}
-    for key, val in six.iteritems(kwargs):
+    for key, val in kwargs.items():
         if key.startswith("__"):
             pub_data[key] = val
         else:
@@ -1857,7 +1852,7 @@ def wheel(name, *args, **kwargs):
 
 # this is the only way I could figure out how to get the REAL file_roots
 # __opt__['file_roots'] is set to  __opt__['pillar_root']
-class _MMinion(object):
+class _MMinion:
     def __new__(cls, saltenv, reload_env=False):
         # this is to break out of salt.loaded.int and make this a true singleton
         # hack until https://github.com/saltstack/salt/pull/10273 is resolved
