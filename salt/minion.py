@@ -46,6 +46,7 @@ import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.lazy
 import salt.utils.minion
 import salt.utils.minions
 import salt.utils.network
@@ -100,6 +101,9 @@ try:
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
+
+_salt_modules_environ = salt.utils.lazy.lazy_import("salt.modules.environ")
+_salt_utils_yaml = salt.utils.lazy.lazy_import("salt.utils.yaml")
 
 
 log = logging.getLogger(__name__)
@@ -913,10 +917,6 @@ class SMinion(MinionBase):
     """
 
     def __init__(self, opts, context=None):
-        # Without this global declaration, the late `import` statement below
-        # causes `salt` to become a function-local variable.
-        global salt
-
         # Late setup of the opts grains, so we can log from the grains module
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
@@ -933,8 +933,6 @@ class SMinion(MinionBase):
         if self.opts["file_client"] == "remote" and self.opts.get(
             "minion_pillar_cache", False
         ):
-            import salt.utils.yaml
-
             pdir = os.path.join(self.opts["cachedir"], "pillar")
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -945,11 +943,11 @@ class SMinion(MinionBase):
                 penv = "base"
             cache_top = {penv: {self.opts["id"]: ["cache"]}}
             with salt.utils.files.fopen(ptop, "wb") as fp_:
-                salt.utils.yaml.safe_dump(cache_top, fp_, encoding=SLS_ENCODING)
+                _salt_utils_yaml.safe_dump(cache_top, fp_, encoding=SLS_ENCODING)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, "cache.sls")
             with salt.utils.files.fopen(cache_sls, "wb") as fp_:
-                salt.utils.yaml.safe_dump(
+                _salt_utils_yaml.safe_dump(
                     self.opts["pillar"], fp_, encoding=SLS_ENCODING
                 )
                 os.chmod(cache_sls, 0o600)
@@ -2613,9 +2611,7 @@ class Minion(MinionBase):
             return False
         false_unsets = data.get("false_unsets", False)
         clear_all = data.get("clear_all", False)
-        import salt.modules.environ as mod_environ
-
-        return mod_environ.setenv(environ, false_unsets, clear_all)
+        return _salt_modules_environ.setenv(environ, false_unsets, clear_all)
 
     def _pre_tune(self):
         """

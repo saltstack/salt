@@ -33,6 +33,8 @@ from salt.utils import entrypoints
 
 from .lazy import SALT_BASE_PATH, FilterDictWrapper, LazyLoader
 
+_salt_modules_cmdmod = salt.utils.lazy.lazy_import("salt.modules.cmdmod")
+
 log = logging.getLogger(__name__)
 
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
@@ -1060,10 +1062,6 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     """
-    # Without this global declaration, the late `import` statement below causes
-    # `salt` to become a function-local variable.
-    global salt
-
     # if we have no grains, lets try loading from disk (TODO: move to decorator?)
     cfn = os.path.join(opts["cachedir"], "grains.cache.p")
     if not force_refresh and opts.get("grains_cache", False):
@@ -1205,11 +1203,8 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         with salt.utils.files.set_umask(0o077):
             try:
                 if salt.utils.platform.is_windows():
-                    # Late import
-                    import salt.modules.cmdmod
-
                     # Make sure cache file isn't read-only
-                    salt.modules.cmdmod._run_quiet('attrib -R "{}"'.format(cfn))
+                    _salt_modules_cmdmod._run_quiet('attrib -R "{}"'.format(cfn))
                 with salt.utils.files.fopen(cfn, "w+b") as fp_:
                     try:
                         salt.payload.dump(grains_data, fp_)

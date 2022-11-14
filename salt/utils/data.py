@@ -15,12 +15,15 @@ import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import salt.utils.dictupdate
+import salt.utils.lazy
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
+
+_salt_utils_args = salt.utils.lazy.lazy_import("salt.utils.args")
 
 try:
     import jmespath
@@ -852,12 +855,9 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
             try:
                 ptr = ptr[each]
             except KeyError:
-                # Late import to avoid circular import
-                import salt.utils.args
-
                 # YAML-load the current key (catches integer/float dict keys)
                 try:
-                    loaded_key = salt.utils.args.yamlify_arg(each)
+                    loaded_key = _salt_utils_args.yamlify_arg(each)
                 except Exception:  # pylint: disable=broad-except
                     return default
                 if loaded_key == each:

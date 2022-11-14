@@ -19,6 +19,7 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.lazy
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
@@ -44,6 +45,14 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
+
+_inspect = salt.utils.lazy.lazy_import("inspect")
+_platform = salt.utils.lazy.lazy_import("platform")
+_ssl = salt.utils.lazy.lazy_import("ssl")
+
+_salt_grains_core = salt.utils.lazy.lazy_import("salt.grains.core")
+_salt_loader = salt.utils.lazy.lazy_import("salt.loader")
+_salt_utils_sdb = salt.utils.lazy.lazy_import("salt.utils.sdb")
 
 log = logging.getLogger(__name__)
 
@@ -83,14 +92,9 @@ def _gather_buffer_space():
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
-        # Avoid loading core grains unless absolutely required
-        import platform
-
-        import salt.grains.core
-
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
-        os_data = {"kernel": platform.system()}
-        grains = salt.grains.core._memdata(os_data)
+        os_data = {"kernel": _platform.system()}
+        grains = _salt_grains_core._memdata(os_data)
         total_mem = grains["mem_total"]
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
@@ -2071,9 +2075,7 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
         # or salt-api which have not yet migrated to the new default_path
         # argument. Let's issue a warning message that the environ vars won't
         # work.
-        import inspect
-
-        previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
+        previous_frame = _inspect.getframeinfo(_inspect.currentframe().f_back)
         log.warning(
             "The function '%s()' defined in '%s' is not yet using the "
             "new 'default_path' argument to `salt.config.load_config()`. "
@@ -2310,8 +2312,7 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     apply_sdb(opts)
 
     _validate_opts(opts)
-    import salt.loader
-    opts["grains"] = salt.loader.grains(opts)
+    opts["grains"] = _salt_loader.grains(opts)
     opts["pillar"] = {}
     return opts
 
@@ -2483,13 +2484,10 @@ def apply_sdb(opts, sdb_opts=None):
     """
     Recurse for sdb:// links for opts
     """
-    # Late load of SDB to keep CLI light
-    import salt.utils.sdb
-
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
-        return salt.utils.sdb.sdb_get(sdb_opts, opts)
+        return _salt_utils_sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():
             if value is None:
@@ -3500,9 +3498,6 @@ def call_id_function(opts):
     if opts.get("id"):
         return opts["id"]
 
-    # Import 'salt.loader' here to avoid a circular dependency
-    import salt.loader as loader
-
     if isinstance(opts["id_function"], str):
         mod_fun = opts["id_function"]
         fun_kwargs = {}
@@ -3518,10 +3513,10 @@ def call_id_function(opts):
     mod, fun = mod_fun.split(".")
     if not opts.get("grains"):
         # Get grains for use by the module
-        opts["grains"] = loader.grains(opts)
+        opts["grains"] = _salt_loader.grains(opts)
 
     try:
-        id_mod = loader.raw_mod(opts, mod, fun)
+        id_mod = _salt_loader.raw_mod(opts, mod, fun)
         if not id_mod:
             raise KeyError
         # we take whatever the module returns as the minion ID
@@ -3647,7 +3642,6 @@ def _update_ssl_config(opts):
     if opts["ssl"] is True:
         opts["ssl"] = {}
         return
-    import ssl
 
     for key, prefix in (("cert_reqs", "CERT_"), ("ssl_version", "PROTOCOL_")):
         val = opts["ssl"].get(key)
@@ -3656,15 +3650,15 @@ def _update_ssl_config(opts):
         if (
             not isinstance(val, str)
             or not val.startswith(prefix)
-            or not hasattr(ssl, val)
+            or not hasattr(_ssl, val)
         ):
             message = "SSL option '{}' must be set to one of the following values: '{}'.".format(
                 key,
-                "', '".join([val for val in dir(ssl) if val.startswith(prefix)]),
+                "', '".join([val for val in dir(_ssl) if val.startswith(prefix)]),
             )
             log.error(message)
             raise salt.exceptions.SaltConfigurationError(message)
-        opts["ssl"][key] = getattr(ssl, val)
+        opts["ssl"][key] = getattr(_ssl, val)
 
 
 def _adjust_log_file_override(overrides, default_log_file):
