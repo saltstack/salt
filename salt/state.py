@@ -100,6 +100,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "runas_password",
         "fire_event",
         "saltenv",
+        "umask",
         "use",
         "use_in",
         "__env__",
@@ -116,6 +117,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_tgt_type",
         "__prereq__",
         "__prerequired__",
+        "__umask__",
     ]
 )
 
@@ -384,7 +386,7 @@ class Compiler:
             self.opts["renderer"],
             self.opts["renderer_blacklist"],
             self.opts["renderer_whitelist"],
-            **kwargs
+            **kwargs,
         )
         if not high:
             return high
@@ -916,6 +918,8 @@ class State:
         Check that unless doesn't return 0, and that onlyif returns a 0.
         """
         ret = {"result": False, "comment": []}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
         cmd_opts = {}
 
         # Set arguments from cmd.run state as appropriate
@@ -977,6 +981,8 @@ class State:
         command returns False (non 0), the state will not run
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
 
         if not isinstance(low_data["onlyif"], list):
             low_data_onlyif = [low_data["onlyif"]]
@@ -1052,6 +1058,8 @@ class State:
         state will run.
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
 
         if not isinstance(low_data["unless"], list):
             low_data_unless = [low_data["unless"]]
@@ -1129,6 +1137,8 @@ class State:
         Alter the way a successful state run is determined
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -1159,6 +1169,8 @@ class State:
         Check that listed files exist
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
 
         if isinstance(low_data["creates"], str) and os.path.exists(low_data["creates"]):
             ret["comment"] = "{} exists".format(low_data["creates"])
@@ -1319,6 +1331,12 @@ class State:
                     type(data["name"]).__name__,
                 )
             )
+        if "umask" in data:
+            umask = data.pop("umask")
+            try:
+                data["__umask__"] = int(str(umask), 8)
+            except (TypeError, ValueError):
+                errors.append(f"Invalid umask: {umask}")
         if errors:
             return errors
         full = data["state"] + "." + data["fun"]
@@ -2305,9 +2323,10 @@ class State:
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata["full"]](
-                            *cdata["args"], **cdata["kwargs"]
-                        )
+                        with salt.utils.files.set_umask(low.get("__umask__")):
+                            ret = self.states[cdata["full"]](
+                                *cdata["args"], **cdata["kwargs"]
+                            )
                 self.states.inject_globals = {}
             if (
                 "check_cmd" in low
@@ -3077,8 +3096,9 @@ class State:
                     "start_time": start_time,
                     "comment": comment,
                     "__run_num__": self.__run_num,
-                    "__sls__": low["__sls__"],
                 }
+                for key in ("__sls__", "__id__", "name"):
+                    run_dict[tag][key] = low.get(key)
                 self.__run_num += 1
                 self.event(run_dict[tag], len(chunks), fire_event=low.get("fire_event"))
                 return running
@@ -3103,8 +3123,9 @@ class State:
                                 "result": False,
                                 "comment": "Recursive requisite found",
                                 "__run_num__": self.__run_num,
-                                "__sls__": low["__sls__"],
                             }
+                            for key in ("__sls__", "__id__", "name"):
+                                running[tag][key] = low.get(key)
                         self.__run_num += 1
                         self.event(
                             running[tag], len(chunks), fire_event=low.get("fire_event")
@@ -3131,8 +3152,9 @@ class State:
                         "result": False,
                         "comment": "Recursive requisite found",
                         "__run_num__": self.__run_num,
-                        "__sls__": low["__sls__"],
                     }
+                    for key in ("__sls__", "__id__", "name"):
+                        running[tag][key] = low.get(key)
                 else:
                     running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
@@ -3156,7 +3178,8 @@ class State:
                     self.pre[tag]["changes"] = {}
                 running[tag] = self.pre[tag]
                 running[tag]["__run_num__"] = self.__run_num
-                running[tag]["__sls__"] = low["__sls__"]
+                for key in ("__sls__", "__id__", "name"):
+                    running[tag][key] = low.get(key)
             # otherwise the failure was due to a requisite down the chain
             else:
                 # determine what the requisite failures where, and return
@@ -3190,8 +3213,9 @@ class State:
                     "start_time": start_time,
                     "comment": _cmt,
                     "__run_num__": self.__run_num,
-                    "__sls__": low["__sls__"],
                 }
+                for key in ("__sls__", "__id__", "name"):
+                    running[tag][key] = low.get(key)
                 self.pre[tag] = running[tag]
             self.__run_num += 1
         elif status == "change" and not low.get("__prereq__"):
@@ -3212,8 +3236,9 @@ class State:
                 "start_time": start_time,
                 "comment": "No changes detected",
                 "__run_num__": self.__run_num,
-                "__sls__": low["__sls__"],
             }
+            for key in ("__sls__", "__id__", "name"):
+                pre_ret[key] = low.get(key)
             running[tag] = pre_ret
             self.pre[tag] = pre_ret
             self.__run_num += 1
@@ -3227,8 +3252,9 @@ class State:
                 "comment": "State was not run because onfail req did not change",
                 "__state_ran__": False,
                 "__run_num__": self.__run_num,
-                "__sls__": low["__sls__"],
             }
+            for key in ("__sls__", "__id__", "name"):
+                running[tag][key] = low.get(key)
             self.__run_num += 1
         elif status == "onchanges":
             start_time, duration = _calculate_fake_duration()
@@ -3242,8 +3268,9 @@ class State:
                 ),
                 "__state_ran__": False,
                 "__run_num__": self.__run_num,
-                "__sls__": low["__sls__"],
             }
+            for key in ("__sls__", "__id__", "name"):
+                running[tag][key] = low.get(key)
             self.__run_num += 1
         else:
             if low.get("__prereq__"):
@@ -3266,8 +3293,9 @@ class State:
                     "comment": sub_state_data.get("comment", ""),
                     "__state_ran__": True,
                     "__run_num__": self.__run_num,
-                    "__sls__": low["__sls__"],
                 }
+                for key in ("__sls__", "__id__", "name"):
+                    running[sub_tag][key] = low.get(key)
 
         return running
 
@@ -3275,8 +3303,6 @@ class State:
         """
         Find all of the beacon routines and call the associated mod_beacon runs
         """
-        listeners = []
-        crefs = {}
         beacons = []
         for chunk in chunks:
             if "beacon" in chunk:
