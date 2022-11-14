@@ -27,6 +27,8 @@ jobs:
     name: Setup Test Dependencies
     runs-on:
       - self-hosted
+      - linux
+      - bastion
     timeout-minutes: 90
     steps:
       - name: Checkout Source Code
@@ -99,6 +101,8 @@ jobs:
     name: Test
     runs-on:
       - self-hosted
+      - linux
+      - bastion
     timeout-minutes: 240  # 4 Hours
     needs:
       - dependencies
