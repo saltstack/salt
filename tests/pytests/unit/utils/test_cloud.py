@@ -213,7 +213,7 @@ def test_run_psexec_command_cleanup_lingering_paexec():
     # We're mocking 'remove_service' because all we care about is the cleanup
     # command
     mock_rm_svc = patch("salt.utils.cloud.Client.remove_service", autospec=True)
-    with mock_psexec as mock_client, mock_scmr, mock_rm_svc:
+    with mock_scmr, mock_rm_svc, mock_psexec as mock_client:
         mock_client.return_value.session = MagicMock(username="Gary")
         mock_client.return_value.connection = MagicMock(server_name="Krabbs")
         mock_client.return_value.run_executable.return_value = (
