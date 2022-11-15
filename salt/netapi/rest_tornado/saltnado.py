@@ -332,13 +332,6 @@ class EventListener:
         """
         Get an event (asynchronous of course) return a future that will get it later
         """
-        # if the request finished, no reason to allow event fetching, since we
-        # can't send back to the client
-        if request._finished:
-            future = Future()
-            future.set_exception(TimeoutException())
-            return future
-
         future = Future()
         if callback is not None:
 
