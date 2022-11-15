@@ -402,12 +402,13 @@ def test_set_hwclock_timedatectl():
     Test set hwclock with timedatectl
     :return:
     """
-    timezone.set_hwclock("UTC")
     with patch("salt.utils.path.which", MagicMock(return_value=True)):
+        timezone.set_hwclock("UTC")
         name, args, kwargs = timezone.__salt__["cmd.retcode"].mock_calls[0]
     assert args == (["timedatectl", "set-local-rtc", "false"],)
 
-    timezone.set_hwclock("localtime")
+    with patch("salt.utils.path.which", MagicMock(return_value=True)):
+        timezone.set_hwclock("localtime")
     with patch("salt.utils.path.which", MagicMock(return_value=True)):
         name, args, kwargs = timezone.__salt__["cmd.retcode"].mock_calls[1]
     assert args == (["timedatectl", "set-local-rtc", "true"],)
