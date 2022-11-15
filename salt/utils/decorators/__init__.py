@@ -865,3 +865,42 @@ def ensure_unicode_args(function):
         return function(*args, **kwargs)
 
     return wrapped
+
+
+class classproperty(property):
+    """Decorator like :py:func:`property`, but for class properties.
+
+    Usage example:
+
+    .. code-block:: python
+
+        class Foo:
+            @classproperty
+            def custom_prop(cls):
+                return "hello world"
+
+        assert Foo.custom_prop == "hello world"
+
+    """
+
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+        if fset is not None:
+            raise NotImplementedError(
+                "classproperty setters are not supported due to a limitation "
+                "in Python: <https://github.com/python/cpython/issues/89519>"
+            )
+        if fdel is not None:
+            raise NotImplementedError(
+                "classproperty deleters are not supported due to a limitation "
+                "in Python: <https://github.com/python/cpython/issues/89519>"
+            )
+        super().__init__(fget, doc=doc)
+
+    def __get__(self, obj, objtype=None):
+        if objtype is None:
+            objtype = type(obj)
+        # The second argument probably doesn't matter, but @classmethod does
+        # `__get__(objtype, objtype)`, not `__get__(objtype, type(objtype))`, so
+        # the same thing is done here for consistency.
+        # https://github.com/python/cpython/blob/v3.11.0/Objects/funcobject.c#L900-L901
+        return super().__get__(objtype, objtype)
