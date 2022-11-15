@@ -13,7 +13,7 @@ class Request:
     __slots__ = ("_finished",)
 
     def __init__(self):
-        self._finished = False
+        self._finished = True
 
 
 @pytest.fixture
