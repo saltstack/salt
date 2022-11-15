@@ -175,6 +175,13 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
 .. code-block:: yaml
 
+    master_type: str
+
+If this option is ``str`` (default), multiple hot masters are configured.
+Minions can connect to multiple masters simultaneously (all master are "hot").
+
+.. code-block:: yaml
+
     master_type: failover
 
 If this option is set to ``failover``, :conf_minion:`master` must be a list of
@@ -595,9 +602,14 @@ The path to the minion's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/minion``
+Default: ``<LIB_STATE_DIR>/pki/minion``
 
 The directory used to store the minion's public and private keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -926,6 +938,24 @@ A value of 10 minutes is a reasonable default.
 .. code-block:: yaml
 
     grains_refresh_every: 0
+
+.. conf_minion:: grains_refresh_pre_exec
+
+``grains_refresh_pre_exec``
+---------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+The ``grains_refresh_pre_exec`` setting allows for a minion to check its grains
+prior to the execution of any operation to see if they have changed and, if
+so, to inform the master of the new grains. This operation is moderately
+expensive, therefore care should be taken before enabling this behavior.
+
+.. code-block:: yaml
+
+    grains_refresh_pre_exec: True
 
 .. conf_minion:: metadata_server_grains
 
@@ -1463,6 +1493,23 @@ process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_minion:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_minion:: tcp_pub_port
 
@@ -2294,7 +2341,7 @@ will be shown for each state run.
 .. conf_minion:: state_output_pct
 
 ``state_output_pct``
-------------------------
+--------------------
 
 Default: ``False``
 
@@ -2304,6 +2351,20 @@ as a percent of total actions will be shown for each state run.
 .. code-block:: yaml
 
     state_output_pct: False
+
+.. conf_minion:: state_compress_ids
+
+``state_compress_ids``
+----------------------
+
+Default: ``False``
+
+The ``state_compress_ids`` setting aggregates information about states which
+have multiple "names" under the same state ID in the highstate output.
+
+.. code-block:: yaml
+
+    state_compress_ids: False
 
 .. conf_minion:: autoload_dynamic_modules
 
@@ -2504,26 +2565,6 @@ Master will not be returned to the Minion.
 
     fileserver_ignoresymlinks: False
 
-.. conf_minion:: fileserver_limit_traversal
-
-``fileserver_limit_traversal``
-------------------------------
-
-.. versionadded:: 2014.1.0
-
-Default: ``False``
-
-By default, the Salt fileserver recurses fully into all defined environments
-to attempt to find files. To limit this behavior so that the fileserver only
-traverses directories with SLS files and special Salt directories like _modules,
-set ``fileserver_limit_traversal`` to ``True``. This might be useful for
-installations where a file root has a very large number of files and performance
-is impacted.
-
-.. code-block:: yaml
-
-    fileserver_limit_traversal: False
-
 .. conf_minion:: hash_type
 
 ``hash_type``
@@ -2672,6 +2713,32 @@ List of renderers which are permitted to be used for pillar decryption.
     decrypt_pillar_renderers:
       - gpg
       - my_custom_renderer
+
+.. conf_minion:: gpg_decrypt_must_succeed
+
+``gpg_decrypt_must_succeed``
+----------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+If this is ``True`` and the ciphertext could not be decrypted, then an error is
+raised.
+
+Sending the ciphertext through basically is *never* desired, for example if a
+state is setting a database password from pillar and gpg rendering fails, then
+the state will update the password to the ciphertext, which by definition is
+not encrypted.
+
+.. warning::
+
+    The value defaults to ``False`` for backwards compatibility.  In the
+    ``Chlorine`` release, this option will default to ``True``.
+
+.. code-block:: yaml
+
+    gpg_decrypt_must_succeed: False
 
 .. conf_minion:: pillarenv
 

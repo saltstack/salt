@@ -13,7 +13,14 @@ Statistics
 - Total Issue References: **66**
 - Total PR References: **166**
 
-- Contributors: **49** (`0xf10e`_, `Azidburn`_, `F30`_, `JaseFace`_, `JohannesEbke`_, `aletourneau`_, `aneeshusa`_, `basepi`_, `bastichelaar`_, `bersace`_, `cachedout`_, `cedwards`_, `cellscape`_, `chris-prince`_, `clan`_, `clinta`_, `cr1st1p`_, `cro`_, `dr4Ke`_, `ericfode`_, `ether42`_, `garethgreenaway`_, `gtmanfred`_, `hvnsweeting`_, `jfindlay`_, `jleroy`_, `joejulian`_, `justinta`_, `kaithar`_, `lorengordon`_, `martinhoefling`_, `mguegan`_, `multani`_, `notpeter`_, `panticz`_, `rallytime`_, `rominf`_, `rubic`_, `s0undt3ch`_, `skizunov`_, `slinu3d`_, `t0rrant`_, `techhat`_, `teizz`_, `terminalmage`_, `thatch45`_, `twangboy`_, `vdesjardins`_, `vr-jack`_)
+- Contributors: **49** (`0xf10e`_, `Azidburn`_, `F30`_, `JaseFace`_, `JohannesEbke`_,
+  `aletourneau`_, `aneeshusa`_, `basepi`_, `bastichelaar`_, `bersace`_, `cachedout`_, `cedwards`_,
+  `cellscape`_, `chris-prince`_, `clan`_, `clinta`_, `cr1st1p`_, `cro`_, `dr4Ke`_, `ericfode`_,
+  `ether42`_, `garethgreenaway`_, `gtmanfred`_, `hvnsweeting`_, `jfindlay`_, `jleroy`_,
+  `joejulian`_, `justinta`_, `kaithar`_, `lorengordon`_, `martinhoefling`_, `mguegan`_, `multani`_,
+  `notpeter`_, `panticz`_, `rallytime`_, `rominf`_, `rubic`_, `s0undt3ch`_, `skizunov`_,
+  `slinu3d`_, `t0rrant`_, `techhat`_, `teizz`_, `terminalmage`_, `thatch45`_, `twangboy`_,
+  `vdesjardins`_, `vr-jack`_)
 
 
 Security Fix
@@ -90,7 +97,7 @@ Changelog for v2014.7.5..v2014.7.6
 
   * 2d9aa2bb97 Avoid shadowing variables in lxc module
 
-  * 792e1021f2 Allow to override profile options in lxc.cloud_init_interface
+  * 792e1021f2 Allow overriding profile options in lxc.cloud_init_interface
 
   * 42bd64b9b3 Return changes on successful lxc.create from salt-cloud
 
@@ -318,9 +325,9 @@ Changelog for v2014.7.5..v2014.7.6
 * **PR** `#23551`_: (`dr4Ke`_) grains.append unit tests, related to `#23474`_
   @ *2015-05-11 21:54:25 UTC*
 
-  * **PR** `#23474`_: (`dr4Ke`_) Fix grains.append in nested dictionnary grains `#23411`_ (refs: `#23551`_)
+  * **PR** `#23474`_: (`dr4Ke`_) Fix grains.append in nested dictionary grains `#23411`_ (refs: `#23551`_)
 
-  * **PR** `#23440`_: (`dr4Ke`_) fix grains.append in nested dictionnary grains `#23411`_ (refs: `#23474`_)
+  * **PR** `#23440`_: (`dr4Ke`_) fix grains.append in nested dictionary grains `#23411`_ (refs: `#23474`_)
 
   * 6ec87ce9f5 Merge pull request `#23551`_ from dr4Ke/grains.append_unit_tests
 
@@ -334,18 +341,18 @@ Changelog for v2014.7.5..v2014.7.6
 
 * **ISSUE** `#23411`_: (`dr4Ke`_) grains.append should work at any level of a grain (refs: `#23440`_, `#23474`_)
 
-* **PR** `#23474`_: (`dr4Ke`_) Fix grains.append in nested dictionnary grains `#23411`_ (refs: `#23551`_)
+* **PR** `#23474`_: (`dr4Ke`_) Fix grains.append in nested dictionary grains `#23411`_ (refs: `#23551`_)
   @ *2015-05-11 18:00:21 UTC*
 
-  * **PR** `#23440`_: (`dr4Ke`_) fix grains.append in nested dictionnary grains `#23411`_ (refs: `#23474`_)
+  * **PR** `#23440`_: (`dr4Ke`_) fix grains.append in nested dictionary grains `#23411`_ (refs: `#23474`_)
 
   * e96c5c5bf3 Merge pull request `#23474`_ from dr4Ke/fix_grains.append_nested
 
-  * a01a5bb51e grains.get, parameter delimititer, versionadded: 2014.7.6
+  * a01a5bb51e grains.get, parameter delimiter, versionadded: 2014.7.6
 
   * b39f50475d remove debugging output
 
-  * b6e15e295c fix grains.append in nested dictionnary grains `#23411`_
+  * b6e15e295c fix grains.append in nested dictionary grains `#23411`_
 
 * **PR** `#23537`_: (`t0rrant`_) Update changelog
   @ *2015-05-11 17:02:16 UTC*
@@ -558,12 +565,12 @@ Changelog for v2014.7.5..v2014.7.6
 
 * **ISSUE** `#22742`_: (`hvnsweeting`_) salt-master says: "This master address: 'salt' was previously resolvable but now fails to resolve!" (refs: `#23344`_)
 
-* **PR** `#23344`_: (`cachedout`_) Explicitely set file_client on master
+* **PR** `#23344`_: (`cachedout`_) Explicitly set file_client on master
   @ *2015-05-04 23:21:48 UTC*
 
   * 02658b1e60 Merge pull request `#23344`_ from cachedout/issue_22742
 
-  * 5adc96ce7f Explicitely set file_client on master
+  * 5adc96ce7f Explicitly set file_client on master
 
 * **PR** `#23318`_: (`cellscape`_) Honor seed argument in LXC container initializaton
   @ *2015-05-04 20:58:12 UTC*
@@ -858,7 +865,7 @@ Changelog for v2014.7.5..v2014.7.6
 * **PR** `#23113`_: (`rallytime`_) Revert "Backport `#22895`_ to 2014.7"
   @ *2015-04-28 03:27:29 UTC*
 
-  * **PR** `#22895`_: (`aletourneau`_) pam_tally counter was not reset to 0 after a succesfull login (refs: `#23113`_, `#22925`_, #saltstack/salt`#22925`_)
+  * **PR** `#22895`_: (`aletourneau`_) pam_tally counter was not reset to 0 after a successful login (refs: `#23113`_, `#22925`_, #saltstack/salt`#22925`_)
 
   * dfe2066b25 Merge pull request `#23113`_ from saltstack/revert-22925-bp-22895
 
@@ -1040,7 +1047,7 @@ Changelog for v2014.7.5..v2014.7.6
 * **PR** `#22925`_: (`rallytime`_) Backport `#22895`_ to 2014.7
   @ *2015-04-22 02:30:26 UTC*
 
-  * **PR** `#22895`_: (`aletourneau`_) pam_tally counter was not reset to 0 after a succesfull login (refs: `#23113`_, `#22925`_, #saltstack/salt`#22925`_)
+  * **PR** `#22895`_: (`aletourneau`_) pam_tally counter was not reset to 0 after a successful login (refs: `#23113`_, `#22925`_, #saltstack/salt`#22925`_)
 
   * 6890752dd3 Merge pull request `#22925`_ from rallytime/bp-22895
 
@@ -1050,7 +1057,7 @@ Changelog for v2014.7.5..v2014.7.6
 
   * 5ebf159554 Cleaned up pull request
 
-  * a08ac478f6 pam_tally counter was not reset to 0 after a succesfull login
+  * a08ac478f6 pam_tally counter was not reset to 0 after a successful login
 
 * **ISSUE** `#22790`_: (`whiteinge`_) jobs.list_jobs runner tracebacks on 'missing' argument (refs: `#22914`_)
 

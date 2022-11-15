@@ -26,7 +26,7 @@ try:
     import crypt
 
     HAS_CRYPT = True
-except ImportError:
+except (ImportError, PermissionError):
     HAS_CRYPT = False
 
 try:
