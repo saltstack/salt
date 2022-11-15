@@ -12,7 +12,6 @@ import re
 import time
 import types
 
-import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
@@ -33,6 +32,7 @@ from salt.utils import entrypoints
 
 from .lazy import SALT_BASE_PATH, FilterDictWrapper, LazyLoader
 
+_salt_config = salt.utils.lazy.lazy_import("salt.config")
 _salt_modules_cmdmod = salt.utils.lazy.lazy_import("salt.modules.cmdmod")
 
 log = logging.getLogger(__name__)
@@ -1077,21 +1077,21 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
     if "conf_file" in opts:
         pre_opts = {}
         pre_opts.update(
-            salt.config.load_config(
+            _salt_config.load_config(
                 opts["conf_file"],
                 "SALT_MINION_CONFIG",
-                salt.config.DEFAULT_MINION_OPTS["conf_file"],
+                _salt_config.DEFAULT_MINION_OPTS["conf_file"],
             )
         )
         default_include = pre_opts.get("default_include", opts["default_include"])
         include = pre_opts.get("include", [])
         pre_opts.update(
-            salt.config.include_config(
+            _salt_config.include_config(
                 default_include, opts["conf_file"], verbose=False
             )
         )
         pre_opts.update(
-            salt.config.include_config(include, opts["conf_file"], verbose=True)
+            _salt_config.include_config(include, opts["conf_file"], verbose=True)
         )
         if "grains" in pre_opts:
             opts["grains"] = pre_opts["grains"]

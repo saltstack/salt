@@ -1,3 +1,3 @@
 New `salt.utils.lazy.lazy_import` function for lazy loading Python imports.
 Converted several deferred `import` statements in core code to instead use the
-new function.
+new function, and converted some eager imports to lazy imports.

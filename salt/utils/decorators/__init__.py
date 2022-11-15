@@ -12,13 +12,15 @@ import time
 from collections import defaultdict
 from functools import wraps
 
-import salt.utils.args
+import salt.utils.lazy
 import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError,
     SaltConfigurationError,
     SaltInvocationError,
 )
+
+_salt_utils_args = salt.utils.lazy.lazy_import("salt.utils.args")
 
 IS_WINDOWS = False
 if getattr(sys, "getwindowsversion", False):
@@ -119,9 +121,9 @@ class Depends:
         full_name = "{}.{}".format(mod_name, func_name)
         log.trace("Running '%s' for '%s'", dependency, full_name)
         if IS_WINDOWS:
-            args = salt.utils.args.shlex_split(dependency, posix=False)
+            args = _salt_utils_args.shlex_split(dependency, posix=False)
         else:
-            args = salt.utils.args.shlex_split(dependency)
+            args = _salt_utils_args.shlex_split(dependency)
         log.trace("Command after shlex_split: %s", args)
         proc = subprocess.Popen(
             args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -256,7 +258,7 @@ def timing(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         start_time = time.time()
-        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        ret = function(*args, **_salt_utils_args.clean_kwargs(**kwargs))
         end_time = time.time()
         if function.__module__.startswith("salt.loaded.int."):
             mod_name = function.__module__[16:]
@@ -334,7 +336,7 @@ class _DeprecationDecorator:
         :return:
         """
         _args = list()
-        _kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        _kwargs = _salt_utils_args.clean_kwargs(**kwargs)
 
         return _args, _kwargs
 

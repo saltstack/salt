@@ -12,9 +12,11 @@ from collections import namedtuple
 
 import salt.utils.data
 import salt.utils.jid
+import salt.utils.lazy
 import salt.utils.versions
-import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
+
+_salt_utils_yaml = salt.utils.lazy.lazy_import("salt.utils.yaml")
 
 log = logging.getLogger(__name__)
 
@@ -174,14 +176,14 @@ def yamlify_arg(arg):
         if "#" in arg:
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
-            parsed_arg = salt.utils.yaml.safe_load(arg)
+            parsed_arg = _salt_utils_yaml.safe_load(arg)
             if isinstance(parsed_arg, str) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == "None":
             arg = None
         else:
-            arg = salt.utils.yaml.safe_load(arg)
+            arg = _salt_utils_yaml.safe_load(arg)
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces

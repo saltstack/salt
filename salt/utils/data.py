@@ -17,13 +17,13 @@ from collections.abc import Mapping, MutableMapping, Sequence
 import salt.utils.dictupdate
 import salt.utils.lazy
 import salt.utils.stringutils
-import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
 
 _salt_utils_args = salt.utils.lazy.lazy_import("salt.utils.args")
+_salt_utils_yaml = salt.utils.lazy.lazy_import("salt.utils.yaml")
 
 try:
     import jmespath
@@ -1043,8 +1043,8 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
     """
     if isinstance(data, str):
         try:
-            data = salt.utils.yaml.safe_load(data)
-        except salt.utils.yaml.parser.ParserError as err:
+            data = _salt_utils_yaml.safe_load(data)
+        except _salt_utils_yaml.parser.ParserError as err:
             log.error(err)
             return {}
 

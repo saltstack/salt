@@ -28,7 +28,6 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.versions
 import salt.utils.xdg
-import salt.utils.yaml
 from salt._logging import (
     DFLT_LOG_DATEFMT,
     DFLT_LOG_DATEFMT_LOGFILE,
@@ -53,6 +52,7 @@ _ssl = salt.utils.lazy.lazy_import("ssl")
 _salt_grains_core = salt.utils.lazy.lazy_import("salt.grains.core")
 _salt_loader = salt.utils.lazy.lazy_import("salt.loader")
 _salt_utils_sdb = salt.utils.lazy.lazy_import("salt.utils.sdb")
+_salt_utils_yaml = salt.utils.lazy.lazy_import("salt.utils.yaml")
 
 log = logging.getLogger(__name__)
 
@@ -2003,8 +2003,8 @@ def _read_conf_file(path):
     append_file_suffix_YAMLError = False
     with salt.utils.files.fopen(path, "r") as conf_file:
         try:
-            conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
-        except salt.utils.yaml.YAMLError as err:
+            conf_opts = _salt_utils_yaml.safe_load(conf_file) or {}
+        except _salt_utils_yaml.YAMLError as err:
             message = "Error parsing configuration file: {} - {}".format(path, err)
             log.error(message)
             if path.endswith("_schedule.conf"):
