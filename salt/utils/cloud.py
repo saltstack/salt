@@ -897,6 +897,15 @@ class Client:
         self._client = PsExecClient(server, username, password, port, encrypt)
         self._client._service = ScmrService(self.service_name, self._client.session)
 
+    def __enter__(self):
+        self.connect()
+        self.create_service()
+        return self
+
+    def __exit__(self, tb_type, tb_value, tb):
+        self.remove_service()
+        self.disconnect()
+
     def connect(self):
         return self._client.connect()
 
@@ -971,17 +980,10 @@ def run_psexec_command(cmd, args, host, username, password, port=445):
     Run a command remotely using the psexec protocol
     """
     service_name = "PS-Exec-{}".format(uuid.uuid4())
-    stdout, stderr, ret_code = "", "", None
-    client = Client(
+    with Client(
         host, username, password, port=port, encrypt=False, service_name=service_name
-    )
-    client.connect()
-    try:
-        client.create_service()
+    ) as client:
         stdout, stderr, ret_code = client.run_executable(cmd, args)
-    finally:
-        client.remove_service()
-        client.disconnect()
     return stdout, stderr, ret_code
 
 
