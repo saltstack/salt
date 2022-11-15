@@ -3916,9 +3916,15 @@ def directory(
     if tchanges:
         ret["changes"].update(tchanges)
 
-    # Don't run through the reset of the function if there are no changes to be
-    # made
-    if __opts__["test"] or not ret["changes"]:
+    if __opts__["test"]:
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        return ret
+
+    # Don't run through the rest of the function if there are no changes to be
+    # made, except on windows since _check_directory_win just basically checks
+    # ownership and permissions
+    if not salt.utils.platform.is_windows() and not ret["changes"]:
         ret["result"] = tresult
         ret["comment"] = tcomment
         return ret
