@@ -206,6 +206,29 @@ def test_deploy_windows_custom_port():
         mock.assert_called_once_with("test", "Administrator", None, 1234)
 
 
+def test_run_psexec_command_cleanup_lingering_paexec():
+    pytest.importorskip("pypsexec.client", reason="Requires PyPsExec")
+    mock_psexec = patch("salt.utils.cloud.PsExecClient", autospec=True)
+    mock_scmr = patch("salt.utils.cloud.ScmrService", autospec=True)
+    mock_rm_svc = patch("salt.utils.cloud.Client.remove_service", autospec=True)
+    with mock_psexec as mock_client, mock_scmr, mock_rm_svc:
+        mock_client.return_value.session = MagicMock(username="Gary")
+        mock_client.return_value.connection = MagicMock(server_name="Krabbs")
+        mock_client.return_value.run_executable.return_value = (
+            "Sandy",
+            "MermaidMan",
+            "BarnicleBoy",
+        )
+        cloud.run_psexec_command(
+            "spongebob",
+            "squarepants",
+            "patrick",
+            "squidward",
+            "plankton",
+        )
+        mock_client.return_value.cleanup.assert_called_once()
+
+
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
 def test_deploy_windows_programdata():
     """
