@@ -23,7 +23,6 @@ def sample_process():
     return proc
 
 
-@pytest.mark.xfail
 def test__status_when_process_is_found_with_matching_status_then_proc_info_should_be_returned(
     sample_process,
 ):
@@ -37,7 +36,7 @@ def test__status_when_process_is_found_with_matching_status_then_proc_info_shoul
         ],  # MagicMock(info={"status": "fnord", "blerp": "whatever"})],
     ):
 
-        actual_result = salt.modules.ps.status(filter="fnord")
+        actual_result = salt.modules.ps.status(status="fnord")
         assert actual_result == expected_result
 
 
@@ -49,11 +48,10 @@ def test__status_when_no_matching_processes_then_no_results_should_be_returned()
         return_value=[MagicMock(info={"status": "foo", "blerp": "whatever"})],
     ):
 
-        actual_result = salt.modules.ps.status(filter="fnord")
+        actual_result = salt.modules.ps.status(status="fnord")
         assert actual_result == expected_result
 
 
-@pytest.mark.xfail
 def test__status_when_some_matching_processes_then_only_correct_info_should_be_returned(
     sample_process,
 ):
@@ -68,7 +66,7 @@ def test__status_when_some_matching_processes_then_only_correct_info_should_be_r
         ],
     ):
 
-        actual_result = salt.modules.ps.status(filter="fnord")
+        actual_result = salt.modules.ps.status(status="fnord")
         assert actual_result == expected_result
 
 
@@ -401,10 +399,9 @@ def test_top_zombie_process():
 
 def test_status_when_no_status_is_provided_then_raise_invocation_error():
     with pytest.raises(SaltInvocationError):
-        actual_result = salt.modules.ps.status(filter="")
+        actual_result = salt.modules.ps.status(status="")
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "exc_type",
     (
@@ -424,7 +421,7 @@ def test_status_when_access_denied_from_psutil_it_should_CommandExecutionError(
             salt.exceptions.CommandExecutionError,
             match="Psutil did not return a list of processes",
         ):
-            actual_result = salt.modules.ps.status(filter="fnord")
+            actual_result = salt.modules.ps.status(status="fnord")
 
 
 ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
