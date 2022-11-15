@@ -950,7 +950,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
-        self.context = {}
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -1138,7 +1137,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.key,
         )
         self.clear_funcs.connect()
-        self.aes_funcs = AESFuncs(self.opts, context=self.context)
+        self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
 
@@ -1199,10 +1198,9 @@ class AESFuncs(TransportMethods):
         "_dir_list",
         "_symlink_list",
         "_file_envs",
-        "_ext_nodes",  # To be removed in 3006 (Sulfur) #60980
     )
 
-    def __init__(self, opts, context=None):
+    def __init__(self, opts):
         """
         Create a new AESFuncs
 
@@ -1212,7 +1210,6 @@ class AESFuncs(TransportMethods):
         :returns: Instance for handling AES operations
         """
         self.opts = opts
-        self.context = context
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
@@ -1398,10 +1395,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    # To be removed in 3006 (Sulfur) #60980
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1604,7 +1597,6 @@ class AESFuncs(TransportMethods):
             pillarenv=load.get("pillarenv"),
             extra_minion_data=load.get("extra_minion_data"),
             clean_cache=load.get("clean_cache"),
-            context=self.context,
         )
         data = pillar.compile_pillar()
         self.fs_.update_opts()
@@ -1728,7 +1720,7 @@ class AESFuncs(TransportMethods):
             if any(key not in load for key in ("return", "jid", "id")):
                 continue
             # if we have a load, save it
-            if load.get("load"):
+            if load.get("load") and self.opts["master_job_cache"]:
                 fstr = "{}.save_load".format(self.opts["master_job_cache"])
                 self.mminion.returners[fstr](load["jid"], load["load"])
 
@@ -1751,8 +1743,8 @@ class AESFuncs(TransportMethods):
                     ret["master_id"] = load["master_id"]
                 if "fun" in load:
                     ret["fun"] = load["fun"]
-                if "arg" in load:
-                    ret["fun_args"] = load["arg"]
+                if "fun_args" in load:
+                    ret["fun_args"] = load["fun_args"]
                 if "out" in load:
                     ret["out"] = load["out"]
                 if "sig" in load:

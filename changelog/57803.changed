@@ -1,0 +1,2 @@
+``umask`` is now a global state argument, instead of only applying to ``cmd``
+states.

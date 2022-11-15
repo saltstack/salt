@@ -144,7 +144,7 @@ from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
-import salt.utils.jid
+import salt.utils.data
 import salt.utils.json
 
 # Let's not allow PyLint complain about string substitution
@@ -307,15 +307,16 @@ def returner(ret):
                      (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
                      VALUES (%s, %s, %s, %s, %s, %s)"""
 
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    salt.utils.json.dumps(ret["return"]),
+                    salt.utils.json.dumps(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    salt.utils.json.dumps(ret),
+                    salt.utils.json.dumps(cleaned_return),
                 ),
             )
     except salt.exceptions.SaltMasterError as exc:
@@ -349,8 +350,9 @@ def save_load(jid, load, minions=None):
 
         sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
 
+        json_data = salt.utils.json.dumps(salt.utils.data.decode(load))
         try:
-            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
+            cur.execute(sql, (jid, json_data))
         except MySQLdb.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try/except we get tons of duplicate entry errors
