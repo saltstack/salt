@@ -1,8 +1,6 @@
 import pytest
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.slow_test]
 
 
 def test_onlyif_req_retcode(state):

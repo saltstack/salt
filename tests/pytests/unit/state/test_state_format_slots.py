@@ -14,6 +14,8 @@ from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [pytest.mark.core_test]
+
 
 @pytest.fixture
 def state_obj(tmp_path):

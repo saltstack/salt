@@ -194,6 +194,7 @@ def test_get_repos_doesnot_exist():
 
 
 @pytest.mark.destructive_test
+@pytest.mark.slow_test
 def test_del_repo(revert_repo_file):
     """
     Test aptpkg.del_repo when passing repo
@@ -241,6 +242,7 @@ def test__expand_repo_def(grains):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.slow_test
 def test_mod_repo(revert_repo_file):
     """
     Test aptpkg.mod_repo when the repo exists.
@@ -255,6 +257,7 @@ def test_mod_repo(revert_repo_file):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.slow_test
 def test_mod_repo_no_file(tmp_path, revert_repo_file):
     """
     Test aptpkg.mod_repo when the file does not exist.

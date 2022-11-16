@@ -5,6 +5,8 @@ import pytest
 import salt.config
 import salt.state
 
+pytestmark = [pytest.mark.core_test]
+
 
 @pytest.fixture
 def master_opts():

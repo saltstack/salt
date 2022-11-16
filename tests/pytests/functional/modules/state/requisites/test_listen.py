@@ -317,6 +317,7 @@ def test_listen_requisite_resolution_names(state, state_tree):
         assert "test_|-listener_service_|-crond_|-mod_watch" in ret
 
 
+@pytest.mark.slow_test
 def test_onlyif_req(state, subtests):
     onlyif = [{}]
     with subtests.test(onlyif=onlyif):

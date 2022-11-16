@@ -12,6 +12,8 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
+pytestmark = [pytest.mark.core_test]
+
 
 @pytest.fixture
 def root_dir(tmp_path):
