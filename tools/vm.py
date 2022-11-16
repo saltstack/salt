@@ -471,8 +471,15 @@ class VM:
         ssh_connection_timeout = self.config.connect_timeout
         ssh_connection_timeout_progress = 0
 
+        started_in_ci = os.environ.get("RUNNER_NAME") is not None
+        tags = [
+            {"Key": "vm-name", "Value": self.name},
+            {"Key": "instance-client-id", "Value": REPO_CHECKOUT_ID},
+            {"Key": "started-in-ci", "Value": str(started_in_ci).lower()},
+        ]
+
         network_interfaces = None
-        if os.environ.get("RUNNER_NAME") is not None:
+        if started_in_ci:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
@@ -545,11 +552,6 @@ class VM:
             f"Starting {self!r} in {self.region_name!r} with ssh key named {key_name!r}...",
             total=create_timeout,
         )
-
-        tags = [
-            {"Key": "vm-name", "Value": self.name},
-            {"Key": "instance-client-id", "Value": REPO_CHECKOUT_ID},
-        ]
         if os.environ.get("CI") is not None:
             job = os.environ["GITHUB_JOB"]
             ref = os.environ["GITHUB_REF"]
