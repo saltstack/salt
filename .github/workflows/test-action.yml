@@ -109,7 +109,7 @@ jobs:
       - self-hosted
       - linux
       - bastion
-    timeout-minutes: 240  # 4 Hours
+    timeout-minutes: 180  # 3 Hours - More than this and something is wrong
     needs:
       - dependencies
     strategy:
