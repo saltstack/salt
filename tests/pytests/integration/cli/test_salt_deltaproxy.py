@@ -116,10 +116,16 @@ def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.parametrize(
+    "parallel_startup",
+    [True, False],
+    ids=["parallel_startup=True", "parallel_startup=False"],
+)
 def test_exit_status_correct_usage(
     salt_master,
     salt_cli,
     proxy_minion_id,
+    parallel_startup,
 ):
     """
     Ensure the salt-proxy control proxy starts and
@@ -153,11 +159,12 @@ def test_exit_status_correct_usage(
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
+        parallel_startup: {}
         ids:
           - {}
           - {}
     """.format(
-        proxy_one, proxy_two
+        parallel_startup, proxy_one, proxy_two
     )
 
     dummy_proxy_one_pillar_file = """
@@ -227,10 +234,16 @@ def test_exit_status_correct_usage(
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.parametrize(
+    "parallel_startup",
+    [True, False],
+    ids=["parallel_startup=True", "parallel_startup=False"],
+)
 def test_missing_pillar_file(
     salt_master,
     salt_cli,
     proxy_minion_id,
+    parallel_startup,
 ):
     """
     Ensure that the control proxy minion starts up when
@@ -258,11 +271,12 @@ def test_missing_pillar_file(
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
+        parallel_startup: {}
         ids:
           - {}
           - {}
     """.format(
-        proxy_one, proxy_two
+        parallel_startup, proxy_one, proxy_two
     )
 
     dummy_proxy_one_pillar_file = """
@@ -318,10 +332,16 @@ def test_missing_pillar_file(
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.parametrize(
+    "parallel_startup",
+    [True, False],
+    ids=["parallel_startup=True", "parallel_startup=False"],
+)
 def test_invalid_connection(
     salt_master,
     salt_cli,
     proxy_minion_id,
+    parallel_startup,
 ):
     """
     Ensure that the control proxy minion starts up when
@@ -356,12 +376,13 @@ def test_invalid_connection(
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
+        parallel_startup: {}
         ids:
           - {}
           - {}
           - {}
     """.format(
-        broken_proxy_one, broken_proxy_two, proxy_one
+        parallel_startup, broken_proxy_one, broken_proxy_two, proxy_one
     )
 
     dummy_proxy_one_pillar_file = """

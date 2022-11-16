@@ -1249,7 +1249,7 @@ def encrypt(
 
         salt '*' gpg.encrypt filename='/path/to/important.file' recipients=recipient@example.com
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True \\
+        salt '*' gpg.encrypt filename='/path/to/important.file' sign=True use_passphrase=True \\
                              recipients=recipient@example.com
 
     """
