@@ -60,27 +60,27 @@ def patch_file_dest(base_env_state_tree_root_dir):
 
 @pytest.fixture
 def all_patch_file():
-    return os.path.join("salt://", "patches/", "all.patch")
+    return "salt://patches/all.patch"
 
 
 @pytest.fixture
 def numbers_patch_file():
-    return os.path.join("salt://", "patches/", "numbers.patch")
+    return "salt://patches/numbers.patch"
 
 
 @pytest.fixture
 def math_patch_file():
-    return os.path.join("salt://", "patches/", "math.patch")
+    return "salt://patches/math.patch"
 
 
 @pytest.fixture
 def numbers_patch_template():
-    return os.path.join("salt://", "patches/", "numbers.patch.jinja")
+    return "salt://patches/numbers.patch.jinja"
 
 
 @pytest.fixture
 def all_patch_template():
-    return os.path.join("salt://", "patches/", "all.patch.jinja")
+    return "salt://patches/all.patch.jinja"
 
 
 @pytest.fixture(scope="module")
