@@ -6,6 +6,8 @@
 import random
 import string
 
+import pytest
+
 import salt.loader
 import salt.modules.boto3_route53 as boto3_route53
 from salt.utils.versions import LooseVersion
@@ -75,6 +77,7 @@ LIST_RESOURCE_RECORD_SETS_RETURN = {
 }
 
 
+@pytest.mark.slow_test
 @skipIf(HAS_BOTO3 is False, "The boto module must be installed.")
 @skipIf(
     LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION),

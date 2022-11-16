@@ -5,6 +5,7 @@ import pytest
 from tests.support.helpers import VirtualEnv
 
 
+@pytest.mark.slow_test
 @pytest.mark.parametrize(
     "pip_version",
     (
