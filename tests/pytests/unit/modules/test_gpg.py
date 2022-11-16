@@ -22,6 +22,7 @@ pytest.importorskip("gnupg")
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
     pytest.mark.requires_random_entropy,
+    pytest.mark.slow_test,
 ]
 
 log = logging.getLogger(__name__)

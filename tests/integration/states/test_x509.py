@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.usefixtures("salt_sub_minion")
 @skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
+@pytest.mark.pytest
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):

@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.slow_test,
 ]
 
 
