@@ -548,7 +548,7 @@ class VM:
             ]
 
         progress = create_progress_bar()
-        create_tast = progress.add_task(
+        create_task = progress.add_task(
             f"Starting {self!r} in {self.region_name!r} with ssh key named {key_name!r}...",
             total=create_timeout,
         )
@@ -647,7 +647,7 @@ class VM:
             stop = time.time()
             create_timeout_progress += stop - start
             progress.update(
-                create_tast,
+                create_task,
                 description=f"{self!r} created...",
                 completed=create_timeout_progress,
             )
@@ -658,21 +658,21 @@ class VM:
                 create_timeout_progress += 1
                 if self.is_running:
                     progress.update(
-                        create_tast,
+                        create_task,
                         description=f"{self!r} is running.",
                         completed=create_timeout,
                     )
                     self.write_state()
                     break
                 progress.update(
-                    create_tast,
+                    create_task,
                     description=f"Waiting until {self!r} is running...",
                     completed=create_timeout_progress,
                 )
             else:
                 error = f"Failed to create {self!r}"
                 progress.update(
-                    create_tast,
+                    create_task,
                     description=error,
                     completed=create_timeout,
                 )
