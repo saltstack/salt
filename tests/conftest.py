@@ -334,6 +334,21 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
+        "core_test: Mark test as being core. These tests are skipped by default unless"
+        " `--core-tests` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "flaky_jail: Mark test as being jlaky. These tests are skipped by default unless"
+        " `--flaky-jail` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "speed_test: Mark test as being speed. These tests are skipped by default unless"
+        " `--speed-tests` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
         "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
     )
     config.addinivalue_line(
