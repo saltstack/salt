@@ -7,9 +7,7 @@ import pytest
 
 import salt.utils.path
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.slow_test]
 
 
 @pytest.fixture(scope="module")

@@ -16,9 +16,7 @@ import salt.utils.stringutils
 log = logging.getLogger(__name__)
 
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
 
 
 def test_show_highstate(state, state_testfile_dest_path):

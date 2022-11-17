@@ -1,9 +1,12 @@
+import pytest
+
 import salt.modules.baredoc as baredoc
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
+@pytest.mark.slow_test
 class BaredocTest(TestCase, LoaderModuleMockMixin):
     """
     Validate baredoc module

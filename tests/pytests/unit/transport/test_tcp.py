@@ -11,6 +11,8 @@ import salt.ext.tornado
 import salt.transport.tcp
 from tests.support.mock import MagicMock, PropertyMock, patch
 
+pytestmark = [pytest.mark.core_test]
+
 
 @pytest.fixture
 def fake_keys():

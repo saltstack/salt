@@ -136,6 +136,9 @@ class Flaky:
     catcher = flaky_catcher
 
 
+# pytest.mark.flaky = Flaky
+
+
 # ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
 def pytest_tempdir_basename():
     """

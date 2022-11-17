@@ -4,6 +4,7 @@ import sys
 from collections import namedtuple
 
 import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+import pytest
 
 import salt.config
 import salt.loader
@@ -66,6 +67,7 @@ def _has_required_moto():
     return True
 
 
+@pytest.mark.skip_test
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
@@ -152,6 +154,7 @@ class DummyConn:
             setattr(self, key, MagicMock(side_effect=val))
 
 
+@pytest.mark.skip_test
 class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
     """
     TestCase for salt.modules.boto_route53 module

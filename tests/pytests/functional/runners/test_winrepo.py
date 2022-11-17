@@ -4,7 +4,7 @@ import salt.utils.gitfs
 from salt.runners import winrepo
 from tests.support.mock import patch
 
-pytestmark = [pytest.mark.windows_whitelisted]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.slow_test]
 
 
 @pytest.fixture

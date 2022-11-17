@@ -10,6 +10,7 @@ from tests.support.unit import skipIf
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
 @pytest.mark.windows_whitelisted
 @pytest.mark.destructive_test
+@pytest.mark.slow_test
 class ChocolateyModuleTest(ModuleCase):
     """
     Validate Chocolatey module

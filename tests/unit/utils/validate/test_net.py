@@ -1,7 +1,10 @@
+import pytest
+
 from salt.utils.validate import net
 from tests.support.unit import TestCase
 
 
+@pytest.mark.slow_test
 class ValidateNetTestCase(TestCase):
     """
     TestCase for salt.utils.validate.net module

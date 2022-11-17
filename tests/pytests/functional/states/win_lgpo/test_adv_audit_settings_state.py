@@ -8,6 +8,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
+    pytest.mark.slow_test,
 ]
 
 

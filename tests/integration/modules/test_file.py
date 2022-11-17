@@ -37,6 +37,7 @@ def symlink(source, link_name):
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test
 class FileModuleTest(ModuleCase):
     """
     Validate the file module

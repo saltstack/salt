@@ -8,9 +8,7 @@ import pytest
 import salt.utils.files
 from tests.support.helpers import dedent
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.slow_test]
 
 
 @pytest.fixture(scope="module")

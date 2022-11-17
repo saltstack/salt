@@ -18,6 +18,9 @@ if salt.utils.platform.is_windows():
         pass
 
 
+pytestmark = [pytest.mark.core_test]
+
+
 def _freebsd_or_openbsd():
     return salt.utils.platform.is_freebsd() or salt.utils.platform.is_openbsd()
 
