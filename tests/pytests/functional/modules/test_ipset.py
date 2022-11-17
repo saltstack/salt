@@ -3,8 +3,10 @@ import logging
 import pytest
 
 pytestmark = [
-    pytest.mark.windows_whitelisted,
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("ipset", check_all=False),
 ]
+
 
 log = logging.getLogger(__name__)
 
