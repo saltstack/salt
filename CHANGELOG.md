@@ -933,7 +933,7 @@ Salt 3002.2 (2020-11-16)
 
 Fixed
 -----
-
+- Fix server core grains issue when running inside a windows container (#59611)
 - Change dict check to isinstance instead of type() for key_values in file.keyvalue. (#57758)
 - Fail when func_ret is False when using the new module.run syntax. (#57768)
 - Fix comparison of certificate values (#58296)

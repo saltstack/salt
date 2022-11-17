@@ -1687,7 +1687,6 @@ def show_states(queue=False, **kwargs):
     """
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
-        assert False
         return conflict
 
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)

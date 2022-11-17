@@ -78,11 +78,11 @@ __grants__ = [
     "ALTER ROUTINE",
     "BACKUP_ADMIN",
     "BINLOG_ADMIN",
-    "BINLOG ADMIN",
-    "BINLOG MONITOR",
-    "BINLOG REPLAY",
+    "BINLOG ADMIN",  # MariaDB since 10.5.2
+    "BINLOG MONITOR",  # MariaDB since 10.5.2
+    "BINLOG REPLAY",  # MariaDB since 10.5.2
     "CONNECTION_ADMIN",
-    "CONNECTION ADMIN",
+    "CONNECTION ADMIN",  # MariaDB since 10.5.2
     "CREATE",
     "CREATE ROLE",
     "CREATE ROUTINE",
@@ -91,12 +91,13 @@ __grants__ = [
     "CREATE USER",
     "CREATE VIEW",
     "DELETE",
+    "DELETE HISTORY",  # MariaDB since 10.3.4
     "DROP",
     "DROP ROLE",
     "ENCRYPTION_KEY_ADMIN",
     "EVENT",
     "EXECUTE",
-    "FEDERATED ADMIN",
+    "FEDERATED ADMIN",  # MariaDB since 10.5.2
     "FILE",
     "GRANT OPTION",
     "GROUP_REPLICATION_ADMIN",
@@ -105,26 +106,26 @@ __grants__ = [
     "LOCK TABLES",
     "PERSIST_RO_VARIABLES_ADMIN",
     "PROCESS",
-    "READ_ONLY ADMIN",
+    "READ_ONLY ADMIN",  # MariaDB since 10.5.2
     "REFERENCES",
     "RELOAD",
-    "REPLICA MONITOR",
+    "REPLICA MONITOR",  # MariaDB since 10.5.9
     "REPLICATION CLIENT",
-    "REPLICATION MASTER ADMIN",
-    "REPLICATION REPLICA",
+    "REPLICATION MASTER ADMIN",  # MariaDB since 10.5.2
+    "REPLICATION REPLICA",  # MariaDB since 10.5.1
     "REPLICATION SLAVE",
     "REPLICATION_SLAVE_ADMIN",
-    "REPLICATION SLAVE ADMIN",
+    "REPLICATION SLAVE ADMIN",  # MariaDB since 10.5.2
     "RESOURCE_GROUP_ADMIN",
     "RESOURCE_GROUP_USER",
     "ROLE_ADMIN",
     "SELECT",
-    "SET USER",
+    "SET USER",  # MariaDB since 10.5.2
     "SET_USER_ID",
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
-    "SLAVE MONITOR",
+    "SLAVE MONITOR",  # MariaDB since 10.5.9
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
@@ -2490,8 +2491,9 @@ def grant_exists(
 
     try:
         target = __grant_generate(grant, database, user, host, grant_option, escape)
-    except Exception:  # pylint: disable=broad-except
+    except Exception as exc:  # pylint: disable=broad-except
         log.error("Error during grant generation.")
+        log.error(exc)
         return False
 
     grants = user_grants(user, host, **connection_args)

@@ -192,7 +192,7 @@ def latest_version(*names, **kwargs):
 
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     # Refresh repo index before checking for latest version available
@@ -389,7 +389,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if pkg_type != "repository":
@@ -548,7 +548,7 @@ def _locate_repo_files(repo, rewrite=False):
                 else:
                     write_buff.append(line)
         if rewrite and filename in ret_val:
-            if len(write_buff) > 0:
+            if write_buff:
                 with salt.utils.files.fopen(filename, "w") as rewrite_file:
                     rewrite_file.writelines(write_buff)
             else:  # Prune empty files
@@ -575,7 +575,7 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
         salt '*' pkg.add_repo <repo url> [conffile=/path/to/xbps/repo.conf]
     """
 
-    if len(_locate_repo_files(repo)) == 0:
+    if not _locate_repo_files(repo):
         try:
             with salt.utils.files.fopen(conffile, "a+") as conf_file:
                 conf_file.write(
