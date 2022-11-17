@@ -29,12 +29,12 @@ def __virtual__():
     return (False, "Icinga2 not installed.")
 
 
-def generate_ticket(domain):
+def generate_ticket(domain, salt):
     """
     Generate and save an icinga2 ticket.
 
     Returns::
-        icinga2 pki ticket --cn domain.tld
+        icinga2 pki ticket --cn domain.tld --salt SHARED_SECRET
 
     CLI Example:
 
@@ -44,23 +44,23 @@ def generate_ticket(domain):
 
     """
     result = __salt__["cmd.run_all"](
-        ["icinga2", "pki", "ticket", "--cn", domain], python_shell=False
+        ["icinga2", "pki", "ticket", "--cn", domain, "--salt", salt], python_shell=False
     )
     return result
 
 
-def generate_cert(domain):
+def generate_cert(domain, salt):
     """
     Generate an icinga2 client certificate and key.
 
     Returns::
-        icinga2 pki new-cert --cn domain.tld --key /etc/icinga2/pki/domain.tld.key --cert /etc/icinga2/pki/domain.tld.crt
+        icinga2 pki new-cert --cn domain.tld --key /etc/icinga2/pki/domain.tld.key --cert /etc/icinga2/pki/domain.tld.crt --salt SHARED_SECRET
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' icinga2.generate_cert domain.tld
+        salt '*' icinga2.generate_cert domain.tld SHARED_SECRET
 
     """
     result = __salt__["cmd.run_all"](
@@ -74,24 +74,26 @@ def generate_cert(domain):
             "{}{}.key".format(get_certs_path(), domain),
             "--cert",
             "{}{}.crt".format(get_certs_path(), domain),
+            "--salt",
+            salt,
         ],
         python_shell=False,
     )
     return result
 
 
-def save_cert(domain, master):
+def save_cert(domain, master, salt):
     """
     Save the certificate for master icinga2 node.
 
     Returns::
-        icinga2 pki save-cert --key /etc/icinga2/pki/domain.tld.key --cert /etc/icinga2/pki/domain.tld.crt --trustedcert /etc/icinga2/pki/trusted-master.crt --host master.domain.tld
+        icinga2 pki save-cert --key /etc/icinga2/pki/domain.tld.key --cert /etc/icinga2/pki/domain.tld.crt --trustedcert /etc/icinga2/pki/trusted-master.crt --host master.domain.tld --salt SHARED_SECRET
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' icinga2.save_cert domain.tld master.domain.tld
+        salt '*' icinga2.save_cert domain.tld master.domain.tld SHARED_SECRET
 
     """
     result = __salt__["cmd.run_all"](
@@ -107,25 +109,27 @@ def save_cert(domain, master):
             "{}trusted-master.crt".format(get_certs_path()),
             "--host",
             master,
+            "--salt",
+            salt,
         ],
         python_shell=False,
     )
     return result
 
 
-def request_cert(domain, master, ticket, port):
+def request_cert(domain, master, ticket, salt, port):
     """
     Request CA cert from master icinga2 node.
 
     Returns::
         icinga2 pki request --host master.domain.tld --port 5665 --ticket TICKET_ID --key /etc/icinga2/pki/domain.tld.key --cert /etc/icinga2/pki/domain.tld.crt --trustedcert \
-                /etc/icinga2/pki/trusted-master.crt --ca /etc/icinga2/pki/ca.crt
+                /etc/icinga2/pki/trusted-master.crt --ca /etc/icinga2/pki/ca.crt --salt SHARED_SECRET
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' icinga2.request_cert domain.tld master.domain.tld TICKET_ID
+        salt '*' icinga2.request_cert domain.tld master.domain.tld TICKET_ID SHARED_SECRET
 
     """
     result = __salt__["cmd.run_all"](
@@ -147,25 +151,27 @@ def request_cert(domain, master, ticket, port):
             "{}trusted-master.crt".format(get_certs_path()),
             "--ca",
             "{}ca.crt".format(get_certs_path()),
+            "--salt",
+            salt,
         ],
         python_shell=False,
     )
     return result
 
 
-def node_setup(domain, master, ticket):
+def node_setup(domain, master, ticket, salt):
     """
     Setup the icinga2 node.
 
     Returns::
         icinga2 node setup --ticket TICKET_ID --endpoint master.domain.tld --zone domain.tld --master_host master.domain.tld --trustedcert \
-                /etc/icinga2/pki/trusted-master.crt
+                /etc/icinga2/pki/trusted-master.crt --salt SHARED_SECRET
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID
+        salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID SHARED_SECRET
 
     """
     result = __salt__["cmd.run_all"](
@@ -183,6 +189,8 @@ def node_setup(domain, master, ticket):
             master,
             "--trustedcert",
             "{}trusted-master.crt".format(get_certs_path()),
+            "--salt",
+            salt,
         ],
         python_shell=False,
     )
