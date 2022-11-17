@@ -4955,7 +4955,8 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
             dvs_config.infrastructureTrafficResourceConfig,
             dvs_dict["infrastructure_traffic_resource_pools"],
         )
-    log.trace("dvs_config= %s", dvs_config)
+    log.trace("dvs_config = %s", dvs_config)
+
     salt.utils.vmware.update_dvs(dvs_ref, dvs_config_spec=dvs_config)
     if "network_resource_management_enabled" in dvs_dict:
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
@@ -8237,7 +8238,7 @@ def add_host_to_dvs(
         )
         ret["success"] = False
 
-    if len(ret["message"]) > 0:
+    if ret["message"]:
         return ret
 
     dvs_uuid = dvs.config.uuid
@@ -8270,7 +8271,7 @@ def add_host_to_dvs(
         dvs_hostmember = vim.dvs.HostMember(config=dvs_hostmember_config)
         p_nics = salt.utils.vmware._get_pnics(host_ref)
         p_nic = [x for x in p_nics if x.device == vmnic_name]
-        if len(p_nic) == 0:
+        if not p_nic:
             ret[host_name].update(
                 {"message": "Physical nic {} not found".format(vmknic_name)}
             )
@@ -8280,7 +8281,7 @@ def add_host_to_dvs(
         v_nics = salt.utils.vmware._get_vnics(host_ref)
         v_nic = [x for x in v_nics if x.device == vmknic_name]
 
-        if len(v_nic) == 0:
+        if not v_nic:
             ret[host_name].update(
                 {"message": "Virtual nic {} not found".format(vmnic_name)}
             )
