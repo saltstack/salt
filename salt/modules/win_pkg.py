@@ -1768,10 +1768,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Install the software
         # Check Use Scheduler Option
+        log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+        log.debug("PKG : pwd: %s", cache_path)
         if pkginfo[version_num].get("use_scheduler", False):
             # Create Scheduled Task
-            log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
-            log.debug("PKG : pwd: %s", cache_path)
             __salt__["task.create_task"](
                 name="update-salt-software",
                 user_name="System",
@@ -1829,8 +1829,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     ret[pkg_name] = {"install status": "failed"}
         else:
             # Launch the command
-            log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
-            log.debug("PKG : pwd: %s", cache_path)
             result = __salt__["cmd.run_all"](
                 '"{}" /s /c "{}"'.format(cmd_shell, arguments),
                 cache_path,
