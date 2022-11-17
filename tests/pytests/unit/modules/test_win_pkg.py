@@ -323,8 +323,8 @@ def test_pkg_install_log_message(caplog):
         assert (
             'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /s /c "runme.exe" /s -e '
             "True -test_flag True"
-        ) in caplog.messages
-        assert "PKG : pwd: " in caplog.messages
+        ).lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
         assert "PKG : retcode: 0" in caplog.messages
 
 
