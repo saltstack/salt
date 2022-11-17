@@ -361,6 +361,9 @@ class EventListener:
             return
         if not future.done():
             future.set_exception(TimeoutException())
+        # We need to remove it from the map even if we didn't explicitly time it out
+        # Otherwise, we get a memory leak in the tag_map
+        if future in self.tag_map[(tag, matcher)] and future.done():
             self.tag_map[(tag, matcher)].remove(future)
         if len(self.tag_map[(tag, matcher)]) == 0:
             del self.tag_map[(tag, matcher)]
