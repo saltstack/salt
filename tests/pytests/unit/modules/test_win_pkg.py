@@ -312,7 +312,9 @@ def test_pkg_install_log_message(caplog):
             "cp.is_cached": MagicMock(return_value="C:\\fake\\path.exe"),
             "cmd.run_all": mock_cmd_run_all,
         },
-    ), caplog.at_level(logging.DEBUG):
+    ), caplog.at_level(
+        logging.DEBUG
+    ):
         win_pkg.install(
             pkgs=["firebox"],
             version="3.03",
