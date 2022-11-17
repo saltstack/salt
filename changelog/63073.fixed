@@ -1,0 +1,1 @@
+New `salt.utils.lazy.lazy_import` function for lazy loading Python imports.

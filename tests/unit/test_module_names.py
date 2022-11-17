@@ -18,6 +18,7 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests"),
     os.path.join("tests", "perf"),
     os.path.join("tests", "pkg"),
+    os.path.join("tests", "pytests", "unit", "utils", "_lazy_test_module"),
     os.path.join("tests", "support"),
     os.path.join("tests", "unit", "files"),
     os.path.join("tests", "unit", "modules", "inspectlib"),
