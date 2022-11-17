@@ -37,15 +37,10 @@ import salt.utils.platform
 import salt.utils.win_functions
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
-from tests.support.helpers import (
-    PRE_PYTEST_SKIP_OR_NOT,
-    PRE_PYTEST_SKIP_REASON,
-    Webserver,
-    get_virtualenv_binary_path,
-)
+from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import check_required_sminion_attributes, create_sminion
+from tests.support.sminion import create_sminion
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
 PYTESTS_DIR = TESTS_DIR / "pytests"
@@ -488,138 +483,8 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
-    integration_utils_tests_path = str(TESTS_DIR / "integration" / "utils")
-    if (
-        str(item.fspath).startswith(integration_utils_tests_path)
-        and PRE_PYTEST_SKIP_OR_NOT is True
-    ):
-        item._skipped_by_mark = True
-        pytest.skip(PRE_PYTEST_SKIP_REASON)
-
-    if item.get_closest_marker("slow_test"):
-        if item.config.getoption("--run-slow") is False:
-            item._skipped_by_mark = True
-            pytest.skip("Slow tests are disabled!")
-
-    requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
-    if requires_sshd_server_marker is not None:
-        if not item.config.getoption("--ssh-tests"):
-            item._skipped_by_mark = True
-            pytest.skip("SSH tests are disabled, pass '--ssh-tests' to enable them.")
-        item.fixturenames.append("sshd_server")
-        item.fixturenames.append("salt_ssh_roster_file")
-
-    requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
-    if requires_salt_modules_marker is not None:
-        required_salt_modules = requires_salt_modules_marker.args
-        if len(required_salt_modules) == 1 and isinstance(
-            required_salt_modules[0], (list, tuple, set)
-        ):
-            required_salt_modules = required_salt_modules[0]
-        required_salt_modules = set(required_salt_modules)
-        not_available_modules = check_required_sminion_attributes(
-            "functions", required_salt_modules
-        )
-
-        if not_available_modules:
-            item._skipped_by_mark = True
-            if len(not_available_modules) == 1:
-                pytest.skip(
-                    "Salt module '{}' is not available".format(*not_available_modules)
-                )
-            pytest.skip(
-                "Salt modules not available: {}".format(
-                    ", ".join(not_available_modules)
-                )
-            )
-
-    requires_salt_states_marker = item.get_closest_marker("requires_salt_states")
-    if requires_salt_states_marker is not None:
-        required_salt_states = requires_salt_states_marker.args
-        if len(required_salt_states) == 1 and isinstance(
-            required_salt_states[0], (list, tuple, set)
-        ):
-            required_salt_states = required_salt_states[0]
-        required_salt_states = set(required_salt_states)
-        not_available_states = check_required_sminion_attributes(
-            "states", required_salt_states
-        )
-
-        if not_available_states:
-            item._skipped_by_mark = True
-            if len(not_available_states) == 1:
-                pytest.skip(
-                    "Salt state module '{}' is not available".format(
-                        *not_available_states
-                    )
-                )
-            pytest.skip(
-                "Salt state modules not available: {}".format(
-                    ", ".join(not_available_states)
-                )
-            )
-
-    requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
-    if requires_random_entropy_marker is not None:
-        if requires_random_entropy_marker.args:
-            raise pytest.UsageError(
-                "'requires_random_entropy' marker does not accept any arguments "
-                "only keyword arguments."
-            )
-        skip = requires_random_entropy_marker.kwargs.pop("skip", None)
-        if skip and not isinstance(skip, bool):
-            raise pytest.UsageError(
-                "The 'skip' keyword argument to the 'requires_random_entropy' marker "
-                "requires a boolean not '{}'.".format(type(skip))
-            )
-        minimum_entropy = requires_random_entropy_marker.kwargs.pop("minimum", None)
-        if minimum_entropy is not None:
-            if not isinstance(minimum_entropy, int):
-                raise pytest.UsageError(
-                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
-                    "must be an integer not '{}'.".format(type(minimum_entropy))
-                )
-            if minimum_entropy <= 0:
-                raise pytest.UsageError(
-                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
-                    "must be an positive integer not '{}'.".format(minimum_entropy)
-                )
-        max_minutes = requires_random_entropy_marker.kwargs.pop("timeout", None)
-        if max_minutes is not None:
-            if not isinstance(max_minutes, int):
-                raise pytest.UsageError(
-                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
-                    "must be an integer not '{}'.".format(type(max_minutes))
-                )
-            if max_minutes <= 0:
-                raise pytest.UsageError(
-                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
-                    "must be an positive integer not '{}'.".format(max_minutes)
-                )
-        if requires_random_entropy_marker.kwargs:
-            raise pytest.UsageError(
-                "Unsupported keyword arguments passed to the 'requires_random_entropy' "
-                "marker: {}".format(
-                    ", ".join(list(requires_random_entropy_marker.kwargs))
-                )
-            )
-        entropy_generator = EntropyGenerator(
-            minimum_entropy=minimum_entropy, max_minutes=max_minutes, skip=skip
-        )
-        entropy_generator.generate_entropy()
-
-    if salt.utils.platform.is_windows():
-        unit_tests_paths = (
-            str(TESTS_DIR / "unit"),
-            str(PYTESTS_DIR / "unit"),
-        )
-        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
-            # Unit tests are whitelisted on windows by default, so, we're only
-            # after all other tests
-            windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
-            if windows_whitelisted_marker is None:
-                item._skipped_by_mark = True
-                pytest.skip("Test is not whitelisted for Windows")
+    item._skipped_by_mark = True
+    raise pytest.skip.Exception("CMCMARROW test skip")
 
 
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
