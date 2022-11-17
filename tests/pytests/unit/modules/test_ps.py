@@ -28,15 +28,12 @@ def sample_process():
         "ppid": "99",
         "cpu_num": "9999999",
     }
-    extra_data = {}
-    # Note: in the future it's possible that more data needs to be returned
-    # here, if other attributes end out being important. Otherwise, this should
-    # be enough. See the commit that added this comment block for more info.
     important_data = {
         "name": b"blerp",
         "status": status,
         "create_time": "393829200",
     }
+    important_data.update(extra_data)
     patch_stat_file = patch(
         "psutil._psplatform.Process._parse_stat_file", return_value=important_data
     )
