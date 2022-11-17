@@ -16,11 +16,40 @@ psutil = pytest.importorskip("salt.utils.psutil_compat")
 
 @pytest.fixture
 def sample_process():
-    proc = psutil.Process(pid=42)
-    proc.name = lambda: "blerp"
-    proc.info = proc.as_dict()
-    proc.info["status"] = "fnord"
-    return proc
+    status = b"fnord"
+    extra_data = {
+        "utime": "42",
+        "stime": "42",
+        "children_utime": "42",
+        "children_stime": "42",
+        "ttynr": "42",
+        "cpu_time": "42",
+        "blkio_ticks": "99",
+        "ppid": "99",
+        "cpu_num": "9999999",
+    }
+    extra_data = {}
+    # Note: in the future it's possible that more data needs to be returned
+    # here, if other attributes end out being important. Otherwise, this should
+    # be enough. See the commit that added this comment block for more info.
+    important_data = {
+        "name": b"blerp",
+        "status": status,
+        "create_time": "393829200",
+    }
+    patch_stat_file = patch(
+        "psutil._psplatform.Process._parse_stat_file", return_value=important_data
+    )
+    patch_status = patch(
+        "psutil._psplatform.Process.status", return_value=status.decode()
+    )
+    patch_create_time = patch(
+        "psutil._psplatform.Process.create_time", return_value=393829200
+    )
+    with patch_stat_file, patch_status, patch_create_time:
+        proc = psutil.Process(pid=42)
+        proc.info = proc.as_dict(("name", "status"))
+        yield proc
 
 
 def test__status_when_process_is_found_with_matching_status_then_proc_info_should_be_returned(
