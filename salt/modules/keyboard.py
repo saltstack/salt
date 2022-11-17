@@ -7,6 +7,7 @@ systemd, or such as Redhat, Debian and Gentoo.
 import logging
 
 import salt.utils.path
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +78,11 @@ def set_sys(layout):
         __salt__["file.sed"](
             "/etc/conf.d/keymaps", "^keymap=.*", "keymap={}".format(layout)
         )
+
+
+    # set_sys_warning_message = "The set_sys function will return True instead of layout in the Argon release"
+    # salt.utils.versions.warn_until("Argon", set_sys_warning_message)
+
     return layout
 
 
@@ -107,4 +113,8 @@ def set_x(layout):
     """
     cmd = "setxkbmap {}".format(layout)
     __salt__["cmd.run"](cmd)
+
+    # set_x_warning_message = "The set_x function will return True instead of layout in the Argon release"
+    # salt.utils.versions.warn_until("Argon", set_x_warning_message)
+
     return layout

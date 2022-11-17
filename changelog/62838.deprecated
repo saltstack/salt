@@ -1,0 +1,1 @@
+The `set_sys` and `get_x` functions in the keyboard module will change in the Argon release to return True instead of the value of `layout`.
