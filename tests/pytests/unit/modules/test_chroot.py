@@ -39,9 +39,6 @@ from tests.support.mock import MagicMock, patch
 @pytest.mark.skipif(
     salt.utils.platform.is_windows(), reason="This test cannot work on Windows"
 )
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="This test cannot work on Windows"
-)
 @pytest.fixture
 def configure_loader_modules():
     loader_context = salt.loader.context.LoaderContext()
