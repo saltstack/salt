@@ -109,8 +109,18 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
                         before="^{}=.*".format(key),
                         after="{}={}".format(key, kwargs[key]),
                     )
+            elif isinstance(dnsopts[key], bool) and not kwargs[key]:
+                __salt__["file.line"](
+                    config_file, match=f"^{key}(=.*|$)".format(key), mode="delete"
+                )
+            elif isinstance(dnsopts[key], bool) and kwargs[key] and dnsopts[key]:
+                pass
             else:
                 __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
+        elif isinstance(kwargs[key], bool) and kwargs[key]:
+            __salt__["file.append"](config_file, key)
+        elif isinstance(kwargs[key], bool) and not kwargs[key]:
+            pass
         else:
             __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
     return ret_kwargs
@@ -175,8 +185,8 @@ def _parse_dnamasq(filename):
 
     with salt.utils.files.fopen(filename, "r") as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
-            if not line.strip():
+            line = salt.utils.stringutils.to_unicode(line).strip()
+            if not line:  # Empty string
                 continue
             if line.startswith("#"):
                 continue
@@ -186,11 +196,9 @@ def _parse_dnamasq(filename):
                     if isinstance(fileopts[comps[0]], str):
                         temp = fileopts[comps[0]]
                         fileopts[comps[0]] = [temp]
-                    fileopts[comps[0]].append(comps[1].strip())
+                    fileopts[comps[0]].append(comps[1])
                 else:
-                    fileopts[comps[0]] = comps[1].strip()
+                    fileopts[comps[0]] = comps[1]
             else:
-                if "unparsed" not in fileopts:
-                    fileopts["unparsed"] = []
-                fileopts["unparsed"].append(line)
+                fileopts[line] = True
     return fileopts
