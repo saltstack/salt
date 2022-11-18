@@ -838,6 +838,8 @@ def _run(
                 stream_stderr=True,
             )
             ret["pid"] = proc.pid
+            stdout = ""
+            stderr = ""
             while proc.has_unread_data:
                 try:
                     try:
@@ -848,12 +850,8 @@ def _run(
                             cstdout, cstderr = "", ""
                         if cstdout:
                             stdout += cstdout
-                        else:
-                            stdout = ""
                         if cstderr:
                             stderr += cstderr
-                        else:
-                            stderr = ""
                         if timeout and (time.time() > will_timeout):
                             ret["stderr"] = "SALT: Timeout after {}s\n{}".format(
                                 timeout, stderr
