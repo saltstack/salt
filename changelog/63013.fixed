@@ -1,0 +1,3 @@
+The `__opts__` dunder dictionary is now added to the loader's `pack` if not
+already present, which makes it accessible via the
+`salt.loader.context.NamedLoaderContext` class.

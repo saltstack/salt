@@ -517,6 +517,7 @@ execution modules
     win_iis
     win_ip
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_ntp

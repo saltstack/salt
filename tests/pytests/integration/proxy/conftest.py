@@ -12,7 +12,16 @@ def salt_proxy(salt_master, salt_proxy_factory):
 
 
 @pytest.fixture(scope="module")
-def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
+def deltaproxy_parallel_startup():
+    yield from [True, False]
+
+
+@pytest.fixture(
+    scope="module",
+    params=[True, False],
+    ids=["parallel_startup=True", "parallel_startup=False"],
+)
+def deltaproxy_pillar_tree(request, salt_master, salt_delta_proxy_factory):
     """
     Create the pillar files for controlproxy and two dummy proxy minions
     """
@@ -45,12 +54,14 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
+        parallel_startup: {}
         ids:
           - {}
           - {}
           - {}
           - {}
     """.format(
+        request.param,
         proxy_one,
         proxy_two,
         proxy_three,

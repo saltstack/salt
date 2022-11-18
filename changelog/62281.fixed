@@ -1,0 +1,1 @@
+Fix Salt Package Manager (SPM) exception when calling spm create_repo .

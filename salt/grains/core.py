@@ -1438,7 +1438,9 @@ def _windows_os_release_grain(caption, product_type):
     release = ""
     if "Server" in caption:
         # Edge case here to handle MS Product that doesn't contain a year
-        if re.match(r"^Microsoft Hyper-V Server$", caption):
+        if re.match(
+            r"^Microsoft[^\d]+(Server|Datacenter|Standard|Essentials)$", caption
+        ):
             version = "2019"
         else:
             for item in caption.split(" "):
@@ -3180,8 +3182,6 @@ def _hw_data(osdata):
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
                 grains["manufacturer"] = res.group(1).strip().replace("'", "")
-                # Remove manufacture in Sulfur: salt.utils.versions.warn_until("Sulfur")
-                grains["manufacture"] = grains["manufacturer"]
                 break
 
         for regex in product_regexes:

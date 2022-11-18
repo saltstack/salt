@@ -309,11 +309,7 @@ def _run_with_coverage(session, *test_cmd, env=None):
     if SKIP_REQUIREMENTS_INSTALL is False:
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
-            version_info = _get_session_python_version_info(session)
-            if version_info < (3, 7):
-                coverage_requirement = "coverage==6.2"
-            else:
-                coverage_requirement = "coverage==6.5.0"
+            coverage_requirement = "coverage==5.2"
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
