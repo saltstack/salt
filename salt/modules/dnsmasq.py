@@ -88,7 +88,7 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
         salt '*' dnsmasq.set_config config_file=/etc/dnsmasq.conf domain=mydomain.com
     """
-    dnsopts = get_config(config_file)
+    dnsopts = get_config(config_file, follow)
     includes = [config_file]
     if follow:
         includes.extend(_discover_configs(dnsopts))
@@ -116,13 +116,14 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
     return ret_kwargs
 
 
-def get_config(config_file="/etc/dnsmasq.conf"):
+def get_config(config_file="/etc/dnsmasq.conf", follow=True):
     """
     Dumps all options from the config file.
 
-    config_file
-        The location of the config file from which to obtain contents.
+    :param string config_file The location of the config file from which to obtain contents.
         Defaults to ``/etc/dnsmasq.conf``.
+    :param bool follow: attempt to set the config option inside any file within
+        the ``conf-dir`` where it has already been enabled.
 
     CLI Examples:
 
@@ -132,8 +133,9 @@ def get_config(config_file="/etc/dnsmasq.conf"):
         salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
     """
     dnsopts = _parse_dnamasq(config_file)
-    for config in _discover_configs(dnsopts):
-        dnsopts.update(_parse_dnamasq(config))
+    if follow:
+        for config in _discover_configs(dnsopts):
+            dnsopts.update(_parse_dnamasq(config))
     return dnsopts
 
 
