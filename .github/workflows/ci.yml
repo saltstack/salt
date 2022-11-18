@@ -7,6 +7,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # Concurrency is defined in a way that concurrent builds against branches do
+  # not cancel previous builds.
+  # However, for every new build against the same pull request source branch,
+  # all older builds against that same branch get canceled.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   get-changed-files:
     name: Get Changed Files
