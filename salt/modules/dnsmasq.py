@@ -5,6 +5,7 @@ Module for managing dnsmasq
 
 import logging
 import os
+from glob import glob
 
 import salt.utils.files
 import salt.utils.platform
@@ -89,17 +90,8 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
     """
     dnsopts = get_config(config_file)
     includes = [config_file]
-    if follow is True and "conf-dir" in dnsopts:
-        for filename in os.listdir(dnsopts["conf-dir"]):
-            if filename.startswith("."):
-                continue
-            if filename.endswith("~"):
-                continue
-            if filename.endswith("bak"):
-                continue
-            if filename.endswith("#") and filename.endswith("#"):
-                continue
-            includes.append("{}/{}".format(dnsopts["conf-dir"], filename))
+    if follow:
+        includes.extend(_discover_configs(dnsopts))
 
     ret_kwargs = {}
     for key in kwargs:
@@ -140,18 +132,34 @@ def get_config(config_file="/etc/dnsmasq.conf"):
         salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
     """
     dnsopts = _parse_dnamasq(config_file)
-    if "conf-dir" in dnsopts:
-        for filename in os.listdir(dnsopts["conf-dir"]):
-            if filename.startswith("."):
-                continue
-            if filename.endswith("~"):
-                continue
-            if filename.endswith("#") and filename.endswith("#"):
-                continue
-            dnsopts.update(
-                _parse_dnamasq("{}/{}".format(dnsopts["conf-dir"], filename))
-            )
+    for config in _discover_configs(dnsopts):
+        dnsopts.update(_parse_dnamasq(config))
     return dnsopts
+
+
+def _discover_configs(dnsopts):
+    if "conf-dir" not in dnsopts:
+        return []
+
+    config_files = []
+    # See "--conf-dir" in manpage
+    config_dir_and_maybe_glob = dnsopts["conf-dir"].split(",")
+    config_dir = config_dir_and_maybe_glob[0]
+    try:
+        config_file_glob = config_dir_and_maybe_glob[1]
+    except IndexError:
+        config_file_glob = "*"
+
+    for filename in glob(os.path.join(config_dir, config_file_glob)):
+        if filename.startswith("."):
+            continue
+        if filename.endswith("~"):
+            continue
+        if filename.endswith("#") and filename.endswith("#"):
+            continue
+        config_files.append(filename)
+
+    return config_files
 
 
 def _parse_dnamasq(filename):
