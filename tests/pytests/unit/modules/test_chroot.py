@@ -27,19 +27,15 @@
 
 import sys
 
+import pytest
+
 import salt.loader.context
 import salt.modules.chroot as chroot
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
-import pytest
+from tests.support.unit import skipIf
 
-
-"""
-Test cases for salt.modules.chroot
-"""
 
 @skipIf(salt.utils.platform.is_windows(), "This test cannot work on Windows")
 @pytest.fixture
@@ -56,16 +52,14 @@ def configure_loader_modules():
         }
     }
 
+
 def test__create_and_execute_salt_state():
-    with patch(
-        "salt.client.ssh.wrapper.state._cleanup_slsmod_low_data", MagicMock()
-    ):
-        with patch(
-            "salt.utils.hashutils.get_hash", MagicMock(return_value="deadbeaf")
-        ):
+    with patch("salt.client.ssh.wrapper.state._cleanup_slsmod_low_data", MagicMock()):
+        with patch("salt.utils.hashutils.get_hash", MagicMock(return_value="deadbeaf")):
             with patch("salt.fileclient.get_file_client", MagicMock()):
                 with patch("salt.modules.chroot.call", MagicMock()):
                     chroot._create_and_execute_salt_state("", {}, {}, False, "md5")
+
 
 @patch("os.path.isdir")
 def test_exist(isdir):
@@ -77,6 +71,7 @@ def test_exist(isdir):
 
     isdir.side_effect = (True, True, True, False)
     assert not chroot.exist("/chroot")
+
 
 @patch("os.makedirs")
 @patch("salt.modules.chroot.exist")
@@ -92,6 +87,7 @@ def test_create(exist, makedirs):
     assert chroot.create("/chroot")
     makedirs.assert_called()
 
+
 @patch("salt.utils.files.fopen")
 def test_in_chroot(fopen):
     """
@@ -103,6 +99,7 @@ def test_in_chroot(fopen):
         fopen.read = MagicMock(side_effect=(root_mountinfo, self_mountinfo))
         assert chroot.in_chroot() == result
 
+
 @patch("salt.modules.chroot.exist")
 def test_call_fails_input_validation(exist):
     """
@@ -112,6 +109,7 @@ def test_call_fails_input_validation(exist):
     exist.return_value = False
     pytest.raises(CommandExecutionError, chroot.call, "/chroot", "")
     pytest.raises(CommandExecutionError, chroot.call, "/chroot", "test.ping")
+
 
 @patch("salt.modules.chroot.exist")
 @patch("tempfile.mkdtemp")
@@ -133,11 +131,15 @@ def test_call_fails_untar(mkdtemp, exist):
     with patch.dict(chroot.__utils__, utils_mock), patch.dict(
         chroot.__salt__, salt_mock
     ):
-        assert chroot.call("/chroot", "test.ping") == {"result": False, "comment": "Error"}
+        assert chroot.call("/chroot", "test.ping") == {
+            "result": False,
+            "comment": "Error",
+        }
         utils_mock["thin.gen_thin"].assert_called_once()
         salt_mock["config.option"].assert_called()
         salt_mock["cmd.run"].assert_called_once()
         utils_mock["files.rm_rf"].assert_called_once()
+
 
 @patch("salt.modules.chroot.exist")
 @patch("tempfile.mkdtemp")
@@ -164,10 +166,10 @@ def test_call_fails_salt_thin(mkdtemp, exist):
         chroot.__salt__, salt_mock
     ):
         assert chroot.call("/chroot", "test.ping") == {
-                "result": False,
-                "retcode": 1,
-                "comment": {"stdout": "", "stderr": "Error"},
-            }
+            "result": False,
+            "retcode": 1,
+            "comment": {"stdout": "", "stderr": "Error"},
+        }
         utils_mock["thin.gen_thin"].assert_called_once()
         salt_mock["config.option"].assert_called()
         salt_mock["cmd.run"].assert_called_once()
@@ -191,6 +193,7 @@ def test_call_fails_salt_thin(mkdtemp, exist):
             ],
         )
         utils_mock["files.rm_rf"].assert_called_once()
+
 
 @patch("salt.modules.chroot.exist")
 @patch("tempfile.mkdtemp")
@@ -238,6 +241,7 @@ def test_call_success(mkdtemp, exist):
             ],
         )
         utils_mock["files.rm_rf"].assert_called_once()
+
 
 @patch("salt.modules.chroot.exist")
 @patch("tempfile.mkdtemp")
@@ -287,6 +291,7 @@ def test_call_success_parameters(mkdtemp, exist):
         )
         utils_mock["files.rm_rf"].assert_called_once()
 
+
 @patch("salt.modules.chroot._create_and_execute_salt_state")
 @patch("salt.client.ssh.state.SSHHighState")
 @patch("salt.fileclient.get_file_client")
@@ -314,6 +319,7 @@ def test_sls(
     with patch.dict(chroot.__opts__, opts_mock):
         assert chroot.sls("/chroot", "module") == "result"
         _create_and_execute_salt_state.assert_called_once()
+
 
 @patch("salt.modules.chroot._create_and_execute_salt_state")
 @patch("salt.client.ssh.state.SSHHighState")
