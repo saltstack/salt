@@ -14,13 +14,12 @@ from tests.support.mock import patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts)
-    modules = salt.loader.minion_mods(opts, utils=utils)
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts)
+    modules = salt.loader.minion_mods(minion_opts, utils=utils)
     return {
         win_lgpo: {
-            "__opts__": copy.deepcopy(opts),
+            "__opts__": copy.deepcopy(minion_opts),
             "__salt__": modules,
             "__utils__": utils,
         }

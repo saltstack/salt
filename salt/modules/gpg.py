@@ -783,16 +783,21 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
 
 
 def export_key(
-    keyids=None, secret=False, user=None, gnupghome=None, use_passphrase=False
+    keyids=None,
+    secret=False,
+    user=None,
+    gnupghome=None,
+    use_passphrase=False,
+    output=None,
+    bare=False,
 ):
     """
     Export a key from the GPG keychain
 
     keyids
         The key ID(s) of the key(s) to be exported. Can be specified as a comma
-        separated string or a list. Anything which GnuPG itself accepts to
-        identify a key - for example, the key ID or the fingerprint could be
-        used.
+        separated string or a list. Anything which GnuPG itself accepts to identify a key
+        for example, the key ID, fingerprint, user ID or email address could be used.
 
     secret
         Export the secret key identified by the ``keyids`` information passed.
@@ -806,10 +811,21 @@ def export_key(
         Specify the location where GPG keyring and related files are stored.
 
     use_passphrase
-        Whether to use a passphrase with the signing key. Passphrase is received
-        from Pillar.
+        Whether to use a passphrase to export the secret key.
+        Passphrase is received from Pillar.
 
         .. versionadded:: 3003
+
+    output
+        The filename where the exported key data will be written to, default is standard out.
+
+        .. versionadded:: 3006.0
+
+    bare
+        If ``True``, return the (armored) exported key block as a string without the
+        standard comment/res dict.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -822,18 +838,40 @@ def export_key(
         salt '*' gpg.export_key keyids="['3FAD9F1E','3FBD8F1E']" user=username
 
     """
+    ret = {"res": True}
     gpg = _create_gpg(user, gnupghome)
 
     if isinstance(keyids, str):
         keyids = keyids.split(",")
 
-    if use_passphrase:
+    if secret and use_passphrase:
         gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
-        ret = gpg.export_keys(keyids, secret, passphrase=gpg_passphrase)
+        result = gpg.export_keys(keyids, secret, passphrase=gpg_passphrase)
     else:
-        ret = gpg.export_keys(keyids, secret, expect_passphrase=False)
+        result = gpg.export_keys(keyids, secret, expect_passphrase=False)
+
+    if result and output:
+        with salt.utils.files.flopen(output, "w") as fout:
+            fout.write(salt.utils.stringutils.to_str(result))
+
+    if result:
+        if not bare:
+            if output:
+                ret["comment"] = "Exported key data has been written to {}".format(
+                    output
+                )
+            else:
+                ret["comment"] = result
+        else:
+            ret = result
+    else:
+        if not bare:
+            ret["res"] = False
+        else:
+            ret = False
+
     return ret
 
 
@@ -1158,6 +1196,7 @@ def encrypt(
     output=None,
     sign=None,
     use_passphrase=False,
+    always_trust=False,
     gnupghome=None,
     bare=False,
 ):
@@ -1170,7 +1209,8 @@ def encrypt(
         ``/etc/salt/gpgkeys``.
 
     recipients
-        The fingerprints for those recipient whom the data is being encrypted for.
+        The key ID, fingerprint, user ID or email address associated with the recipients
+        key can be used.
 
     text
         The text to encrypt.
@@ -1186,8 +1226,13 @@ def encrypt(
         default key or fingerprint to specify a different key to sign with.
 
     use_passphrase
-        Whether to use a passphrase with the signing key. Passphrase is received
-        from Pillar.
+        Whether to use a passphrase with the signing key.
+        Passphrase is received from Pillar.
+
+    always_trust
+        Skip key validation and assume that used keys are fully trusted.
+
+        .. versionadded:: 3006.0
 
     gnupghome
         Specify the location where GPG keyring and related files are stored.
@@ -1204,37 +1249,39 @@ def encrypt(
 
         salt '*' gpg.encrypt filename='/path/to/important.file' recipients=recipient@example.com
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True \\
+        salt '*' gpg.encrypt filename='/path/to/important.file' sign=True use_passphrase=True \\
                              recipients=recipient@example.com
 
     """
     ret = {"res": True, "comment": ""}
     gpg = _create_gpg(user, gnupghome)
 
-    if use_passphrase:
+    if sign and use_passphrase:
         gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
-        gpg_passphrase = gpg_passphrase["gpg_passphrase"]
     else:
         gpg_passphrase = None
 
     if text:
-        result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
+        result = gpg.encrypt(
+            text,
+            recipients,
+            sign=sign,
+            passphrase=gpg_passphrase,
+            always_trust=always_trust,
+            output=output,
+        )
     elif filename:
         with salt.utils.files.flopen(filename, "rb") as _fp:
-            if output:
-                result = gpg.encrypt_file(
-                    _fp,
-                    recipients,
-                    passphrase=gpg_passphrase,
-                    output=output,
-                    sign=sign,
-                )
-            else:
-                result = gpg.encrypt_file(
-                    _fp, recipients, passphrase=gpg_passphrase, sign=sign
-                )
+            result = gpg.encrypt_file(
+                _fp,
+                recipients,
+                sign=sign,
+                passphrase=gpg_passphrase,
+                always_trust=always_trust,
+                output=output,
+            )
     else:
         raise SaltInvocationError("filename or text must be passed.")
 
@@ -1254,7 +1301,9 @@ def encrypt(
             )
         else:
             ret = False
+
         log.error(result.stderr)
+
     return ret
 
 
@@ -1310,7 +1359,6 @@ def decrypt(
         gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
-        gpg_passphrase = gpg_passphrase["gpg_passphrase"]
     else:
         gpg_passphrase = None
 

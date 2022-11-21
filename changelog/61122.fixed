@@ -1,0 +1,1 @@
+Fix ipset state when the comment kwarg is set.

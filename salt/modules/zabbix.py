@@ -664,7 +664,7 @@ def user_exists(alias, **connection_args):
             # Zabbix 5.4 changed object fields
             params = {"output": "extend", "filter": {username_field: alias}}
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return True if len(ret["result"]) > 0 else False
+            return True if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -723,7 +723,7 @@ def user_get(alias=None, userids=None, **connection_args):
                 params.setdefault("userids", userids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1189,7 +1189,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
 
-            return False if len(ret["result"]) < 1 else ret["result"]
+            return False if not ret["result"] else ret["result"]
         else:
             raise KeyError
     except KeyError:
@@ -1478,7 +1478,7 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
                 params["filter"].setdefault("host", host)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1859,7 +1859,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
                 params.setdefault("hostids", hostids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -1982,7 +1982,7 @@ def hostinterface_get(hostids, **connection_args):
                 params.setdefault("hostids", hostids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -2203,7 +2203,7 @@ def usermacro_get(
                 params = _params_extend(params, globalmacro=True)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -2478,7 +2478,7 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
                 params.setdefault("mediatypeids", mediatypeids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -2659,7 +2659,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
                 params.setdefault("templateids", templateids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"] if len(ret["result"]) > 0 else False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
@@ -2700,10 +2700,7 @@ def run_query(method, params, **connection_args):
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             if isinstance(ret["result"], bool):
                 return ret["result"]
-            if ret["result"] is True or len(ret["result"]) > 0:
-                return ret["result"]
-            else:
-                return False
+            return ret["result"] if ret["result"] else False
         else:
             raise KeyError
     except KeyError:
