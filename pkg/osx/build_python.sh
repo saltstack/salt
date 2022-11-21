@@ -1,21 +1,28 @@
 #!/bin/bash
+################################################################################
+#
+# Title: Build Pythong
+# Author: Twangboy
+#
+# Description: Script that builds python from source using the Relative
+#              Environment for Python project (relenv):
+#
+#              https://github.com/saltstack/relative-environment-for-python
+#
+#              For more information, run this script with the -h option.
+################################################################################
 
-################################################################################
-# Make sure the script is launched with sudo
-################################################################################
-#if [[ $(id -u) -ne 0 ]]; then
-#    echo ">>>>>> Re-launching as sudo <<<<<<"
-#    exec sudo -E /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
-#fi
-
-################################################################################
+#-------------------------------------------------------------------------------
 # Variables
-################################################################################
+#-------------------------------------------------------------------------------
 # The default version to be built
-PYTHON_VERSION="3.9.15"
+# TODO: The is not selectable via RELENV yet. This has to match whatever relenv
+# TODO: is building
+PY_VERSION="3.10.7"
 
 # Valid versions supported by MacOS
-PYTHON_VERSIONS=(
+PY_VERSIONS=(
+    "3.10.7"
     "3.9.15"
     "3.9.14"
     "3.9.13"
@@ -28,15 +35,18 @@ PYTHON_VERSIONS=(
     "3.8.11"
 )
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-RELENV_DIR="$SCRIPT_DIR\relative-environment-for-python"
+# Locations
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SYS_PY_BIN="$(which python3)"
+RELENV_SRC="$SCRIPT_DIR/relative-environment-for-python"
 RELENV_URL="https://github.com/saltstack/relative-environment-for-python"
-# TODO: python3 instead of python for OSX
-PYTHON_BIN=$(which python)
+RELENV_BLD="$HOME/.local/relenv/build"
+BUILD_DIR="$SCRIPT_DIR/build"
+BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
 
-################################################################################
+#-------------------------------------------------------------------------------
 # Functions
-################################################################################
+#-------------------------------------------------------------------------------
 # _usage
 #
 #   Prints out help text
@@ -50,31 +60,40 @@ PYTHON_BIN=$(which python)
      echo "  -h, --help      this message"
      echo "  -v, --version   version of python to install"
      echo "                  python version must be one of:"
-     for i in "${PYTHON_VERSIONS[@]}"; do
+     for i in "${PY_VERSIONS[@]}"; do
          echo "                  - $i"
      done
      echo ""
-     echo "  build python 3.9.15"
+     echo "  To build python 3.9.15:"
      echo "      example: $0 --version 3.9.15"
 }
 
+# _msg
+#
+#   Prints the message with a dash... no new line
 _msg() {
     printf -- "- $1: "
 }
 
+# _success
+#
+#   Prints a green Success
 _success() {
     printf '\e[32m%s\e[0m\n' "Success"
 }
 
+# _failure
+#
+#   Prints a red Failure and exits
 _failure() {
     printf '\e[31m%s\e[0m\n' "Failure"
     exit 1
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 # Get Parameters
-################################################################################
+#-------------------------------------------------------------------------------
 while true; do
     if [[ -z "$1" ]]; then break; fi
     case "$1" in
@@ -84,7 +103,7 @@ while true; do
             ;;
         -v | --version )
             shift
-            PYTHON_VERSION="$*"
+            PY_VERSION="$*"
             shift
             ;;
         -*)
@@ -93,39 +112,60 @@ while true; do
             _usage
             ;;
         * )
-            PYTHON_VERSION="$*"
+            PY_VERSION="$*"
             shift
             ;;
     esac
 done
 
-if ! [[ " ${PYTHON_VERSIONS[*]} " =~ " $PYTHON_VERSION " ]]; then
-    echo "Invalid Python Version: $PYTHON_VERSION"
+if ! [[ " ${PY_VERSIONS[*]} " =~ " $PY_VERSION " ]]; then
+    echo "Invalid Python Version: $PY_VERSION"
     echo ""
     _usage
     exit 1
 fi
 
+#TODO: Relenv is only building 3.10.7. It's not currently selectable
+#TODO: Once it is, we can remove this
+PY_VERSION="3.10.7"
+
+# Get the short version
+PY_SHORT_VER="${PY_VERSION%.*}"
+
+#-------------------------------------------------------------------------------
+# Script Start
+#-------------------------------------------------------------------------------
 printf "=%.0s" {1..80}; printf "\n"
 echo "Build Python with Relenv"
-echo "- Python Version: $PYTHON_VERSION"
+echo "- Python Version: $PY_VERSION"
 printf -- "-%.0s" {1..80}; printf "\n"
 
 #-------------------------------------------------------------------------------
-# Prepping Environment
+# Cleaning Environment
 #-------------------------------------------------------------------------------
-if [ -d "$RELENV_DIR" ]; then
-    _msg "Removing Relenv Directory"
-    rm -rf $RELENV_DIR
-    if [ -d "$RELENV_DIR" ]; then
+if [ -d "$RELENV_SRC" ]; then
+    _msg "Removing Relenv Source Directory"
+    rm -rf $RELENV_SRC
+    if [ -d "$RELENV_SRC" ]; then
         _failure
     else
         _success
     fi
 fi
 
+if [ -d "$BUILD_DIR" ]; then
+    _msg "Removing Build Directory"
+    rm -rf $BUILD_DIR
+    if ! [ -d "$BUILD_DIR" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
+
 if [ -n "${VIRTUAL_ENV}" ]; then
-    _msg "Deactivating venv"
+    _msg "Deactivating Virtual Environment"
+    deactivate
     if [ -z "${VIRTUAL_ENV}" ]; then
         _success
     else
@@ -134,12 +174,12 @@ if [ -n "${VIRTUAL_ENV}" ]; then
 fi
 
 if [ -d "$SCRIPT_DIR/venv" ]; then
-    _msg "Removing venv dir"
-    rm -rf "$SCRIPT_DIR/venv"
-    if [ -d "$RELENV_DIR" ]; then
-        _failure
-    else
+    _msg "Removing Virtual Environment Directory"
+    rm -rf $SCRIPT_DIR/venv
+    if ! [ -d "$SCRIPT_DIR/venv" ]; then
         _success
+    else
+        _failure
     fi
 fi
 
@@ -147,27 +187,26 @@ fi
 # Downloading Relenv
 #-------------------------------------------------------------------------------
 _msg "Cloning Relenv"
-git clone "--depth" 1 "$RELENV_URL" "$RELENV_DIR" >/dev/null 2>&1
-if [ -d "$RELENV_DIR/relenv" ]; then
+git clone --depth 1 $RELENV_URL $RELENV_SRC >/dev/null 2>&1
+if [ -d "$RELENV_SRC/relenv" ]; then
     _success
 else
     _failure
 fi
 
 #-------------------------------------------------------------------------------
-# Setting up venv
+# Setting Up Virtual Environment
 #-------------------------------------------------------------------------------
-_msg "Setting up venv"
-$PYTHON_BIN -m venv "$SCRIPT_DIR/venv"
+_msg "Setting Up Virtual Environment"
+$SYS_PY_BIN -m venv $SCRIPT_DIR/venv
 if [ -d "$SCRIPT_DIR/venv" ]; then
     _success
 else
     _failure
 fi
 
-_msg "Activating venv"
-# TODO: bin instead of scripts for OSX
-source "$SCRIPT_DIR/venv/Scripts/activate"
+_msg "Activating Virtual Environment"
+source $SCRIPT_DIR/venv/bin/activate
 if [ -n "${VIRTUAL_ENV}" ]; then
     _success
 else
@@ -175,15 +214,74 @@ else
 fi
 
 #-------------------------------------------------------------------------------
-# Setting up venv
+# Installing Relenv
 #-------------------------------------------------------------------------------
-_msg "Installing relenv"
-pip install -e "$RELENV_DIR/." >/dev/null 2>&1
+_msg "Installing Relenv"
+pip install -e $RELENV_SRC/. >/dev/null 2>&1
 if [ -n "$(pip show relenv)" ]; then
     _success
 else
     _failure
 fi
 
-_msg "Building Python with relenv"
-python -m relenv build --clean
+#-------------------------------------------------------------------------------
+# Building Python with Relenv
+#-------------------------------------------------------------------------------
+_msg "Building Python with Relenv"
+# We want to suppress the output here so it looks nice
+# To see the output, remove the output redirection
+python -m relenv build --clean >/dev/null 2>&1
+if [ -f "$RELENV_BLD/x86_64-macos.tar.xz" ]; then
+    _success
+else
+    _failure
+fi
+
+
+#-------------------------------------------------------------------------------
+# Moving Python to Build Directory
+#-------------------------------------------------------------------------------
+if ! [ -d "$BUILD_DIR/opt/salt" ]; then
+    _msg "Creating Build Directory"
+    mkdir -p $BUILD_DIR/opt/salt
+    if [ -d "$BUILD_DIR/opt/salt" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
+
+_msg "Moving Python to Build Directory"
+mv $RELENV_BLD/x86_64-macos/* $BUILD_DIR/opt/salt/
+if [ -f "$BLD_PY_BIN" ]; then
+    _success
+else
+    _failure
+fi
+
+#-------------------------------------------------------------------------------
+# Removing Unneeded Libraries from Python
+#-------------------------------------------------------------------------------
+REMOVE=(
+    "idlelib"
+    "test"
+    "tkinter"
+    "turtledemo"
+)
+for i in "${REMOVE[@]}"; do
+    _msg "Removing $i"
+    DIR="$BUILD_DIR/opt/salt/lib/python$PY_SHORT_VER/$i"
+    rm -rf $DIR
+    if ! [ -d "$DIR" ]; then
+        _success
+    else
+        _failure
+    fi
+done
+
+#-------------------------------------------------------------------------------
+# Finished
+#-------------------------------------------------------------------------------
+printf -- "-%.0s" {1..80}; printf "\n"
+echo "Build Python with Relenv Completed"
+printf "=%.0s" {1..80}; printf "\n"
