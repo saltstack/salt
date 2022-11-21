@@ -600,6 +600,14 @@
 #     - require
 #     - require_in
 
+# If set, this parameter expects a dictionary of state module names as keys
+# and list of conditions which must be satisfied in order to run any functions
+# in that state module.
+#
+#global_state_conditions:
+#  "*": ["G@global_noop:false"]
+#  service: ["not G@virtual_subtype:chroot"]
+
 #####     File Directory Settings    #####
 ##########################################
 # The Salt Minion can redirect all file server operations to a local directory,
