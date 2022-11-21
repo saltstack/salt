@@ -2092,11 +2092,7 @@ class State:
         instance.format_slots(cdata)
         tag = _gen_tag(low)
         try:
-            ret = instance._match_global_state_conditions(
-                cdata["full"], low["state"], name
-            )
-            if not ret:
-                ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
+            ret = instance.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -2350,19 +2346,23 @@ class State:
                     ret = mock_ret(cdata)
                 else:
                     # Execute the state function
-                    if not low.get("__prereq__") and low.get("parallel"):
+                    ret = self._match_global_state_conditions(
+                        cdata["full"], low["state"], low["name"]
+                    )
+                    if ret:
+                        log.info(
+                            "Failed to meet global state conditions. State '%s' not called.",
+                            low["name"],
+                        )
+                    elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self._match_global_state_conditions(
-                            cdata["full"], low["state"], low["name"]
-                        )
-                        if not ret:
-                            with salt.utils.files.set_umask(low.get("__umask__")):
-                                ret = self.states[cdata["full"]](
-                                    *cdata["args"], **cdata["kwargs"]
-                                )
+                        with salt.utils.files.set_umask(low.get("__umask__")):
+                            ret = self.states[cdata["full"]](
+                                *cdata["args"], **cdata["kwargs"]
+                            )
                 self.states.inject_globals = {}
             if (
                 "check_cmd" in low
