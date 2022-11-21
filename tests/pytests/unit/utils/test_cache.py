@@ -5,11 +5,11 @@
     Test the salt cache objects
 """
 
+import pathlib
 import time
 
 import pytest
 
-import salt.config
 import salt.loader
 import salt.payload
 import salt.utils.cache as cache
@@ -47,24 +47,15 @@ def test_ttl():
 
 
 @pytest.fixture
-def cache_dir(tmp_path):
-    cachedir = tmp_path / "cachedir"
-    cachedir.mkdir()
-    return cachedir
+def cache_dir(minion_opts):
+    return pathlib.Path(minion_opts["cachedir"])
 
 
-@pytest.fixture
-def minion_config(cache_dir):
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["cachedir"] = str(cache_dir)
-    return opts
-
-
-def test_smoke_context(minion_config):
+def test_smoke_context(minion_opts):
     """
     Smoke test the context cache
     """
-    context_cache = cache.ContextCache(minion_config, "cache_test")
+    context_cache = cache.ContextCache(minion_opts, "cache_test")
 
     data = {"a": "b"}
     context_cache.cache_context(data.copy())
@@ -106,7 +97,7 @@ def cache_mods_path(tmp_path, cache_mod_name):
         yield _cache_mods_path
 
 
-def test_context_wrapper(minion_config, cache_mods_path):
+def test_context_wrapper(minion_opts, cache_mods_path):
     """
     Test to ensure that a module which decorates itself
     with a context cache can store and retrieve its contextual
@@ -117,7 +108,7 @@ def test_context_wrapper(minion_config, cache_mods_path):
         [str(cache_mods_path)],
         tag="rawmodule",
         virtual_enable=False,
-        opts=minion_config,
+        opts=minion_opts,
     )
 
     cache_test_func = loader["cache_mod.test_context_module"]
@@ -126,7 +117,7 @@ def test_context_wrapper(minion_config, cache_mods_path):
     assert cache_test_func()["called"] == 1
 
 
-def test_set_cache(minion_config, cache_mods_path, cache_mod_name, cache_dir):
+def test_set_cache(minion_opts, cache_mods_path, cache_mod_name, cache_dir):
     """
     Tests to ensure the cache is written correctly
     """
@@ -136,8 +127,8 @@ def test_set_cache(minion_config, cache_mods_path, cache_mod_name, cache_dir):
         [str(cache_mods_path)],
         tag="rawmodule",
         virtual_enable=False,
-        opts=minion_config,
-        pack={"__context__": context, "__opts__": minion_config},
+        opts=minion_opts,
+        pack={"__context__": context, "__opts__": minion_opts},
     )
 
     cache_test_func = loader["cache_mod.test_context_module"]
@@ -160,13 +151,13 @@ def test_set_cache(minion_config, cache_mods_path, cache_mod_name, cache_dir):
 
     # Test cache de-serialize
     cc = cache.ContextCache(
-        minion_config, "salt.loaded.ext.rawmodule.{}".format(cache_mod_name)
+        minion_opts, "salt.loaded.ext.rawmodule.{}".format(cache_mod_name)
     )
     retrieved_cache = cc.get_cache_context()
     assert retrieved_cache == dict(context, called=1)
 
 
-def test_refill_cache(minion_config, cache_mods_path):
+def test_refill_cache(minion_opts, cache_mods_path):
     """
     Tests to ensure that the context cache can rehydrate a wrapped function
     """
@@ -175,8 +166,8 @@ def test_refill_cache(minion_config, cache_mods_path):
         [str(cache_mods_path)],
         tag="rawmodule",
         virtual_enable=False,
-        opts=minion_config,
-        pack={"__context__": context, "__opts__": minion_config},
+        opts=minion_opts,
+        pack={"__context__": context, "__opts__": minion_opts},
     )
 
     cache_test_func = loader["cache_mod.test_compare_context"]

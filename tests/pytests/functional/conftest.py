@@ -42,8 +42,8 @@ def minion_config_defaults():
 @pytest.fixture(scope="module")
 def minion_config_overrides():
     """
-    Functional test modules can provide this fixture to tweak the configuration overrides dictionary
-    passed to the minion factory
+    Functional test modules can provide this fixture to tweak the configuration
+    overrides dictionary passed to the minion factory
     """
     return {}
 
@@ -60,7 +60,14 @@ def minion_opts(
     minion_config_overrides.update(
         {
             "file_client": "local",
-            "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
+            "file_roots": {
+                "base": [
+                    str(state_tree),
+                ],
+                "prod": [
+                    str(state_tree_prod),
+                ],
+            },
         }
     )
     factory = salt_factories.salt_minion_daemon(
