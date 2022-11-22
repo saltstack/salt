@@ -1976,3 +1976,46 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
             raise CommandExecutionError("rm_filesystems error exception {exc}")
 
     return modified
+
+
+def get_mount_from_path(path):
+    """
+    Return the mount providing a specified path.
+
+    .. versionadded:: 3006.0
+
+    path
+        The path for the function to evaluate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.get_mount_from_path /opt/some/nested/path
+    """
+    path = os.path.realpath(os.path.abspath(path))
+    while path != os.path.sep:
+        if os.path.ismount(path):
+            return path
+        path = os.path.abspath(os.path.join(path, os.pardir))
+    return path
+
+
+def get_device_from_path(path):
+    """
+    Return the underlying device for a specified path.
+
+    .. versionadded:: 3006.0
+
+    path
+        The path for the function to evaluate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.get_device_from_path /
+    """
+    mount = get_mount_from_path(path)
+    mounts = active()
+    return mounts.get(mount, {}).get("device")
