@@ -4,16 +4,14 @@ unit tests for the script engine
 
 import pytest
 
-import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MASTER_OPTS
-    return {script: {"__opts__": opts}}
+def configure_loader_modules(master_opts):
+    return {script: {"__opts__": master_opts}}
 
 
 def test__get_serializer():

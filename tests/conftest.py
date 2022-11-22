@@ -237,6 +237,10 @@ def pytest_configure(config):
             continue
         if dirname != TESTS_DIR:
             config.addinivalue_line("norecursedirs", str(CODE_DIR / dirname))
+    config.addinivalue_line(
+        "norecursedirs",
+        str(TESTS_DIR / "unit" / "modules" / "inspectlib" / "tree_test"),
+    )
 
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(

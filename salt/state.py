@@ -788,6 +788,44 @@ class State:
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
+        self.global_state_conditions = None
+
+    def _match_global_state_conditions(self, full, state, name):
+        """
+        Return ``None`` if global state conditions are met. Otherwise, pass a
+        return dictionary which effectively creates a no-op outcome.
+
+        This operation is "explicit allow", in that ANY state and condition
+        combination which matches will allow the state to be run.
+        """
+        matches = []
+        ret = None
+        ret_dict = {
+            "name": name,
+            "comment": "Failed to meet global state conditions. State not called.",
+            "changes": {},
+            "result": None,
+        }
+
+        if not isinstance(self.global_state_conditions, dict):
+            self.global_state_conditions = (
+                self.functions["config.option"]("global_state_conditions") or {}
+            )
+
+        for state_match, conditions in self.global_state_conditions.items():
+            if state_match in ["*", full, state]:
+                if isinstance(conditions, str):
+                    conditions = [conditions]
+                if isinstance(conditions, list):
+                    matches.extend(
+                        self.functions["match.compound"](condition)
+                        for condition in conditions
+                    )
+
+        if matches and not any(matches):
+            ret = ret_dict
+
+        return ret
 
     def _gather_pillar(self):
         """
@@ -2318,7 +2356,15 @@ class State:
                     ret = mock_ret(cdata)
                 else:
                     # Execute the state function
-                    if not low.get("__prereq__") and low.get("parallel"):
+                    ret = self._match_global_state_conditions(
+                        cdata["full"], low["state"], low["name"]
+                    )
+                    if ret:
+                        log.info(
+                            "Failed to meet global state conditions. State '%s' not called.",
+                            low["name"],
+                        )
+                    elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
                         ret = self.call_parallel(cdata, low)
                     else:

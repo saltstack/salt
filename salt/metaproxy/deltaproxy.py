@@ -428,10 +428,6 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     _proxy_minion = ProxyMinion(proxyopts)
     _proxy_minion.proc_dir = salt.minion.get_proc_dir(proxyopts["cachedir"], uid=uid)
 
-    _proxy_minion.proxy = salt.loader.proxy(
-        proxyopts, utils=main_utils, context=proxy_context
-    )
-
     # And load the modules
     (
         _proxy_minion.functions,
@@ -459,6 +455,13 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
         opts=proxyopts,
         grains=proxyopts["grains"],
         context=proxy_context,
+    )
+
+    # Create this after modules are synced to ensure
+    # any custom modules, eg. custom proxy modules
+    # are avaiable.
+    _proxy_minion.proxy = salt.loader.proxy(
+        proxyopts, utils=main_utils, context=proxy_context
     )
 
     _proxy_minion.functions.pack["__proxy__"] = _proxy_minion.proxy
