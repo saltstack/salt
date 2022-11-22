@@ -11,9 +11,14 @@
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-RELENV_SRC="$SCRIPT_DIR/relative-environment-for-python"
-RELENV_DIR="$HOME/.local/relenv"
-BUILD_DIR="$SCRIPT_DIR/build"
+REMOVE_DIRS=(
+    "$SCRIPT_DIR/relative-environment-for-python"
+    "$HOME/.local/relenv"
+    "$SCRIPT_DIR/build"
+    "$SCRIPT_DIR/venv"
+    "$SRC_DIR/build"
+    "$SRC_DIR/dist"
+)
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -23,7 +28,7 @@ BUILD_DIR="$SCRIPT_DIR/build"
 #   Prints out help text
 _usage() {
      echo ""
-     echo "Script to clean the package directory:"
+     echo "Script to clean the package directory and build environment:"
      echo ""
      echo "usage: ${0}"
      echo "             [-h|--help]"
@@ -66,38 +71,8 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Cleaning Environment
 #-------------------------------------------------------------------------------
-if [ -d "$BUILD_DIR" ]; then
-    _msg "Removing BuildDirectory"
-    rm -rf "$BUILD_DIR"
-    if [ -d "$BUILD_DIR" ]; then
-        _failure
-    else
-        _success
-    fi
-fi
-
-if [ -d "$RELENV_SRC" ]; then
-    _msg "Removing Relenv Source Directory"
-    rm -rf "$RELENV_SRC"
-    if [ -d "$RELENV_SRC" ]; then
-        _failure
-    else
-        _success
-    fi
-fi
-
-if [ -d "$RELENV_DIR" ]; then
-    _msg "Removing Relenv Build Directory"
-    rm -rf "$RELENV_DIR"
-    if ! [ -d "$RELENV_DIR" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
-
 if [ -n "${VIRTUAL_ENV}" ]; then
-    _msg "Deactivating Virtual Environment"
+    _msg "Deactivating virtual environment"
     deactivate
     if [ -z "${VIRTUAL_ENV}" ]; then
         _success
@@ -106,35 +81,17 @@ if [ -n "${VIRTUAL_ENV}" ]; then
     fi
 fi
 
-if [ -d "$SCRIPT_DIR/venv" ]; then
-    _msg "Removing Virtual Environment Directory"
-    rm -rf "$SCRIPT_DIR/venv"
-    if ! [ -d "$SCRIPT_DIR/venv" ]; then
-        _success
-    else
-        _failure
+for dir in "${REMOVE_DIRS[@]}"; do
+    if [ -d "$dir" ]; then
+        _msg "Removing $dir"
+        rm -rf "$dir"
+        if [ -d "$dir" ]; then
+            _failure
+        else
+            _success
+        fi
     fi
-fi
-
-if [ -d "$SRC_DIR/build" ]; then
-    _msg "Removing Build Directory"
-    rm -rf "$SRC_DIR/build"
-    if ! [ -d "$SRC_DIR/build" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
-
-if [ -d "$SRC_DIR/dist" ]; then
-    _msg "Removing Dist Directory"
-    rm -rf "$SRC_DIR/dist"
-    if ! [ -d "$SRC_DIR/dist" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
+done
 
 #-------------------------------------------------------------------------------
 # Script Complete

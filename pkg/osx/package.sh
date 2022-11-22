@@ -137,7 +137,7 @@ fi
 #BIN_DIR="$BUILD_DIR/opt/salt/bin"
 #FILE="$BIN_DIR/start-*.sh"
 #if ! compgen -G "$FILE" > /dev/null; then
-#    _msg "Staging Start Scripts"
+#    _msg "Staging start scripts"
 #    cp "$PKG_RESOURCES/scripts/start-*.sh" "$BIN_DIR/"
 #    if compgen -G "$FILE" > /dev/null; then
 #        _success
@@ -147,7 +147,7 @@ fi
 #fi
 #
 #if ! [ -f "$BIN_DIR/salt-config.sh" ]; then
-#    _msg "Staging Salt Config Script"
+#    _msg "Staging Salt config script"
 #    cp "$PKG_RESOURCES/scripts/salt-config.sh" "$BIN_DIR/"
 #    if [ -f "$BIN_DIR/salt-config.sh" ]; then
 #        _success
@@ -158,7 +158,7 @@ fi
 
 SALT_DIR="$BUILD_DIR/opt/salt"
 if ! [ -f "$SALT_DIR/salt-config.sh" ]; then
-    _msg "Staging Salt Config Script"
+    _msg "Staging Salt config script"
     cp "$PKG_RESOURCES/scripts/salt-config.sh" "$SALT_DIR/"
     if [ -f "$SALT_DIR/salt-config.sh" ]; then
         _success
@@ -171,7 +171,7 @@ fi
 # Copy Service Definitions from Salt Repo to the Package Directory
 #-------------------------------------------------------------------------------
 if ! [ -d "$BUILD_DIR/Library/LaunchDaemons" ]; then
-    _msg "Creating LaunchDaemons Directory"
+    _msg "Creating LaunchDaemons directory"
     mkdir -p "$BUILD_DIR/Library/LaunchDaemons"
     if [ -d "$BUILD_DIR/Library/LaunchDaemons" ]; then
         _success
@@ -189,7 +189,7 @@ ITEMS=(
 for i in "${ITEMS[@]}"; do
     FILE="$BUILD_DIR/Library/LaunchDaemons/com.saltstack.salt.$i.com"
     if ! [ -f "$FILE" ]; then
-        _msg "Copying $i Service Definition"
+        _msg "Copying $i service definition"
         cp "$PKG_RESOURCES/scripts/com.saltstack.salt.$i.plist" "$FILE"
         if [ -f "$FILE" ]; then
             _success
@@ -210,7 +210,7 @@ ITEMS=(
 
 for i in "${ITEMS[@]}"; do
     if [[ -n $(find "$BUILD_DIR" -name "$i" -type d) ]]; then
-        _msg "Removing $i"
+        _msg "Removing $i directories"
         find "$BUILD_DIR" -name "$i" -type d -prune -exec rm -rf {} \;
         if [[ -z $(find "$BUILD_DIR" -name "$i" -type d) ]]; then
             _success
@@ -221,7 +221,7 @@ for i in "${ITEMS[@]}"; do
 done
 
 if [[ -n $(find "$BUILD_DIR" -name "*.pyc" -type f) ]]; then
-    _msg "Removing *.pyc"
+    _msg "Removing *.pyc files"
     find "$BUILD_DIR" -name "*.pyc" -type f -delete
     if [[ -z $(find "$BUILD_DIR" -name "*.pyc" -type f) ]]; then
         _success
@@ -234,7 +234,7 @@ fi
 # Copy Config Files from Salt Repo to the Package Directory
 #-------------------------------------------------------------------------------
 if ! [ -d "$CONF_DIR" ]; then
-    _msg "Creating Config Directory"
+    _msg "Creating config directory"
     mkdir -p "$CONF_DIR"
     if [ -d "$CONF_DIR" ]; then
         _success
@@ -247,9 +247,10 @@ ITEMS=(
   "master"
 )
 for i in "${ITEMS[@]}"; do
-    if ! [ -f "$CONF_DIR/$i.dis" ]; then
+    if ! [ -f "$CONF_DIR/$i.dist" ]; then
+        _msg "Copying $i config"
         cp "$SRC_DIR/conf/$i" "$CONF_DIR/$i.dist"
-        if [ -f "$CONF_DIR/$i.dis" ]; then
+        if [ -f "$CONF_DIR/$i.dist" ]; then
             _success
         else
             _failure
@@ -262,7 +263,7 @@ done
 #-------------------------------------------------------------------------------
 DIST="$PKG_RESOURCES/distribution.xml"
 if [ -f "$DIST" ]; then
-    _msg "Removing Existing distribution.xml"
+    _msg "Removing existing distribution.xml"
     rm -f "$DIST"
     if ! [ -f "$DIST" ]; then
         _success
@@ -281,7 +282,7 @@ fi
 
 # We need to do version first because Title contains version and we need to
 # be able to check it
-_msg "Setting Package Version"
+_msg "Setting package version"
 SEDSTR="s/@VERSION@/$VERSION/g"
 sed -E -i "" "$SEDSTR" "$DIST"
 if grep -q "$VERSION"; then
@@ -290,7 +291,7 @@ else
     _failure
 fi
 
-_msg "Setting Package Title"
+_msg "Setting package title"
 TITLE="Salt $VERSION (Python 3)"
 SEDSTR="s/@TITLE@/$TITLE/g"
 sed -E -i "" "$SEDSTR" "$DIST"
@@ -300,7 +301,7 @@ else
     _failure
 fi
 
-_msg "Setting Package Description"
+_msg "Setting package description"
 DESC="Salt $VERSION with Python 3"
 SEDSTR="s/@DESC@/$DESC/g"
 sed -E -i "" "$SEDSTR" "$DIST"
@@ -310,7 +311,7 @@ else
     _failure
 fi
 
-_msg "Setting Package Architecture"
+_msg "Setting package architecture"
 SEDSTR="s/@CPU_ARCH@/$CPU_ARCH/g"
 sed -i "" "$SEDSTR" "$DIST"
 if grep -q "$CPU_ARCH"; then
@@ -323,7 +324,7 @@ fi
 # Build and Sign the Package
 #-------------------------------------------------------------------------------
 
-_msg "Building the Source Package"
+_msg "Building the source package"
 # Build the src package
 FILE="salt-src-$VERSION-py3-$CPU_ARCH.pkg"
 if pkgbuild --root="$BUILD_DIR" \
@@ -338,7 +339,7 @@ else
 fi
 
 
-_msg "Building the Product Package (signed)"
+_msg "Building the product package (signed)"
 FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
 if productbuild --resources=pkg-resources \
                 --distribution=distribution.xml  \

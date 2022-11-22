@@ -71,29 +71,25 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Cleaning Environment
 #-------------------------------------------------------------------------------
-if [ -d "$SRC_DIR/build" ]; then
-    _msg "Removing Build Directory"
-    rm -rf "$SRC_DIR/build"
-    if ! [ -d "$SRC_DIR/build" ]; then
-        _success
-    else
-        _failure
+REMOVE_DIRS=(
+    "$SRC_DIR/build"
+    "$SRC_DIR/dist"
+)
+for dir in "${REMOVE_DIRS[@]}"; do
+    if [ -d "$dir" ]; then
+        _msg "Removing $dir"
+        rm -rf "$dir"
+        if [ -d "$dir" ]; then
+            _failure
+        else
+            _success
+        fi
     fi
-fi
-
-if [ -d "$SRC_DIR/dist" ]; then
-    _msg "Removing Dist Directory"
-    rm -rf "$SRC_DIR/dist"
-    if ! [ -d "$SRC_DIR/dist" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
+done
 
 TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/salt*/"
 if compgen -G "$TEST_DIR" > /dev/null; then
-    _msg "Removing Salt Directory"
+    _msg "Removing salt directory"
     find "$TEST_DIR" -type d -exec rm -rf {} +
     if ! compgen -G "$TEST_DIR" > /dev/null; then
         _success

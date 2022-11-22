@@ -122,7 +122,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Submit app for notarization
 #-------------------------------------------------------------------------------
-_msg "Submit Package for Notarization"
+_msg "Submit package for notarization"
 if xcrun altool --notarize-app \
                 --primary-bundle-id "$BUNDLE_ID" \
                 --username "$APPLE_ACCT" \
@@ -137,7 +137,7 @@ fi
 # Uncomment for debugging
 # cat "$CMD_OUTPUT"
 
-_msg "Verifying Successful Upload"
+_msg "Verifying successful upload"
 if grep -q "No errors uploading" "$CMD_OUTPUT"; then
     _success
 else
@@ -183,7 +183,7 @@ if ! grep -q "Status: success" "$CMD_OUTPUT"; then
     exit 1
 fi
 
-_msg "Stapling Notarization to the Package"
+_msg "Stapling notarization to the package"
 if xcrun stapler staple "$PACKAGE" > "$CMD_OUTPUT"; then
     _success
 else
