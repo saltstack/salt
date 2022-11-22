@@ -98,7 +98,7 @@ or compound matcher (for the latter, see the notes above).
         - days_valid: 90
         - copypath: /etc/pki/issued_certs/
 
-.. _x509-setup
+.. _x509-setup:
 """
 import base64
 import datetime
