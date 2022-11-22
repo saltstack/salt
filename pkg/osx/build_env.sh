@@ -1,11 +1,11 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Environment Script for macOS
+# Title: Build Environment Script for MacOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This script sets up a build environment for Salt on macOS using
+# Description: This script sets up a build environment for Salt on MacOS using
 #              pyenv.
 #
 # Requirements:
@@ -20,7 +20,7 @@
 #
 #     Example:
 #         The following will set up an optimized Python build environment for
-#         Salt on macOS
+#         Salt on MacOS
 #
 #         ./build_env.sh
 #

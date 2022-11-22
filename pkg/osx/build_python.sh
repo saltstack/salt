@@ -1,13 +1,16 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Pythong
+# Title: Build Python
 # Author: Twangboy
 #
-# Description: Script that builds python from source using the Relative
+# Description: This script builds Python from source using the Relative
 #              Environment for Python project (relenv):
 #
 #              https://github.com/saltstack/relative-environment-for-python
+#
+#              The build is placed in the ./build directory relative to this
+#              script.
 #
 #              For more information, run this script with the -h option.
 ################################################################################
@@ -50,7 +53,7 @@ BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
 # _usage
 #
 #   Prints out help text
- _usage() {
+_usage() {
      echo ""
      echo "Script to build Python using the Relenv library:"
      echo ""
@@ -72,7 +75,7 @@ BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
 #
 #   Prints the message with a dash... no new line
 _msg() {
-    printf -- "- $1: "
+    printf -- "- %s: " "$1"
 }
 
 # _success
@@ -145,7 +148,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 if [ -d "$RELENV_SRC" ]; then
     _msg "Removing Relenv Source Directory"
-    rm -rf $RELENV_SRC
+    rm -rf "$RELENV_SRC"
     if [ -d "$RELENV_SRC" ]; then
         _failure
     else
@@ -155,7 +158,7 @@ fi
 
 if [ -d "$BUILD_DIR" ]; then
     _msg "Removing Build Directory"
-    rm -rf $BUILD_DIR
+    rm -rf "$BUILD_DIR"
     if ! [ -d "$BUILD_DIR" ]; then
         _success
     else
@@ -175,7 +178,7 @@ fi
 
 if [ -d "$SCRIPT_DIR/venv" ]; then
     _msg "Removing Virtual Environment Directory"
-    rm -rf $SCRIPT_DIR/venv
+    rm -rf "$SCRIPT_DIR/venv"
     if ! [ -d "$SCRIPT_DIR/venv" ]; then
         _success
     else
@@ -187,7 +190,7 @@ fi
 # Downloading Relenv
 #-------------------------------------------------------------------------------
 _msg "Cloning Relenv"
-git clone --depth 1 $RELENV_URL $RELENV_SRC >/dev/null 2>&1
+git clone --depth 1 "$RELENV_URL" "$RELENV_SRC" >/dev/null 2>&1
 if [ -d "$RELENV_SRC/relenv" ]; then
     _success
 else
@@ -198,7 +201,7 @@ fi
 # Setting Up Virtual Environment
 #-------------------------------------------------------------------------------
 _msg "Setting Up Virtual Environment"
-$SYS_PY_BIN -m venv $SCRIPT_DIR/venv
+$SYS_PY_BIN -m venv "$SCRIPT_DIR/venv"
 if [ -d "$SCRIPT_DIR/venv" ]; then
     _success
 else
@@ -206,7 +209,7 @@ else
 fi
 
 _msg "Activating Virtual Environment"
-source $SCRIPT_DIR/venv/bin/activate
+source "$SCRIPT_DIR/venv/bin/activate"
 if [ -n "${VIRTUAL_ENV}" ]; then
     _success
 else
@@ -217,7 +220,7 @@ fi
 # Installing Relenv
 #-------------------------------------------------------------------------------
 _msg "Installing Relenv"
-pip install -e $RELENV_SRC/. >/dev/null 2>&1
+pip install -e "$RELENV_SRC/." >/dev/null 2>&1
 if [ -n "$(pip show relenv)" ]; then
     _success
 else
@@ -237,13 +240,12 @@ else
     _failure
 fi
 
-
 #-------------------------------------------------------------------------------
 # Moving Python to Build Directory
 #-------------------------------------------------------------------------------
 if ! [ -d "$BUILD_DIR/opt/salt" ]; then
     _msg "Creating Build Directory"
-    mkdir -p $BUILD_DIR/opt/salt
+    mkdir -p "$BUILD_DIR/opt/salt"
     if [ -d "$BUILD_DIR/opt/salt" ]; then
         _success
     else
@@ -252,7 +254,7 @@ if ! [ -d "$BUILD_DIR/opt/salt" ]; then
 fi
 
 _msg "Moving Python to Build Directory"
-mv $RELENV_BLD/x86_64-macos/* $BUILD_DIR/opt/salt/
+mv "$RELENV_BLD"/x86_64-macos/* "$BUILD_DIR/opt/salt/"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
 else
@@ -271,7 +273,7 @@ REMOVE=(
 for i in "${REMOVE[@]}"; do
     _msg "Removing $i"
     DIR="$BUILD_DIR/opt/salt/lib/python$PY_SHORT_VER/$i"
-    rm -rf $DIR
+    rm -rf "$DIR"
     if ! [ -d "$DIR" ]; then
         _success
     else

@@ -1,12 +1,12 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Package Script for macOS
+# Title: Build Package Script for MacOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This creates a macOS package for Salt from the contents of
-#              /opt/salt and signs it
+# Description: This creates a MacOS package for Salt from the contents of
+#              ./build and signs it
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
@@ -15,16 +15,14 @@
 #
 # Usage:
 #     This script can be passed 2 parameters
-#         $1 : <version> : the version name to give the package (overrides
-#              version of the git repo) (Defaults to the git repo version)
-#         $2 : <package dir> : the staging area for the package defaults to
-#              /tmp/salt_pkg
+#         $1 : <version> : the version name to give the package. Defaults to the
+#                          git repo version
 #
 #     Example:
-#         The following will build Salt version 2017.7.0 and stage all files in
-#         /tmp/salt_pkg:
+#         The following will build Salt version 3006.1-1 and stage all files in
+#         the ./build directory relative to this script
 #
-#         ./build_pkg.sh 2017.7.0 /tmp/salt_pkg
+#         ./build_pkg.sh 3006.1-1
 #
 # Environment Setup:
 #
@@ -35,7 +33,7 @@
 #         security import "developerID_installer.p12" -k ~/Library/Keychains/login.keychain
 #
 #         NOTE: The .p12 certificate is required as the .cer certificate is
-#               is missing the private key. This can be created by exporting the
+#               missing the private key. This can be created by exporting the
 #               certificate from the machine it was created on
 #
 #     Define Environment Variables:
@@ -46,177 +44,317 @@
 #         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
-echo "Building Salt Package"
-
-################################################################################
-# Make sure the script is launched with sudo
-################################################################################
-if [[ $(id -u) -ne 0 ]]; then
-    echo ">>>>>> Re-launching as sudo <<<<<<"
-    exec sudo -E /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
-fi
-
-################################################################################
-# Set to Exit on all Errors
-################################################################################
-trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
-
-quit_on_error() {
-    echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit 1
-}
-
-################################################################################
-# Check passed parameters, set defaults
-################################################################################
+#-------------------------------------------------------------------------------
+# Variables
+#-------------------------------------------------------------------------------
 # Get/Set Version
 if [ "$1" == "" ]; then
-    VERSION=`git describe`
+    VERSION=$(git describe)
 else
     VERSION=$1
 fi
 
-# Get/Set temp directory
-if [ "$2" == "" ]; then
-    PKGDIR=/tmp/salt_pkg
-else
-    PKGDIR=$2
-fi
+CPU_ARCH=$(uname -m)
+SRC_DIR=$(git rev-parse --show-toplevel)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+BUILD_DIR="$SCRIPT_DIR/build"
+CONF_DIR="$BUILD_DIR/etc/salt"
+PKG_RESOURCES=$SRC_DIR/pkg/osx
+CMD_OUTPUT=$(mktemp -t cmd.log)
 
-CPUARCH=`uname -m`
+#-------------------------------------------------------------------------------
+# Functions
+#-------------------------------------------------------------------------------
+# _usage
+#
+#   Prints out help text
+_usage() {
+     echo ""
+     echo "Script to build the Salt package:"
+     echo ""
+     echo "usage: ${0}"
+     echo "             [-h|--help]"
+     echo ""
+     echo "  -h, --help      this message"
+     echo ""
+     echo "  To build the Salt package:"
+     echo "      example: $0"
+}
 
-################################################################################
-# Additional Parameters Required for the script to function properly
-################################################################################
-echo "**** Setting Variables"
+# _msg
+#
+#   Prints the message with a dash... no new line
+_msg() {
+    printf -- "- %s: " "$1"
+}
 
-SRCDIR=`git rev-parse --show-toplevel`
-PKGRESOURCES=$SRCDIR/pkg/osx
-PY_VERSION=3.9
-PY_DOT_VERSION=3.9.15
+# _success
+#
+#   Prints a green Success
+_success() {
+    printf "\e[32m%s\e[0m\n" "Success"
+}
 
-################################################################################
+# _failure
+#
+#   Prints a red Failure and exits
+_failure() {
+    printf "\e[31m%s\e[0m\n" "Failure"
+    echo "output >>>>>>"
+    cat "$CMD_OUTPUT" 1>&2
+    echo "<<<<<< output"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Delete temporary files on exit
+#-------------------------------------------------------------------------------
+function finish {
+    rm "$CMD_OUTPUT"
+}
+trap finish EXIT
+
+#-------------------------------------------------------------------------------
+# Script Start
+#-------------------------------------------------------------------------------
+printf "=%.0s" {1..80}; printf "\n"
+echo "Building Salt Package"
+printf -- "-%.0s" {1..80}; printf "\n"
+
+#-------------------------------------------------------------------------------
 # Make sure this is the Salt Repository
-################################################################################
-if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
+#-------------------------------------------------------------------------------
+if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
-    echo "The macOS build process needs some files from a Git checkout of Salt."
+    echo "The MacOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the 'pkg/osx' directory of the Git checkout."
     exit 1
 fi
 
-################################################################################
-# Ensure Paths are present and clean
-################################################################################
-echo "**** Cleaning Staging Area"
-
-# Clean folder in the staging area
-rm -rdf $PKGDIR
-mkdir -p $PKGDIR
-
-################################################################################
+#-------------------------------------------------------------------------------
 # Copy Start Scripts from Salt Repo to /opt/salt
-################################################################################
-echo "**** Copying Start Scripts"
+#-------------------------------------------------------------------------------
+#BIN_DIR="$BUILD_DIR/opt/salt/bin"
+#FILE="$BIN_DIR/start-*.sh"
+#if ! compgen -G "$FILE" > /dev/null; then
+#    _msg "Staging Start Scripts"
+#    cp "$PKG_RESOURCES/scripts/start-*.sh" "$BIN_DIR/"
+#    if compgen -G "$FILE" > /dev/null; then
+#        _success
+#    else
+#        _failure
+#    fi
+#fi
+#
+#if ! [ -f "$BIN_DIR/salt-config.sh" ]; then
+#    _msg "Staging Salt Config Script"
+#    cp "$PKG_RESOURCES/scripts/salt-config.sh" "$BIN_DIR/"
+#    if [ -f "$BIN_DIR/salt-config.sh" ]; then
+#        _success
+#    else
+#        _failure
+#    fi
+#fi
 
-cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
-cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
+SALT_DIR="$BUILD_DIR/opt/salt"
+if ! [ -f "$SALT_DIR/salt-config.sh" ]; then
+    _msg "Staging Salt Config Script"
+    cp "$PKG_RESOURCES/scripts/salt-config.sh" "$SALT_DIR/"
+    if [ -f "$SALT_DIR/salt-config.sh" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
 
-################################################################################
+#-------------------------------------------------------------------------------
 # Copy Service Definitions from Salt Repo to the Package Directory
-################################################################################
+#-------------------------------------------------------------------------------
+if ! [ -d "$BUILD_DIR/Library/LaunchDaemons" ]; then
+    _msg "Creating LaunchDaemons Directory"
+    mkdir -p "$BUILD_DIR/Library/LaunchDaemons"
+    if [ -d "$BUILD_DIR/Library/LaunchDaemons" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
 
-echo "**** Copying Build Files"
-mkdir -p $PKGDIR/opt/salt
-# -r: Recursive, Symbolic Links are preserved
-cp -R /opt/salt/.pyenv $PKGDIR/opt/salt/.pyenv
+ITEMS=(
+    "minion"
+    "master"
+    "syndic"
+    "api"
+)
+for i in "${ITEMS[@]}"; do
+    FILE="$BUILD_DIR/Library/LaunchDaemons/com.saltstack.salt.$i.com"
+    if ! [ -f "$FILE" ]; then
+        _msg "Copying $i Service Definition"
+        cp "$PKG_RESOURCES/scripts/com.saltstack.salt.$i.plist" "$FILE"
+        if [ -f "$FILE" ]; then
+            _success
+        else
+            _failure
+        fi
+    fi
+done
 
-echo "**** Copying Service Definitions"
-mkdir -p $PKGDIR/Library/LaunchDaemons $PKGDIR/etc
-
-cp $PKGRESOURCES/scripts/com.saltstack.salt.minion.plist $PKGDIR/Library/LaunchDaemons
-cp $PKGRESOURCES/scripts/com.saltstack.salt.master.plist $PKGDIR/Library/LaunchDaemons
-cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchDaemons
-cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
-
-################################################################################
+#-------------------------------------------------------------------------------
 # Remove unnecessary files from the package
-################################################################################
-echo "**** Trimming Unneeded Files"
+#-------------------------------------------------------------------------------
+ITEMS=(
+    "pkgconfig"
+    "share"
+    "__pycache__"
+)
 
-rm -rdf $PKGDIR/opt/salt/.pyenv/lib/pkgconfig
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/engines*
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/test
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/site-packages/Cryptodome/SelfTest
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib/$PY_VERSION/site-packages/libcloud/test
+for i in "${ITEMS[@]}"; do
+    if [[ -n $(find "$BUILD_DIR" -name "$i" -type d) ]]; then
+        _msg "Removing $i"
+        find "$BUILD_DIR" -name "$i" -type d -prune -exec rm -rf {} \;
+        if [[ -z $(find "$BUILD_DIR" -name "$i" -type d) ]]; then
+            _success
+        else
+            _failure
+        fi
+    fi
+done
 
-echo "**** Removing pkgconfig directories"
-find $PKGDIR/opt/salt -name 'pkgconfig' -type d -prune -exec rm -rf {} \;
+if [[ -n $(find "$BUILD_DIR" -name "*.pyc" -type f) ]]; then
+    _msg "Removing *.pyc"
+    find "$BUILD_DIR" -name "*.pyc" -type f -delete
+    if [[ -z $(find "$BUILD_DIR" -name "*.pyc" -type f) ]]; then
+        _success
+    else
+        _failure
+    fi
+fi
 
-echo "**** Removing Unneeded documentation"
-find $PKGDIR/opt/salt -name 'share' -type d -prune -exec rm -rf {} \;
-
-echo "**** Removing pyenv shims"
-find $PKGDIR/opt/salt -name 'shims' -type d -prune -exec rm -rf {} \;
-
-echo "**** Removing Compiled Python Files (.pyc/__pycache__)"
-find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
-find $PKGDIR/opt/salt -name '__pycache__' -type d -prune -exec rm -rf {} \;
-
-################################################################################
+#-------------------------------------------------------------------------------
 # Copy Config Files from Salt Repo to the Package Directory
-################################################################################
-echo "**** Copying Config Files"
+#-------------------------------------------------------------------------------
+if ! [ -d "$CONF_DIR" ]; then
+    _msg "Creating Config Directory"
+    mkdir -p "$CONF_DIR"
+    if [ -d "$CONF_DIR" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
+ITEMS=(
+  "minion"
+  "master"
+)
+for i in "${ITEMS[@]}"; do
+    if ! [ -f "$CONF_DIR/$i.dis" ]; then
+        cp "$SRC_DIR/conf/$i" "$CONF_DIR/$i.dist"
+        if [ -f "$CONF_DIR/$i.dis" ]; then
+            _success
+        else
+            _failure
+        fi
+    fi
+done
 
-mkdir -p $PKGDIR/etc/salt
-cp $SRCDIR/conf/minion $PKGDIR/etc/salt/minion.dist
-cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
-
-################################################################################
+#-------------------------------------------------------------------------------
 # Add Title, Description, Version and CPU Arch to distribution.xml
-################################################################################
-echo "**** Modifying distribution.xml"
+#-------------------------------------------------------------------------------
+DIST="$PKG_RESOURCES/distribution.xml"
+if [ -f "$DIST" ]; then
+    _msg "Removing Existing distribution.xml"
+    rm -f "$DIST"
+    if ! [ -f "$DIST" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
 
-TITLE="Salt $VERSION (Python 3)"
-DESC="Salt $VERSION with Python 3"
+_msg "Creating distribution.xml"
+cp "$PKG_RESOURCES/distribution.xml.dist" "$DIST"
+if [ -f "$DIST" ]; then
+    _success
+else
+    _failure
+fi
 
-cd $PKGRESOURCES
-cp distribution.xml.dist distribution.xml
-
-SEDSTR="s/@TITLE@/$TITLE/g"
-sed -E -i '' "$SEDSTR" distribution.xml
-
-SEDSTR="s/@DESC@/$DESC/g"
-sed -E -i '' "$SEDSTR" distribution.xml
-
+# We need to do version first because Title contains version and we need to
+# be able to check it
+_msg "Setting Package Version"
 SEDSTR="s/@VERSION@/$VERSION/g"
-sed -E -i '' "$SEDSTR" distribution.xml
+sed -E -i "" "$SEDSTR" "$DIST"
+if grep -q "$VERSION"; then
+    _success
+else
+    _failure
+fi
 
-SEDSTR="s/@CPUARCH@/$CPUARCH/g"
-sed -i '' "$SEDSTR" distribution.xml
+_msg "Setting Package Title"
+TITLE="Salt $VERSION (Python 3)"
+SEDSTR="s/@TITLE@/$TITLE/g"
+sed -E -i "" "$SEDSTR" "$DIST"
+if grep -q "$TITLE"; then
+    _success
+else
+    _failure
+fi
 
-################################################################################
+_msg "Setting Package Description"
+DESC="Salt $VERSION with Python 3"
+SEDSTR="s/@DESC@/$DESC/g"
+sed -E -i "" "$SEDSTR" "$DIST"
+if grep -q "$DESC"; then
+    _success
+else
+    _failure
+fi
+
+_msg "Setting Package Architecture"
+SEDSTR="s/@CPU_ARCH@/$CPU_ARCH/g"
+sed -i "" "$SEDSTR" "$DIST"
+if grep -q "$CPU_ARCH"; then
+    _success
+else
+    _failure
+fi
+
+#-------------------------------------------------------------------------------
 # Build and Sign the Package
-################################################################################
-echo "**** Building the Source Package"
+#-------------------------------------------------------------------------------
 
+_msg "Building the Source Package"
 # Build the src package
-pkgbuild --root=$PKGDIR \
-         --scripts=pkg-scripts \
-         --identifier=com.saltstack.salt \
-         --version=$VERSION \
-         --ownership=recommended \
-         salt-src-$VERSION-py3-$CPUARCH.pkg > /dev/null
+FILE="salt-src-$VERSION-py3-$CPU_ARCH.pkg"
+if pkgbuild --root="$BUILD_DIR" \
+            --scripts=pkg-scripts \
+            --identifier=com.saltstack.salt \
+            --version="$VERSION" \
+            --ownership=recommended \
+            "$FILE" > "$CMD_OUTPUT" 2>&1; then
+    _success
+else
+    _failure
+fi
 
-echo "**** Building and Signing the Product Package with Timestamp"
-productbuild --resources=pkg-resources \
-             --distribution=distribution.xml  \
-             --package-path=salt-src-$VERSION-py3-$CPUARCH.pkg \
-             --version=$VERSION \
-             --sign "$DEV_INSTALL_CERT" \
-             --timestamp \
-             salt-$VERSION-py3-$CPUARCH-signed.pkg > /dev/null
 
-echo "Building Salt Package Completed Successfully"
-echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+_msg "Building the Product Package (signed)"
+FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+if productbuild --resources=pkg-resources \
+                --distribution=distribution.xml  \
+                --package-path="salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
+                --version="$VERSION" \
+                --sign "$DEV_INSTALL_CERT" \
+                --timestamp \
+                "$FILE" > "$CMD_OUTPUT" 2>&1; then
+    _success
+else
+    _failure
+fi
+
+#-------------------------------------------------------------------------------
+# Script Start
+#-------------------------------------------------------------------------------
+printf -- "-%.0s" {1..80}; printf "\n"
+echo "Building Salt Package Completed"
+printf "=%.0s" {1..80}; printf "\n"

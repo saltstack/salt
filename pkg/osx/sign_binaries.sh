@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Binary Signing Script for macOS
+# Title: Binary Signing Script for MacOS
 # Author: Shane Lee
 # Date: December 2020
 #
@@ -46,8 +46,8 @@
 #-------------------------------------------------------------------------------
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BUILD_DIR="$SCRIPT_DIR/build"
-CMD_OUTPUT=$(mktemp -t cmd.log)
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CMD_OUTPUT=$(mktemp -t cmd.log)
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -55,9 +55,9 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # _usage
 #
 #   Prints out help text
- _usage() {
+_usage() {
      echo ""
-     echo "Script to sign binaries in preperation for packaging:"
+     echo "Script to sign binaries in preparation for packaging:"
      echo ""
      echo "usage: ${0}"
      echo "             [-h|--help] [-v|--version]"
@@ -72,7 +72,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 #
 #   Prints the message with a dash... no new line
 _msg() {
-    printf -- "- $1: "
+    printf -- "- %s: " "$1"
 }
 
 # _success
@@ -94,10 +94,18 @@ _failure() {
 }
 
 #-------------------------------------------------------------------------------
+# Delete temporary files on exit
+#-------------------------------------------------------------------------------
+function finish {
+    rm "$CMD_OUTPUT"
+}
+trap finish EXIT
+
+#-------------------------------------------------------------------------------
 # Script Start
 #-------------------------------------------------------------------------------
 printf "=%.0s" {1..80}; printf "\n"
-echo "Signe Binaries"
+echo "Sign Binaries"
 printf -- "-%.0s" {1..80}; printf "\n"
 
 ################################################################################
