@@ -20,16 +20,21 @@ jobs:
     - name: Create Onedir
       env:
         RELENV_PIP_DIR: yes
+        RELENV_DEBUG: yes
       run: |
-        relenv toolchain fetch
+        mkdir build
+        cd build
+        relenv toolchain fetch --arch=x86_64
+        relenv fetch --arch=x86_64
         relenv create salt
-        salt/bin/pip3 install . --no-cache
+        salt/bin/pip3 install ../ --no-cache
+        tar -cvf salt.tar.xz salt
 
     - name: Artifact
       uses: actions/upload-artifact@v3
       with:
         name: Salt Onedir X86_64
-        path: salt*.tar.xz
+        path: build/salt*.tar.xz
 
   test:
     needs: build
