@@ -99,9 +99,9 @@ def certificate_managed(
     ca_server
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
-        must be configured on the ca_server. See `Signing policies`_ for
-        details. Also, the Salt master must permit peers to call the
-        ``sign_remote_certificate`` function, see `Peer communication`_.
+        must be configured on the ca_server.  Also, the Salt master must
+        permit peers to call the ``sign_remote_certificate`` function.
+        See the :ref:`execution module docs <x509-setup>` for details.
 
     signing_policy
         The name of a configured signing policy. Parameters specified in there
