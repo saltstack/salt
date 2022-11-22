@@ -174,7 +174,6 @@ def create_certificate(
         salt '*' x509.create_certificate signing_private_key='/etc/pki/myca.key' csr='/etc/pki/my.csr'
 
     ca_server
-
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
         must be configured on the ca_server. See `Signing policies`_ for
@@ -182,19 +181,16 @@ def create_certificate(
         ``sign_remote_certificate`` function, see `Peer communication`_.
 
     signing_policy
-
         The name of a configured signing policy. Parameters specified in there
         are hardcoded and cannot be overridden. This is required for remote signing,
         otherwise optional. See `Signing policies`_ for details.
 
     encoding
-
         Specify the encoding of the resulting certificate. It can be returned
         as a ``pem`` (or ``pkcs7_pem``) string or several (base64-encoded)
         binary formats (``der``, ``pkcs7_der``, ``pkcs12``). Defaults to ``pem``.
 
     append_certs
-
         A list of additional certificates to append to the new one, e.g. to create a CA chain.
 
         .. note::
@@ -202,17 +198,14 @@ def create_certificate(
             Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
 
     copypath
-
         Create a copy of the issued certificate in PEM format in this directory.
         The file will be named ``<serial_number>.crt`` if prepend_cn is False.
 
     prepend_cn
-
         When ``copypath`` is set, prepend the common name of the certificate to
         the file name like so: ``<CN>-<serial_number>.crt``. Defaults to false.
 
     pkcs12_passphrase
-
         When encoding a certificate as ``pkcs12``, encrypt it with this passphrase.
 
         .. note::
@@ -220,84 +213,68 @@ def create_certificate(
             PKCS12 encryption is very weak and `should not be relied on for security <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
 
     pkcs12_encryption_compat
-
         OpenSSL 3 and cryptography v37 switched to a much more secure default
         encryption for PKCS12, which might be incompatible with some systems.
         This forces the legacy encryption. Defaults to False.
 
     pkcs12_friendlyname
-
         When encoding a certificate as ``pkcs12``, a name for the certificate can be included.
 
     digest
-
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
         This will be ignored for ``ed25519`` and ``ed448`` key types.
 
     private_key
-
         The private key corresponding to the public key the certificate should
         be issued for. This is one way of specifying the public key that will
         be included in the certificate, the other ones being ``public_key`` and ``csr``.
 
     private_key_passphrase
-
         If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
 
     public_key
-
         The public key the certificate should be issued for. Other ways of passing
         the required information are ``private_key`` and ``csr``. If neither are set,
         the public key of the ``signing_private_key`` will be included, i.e.
         a self-signed certificate is generated.
 
     csr
-
         A certificate signing request to use as a base for generating the certificate.
         The following information will be respected, depending on configuration:
-
         * public key
         * extensions, if not otherwise specified (arguments, signing_policy)
 
     signing_cert
-
         The CA certificate to be used for signing the issued certificate.
 
     signing_private_key
-
         The private key corresponding to the public key in ``signing_cert``. Required.
 
     signing_private_key_passphrase
-
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
 
     serial_number
-
         A serial number to be embedded in the certificate. If unspecified, will
         autogenerate one. This should be an integer, either in decimal or
         hexadecimal notation.
 
     not_before
-
         Set a specific date the certificate should not be valid before.
         The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as UTC.
         Defaults to the time of issuance.
 
     not_after
-
         Set a specific date the certificate should not be valid after.
         The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
         If unspecified, defaults to the current time plus ``days_valid`` days.
 
     days_valid
-
         If ``not_after`` is unspecified, the number of days from the time of issuance
         the certificate should be valid for. Defaults to ``30``.
 
     subject
-
         The subject's distinguished name embedded in the certificate. This is one way of
         passing this information (see ``kwargs`` below for the other).
         This argument will be preferred and allows to control the order of RDNs in the DN
@@ -314,16 +291,13 @@ def create_certificate(
             Parsing of RFC4514 strings requires at least cryptography release 37.
 
     kwargs
-
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments. See below for an overview.
 
     Subject properties in kwargs
-
         C, ST, L, STREET, O, OU, CN, MAIL, SN, GN, UID, SERIALNUMBER
 
     X.509v3 extensions in kwargs
-
         Most extensions can be configured using the same string format as OpenSSL,
         while some require adjustments. In general, since the strings are
         parsed to dicts/lists, you can always use the latter formats directly.
@@ -334,7 +308,6 @@ def create_certificate(
         Examples (the first ones showcase dict/list correspondance):
 
         basicConstraints
-
             ``critical, CA:TRUE, pathlen:1`` or
 
             .. code-block:: yaml
@@ -345,7 +318,6 @@ def create_certificate(
                     pathlen: 1
 
         keyUsage
-
             ``critical, cRLSign, keyCertSign`` or
 
             .. code-block:: yaml
@@ -356,33 +328,27 @@ def create_certificate(
                     - keyCertSign
 
         subjectKeyIdentifier
-
             This can be an explicit value or ``hash``, in which case the value
             will be set to the SHA1 hash of some encoding of the associated public key,
             depending on the underlying algorithm (RSA/EC/ED).
 
         authorityKeyIdentifier
-
             ``keyid:always, issuer``
 
         subjectAltName
-
             There is support for all OpenSSL-defined types except ``otherName``.
 
             ``email:me@example.com,DNS:example.com``
 
         issuerAltName
-
             The syntax is the same as for ``subjectAltName``, except that the additional
             value ``issuer:copy`` is supported, which will copy the values of
             ``subjectAltName`` in the issuer's certificate.
 
         authorityInfoAccess
-
             ``OCSP;URI:http://ocsp.example.com/,caIssuers;URI:http://myca.example.com/ca.cer``
 
         crlDistributionPoints
-
             When set to a string value, items are interpreted as fullnames:
 
             ``URI:http://example.com/myca.crl, URI:http://example.org/my.crl``
@@ -399,7 +365,6 @@ def create_certificate(
                     - URI:http://example.org/my.crl
 
         certificatePolicies
-
             ``critical, 1.2.4.5, 1.1.3.4``
 
             Again, there is support for more attributes using the full form:
@@ -416,15 +381,12 @@ def create_certificate(
                         text: mytext
 
         policyConstraints
-
             ``requireExplicitPolicy:3,inhibitPolicyMapping:1``
 
         inhibitAnyPolicy
-
             The value is just an integer: ``- inhibitAnyPolicy: 1``
 
         nameConstraints
-
             ``critical,permitted;IP:192.168.0.0/255.255.0.0,permitted;email:.example.com,excluded;email:.com``
 
             .. code-block:: yaml
@@ -437,12 +399,10 @@ def create_certificate(
                     excluded:
                       - email:.com
         noCheck
-
             This extension does not take any values, except ``critical``. Just the presence
             in the keyword args will add it.
 
         tlsfeature
-
             ``status_request``
 
         For more information, visit the `OpenSSL docs <https://www.openssl.org/docs/man3.0/man5/x509v3_config.html>`_.
@@ -586,17 +546,14 @@ def encode_certificate(
         salt '*' x509.encode_certificate /etc/pki/my.crt /etc/pki/my_ca_intermediate.crt
 
     certificate
-
         The certificate to encode.
 
     encoding
-
         Specify the encoding of the resulting certificate. It can be returned
         as a ``pem`` (or ``pkcs7_pem``) string or several (base64-encoded)
         binary formats (``der``, ``pkcs7_der``, ``pkcs12``). Defaults to ``pem``.
 
     append_certs
-
         A list of additional certificates to encode with the new one, e.g. to create a CA chain.
 
         .. note::
@@ -604,29 +561,24 @@ def encode_certificate(
             Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
 
     private_key
-
         For ``pkcs12``, the private key corresponding to the public key of the ``certificate``
         to be embedded.
 
     private_key_passphrase
-
         For ``pkcs12``, if the private key to embed is encrypted, specify the corresponding
         passphrase.
 
     pkcs12_passphrase
-
         For ``pkcs12``, the container can be encrypted. Specify the passphrase to use here.
         Mind that PKCS12 encryption should not be relied on for security purposes, see
         note above in create_certificate.
 
     pkcs12_encryption_compat
-
         OpenSSL 3 and cryptography v37 switched to a much more secure default
         encryption for PKCS12, which might be incompatible with some systems.
         This forces the legacy encryption. Defaults to False.
 
     pkcs12_friendlyname
-
         When encoding a certificate as ``pkcs12``, a name for the certificate can be included.
     """
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
@@ -732,12 +684,10 @@ def create_crl(
                 revoked="[{'certificate': '/etc/pki/certs/www1.crt', 'revocation_date': '2015-03-01 00:00:00'}]"
 
     signing_private_key
-
         Your certificate authority's private key. It will be used to sign
         the CRL. Required.
 
     revoked
-
         A list of dicts containing all the certificates to revoke. Each dict
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
@@ -773,68 +723,54 @@ def create_crl(
             The value should be a string in the same format as ``revocation_date``.
 
     signing_cert
-
         The CA certificate to be used for signing the issued certificate.
 
     signing_private_key_passphrase
-
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
 
     include_expired
-
         Also include already expired certificates in the CRL. Defaults to false.
 
     days_valid
-
         The number of days that the CRL should be valid. This sets the ``Next Update``
         field in the CRL. Defaults to 100.
 
     digest
-
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
         This will be ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
-
         Specify the encoding of the resulting certificate revocation list.
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
 
     extensions
-
         Add CRL extensions. The following are available:
 
         authorityKeyIdentifier
-
             See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`.
 
         authorityInfoAccess
-
             See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`.
 
         cRLNumber
-
             Specifies a sequential number for each CRL issued by a CA.
             Values must be integers.
 
         deltaCRLIndicator
-
             If the CRL is a delta CRL, this value points to the cRLNumber
             of the base cRL. Values must be integers.
 
         freshestCRL
-
             Identifies how delta CRL information is obtained. The format
             is the same as ``crlDistributionPoints``.
 
         issuerAltName
-
             See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`.
 
         issuingDistributionPoint
-
             Identifies the CRL distribution point for a particular CRL and
             indicates what kinds of revocation it covers. The format is
             comparable to ``crlDistributionPoints``. Specify as follows:
@@ -903,11 +839,9 @@ def encode_crl(crl, encoding="pem"):
         salt '*' x509.encode_crl /etc/pki/my.crl der
 
     crl
-
         The certificate revocation list to encode.
 
     encoding
-
         Specify the encoding of the resulting certificate revocation list.
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
@@ -939,29 +873,24 @@ def create_csr(
         salt '*' x509.create_csr private_key='/etc/pki/myca.key' CN='My Cert'
 
     private_key
-
         The private key corresponding to the public key the certificate should
         be issued for. The CSR will be signed by it. Required.
 
     private_key_passphrase
-
         If ``private_key`` is encrypted, the passphrase to decrypt it.
 
     digest
-
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
         This will be ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
-
         Specify the encoding of the resulting certificate signing request.
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
 
     kwargs
-
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments.
         See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
@@ -1015,11 +944,9 @@ def encode_csr(csr, encoding="pem"):
         salt '*' x509.encode_csr /etc/pki/my.csr der
 
     csr
-
         The certificate signing request to encode.
 
     encoding
-
         Specify the encoding of the resulting certificate signing request.
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
@@ -1055,31 +982,26 @@ def create_private_key(
         salt '*' x509.create_private_key algo=ec keysize=384
 
     algo
-
         The digital signature scheme the private key should be based on.
         Available: ``rsa``, ``ec``, ``ed25519``, ``ed448``. Defaults to ``rsa``.
 
     keysize
-
         For ``rsa``, specifies the bitlength of the private key (2048, 3072, 4096).
         For ``ec``, specifies the NIST curve to use (256, 384, 521).
         Irrelevant for Edwards-curve schemes (`ed25519``, ``ed448``).
         Defaults to 2048 for RSA and 256 for EC.
 
     passphrase
-
         If this is specified, the private key will be encrypted using this
         passphrase. The encryption algorithm cannot be selected, it will be
         determined automatically as the best available one.
 
     encoding
-
         Specify the encoding of the resulting private key. It can be returned
         as a ``pem`` string, base64-encoded ``der`` and base64-encoded ``pkcs12``.
         Defaults to ``pem``.
 
     pkcs12_encryption_compat
-
         Some operating systems are incompatible with the encryption defaults
         for PKCS12 used since OpenSSL v3. This switch triggers a fall back to
         ``PBESv1SHA1And3KeyTripleDESCBC``.
@@ -1110,11 +1032,9 @@ def encode_private_key(
         salt '*' x509.encode_private_key /etc/pki/my.key der
 
     csr
-
         The private key to encode.
 
     encoding
-
         Specify the encoding of the resulting private key. It can be returned
         as a ``pem`` string, base64-encoded ``der`` and base64-encoded ``pkcs12``.
         Defaults to ``pem``.
@@ -1170,11 +1090,9 @@ def expires(certificate, days=0):
         salt '*' x509.expires /etc/pki/my.crt days=7
 
     certificate
-
         The certificate to check.
 
     days
-
         If specified, determine expiration x days in the future.
         Defaults to ``0``, which checks for the current time.
     """
@@ -1197,7 +1115,6 @@ def expired(certificate):
         salt '*' x509.expired /etc/pki/mycert.crt
 
     certificate
-
         The certificate to check.
     """
     ret = {}
@@ -1224,7 +1141,6 @@ def get_pem_entries(glob_path):
         salt '*' x509.get_pem_entries "/etc/pki/*.crt"
 
     glob_path
-
         A path to certificates to be read and returned.
     """
     ret = {}
@@ -1251,12 +1167,10 @@ def get_pem_entry(text, pem_type=None):
         salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
 
     text
-
         Text containing the X509 PEM entry to be returned or path to
         a file containing the text.
 
     pem_type
-
         If specified, this function will only return a pem of a certain type,
         for example 'CERTIFICATE' or 'CERTIFICATE REQUEST'.
     """
@@ -1329,11 +1243,9 @@ def get_private_key_size(private_key, passphrase=None):
         salt '*' x509.get_private_key_size /etc/pki/my.key
 
     private_key
-
         The private key to check.
 
     passphrase
-
         If ``private_key`` is encrypted, the passphrase to decrypt it.
     """
     privkey = x509util.load_privkey(private_key, passphrase=passphrase)
@@ -1355,11 +1267,9 @@ def get_public_key(key, passphrase=None):
         salt '*' x509.get_public_key /etc/pki/my.key
 
     key
-
         A reference to the structure to look the public key up for.
 
     passphrase
-
         If ``key`` is encrypted, the passphrase to decrypt it.
     """
     try:
@@ -1398,11 +1308,9 @@ def get_signing_policy(signing_policy, ca_server=None):
         salt '*' x509.get_signing_policy www
 
     signing_policy
-
         The name of the signing policy to return.
 
     ca_server
-
         If this is set, the CA server will be queried for the
         signing policy instead of looking it up locally.
     """
@@ -1427,7 +1335,6 @@ def read_certificate(certificate):
         salt '*' x509.read_certificate /etc/pki/mycert.crt
 
     certificate
-
         The certificate to read.
     """
     cert = x509util.load_cert(certificate)
@@ -1485,7 +1392,6 @@ def read_certificates(glob_path):
         salt '*' x509.read_certificates "/etc/pki/*.crt"
 
     glob_path
-
         A path to certificates to be read and returned.
     """
     ret = {}
@@ -1511,7 +1417,6 @@ def read_crl(crl):
         salt '*' x509.read_crl /etc/pki/my.crl
 
     crl
-
         The certificate revocation list to read.
     """
     crl = x509util.load_crl(crl)
@@ -1592,17 +1497,14 @@ def sign_remote_certificate(
         salt '*' x509.sign_remote_certificate www kwargs="{'public_key': '/etc/pki/www.key'}"
 
     signing_policy
-
         The name of the signing policy to use. Required.
 
     kwargs
-
         A dict containing all the arguments to be passed into the
         create_certificate function. This will become kwargs when passed
         to create_certificate.
 
     get_signing_policy_only
-
         Only return the named signing policy. Defaults to False.
     """
     ret = {"data": None, "errors": []}
@@ -1677,11 +1579,9 @@ def verify_crl(crl, cert):
         salt '*' x509.verify_crl /etc/pki/my.crl /etc/pki/my.crt
 
     crl
-
         The certificate revocation list to check the signature on.
 
     cert
-
         The certificate (or any reference that can be passed
         to ``get_public_key``) to retrieve the public key from.
     """
@@ -1701,16 +1601,13 @@ def verify_private_key(private_key, public_key, passphrase=None):
         salt '*' x509.verify_private_key /etc/pki/my.key /etc/pki/my.crt
 
     private_key
-
         The private key to check.
 
     public_key
-
         The certificate (or any reference that can be passed
         to ``get_public_key``) to retrieve the public key from.
 
     passphrase
-
         If ``private_key`` is encrypted, the passphrase to decrypt it.
     """
     privkey = x509util.load_privkey(private_key, passphrase=None)
@@ -1732,11 +1629,9 @@ def verify_signature(
         salt '*' x509.verify_signature /etc/pki/my.key /etc/pki/my.crt
 
     certificate
-
         The certificate to check the signature on.
 
     signing_pub_key
-
         Any reference that can be passed to ``get_public_key`` to retrieve
         the public key of the signing entity from. If unspecified, will
         take the public key of ``certificate``, i.e. verify a self-signed
@@ -1767,11 +1662,9 @@ def will_expire(certificate, days):
         salt '*' x509.will_expire "/etc/pki/mycert.crt" days=30
 
     certificate
-
         The certificate to be read.
 
     days
-
         The number of days in the future to check the validity for.
     """
     ret = {"check_days": days}
@@ -1799,21 +1692,17 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
 
     text
-
         PEM string input to be written out.
 
     path
-
         Path of the file to write the PEM out to.
 
     overwrite
-
         If ``True`` (default), write_pem will overwrite the entire PEM file.
         Set to ``False`` to preserve existing private keys and DH params that may
         exist in the PEM file.
 
     pem_type
-
         The PEM type to be saved, for example ``CERTIFICATE`` or
         ``PUBLIC KEY``. Adding this will allow the function to take
         input that may contain multiple PEM types.

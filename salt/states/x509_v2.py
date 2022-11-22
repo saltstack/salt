@@ -90,16 +90,13 @@ def certificate_managed(
     as well as most ones for ``file.managed``.
 
     name
-
         The path the certificate should be present at.
 
     days_remaining
-
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of days. Defaults to 7.
 
     ca_server
-
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
         must be configured on the ca_server. See `Signing policies`_ for
@@ -107,19 +104,16 @@ def certificate_managed(
         ``sign_remote_certificate`` function, see `Peer communication`_.
 
     signing_policy
-
         The name of a configured signing policy. Parameters specified in there
         are hardcoded and cannot be overridden. This is required for remote signing,
         otherwise optional.
 
     encoding
-
         Specify the encoding of the resulting certificate. It can be saved
         as a ``pem`` (or ``pkcs7_pem``) text file or in several binary formats
         (``der``, ``pkcs7_der``, ``pkcs12``). Defaults to ``pem``.
 
     append_certs
-
         A list of additional certificates to append to the new one, e.g. to create a CA chain.
 
         .. note::
@@ -127,53 +121,43 @@ def certificate_managed(
             Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
 
     copypath
-
         Create a copy of the issued certificate in PEM format in this directory.
         The file will be named ``<serial_number>.crt`` if prepend_cn is False.
 
     prepend_cn
-
         When ``copypath`` is set, prepend the common name of the certificate to
         the file name like so: ``<CN>-<serial_number>.crt``. Defaults to false.
 
     digest
-
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
         This will be ignored for ``ed25519`` and ``ed448`` key types.
 
     signing_private_key
-
         The private key corresponding to the public key in ``signing_cert``. Required.
 
     signing_private_key_passphrase
-
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
 
     signing_cert
-
         The CA certificate to be used for signing the issued certificate.
 
     public_key
-
         The public key the certificate should be issued for. Other ways of passing
         the required information are ``private_key`` and ``csr``. If neither are set,
         the public key of the ``signing_private_key`` will be included, i.e.
         a self-signed certificate is generated.
 
     private_key
-
         The private key corresponding to the public key the certificate should
         be issued for. This is one way of specifying the public key that will
         be included in the certificate, the other ones being ``public_key`` and ``csr``.
 
     private_key_passphrase
-
         If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
 
     csr
-
         A certificate signing request to use as a base for generating the certificate.
         The following information will be respected, depending on configuration:
 
@@ -181,7 +165,6 @@ def certificate_managed(
         * extensions, if not otherwise specified (arguments, signing_policy)
 
     subject
-
         The subject's distinguished name embedded in the certificate. This is one way of
         passing this information (see ``kwargs`` below for the other).
         This argument will be preferred and allows to control the order of RDNs in the DN
@@ -194,30 +177,25 @@ def certificate_managed(
         Multiple name attributes per RDN are concatenated with a ``+``.
 
     serial_number
-
         A serial number to be embedded in the certificate. If unspecified, will
         autogenerate one. This should be an integer, either in decimal or
         hexadecimal notation.
 
     not_before
-
         Set a specific date the certificate should not be valid before.
         The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as UTC.
         Defaults to the time of issuance.
 
     not_after
-
         Set a specific date the certificate should not be valid after.
         The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
         If unspecified, defaults to the current time plus ``days_valid`` days.
 
     days_valid
-
         If ``not_after`` is unspecified, the number of days from the time of issuance
         the certificate should be valid for. Defaults to ``30``.
 
     pkcs12_passphrase
-
         When encoding a certificate as ``pkcs12``, encrypt it with this passphrase.
 
         .. note::
@@ -225,17 +203,14 @@ def certificate_managed(
             PKCS12 encryption is very weak and `should not be relied on for security <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
 
     pkcs12_encryption_compat
-
         OpenSSL 3 and cryptography v37 switched to a much more secure default
         encryption for PKCS12, which might be incompatible with some systems.
         This forces the legacy encryption. Defaults to False.
 
     pkcs12_friendlyname
-
         When encoding a certificate as ``pkcs12``, a name for the certificate can be included.
 
     kwargs
-
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments. See
         :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
@@ -500,16 +475,13 @@ def crl_managed(
     as well as most ones for ``file.managed``.
 
     name
-
         The path the certificate revocation list should be present at.
 
     signing_private_key
-
         Your certificate authority's private key. It will be used to sign
         the CRL. Required.
 
     revoked
-
         A list of dicts containing all the certificates to revoke. Each dict
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
@@ -545,42 +517,34 @@ def crl_managed(
             The value should be a string in the same format as ``revocation_date``.
 
     days_remaining
-
         The certificate revocation list will be recreated once the remaining
         CRL validity period is less than this number of days. Defaults to 7.
 
     signing_cert
-
         The CA certificate to be used for signing the issued certificate.
 
     signing_private_key_passphrase
-
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
 
     include_expired
-
         Also include already expired certificates in the CRL. Defaults to false.
 
     days_valid
-
         The number of days that the CRL should be valid. This sets the ``Next Update``
         field in the CRL. Defaults to 100.
 
     digest
-
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
         This will be ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
-
         Specify the encoding of the resulting certificate revocation list.
         It can saved as a ``pem`` text file or binary ``der``.
         Defaults to ``pem``.
 
     extensions
-
         Add CRL extensions. See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
         for details.
 
@@ -793,33 +757,27 @@ def csr_managed(
     as well as most ones for ``file.managed``.
 
     name
-
         The path the certificate signing request should be present at.
 
     private_key
-
         The private key corresponding to the public key the certificate should
         be issued for. The CSR will be signed by it. Required.
 
     private_key_passphrase
-
         If ``private_key`` is encrypted, the passphrase to decrypt it.
 
     digest
-
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
         This will be ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
-
         Specify the encoding of the resulting certificate revocation list.
         It can saved as a ``pem`` text file or binary ``der``.
         Defaults to ``pem``.
 
     kwargs
-
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments.
         See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
@@ -984,15 +942,12 @@ def pem_managed(name, text, **kwargs):
     Manage the contents of a PEM file directly with the content in text, ensuring correct formatting.
 
     name
-
         The path to the file to manage
 
     text
-
         The PEM formatted text to write.
 
     kwargs
-
         Most arguments supported by :py:func:`file.managed <salt.states.file.managed>` are passed through.
     """
     file_args, extra_args = _split_file_kwargs(**kwargs)
@@ -1022,35 +977,29 @@ def private_key_managed(
     as well as most ones for ``file.managed``.
 
     name
-
         The path the private key should be present at.
 
     algo
-
         The digital signature scheme the private key should be based on.
         Available: ``rsa``, ``ec``, ``ed25519``, ``ed448``. Defaults to ``rsa``.
 
     keysize
-
         For ``rsa``, specifies the bitlength of the private key (2048, 3072, 4096).
         For ``ec``, specifies the NIST curve to use (256, 384, 521).
         Irrelevant for Edwards-curve schemes (`ed25519``, ``ed448``).
         Defaults to 2048 for RSA and 256 for EC.
 
     passphrase
-
         If this is specified, the private key will be encrypted using this
         passphrase. The encryption algorithm cannot be selected, it will be
         determined automatically as the best available one.
 
     encoding
-
         Specify the encoding of the resulting private key. It can be saved
         as a ``pem`` text file, binary ``der`` or ``pkcs12``.
         Defaults to ``pem``.
 
     new
-
         Always create a new key. Defaults to false.
         Combining new with :mod:`prereq <salt.states.requsities.preqreq>`
         can allow key rotation whenever a new certificate is generated.
@@ -1060,7 +1009,6 @@ def private_key_managed(
         Defaults to false.
 
     pkcs12_encryption_compat
-
         Some operating systems are incompatible with the encryption defaults
         for PKCS12 used since OpenSSL v3. This switch triggers a fall back to
         ``PBESv1SHA1And3KeyTripleDESCBC``.
