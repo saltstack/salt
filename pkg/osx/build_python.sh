@@ -128,13 +128,6 @@ if ! [[ " ${PY_VERSIONS[*]} " =~ " $PY_VERSION " ]]; then
     exit 1
 fi
 
-#TODO: Relenv is only building 3.10.7. It's not currently selectable
-#TODO: Once it is, we can remove this
-PY_VERSION="3.10.7"
-
-# Get the short version
-PY_SHORT_VER="${PY_VERSION%.*}"
-
 #-------------------------------------------------------------------------------
 # Script Start
 #-------------------------------------------------------------------------------
@@ -147,7 +140,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 # Cleaning Environment
 #-------------------------------------------------------------------------------
 if [ -d "$RELENV_SRC" ]; then
-    _msg "Removing Relenv Source Directory"
+    _msg "Removing relenv source directory"
     rm -rf "$RELENV_SRC"
     if [ -d "$RELENV_SRC" ]; then
         _failure
@@ -157,7 +150,7 @@ if [ -d "$RELENV_SRC" ]; then
 fi
 
 if [ -d "$BUILD_DIR" ]; then
-    _msg "Removing Build Directory"
+    _msg "Removing build directory"
     rm -rf "$BUILD_DIR"
     if ! [ -d "$BUILD_DIR" ]; then
         _success
@@ -167,7 +160,7 @@ if [ -d "$BUILD_DIR" ]; then
 fi
 
 if [ -n "${VIRTUAL_ENV}" ]; then
-    _msg "Deactivating Virtual Environment"
+    _msg "Deactivating virtual environment"
     deactivate
     if [ -z "${VIRTUAL_ENV}" ]; then
         _success
@@ -177,7 +170,7 @@ if [ -n "${VIRTUAL_ENV}" ]; then
 fi
 
 if [ -d "$SCRIPT_DIR/venv" ]; then
-    _msg "Removing Virtual Environment Directory"
+    _msg "Removing virtual environment directory"
     rm -rf "$SCRIPT_DIR/venv"
     if ! [ -d "$SCRIPT_DIR/venv" ]; then
         _success
@@ -187,20 +180,20 @@ if [ -d "$SCRIPT_DIR/venv" ]; then
 fi
 
 #-------------------------------------------------------------------------------
-# Downloading Relenv
+# Cloning Relenv
 #-------------------------------------------------------------------------------
-_msg "Cloning Relenv"
-git clone --depth 1 "$RELENV_URL" "$RELENV_SRC" >/dev/null 2>&1
-if [ -d "$RELENV_SRC/relenv" ]; then
-    _success
-else
-    _failure
-fi
+#_msg "Cloning relenv"
+#git clone --depth 1 "$RELENV_URL" "$RELENV_SRC" >/dev/null 2>&1
+#if [ -d "$RELENV_SRC/relenv" ]; then
+#    _success
+#else
+#    _failure
+#fi
 
 #-------------------------------------------------------------------------------
 # Setting Up Virtual Environment
 #-------------------------------------------------------------------------------
-_msg "Setting Up Virtual Environment"
+_msg "Setting up virtual environment"
 $SYS_PY_BIN -m venv "$SCRIPT_DIR/venv"
 if [ -d "$SCRIPT_DIR/venv" ]; then
     _success
@@ -208,7 +201,7 @@ else
     _failure
 fi
 
-_msg "Activating Virtual Environment"
+_msg "Activating virtual environment"
 source "$SCRIPT_DIR/venv/bin/activate"
 if [ -n "${VIRTUAL_ENV}" ]; then
     _success
@@ -219,8 +212,9 @@ fi
 #-------------------------------------------------------------------------------
 # Installing Relenv
 #-------------------------------------------------------------------------------
-_msg "Installing Relenv"
-pip install -e "$RELENV_SRC/." >/dev/null 2>&1
+_msg "Installing relenv"
+#pip install -e "$RELENV_SRC/." >/dev/null 2>&1
+pip install relenv
 if [ -n "$(pip show relenv)" ]; then
     _success
 else
@@ -230,7 +224,7 @@ fi
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
-_msg "Building Python with Relenv"
+_msg "Building python with relenv"
 # We want to suppress the output here so it looks nice
 # To see the output, remove the output redirection
 python -m relenv build --clean >/dev/null 2>&1
@@ -244,7 +238,7 @@ fi
 # Moving Python to Build Directory
 #-------------------------------------------------------------------------------
 if ! [ -d "$BUILD_DIR/opt/salt" ]; then
-    _msg "Creating Build Directory"
+    _msg "Creating build directory"
     mkdir -p "$BUILD_DIR/opt/salt"
     if [ -d "$BUILD_DIR/opt/salt" ]; then
         _success
@@ -253,7 +247,7 @@ if ! [ -d "$BUILD_DIR/opt/salt" ]; then
     fi
 fi
 
-_msg "Moving Python to Build Directory"
+_msg "Moving python to build directory"
 mv "$RELENV_BLD"/x86_64-macos/* "$BUILD_DIR/opt/salt/"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
@@ -271,15 +265,18 @@ REMOVE=(
     "turtledemo"
 )
 for i in "${REMOVE[@]}"; do
-    _msg "Removing $i"
-    DIR="$BUILD_DIR/opt/salt/lib/python$PY_SHORT_VER/$i"
-    rm -rf "$DIR"
-    if ! [ -d "$DIR" ]; then
-        _success
-    else
-        _failure
+    TEST_DIR="$BUILD_DIR/opt/salt/lib/python3.*/$i"
+    if compgen -G "$TEST_DIR" > /dev/null; then
+        _msg "Removing $i directory"
+        find "$TEST_DIR" -type d -exec rm -rf {} +
+        if ! compgen -G "$TEST_DIR" > /dev/null; then
+            _success
+        else
+            _failure
+        fi
     fi
 done
+
 
 #-------------------------------------------------------------------------------
 # Finished
