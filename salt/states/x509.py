@@ -190,6 +190,8 @@ def __virtual__():
     """
     only load this module if the corresponding execution module is loaded
     """
+    if __opts__.get("x509_v2"):
+        return (False, "Superseded, using x509_v2")
     if "x509.get_pem_entry" in __salt__:
         return "x509"
     else:

@@ -79,6 +79,8 @@ def __virtual__():
     """
     only load this module if m2crypto is available
     """
+    if __opts__.get("x509_v2"):
+        return (False, "Superseded, using x509_v2")
     if HAS_M2:
         return __virtualname__
     else:
