@@ -3,14 +3,14 @@
 # Title: Clean Environment Script
 # Author: Twangboy
 #
-# Description: This script cleans up build artifacts from the package directory
+# Description: This script cleans up build artifacts from the package directory.
 #              Run this script with the -h option for more information
 ################################################################################
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
-SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 RELENV_SRC="$SCRIPT_DIR/relative-environment-for-python"
 RELENV_DIR="$HOME/.local/relenv"
 BUILD_DIR="$SCRIPT_DIR/build"
@@ -21,7 +21,7 @@ BUILD_DIR="$SCRIPT_DIR/build"
 # _usage
 #
 #   Prints out help text
- _usage() {
+_usage() {
      echo ""
      echo "Script to clean the package directory:"
      echo ""
@@ -38,7 +38,7 @@ BUILD_DIR="$SCRIPT_DIR/build"
 #
 #   Prints the message with a dash... no new line
 _msg() {
-    printf -- "- $1: "
+    printf -- "- %s: " "$1"
 }
 
 # _success
@@ -68,7 +68,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 if [ -d "$BUILD_DIR" ]; then
     _msg "Removing BuildDirectory"
-    rm -rf $BUILD_DIR
+    rm -rf "$BUILD_DIR"
     if [ -d "$BUILD_DIR" ]; then
         _failure
     else
@@ -78,7 +78,7 @@ fi
 
 if [ -d "$RELENV_SRC" ]; then
     _msg "Removing Relenv Source Directory"
-    rm -rf $RELENV_SRC
+    rm -rf "$RELENV_SRC"
     if [ -d "$RELENV_SRC" ]; then
         _failure
     else
@@ -88,7 +88,7 @@ fi
 
 if [ -d "$RELENV_DIR" ]; then
     _msg "Removing Relenv Build Directory"
-    rm -rf $RELENV_DIR
+    rm -rf "$RELENV_DIR"
     if ! [ -d "$RELENV_DIR" ]; then
         _success
     else
@@ -108,7 +108,7 @@ fi
 
 if [ -d "$SCRIPT_DIR/venv" ]; then
     _msg "Removing Virtual Environment Directory"
-    rm -rf $SCRIPT_DIR/venv
+    rm -rf "$SCRIPT_DIR/venv"
     if ! [ -d "$SCRIPT_DIR/venv" ]; then
         _success
     else
