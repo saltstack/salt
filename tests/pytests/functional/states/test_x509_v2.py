@@ -247,6 +247,26 @@ q1HXd62bA8k27ukX7w8qWsk6fOTwPh5F3883L5jVqcRsL9pqb4RUugTh/aReVlKW
 
 
 @pytest.fixture()
+def csr_invalid_version():
+    return """\
+-----BEGIN CERTIFICATE REQUEST-----
+MIICVjCCAT4CAQIwADCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAM5+
+0OS8+xIy2I475qlgxEqqSP28BncqlRG1d1VjB4Xc22K+QHS2ipeFM6NRlO2OytYy
+qMMgqU1lKU7sJXxw/uXfNMP40G3t5hrI8O/KtVbIYwujVkswgEMg4bZvmOSjyqte
+BbOH4baQK+7P8LN8Ceaja6d5QAWKBvKSD8f8X1khZP8Lw0rUJjOFWi+XIrEsyd8d
+gern7Qw6ATdFvLs7aY5p2AliUhp1zlqkBJqNcqpLQZubVlg8w1ABfzwFRvTslGio
+SCoCA0MJ0QyThgHjJIqpvZGVdrD4ZQP4rXZHMv8Qzquolpou0n984oCk8t3qyaR+
+WmJIdcPtmMYr8Y6YGKcCAwEAAaARMA8GCSqGSIb3DQEJDjECMAAwDQYJKoZIhvcN
+AQELBQADggEBAEwUc47pXGCNLmZSKAhDu4FbrVyW+PrdWGYKBI+onycy7wCqDP9c
+vQ4lGeuG3t074drgKvm9fIDUdTZLqDDXD2kOAW+7AYbRYxUvTxMiDyrsqyH+N590
+S+SucVJzEZTVNqrWLMn4JwOuXf4onuAxtFLOY+dSGbpU6CiFbaXk6qDDsankqn0Y
+TsAWx3PqeU2w9CT3a68rW214Avn1aMP+aCMHZ7QQpnTnRKXVZscOjiY6MT9Yb8Nv
+BldjvVnQN7bCjM2TQTMSbd00lD+071hLm6ceDQdoewbipNKyhBnQd4hFYJgDPQR7
+1OVnGCilmno3MkKW4yztBX2gI2ifXSaunmY=
+-----END CERTIFICATE REQUEST-----"""
+
+
+@pytest.fixture()
 def ec_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -521,10 +541,13 @@ def pk_args(tmp_path):
     }
 
 
-@pytest.fixture()
-def existing_file(tmp_path):
+@pytest.fixture(params=["1234"])
+def existing_file(tmp_path, request):
+    text = request.param
+    if callable(text):
+        text = request.getfixturevalue(text.__name__)
     test_file = tmp_path / "cert"
-    test_file.write_text("1234")
+    test_file.write_text(text)
     yield test_file
     # cleanup is done by tmp_path
 
@@ -1835,6 +1858,23 @@ def test_csr_managed_existing_with_exts(x509, csr_args, rsa_privkey):
 def test_csr_managed_existing_not_a_csr(x509, csr_args, rsa_privkey):
     """
     If `name` is not a valid csr, a new one should be written to the path
+    """
+    csr_args["name"] = csr_args["name"][:-3] + "cert"
+    ret = x509.csr_managed(**csr_args)
+    _assert_csr_basic(ret, rsa_privkey)
+
+
+@pytest.mark.usefixtures("existing_file")
+@pytest.mark.parametrize("existing_file", [csr_invalid_version], indirect=True)
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 38,
+    reason="Cryptography < v38 does not enforce correct version fields",
+)
+def test_csr_managed_existing_invalid_version(x509, csr_args, rsa_privkey):
+    """
+    The previous x509 modules created CSR with invalid version
+    fields by default. Since cryptography v38, this leads to an
+    exception.
     """
     csr_args["name"] = csr_args["name"][:-3] + "cert"
     ret = x509.csr_managed(**csr_args)
