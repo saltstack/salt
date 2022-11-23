@@ -126,6 +126,16 @@ _usage() {
 }
 
 #-------------------------------------------------------------------------------
+# Quit on error
+#-------------------------------------------------------------------------------
+quit_on_error() {
+    echo "$(basename "$0") caught error on line : $1 command was: $2"
+    echo -en "\033]0;\a"
+    exit 1
+}
+trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
+
+#-------------------------------------------------------------------------------
 # Make sure this is the Salt Repository
 #-------------------------------------------------------------------------------
 if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
@@ -165,7 +175,7 @@ printf "v%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Notarize Package
 #-------------------------------------------------------------------------------
-$SCRIPT_DIR/notarize.sh "salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+"$SCRIPT_DIR/notarize.sh" "salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
 
 #-------------------------------------------------------------------------------
 # Script Completed
