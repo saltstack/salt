@@ -550,6 +550,41 @@ def match_pubkey(pubkey_a, pubkey_b):
     return to_pem(pubkey_a) == to_pem(pubkey_b)
 
 
+def merge_signing_policy(policy, kwargs):
+    """
+    Merge a signing policy, taking care that the different methods
+    of specifying RDN do not lead to unexpected results.
+
+    This is found in utils since the state module needs
+    access as well to check for expected changes.
+    """
+    if not policy:
+        return kwargs
+    # ensure we don't modify data that is used elsewhere
+    policy = copy.deepcopy(policy)
+    if "subject" in kwargs:
+        # a) ensure subject in kwargs does not override CN etc from signing policy
+        if any(x in policy for x in NAME_OID):
+            kwargs.pop("subject")
+        # b) subject is not enforced or if it is a string, it cannot be overridden
+        elif "subject" not in policy or not isinstance(policy["subject"], (dict, list)):
+            pass
+        # c) if both subject sources are of the same time, update dicts or merge lists
+        else:
+            try:
+                kwargs["subject"].update(policy["subject"])
+                policy.pop("subject")
+            except (AttributeError, ValueError):
+                try:
+                    kwargs["subject"] = policy["subject"] + kwargs["subject"]
+                    policy.pop("subject")
+                except TypeError:
+                    pass
+        # d) otherwise enforce subject from signing policy
+    kwargs.update(policy)
+    return kwargs
+
+
 def to_pem(pub_or_cert):
     """
     Returns the PEM-encoded serialization of a public key, certificate,

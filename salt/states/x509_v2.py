@@ -233,7 +233,6 @@ def certificate_managed(
 
     try:
         # check file.managed changes early to avoid using unnecessary resources
-        # and work around https://github.com/saltstack/salt/issues/62590
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
         if file_managed_test["result"] is False:
             ret["result"] = False
@@ -568,7 +567,6 @@ def crl_managed(
 
     try:
         # check file.managed changes early to avoid using unnecessary resources
-        # and work around https://github.com/saltstack/salt/issues/62590
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
 
         if file_managed_test["result"] is False:
@@ -799,7 +797,6 @@ def csr_managed(
 
     try:
         # check file.managed changes early to avoid using unnecessary resources
-        # and work around https://github.com/saltstack/salt/issues/62590
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
 
         if file_managed_test["result"] is False:
@@ -1039,7 +1036,6 @@ def private_key_managed(
             raise SaltInvocationError(f"keysize is an invalid parameter for {algo}")
 
         # check file.managed changes early to avoid using unnecessary resources
-        # and work around https://github.com/saltstack/salt/issues/62590
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
 
         if file_managed_test["result"] is False:
@@ -1257,7 +1253,6 @@ def _add_sub_state_run(ret, sub):
 def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
-    # # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
     res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
     return res[next(iter(res))]
@@ -1278,9 +1273,11 @@ def _build_cert(
     ca_server=None, signing_policy=None, signing_private_key=None, **kwargs
 ):
     final_kwargs = copy.deepcopy(kwargs)
-    final_kwargs.update(
-        __salt__["x509.get_signing_policy"](signing_policy, ca_server=ca_server)
+    x509util.merge_signing_policy(
+        __salt__["x509.get_signing_policy"](signing_policy, ca_server=ca_server),
+        final_kwargs,
     )
+
     builder, _, private_key_loaded, signing_cert = x509util.build_crt(
         signing_private_key,
         skip_load_signing_private_key=ca_server is not None,
