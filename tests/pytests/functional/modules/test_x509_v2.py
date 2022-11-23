@@ -32,7 +32,23 @@ def minion_config_overrides():
                 "keyUsage": "critical, cRLSign, keyCertSign",
                 "authorityKeyIdentifier": "keyid:always",
                 "subjectKeyIdentifier": "hash",
-            }
+            },
+            "testsubjectstrpolicy": {
+                "subject": "CN=from_signing_policy",
+            },
+            "testsubjectdictpolicy": {
+                "subject": {"CN": "from_signing_policy"},
+            },
+            "testsubjectlistpolicy": {
+                "subject": [
+                    "C=US",
+                    "L=Salt Lake City",
+                    "O=Salt Test",
+                ],
+            },
+            "testnosubjectpolicy": {
+                "basicConstraints": "critical, CA:FALSE",
+            },
         },
         "x509_v2": True,
     }
@@ -866,6 +882,153 @@ def test_create_certificate_with_signing_policy(x509, ca_cert, ca_key, rsa_privk
         ext = cert.extensions.get_extension_for_class(x)
         if cx509.BasicConstraints == x:
             assert not ext.value.ca
+
+
+def test_create_certificate_with_signing_policy_no_subject_override(
+    x509, ca_cert, ca_key, rsa_privkey
+):
+    """
+    Since `subject` gets precedence, if the signing policy uses direct kwargs
+    for name attributes, ensure that setting `subject` gets ignored.
+    """
+    res = x509.create_certificate(
+        signing_policy="testpolicy",
+        subject={"CN": "from_kwargs", "SERIALNUMBER": "1234"},
+        signing_cert=ca_cert,
+        signing_private_key=ca_key,
+        private_key=rsa_privkey,
+    )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+
+
+@pytest.mark.parametrize(
+    "signing_policy,subject,expected",
+    [
+        (
+            "testsubjectdictpolicy",
+            "CN=from_kwargs,SERIALNUMBER=1234",
+            "CN=from_signing_policy",
+        ),
+        (
+            "testsubjectdictpolicy",
+            ["CN=from_kwargs", "SERIALNUMBER=1234"],
+            "CN=from_signing_policy",
+        ),
+        (
+            "testsubjectstrpolicy",
+            ["CN=from_kwargs", "SERIALNUMBER=1234"],
+            "CN=from_signing_policy",
+        ),
+        (
+            "testsubjectstrpolicy",
+            {"CN": "from_kwargs", "SERIALNUMBER": "1234"},
+            "CN=from_signing_policy",
+        ),
+        (
+            "testsubjectlistpolicy",
+            "CN=from_kwargs,SERIALNUMBER=1234",
+            "O=Salt Test,L=Salt Lake City,C=US",
+        ),
+        (
+            "testsubjectlistpolicy",
+            {"CN": "from_kwargs", "SERIALNUMBER": "1234"},
+            "O=Salt Test,L=Salt Lake City,C=US",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_create_certificate_with_signing_policy_subject_type_mismatch_no_override(
+    x509, ca_cert, ca_key, rsa_privkey, signing_policy, subject, expected
+):
+    """
+    When both signing_policy and kwargs have `subject` and the types do not match,
+    force signing_policy
+    """
+    res = x509.create_certificate(
+        signing_policy=signing_policy,
+        subject=subject,
+        signing_cert=ca_cert,
+        signing_private_key=ca_key,
+        private_key=rsa_privkey,
+    )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == expected
+
+
+@pytest.mark.parametrize(
+    "signing_policy,subject,expected",
+    [
+        (
+            "testsubjectdictpolicy",
+            {"CN": "from_kwargs", "O": "Foo"},
+            "CN=from_signing_policy,O=Foo",
+        ),
+        ("testsubjectstrpolicy", "CN=from_kwargs,O=Foo", "CN=from_signing_policy"),
+        (
+            "testsubjectlistpolicy",
+            ["CN=Test1"],
+            "CN=Test1,O=Salt Test,L=Salt Lake City,C=US",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_create_certificate_with_signing_policy_subject_merging(
+    x509, ca_cert, ca_key, rsa_privkey, signing_policy, subject, expected
+):
+    """
+    When both signing_policy and kwargs have `subject` and the types match,
+    merge them with priority to signing_policy
+    """
+    res = x509.create_certificate(
+        signing_policy=signing_policy,
+        subject=subject,
+        signing_cert=ca_cert,
+        signing_private_key=ca_key,
+        private_key=rsa_privkey,
+    )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == expected
+
+
+@pytest.mark.parametrize(
+    "subject,expected",
+    [
+        ({"CN": "from_kwargs", "O": "Foo"}, "CN=from_kwargs,O=Foo"),
+        ("CN=from_kwargs,O=Foo", "CN=from_kwargs,O=Foo"),
+        (["O=Foo", "CN=Test1"], "CN=Test1,O=Foo"),
+    ],
+)
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_create_certificate_with_signing_policy_no_subject(
+    x509, ca_cert, ca_key, rsa_privkey, subject, expected
+):
+    """
+    When signing_policy does not enforce `subject` somehow,
+    make sure to follow kwargs
+    """
+    res = x509.create_certificate(
+        signing_policy="testnosubjectpolicy",
+        subject=subject,
+        signing_cert=ca_cert,
+        signing_private_key=ca_key,
+        private_key=rsa_privkey,
+    )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == expected
 
 
 def test_create_certificate_not_before_not_after(x509, ca_cert, ca_key, rsa_privkey):

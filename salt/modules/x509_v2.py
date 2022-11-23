@@ -451,8 +451,7 @@ def create_certificate(
             ca_server, signing_policy, **kwargs
         )
     else:
-        signing_policy = _get_signing_policy(signing_policy)
-        kwargs.update(signing_policy)
+        x509util.merge_signing_policy(_get_signing_policy(signing_policy), kwargs)
         cert, private_key_loaded = _create_certificate_local(**kwargs)
 
     if "pkcs12" == encoding:
@@ -1520,22 +1519,25 @@ def sign_remote_certificate(
         if "__pub_id" not in more_kwargs:
             ret["errors"].append("minion sending this request could not be identified")
             return ret
+        # also pop "minions" to avoid leaking more details than necessary
         if not _match_minions(signing_policy.pop("minions"), more_kwargs["__pub_id"]):
             ret["errors"].append("minion not permitted to use specified signing policy")
             return ret
 
     if get_signing_policy_only:
+        # This is relevant for the state module to be able to check for changes
+        # without generating and signing a new certificate every time.
+        # remove unnecessary sensitive information
         signing_policy.pop("signing_private_key", None)
         signing_policy.pop("signing_private_key_passphrase", None)
+        # ensure to deliver the signing cert as well, not a file path
         if "signing_cert" in signing_policy:
             signing_policy["signing_cert"] = x509util.to_der(
                 x509util.load_cert(signing_policy["signing_cert"])
             )
-        # this is relevant for the state module to be able to check for changes
-        # without generating and signing a new certificate every time
         ret["data"] = signing_policy
         return ret
-    kwargs.update(signing_policy)
+    x509util.merge_signing_policy(signing_policy, kwargs)
     # ensure the certificate will be issued from this minion
     kwargs.pop("ca_server", None)
     try:
