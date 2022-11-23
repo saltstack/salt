@@ -876,7 +876,7 @@ def test_is_mounted():
 
 def test_get_mount_from_path(tmp_path):
     expected = tmp_path
-    while not expected.is_mount():
+    while not os.path.ismount(expected):
         expected = expected.parent
     path = str(tmp_path)
     ret = mount.get_mount_from_path(path)
@@ -885,7 +885,7 @@ def test_get_mount_from_path(tmp_path):
 
 def test_get_device_from_path(tmp_path):
     expected = tmp_path
-    while not expected.is_mount():
+    while not os.path.ismount(expected):
         expected = expected.parent
     mock_active = [
         {},
