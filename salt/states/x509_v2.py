@@ -1408,7 +1408,8 @@ def _compare_exts(current, builder):
     removed = []
     builder_extensions = cx509.Extensions(_getattr_safe(builder, "_extensions"))
 
-    for ext in builder_extensions:
+    # iter is unnecessary, but avoids a pylint < 2.13.6 crash
+    for ext in iter(builder_extensions):
         try:
             cur_ext = current.extensions.get_extension_for_oid(ext.value.oid)
             if cur_ext.critical != ext.critical or cur_ext.value != ext.value:
