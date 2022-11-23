@@ -99,7 +99,7 @@ fi
 # Install Salt into the Python Environment
 #-------------------------------------------------------------------------------
 _msg "Installing Salt"
-$PIP_BIN install "$SRC_DIR/."
+$PIP_BIN install "$SRC_DIR"
 TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/salt*"
 if compgen -G "$TEST_DIR" > /dev/null; then
     _success
