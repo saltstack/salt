@@ -285,7 +285,7 @@ fi
 _msg "Setting package version"
 SEDSTR="s/@VERSION@/$VERSION/g"
 sed -E -i "" "$SEDSTR" "$DIST"
-if grep -q "$VERSION"; then
+if grep -q "$VERSION" "$DIST"; then
     _success
 else
     _failure
@@ -295,7 +295,7 @@ _msg "Setting package title"
 TITLE="Salt $VERSION (Python 3)"
 SEDSTR="s/@TITLE@/$TITLE/g"
 sed -E -i "" "$SEDSTR" "$DIST"
-if grep -q "$TITLE"; then
+if grep -q "$TITLE" "$DIST"; then
     _success
 else
     _failure
@@ -305,7 +305,7 @@ _msg "Setting package description"
 DESC="Salt $VERSION with Python 3"
 SEDSTR="s/@DESC@/$DESC/g"
 sed -E -i "" "$SEDSTR" "$DIST"
-if grep -q "$DESC"; then
+if grep -q "$DESC" "$DIST"; then
     _success
 else
     _failure
@@ -313,8 +313,8 @@ fi
 
 _msg "Setting package architecture"
 SEDSTR="s/@CPU_ARCH@/$CPU_ARCH/g"
-sed -i "" "$SEDSTR" "$DIST"
-if grep -q "$CPU_ARCH"; then
+sed -i '' "$SEDSTR" "$DIST"
+if grep -q "$CPU_ARCH" "$DIST"; then
     _success
 else
     _failure
