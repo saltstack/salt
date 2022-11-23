@@ -620,7 +620,7 @@ def crl_managed(
                         # although CA certificates should not be using those currently
                         changes["digest"] = digest
                 except UnsupportedAlgorithm:
-                    # this eg happens with sha3 digest in cryptography <= v39
+                    # this eg happens with sha3 digest in cryptography < v39
                     log.warning(
                         "Could not determine signature hash algorithm of '%s'. "
                         "Continuing anyways",
@@ -841,6 +841,11 @@ def csr_managed(
                     replace = True
                 else:
                     raise
+            except cx509.InvalidVersion:
+                # by default, the previous x509 modules generated CSR with
+                # invalid versions, which leads to an exception in cryptography >= v38
+                changes["invalid_version"] = True
+                replace = True
             else:
                 try:
                     if current.signature_hash_algorithm is not None and not isinstance(
@@ -850,7 +855,7 @@ def csr_managed(
                         # ed25519, ed448 do not use a separate hash for signatures, hence algo is None
                         changes["digest"] = digest
                 except UnsupportedAlgorithm:
-                    # this eg happens with sha3 digest in cryptography <= v39
+                    # this eg happens with sha3 digest in cryptography < v39
                     log.warning(
                         "Could not determine signature hash algorithm of '%s'. "
                         "Continuing anyways",
