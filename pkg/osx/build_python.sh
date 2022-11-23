@@ -23,7 +23,7 @@
 # TODO: is building
 PY_VERSION="3.10.7"
 
-# Valid versions supported by MacOS
+# Valid versions supported by macOS
 PY_VERSIONS=(
     "3.10.7"
     "3.9.15"
@@ -109,6 +109,7 @@ while true; do
             echo "Invalid Option: $1"
             echo ""
             _usage
+            exit 1
             ;;
         * )
             PY_VERSION="$*"

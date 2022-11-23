@@ -6,14 +6,14 @@
 # Date: December 2015
 #
 # Description: This script stops the salt minion service before attempting to
-#              install Salt on MacOS. It also removes the /opt/salt
+#              install Salt on macOS. It also removes the /opt/salt
 #              directory, symlink to salt-config, and salt from paths.d.
 #
 # Requirements:
 #    - None
 #
 # Usage:
-#     This script is run as a part of the MacOS Salt Installation
+#     This script is run as a part of the macOS Salt Installation
 #
 ###############################################################################
 

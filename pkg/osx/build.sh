@@ -1,12 +1,12 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Salt Package Script for MacOS
+# Title: Build Salt Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
 # Description: This script downloads and installs all dependencies and build
-#              tools required to create a .pkg file for installation on MacOS.
+#              tools required to create a .pkg file for installation on macOS.
 #              Salt and all dependencies will be installed to a Relenv Python
 #              environment in the ./build directory relevant to this script. A
 #              .pkg file will then be created. The pkg will be signed and
@@ -59,7 +59,7 @@
 #         environment variable.
 #
 #     notarize.sh
-#         Uploads the package to be notarized by apple and staples the
+#         Uploads the package to be notarized by Apple and staples the
 #         notarization to the installer pkg. It uses the Apple Account name
 #         specified in the APPLE_ACCT environment variable and the app-specific
 #         password for that account specified in the APP_SPEC_PWD environment
@@ -99,12 +99,6 @@ SRC_DIR=$(git rev-parse --show-toplevel)
 SCRIPT_DIR="$SRC_DIR/pkg/osx"
 CPU_ARCH=$(uname -m)
 
-if [ "$1" == "" ]; then
-    VERSION=$(git describe)
-else
-    VERSION=$1
-fi
-
 #-------------------------------------------------------------------------------
 # Functions
 #-------------------------------------------------------------------------------
@@ -113,7 +107,7 @@ fi
 #   Prints out help text
 _usage() {
      echo ""
-     echo "Script to build a Salt package for MacOS:"
+     echo "Script to build a Salt package for macOS:"
      echo ""
      echo "usage: ${0}"
      echo "             [-h|--help] [-v|--version]"
@@ -124,6 +118,38 @@ _usage() {
      echo "  Build a Salt package:"
      echo "      example: $0 3006.1-1"
 }
+
+#-------------------------------------------------------------------------------
+# Get Parameters
+#-------------------------------------------------------------------------------
+while true; do
+    if [[ -z "$1" ]]; then break; fi
+    case "$1" in
+        -h | --help )
+            _usage
+            exit 0
+            ;;
+        -v | --version )
+            shift
+            VERSION="$*"
+            shift
+            ;;
+        -*)
+            echo "Invalid Option: $1"
+            echo ""
+            _usage
+            exit 1
+            ;;
+        * )
+            VERSION="$*"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$VERSION" ]; then
+    VERSION=$(git describe)
+fi
 
 #-------------------------------------------------------------------------------
 # Quit on error
@@ -140,7 +166,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 #-------------------------------------------------------------------------------
 if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a Salt git repository."
-    echo "The MacOS build process needs some files from a Git checkout of Salt."
+    echo "The macOS build process needs some files from a Git checkout of Salt."
     echo -en "\033]0;\a"
     exit 1
 fi
@@ -149,7 +175,7 @@ fi
 # Script Start
 #-------------------------------------------------------------------------------
 printf "#%.0s" {1..80}; printf "\n"
-echo "Build Salt Package for MacOS"
+echo "Build Salt Package for macOS"
 printf "v%.0s" {1..80}; printf "\n"
 
 #-------------------------------------------------------------------------------
@@ -181,5 +207,5 @@ printf "v%.0s" {1..80}; printf "\n"
 # Script Completed
 #-------------------------------------------------------------------------------
 printf "^%.0s" {1..80}; printf "\n"
-echo "Build Salt Package for MacOS Complete"
+echo "Build Salt Package for macOS Complete"
 printf "#%.0s" {1..80}; printf "\n"
