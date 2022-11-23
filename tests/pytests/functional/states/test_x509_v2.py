@@ -43,6 +43,9 @@ def minion_config_overrides():
             "testsubjectstrpolicy": {
                 "subject": "CN=from_signing_policy",
             },
+            "testnosubjectpolicy": {
+                "CN": "from_signing_policy",
+            },
         },
         "x509_v2": True,
     }
@@ -927,10 +930,26 @@ def test_certificate_managed_existing_with_signing_policy(x509, cert_args):
     CRYPTOGRAPHY_VERSION[0] < 37,
     reason="Parsing of RFC4514 strings requires cryptography >= 37",
 )
-def test_certificate_managed_with_signing_policy_override_no_changes(
-    x509, cert_args, rsa_privkey, ca_key
-):
+def test_certificate_managed_with_signing_policy_override_no_changes(x509, cert_args):
     cert_args["CN"] = "from_call"
+    ret = x509.certificate_managed(**cert_args)
+    _assert_not_changed(ret)
+
+
+@pytest.mark.usefixtures("existing_cert")
+@pytest.mark.parametrize(
+    "existing_cert",
+    [{"signing_policy": "testnosubjectpolicy"}],
+    indirect=True,
+)
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_certificate_managed_with_signing_policy_no_subject_override_no_changes(
+    x509, cert_args
+):
+    cert_args["subject"] = "CN=from_call"
     ret = x509.certificate_managed(**cert_args)
     _assert_not_changed(ret)
 

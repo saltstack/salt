@@ -148,7 +148,14 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key, ca_key_enc):
                 "noCheck": True,
                 "tlsfeature": "status_request",
             },
+            "testnosubjectpolicy": {
+                "signing_cert": ca_cert,
+                "signing_private_key": ca_key,
+                "CN": "from_signing_policy",
+            },
             "testsubjectstrpolicy": {
+                "signing_cert": ca_cert,
+                "signing_private_key": ca_key,
                 "subject": "CN=from_signing_policy",
             },
         },
@@ -547,7 +554,29 @@ def test_sign_remote_certificate_no_subject_override(
     Ensure that kwargs from remote requests are overridden
     by signing policies as is done for regular ones
     """
-    cert_args["CN"] = "from_call"
+    cert_args["subject"] = {"O": "from_call"}
+    cert_args["signing_policy"] = "testsubjectstrpolicy"
+    ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
+    assert ret.data
+    cert = _get_cert(ret.data)
+    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, rsa_privkey)
+
+
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_sign_remote_certificate_no_name_attribute_override(
+    x509_salt_call_cli, cert_args, ca_key, rsa_privkey
+):
+    """
+    Ensure that kwargs from remote requests are overridden
+    by signing policies as is done for regular ones
+    """
+    cert_args["subject"] = "CN=from_call"
+    cert_args["signing_policy"] = "testnosubjectpolicy"
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
