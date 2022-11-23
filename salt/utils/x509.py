@@ -144,18 +144,6 @@ NAME_OID = OrderedDict(
     ]
 )
 
-NAME_ALT = {
-    "CN": ["commonName"],
-    "L": ["localityName"],
-    "ST": ["SP", "stateOrProvinceName"],
-    "O": ["organizationName"],
-    "OU": ["organizationUnitName"],
-    "GN": ["givenName"],
-    "SN": ["surname"],
-    "MAIL": ["Email", "emailAddress"],
-    "SERIALNUMBER": ["serialNumber"],
-}
-
 EXTENDED_KEY_USAGE_OID = {
     "serverAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.1"),
     "clientAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.2"),
@@ -1696,11 +1684,8 @@ def _get_dn(dn):
     elif isinstance(dn, dict):
         parsed = []
         for name, oid in NAME_OID.items():
-            for var in [name] + NAME_ALT.get(name, []):
-                if var in dn:
-                    parsed.append(cx509.NameAttribute(oid, dn[var]))
-                    # only allow a single attribute of the same type for dicts
-                    break
+            if name in dn:
+                parsed.append(cx509.NameAttribute(oid, dn[name]))
         return cx509.Name(parsed)
 
     raise SaltInvocationError("Need string, list or dict to parse distinguished names")
