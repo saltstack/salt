@@ -277,6 +277,7 @@ cp "$PKG_RESOURCES/distribution.xml.dist" "$DIST"
 if [ -f "$DIST" ]; then
     _success
 else
+    CMD_OUTPUT="Failed to copy: $DIST"
     _failure
 fi
 
@@ -288,6 +289,7 @@ sed -E -i "" "$SEDSTR" "$DIST"
 if grep -q "$VERSION" "$DIST"; then
     _success
 else
+    CMD_OUTPUT="Failed to set: $VERSION"
     _failure
 fi
 
@@ -298,6 +300,7 @@ sed -E -i "" "$SEDSTR" "$DIST"
 if grep -q "$TITLE" "$DIST"; then
     _success
 else
+    CMD_OUTPUT="Failed to set: $TITLE"
     _failure
 fi
 
@@ -308,6 +311,7 @@ sed -E -i "" "$SEDSTR" "$DIST"
 if grep -q "$DESC" "$DIST"; then
     _success
 else
+    CMD_OUTPUT="Failed to set: $DESC"
     _failure
 fi
 
@@ -317,6 +321,7 @@ sed -i '' "$SEDSTR" "$DIST"
 if grep -q "$CPU_ARCH" "$DIST"; then
     _success
 else
+    CMD_OUTPUT="Failed to set: $CPU_ARCH"
     _failure
 fi
 
