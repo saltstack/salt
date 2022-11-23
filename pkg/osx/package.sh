@@ -54,9 +54,9 @@ else
     VERSION=$1
 fi
 
-CPU_ARCH=$(uname -m)
-SRC_DIR=$(git rev-parse --show-toplevel)
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CPU_ARCH="$(uname -m)"
+SRC_DIR="$(git rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build"
 CONF_DIR="$BUILD_DIR/etc/salt"
 PKG_RESOURCES=$SRC_DIR/pkg/osx
@@ -284,8 +284,8 @@ fi
 # We need to do version first because Title contains version and we need to
 # be able to check it
 _msg "Setting package version"
-SEDSTR="s/@VERSION@/$VERSION/g"
-sed -E -i "" "$SEDSTR" "$DIST"
+SED_STR="s/@VERSION@/$VERSION/g"
+sed -i "" "$SED_STR" "$DIST"
 if grep -q "$VERSION" "$DIST"; then
     _success
 else
@@ -295,8 +295,8 @@ fi
 
 _msg "Setting package title"
 TITLE="Salt $VERSION (Python 3)"
-SEDSTR="s/@TITLE@/$TITLE/g"
-sed -E -i "" "$SEDSTR" "$DIST"
+SED_STR="s/@TITLE@/$TITLE/g"
+sed -i "" "$SED_STR" "$DIST"
 if grep -q "$TITLE" "$DIST"; then
     _success
 else
@@ -306,8 +306,8 @@ fi
 
 _msg "Setting package description"
 DESC="Salt $VERSION with Python 3"
-SEDSTR="s/@DESC@/$DESC/g"
-sed -E -i "" "$SEDSTR" "$DIST"
+SED_STR="s/@DESC@/$DESC/g"
+sed -i "" "$SED_STR" "$DIST"
 if grep -q "$DESC" "$DIST"; then
     _success
 else
@@ -316,8 +316,8 @@ else
 fi
 
 _msg "Setting package architecture"
-SEDSTR="s/@CPU_ARCH@/$CPU_ARCH/g"
-sed -i '' "$SEDSTR" "$DIST"
+SED_STR="s/@CPU_ARCH@/$CPU_ARCH/g"
+sed -i "" "$SED_STR" "$DIST"
 if grep -q "$CPU_ARCH" "$DIST"; then
     _success
 else
