@@ -1,11 +1,11 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Notarize Package Script for MacOS
+# Title: Notarize Package Script for macOS
 # Author: Shane Lee
 # Date: December 2020
 #
-# Description: This notarizes the MacOS Installer Package (.pkg). It uses the
+# Description: This notarizes the macOS Installer Package (.pkg). It uses the
 #              `altool` xcode utility which is only available in the full
 #              Xcode package. It is not available in Command Line Tools.
 #
@@ -38,7 +38,7 @@
 # Environment Setup:
 #
 #     Define Environment Variables:
-#         Create two environment variables for the apple account and the
+#         Create two environment variables for the Apple account and the
 #         app-specific password associated with that account. To generate the
 #         app-specific password see: https://support.apple.com/en-us/HT204397
 #
@@ -103,6 +103,28 @@ _failure() {
     echo "<<<<<< output"
     exit 1
 }
+
+#-------------------------------------------------------------------------------
+# Get Parameters
+#-------------------------------------------------------------------------------
+while true; do
+    if [[ -z "$1" ]]; then break; fi
+    case "$1" in
+        -h | --help )
+            _usage
+            exit 0
+            ;;
+        -*)
+            echo "Invalid Option: $1"
+            echo ""
+            _usage
+            exit 1
+            ;;
+        * )
+            shift
+            ;;
+    esac
+done
 
 #-------------------------------------------------------------------------------
 # Delete temporary files on exit

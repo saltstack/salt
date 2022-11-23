@@ -1,11 +1,11 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Package Script for MacOS
+# Title: Build Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This creates a MacOS package for Salt from the contents of
+# Description: This creates a macOS package for Salt from the contents of
 #              ./build and signs it
 #
 # Requirements:
@@ -107,6 +107,28 @@ _failure() {
 }
 
 #-------------------------------------------------------------------------------
+# Get Parameters
+#-------------------------------------------------------------------------------
+while true; do
+    if [[ -z "$1" ]]; then break; fi
+    case "$1" in
+        -h | --help )
+            _usage
+            exit 0
+            ;;
+        -*)
+            echo "Invalid Option: $1"
+            echo ""
+            _usage
+            exit 1
+            ;;
+        * )
+            shift
+            ;;
+    esac
+done
+
+#-------------------------------------------------------------------------------
 # Delete temporary files on exit
 #-------------------------------------------------------------------------------
 function finish {
@@ -126,7 +148,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
-    echo "The MacOS build process needs some files from a Git checkout of Salt."
+    echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the 'pkg/osx' directory of the Git checkout."
     exit 1
 fi
