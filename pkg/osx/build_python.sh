@@ -214,7 +214,7 @@ fi
 #-------------------------------------------------------------------------------
 _msg "Installing relenv"
 #pip install -e "$RELENV_SRC/." >/dev/null 2>&1
-pip install relenv
+pip install relenv >/dev/null 2>&1
 if [ -n "$(pip show relenv)" ]; then
     _success
 else
