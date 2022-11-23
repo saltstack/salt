@@ -25,7 +25,6 @@ import logging
 import os.path
 
 import salt.utils.files
-import salt.utils.x509 as x509util
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -33,6 +32,8 @@ try:
     import cryptography.x509 as cx509
     from cryptography.exceptions import UnsupportedAlgorithm
     from cryptography.hazmat.primitives import hashes
+
+    import salt.utils.x509 as x509util
 
     HAS_CRYPTOGRAPHY = True
 except ImportError:
@@ -1405,9 +1406,7 @@ def _compare_exts(current, builder):
     added = []
     changed = []
     removed = []
-    builder_extensions = cx509.extensions.Extensions(
-        _getattr_safe(builder, "_extensions")
-    )
+    builder_extensions = cx509.Extensions(_getattr_safe(builder, "_extensions"))
 
     for ext in builder_extensions:
         try:
