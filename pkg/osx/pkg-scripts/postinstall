@@ -93,8 +93,8 @@ if [ ! -d "/etc/paths.d" ]; then
     log "Path: Created Successfully"
 fi
 log "Path: Adding salt to the path..."
-sh -c "echo \"$INSTALL_DIR > /etc/paths.d/salt"
-sh -c "echo \"$INSTALL_DIR >> /etc/paths.d/salt"
+sh -c "echo \"$INSTALL_DIR\" > /etc/paths.d/salt"
+sh -c "echo \"$INSTALL_DIR\" >> /etc/paths.d/salt"
 log "Path: Added Successfully"
 
 #-------------------------------------------------------------------------------
