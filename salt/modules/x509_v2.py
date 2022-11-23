@@ -112,11 +112,14 @@ try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.x509 import ExtensionNotFound, SubjectKeyIdentifier
 
+    import salt.utils.x509 as x509util
+
     HAS_CRYPTOGRAPHY = True
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
 try:
+    # pylint: disable=no-name-in-module
     from cryptography.hazmat._oid import SignatureAlgorithmOID
 
     HAS_SIG_ALGO_OID = True
@@ -126,7 +129,6 @@ except ImportError:
 
 import salt.utils.files
 import salt.utils.stringutils
-import salt.utils.x509 as x509util
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.odict import OrderedDict
 
