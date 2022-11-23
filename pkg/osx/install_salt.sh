@@ -15,10 +15,7 @@
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="$SCRIPT_DIR/build/opt/salt/bin/python3"
-# This gets used by relenv to place binaries in the salt root instead of in the
-# bin directory
-RELENV_PIP_DIR="yes"
+PIP_BIN="$SCRIPT_DIR/build/opt/salt/bin/pip3"
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -101,17 +98,8 @@ fi
 #-------------------------------------------------------------------------------
 # Install Salt into the Python Environment
 #-------------------------------------------------------------------------------
-#_msg "Building Salt"
-#$PYTHON_BIN "$SRC_DIR/setup.py" build -e "$PYTHON_BIN -E -s --upgrade" >/dev/null 2>&1
-#TEST_DIR="$SRC_DIR/build/scripts-3*/salt-minion"
-#if compgen -G "$TEST_DIR" > /dev/null; then
-#    _success
-#else
-#    _failure
-#fi
-
 _msg "Installing Salt"
-$PYTHON_BIN "$SRC_DIR/setup.py" install >/dev/null 2>&1
+$PIP_BIN install "$SRC_DIR/."
 TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/salt*"
 if compgen -G "$TEST_DIR" > /dev/null; then
     _success

@@ -41,9 +41,6 @@ PY_VERSIONS=(
 # Locations
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYS_PY_BIN="$(which python3)"
-RELENV_SRC="$SCRIPT_DIR/relative-environment-for-python"
-RELENV_URL="https://github.com/saltstack/relative-environment-for-python"
-RELENV_BLD="$HOME/.local/relenv/build"
 BUILD_DIR="$SCRIPT_DIR/build"
 BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
 
@@ -139,16 +136,6 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Cleaning Environment
 #-------------------------------------------------------------------------------
-if [ -d "$RELENV_SRC" ]; then
-    _msg "Removing relenv source directory"
-    rm -rf "$RELENV_SRC"
-    if [ -d "$RELENV_SRC" ]; then
-        _failure
-    else
-        _success
-    fi
-fi
-
 if [ -d "$BUILD_DIR" ]; then
     _msg "Removing build directory"
     rm -rf "$BUILD_DIR"
@@ -180,17 +167,6 @@ if [ -d "$SCRIPT_DIR/venv" ]; then
 fi
 
 #-------------------------------------------------------------------------------
-# Cloning Relenv
-#-------------------------------------------------------------------------------
-#_msg "Cloning relenv"
-#git clone --depth 1 "$RELENV_URL" "$RELENV_SRC" >/dev/null 2>&1
-#if [ -d "$RELENV_SRC/relenv" ]; then
-#    _success
-#else
-#    _failure
-#fi
-
-#-------------------------------------------------------------------------------
 # Setting Up Virtual Environment
 #-------------------------------------------------------------------------------
 _msg "Setting up virtual environment"
@@ -213,7 +189,6 @@ fi
 # Installing Relenv
 #-------------------------------------------------------------------------------
 _msg "Installing relenv"
-#pip install -e "$RELENV_SRC/." >/dev/null 2>&1
 pip install relenv >/dev/null 2>&1
 if [ -n "$(pip show relenv)" ]; then
     _success
@@ -224,31 +199,11 @@ fi
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
-_msg "Building python with relenv"
+_msg "Fetching python (relenv)"
 # We want to suppress the output here so it looks nice
 # To see the output, remove the output redirection
-python -m relenv build --clean >/dev/null 2>&1
-if [ -f "$RELENV_BLD/x86_64-macos.tar.xz" ]; then
-    _success
-else
-    _failure
-fi
-
-#-------------------------------------------------------------------------------
-# Moving Python to Build Directory
-#-------------------------------------------------------------------------------
-if ! [ -d "$BUILD_DIR/opt/salt" ]; then
-    _msg "Creating build directory"
-    mkdir -p "$BUILD_DIR/opt/salt"
-    if [ -d "$BUILD_DIR/opt/salt" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
-
-_msg "Moving python to build directory"
-mv "$RELENV_BLD"/x86_64-macos/* "$BUILD_DIR/opt/salt/"
+python -m relenv fetch >/dev/null 2>&1
+python -m relenv create "$BUILD_DIR/opt/salt"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
 else
@@ -277,7 +232,6 @@ for i in "${REMOVE[@]}"; do
         fi
     fi
 done
-
 
 #-------------------------------------------------------------------------------
 # Finished
