@@ -39,7 +39,10 @@ def minion_config_overrides():
                 "keyUsage": "critical, cRLSign, keyCertSign",
                 "authorityKeyIdentifier": "keyid:always",
                 "subjectKeyIdentifier": "hash",
-            }
+            },
+            "testsubjectstrpolicy": {
+                "subject": "CN=from_signing_policy",
+            },
         },
         "x509_v2": True,
     }
@@ -914,6 +917,24 @@ def test_certificate_managed_existing_with_signing_policy(x509, cert_args):
     _assert_not_changed(ret)
 
 
+@pytest.mark.usefixtures("existing_cert")
+@pytest.mark.parametrize(
+    "existing_cert",
+    [{"signing_policy": "testsubjectstrpolicy"}],
+    indirect=True,
+)
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_certificate_managed_with_signing_policy_override_no_changes(
+    x509, cert_args, rsa_privkey, ca_key
+):
+    cert_args["CN"] = "from_call"
+    ret = x509.certificate_managed(**cert_args)
+    _assert_not_changed(ret)
+
+
 @pytest.mark.usefixtures("existing_cert_chain")
 @pytest.mark.parametrize(
     "existing_cert_chain",
@@ -1325,8 +1346,6 @@ def test_certificate_managed_mode_change_only(
 def test_certificate_managed_mode_test_true(x509, cert_args, modules):
     """
     Test mode should not make changes at all.
-    The module contains a workaround for
-    https://github.com/saltstack/salt/issues/62590
     """
     cert_args["test"] = True
     cert_args["mode"] = "0666"
@@ -1713,8 +1732,6 @@ def test_crl_managed_mode_change_only(x509, crl_args, ca_key, modules):
 def test_crl_managed_mode_test_true(x509, crl_args, modules):
     """
     Test mode should not make changes at all.
-    The module contains a workaround for
-    https://github.com/saltstack/salt/issues/62590
     """
     crl_args["test"] = True
     crl_args["mode"] = "0666"
@@ -2000,8 +2017,6 @@ def test_csr_managed_mode_change_only(x509, csr_args, ca_key, modules):
 def test_csr_managed_mode_test_true(x509, csr_args, modules):
     """
     Test mode should not make changes at all.
-    The module contains a workaround for
-    https://github.com/saltstack/salt/issues/62590
     """
     csr_args["test"] = True
     csr_args["mode"] = "0666"
@@ -2279,8 +2294,6 @@ def test_private_key_managed_file_managed_create_false(x509, pk_args):
 def test_private_key_managed_mode_test_true(x509, pk_args, modules):
     """
     Test mode should not make changes at all.
-    The module contains a workaround for
-    https://github.com/saltstack/salt/issues/62590
     """
     pk_args["test"] = True
     pk_args["mode"] = "0666"

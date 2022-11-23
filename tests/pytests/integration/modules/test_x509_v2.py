@@ -15,6 +15,7 @@ from saltfactories.utils.tempfiles import temp_file
 import salt.utils.x509 as x509util
 
 try:
+    import cryptography
     import cryptography.x509 as cx509
     from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
 
@@ -22,6 +23,11 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
+
+pytestmark = [
+    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library")
+]
 
 log = logging.getLogger(__name__)
 
@@ -141,6 +147,9 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key, ca_key_enc):
                 "nameConstraints": "permitted;IP:192.168.0.0/255.255.0.0,excluded;email:.com",
                 "noCheck": True,
                 "tlsfeature": "status_request",
+            },
+            "testsubjectstrpolicy": {
+                "subject": "CN=from_signing_policy",
             },
         },
         "x509_v2": True,
@@ -525,6 +534,26 @@ def test_sign_remote_certificate_disallowed_policy(x509_salt_call_cli, cert_args
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert not ret.data
     assert "minion not permitted to use specified signing policy" in ret.stderr
+
+
+@pytest.mark.skipif(
+    CRYPTOGRAPHY_VERSION[0] < 37,
+    reason="Parsing of RFC4514 strings requires cryptography >= 37",
+)
+def test_sign_remote_certificate_no_subject_override(
+    x509_salt_call_cli, cert_args, ca_key, rsa_privkey
+):
+    """
+    Ensure that kwargs from remote requests are overridden
+    by signing policies as is done for regular ones
+    """
+    cert_args["CN"] = "from_call"
+    ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
+    assert ret.data
+    cert = _get_cert(ret.data)
+    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, rsa_privkey)
 
 
 def test_get_signing_policy_remote(x509_salt_call_cli, cert_args, ca_minion_config):
