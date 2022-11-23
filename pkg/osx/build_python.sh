@@ -90,7 +90,6 @@ _failure() {
     exit 1
 }
 
-
 #-------------------------------------------------------------------------------
 # Get Parameters
 #-------------------------------------------------------------------------------
@@ -199,12 +198,20 @@ fi
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
-_msg "Fetching python (relenv)"
+echo "- Building python (relenv):"
+relenv build --clean
 # We want to suppress the output here so it looks nice
 # To see the output, remove the output redirection
-python -m relenv build --clean >/dev/null 2>&1
-#python -m relenv fetch >/dev/null 2>&1
-python -m relenv create "$BUILD_DIR/opt/salt"
+#_msg "Fetching python (relenv)"
+#relenv fetch >/dev/null 2>&1
+#if [ -f "$HOME/.local/relenv/build/x86_64-macos.tar.xz" ]; then
+#    _success
+#else
+#    _failure
+#fi
+
+_msg "Extracting python environment"
+relenv create "$BUILD_DIR/opt/salt"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
 else
