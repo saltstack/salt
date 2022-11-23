@@ -202,7 +202,8 @@ fi
 _msg "Fetching python (relenv)"
 # We want to suppress the output here so it looks nice
 # To see the output, remove the output redirection
-python -m relenv fetch >/dev/null 2>&1
+python -m relenv build --clean >/dev/null 2>&1
+#python -m relenv fetch >/dev/null 2>&1
 python -m relenv create "$BUILD_DIR/opt/salt"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
