@@ -266,9 +266,10 @@ REMOVE=(
 )
 for i in "${REMOVE[@]}"; do
     TEST_DIR="$BUILD_DIR/opt/salt/lib/python3.*/$i"
-    if compgen -G "$TEST_DIR" > /dev/null; then
+    DIR=$(compgen -G "$TEST_DIR")
+    if [ -n "$DIR" ]; then
         _msg "Removing $i directory"
-        find "$TEST_DIR" -type d -exec rm -rf {} +
+        rm -rf "$DIR"
         if ! compgen -G "$TEST_DIR" > /dev/null; then
             _success
         else
