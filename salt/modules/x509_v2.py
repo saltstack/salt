@@ -98,6 +98,66 @@ or compound matcher (for the latter, see the notes above).
         - days_valid: 90
         - copypath: /etc/pki/issued_certs/
 
+
+.. note::
+
+    The following semantics are applied regarding order of preference
+    for specifying the subject name:
+
+    * If neither ``subject`` nor any name attributes (like ``CN``) are part of the policy,
+      issued certificates can contain any requested ones.
+    * If any name attributes are specified in the signing policy, ``subject`` contained
+      in requests is ignored.
+    * If ``subject`` is specified in the signing policy, any name attributes are ignored.
+      If the request contains the same data type for ``subject`` as the signing policy
+      (for dicts and lists, and only then), merging is performed, otherwise ``subject``
+      is taken from the signing policy. Dicts are merged and list items are appended,
+      with the items taken from the signing policy having priority.
+
+Breaking changes versus the previous ``x509`` modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+General
+^^^^^^^
+* ``path`` and ``text`` parameters have been removed for all ``create_*`` functions.
+* The output format has changed for all ``read_*`` functions.
+
+``create_certificate``
+~~~~~~~~~~~~~~~~~~~~~~
+* ``overwrite``, ``version`` and ``serial_bits`` parameters have been removed.
+* Name attributes must be specified as their short variant (e.g. ``CN``, not ``commonName``).
+* ``algorithm`` has been renamed to ``digest``.
+* ``days_valid`` defaults to 30 instead of 365.
+* The formatting of some extensions might have changed.
+
+``create_csr``
+^^^^^^^^^^^^^^
+See above.
+
+``create_crl``
+^^^^^^^^^^^^^^
+* ``revoked`` is to be specified as a simple list of dicts, each dict representing a revoked certificate.
+* ``reason`` per revoked certificate has been moved to ``extensions:CRLReason``.
+
+``create_private_key``
+^^^^^^^^^^^^^^^^^^^^^^
+* ``cipher`` and ``verbose`` have been removed.
+* ``bits`` has been renamed to ``keysize``.
+
+``get_public_key``
+^^^^^^^^^^^^^^^^^^
+* ``asObj`` has been removed.
+
+``sign_remote_certificate``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* The expected input and output format have changed.
+
+State module
+^^^^^^^^^^^^
+* The ``comment`` and ``changes`` fields of the return dict are different.
+* For ``certificate_managed`` and ``crl_managed``, ``days_remaining`` defaults to 7 instead of 90/30.
+* For ``crl_managed``, setting days_remaining=0 does not disable reissuance
+* For ``private_key_managed``, the file mode defaults to ``0400``.
+
 .. _x509-setup:
 """
 import base64
@@ -264,7 +324,7 @@ def create_certificate(
 
     not_before
         Set a specific date the certificate should not be valid before.
-        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as UTC.
+        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
         Defaults to the time of issuance.
 
     not_after
@@ -281,7 +341,7 @@ def create_certificate(
         passing this information (see ``kwargs`` below for the other).
         This argument will be preferred and allows to control the order of RDNs in the DN
         as well as to embed RDNs with multiple attributes.
-        This can be specified as a RFC4514-encoded string (``CN=example.com,O=Example Inc,C=US``,
+        This can be specified as an RFC4514-encoded string (``CN=example.com,O=Example Inc,C=US``,
         mind that the rendered order is reversed from what is embedded), a list
         of RDNs encoded as in RFC4514 (``["C=US", "O=Example Inc", "CN=example.com"]``)
         or a dictionary (``{"CN": "example.com", "C": "US", "O": "Example Inc"}``,
@@ -294,7 +354,7 @@ def create_certificate(
 
     kwargs
         Embedded X.509v3 extensions and the subject's distinguished name can be
-        controlled via supplemental keyword arguments. See below for an overview.
+        controlled via supplemental keyword arguments. See the following for an overview.
 
     Subject properties in kwargs
         C, ST, L, STREET, O, OU, CN, MAIL, SN, GN, UID, SERIALNUMBER
@@ -307,7 +367,7 @@ def create_certificate(
         of the configuration string, in the list or as a key in the dictionary
         with the value ``true``.
 
-        Examples (the first ones showcase dict/list correspondance):
+        Examples (some showcase dict/list correspondance):
 
         basicConstraints
             ``critical, CA:TRUE, pathlen:1`` or
@@ -332,7 +392,7 @@ def create_certificate(
         subjectKeyIdentifier
             This can be an explicit value or ``hash``, in which case the value
             will be set to the SHA1 hash of some encoding of the associated public key,
-            depending on the underlying algorithm (RSA/EC/ED).
+            depending on the underlying algorithm (RSA/ECDSA/EdDSA).
 
         authorityKeyIdentifier
             ``keyid:always, issuer``
@@ -340,7 +400,14 @@ def create_certificate(
         subjectAltName
             There is support for all OpenSSL-defined types except ``otherName``.
 
-            ``email:me@example.com,DNS:example.com``
+            ``email:me@example.com,DNS:example.com`` or
+
+            .. code-block:: yaml
+
+                # mind this being a list, not a dict
+                - subjectAltName:
+                    - email:me@example.com
+                    - DNS:example.com
 
         issuerAltName
             The syntax is the same as for ``subjectAltName``, except that the additional
@@ -402,7 +469,7 @@ def create_certificate(
                       - email:.com
         noCheck
             This extension does not take any values, except ``critical``. Just the presence
-            in the keyword args will add it.
+            in the keyword args will include it.
 
         tlsfeature
             ``status_request``
@@ -486,7 +553,7 @@ def _create_certificate_remote(
     result = _query_remote(ca_server, signing_policy, kwargs)
     try:
         return x509util.load_cert(result), private_key_loaded
-    except ValueError as err:
+    except (CommandExecutionError, SaltInvocationError) as err:
         raise CommandExecutionError(
             f"ca_server did not return a certificate: {result}"
         ) from err
@@ -544,7 +611,7 @@ def encode_certificate(
 
     .. code-block:: bash
 
-        salt '*' x509.encode_certificate /etc/pki/my.crt /etc/pki/my_ca_intermediate.crt
+        salt '*' x509.encode_certificate /etc/pki/my.crt pem /etc/pki/ca.crt
 
     certificate
         The certificate to encode.
@@ -572,7 +639,7 @@ def encode_certificate(
     pkcs12_passphrase
         For ``pkcs12``, the container can be encrypted. Specify the passphrase to use here.
         Mind that PKCS12 encryption should not be relied on for security purposes, see
-        note above in create_certificate.
+        note above in :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`.
 
     pkcs12_encryption_compat
         OpenSSL 3 and cryptography v37 switched to a much more secure default
@@ -699,10 +766,10 @@ def create_crl(
         string in the format "%Y-%m-%d %H:%M:%S".
 
         The dict can also optionally contain the ``not_after`` key. This is
-        redundant if the ``certificate`` key is included. If the
-        ``certificate`` key is not included, this can be used for the logic
-        behind the ``include_expired`` parameter. It should be a string in
-        the format "%Y-%m-%d %H:%M:%S".
+        redundant if the ``certificate`` key is included, since it will be
+        sourced from the certificate. If the ``certificate`` key is not included,
+        this can be used for the logic behind the ``include_expired`` parameter.
+        It should be a string in the format "%Y-%m-%d %H:%M:%S".
 
         The dict can also optionally contain the ``extensions`` key, which
         allows to set CRL entry-specific extensions. The following extensions
@@ -720,11 +787,11 @@ def create_crl(
             ``removeFromCRL``.
 
         invalidityDate
-            Provides the date on which the certificate became invalid.
+            Provides the date on which the certificate likely became invalid.
             The value should be a string in the same format as ``revocation_date``.
 
     signing_cert
-        The CA certificate to be used for signing the issued certificate.
+        The CA certificate to be used for signing the CRL.
 
     signing_private_key_passphrase
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
@@ -733,8 +800,8 @@ def create_crl(
         Also include already expired certificates in the CRL. Defaults to false.
 
     days_valid
-        The number of days that the CRL should be valid. This sets the ``Next Update``
-        field in the CRL. Defaults to 100.
+        The number of days the CRL should be valid for. This sets the ``Next Update``
+        field. Defaults to 100.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -751,10 +818,10 @@ def create_crl(
         Add CRL extensions. The following are available:
 
         authorityKeyIdentifier
-            See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`.
+            See :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`.
 
         authorityInfoAccess
-            See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`.
+            See :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`.
 
         cRLNumber
             Specifies a sequential number for each CRL issued by a CA.
@@ -769,7 +836,7 @@ def create_crl(
             is the same as ``crlDistributionPoints``.
 
         issuerAltName
-            See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`.
+            See :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`.
 
         issuingDistributionPoint
             Identifies the CRL distribution point for a particular CRL and
@@ -894,7 +961,7 @@ def create_csr(
     kwargs
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments.
-        See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
+        See :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`
         for an overview. Mind that some extensions are not available for CSR
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
@@ -999,12 +1066,12 @@ def create_private_key(
 
     encoding
         Specify the encoding of the resulting private key. It can be returned
-        as a ``pem`` string, base64-encoded ``der`` and base64-encoded ``pkcs12``.
+        as a ``pem`` string, base64-encoded ``der`` or base64-encoded ``pkcs12``.
         Defaults to ``pem``.
 
     pkcs12_encryption_compat
         Some operating systems are incompatible with the encryption defaults
-        for PKCS12 used since OpenSSL v3. This switch triggers a fall back to
+        for PKCS12 used since OpenSSL v3. This switch triggers a fallback to
         ``PBESv1SHA1And3KeyTripleDESCBC``.
         Please consider the `notes on PKCS12 encryption <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
     """
@@ -1133,7 +1200,7 @@ def expired(certificate):
 
 def get_pem_entries(glob_path):
     """
-    Returns a dict containing PEM entries in files matching a glob
+    Returns a dict containing PEM entries in files matching a glob.
 
     CLI Example:
 
@@ -1142,7 +1209,7 @@ def get_pem_entries(glob_path):
         salt '*' x509.get_pem_entries "/etc/pki/*.crt"
 
     glob_path
-        A path to certificates to be read and returned.
+        A path representing certificates to be read and returned.
     """
     ret = {}
 
@@ -1158,8 +1225,8 @@ def get_pem_entries(glob_path):
 
 def get_pem_entry(text, pem_type=None):
     """
-    Returns a properly formatted PEM string from the input text fixing
-    any whitespace or line-break issues
+    Returns a properly formatted PEM string from the input text,
+    fixing any whitespace or line-break issues.
 
     CLI Example:
 
@@ -1502,11 +1569,10 @@ def sign_remote_certificate(
 
     kwargs
         A dict containing all the arguments to be passed into the
-        create_certificate function. This will become kwargs when passed
-        to create_certificate.
+        :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>` function.
 
     get_signing_policy_only
-        Only return the named signing policy. Defaults to False.
+        Only return the named signing policy. Defaults to false.
     """
     ret = {"data": None, "errors": []}
     signing_policy = _get_signing_policy(signing_policy)
@@ -1574,7 +1640,8 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
 def verify_crl(crl, cert):
     """
     Verify that a signature on a certificate revocation list was made
-    by the entity represented by the specified certificate.
+    by the private key corresponding to the public key associated
+    with the specified certificate.
 
     CLI Example:
 
@@ -1624,7 +1691,8 @@ def verify_signature(
 ):
     """
     Verify that a signature on a certificate was made
-    by the entity represented by the specified certificate.
+    by the private key corresponding to the public key associated
+    with the specified certificate.
 
     CLI Example:
 
@@ -1666,7 +1734,7 @@ def will_expire(certificate, days):
         salt '*' x509.will_expire "/etc/pki/mycert.crt" days=30
 
     certificate
-        The certificate to be read.
+        The certificate to check.
 
     days
         The number of days in the future to check the validity for.
@@ -1790,7 +1858,7 @@ def _get_signing_policy(name):
         for item in policies:
             dict_.update(item)
         policies = dict_
-    return policies
+    return policies or {}
 
 
 def _parse_dn(subject):
@@ -1850,10 +1918,10 @@ def _parse_crl_entry_extensions(extensions):
 
 def _match_minions(test, minion):
     if "@" in test:
-        # this essentially asks the minion if it is allowed to receive
+        # This essentially asks the minion if it is allowed to receive
         # certificates with the signing policy. Implementing a match runner
         # would plug that security hole somewhat, and fully if only pillars
-        # are used
+        # are used.
         match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
         if minion not in match:
             raise CommandExecutionError(
