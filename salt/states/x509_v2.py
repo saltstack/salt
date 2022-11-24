@@ -11,12 +11,173 @@ Manage X.509 certificates
 
 .. note::
 
-    All parameters that take a public key, private key or certificate
-    can be specified either as a PEM/hex/base64 string or a path to a
-    local file encoded in all supported formats for the type.
+    All parameters that take a public key, private key, certificate,
+    CSR or CRL can be specified either as a PEM/hex/base64 string or
+    a path to a local file encoded in all supported formats for the type.
 
 Configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
+
+For the list of breaking changes versus the previous ``x509`` modules,
+please also refer to the :ref:`execution module docs <x509-setup>`.
+
+About
+-----
+This module can enable managing a complete PKI infrastructure, including creating
+private keys, CAs, certificates and CRLs. It includes the ability to generate a
+private key on a server, and have the corresponding public key sent to a remote
+CA to create a CA signed certificate. This can be done in a secure manner, where
+private keys are always generated locally and never moved across the network.
+
+Example
+-------
+Here is a simple example scenario. In this example ``ca`` is the ca server,
+and ``www`` is a web server that needs a certificate signed by ``ca``.
+
+.. note::
+
+    Remote signing requires the setup of :term:`Peer Communication` and signing
+    policies. Please see the :ref:`execution module docs <x509-setup>`.
+
+
+/srv/salt/top.sls
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - cert
+      'ca':
+        - ca
+      'www':
+        - www
+
+This state creates the CA key, certificate and signing policy. It also publishes
+the certificate to the mine, where it can be easily retrieved by other minions.
+
+.. code-block:: yaml
+
+    # /srv/salt/ca.sls
+
+    Configure the x509 module:
+      file.managed:
+        - name: /etc/salt/minion.d/x509.conf
+        - source: salt://x509.conf
+
+    Restart Salt minion:
+      cmd.run:
+        - name: 'salt-call service.restart salt-minion'
+        - bg: true
+        - onchanges:
+          - file: /etc/salt/minion.d/x509.conf
+
+    Ensure PKI directories exist:
+      file.directory:
+        - name: /etc/pki/issued_certs
+        - makedirs: true
+
+    Create CA private key:
+      x509.private_key_managed:
+        - name: /etc/pki/ca.key
+        - keysize: 4096
+        - backup: true
+        - require:
+          - file: /etc/pki
+
+    Create self-signed CA certificate:
+      x509.certificate_managed:
+        - name: /etc/pki/ca.crt
+        - signing_private_key: /etc/pki/ca.key
+        - CN: ca.example.com
+        - C: US
+        - ST: Utah
+        - L: Salt Lake City
+        - basicConstraints: "critical, CA:true"
+        - keyUsage: "critical, cRLSign, keyCertSign"
+        - subjectKeyIdentifier: hash
+        - authorityKeyIdentifier: keyid:always,issuer
+        - days_valid: 3650
+        - days_remaining: 0
+        - backup: true
+        - require:
+          - x509: /etc/pki/ca.key
+
+.. code-block:: yaml
+
+    # /srv/salt/x509.conf
+
+    # enable x509_v2
+    x509_v2: true
+
+    # publish the CA certificate to the mine
+    mine_functions:
+      x509.get_pem_entries: [/etc/pki/ca.crt]
+
+    # define at least one signing policy for remote signing
+    x509_signing_policies:
+      www:
+        - minions: 'www'
+        - signing_private_key: /etc/pki/ca.key
+        - signing_cert: /etc/pki/ca.crt
+        - C: US
+        - ST: Utah
+        - L: Salt Lake City
+        - basicConstraints: "critical CA:false"
+        - keyUsage: "critical keyEncipherment"
+        - subjectKeyIdentifier: hash
+        - authorityKeyIdentifier: keyid:always,issuer
+        - days_valid: 30
+        - copypath: /etc/pki/issued_certs/
+
+
+This example state will instruct all minions to trust certificates signed by
+our new CA. Mind that this example works for Debian-based OS only.
+Also note the Jinja call to encode the string to JSON, which will avoid
+YAML issues with newline characters.
+
+.. code-block:: jinja
+
+    # /srv/salt/cert.sls
+
+    Ensure the CA trust bundle exists:
+      file.directory:
+        - name: /usr/local/share/ca-certificates
+
+    Ensure our self-signed CA certificate is included:
+      x509.pem_managed:
+        - name: /usr/local/share/ca-certificates/myca.crt
+        - text: {{ salt["mine.get"]("ca", "x509.get_pem_entries")["ca"]["/etc/pki/ca.crt"] | json }}
+
+This state creates a private key, then requests a certificate signed by our CA
+according to the www policy.
+
+.. code-block:: yaml
+
+    # /srv/salt/www.sls
+
+    Ensure PKI directory exists:
+      file.directory:
+        - name: /etc/pki
+
+    Create private key for the certificate:
+      x509.private_key_managed:
+        - name: /etc/pki/www.key
+        - keysize: 4096
+        - backup: true
+        - require:
+          - file: /etc/pki
+
+    Request certificate:
+      x509.certificate_managed:
+        - name: /etc/pki/www.crt
+        - ca_server: ca
+        - signing_policy: www
+        - private_key: /etc/pki/www.key
+        - CN: www.example.com
+        - days_remaining: 7
+        - backup: true
+        - require:
+          - x509: /etc/pki/www.key
 """
 import base64
 import copy
@@ -87,8 +248,8 @@ def certificate_managed(
     """
     Make sure an X.509 certificate is present as specified.
 
-    This function accepts the same arguments as ``x509.create_certificate``,
-    as well as most ones for ``file.managed``.
+    This function accepts the same arguments as :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`,
+    as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
 
     name
         The path the certificate should be present at.
@@ -101,7 +262,7 @@ def certificate_managed(
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
         must be configured on the ca_server.  Also, the Salt master must
-        permit peers to call the ``sign_remote_certificate`` function.
+        permit peers to call the ``x509.sign_remote_certificate`` function.
         See the :ref:`execution module docs <x509-setup>` for details.
 
     signing_policy
@@ -110,7 +271,7 @@ def certificate_managed(
         otherwise optional.
 
     encoding
-        Specify the encoding of the resulting certificate. It can be saved
+        Specify the encoding of the resulting certificate. It can be serialized
         as a ``pem`` (or ``pkcs7_pem``) text file or in several binary formats
         (``der``, ``pkcs7_der``, ``pkcs12``). Defaults to ``pem``.
 
@@ -123,7 +284,7 @@ def certificate_managed(
 
     copypath
         Create a copy of the issued certificate in PEM format in this directory.
-        The file will be named ``<serial_number>.crt`` if prepend_cn is False.
+        The file will be named ``<serial_number>.crt`` if prepend_cn is false.
 
     prepend_cn
         When ``copypath`` is set, prepend the common name of the certificate to
@@ -177,6 +338,10 @@ def certificate_managed(
         default ordering).
         Multiple name attributes per RDN are concatenated with a ``+``.
 
+        .. note::
+
+            Parsing of RFC4514 strings requires at least cryptography release 37.
+
     serial_number
         A serial number to be embedded in the certificate. If unspecified, will
         autogenerate one. This should be an integer, either in decimal or
@@ -184,7 +349,7 @@ def certificate_managed(
 
     not_before
         Set a specific date the certificate should not be valid before.
-        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as UTC.
+        The format should follow ``%Y-%m-%d %H:%M:%S`` and will be interpreted as GMT/UTC.
         Defaults to the time of issuance.
 
     not_after
@@ -214,7 +379,7 @@ def certificate_managed(
     kwargs
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments. See
-        :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
+        :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`
         for an overview.
     """
     ret = {
@@ -471,8 +636,8 @@ def crl_managed(
     """
     Make sure a certificate revocation list is present as specified.
 
-    This function accepts the same arguments as ``x509.create_certificate``,
-    as well as most ones for ``file.managed``.
+    This function accepts the same arguments as :py:func:`x509.create_crl <salt.modules.x509_v2.create_crl>`,
+    as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
 
     name
         The path the certificate revocation list should be present at.
@@ -489,13 +654,13 @@ def crl_managed(
 
         The dict can optionally contain the ``revocation_date`` key. If this
         key is omitted, the revocation date will be set to now. It should be a
-        string in the format "%Y-%m-%d %H:%M:%S".
+        string in the format ``%Y-%m-%d %H:%M:%S``.
 
         The dict can also optionally contain the ``not_after`` key. This is
         redundant if the ``certificate`` key is included. If the
         ``certificate`` key is not included, this can be used for the logic
         behind the ``include_expired`` parameter. It should be a string in
-        the format "%Y-%m-%d %H:%M:%S".
+        the format ``%Y-%m-%d %H:%M:%S``.
 
         The dict can also optionally contain the ``extensions`` key, which
         allows to set CRL entry-specific extensions. The following extensions
@@ -541,15 +706,39 @@ def crl_managed(
 
     encoding
         Specify the encoding of the resulting certificate revocation list.
-        It can saved as a ``pem`` text file or binary ``der``.
+        It can serialized as a ``pem`` text or binary ``der`` file.
         Defaults to ``pem``.
 
     extensions
-        Add CRL extensions. See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
+        Add CRL extensions. See :py:func:`x509.create_crl <salt.modules.x509_v2.create_crl>`
         for details.
 
-        For ``cRLNumber``, in addition the value ``auto`` is supported, which
-        autoincreases the number every time a new CRL is issued.
+        .. note::
+
+            For ``cRLNumber``, in addition the value ``auto`` is supported, which
+            automatically increases the counter every time a new CRL is issued.
+
+    Example:
+
+    .. code-block:: yaml
+
+        Manage CRL:
+          x509.crl_managed:
+            - name: /etc/pki/ca.crl
+            - signing_private_key: /etc/pki/myca.key
+            - signing_cert: /etc/pki/myca.crt
+            - revoked:
+              - certificate: /etc/pki/certs/badweb.crt
+                revocation_date: 2022-11-01 00:00:00
+                extensions:
+                  CRLReason: keyCompromise
+              - serial_number: D6:D2:DC:D8:4D:5C:C0:F4
+                not_after: 2023-03-14 00:00:00
+                revocation_date: 2022-10-25 00:00:00
+                extensions:
+                  CRLReason: cessationOfOperation
+            - extensions:
+                cRLNumber: auto
     """
     ret = {
         "name": name,
@@ -752,8 +941,8 @@ def csr_managed(
     """
     Make sure a certificate signing request is present as specified.
 
-    This function accepts the same arguments as ``x509.create_certificate``,
-    as well as most ones for ``file.managed``.
+    This function accepts the same arguments as :py:func:`x509.create_csr <salt.modules.x509_v2.create_csr>`,
+    as well as most ones for :py:func:`file.managed <salt.states.file.managed>`.
 
     name
         The path the certificate signing request should be present at.
@@ -773,13 +962,13 @@ def csr_managed(
 
     encoding
         Specify the encoding of the resulting certificate revocation list.
-        It can saved as a ``pem`` text file or binary ``der``.
+        It can serialized as a ``pem`` text or binary ``der`` file.
         Defaults to ``pem``.
 
     kwargs
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments.
-        See :py:func:`x509.create_certificate <salt.modules.x509.create_certificate>`
+        See :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`
         for an overview. Mind that some extensions are not available for CSR
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
@@ -942,13 +1131,14 @@ def csr_managed(
 
 def pem_managed(name, text, **kwargs):
     """
-    Manage the contents of a PEM file directly with the content in text, ensuring correct formatting.
+    Manage the contents of a PEM file directly with the content in text,
+    ensuring correct formatting.
 
     name
-        The path to the file to manage
+        The path to the file to manage.
 
     text
-        The PEM formatted text to write.
+        The PEM-formatted text to write.
 
     kwargs
         Most arguments supported by :py:func:`file.managed <salt.states.file.managed>` are passed through.
@@ -958,7 +1148,6 @@ def pem_managed(name, text, **kwargs):
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
     file_args["contents"] = __salt__["x509.get_pem_entry"](text=text)
-
     return _file_managed(name, **file_args)
 
 
@@ -976,8 +1165,12 @@ def private_key_managed(
     """
     Make sure a private key is present as specified.
 
-    This function accepts the same arguments as ``x509.create_certificate``,
-    as well as most ones for ``file.managed``.
+    This function accepts the same arguments as :py:func:`x509.create_private_key <salt.modules.x509_v2.create_private_key>`,
+    as well as most ones for :py:func:`file.managed <salt.states.file.managed>`.
+
+    .. note::
+
+        If ``mode`` is unspecified, it will default to ``0400``.
 
     name
         The path the private key should be present at.
@@ -998,13 +1191,13 @@ def private_key_managed(
         determined automatically as the best available one.
 
     encoding
-        Specify the encoding of the resulting private key. It can be saved
-        as a ``pem`` text file, binary ``der`` or ``pkcs12``.
+        Specify the encoding of the resulting private key. It can be serialized
+        as a ``pem`` text, binary ``der`` or ``pkcs12`` file.
         Defaults to ``pem``.
 
     new
         Always create a new key. Defaults to false.
-        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`
+        Combining new with :mod:`prereq <salt.states.requisites.prereq>`
         can allow key rotation whenever a new certificate is generated.
 
     overwrite
@@ -1013,9 +1206,27 @@ def private_key_managed(
 
     pkcs12_encryption_compat
         Some operating systems are incompatible with the encryption defaults
-        for PKCS12 used since OpenSSL v3. This switch triggers a fall back to
+        for PKCS12 used since OpenSSL v3. This switch triggers a fallback to
         ``PBESv1SHA1And3KeyTripleDESCBC``.
         Please consider the `notes on PKCS12 encryption <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
+
+    Example:
+
+    The Jinja templating in this example ensures a new private key is generated
+    if the file does not exist and whenever the associated certificate
+    is to be renewed.
+
+    .. code-block:: jinja
+
+        Manage www private key:
+          x509.private_key_managed:
+            - name: /etc/pki/www.key
+            - keysize: 4096
+            - new: true
+        {%- if salt["file.file_exists"]("/etc/pki/www.key") %}
+            - prereq:
+              - x509: /etc/pki/www.crt
+        {%- endif %}
     """
     ret = {
         "name": name,
