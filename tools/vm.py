@@ -58,7 +58,6 @@ with REPO_ROOT.joinpath("cicd", "images.yml").open() as rfh:
 REPO_CHECKOUT_ID = hashlib.sha256(
     "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
 ).hexdigest()
-LAUNCH_TEMPLATE_NAME_FMT = "spb-{}-salt-project-golden-image-launch-template"
 
 # Define the command group
 vm = command_group(name="vm", help="VM Related Commands", description=__doc__)
@@ -477,6 +476,45 @@ class VM:
             {"Key": "instance-client-id", "Value": REPO_CHECKOUT_ID},
             {"Key": "started-in-ci", "Value": str(started_in_ci).lower()},
         ]
+        client = boto3.client("ec2", region_name=self.region_name)
+        # Let's search for the launch template corresponding to this AMI
+        launch_template_name = None
+        try:
+            response = response = client.describe_launch_templates(
+                Filters=[
+                    {
+                        "Name": "tag:spb:is-golden-image-template",
+                        "Values": ["true"],
+                    },
+                    {
+                        "Name": "tag:spb:project",
+                        "Values": ["salt-project"],
+                    },
+                    {
+                        "Name": "tag:spb:image-id",
+                        "Values": [self.config.ami],
+                    },
+                ]
+            )
+            log.debug(
+                "Search for launch template response:\n%s", pprint.pformat(response)
+            )
+            for details in response.get("LaunchTemplates"):
+                if launch_template_name is not None:
+                    log.info(
+                        "Multiple launch templates for the same AMI. This is not "
+                        "supposed to happen. Picked the first one listed: %s",
+                        response,
+                    )
+                    break
+                launch_template_name = details["LaunchTemplateName"]
+
+            if launch_template_name is None:
+                self.ctx.error(f"Could not find a launch template for {self.name!r}")
+                self.ctx.exit(1)
+        except ClientError as exc:
+            self.ctx.error(f"Could not find a launch template for {self.name!r}: {exc}")
+            self.ctx.exit(1)
 
         network_interfaces = None
         if started_in_ci:
@@ -486,10 +524,9 @@ class VM:
             log.info("Starting Developer configured VM")
 
             # Grab the public subnet of the vpc used on the template
-            client = boto3.client("ec2", region_name=self.region_name)
             try:
                 data = client.describe_launch_template_versions(
-                    LaunchTemplateName=LAUNCH_TEMPLATE_NAME_FMT.format(self.config.ami)
+                    LaunchTemplateName=launch_template_name
                 )
             except ClientError as exc:
                 if "InvalidLaunchTemplateName." not in str(exc):
@@ -521,7 +558,7 @@ class VM:
                     "Values": [vpc.id],
                 },
                 {
-                    "Name": "tag:spb:environment",
+                    "Name": "tag:spb:project",
                     "Values": ["salt-project"],
                 },
                 {
@@ -624,9 +661,7 @@ class VM:
                     }
                 ],
                 LaunchTemplate={
-                    "LaunchTemplateName": LAUNCH_TEMPLATE_NAME_FMT.format(
-                        self.config.ami
-                    )
+                    "LaunchTemplateName": launch_template_name,
                 },
             )
             if instance_type:
