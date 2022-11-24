@@ -58,10 +58,12 @@ with REPO_ROOT.joinpath("cicd", "images.yml").open() as rfh:
 REPO_CHECKOUT_ID = hashlib.sha256(
     "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
 ).hexdigest()
-
+AWS_REGION = (
+    os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION") or "us-west-2"
+)
 # Define the command group
 vm = command_group(name="vm", help="VM Related Commands", description=__doc__)
-vm.add_argument("--region", help="The AWS region.", default="eu-central-1")
+vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
 
 
 @vm.command(
