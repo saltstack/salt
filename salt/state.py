@@ -3742,7 +3742,8 @@ class BaseHighState:
             )
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
-            opts["state_events"] = mopts.get("state_events")
+            if "state_events" not in opts:
+                opts["state_events"] = mopts.get("state_events")
             opts["state_aggregate"] = (
                 opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
