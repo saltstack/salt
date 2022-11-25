@@ -21,6 +21,7 @@ jobs:
       env:
         RELENV_PIP_DIR: yes
         RELENV_DEBUG: yes
+        USE_STATIC_REQUIREMENTS: 1
       run: |
         mkdir build
         cd build
