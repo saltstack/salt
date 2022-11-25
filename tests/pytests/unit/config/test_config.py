@@ -49,26 +49,26 @@ def macos_config():
 def test_disabled_grains_defaults_linux(linux_config):
     with patch("salt.config", linux_config):
         result = salt.config.DEFAULT_MINION_OPTS["disabled_grains"]
-        expected = ["fibre_channel", "iscsi", "metadata_server", "nvme"]
+        expected = ["fqdns"]
     assert sorted(result) == sorted(expected)
 
 
 def test_disabled_grains_defaults_proxy(proxy_config):
     with patch("salt.config", proxy_config):
         result = salt.config.DEFAULT_MINION_OPTS["disabled_grains"]
-        expected = ["fibre_channel", "iscsi", "metadata_server", "nvme"]
+        expected = ["fqdns"]
     assert sorted(result) == sorted(expected)
 
 
 def test_disabled_grains_defaults_windows(windows_config):
     with patch("salt.config", windows_config):
         result = salt.config.DEFAULT_MINION_OPTS["disabled_grains"]
-        expected = ["fibre_channel", "fqdns", "iscsi", "metadata_server", "nvme"]
+        expected = ["fqdns"]
     assert sorted(result) == sorted(expected)
 
 
 def test_disabled_grains_defaults_macos(macos_config):
     with patch("salt.config", macos_config):
         result = salt.config.DEFAULT_MINION_OPTS["disabled_grains"]
-        expected = ["fibre_channel", "fqdns", "iscsi", "metadata_server", "nvme"]
+        expected = ["fqdns"]
     assert sorted(result) == sorted(expected)
