@@ -51,7 +51,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
-_DFLT_DISABLED_GRAINS = []
+_DFLT_DISABLED_GRAINS = ["fqdns"]
 DEFAULT_INTERVAL = 60
 DEFAULT_HASH_TYPE = "sha256"
 
@@ -61,7 +61,6 @@ if salt.utils.platform.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = "tcp"
-    _DFLT_DISABLED_GRAINS.append("fqdns")
     _MASTER_TRIES = -1
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
@@ -70,15 +69,6 @@ else:
     _MASTER_USER = salt.utils.user.get_user()
     _MASTER_TRIES = 1
     _DFLT_IPC_MODE = "ipc"
-
-if (
-    salt.utils.platform.is_aix()
-    or salt.utils.platform.is_sunos()
-    or salt.utils.platform.is_junos()
-    # fqdn resolution can be very slow on macOS, see issue #62168
-    or salt.utils.platform.is_darwin()
-):
-    _DFLT_DISABLED_GRAINS.append("fqdns")
 
 
 def _gather_buffer_space():
@@ -4258,8 +4248,16 @@ def _update_disabled_grains(opts):
         if m:
             grain = m["grain"].rstrip("_")
             if opt_val is True and grain in opts["disabled_grains"]:
+                salt.utils.versions.warn_until(
+                    "Calcium",
+                    f"The '{opt_name}' option is deprecated. Use 'disabled_grains' instead.",
+                )
                 opts["disabled_grains"].remove(grain)
             elif opt_val is False:
+                salt.utils.versions.warn_until(
+                    "Calcium",
+                    f"The '{opt_name}' option is deprecated. Use 'disabled_grains' instead.",
+                )
                 opts["disabled_grains"].append(grain)
             else:
                 # regex hit a non-bool option such as start_event_grains

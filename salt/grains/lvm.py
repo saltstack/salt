@@ -1,5 +1,14 @@
 """
 Detect LVM Volumes
+
+.. versionchanged:: 3008.0
+
+To disable these grains add "lvm" to "disabled_grains" in the minion config.
+
+.. code-block:: yaml
+
+    disabled_grains:
+      - lvm
 """
 
 import logging
@@ -15,6 +24,12 @@ __salt__ = {
 }
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = "lvm"
+
+
+def __virtual__():
+    return __virtualname__ not in __opts__.get("disabled_grains", [])
 
 
 def lvm():
