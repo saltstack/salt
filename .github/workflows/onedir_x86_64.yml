@@ -28,6 +28,7 @@ jobs:
         relenv toolchain fetch --arch=x86_64
         relenv fetch --arch=x86_64
         relenv create salt
+        env
         salt/bin/pip3 install ../ --no-cache
         tar -cvf salt.tar.xz salt
 
