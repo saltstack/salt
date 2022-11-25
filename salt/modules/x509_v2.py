@@ -169,23 +169,14 @@ import re
 import sys
 
 try:
+    import cryptography.x509 as cx509
     from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.x509 import ExtensionNotFound, SubjectKeyIdentifier
 
     import salt.utils.x509 as x509util
 
     HAS_CRYPTOGRAPHY = True
 except ImportError:
     HAS_CRYPTOGRAPHY = False
-
-try:
-    # pylint: disable=no-name-in-module
-    from cryptography.hazmat._oid import SignatureAlgorithmOID
-
-    HAS_SIG_ALGO_OID = True
-except ImportError:
-    HAS_SIG_ALGO_OID = False
-
 
 import salt.utils.files
 import salt.utils.stringutils
@@ -1434,11 +1425,13 @@ def read_certificate(certificate):
     try:
         ret["signature_algorithm"] = cert.signature_algorithm_oid._name
     except AttributeError:
-        if HAS_SIG_ALGO_OID:
-            for name, oid in SignatureAlgorithmOID.items():
+        try:
+            for name, oid in cx509.SignatureAlgorithmOID.items():
                 if oid == cert.signature_algorithm_oid:
                     ret["signature_algorithm"] = name
                     break
+        except AttributeError:
+            pass
 
     if "signature_algorithm" not in ret:
         ret["signature_algorithm"] = cert.signature_algorithm_oid.dotted_string
@@ -1501,11 +1494,13 @@ def read_crl(crl):
     try:
         ret["signature_algorithm"] = crl.signature_algorithm_oid._name
     except AttributeError:
-        if HAS_SIG_ALGO_OID:
-            for name, oid in SignatureAlgorithmOID.items():
+        try:
+            for name, oid in cx509.SignatureAlgorithmOID.items():
                 if oid == crl.signature_algorithm_oid:
                     ret["signature_algorithm"] = name
                     break
+        except AttributeError:
+            pass
 
     if "signature_algorithm" not in ret:
         ret["signature_algorithm"] = crl.signature_algorithm_oid.dotted_string
@@ -1547,7 +1542,7 @@ def read_csr(csr):
         "subject_hash": x509util.pretty_hex(_get_name_hash(csr.subject)),
         "subject_str": csr.subject.rfc4514_string(),
         "public_key_hash": x509util.pretty_hex(
-            SubjectKeyIdentifier.from_public_key(csr.public_key()).digest
+            cx509.SubjectKeyIdentifier.from_public_key(csr.public_key()).digest
         ),
         "extensions": _parse_extensions(csr.extensions),
     }
@@ -1903,7 +1898,7 @@ def _parse_extensions(extensions):
     for extname, _, oid in x509util.EXTNAMES:
         try:
             ext = extensions.get_extension_for_oid(oid)
-        except ExtensionNotFound:
+        except cx509.ExtensionNotFound:
             continue
         ret[extname] = x509util.render_extension(ext)
     return ret
@@ -1914,7 +1909,7 @@ def _parse_crl_entry_extensions(extensions):
     for extname, _, oid in x509util.EXTNAMES_CRL_ENTRY:
         try:
             ext = extensions.get_extension_for_oid(oid)
-        except ExtensionNotFound:
+        except cx509.ExtensionNotFound:
             continue
         ret[extname] = x509util.render_extension(ext)
     return ret

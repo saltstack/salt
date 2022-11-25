@@ -895,8 +895,7 @@ def test_certificate_managed_existing(x509, cert_args):
 
 
 @pytest.mark.usefixtures("existing_cert_exts")
-def test_certificate_managed_existing_with_exts(x509, cert_args, rsa_privkey, ca_key):
-    cert_args["private_key"] = rsa_privkey
+def test_certificate_managed_existing_with_exts(x509, cert_args):
     ret = x509.certificate_managed(**cert_args)
     _assert_not_changed(ret)
 
@@ -1099,7 +1098,6 @@ def test_certificate_managed_signing_cert_change(
 
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_subject_change(x509, cert_args, rsa_privkey, ca_key):
-    cert_args["private_key"] = rsa_privkey
     cert_args["CN"] = "renewed"
     ret = x509.certificate_managed(**cert_args)
     cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
@@ -1109,7 +1107,6 @@ def test_certificate_managed_subject_change(x509, cert_args, rsa_privkey, ca_key
 
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_serial_number_change(x509, cert_args, rsa_privkey, ca_key):
-    cert_args["private_key"] = rsa_privkey
     cert_args["serial_number"] = 42
     ret = x509.certificate_managed(**cert_args)
     cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
@@ -1151,7 +1148,6 @@ def test_certificate_managed_encoding_change(
     """
     Ensure that a change in encoding does not reissue the certificate
     """
-    cert_args["private_key"] = rsa_privkey
     cert_args["encoding"] = encoding
     cert_args.pop("serial_number", None)
     cert = _get_cert(cert_args["name"])
@@ -1266,7 +1262,6 @@ def test_pkcs12_friendlyname_change(x509, cert_args, ca_cert, ca_key, rsa_privke
 
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_extension_added(x509, cert_args, rsa_privkey, ca_key):
-    cert_args["private_key"] = rsa_privkey
     cert_args["basicConstraints"] = "critical, CA:TRUE, pathlen:1"
     ret = x509.certificate_managed(**cert_args)
     cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
@@ -1278,11 +1273,7 @@ def test_certificate_managed_extension_added(x509, cert_args, rsa_privkey, ca_ke
 
 
 @pytest.mark.usefixtures("existing_cert_exts")
-def test_certificate_managed_extension_changed(
-    x509, cert_args, cert_args_exts, rsa_privkey, ca_key
-):
-    cert_args["private_key"] = rsa_privkey
-    cert_args.update(cert_args_exts)
+def test_certificate_managed_extension_changed(x509, cert_args, rsa_privkey, ca_key):
     cert_args["basicConstraints"] = "critical, CA:TRUE, pathlen:2"
     cert_args["subjectAltName"] = "DNS:sub.salt.ca,email:subnew@salt.ca"
     ret = x509.certificate_managed(**cert_args)
@@ -1299,11 +1290,7 @@ def test_certificate_managed_extension_changed(
 
 
 @pytest.mark.usefixtures("existing_cert_exts")
-def test_certificate_managed_extension_removed(
-    x509, cert_args, cert_args_exts, rsa_privkey, ca_key
-):
-    cert_args["private_key"] = rsa_privkey
-    cert_args.update(cert_args_exts)
+def test_certificate_managed_extension_removed(x509, cert_args, rsa_privkey, ca_key):
     cert_args.pop("tlsfeature")
     cert_args.pop("nameConstraints")
     ret = x509.certificate_managed(**cert_args)
@@ -1969,7 +1956,6 @@ def test_csr_managed_extension_added(x509, csr_args, rsa_privkey):
 
 @pytest.mark.usefixtures("existing_csr_exts")
 def test_csr_managed_extension_changed(x509, csr_args, csr_args_exts, rsa_privkey):
-    csr_args.update(csr_args_exts)
     csr_args["basicConstraints"] = "critical, CA:TRUE, pathlen:2"
     csr_args["subjectAltName"] = "DNS:sub.salt.ca,email:subnew@salt.ca"
     ret = x509.csr_managed(**csr_args)
@@ -1987,7 +1973,6 @@ def test_csr_managed_extension_changed(x509, csr_args, csr_args_exts, rsa_privke
 
 @pytest.mark.usefixtures("existing_csr_exts")
 def test_csr_managed_extension_removed(x509, csr_args, csr_args_exts, rsa_privkey):
-    csr_args.update(csr_args_exts)
     csr_args.pop("tlsfeature")
     csr_args.pop("nameConstraints")
     ret = x509.csr_managed(**csr_args)

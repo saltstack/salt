@@ -933,7 +933,9 @@ def verify_signature(cert, pubkey):
     key_type = get_key_type(pubkey)
     if KEY_TYPE.RSA == key_type:
         try:
-            if cx509.SignatureAlgorithmOID.RSASSA_PSS == cert.signature_algorithm_oid:
+            # SignatureAlgorithmOID is not present in older versions,
+            # otherwise cx509.SignatureAlgorithmOID.RSASSA_PSS could be used
+            if "1.2.840.113549.1.1.10" == cert.signature_algorithm_oid.dotted_string:
                 pubkey.verify(
                     cert.signature,
                     cert.tbs_certificate_bytes,
