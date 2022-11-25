@@ -81,7 +81,8 @@ GsL0HHWxVXkGnFGFk6Sbo3vnN7CpkpQTWFqeQQ5rHOw91pt7KnNZwc6I3ZjrCUHJ
 +UmKKrga16a4Q+8FBpYdphQU609npo/0zuaE6FyiJYlW3tG+mlbbNgzY/+eUaxt2
 9Bp9mtA+Hkox551Mfpq45Oi+ehwMt0xjZCjuFCM78oiUdHCGO+EmcT7ogiYALiOF
 LN1w5sybsYwIw6QN
------END CERTIFICATE-----"""
+-----END CERTIFICATE-----
+"""
 
 
 @pytest.fixture()
@@ -1365,6 +1366,8 @@ def test_certificate_managed_mode_change_only(
 def test_certificate_managed_mode_test_true(x509, cert_args, modules):
     """
     Test mode should not make changes at all.
+    The module contains a workaround for
+    https://github.com/saltstack/salt/issues/62590
     """
     cert_args["test"] = True
     cert_args["mode"] = "0666"
@@ -1751,6 +1754,8 @@ def test_crl_managed_mode_change_only(x509, crl_args, ca_key, modules):
 def test_crl_managed_mode_test_true(x509, crl_args, modules):
     """
     Test mode should not make changes at all.
+    The module contains a workaround for
+    https://github.com/saltstack/salt/issues/62590
     """
     crl_args["test"] = True
     crl_args["mode"] = "0666"
@@ -2036,6 +2041,8 @@ def test_csr_managed_mode_change_only(x509, csr_args, ca_key, modules):
 def test_csr_managed_mode_test_true(x509, csr_args, modules):
     """
     Test mode should not make changes at all.
+    The module contains a workaround for
+    https://github.com/saltstack/salt/issues/62590
     """
     csr_args["test"] = True
     csr_args["mode"] = "0666"
@@ -2313,6 +2320,8 @@ def test_private_key_managed_file_managed_create_false(x509, pk_args):
 def test_private_key_managed_mode_test_true(x509, pk_args, modules):
     """
     Test mode should not make changes at all.
+    The module contains a workaround for
+    https://github.com/saltstack/salt/issues/62590
     """
     pk_args["test"] = True
     pk_args["mode"] = "0666"
@@ -2424,6 +2433,33 @@ def test_private_key_managed_existing_not_a_pk(x509, pk_args, overwrite):
     if not overwrite:
         assert "does not seem to be a private key" in ret.comment
         assert "Pass overwrite" in ret.comment
+
+
+def test_pem_managed(x509, ca_cert, tmp_path):
+    tgt = tmp_path / "ca"
+    ret = x509.pem_managed(str(tgt), text=ca_cert)
+    assert ret.result
+    assert ret.changes
+    assert tgt.exists()
+    assert tgt.read_text() == ca_cert
+
+
+def test_pem_managed_newline_fix(x509, ca_cert, tmp_path):
+    tgt = tmp_path / "ca"
+    ret = x509.pem_managed(str(tgt), text=ca_cert.replace("\n", ""))
+    assert ret.result
+    assert ret.changes
+    assert tgt.exists()
+    assert tgt.read_text() == ca_cert
+
+
+def test_pem_managed_newline_fix_no_changes(x509, ca_cert, tmp_path):
+    tgt = tmp_path / "ca"
+    tgt.write_text(ca_cert)
+    ret = x509.pem_managed(str(tgt), text=ca_cert.replace("\n", ""))
+    assert ret.result
+    assert not ret.changes
+    assert tgt.read_text() == ca_cert
 
 
 def _assert_cert_created_basic(

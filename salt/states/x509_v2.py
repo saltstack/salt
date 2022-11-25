@@ -1143,7 +1143,7 @@ def pem_managed(name, text, **kwargs):
     kwargs
         Most arguments supported by :py:func:`file.managed <salt.states.file.managed>` are passed through.
     """
-    file_args, extra_args = _split_file_kwargs(**kwargs)
+    file_args, extra_args = _split_file_kwargs(kwargs)
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
@@ -1464,6 +1464,7 @@ def _add_sub_state_run(ret, sub):
 def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
+    # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
     res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
     return res[next(iter(res))]

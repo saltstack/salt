@@ -1191,7 +1191,9 @@ def expired(certificate):
         ret["path"] = certificate
     cert = x509util.load_cert(certificate)
     try:
-        ret["cn"] = cert.get_attributes_for_oid(x509util.NAME_OID["CN"])[0]
+        ret["cn"] = cert.subject.get_attributes_for_oid(x509util.NAME_OID["CN"])[
+            0
+        ].value
     except IndexError:
         pass
     ret["expired"] = expires(certificate)
@@ -1745,7 +1747,9 @@ def will_expire(certificate, days):
         ret["path"] = certificate
     cert = x509util.load_cert(certificate)
     try:
-        ret["cn"] = cert.get_attributes_for_oid(x509util.NAME_OID["CN"])[0]
+        ret["cn"] = cert.subject.get_attributes_for_oid(x509util.NAME_OID["CN"])[
+            0
+        ].value
     except IndexError:
         pass
     ret["will_expire"] = expires(certificate, days)
