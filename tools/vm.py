@@ -11,7 +11,6 @@ import os
 import pathlib
 import platform
 import pprint
-import random
 import shutil
 import subprocess
 import sys
@@ -19,6 +18,7 @@ import textwrap
 import time
 from datetime import datetime
 from functools import lru_cache
+from operator import attrgetter
 from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
@@ -518,41 +518,47 @@ class VM:
             self.ctx.error(f"Could not find a launch template for {self.name!r}: {exc}")
             self.ctx.exit(1)
 
+        try:
+            data = client.describe_launch_template_versions(
+                LaunchTemplateName=launch_template_name
+            )
+        except ClientError as exc:
+            if "InvalidLaunchTemplateName." not in str(exc):
+                raise
+            self.ctx.error(f"Could not find a launch template for {self.name!r}")
+            self.ctx.exit(1)
+
+        # The newest template comes first
+        template_data = data["LaunchTemplateVersions"][0]["LaunchTemplateData"]
+        security_group_ids = template_data["SecurityGroupIds"]
+
+        vpc = None
+        subnets = {}
+        for sg_id in security_group_ids:
+            sg = self.ec2.SecurityGroup(sg_id)
+            vpc = self.ec2.Vpc(sg.vpc_id)
+            for subnet in vpc.subnets.all():
+                for tag in subnet.tags:
+                    if tag["Key"] != "Name":
+                        continue
+                    if started_in_ci and "-private-" in tag["Value"]:
+                        subnets[subnet.id] = subnet.available_ip_address_count
+                        break
+                    if started_in_ci is False and "-public-" in tag["Value"]:
+                        subnets[subnet.id] = subnet.available_ip_address_count
+                        break
+            if subnets:
+                # Let's not process the other security group(s), if any
+                break
+
+        chosen_subnet, _ = sorted(subnets.items(), reverse=True)[0]
+
         network_interfaces = None
         if started_in_ci:
             log.info("Starting CI configured VM")
         else:
             # This is a developer running
             log.info("Starting Developer configured VM")
-
-            # Grab the public subnet of the vpc used on the template
-            try:
-                data = client.describe_launch_template_versions(
-                    LaunchTemplateName=launch_template_name
-                )
-            except ClientError as exc:
-                if "InvalidLaunchTemplateName." not in str(exc):
-                    raise
-                self.ctx.error(f"Could not find a launch template for {self.name!r}")
-                self.ctx.exit(1)
-            # The newest template comes first
-            template_data = data["LaunchTemplateVersions"][0]["LaunchTemplateData"]
-            subnet_id = template_data["NetworkInterfaces"][0]["SubnetId"]
-            # Grab the subnet instance
-            subnet = self.ec2.Subnet(subnet_id)
-            # Grabt the VPC instance from the subnet
-            vpc = self.ec2.Vpc(subnet.vpc_id)
-            # Collect all public subnets on the VPC
-            public_subnets = []
-            for subnet in vpc.subnets.all():
-                for tag in subnet.tags:
-                    if tag["Key"] != "Name":
-                        continue
-                    if "-public-" in tag["Value"]:
-                        public_subnets.append(subnet)
-                        break
-            # Randomly choose one of the subnets
-            chosen_public_subnet = random.choice(public_subnets)
             # Get the develpers security group
             security_group_filters = [
                 {
@@ -576,15 +582,7 @@ class VM:
                 )
                 self.ctx.exit(1)
             # Override the launch template network interfaces config
-            network_interfaces = [
-                {
-                    "AssociatePublicIpAddress": True,
-                    "DeleteOnTermination": True,
-                    "DeviceIndex": 0,
-                    "SubnetId": chosen_public_subnet.id,
-                    "Groups": [sg["GroupId"] for sg in response["SecurityGroups"]],
-                }
-            ]
+            security_group_ids = [sg["GroupId"] for sg in response["SecurityGroups"]]
 
         progress = create_progress_bar()
         create_task = progress.add_task(
@@ -665,6 +663,8 @@ class VM:
                 LaunchTemplate={
                     "LaunchTemplateName": launch_template_name,
                 },
+                SecurityGroupIds=security_group_ids,
+                SubnetId=chosen_subnet,
             )
             if instance_type:
                 # The user provided a custom instance type
