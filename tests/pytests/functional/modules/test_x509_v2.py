@@ -84,7 +84,8 @@ GsL0HHWxVXkGnFGFk6Sbo3vnN7CpkpQTWFqeQQ5rHOw91pt7KnNZwc6I3ZjrCUHJ
 +UmKKrga16a4Q+8FBpYdphQU609npo/0zuaE6FyiJYlW3tG+mlbbNgzY/+eUaxt2
 9Bp9mtA+Hkox551Mfpq45Oi+ehwMt0xjZCjuFCM78oiUdHCGO+EmcT7ogiYALiOF
 LN1w5sybsYwIw6QN
------END CERTIFICATE-----"""
+-----END CERTIFICATE-----
+"""
 
 
 @pytest.fixture()
@@ -1141,7 +1142,7 @@ def test_create_certificate_append_certs_pem(x509, ca_cert, ca_key, rsa_privkey)
     )
     cert = _get_cert(res)
     assert "CN=success" == cert.subject.rfc4514_string()
-    assert res.endswith(ca_cert + "\n")
+    assert res.endswith(ca_cert)
 
 
 @pytest.mark.skipif(
@@ -1446,6 +1447,75 @@ def test_verify_signature(x509, algo, request):
     cert = x509.create_certificate(signing_private_key=privkey)
     assert x509.verify_signature(cert, privkey)
     assert not x509.verify_signature(cert, wrong_privkey)
+
+
+def test_get_pem_entry(x509, ca_cert):
+    res = x509.get_pem_entry(ca_cert)
+    assert res == ca_cert.encode()
+
+
+def test_get_pem_entry_newline_fix(x509, ca_cert):
+    res = x509.get_pem_entry(ca_cert.replace("\n", ""))
+    assert res == ca_cert.encode()
+
+
+@pytest.fixture()
+def fresh_cert(x509, ca_key):
+    return x509.create_certificate(signing_private_key=ca_key, days_valid=1, CN="fresh")
+
+
+def test_expires(x509, fresh_cert):
+    assert not x509.expires(fresh_cert)
+    assert x509.expires(fresh_cert, 2)
+
+
+def test_expired(x509, ca_key, fresh_cert, tmp_path):
+    tgt = tmp_path / "pem"
+    tgt.write_text(fresh_cert)
+    res = x509.expired(str(tgt))
+    assert res == {"cn": "fresh", "path": str(tgt), "expired": False}
+    old_cert = x509.create_certificate(
+        signing_private_key=ca_key,
+        not_before="2000-01-01 13:37:00",
+        not_after="2000-01-01 13:37:42",
+        CN="expired",
+    )
+    res = x509.expired(old_cert)
+    assert res == {"cn": "expired", "expired": True}
+
+
+def test_will_expire(x509, fresh_cert):
+    assert {"check_days": 0, "cn": "fresh", "will_expire": False} == x509.will_expire(
+        fresh_cert, 0
+    )
+    assert {"check_days": 2, "cn": "fresh", "will_expire": True} == x509.will_expire(
+        fresh_cert, 2
+    )
+
+
+def test_write_pem(x509, fresh_cert, tmp_path):
+    tgt = tmp_path / "write_pem"
+    x509.write_pem(fresh_cert, str(tgt))
+    assert tgt.exists()
+    assert tgt.read_text() == fresh_cert
+
+
+def test_get_pem_entries(x509, fresh_cert, ca_cert, tmp_path):
+    ca = tmp_path / "ca"
+    cert = tmp_path / "cert"
+    ca.write_text(ca_cert)
+    cert.write_text(fresh_cert)
+    res = x509.get_pem_entries(str(tmp_path / "*"))
+    assert res
+    assert res == {str(ca): ca_cert.encode(), str(cert): fresh_cert.encode()}
+
+
+def test_read_certificates(x509, cert_exts, cert_exts_read, tmp_path):
+    cert = tmp_path / "cert"
+    cert.write_text(cert_exts)
+    res = x509.read_certificates(str(tmp_path / "*"))
+    assert res
+    assert res == {str(cert): cert_exts_read}
 
 
 def _get_cert(cert, encoding="pem", passphrase=None):
