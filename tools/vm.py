@@ -18,7 +18,6 @@ import textwrap
 import time
 from datetime import datetime
 from functools import lru_cache
-from operator import attrgetter
 from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
@@ -26,7 +25,6 @@ from ptscripts import Context, command_group
 try:
     import attr
     import boto3
-    import yaml
     from botocore.exceptions import ClientError
     from rich.progress import (
         BarColumn,
@@ -53,8 +51,8 @@ log = logging.getLogger(__name__)
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 STATE_DIR = REPO_ROOT / ".vms-state"
-with REPO_ROOT.joinpath("cicd", "images.yml").open() as rfh:
-    AMIS = yaml.safe_load(rfh)
+with REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+    AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
     "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
 ).hexdigest()
@@ -380,7 +378,13 @@ class VM:
 
     @config.default
     def _config_default(self):
-        config = AMIConfig(**AMIS[self.name])
+        config = AMIConfig(
+            **{
+                key: value
+                for (key, value) in AMIS[self.name].items()
+                if key in AMIConfig.__annotations__
+            }
+        )
         log.info(f"Loaded VM Configuration:\n{config}")
         return config
 
