@@ -41,7 +41,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       # Skip jobs if nox.*.tar.* is already cached
       - name: PyPi Proxy
@@ -129,7 +129,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: PyPi Proxy
         run: |
