@@ -17,12 +17,12 @@ jobs:
 #    - uses: actions/setup-python@v4
 #      with:
 #        python-version: '3.10'
+#        pip3 install git+https://github.com/dwoz/relative-environment-for-python.git@static_req_test
 
     - name: Install relenv
       run: |
         python3 --version
         pip3 list
-#        pip3 install git+https://github.com/dwoz/relative-environment-for-python.git@static_req_test
         pip3 install relenv
 
     - name: Create Onedir
