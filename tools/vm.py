@@ -77,6 +77,13 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
         "instance_type": {
             "help": "The instance type to use.",
         },
+        "no_delete": {
+            "help": (
+                "By default, every VM started will get terminated after a specific "
+                "ammount of hours. When true, the started VM get's excluded from that "
+                "forced termination."
+            ),
+        },
         "destroy_on_failure": {
             "help": "Destroy the instance on failing to craete and connect.",
         },
@@ -87,6 +94,7 @@ def create(
     name: str,
     key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
     instance_type: str = None,
+    no_delete: bool = False,
     destroy_on_failure: bool = False,
 ):
     """
@@ -95,7 +103,9 @@ def create(
     if key_name is None:
         ctx.exit(1, "We need a key name to spin a VM")
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    created = vm.create(key_name=key_name, instance_type=instance_type)
+    created = vm.create(
+        key_name=key_name, instance_type=instance_type, no_delete=no_delete
+    )
     if created is not True and destroy_on_failure:
         ctx.error(created)
         vm.destroy()
@@ -465,7 +475,7 @@ class VM:
         )
         self.ssh_config_file.write_text(ssh_config)
 
-    def create(self, key_name=None, instance_type=None):
+    def create(self, key_name=None, instance_type=None, no_delete=False):
         if self.is_running:
             log.info(f"{self!r} is already running...")
             return True
@@ -481,6 +491,7 @@ class VM:
             {"Key": "vm-name", "Value": self.name},
             {"Key": "instance-client-id", "Value": REPO_CHECKOUT_ID},
             {"Key": "started-in-ci", "Value": str(started_in_ci).lower()},
+            {"Key": "no-delete", "Value": str(no_delete).lower()},
         ]
         client = boto3.client("ec2", region_name=self.region_name)
         # Let's search for the launch template corresponding to this AMI
