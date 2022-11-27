@@ -4682,7 +4682,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
         salt '*' file.apply_template_on_contents \\
             contents='This is a {{ template }} string.' \\
             template=jinja \\
-            "context={}" "defaults={'template': 'cool'}" \\
+            context="{}" defaults="{'template': 'cool'}" \\
             saltenv=base
     """
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
