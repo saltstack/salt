@@ -8,6 +8,10 @@ from saltfactories.utils import random_string
 
 import salt.utils.platform
 
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="Temporarily skipped on the newer golden images")
+]
+
 
 @pytest.fixture(scope="module")
 def logging_master(salt_factories):
