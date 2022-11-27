@@ -466,6 +466,7 @@ class VM:
             Host {self.name}
               Hostname {self.instance.public_ip_address or self.instance.private_ip_address}
               User {self.config.ssh_username}
+              ControlMaster=no
               Compression=yes
               LogLevel=FATAL
               StrictHostKeyChecking=no
