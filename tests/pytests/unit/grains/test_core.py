@@ -2913,6 +2913,7 @@ def test__hw_data_linux_empty():
             "biosreleasedate": "",
             "biosversion": "",
             "biosvendor": "",
+            "boardname": "",
             "manufacturer": "",
             "productname": "",
             "serialnumber": "",
