@@ -11,122 +11,133 @@ import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import skipIf
 
-STUB_DISK_USAGE = {
-    "/": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-    "/dev": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-    "/run": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-    "/run/lock": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-    "/run/shm": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-    "/run/user": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-    "/sys/fs/cgroup": {
-        "filesystem": None,
-        "1K-blocks": 10000,
-        "used": 10000,
-        "available": 10000,
-        "capacity": 10000,
-    },
-}
+
+@pytest.fixture
+def stub_disk_usage():
+    return {
+        "/": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+        "/dev": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+        "/run": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+        "/run/lock": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+        "/run/shm": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+        "/run/user": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+        "/sys/fs/cgroup": {
+            "filesystem": None,
+            "1K-blocks": 10000,
+            "used": 10000,
+            "available": 10000,
+            "capacity": 10000,
+        },
+    }
 
 
-STUB_DISK_INODEUSAGE = {
-    "/": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-    "/dev": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-    "/run": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-    "/run/lock": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-    "/run/shm": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-    "/run/user": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-    "/sys/fs/cgroup": {
-        "inodes": 10000,
-        "used": 10000,
-        "free": 10000,
-        "use": 10000,
-        "filesystem": None,
-    },
-}
+@pytest.fixture
+def stub_disk_inodeusage():
+    return {
+        "/": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+        "/dev": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+        "/run": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+        "/run/lock": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+        "/run/shm": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+        "/run/user": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+        "/sys/fs/cgroup": {
+            "inodes": 10000,
+            "used": 10000,
+            "free": 10000,
+            "use": 10000,
+            "filesystem": None,
+        },
+    }
 
-STUB_DISK_PERCENT = {
-    "/": 50,
-    "/dev": 10,
-    "/run": 10,
-    "/run/lock": 10,
-    "/run/shm": 10,
-    "/run/user": 10,
-    "/sys/fs/cgroup": 10,
-}
 
-STUB_DISK_BLKID = {"/dev/sda": {"TYPE": "ext4", "UUID": None}}
+@pytest.fixture
+def stub_disk_percent():
+    return {
+        "/": 50,
+        "/dev": 10,
+        "/run": 10,
+        "/run/lock": 10,
+        "/run/shm": 10,
+        "/run/user": 10,
+        "/sys/fs/cgroup": 10,
+    }
+
+
+@pytest.fixture
+def stub_disk_blkid():
+    return {"/dev/sda": {"TYPE": "ext4", "UUID": None}}
 
 
 @pytest.fixture
@@ -134,13 +145,13 @@ def configure_loader_modules():
     return {disk: {}}
 
 
-def test_usage_dict():
+def test_usage_dict(stub_disk_usage):
     with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch(
-        "salt.modules.disk.usage", MagicMock(return_value=STUB_DISK_USAGE)
+        "salt.modules.disk.usage", MagicMock(return_value=stub_disk_usage)
     ):
         mock_cmd = MagicMock(return_value=1)
         with patch.dict(disk.__salt__, {"cmd.run": mock_cmd}):
-            assert STUB_DISK_USAGE == disk.usage(args=None)
+            assert stub_disk_usage == disk.usage(args=None)
 
 
 def test_usage_none():
@@ -152,22 +163,22 @@ def test_usage_none():
             assert "" == disk.usage(args=None)
 
 
-def test_inodeusage():
+def test_inodeusage(stub_disk_inodeusage):
     with patch.dict(disk.__grains__, {"kernel": "OpenBSD"}), patch(
-        "salt.modules.disk.inodeusage", MagicMock(return_value=STUB_DISK_INODEUSAGE)
+        "salt.modules.disk.inodeusage", MagicMock(return_value=stub_disk_inodeusage)
     ):
         mock = MagicMock()
         with patch.dict(disk.__salt__, {"cmd.run": mock}):
-            assert STUB_DISK_INODEUSAGE == disk.inodeusage(args=None)
+            assert stub_disk_inodeusage == disk.inodeusage(args=None)
 
 
-def test_percent():
+def test_percent(stub_disk_percent):
     with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch(
-        "salt.modules.disk.percent", MagicMock(return_value=STUB_DISK_PERCENT)
+        "salt.modules.disk.percent", MagicMock(return_value=stub_disk_percent)
     ):
         mock = MagicMock()
         with patch.dict(disk.__salt__, {"cmd.run": mock}):
-            assert STUB_DISK_PERCENT == disk.percent(args=None)
+            assert stub_disk_percent == disk.percent(args=None)
 
 
 def test_percent_args():
@@ -179,11 +190,11 @@ def test_percent_args():
             assert "/" == disk.percent("/")
 
 
-def test_blkid():
+def test_blkid(stub_disk_blkid):
     with patch.dict(
         disk.__salt__, {"cmd.run_stdout": MagicMock(return_value=1)}
-    ), patch("salt.modules.disk.blkid", MagicMock(return_value=STUB_DISK_BLKID)):
-        assert STUB_DISK_BLKID == disk.blkid()
+    ), patch("salt.modules.disk.blkid", MagicMock(return_value=stub_disk_blkid)):
+        assert stub_disk_blkid == disk.blkid()
 
 
 @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
