@@ -200,16 +200,19 @@ jobs:
 
       - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- salt
 
       - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- tests
 
       - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        continue-on-error: true
         run: |
           nox --force-color -e report-coverage
 
@@ -266,14 +269,17 @@ jobs:
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Report Salt Code Coverage
+        continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- salt
 
       - name: Report Tests Code Coverage
+        continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- tests
 
       - name: Report Combined Code Coverage
+        continue-on-error: true
         run: |
           nox --force-color -e report-coverage
 
