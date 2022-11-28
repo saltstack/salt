@@ -3,7 +3,6 @@ import shutil
 
 import pytest
 
-import salt.config
 import salt.spm
 import salt.utils.files
 from tests.support.mock import MagicMock, patch
@@ -61,8 +60,8 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
 
 
 @pytest.fixture()
-def setup_spm(tmp_path):
-    minion_config = salt.config.DEFAULT_MINION_OPTS.copy()
+def setup_spm(tmp_path, minion_opts):
+    minion_config = minion_opts.copy()
     minion_config.update(
         {
             "spm_logfile": str(tmp_path / "log"),
@@ -90,7 +89,6 @@ def setup_spm(tmp_path):
     )
     ui = SPMTestUserInterface()
     client = salt.spm.SPMClient(ui, minion_config)
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     return tmp_path, ui, client, minion_config, minion_opts
 
 

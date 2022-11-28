@@ -92,13 +92,13 @@ def configure_loader_modules():
 
 
 @pytest.fixture
-def slack_client():
+def slack_client(minion_opts):
     mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     app_token = "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     bot_token = "xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
     trigger = "!"
 
-    with patch.dict(slack_engine.__opts__, mock_opts):
+    with patch.dict(slack_engine.__opts__, minion_opts):
         with patch(
             "slack_bolt.App", MagicMock(autospec=True, return_value=MockSlackBoltApp())
         ):
