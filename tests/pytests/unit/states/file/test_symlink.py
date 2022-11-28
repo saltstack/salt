@@ -405,7 +405,9 @@ def test_symlink():
             "file.get_group": mock_grp,
             "file.user_to_uid": mock_uid,
             "file.group_to_gid": mock_gid,
+            "file.gid_to_group": MagicMock(return_value=group),
             "file.readlink": mock_target,
+            "user.info": mock_t,
         },
     ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
         os.path, "isdir", MagicMock(side_effect=[True, False])
