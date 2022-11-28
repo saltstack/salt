@@ -15,7 +15,8 @@
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PIP_BIN="$SCRIPT_DIR/build/opt/salt/bin/pip3"
+BUILD_DIR="$SCRIPT_DIR/build/opt/salt"
+PIP_BIN="$BUILD_DIR/bin/pip3"
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -118,9 +119,23 @@ if compgen -G "$TEST_DIR" > /dev/null; then
 fi
 
 #-------------------------------------------------------------------------------
+# Install Requirements into the Python Environment
+#-------------------------------------------------------------------------------
+_msg "Installing Salt requirements"
+# TODO: Need to figure out how to not hardcode the python version here
+# TODO: Maybe get the Python version from python itself
+$PIP_BIN install -r "$SRC_DIR/requirements/static/pkg/py3.10/darwin.txt" > /dev/null 2>&1
+TEST_FILE="$BUILD_DIR/bin/wheel"
+if [ -f "$TEST_FILE" ]; then
+    _success
+else
+    _failure
+fi
+
+#-------------------------------------------------------------------------------
 # Install Salt into the Python Environment
 #-------------------------------------------------------------------------------
-_msg "Installing Salt"
+_msg "Installing Salt using RELENV_PIP_DIR"
 RELENV_PIP_DIR="yes" $PIP_BIN install "$SRC_DIR" > /dev/null 2>&1
 TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/salt*"
 if compgen -G "$TEST_DIR" > /dev/null; then
