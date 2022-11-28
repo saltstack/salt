@@ -127,7 +127,8 @@ fi
 #-------------------------------------------------------------------------------
 _msg "Installing wheel"
 $PIP_BIN install "wheel" > /dev/null 2>&1
-if [ -f "$BUILD_DIR/bin/wheel" ]; then
+TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/wheel*"
+if compgen -G "$TEST_DIR" > /dev/null; then
     _success
 else
     _failure
