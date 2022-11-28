@@ -1799,7 +1799,7 @@ def render_extension(ext):
         try:
             usages = [
                 x._name if x._name != "Unknown OID" else x.dotted_string
-                for x in ext.value._usages
+                for x in ext.value._usages or []
             ]
         except AttributeError:
             # best effort in case x._name becomes undefined at some point
@@ -1839,7 +1839,7 @@ def render_extension(ext):
     ):
         try:
             ret["value"] = [
-                render_gn(x) for x in ext.value._general_names._general_names
+                render_gn(x) for x in ext.value._general_names._general_names or []
             ]
         except AttributeError:
             # best effort in case ext.value._general_names._general_names
@@ -1902,7 +1902,7 @@ def render_extension(ext):
             {
                 "fullname": [render_gn(x) for x in ext.value.full_name or []],
                 "onysomereasons": list(
-                    sorted(x.value for x in ext.value.only_some_reasons)
+                    sorted(x.value for x in ext.value.only_some_reasons or [])
                 ),
                 "relativename": ext.value.relative_name.rfc4514_string()
                 if ext.value.relative_name
@@ -1960,8 +1960,8 @@ def render_extension(ext):
     if isinstance(ext.value, cx509.NameConstraints):
         ret.update(
             {
-                "excluded": [render_gn(x) for x in ext.value.excluded_subtrees],
-                "permitted": [render_gn(x) for x in ext.value.permitted_subtrees],
+                "excluded": [render_gn(x) for x in ext.value.excluded_subtrees or []],
+                "permitted": [render_gn(x) for x in ext.value.permitted_subtrees or []],
             }
         )
         return ret
