@@ -209,7 +209,7 @@ ITEMS=(
     "api"
 )
 for i in "${ITEMS[@]}"; do
-    FILE="$BUILD_DIR/Library/LaunchDaemons/com.saltstack.salt.$i.com"
+    FILE="$BUILD_DIR/Library/LaunchDaemons/com.saltstack.salt.$i.plist"
     if ! [ -f "$FILE" ]; then
         _msg "Copying $i service definition"
         cp "$PKG_RESOURCES/scripts/com.saltstack.salt.$i.plist" "$FILE"
