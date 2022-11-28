@@ -204,6 +204,7 @@ if ! grep -q "Status: success" "$CMD_OUTPUT"; then
     awk -F ': ' '/LogFileURL/ {print $2}' "$CMD_OUTPUT"
     exit 1
 fi
+echo "  Notarization Complete"
 
 _msg "Stapling notarization to the package"
 if xcrun stapler staple "$PACKAGE" > "$CMD_OUTPUT"; then
