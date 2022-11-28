@@ -149,7 +149,8 @@ def ssh(ctx: Context, name: str, command: list[str], sudo: bool = False):
     SSH into the VM, or run 'command' in VM
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.run(command, sudo=sudo)
+    pseudo_terminal = command == []
+    vm.run(command, sudo=sudo, capture=False, pseudo_terminal=pseudo_terminal)
 
 
 @vm.command(
@@ -925,11 +926,17 @@ class VM:
                 env=env,
                 log_command_level=log_command_level,
             )
+            log.debug(f"Running {ssh_command!r} ...")
             return self.ctx.run(
                 *ssh_command,
                 check=check,
+                capture=capture,
+                interactive=pseudo_terminal,
                 no_output_timeout_secs=self.ctx.parser.options.no_output_timeout_secs,
             )
+        except subprocess.CalledProcessError as exc:
+            log.error(str(exc))
+            self.ctx.exit(exc.returncode)
         except (KeyboardInterrupt, SystemExit):
             pass
 
