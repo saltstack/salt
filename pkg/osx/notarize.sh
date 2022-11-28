@@ -144,7 +144,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Submit app for notarization
 #-------------------------------------------------------------------------------
-_msg "Submit package for notarization"
+_msg "Submitting package for notarization"
 if xcrun altool --notarize-app \
                 --primary-bundle-id "$BUNDLE_ID" \
                 --username "$APPLE_ACCT" \
