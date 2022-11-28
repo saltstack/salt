@@ -417,6 +417,8 @@ def test_symlink():
         "salt.states.file._set_symlink_ownership", return_value=True
     ), patch(
         "salt.states.file._check_symlink_ownership", return_value=True
+    ), patch(
+        "salt.states.file._get_symlink_ownership", return_value=(user, group)
     ):
         if salt.utils.platform.is_windows():
             comt = "Symlink {} is present and owned by {}".format(name, user)
