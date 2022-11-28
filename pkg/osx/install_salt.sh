@@ -125,6 +125,14 @@ fi
 #-------------------------------------------------------------------------------
 # Install Requirements into the Python Environment
 #-------------------------------------------------------------------------------
+_msg "Installing wheel"
+$PIP_BIN install "wheel" > /dev/null 2>&1
+if [ -f "$BUILD_DIR/bin/wheel" ]; then
+    _success
+else
+    _failure
+fi
+
 _msg "Installing Salt requirements"
 $PIP_BIN install -r "$REQ_FILE" > /dev/null 2>&1
 if [ -f "$BUILD_DIR/bin/distro" ]; then
