@@ -227,7 +227,6 @@ def write_cache(connection):
         and "vault_secret_path_metadata" not in connection
     ):
         log.debug("Not caching vault single use token")
-        __context__["vault_token"] = connection
         return True
     elif (
         "vault_secret_path_metadata" in __context__
