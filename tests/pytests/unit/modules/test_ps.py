@@ -35,7 +35,9 @@ def sample_process():
     }
     important_data.update(extra_data)
     patch_stat_file = patch(
-        "psutil._psplatform.Process._parse_stat_file", return_value=important_data
+        "psutil._psplatform.Process._parse_stat_file",
+        return_value=important_data,
+        create=True,
     )
     patch_status = patch(
         "psutil._psplatform.Process.status", return_value=status.decode()
