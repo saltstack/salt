@@ -6,7 +6,6 @@ centosstream-9-x86_64: ami-0d8fb58d95608d6c9
 debian-10-amd64: ami-0603a8ba0f12ace6a
 debian-11-amd64: ami-0d86196278d678ce4
 debian-11-arm64: ami-0aee2334ae00e0022
-fedora-35-x86_64: ami-0c12558afd50db829
 opensuse-15-x86_64: ami-0ddaff351afcfe772
 photon-3-x86_64: ami-0dd43cb13a3b4022c
 ubuntu-1804-amd64: ami-06ff7eaacbc638ecd
