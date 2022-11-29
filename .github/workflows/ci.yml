@@ -79,6 +79,46 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  windows-2016:
+    name: Windows 2016
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2016
+      nox-session: ci-test
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  windows-2019:
+    name: Windows 2019
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2019
+      nox-session: ci-test
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  windows-2022:
+    name: Windows 2022
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  macos-12:
+    name: MacOS 12
+    needs:
+      - get-changed-files
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
   almalinux-8:
     name: Alma Linux 8
     needs:
@@ -266,46 +306,6 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
-      nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
-  windows-2016:
-    name: Windows 2016
-    needs:
-      - get-changed-files
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: windows-2016
-      nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
-  windows-2019:
-    name: Windows 2019
-    needs:
-      - get-changed-files
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: windows-2019
-      nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
-  windows-2022:
-    name: Windows 2022
-    needs:
-      - get-changed-files
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: windows-2022
-      nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
-  macos-12:
-    name: MacOS 12
-    needs:
-      - get-changed-files
-    uses: ./.github/workflows/test-action-macos.yml
-    with:
-      distro-slug: macos-12
       nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
