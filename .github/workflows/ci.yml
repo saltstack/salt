@@ -86,7 +86,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-8
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   almalinux-9:
@@ -96,7 +96,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-9
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   amazonlinux-2:
@@ -106,7 +106,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: amazonlinux-2
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   archlinux-lts:
@@ -116,7 +116,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: archlinux-lts
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   centos-7:
@@ -126,7 +126,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centos-7
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   centosstream-8:
@@ -136,7 +136,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-8
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   centosstream-9:
@@ -146,7 +146,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-9
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   debian-10:
@@ -156,7 +156,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-10
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   debian-11:
@@ -166,7 +166,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   debian-11-arm64:
@@ -176,7 +176,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11-arm64
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   fedora-36:
@@ -186,7 +186,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: fedora-36
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   opensuse-15:
@@ -196,7 +196,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: opensuse-15
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   photon-3:
@@ -206,7 +206,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-3
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   photon-4:
@@ -216,7 +216,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   ubuntu-1804:
@@ -226,7 +226,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-18.04
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   ubuntu-2004:
@@ -236,7 +236,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   ubuntu-2004-arm64:
@@ -246,7 +246,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   ubuntu-2204:
@@ -256,7 +256,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   ubuntu-2204-arm64:
@@ -266,7 +266,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   windows-2016:
@@ -276,7 +276,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2016
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   windows-2019:
@@ -286,7 +286,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   windows-2022:
@@ -296,7 +296,7 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2022
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   macos-12:
@@ -306,7 +306,7 @@ jobs:
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
-      nox-session: ci-test-3
+      nox-session: ci-test
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
 
