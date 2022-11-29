@@ -14,10 +14,10 @@ This section contains a list of the Python modules that are used to extend the v
     ../ref/clouds/all/index
     ../ref/configuration/index
     ../ref/engines/all/index
+    ../ref/modules/all/index
     ../ref/executors/all/index
     ../ref/file_server/all/index
     ../ref/grains/all/index
-    ../ref/modules/all/index
     ../ref/netapi/all/index
     ../ref/output/all/index
     ../ref/pillar/all/index

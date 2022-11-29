@@ -426,6 +426,8 @@ class SaltEvent:
                 try:
                     self.pusher.connect(timeout=timeout)
                     self.cpush = True
+                except salt.ext.tornado.iostream.StreamClosedError as exc:
+                    log.debug("Unable to connect pusher: %s", exc)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Unable to connect pusher: %s",

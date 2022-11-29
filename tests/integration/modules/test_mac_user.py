@@ -124,9 +124,11 @@ class MacUserModuleTest(ModuleCase):
             self.assertEqual(fullname_info["fullname"], "Foo Bar")
 
             # Test mac_user.chgroups
+            pre_info = self.run_function("user.info", [CHANGE_USER])["groups"]
+            expected = pre_info + ["wheel"]
             self.run_function("user.chgroups", [CHANGE_USER, "wheel"])
             groups_info = self.run_function("user.info", [CHANGE_USER])
-            self.assertEqual(groups_info["groups"], ["wheel"])
+            self.assertEqual(groups_info["groups"], expected)
 
         except AssertionError:
             self.run_function("user.delete", [CHANGE_USER])

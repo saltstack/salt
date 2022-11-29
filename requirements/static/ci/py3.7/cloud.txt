@@ -420,6 +420,8 @@ docker==5.0.2
     #   pytest-salt-factories
 etcd3-py==0.1.6 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
+exceptiongroup==1.0.4
+    # via pytest
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
@@ -684,8 +686,6 @@ psutil==5.8.0
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-py==1.10.0
-    # via pytest
 pyasn1-modules==0.2.8
     # via google-auth
 pyasn1==0.4.8
@@ -732,7 +732,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc20 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
@@ -751,7 +751,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==2.0.2
     # via -r requirements/pytest.txt
-pytest==7.0.1 ; python_version >= "3.6"
+pytest==7.2.0 ; python_version > "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code

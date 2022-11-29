@@ -404,28 +404,26 @@ def test_grants_present_absent_state_file(
 
     try:
         with pytest.helpers.temp_file("manage_mysql.sls", content, state_tree):
-            ret = modules.state.apply(
-                "manage_mysql",
-            )
+            ret = modules.state.apply("manage_mysql")
 
             # Check user creation
             state = "mysql_user_|-sbclient_2_0_|-sbclient_2_0_|-present"
             assert state in ret
             assert "changes" in ret[state]
-            assert ret[state]["changes"] == {"sbclient_2_0": "Present"}
+            assert ret[state].changes == {"sbclient_2_0": "Present"}
 
             # Check database creation
             state = "mysql_database_|-sbclient_2_0_|-sbclient_2_0_|-present"
             assert state in ret
             assert "changes" in ret[state]
-            assert ret[state]["changes"] == {"sbclient_2_0": "Present"}
+            assert ret[state].changes == {"sbclient_2_0": "Present"}
 
             # Check grant creation
             state = "mysql_grants_|-sbclient_2_0_|-sbclient_2_0_|-present"
             assert state in ret
             assert "comment" in ret[state]
             assert (
-                ret[state]["comment"]
+                ret[state].comment
                 == "Grant ALL PRIVILEGES on sbclient_2_0.* to sbclient_2_0@localhost has been added"
             )
 

@@ -6,12 +6,14 @@ import yaml as _yaml
 
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
+import salt.serializers.keyvalue as keyvalue
 import salt.serializers.msgpack as msgpack
 import salt.serializers.plist as plist
 import salt.serializers.python as python
 import salt.serializers.tomlmod as tomlmod
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
+import salt.utils.platform
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
@@ -397,3 +399,44 @@ def test_serialize_binary_plist():
 
     deserialized = plist.deserialize(serialized)
     assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue():
+    data = {"foo": "bar baz"}
+    serialized = keyvalue.serialize(data)
+    assert serialized == "foo=bar baz", serialized
+
+    deserialized = keyvalue.deserialize(serialized)
+    assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue_quoting():
+    data = {"foo": "bar baz"}
+    serialized = keyvalue.serialize(data, quoting=True)
+    assert serialized == "foo='bar baz'", serialized
+
+    deserialized = keyvalue.deserialize(serialized, quoting=False)
+    assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue_separator():
+    data = {"foo": "bar baz"}
+    serialized = keyvalue.serialize(data, separator=" = ")
+    assert serialized == "foo = bar baz", serialized
+
+    deserialized = keyvalue.deserialize(serialized, separator=" = ")
+    assert deserialized == data, deserialized
+
+
+def test_serialize_keyvalue_list_of_lists():
+    if salt.utils.platform.is_windows():
+        linend = "\r\n"
+    else:
+        linend = "\n"
+    data = [["foo", "bar baz"], ["salt", "rocks"]]
+    expected = {"foo": "bar baz", "salt": "rocks"}
+    serialized = keyvalue.serialize(data)
+    assert serialized == f"foo=bar baz{linend}salt=rocks", serialized
+
+    deserialized = keyvalue.deserialize(serialized)
+    assert deserialized == expected, deserialized

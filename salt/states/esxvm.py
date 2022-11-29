@@ -185,6 +185,7 @@ example.
 
 import logging
 import sys
+from functools import wraps
 
 import salt.exceptions
 from salt.config.schemas.esxvm import ESXVirtualMachineConfigSchema
@@ -228,6 +229,28 @@ def __virtual__():
     return True
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxvm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def vm_configured(
     name,
     vm_name,
@@ -369,6 +392,7 @@ def vm_configured(
     return result
 
 
+@_deprecation_message
 def vm_cloned(name):
     """
     Clones a virtual machine from a template virtual machine if it doesn't
@@ -379,6 +403,7 @@ def vm_cloned(name):
     return result
 
 
+@_deprecation_message
 def vm_updated(
     name,
     vm_name,
@@ -503,6 +528,7 @@ def vm_updated(
     return result
 
 
+@_deprecation_message
 def vm_created(
     name,
     vm_name,
@@ -585,6 +611,7 @@ def vm_created(
     return result
 
 
+@_deprecation_message
 def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
     """
     Registers a virtual machine if the machine files are available on
