@@ -3683,7 +3683,7 @@ class SyndicManager(MinionBase):
                 # __'s to make sure it doesn't print out on the master cli
                 jdict["__master_id__"] = master
             ret = {}
-            for key in "return", "retcode", "success":
+            for key in "return", "retcode", "success", "fun_args":
                 if key in data:
                     ret[key] = data[key]
             jdict[data["id"]] = ret
@@ -3798,6 +3798,16 @@ class ProxyMinion(Minion):
         """
         mp_call = _metaproxy_call(self.opts, "post_master_init")
         return mp_call(self, master)
+
+    @salt.ext.tornado.gen.coroutine
+    def subproxy_post_master_init(self, minion_id, uid):
+        """
+        Function to finish init for the sub proxies
+
+        :rtype : None
+        """
+        mp_call = _metaproxy_call(self.opts, "subproxy_post_master_init")
+        return mp_call(self, minion_id, uid)
 
     def tune_in(self, start=True):
         """
