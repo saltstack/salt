@@ -138,9 +138,11 @@ matches the ``libgit2`` version from Debian. This is version 1.6.1.
 
 .. code-block:: bash
 
-    # apt-get purge python3-pygit2
-    # apt-get install python3-pip
-    # python3 -m pip install pygit2==1.6.1
+    # apt-get install libgit2
+    # salt-pip install pygit2==1.6.1 --no-deps
+
+Note that the above instructions assume a onedir installation. The need for
+`--no-deps` is to prevent the CFFI package from mismatching with Salt.
 
 GitPython
 ---------
