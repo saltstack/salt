@@ -38,7 +38,6 @@ from salt.exceptions import SaltInvocationError
 # pylint: disable=import-error
 try:
     # pylint: disable=import-error
-    import boto
     import boto3
     import boto3.session
     import boto.exception
