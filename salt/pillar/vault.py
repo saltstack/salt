@@ -26,6 +26,8 @@ require. Avoid naming every key 'password' as you they will collide:
 
 If you want to nest results under a nesting_key name use the following format:
 
+.. code-block:: yaml
+
     ext_pillar:
       - vault:
           conf: path=secret/salt
