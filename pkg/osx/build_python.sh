@@ -43,6 +43,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYS_PY_BIN="$(which python3)"
 BUILD_DIR="$SCRIPT_DIR/build"
 BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
+RELENV_DIR="$HOME/.local/relenv"
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -166,6 +167,16 @@ if [ -d "$SCRIPT_DIR/venv" ]; then
     fi
 fi
 
+if [ -d "$RELENV_DIR" ]; then
+    _msg "Removing relenv directory"
+    rm -rf "$RELENV_DIR"
+    if ! [ -d "$RELENV_DIR" ]; then
+        _success
+    else
+        _failure
+    fi
+fi
+
 #-------------------------------------------------------------------------------
 # Setting Up Virtual Environment
 #-------------------------------------------------------------------------------
@@ -199,17 +210,17 @@ fi
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
-echo "- Building python (relenv):"
-relenv build --clean
+#echo "- Building python (relenv):"
+#relenv build --clean
 # We want to suppress the output here so it looks nice
 # To see the output, remove the output redirection
-#_msg "Fetching python (relenv)"
-#relenv fetch >/dev/null 2>&1
-#if [ -f "$HOME/.local/relenv/build/x86_64-macos.tar.xz" ]; then
-#    _success
-#else
-#    _failure
-#fi
+_msg "Fetching python (relenv)"
+relenv fetch >/dev/null 2>&1
+if [ -f "$RELENV_DIR/build/x86_64-macos.tar.xz" ]; then
+    _success
+else
+    _failure
+fi
 
 _msg "Extracting python environment"
 relenv create "$BUILD_DIR/opt/salt"
