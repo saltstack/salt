@@ -154,30 +154,8 @@ if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
 fi
 
 #-------------------------------------------------------------------------------
-# Copy Start Scripts from Salt Repo to /opt/salt
+# Copy salt-config from Salt Repo to /opt/salt
 #-------------------------------------------------------------------------------
-#BIN_DIR="$BUILD_DIR/opt/salt/bin"
-#FILE="$BIN_DIR/start-*.sh"
-#if ! compgen -G "$FILE" > /dev/null; then
-#    _msg "Staging start scripts"
-#    cp "$PKG_RESOURCES/scripts/start-*.sh" "$BIN_DIR/"
-#    if compgen -G "$FILE" > /dev/null; then
-#        _success
-#    else
-#        _failure
-#    fi
-#fi
-#
-#if ! [ -f "$BIN_DIR/salt-config.sh" ]; then
-#    _msg "Staging Salt config script"
-#    cp "$PKG_RESOURCES/scripts/salt-config.sh" "$BIN_DIR/"
-#    if [ -f "$BIN_DIR/salt-config.sh" ]; then
-#        _success
-#    else
-#        _failure
-#    fi
-#fi
-
 SALT_DIR="$BUILD_DIR/opt/salt"
 if ! [ -f "$SALT_DIR/salt-config.sh" ]; then
     _msg "Staging Salt config script"
