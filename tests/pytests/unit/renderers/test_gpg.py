@@ -3,18 +3,19 @@ from subprocess import PIPE
 from textwrap import dedent
 
 import pytest
-import salt.config
+
 import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
 from tests.support.mock import MagicMock, Mock, call, patch
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
     """
     GPG renderer configuration
     """
-    return {gpg: {"__opts__": {"gpg_decrypt_must_succeed": True}}}
+    minion_opts["gpg_decrypt_must_succeed"] = True
+    return {gpg: {"__opts__": minion_opts}}
 
 
 def test__get_gpg_exec():
@@ -255,7 +256,7 @@ def test_render_without_cache():
                 popen_mock.assert_has_calls([gpg_call] * 3)
 
 
-def test_render_with_cache():
+def test_render_with_cache(minion_opts):
     key_dir = "/etc/salt/gpgkeys"
     secret = "Use more salt."
     expected = "\n".join([secret] * 3)
@@ -273,7 +274,6 @@ def test_render_with_cache():
     """
     )
 
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     minion_opts["gpg_cache"] = True
     with patch.dict(gpg.__opts__, minion_opts):
         with patch("salt.renderers.gpg.Popen") as popen_mock:

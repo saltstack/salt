@@ -3,9 +3,10 @@ import os
 import zipfile
 
 import pytest
+from saltfactories.utils.functional import MultiStateResult
+
 import salt.utils.files
 import salt.utils.stringutils
-from saltfactories.utils.functional import MultiStateResult
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -13,7 +14,7 @@ def test_get_file_from_env_in_top_match(salt_cli, salt_sub_minion):
     tgt = os.path.join(RUNTIME_VARS.TMP, "prod-cheese-file")
     try:
         ret = salt_cli.run("state.highstate", minion_tgt=salt_sub_minion.id)
-        assert ret.exitcode == 0
+        assert ret.returncode == 0
         assert os.path.isfile(tgt)
         with salt.utils.files.fopen(tgt, "r") as cheese:
             data = salt.utils.stringutils.to_unicode(cheese.read())
@@ -66,8 +67,8 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
             "issue-56131.sls", sls_contents, base_env_state_tree_root_dir
         ):
             ret = salt_call_cli.run("state.sls", "issue-56131")
-            assert ret.exitcode == 0
-            for state_return in MultiStateResult(ret.json):
+            assert ret.returncode == 0
+            for state_return in MultiStateResult(ret.data):
                 assert state_return.result is True
             assert extract_path.exists()
     finally:
@@ -93,9 +94,9 @@ def test_pydsl(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
         "pydsl.sls", sls_contents, base_env_state_tree_root_dir
     ):
         ret = salt_call_cli.run("state.sls", "pydsl")
-        assert ret.exitcode == 0
-        assert ret.json
-        for state_return in MultiStateResult(ret.json):
+        assert ret.returncode == 0
+        assert ret.data
+        for state_return in MultiStateResult(ret.data):
             assert state_return.result is True
         assert testfile.exists()
 
@@ -116,7 +117,45 @@ def test_state_sls_unicode_characters(salt_call_cli, base_env_state_tree_root_di
         "issue-46672.sls", sls_contents, base_env_state_tree_root_dir
     ):
         ret = salt_call_cli.run("state.sls", "issue-46672")
-        assert ret.exitcode == 0
-        assert ret.json
+        assert ret.returncode == 0
+        assert ret.data
         expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
-        assert expected in ret.json
+        assert expected in ret.data
+
+
+@pytest.mark.skip_on_windows(reason="umask is a no-op on Windows")
+@pytest.mark.parametrize("umask", (22, "022"))
+def test_umask_022(salt_call_cli, umask):
+    """
+    Should produce a file with mode 644
+    """
+    with pytest.helpers.temp_file() as name:
+        name.unlink()
+        salt_call_cli.run("state.single", fun="file.touch", name=str(name), umask=umask)
+        assert oct(name.stat().st_mode)[-3:] == "644"
+
+
+@pytest.mark.skip_on_windows(reason="umask is a no-op on Windows")
+@pytest.mark.parametrize("umask", (27, "027"))
+def test_umask_027(salt_call_cli, umask):
+    """
+    Should produce a file with mode 640
+    """
+    with pytest.helpers.temp_file() as name:
+        name.unlink()
+        salt_call_cli.run("state.single", fun="file.touch", name=str(name), umask=umask)
+        assert oct(name.stat().st_mode)[-3:] == "640"
+
+
+@pytest.mark.skip_on_windows(reason="umask is a no-op on Windows")
+@pytest.mark.parametrize("umask", (999, "999", "foo"))
+def test_umask_invalid(salt_call_cli, umask):
+    """
+    Test invalid umask values
+    """
+    with pytest.helpers.temp_file() as name:
+        name.unlink()
+        ret = salt_call_cli.run(
+            "state.single", fun="file.touch", name=str(name), umask=umask
+        )
+        assert ret.data == [f"Invalid umask: {umask}"]

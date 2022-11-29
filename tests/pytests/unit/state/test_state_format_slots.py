@@ -5,20 +5,19 @@
 import logging
 
 import pytest  # pylint: disable=unused-import
+
 import salt.exceptions
 import salt.state
 import salt.utils.files
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def state_obj():
+def state_obj(minion_opts):
     with patch("salt.state.State._gather_pillar"):
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         yield salt.state.State(minion_opts)
 
 
@@ -219,9 +218,8 @@ def test_slot_append(state_obj):
 
 
 # Skip on windows like integration.modules.test_state.StateModuleTest.test_parallel_state_with_long_tag
-@skipIf(
-    salt.utils.platform.is_windows(),
-    "Skipped until parallel states can be fixed on Windows",
+@pytest.mark.skip_on_spawning_platform(
+    reason="Skipped until parallel states can be fixed on spawning platforms."
 )
 def test_format_slots_parallel(state_obj):
     """

@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.service as service
@@ -510,6 +511,26 @@ def test_enabled():
         assert service.__context__ == {"service.state": "enabled"}
 
 
+def test_enabled_in_test_mode():
+    ret = {
+        "changes": {},
+        "comment": "Service salt not present; if created in this state run, it would have been enabled",
+        "name": "salt",
+        "result": None,
+    }
+    mock = MagicMock(
+        return_value={
+            "result": "False",
+            "comment": "The named service salt is not available",
+        }
+    )
+    with patch.object(service, "_enable", mock), patch.dict(
+        service.__opts__, {"test": True}
+    ):
+        assert service.enabled("salt") == ret
+        assert service.__context__ == {"service.state": "enabled"}
+
+
 def test_disabled():
     """
     Test to verify that the service is disabled
@@ -658,21 +679,22 @@ def test_mod_beacon(tmp_path):
 
 
 @pytest.mark.skip_on_darwin(reason="service.running is currently failing on OSX")
+@pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_running_with_reload():
+def test_running_with_reload(minion_opts):
     """
     Test that a running service is properly reloaded
     """
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains"] = salt.loader.grains(opts)
-    utils = salt.loader.utils(opts)
-    modules = salt.loader.minion_mods(opts, utils=utils)
+    # TODO: This is not a unit test, it interacts with the system. Move to functional.
+    minion_opts["grains"] = salt.loader.grains(minion_opts)
+    utils = salt.loader.utils(minion_opts)
+    modules = salt.loader.minion_mods(minion_opts, utils=utils)
 
     service_name = "cron"
     cmd_name = "crontab"
-    os_family = opts["grains"]["os_family"]
-    os_release = opts["grains"]["osrelease"]
+    os_family = minion_opts["grains"]["os_family"]
+    os_release = minion_opts["grains"]["osrelease"]
     if os_family == "RedHat":
         service_name = "crond"
     elif os_family == "Arch":
@@ -697,8 +719,8 @@ def test_running_with_reload():
         post_srv_disable = True
 
     try:
-        with patch.dict(service.__grains__, opts["grains"]), patch.dict(
-            service.__opts__, opts
+        with patch.dict(service.__grains__, minion_opts["grains"]), patch.dict(
+            service.__opts__, minion_opts
         ), patch.dict(service.__salt__, modules), patch.dict(
             service.__utils__, utils
         ), patch.dict(

@@ -4,19 +4,28 @@
 """
 
 import datetime
+import logging
+import pathlib
+import shutil
+import subprocess
 import time
 import types
 
+import psutil
 import pytest
+
 import salt.modules.gpg as gpg
-from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 pytest.importorskip("gnupg")
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
+    pytest.mark.requires_random_entropy,
 ]
+
+log = logging.getLogger(__name__)
+
 
 GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
 GPG_TEST_KEY_ID = "7416F045"
@@ -153,11 +162,43 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
     root.mkdir(mode=0o0700)
+    root.joinpath(".gnupg").mkdir(mode=0o0700)
     pub = root / "gpgfile.pub"
     pub.write_text(GPG_TEST_PUB_KEY)
     priv = root / "gpgfile.priv"
     priv.write_text(GPG_TEST_PRIV_KEY)
-    return types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    try:
+        yield types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    finally:
+        # Make sure we don't leave any gpg-agent's running behind
+        gpg_connect_agent = shutil.which("gpg-connect-agent")
+        if gpg_connect_agent:
+            gnupghome = root / ".gnupg"
+            if not gnupghome.is_dir():
+                gnupghome = root
+            try:
+                subprocess.run(
+                    [gpg_connect_agent, "killagent", "/bye"],
+                    env={"GNUPGHOME": str(gnupghome)},
+                    shell=False,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                # This is likely CentOS 7 or Amazon Linux 2
+                pass
+
+        # If the above errored or was not enough, as a last resort, let's check
+        # the running processes.
+        for proc in psutil.process_iter():
+            try:
+                if "gpg-agent" in proc.name():
+                    for arg in proc.cmdline():
+                        if str(root) in arg:
+                            proc.terminate()
+            except Exception:  # pylint: disable=broad-except
+                pass
 
 
 @pytest.fixture
@@ -202,7 +243,29 @@ def test_list_keys():
             "trust": "-",
             "type": "pub",
             "uids": ["GPG Person <person@example.com>"],
-        }
+        },
+        {
+            "dummy": "",
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "expires": "2011188692",
+            "sigs": [],
+            "subkeys": [
+                [
+                    "yyyyyyyyyyyyyyyy",
+                    "e",
+                    "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+                ]
+            ],
+            "length": "4096",
+            "ownertrust": "-",
+            "sig": "",
+            "algo": "1",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "date": "1506612692",
+            "trust": "r",
+            "type": "pub",
+            "uids": ["GPG Person <person@example.com>"],
+        },
     ]
 
     _expected_result = [
@@ -215,7 +278,17 @@ def test_list_keys():
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             "trust": "Unknown",
-        }
+        },
+        {
+            "keyid": "yyyyyyyyyyyyyyyy",
+            "uids": ["GPG Person <person@example.com>"],
+            "created": "2017-09-28",
+            "expires": "2033-09-24",
+            "keyLength": "4096",
+            "ownerTrust": "Unknown",
+            "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+            "trust": "Revoked",
+        },
     ]
 
     mock_opt = MagicMock(return_value="root")
@@ -479,9 +552,9 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                     )
 
 
-def test_export_key_without_passphrase(gpghome):
+def test_export_public_key(gpghome):
     """
-    Test gpg.export_key without passphrase
+    Test gpg.export_key with single public key
     """
 
     _user_mock = {
@@ -505,7 +578,7 @@ def test_export_key_without_passphrase(gpghome):
                 "salt.modules.gpg.gnupg.GPG.export_keys",
                 MagicMock(return_value=GPG_TEST_PUB_KEY),
             ) as gnupg_export_keys:
-                ret = gpg.export_key("xxxxxxxxxxxxxxxx")
+                ret = gpg.export_key("xxxxxxxxxxxxxxxx", bare=True)
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
                     ["xxxxxxxxxxxxxxxx"],
@@ -514,9 +587,46 @@ def test_export_key_without_passphrase(gpghome):
                 )
 
 
-def test_export_multiple_keys_without_passphrase(gpghome):
+def test_export_public_key_to_file(gpghome):
     """
-    Test gpg.export_key with multiple keys and without passphrase
+    Test gpg.export_key output public key to file
+    """
+
+    _user_mock = {
+        "shell": "/bin/bash",
+        "workphone": "",
+        "uid": 0,
+        "passwd": "x",
+        "roomnumber": "",
+        "gid": 0,
+        "groups": ["root"],
+        "home": str(gpghome.path),
+        "fullname": "root",
+        "homephone": "",
+        "name": "root",
+    }
+
+    exported_keyfile = gpghome.path / "exported_pub_key"
+    mock_opt = MagicMock(return_value="root")
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+
+    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
+        with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+            with patch(
+                "salt.modules.gpg.gnupg.GPG.export_keys",
+                MagicMock(return_value=GPG_TEST_PUB_KEY),
+            ) as gnupg_export_keys:
+                ret = gpg.export_key(
+                    keyids="xxxxxxxxxxxxxxxx", output=exported_keyfile, bare=True
+                )
+                assert ret == GPG_TEST_PUB_KEY
+                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
+                assert keyfile_contents == GPG_TEST_PUB_KEY
+
+
+def test_export_multiple_public_keys(gpghome):
+    """
+    Test gpg.export_key with multiple public keys
     """
 
     _user_mock = {
@@ -541,7 +651,8 @@ def test_export_multiple_keys_without_passphrase(gpghome):
                 MagicMock(return_value=GPG_TEST_PUB_KEY),
             ) as gnupg_export_keys:
                 ret = gpg.export_key(
-                    "xxxxxxxxxxxxxxxx,yyyyyyyyyyyyyyyy,zzzzzzzzzzzzzzzz"
+                    "xxxxxxxxxxxxxxxx,yyyyyyyyyyyyyyyy,zzzzzzzzzzzzzzzz",
+                    bare=True,
                 )
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
@@ -551,43 +662,9 @@ def test_export_multiple_keys_without_passphrase(gpghome):
                 )
 
 
-def test_export_key_with_passphrase_without_gpg_passphrase_in_pillar(gpghome):
+def test_export_secret_key_with_gpg_passphrase_in_pillar(gpghome):
     """
-    Test gpg.export_key with passphrase but without gpg_passphrase pillar
-    """
-
-    _user_mock = {
-        "shell": "/bin/bash",
-        "workphone": "",
-        "uid": 0,
-        "passwd": "x",
-        "roomnumber": "",
-        "gid": 0,
-        "groups": ["root"],
-        "home": str(gpghome.path),
-        "fullname": "root",
-        "homephone": "",
-        "name": "root",
-    }
-
-    mock_opt = MagicMock(return_value="root")
-    pillar_mock = MagicMock(return_value=None)
-    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
-        with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
-            gpg.__salt__, {"pillar.get": pillar_mock}
-        ):
-            with patch(
-                "salt.modules.gpg.gnupg.GPG.export_keys",
-                MagicMock(return_value=GPG_TEST_PUB_KEY),
-            ) as gnupg_export_keys:
-                with pytest.raises(SaltInvocationError):
-                    assert gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
-                gnupg_export_keys.assert_not_called()
-
-
-def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
-    """
-    Test gpg.export_key with passphrase and gpg_passphrase pillar
+    Test gpg.export_key with secret key and gpg_passphrase in pillar
     """
 
     _user_mock = {
@@ -612,15 +689,64 @@ def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
         ):
             with patch(
                 "salt.modules.gpg.gnupg.GPG.export_keys",
-                MagicMock(return_value=GPG_TEST_PUB_KEY),
+                MagicMock(return_value=GPG_TEST_PRIV_KEY),
             ) as gnupg_export_keys:
-                ret = gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
-                assert ret == GPG_TEST_PUB_KEY
+                ret = gpg.export_key(
+                    "xxxxxxxxxxxxxxxx", secret=True, use_passphrase=True, bare=True
+                )
+                assert ret == GPG_TEST_PRIV_KEY
                 gnupg_export_keys.assert_called_with(
                     ["xxxxxxxxxxxxxxxx"],
-                    False,
+                    True,
                     passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
+
+
+def test_export_secret_key_to_file_with_gpg_passphrase_in_pillar(gpghome):
+    """
+    Test gpg.export_key output secret key to file with gpg_passphrase in pillar
+    """
+
+    _user_mock = {
+        "shell": "/bin/bash",
+        "workphone": "",
+        "uid": 0,
+        "passwd": "x",
+        "roomnumber": "",
+        "gid": 0,
+        "groups": ["root"],
+        "home": str(gpghome.path),
+        "fullname": "root",
+        "homephone": "",
+        "name": "root",
+    }
+
+    exported_keyfile = gpghome.path / "exported_priv_key"
+    mock_opt = MagicMock(return_value="root")
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+    with patch.dict(gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}):
+        with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
+            gpg.__salt__, {"pillar.get": pillar_mock}
+        ):
+            with patch(
+                "salt.modules.gpg.gnupg.GPG.export_keys",
+                MagicMock(return_value=GPG_TEST_PRIV_KEY),
+            ) as gnupg_export_keys:
+                ret = gpg.export_key(
+                    keyids="xxxxxxxxxxxxxxxx",
+                    secret=True,
+                    output=exported_keyfile,
+                    use_passphrase=True,
+                    bare=True,
+                )
+                assert ret == GPG_TEST_PRIV_KEY
+                gnupg_export_keys.assert_called_with(
+                    ["xxxxxxxxxxxxxxxx"],
+                    True,
+                    passphrase=GPG_TEST_KEY_PASSPHRASE,
+                )
+                keyfile_contents = pathlib.Path(exported_keyfile).read_text()
+                assert keyfile_contents == GPG_TEST_PRIV_KEY
 
 
 def test_create_key_without_passphrase(gpghome):
@@ -784,24 +910,117 @@ def test_gpg_import_priv_key(gpghome):
 
 
 def test_gpg_sign(gpghome):
+    """
+    Test gpg.sign
+    """
+
     config_user = MagicMock(return_value="salt")
     user_info = MagicMock(
         return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
     )
-    pillar_mock = MagicMock(return_value={"gpg_passphrase": GPG_TEST_KEY_PASSPHRASE})
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
     with patch.dict(gpg.__salt__, {"config.option": config_user}):
         with patch.dict(gpg.__salt__, {"user.info": user_info}):
             with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
-                ret = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
-                assert ret["res"] is True
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
                 gpg_text_input = "The quick brown fox jumped over the lazy dog"
-                gpg_sign_output = gpg.sign(
-                    config_user,
-                    GPG_TEST_KEY_ID,
-                    gpg_text_input,
-                    None,
-                    None,
-                    True,
-                    str(gpghome.path),
+                ret = gpg.sign(
+                    keyid=GPG_TEST_KEY_ID,
+                    text=gpg_text_input,
+                    use_passphrase=True,
+                    gnupghome=str(gpghome.path),
                 )
-                assert gpg_sign_output is not None
+                assert "-----BEGIN PGP SIGNATURE-----" in str(ret)
+
+
+def test_gpg_encrypt_message(gpghome):
+    """
+    Test gpg.encrypt
+    """
+
+    config_user = MagicMock(return_value="salt")
+
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
+    )
+    with patch.dict(gpg.__salt__, {"config.option": config_user}):
+        with patch.dict(gpg.__salt__, {"user.info": user_info}):
+            key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+            assert key["res"] is True
+            gpg_text_input = "The quick brown fox jumped over the lazy dog"
+            ret = gpg.encrypt(
+                recipients=GPG_TEST_KEY_ID,
+                text=gpg_text_input,
+                use_passphrase=True,
+                always_trust=True,
+                gnupghome=str(gpghome.path),
+            )
+            assert ret["res"] is True
+
+
+def test_gpg_encrypt_and_sign_message_with_gpg_passphrase_in_pillar(gpghome):
+    """
+    Test gpg.encrypt sign message with passphrase and gpg_passphrase in pillar
+    """
+
+    config_user = MagicMock(return_value="salt")
+
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
+    )
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+    with patch.dict(gpg.__salt__, {"config.option": config_user}):
+        with patch.dict(gpg.__salt__, {"user.info": user_info}):
+            with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
+                gpg_text_input = "The quick brown fox jumped over the lazy dog"
+                ret = gpg.encrypt(
+                    recipients=GPG_TEST_KEY_ID,
+                    text=gpg_text_input,
+                    sign=True,
+                    use_passphrase=True,
+                    always_trust=True,
+                    gnupghome=str(gpghome.path),
+                )
+                assert ret["res"] is True
+
+
+def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
+    """
+    Test gpg.decrypt with passphrase and gpg_passphrase in pillar
+    """
+
+    gpg_encrypted_message = """-----BEGIN PGP MESSAGE-----
+    hQGMA7z9rKs9ZvTOAQwAnMbwchCm1VXOD+Ml0rnNrhDhsRm+6O96FOq5lWY0ntkj
+    vnXeFOgUf0wzK4hkQT/Yo4/ZpDkV3iwwSIjesqNDS1U/KWfbe2pFeph6w9fHFnXf
+    e8RJY8OGJHN8A9TlCIyKDVKGoXZEcSDZ4K0fNL/OxF3LxsSjJ894F+e2MCnoQZgq
+    3uxQFYb9Gec8iPpBcd7s74J8cX1To9rBKRNSP73NRwVvKbPgB0NjzrLVPmqHGO7Q
+    wFf9tZdGYmxV/AB9H0gCUITBCwnndissVqFpjUpVEIL1jOBus73oiL9Grn5QlZic
+    wDOZyKDlWR15jiiDaWvq4ES6O0j2Oj/FodItJhTbzeXEFOxn7cNbW2kAAc08Hs1u
+    zPI2LywaCSM/IOxrRI8n/ExXxtU0k48827AWTLYmhm+vDct7gQHEJ8Qu3/d5FsP/
+    f1qWrtl+E7TpIIlUIgtPL596LYiwQLisqh1JeqqleSnBESIzgg7teolYdYED606z
+    j9a1oTUHvSnKz6Q5Yh850mYBCBc/iEn0gJBgseGK6rXJF54f5duybkuTKrV+7hUd
+    euy/+K0mnQWPS0G9NhCdQAaydNBZywOyQU6Yv1gPHapRrHOkhZq51sBKmZRGdqH/
+    llX+Wd7pUetBV+vmZp75l8q9CNVpefA=
+    =WXYF
+    -----END PGP MESSAGE-----
+    """
+
+    config_user = MagicMock(return_value="salt")
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(gpghome.path), "uid": 1000}
+    )
+    pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+    with patch.dict(gpg.__salt__, {"config.option": config_user}):
+        with patch.dict(gpg.__salt__, {"user.info": user_info}):
+            with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
+                key = gpg.import_key(None, str(gpghome.priv), "salt", str(gpghome.path))
+                assert key["res"] is True
+                ret = gpg.decrypt(
+                    text=gpg_encrypted_message,
+                    use_passphrase=True,
+                    gnupghome=str(gpghome.path),
+                )
+                assert ret["res"] is True

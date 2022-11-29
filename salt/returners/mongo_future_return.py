@@ -178,17 +178,15 @@ def _get_conn(ret):
         mdb = conn.get_database()
     else:
         if PYMONGO_VERSION > _LooseVersion("2.3"):
-            conn = pymongo.MongoClient(host, port)
+            conn = pymongo.MongoClient(host, port, username=user, password=password)
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(
                     "pymongo <= 2.3 does not support uri format"
                 )
-            conn = pymongo.Connection(host, port)
+            conn = pymongo.Connection(host, port, username=user, password=password)
 
         mdb = conn[db_]
-        if user and password:
-            mdb.authenticate(user, password)
 
     if indexes:
         if PYMONGO_VERSION > _LooseVersion("2.3"):

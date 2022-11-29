@@ -136,6 +136,7 @@ from xml.etree import ElementTree
 from xml.sax import saxutils
 
 import jinja2.exceptions
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -911,26 +912,12 @@ def _handle_unit(s, def_unit="m"):
     """
     Handle the unit conversion, return the value in bytes
     """
-    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(s).strip())
-    value = m.group("value")
-    # default unit
-    unit = m.group("unit").lower() or def_unit
-    try:
-        value = int(value)
-    except ValueError:
-        try:
-            value = float(value)
-        except ValueError:
-            raise SaltInvocationError("invalid number")
-    # flag for base ten
-    dec = False
-    if re.match(r"[kmgtpezy]b$", unit):
-        dec = True
-    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
-        raise SaltInvocationError("invalid units")
-    p = "bkmgtpezy".index(unit[0])
-    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
-    return int(value)
+    ret = salt.utils.stringutils.human_to_bytes(
+        s, default_unit=def_unit, handle_metric=True
+    )
+    if ret == 0:
+        raise SaltInvocationError("invalid number or unit")
+    return ret
 
 
 def nesthash(value=None):
@@ -3511,6 +3498,7 @@ def update(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    autostart=False,
     **kwargs
 ):
     """
@@ -3705,6 +3693,10 @@ def update(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3772,6 +3764,7 @@ def update(
             **kwargs
         )
     )
+    set_autostart(name, "on" if autostart else "off")
 
     if clock:
         offset = "utc" if clock.get("utc", True) else "localtime"
@@ -5576,8 +5569,8 @@ def set_autostart(vm_, state="on", **kwargs):
     system on reboot.
 
     :param vm_: domain name
-    :param state: 'on' to auto start the pool, anything else to mark the
-                  pool not to be started when the host boots
+    :param state: 'on' to auto start the VM, 'off' to mark the VM not to be
+                  started when the host boots
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -5792,7 +5785,6 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
-    sysctl_cmd = "sysctl hw.vmm.create"
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(

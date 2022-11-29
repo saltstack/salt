@@ -1494,7 +1494,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 60b4622 Merge pull request `#50366`_ from jdsieci/2018.3-fix-issue50254
 
-  * a9b9fa2 Fixed pylint warnigs
+  * a9b9fa2 Fixed pylint warnings
 
   * 342786b Issue `#50254`_ fixed
 
@@ -1849,7 +1849,7 @@ Changelog for v2018.3.3..v2018.3.4
   * 77e8dcc On later versions of elementary, the os_family is being populated as elementary.
     In order for the aptpkg module to function, we need to override is to be Debian.
 
-* **ISSUE** `#50311`_: (`marek-obuchowicz`_) pkg.installed state fails even though it suceeded (refs: `#50590`_, `#50333`_)
+* **ISSUE** `#50311`_: (`marek-obuchowicz`_) pkg.installed state fails even though it succeeded (refs: `#50590`_, `#50333`_)
 
 * **ISSUE** `#46689`_: (`mxork`_) pkg.installed: hold: True not applied to a package which is already installed. (refs: `#48426`_)
 
@@ -2471,7 +2471,7 @@ Changelog for v2018.3.3..v2018.3.4
 
     * f28a4fa Merge pull request `#50211`_ from channias/fix-spm-modules-install
 
-      * 9b203d5 Fix broken install of additionnal modules in SPM packages
+      * 9b203d5 Fix broken install of additional modules in SPM packages
 
     * 6b4e07b Merge pull request `#50212`_ from dwoz/test_no_fail
 
@@ -3205,7 +3205,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * eee82d3 Merge pull request `#49875`_ from dwoz/win_spm_tests
 
-  * e76a751 Use os.path.split for more consistancy
+  * e76a751 Use os.path.split for more consistency
 
   * bc54d15 Fix wart in spm on windows
 
@@ -3266,7 +3266,7 @@ Changelog for v2018.3.3..v2018.3.4
 
     * 9ef9206 Actually catch the exception when we fail
 
-            * 19072f0 Use os.path.split for more consistancy
+            * 19072f0 Use os.path.split for more consistency
 
             * 6c22459 Merge remote-tracking branch 'origin/shelltests' into shelltests
 
@@ -3404,13 +3404,13 @@ Changelog for v2018.3.3..v2018.3.4
 * **PR** `#49846`_: (`rallytime`_) Back-port `#49650`_ and `#49827`_ to 2018.3
   @ *2018-10-01 20:05:24 UTC*
 
-  * **PR** `#49827`_: (`dgmorrisjr`_) fixing mis-spelling of lattrs in file.py, referncing `#49204`_  (refs: `#49846`_)
+  * **PR** `#49827`_: (`dgmorrisjr`_) fixing mis-spelling of lattrs in file.py, referencing `#49204`_  (refs: `#49846`_)
 
   * **PR** `#49650`_: (`Yxnt`_) fix aliyun cloud typeerror (refs: `#49846`_)
 
   * 93d064a Merge pull request `#49846`_ from rallytime/bp-49650
 
-  * fb7fed7 referncing `#49204`_, fixing mis-spelling of lattrs on line 4514 per request from @gtmanfred
+  * fb7fed7 referencing `#49204`_, fixing mis-spelling of lattrs on line 4514 per request from @gtmanfred
 
   * ec9fa92 use stringutils instead of hard code
 
@@ -3431,7 +3431,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 44ee2ec Updating default for retry_dns_count
 
-  * 75f64a6 Removing unneccesary code.
+  * 75f64a6 Removing unnecessary code.
 
   * e66dc18 Updating the resolve_dns function in minion.py to include a new minion configuration option which will control how many attempts will be made when the master hostname is unable to be resolved before giving up.
 
@@ -3691,7 +3691,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * d40c034 Fix index error when running on Python 3
 
-* **PR** `#49720`_: (`cstarke`_) Seperate prlctl and prlsrvctl checks into each requiring function
+* **PR** `#49720`_: (`cstarke`_) Separate prlctl and prlsrvctl checks into each requiring function
   @ *2018-09-21 13:32:46 UTC*
 
   * e7bbb83 Merge pull request `#49720`_ from cstarke/2018.3
@@ -3704,7 +3704,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 9034c4e Add import for CommandExecutionError
 
-  * 752b6f8 Seperate prlctl and prlsrvctl checks into each requiring function
+  * 752b6f8 Separate prlctl and prlsrvctl checks into each requiring function
 
 * **PR** `#49615`_: (`terminalmage`_) ping_interval: use service.restart instead of signaling
   @ *2018-09-21 13:26:41 UTC*

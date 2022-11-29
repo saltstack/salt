@@ -8,7 +8,7 @@ import logging
 import os
 
 import pytest
-import salt.config
+
 import salt.loader
 
 # dateutils is needed so that the strftime jinja filter is loaded
@@ -50,9 +50,8 @@ class MockFileClient:
 
 
 @pytest.fixture
-def minion_opts(tmp_path):
-    _opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    _opts.update(
+def minion_opts(tmp_path, minion_opts):
+    minion_opts.update(
         {
             "cachedir": str(tmp_path),
             "file_buffer_size": 1048576,
@@ -68,7 +67,7 @@ def minion_opts(tmp_path):
             ),
         }
     )
-    return _opts
+    return minion_opts
 
 
 @pytest.fixture

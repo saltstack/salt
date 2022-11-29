@@ -1,16 +1,16 @@
 import pytest
-import salt.config
+from pytestshellutils.utils.processes import terminate_process
+
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-from saltfactories.utils.processes import terminate_process
 
 
 @pytest.mark.slow_test
-def test_event_return():
+def test_event_return(master_opts):
     evt = None
     try:
-        evt = salt.utils.event.EventReturn(salt.config.DEFAULT_MASTER_OPTS.copy())
+        evt = salt.utils.event.EventReturn(master_opts)
         evt.start()
     except TypeError as exc:
         if "object" in str(exc):

@@ -333,7 +333,7 @@ def zone_compare(timezone):
 
     .. note::
 
-        On Solaris-link operating systems only a string comparison is done.
+        On Solaris-like operating systems only a string comparison is done.
 
     .. versionchanged:: 2016.11.4
 
@@ -350,7 +350,7 @@ def zone_compare(timezone):
     if "Solaris" in __grains__["os_family"] or "AIX" in __grains__["os_family"]:
         return timezone == get_zone()
 
-    if "FreeBSD" in __grains__["os_family"]:
+    if "Arch" in __grains__["os_family"] or "FreeBSD" in __grains__["os_family"]:
         if not os.path.isfile(_get_localtime_path()):
             return timezone == get_zone()
 

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 from salt.cloud.clouds import hetzner
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 from tests.support.mock import MagicMock, patch

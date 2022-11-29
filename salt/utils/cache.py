@@ -142,10 +142,21 @@ class CacheDisk(CacheDict):
         """
         if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
             return
-        with salt.utils.files.fopen(self._path, "rb") as fp_:
-            cache = salt.utils.data.decode(
-                salt.utils.msgpack.load(fp_, encoding=__salt_system_encoding__)
-            )
+
+        try:
+            with salt.utils.files.fopen(self._path, "rb") as fp_:
+                cache = salt.utils.msgpack.load(
+                    fp_, encoding=__salt_system_encoding__, raw=False
+                )
+        except FileNotFoundError:
+            # File was deleted after os.path.exists call above, treat as empty cache
+            return
+        except (salt.utils.msgpack.exceptions.UnpackException, ValueError) as exc:
+            # File is unreadable, treat as empty cache
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("Error reading cache file at %r: %s", self._path, exc)
+            return
+
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
@@ -170,7 +181,7 @@ class CacheDisk(CacheDict):
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time,
             }
-            salt.utils.msgpack.dump(cache, fp_, use_bin_type=True)
+            salt.utils.msgpack.dump(cache, fp_)
 
 
 class CacheCli:
@@ -203,14 +214,14 @@ class CacheCli:
         """
         published the given minions to the ConCache
         """
-        self.cupd_out.send(salt.payload.dumps(minions))
+        self.cupd_out.send(salt.payload.dumps(minions), track=False)
 
     def get_cached(self):
         """
         queries the ConCache for a list of currently connected minions
         """
         msg = salt.payload.dumps("minions")
-        self.creq_out.send(msg)
+        self.creq_out.send(msg, track=False)
         min_list = salt.payload.loads(self.creq_out.recv())
         return min_list
 

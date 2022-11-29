@@ -19,6 +19,7 @@ For PagerDuty API details, see https://developer.pagerduty.com/documentation/res
 """
 
 import requests
+
 import salt.utils.json
 
 
@@ -336,7 +337,7 @@ def create_or_update_resource(
                 resource_value = resource.get(k, None)
                 if resource_value is not None and resource_value != v:
                     data_to_update[k] = v
-        if len(data_to_update) > 0:
+        if data_to_update:
             if __opts__["test"]:
                 return "would update"
             # flush the resource_cache, because we're modifying a resource

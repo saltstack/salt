@@ -5,7 +5,7 @@ Unit tests for the docker module
 import logging
 
 import pytest
-import salt.config
+
 import salt.loader
 import salt.modules.dockermod as docker_mod
 import salt.utils.platform
@@ -20,9 +20,9 @@ pytest.importorskip(
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
     utils = salt.loader.utils(
-        salt.config.DEFAULT_MINION_OPTS.copy(),
+        minion_opts,
         whitelist=[
             "args",
             "docker",

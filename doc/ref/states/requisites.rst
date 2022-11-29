@@ -60,73 +60,6 @@ Requisites typically need two pieces of information for matching:
           - pkg: nginx
           - file: /etc/nginx/nginx.conf
 
-Glob matching in requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 0.9.8
-
-Glob matching is supported in requisites. This is mostly useful for file
-changes. In the example below, a change in ``/etc/apache2/httpd.conf`` or
-``/etc/apache2/sites-available/default.conf`` will reload/restart the service:
-
-.. code-block:: yaml
-
-    apache2:
-      service.running:
-        - watch:
-          - file: /etc/apache2/*
-
-Omitting state module in requisites
------------------------------------
-
-.. versionadded:: 2016.3.0
-
-In version 2016.3.0, the state module name was made optional. If the state module
-is omitted, all states matching the ID will be required, regardless of which
-module they are using.
-
-.. code-block:: yaml
-
-    - require:
-      - vim
-
-State target matching
-~~~~~~~~~~~~~~~~~~~~~
-
-In order to understand how state targets are matched, it is helpful to know
-:ref:`how the state compiler is working <compiler-ordering>`. Consider the following
-example:
-
-.. code-block:: yaml
-
-    Deploy server package:
-      file.managed:
-        - name: /usr/local/share/myapp.tar.xz
-        - source: salt://myapp.tar.xz
-
-    Extract server package:
-      archive.extracted:
-        - name: /usr/local/share/myapp
-        - source: /usr/local/share/myapp.tar.xz
-        - archive_format: tar
-        - onchanges:
-          - file: Deploy server package
-
-The first formula is converted to a dictionary which looks as follows (represented
-as YAML, some properties omitted for simplicity) as `High Data`:
-
-.. code-block:: yaml
-
-    Deploy server package:
-      file:
-        - managed
-        - name: /usr/local/share/myapp.tar.xz
-        - source: salt://myapp.tar.xz
-
-The ``file.managed`` format used in the formula is essentially syntactic sugar:
-at the end, the target is ``file``, which is used in the ``Extract server package``
-state above.
-
 Identifier matching
 ~~~~~~~~~~~~~~~~~~~
 
@@ -151,13 +84,47 @@ so either of the following versions for "Extract server package" is correct:
         - onchanges:
           - file: /usr/local/share/myapp.tar.xz
 
-Omitting state module in requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Wildcard matching in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.9.8
+
+Wildcard matching is supported for state identifiers.
+
+* ``*`` matches zero or more characters
+* ``?`` matches a single character
+* ``[]`` matches a single character from the enclosed set 
+
+Note that this does not follow glob rules - dots and slashes are not special, 
+and it is matching against state identifiers, not file paths.
+
+In the example below, a change in any state managing an apache config file 
+will reload/restart the service:
+
+.. code-block:: yaml
+
+    apache2:
+      service.running:
+        - watch:
+          - file: /etc/apache2/*
+
+A leading or bare ``*`` must be quoted to avoid confusion with YAML references:
+
+.. code-block:: yaml
+
+    /etc/letsencrypt/renewal-hooks/deploy/install.sh:
+      cmd.run:
+        - onchanges:
+          - acme: '*'
+
+
+Omitting state module
+~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 2016.3.0
 
 In version 2016.3.0, the state module name was made optional. If the state module
-is omitted, all states matching the ID will be required, regardless of which
+is omitted, all states matching the identifier will be required, regardless of which
 module they are using.
 
 .. code-block:: yaml
@@ -165,10 +132,11 @@ module they are using.
     - require:
       - vim
 
+
 Requisites Types
 ----------------
 
-All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`_in <requisites-in>` form:
 
 * :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
 * :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
@@ -185,8 +153,10 @@ Several requisite types have a corresponding :ref:`requisite_any <requisites-any
 * ``onchanges_any``
 * ``onfail_any``
 
-Lastly, onfail has one special ``onfail_all`` form to account for when `AND`
-logic is desired instead of the default `OR` logic of onfail/onfail_any (which
+There is no combined form of :ref:`_any <requisites-any>` and :ref:`_in <requisites-in>` requisites, such as ``require_any_in``!
+
+Lastly, onfail has one special ``onfail_all`` form to account for when ``AND``
+logic is desired instead of the default ``OR`` logic of onfail/onfail_any (which
 are equivalent).
 
 All requisites define specific relationships and always work with the dependency
@@ -797,8 +767,8 @@ from ``all()`` to ``any()``.
       cmd.run:
         - name: /bin/false
 
-In this example `A` will run because at least one of the requirements specified,
-`B` or `C`, will succeed.
+In this example ``A`` will run because at least one of the requirements specified,
+``B`` or ``C``, will succeed.
 
 .. code-block:: yaml
 
@@ -1118,9 +1088,9 @@ Check Command is used for determining that a state did or did not run as
 expected.
 
 **NOTE**: Under the hood ``check_cmd`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
-parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+``python_shell=True``. This means the command will be parsed by a shell, so
+beware of side-effects as this shell will be run with the same privileges as
+the salt-minion.
 
 .. code-block:: yaml
 
@@ -1299,3 +1269,22 @@ times with a 2 second interval, but the file specified did not exist on any run)
      Started: 09:08:12.903000
     Duration: 47000.0 ms
      Changes:
+
+Run State With a Different Umask
+================================
+
+.. versionadded:: 3002
+   NOTE: not available on Windows
+
+The ``umask`` state argument can be used to run a state with a different umask.
+Prior to version 3002 this was available to :mod:`cmd <salt.states.cmd>`
+states, but it is now a global state argument that can be applied to any state.
+
+.. code-block:: yaml
+
+    cleanup_script:
+      cmd.script:
+        - name: salt://myapp/files/my_script.sh
+        - umask: "077"
+        - onchanges:
+          - file: /some/file

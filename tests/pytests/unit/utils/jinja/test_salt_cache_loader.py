@@ -6,24 +6,21 @@ import copy
 import os
 
 import pytest
-import salt.config
-import salt.loader
+from jinja2 import Environment, exceptions
 
 # dateutils is needed so that the strftime jinja filter is loaded
 import salt.utils.dateutils  # pylint: disable=unused-import
-import salt.utils.files
-import salt.utils.json
-import salt.utils.stringutils
-import salt.utils.yaml
-from jinja2 import Environment, exceptions
+import salt.utils.files  # pylint: disable=unused-import
+import salt.utils.json  # pylint: disable=unused-import
+import salt.utils.stringutils  # pylint: disable=unused-import
+import salt.utils.yaml  # pylint: disable=unused-import
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import Mock, patch
 
 
 @pytest.fixture
-def minion_opts(tmp_path):
-    _opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    _opts.update(
+def minion_opts(tmp_path, minion_opts):
+    minion_opts.update(
         {
             "file_buffer_size": 1048576,
             "cachedir": str(tmp_path),
@@ -34,7 +31,7 @@ def minion_opts(tmp_path):
             ),
         }
     )
-    return _opts
+    return minion_opts
 
 
 @pytest.fixture
@@ -110,6 +107,7 @@ def get_loader(mock_file_client, minion_opts):
         """
         if opts is None:
             opts = minion_opts
+        mock_file_client.opts = opts
         loader = SaltCacheLoader(opts, saltenv, _file_client=mock_file_client)
         # Create a mock file client and attach it to the loader
         return loader
@@ -176,8 +174,8 @@ def test_relative_import(
     result = tmpl.render()
     assert result == "Hey world !a b !"
     assert len(fc.requests) == 3
-    assert fc.requests[0]["path"] == os.path.join("salt://relative", "rhello")
-    assert fc.requests[1]["path"] == os.path.join("salt://relative", "rmacro")
+    assert fc.requests[0]["path"] == "salt://relative/rhello"
+    assert fc.requests[1]["path"] == "salt://relative/rmacro"
     assert fc.requests[2]["path"] == "salt://macro"
     # This must fail when rendered: attempts to import from outside file root
     template = jinja.get_template("relative/rescape")
@@ -221,6 +219,7 @@ def test_file_client_kwarg(minion_opts, mock_file_client):
     A file client can be passed to SaltCacheLoader overriding the any
     cached file client
     """
+    mock_file_client.opts = minion_opts
     loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
     assert loader._file_client is mock_file_client
 
@@ -231,6 +230,7 @@ def test_cache_loader_shutdown(minion_opts, mock_file_client):
     file_client does not have a destroy method
     """
     assert not hasattr(mock_file_client, "destroy")
+    mock_file_client.opts = minion_opts
     loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
     assert loader._file_client is mock_file_client
     # Shutdown method should not raise any exceptions

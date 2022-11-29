@@ -94,6 +94,7 @@ example.
 import logging
 import re
 import sys
+from functools import wraps
 
 import salt.utils.files
 from salt.config.schemas.esxi import DiskGroupsDiskScsiAddressSchema, HostCacheSchema
@@ -143,6 +144,28 @@ def __virtual__():
     return (False, "esxi module could not be loaded")
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxi' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def coredump_configured(name, enabled, dump_ip, host_vnic="vmk0", dump_port=6500):
     """
     Ensures a host's core dump configuration.
@@ -279,6 +302,7 @@ def coredump_configured(name, enabled, dump_ip, host_vnic="vmk0", dump_port=6500
     return ret
 
 
+@_deprecation_message
 def password_present(name, password):
     """
     Ensures the given password is set on the ESXi host. Passwords cannot be obtained from
@@ -328,6 +352,7 @@ def password_present(name, password):
     return ret
 
 
+@_deprecation_message
 def ntp_configured(
     name,
     service_running,
@@ -510,6 +535,7 @@ def ntp_configured(
     return ret
 
 
+@_deprecation_message
 def vmotion_configured(name, enabled, device="vmk0"):
     """
     Configures a host's VMotion properties such as enabling VMotion and setting
@@ -578,6 +604,7 @@ def vmotion_configured(name, enabled, device="vmk0"):
     return ret
 
 
+@_deprecation_message
 def vsan_configured(name, enabled, add_disks_to_vsan=False):
     """
     Configures a host's VSAN properties such as enabling or disabling VSAN, or
@@ -670,6 +697,7 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
     return ret
 
 
+@_deprecation_message
 def ssh_configured(
     name,
     service_running,
@@ -886,6 +914,7 @@ def ssh_configured(
     return ret
 
 
+@_deprecation_message
 def syslog_configured(
     name,
     syslog_configs,
@@ -1053,6 +1082,7 @@ def syslog_configured(
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
+@_deprecation_message
 def diskgroups_configured(name, diskgroups, erase_disks=False):
     """
     Configures the disk groups to use for vsan.
@@ -1383,6 +1413,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
+@_deprecation_message
 def host_cache_configured(
     name,
     enabled,
@@ -1691,13 +1722,13 @@ def host_cache_configured(
                     )
                 )
             else:
-                if (existing_datastore["capacity"] / 1024.0 ** 2) < swap_size_MiB:
+                if (existing_datastore["capacity"] / 1024.0**2) < swap_size_MiB:
 
                     raise ArgumentValueError(
                         "Capacity of host cache datastore '{}' ({} MiB) is "
                         "smaller than the required swap size ({} MiB)".format(
                             existing_datastore["name"],
-                            existing_datastore["capacity"] / 1024.0 ** 2,
+                            existing_datastore["capacity"] / 1024.0**2,
                             swap_size_MiB,
                         )
                     )

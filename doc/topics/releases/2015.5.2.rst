@@ -121,7 +121,7 @@ Changelog for v2015.5.1..v2015.5.2
 
   * 02bfb254d6 Merge pull request `#24281`_ from steverweber/ipmi_docfix
 
-  * dd36f2c555 yaml formating
+  * dd36f2c555 yaml formatting
 
   * f6deef3047 include api_kg kwarg in ipmi state
 
@@ -255,7 +255,7 @@ Changelog for v2015.5.1..v2015.5.2
 
   * 608da5ef5d modules/lxc: merge resolution
 
-  * 27c4689a24 modules/lxc: more consistent comparsion
+  * 27c4689a24 modules/lxc: more consistent comparison
 
   * 07c365a23b lxc: merge conflict spotted
 
@@ -1026,7 +1026,7 @@ Changelog for v2015.5.1..v2015.5.2
 
   * 1dc67e5678 lxc: versionadded
 
-  * fcad7cb804 lxc: states improvments
+  * fcad7cb804 lxc: states improvements
 
   * 644bd729f7 lxc: more consistence for profiles
 

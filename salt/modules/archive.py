@@ -425,7 +425,15 @@ def list_(
                 "files": sorted(salt.utils.data.decode_list(files)),
                 "links": sorted(salt.utils.data.decode_list(links)),
             }
-            ret["top_level_dirs"] = [x for x in ret["dirs"] if x.count("/") == 1]
+            top_level_dirs = [x for x in ret["dirs"] if x.count("/") == 1]
+            # the common_prefix logic handles scenarios where the TLD
+            # isn't listed as an archive member on its own
+            common_prefix = os.path.commonprefix(ret["dirs"])
+            if "/" in common_prefix:
+                common_prefix = common_prefix.split("/")[0] + "/"
+                if common_prefix not in top_level_dirs:
+                    top_level_dirs.append(common_prefix)
+            ret["top_level_dirs"] = top_level_dirs
             ret["top_level_files"] = [x for x in ret["files"] if x.count("/") == 0]
             ret["top_level_links"] = [x for x in ret["links"] if x.count("/") == 0]
         else:
@@ -1085,6 +1093,12 @@ def unzip(
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue
+                    # file.extract is expecting the password to be a bytestring
+                    if password:
+                        if isinstance(password, int):
+                            password = str(password)
+                        if isinstance(password, str):
+                            password = password.encode()
                     zfile.extract(target, dest, password)
                     if extract_perms:
                         if not salt.utils.platform.is_windows():

@@ -2,7 +2,7 @@ import os
 import shutil
 
 import pytest
-import salt.config
+
 import salt.spm
 import salt.utils.files
 from tests.support.mock import MagicMock, patch
@@ -60,8 +60,8 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
 
 
 @pytest.fixture()
-def setup_spm(tmp_path):
-    minion_config = salt.config.DEFAULT_MINION_OPTS.copy()
+def setup_spm(tmp_path, minion_opts):
+    minion_config = minion_opts.copy()
     minion_config.update(
         {
             "spm_logfile": str(tmp_path / "log"),
@@ -89,7 +89,6 @@ def setup_spm(tmp_path):
     )
     ui = SPMTestUserInterface()
     client = salt.spm.SPMClient(ui, minion_config)
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     return tmp_path, ui, client, minion_config, minion_opts
 
 
@@ -160,6 +159,18 @@ def test_build_install(setup_spm, f1_content, patch_local_client):
             ):
                 client.run(["local", "install", pkgpath])
         assert len(ui._error) == 0
+
+
+def test_repo_paths(setup_spm):
+    _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
+    ui._error = []
+    with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
+        with patch(
+            "salt.client.get_local_client",
+            MagicMock(return_value=minion_opts["conf_file"]),
+        ):
+            client.run(["create_repo", "."])
+    assert len(ui._error) == 0
 
 
 def test_failure_paths(setup_spm, patch_local_client):

@@ -9,6 +9,7 @@ Tests for salt.states.zpool
 """
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.zpool as zpool
@@ -24,12 +25,11 @@ def utils_patch():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts, whitelist=["zfs"])
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts, whitelist=["zfs"])
     zpool_obj = {
         zpool: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__grains__": {"kernel": "SunOS"},
             "__utils__": utils,
         }
@@ -339,7 +339,7 @@ def test_present_update_success(utils_patch):
         "name": "myzpool",
         "result": True,
         "comment": "properties updated",
-        "changes": {"myzpool": {"autoexpand": False}},
+        "changes": {"myzpool": {"autoexpand": False, "feature@bookmarks": "enabled"}},
     }
 
     config = {
@@ -351,6 +351,8 @@ def test_present_update_success(utils_patch):
     ]
     properties = {
         "autoexpand": False,
+        "feature@hole_birth": "enabled",
+        "feature@bookmarks": "enabled",
     }
 
     mock_exists = MagicMock(return_value=True)
@@ -367,7 +369,7 @@ def test_present_update_success(utils_patch):
                 ("dedupditto", "0"),
                 ("dedupratio", "1.00x"),
                 ("autoexpand", True),
-                ("feature@bookmarks", "enabled"),
+                ("feature@bookmarks", "disabled"),
                 ("allocated", 115712),
                 ("guid", 1591906802560842214),
                 ("feature@large_blocks", "enabled"),
@@ -420,7 +422,7 @@ def test_present_update_success(utils_patch):
 
 def test_present_update_nochange_success(utils_patch):
     """
-    Test zpool present with non existing pool
+    Test zpool present with an up-to-date pool
     """
     config = {
         "import": False,
@@ -431,6 +433,8 @@ def test_present_update_nochange_success(utils_patch):
     ]
     properties = {
         "autoexpand": True,
+        "feature@hole_birth": "enabled",
+        "feature@bookmarks": "enabled",
     }
 
     mock_exists = MagicMock(return_value=True)

@@ -1,8 +1,10 @@
 """
 Tests for the win_pkg module
 """
+import logging
 
 import pytest
+
 import salt.modules.config as config
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
@@ -72,6 +74,46 @@ def test_pkg__get_reg_software():
         if search in key:
             found_python = True
     assert found_python
+
+
+def test_pkg__get_reg_software_noremove():
+    search = "test_pkg_noremove"
+    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
+    win_reg.set_value(
+        hive="HKLM", key=key, vname="NoRemove", vtype="REG_DWORD", vdata="1"
+    )
+    try:
+        result = win_pkg._get_reg_software()
+        assert isinstance(result, dict)
+        found = False
+        search = "test_pkg"
+        for item in result:
+            if search in item:
+                found = True
+        assert found is True
+    finally:
+        win_reg.delete_key_recursive(hive="HKLM", key=key)
+        assert not win_reg.key_exists(hive="HKLM", key=key)
+
+
+def test_pkg__get_reg_software_noremove_not_present():
+    search = "test_pkg_noremove_not_present"
+    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
+    try:
+        result = win_pkg._get_reg_software()
+        assert isinstance(result, dict)
+        found = False
+        for item in result:
+            if search in item:
+                found = True
+        assert found is False
+    finally:
+        win_reg.delete_key_recursive(hive="HKLM", key=key)
+        assert not win_reg.key_exists(hive="HKLM", key=key)
 
 
 def test_pkg_install_not_found():
@@ -237,6 +279,53 @@ def test_pkg_install_single_pkg():
             extra_install_flags="-e True -test_flag True",
         )
         assert "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
+
+
+def test_pkg_install_log_message(caplog):
+    """
+    test pkg.install pkg with extra_install_flags
+    """
+    ret__get_package_info = {
+        "3.03": {
+            "uninstaller": "%program.exe",
+            "reboot": False,
+            "msiexec": False,
+            "installer": "runme.exe",
+            "uninstall_flags": "/S",
+            "locale": "en_US",
+            "install_flags": "/s",
+            "full_name": "Firebox 3.03 (x86 en-US)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    with patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"firebox": "3.03"}, None]
+            ),
+            "cp.is_cached": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ), caplog.at_level(
+        logging.DEBUG
+    ):
+        win_pkg.install(
+            pkgs=["firebox"],
+            version="3.03",
+            extra_install_flags="-e True -test_flag True",
+        )
+        assert (
+            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /s /c "runme.exe" /s -e '
+            "True -test_flag True"
+        ).lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : retcode: 0" in caplog.messages
 
 
 def test_pkg_install_multiple_pkgs():
