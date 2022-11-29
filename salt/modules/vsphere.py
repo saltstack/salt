@@ -9549,7 +9549,7 @@ def _apply_serial_port(serial_device_spec, key, operation="add"):
         type_backing = vim.vm.device.VirtualSerialPort.URIBackingInfo()
         if "uri" not in serial_device_spec["backing"].keys():
             raise ValueError("vSPC proxy URI not specified in config")
-        if "uri" not in serial_device_spec["backing"].keys():
+        if "direction" not in serial_device_spec["backing"].keys():
             raise ValueError("vSPC Direction not specified in config")
         if "filename" not in serial_device_spec["backing"].keys():
             raise ValueError("vSPC Filename not specified in config")
