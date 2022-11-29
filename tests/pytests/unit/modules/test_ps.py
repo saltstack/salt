@@ -39,13 +39,38 @@ def sample_process():
         return_value=important_data,
         create=True,
     )
+    patch_exe = patch(
+        "psutil._psplatform.Process.exe",
+        return_value=important_data["name"].decode(),
+        create=True,
+    )
+    patch_oneshot = patch(
+        "psutil._psplatform.Process.oneshot",
+        return_value={
+            # These keys can be found in psutil/_psbsd.py
+            1: important_data["status"].decode(),
+            9: float(important_data["create_time"]),
+            24: important_data["name"].decode(),
+        },
+        create=True,
+    )
+    patch_kinfo = patch(
+        "psutil._psplatform.Process._get_kinfo_proc",
+        return_value={
+            # These keys can be found in psutil/_psosx.py
+            9: important_data["status"].decode(),
+            8: float(important_data["create_time"]),
+            10: important_data["name"].decode(),
+        },
+        create=True,
+    )
     patch_status = patch(
         "psutil._psplatform.Process.status", return_value=status.decode()
     )
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    with patch_stat_file, patch_status, patch_create_time:
+    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
         proc = psutil.Process(pid=42)
         proc.info = proc.as_dict(("name", "status"))
         yield proc
