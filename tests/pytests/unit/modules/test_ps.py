@@ -49,7 +49,16 @@ def sample_process():
         return_value={
             # These keys can be found in psutil/_psbsd.py
             1: important_data["status"].decode(),
+            # create
             9: float(important_data["create_time"]),
+            # user
+            14: float(important_data["create_time"]),
+            # sys
+            15: float(important_data["create_time"]),
+            # ch_user
+            16: float(important_data["create_time"]),
+            # ch_sys -- we don't really care what they are, obviously
+            17: float(important_data["create_time"]),
             24: important_data["name"].decode(),
         },
         create=True,
