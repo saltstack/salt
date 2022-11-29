@@ -84,6 +84,7 @@ jobs:
 
     - name: Run Tests
       run: |
+        ls -la salt-artifacts/salt
         sudo env SKIP_REQUIREMENTS_INSTALL=YES PATH=salt-artifacts/salt/bin:${PATH} \
           nox --force-color -e 'pytest-zeromq-3(coverage=True)' -- --color=yes \
           -vv --scripts-dir=$(pwd)/salt-artifacts/salt --run-slow --ssh-tests --run-destructive ${{ matrix.test-paths }}
