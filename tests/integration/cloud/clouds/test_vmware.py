@@ -2,6 +2,7 @@
     :codeauthor: Megan Wilhite <mwilhite@saltstack.com>
 """
 
+import logging
 import socket
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
@@ -94,26 +95,32 @@ class VMWareTest(CloudTest):
         self.assertInstanceExists(ret_val)
         self.assertDestroyInstance()
 
-    def test_instant_clone(self):
+    def test_instant_clone(self, caplog):
         """
         Tests creating Instant Clone VM
         """
         # salt-cloud -p my-instant-clone IC3
         profile_name = "vmware-test-instant-clone"
+        snaps_before = self.run_cloud(f"-f list_snapshots cloud-tests-template-base")
+        self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
+
         # create the instance
-        ret_val = self.run_cloud(
-            "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
-        )
+        with caplog.at_level(logging.INFO):
+            ret_val = self.run_cloud(
+                "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+            )
 
-        i_clone_str = "Instant Clone created successfully"
+        snaps_after = self.run_cloud(f"-f list_snapshots cloud-tests-template-base")
 
-        self.assertIn(i_clone_str, str(ret_val))
-
-        self.assertDestroyInstance()
-
-        # now clean up snapshots and make sure re get the proper response.
-        ret_val = self.run_cloud("-a remove_all_snapshots cloud-tests-instant-clone")
-
+        ret_val = self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
         s_ret_str = "Removed all snapshots"
-
         self.assertIn(s_ret_str, str(ret_val))
+
+        # This sometimes times out before it get's an IP, so we check the logs
+        if ret_val == []:
+            check_log = "Successfully completed Instantclone task"
+            self.assertIn(check_log, caplog.text)
+        else:
+            i_clone_str = "Instant Clone created successfully"
+            self.assertIn(i_clone_str, str(ret_val))
+        self.assertDestroyInstance()
