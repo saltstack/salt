@@ -59,28 +59,132 @@ def patch_file_dest(base_env_state_tree_root_dir):
 
 
 @pytest.fixture
-def all_patch_file():
-    return "salt://patches/all.patch"
+def all_patch_file(salt_master):
+    contents = """
+    diff -ur a/foo/bar/math.txt b/foo/bar/math.txt
+    --- a/foo/bar/math.txt	2018-04-09 18:43:52.883205365 -0500
+    +++ b/foo/bar/math.txt	2018-04-09 18:44:58.525061654 -0500
+    @@ -1,3 +1,3 @@
+    -Five plus five is ten
+    +5 + 5 = 10
+
+    -Four squared is sixteen
+    +4² = 16
+    diff -ur a/foo/numbers.txt b/foo/numbers.txt
+    --- a/foo/numbers.txt	2018-04-09 18:43:58.014272504 -0500
+    +++ b/foo/numbers.txt	2018-04-09 18:44:46.487905044 -0500
+    @@ -1,7 +1,7 @@
+    -one
+    -two
+     three
+    +two
+    +one
+
+    -1
+    -2
+     3
+    +2
+    +1
+    """
+    patch_filename = "all.patch"
+    with salt_master.state_tree.base.temp_file(f"patches/{patch_filename}", contents):
+        yield f"salt://patches/{patch_filename}"
 
 
 @pytest.fixture
-def numbers_patch_file():
-    return "salt://patches/numbers.patch"
+def numbers_patch_file(salt_master):
+    contents = """
+    --- a/foo/numbers.txt	2018-04-09 18:43:58.014272504 -0500
+    +++ b/foo/numbers.txt	2018-04-09 18:44:46.487905044 -0500
+    @@ -1,7 +1,7 @@
+    -one
+    -two
+     three
+    +two
+    +one
+
+    -1
+    -2
+     3
+    +2
+    +1
+    """
+    patch_filename = "numbers.patch"
+    with salt_master.state_tree.base.temp_file(f"patches/{patch_filename}", contents):
+        yield f"salt://patches/{patch_filename}"
 
 
 @pytest.fixture
-def math_patch_file():
-    return "salt://patches/math.patch"
+def math_patch_file(salt_master):
+    contents = """
+    --- a/foo/bar/math.txt	2018-04-09 18:43:52.883205365 -0500
+    +++ b/foo/bar/math.txt	2018-04-09 18:44:58.525061654 -0500
+    @@ -1,3 +1,3 @@
+    -Five plus five is ten
+    +5 + 5 = 10
+
+    -Four squared is sixteen
+    +4² = 16
+    """
+    patch_filename = "math.patch"
+    with salt_master.state_tree.base.temp_file(f"patches/{patch_filename}", contents):
+        yield f"salt://patches/{patch_filename}"
 
 
 @pytest.fixture
-def numbers_patch_template():
-    return "salt://patches/numbers.patch.jinja"
+def numbers_patch_template(salt_master):
+    contents = """
+    --- a/foo/numbers.txt	2018-04-09 18:43:58.014272504 -0500
+    +++ b/foo/numbers.txt	2018-04-09 18:44:46.487905044 -0500
+    @@ -1,7 +1,7 @@
+    -one
+    -two
+     three
+    +{{ two }}
+    +one
+
+    -1
+    -2
+     3
+    +2
+    +1
+    """
+    patch_filename = "numbers.patch.jinja"
+    with salt_master.state_tree.base.temp_file(f"patches/{patch_filename}", contents):
+        yield f"salt://patches/{patch_filename}"
 
 
 @pytest.fixture
-def all_patch_template():
-    return "salt://patches/all.patch.jinja"
+def all_patch_template(salt_master):
+    contents = """
+    diff -ur a/foo/bar/math.txt b/foo/bar/math.txt
+    --- a/foo/bar/math.txt	2018-04-09 18:43:52.883205365 -0500
+    +++ b/foo/bar/math.txt	2018-04-09 18:44:58.525061654 -0500
+    @@ -1,3 +1,3 @@
+    -Five plus five is ten
+    +5 + 5 = {{ ten }}
+
+    -Four squared is sixteen
+    +4² = 16
+    diff -ur a/foo/numbers.txt b/foo/numbers.txt
+    --- a/foo/numbers.txt	2018-04-09 18:43:58.014272504 -0500
+    +++ b/foo/numbers.txt	2018-04-09 18:44:46.487905044 -0500
+    @@ -1,7 +1,7 @@
+    -one
+    -two
+     three
+    +{{ two }}
+    +one
+
+    -1
+    -2
+     3
+    +2
+    +1
+    """
+    patch_filename = "all.patch.jinja"
+    with salt_master.state_tree.base.temp_file(f"patches/{patch_filename}", contents):
+        yield f"salt://patches/{patch_filename}"
 
 
 @pytest.fixture(scope="module")
