@@ -35,30 +35,28 @@ def present(
     name, keys=None, user=None, keyserver=None, gnupghome=None, trust=None, **kwargs
 ):
     """
-    Ensure GPG public key is present in keychain
+    Ensure a GPG public key is present in the GPG keychain.
 
     name
-        The unique name or keyid for the GPG public key.
+        The key ID of the GPG public key.
 
     keys
-        The keyId or keyIds to add to the GPG keychain.
+        The key ID or key IDs to add to the GPG keychain.
 
     user
-        Add GPG keys to the specified user's keychain
+        Add GPG keys to the specified user's keychain.
 
     keyserver
         The keyserver to retrieve the keys from.
 
     gnupghome
-        Override GNUPG Home directory
+        Override GnuPG home directory.
 
     trust
         Trust level for the key in the keychain,
-        ignored by default.  Valid trust levels:
+        ignored by default. Valid trust levels:
         expired, unknown, not_trusted, marginally,
         fully, ultimately
-
-
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
@@ -160,20 +158,19 @@ def present(
 
 def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
     """
-    Ensure GPG public key is absent in keychain
+    Ensure a GPG public key is absent from the keychain.
 
     name
-        The unique name or keyid for the GPG public key.
+        The key ID of the GPG public key.
 
     keys
-        The keyId or keyIds to add to the GPG keychain.
+        The key ID or key IDs to remove from the GPG keychain.
 
     user
-        Remove GPG keys from the specified user's keychain
+        Remove GPG keys from the specified user's keychain.
 
     gnupghome
-        Override GNUPG Home directory
-
+        Override GnuPG home directory.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
