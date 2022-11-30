@@ -82,6 +82,15 @@ def present(
             if trust:
                 if trust in _VALID_TRUST_VALUES:
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:
+                        if __opts__["test"]:
+                            ret["result"] = None
+                            ret["comment"].append(
+                                f"Would have set trust level for {key} to {trust}"
+                            )
+                            salt.utils.dictupdate.set_dict_key_value(
+                                ret, f"changes:{key}:trust", trust
+                            )
+                            continue
                         # update trust level
                         result = __salt__["gpg.trust_key"](
                             keyid=key,
@@ -108,6 +117,13 @@ def present(
             ret["comment"].append(f"GPG Public Key {key} already in keychain")
 
         else:
+            if __opts__["test"]:
+                ret["result"] = None
+                ret["comment"].append(f"Would have added {key} to GPG keychain")
+                salt.utils.dictupdate.set_dict_key_value(
+                    ret, f"changes:{key}:added", True
+                )
+                continue
             result = __salt__["gpg.receive_keys"](
                 keyserver,
                 key,
@@ -176,6 +192,11 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
 
     for key in keys:
         if key in current_keys:
+            if __opts__["test"]:
+                ret["result"] = None
+                ret["comment"].append(f"Would have deleted {key} from GPG keychain")
+                salt.utils.dictupdate.append_dict_key_value(ret, "changes:deleted", key)
+                continue
             result = __salt__["gpg.delete_key"](
                 key,
                 user,
