@@ -171,7 +171,7 @@ RequestUUID=$(awk -F ' = ' '/RequestUUID/ {print $2}' "$CMD_OUTPUT")
 # Clear CMD_OUTPUT
 echo "" > "$CMD_OUTPUT"
 
-echo "- Checking Notarization Status (every 10 seconds):"
+echo "- Checking Notarization Status (every 30 seconds):"
 echo -n "  "
 # Though it usually takes 5 minutes, notarization can take up to 30 minutes
 # Check status every 30 seconds for 40 minutes
