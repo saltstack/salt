@@ -1956,9 +1956,11 @@ def get_repo(repo, **kwargs):
             if HAS_SOFTWAREPROPERTIES:
                 try:
                     if hasattr(softwareproperties.ppa, "PPAShortcutHandler"):
-                        repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
-                            dist
-                        )[0]
+                        handler = softwareproperties.ppa.PPAShortcutHandler(repo)
+                        if hasattr(handler, "expand"):
+                            repo = handler.expand(dist)[0]
+                        else:
+                            repo = handler.SourceEntry().line
                     else:
                         repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
                 except NameError as name_error:
@@ -2040,7 +2042,11 @@ def del_repo(repo, **kwargs):
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
             if hasattr(softwareproperties.ppa, "PPAShortcutHandler"):
-                repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+                handler = softwareproperties.ppa.PPAShortcutHandler(repo)
+                if hasattr(handler, "expand"):
+                    repo = handler.expand(dist)[0]
+                else:
+                    repo = handler.SourceEntry().line
             else:
                 repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
@@ -3030,9 +3036,11 @@ def _expand_repo_def(os_name, lsb_distrib_codename=None, **kwargs):
         else:
             if HAS_SOFTWAREPROPERTIES:
                 if hasattr(softwareproperties.ppa, "PPAShortcutHandler"):
-                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[
-                        0
-                    ]
+                    handler = softwareproperties.ppa.PPAShortcutHandler(repo)
+                    if hasattr(handler, "expand"):
+                        repo = handler.expand(dist)[0]
+                    else:
+                        repo = handler.SourceEntry().line
                 else:
                     repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
             else:
