@@ -171,16 +171,19 @@ RequestUUID=$(awk -F ' = ' '/RequestUUID/ {print $2}' "$CMD_OUTPUT")
 # Clear CMD_OUTPUT
 echo "" > "$CMD_OUTPUT"
 
-echo "- Checking Notarization Status (every 30 seconds):"
+echo "- Checking Notarization Status (every 10 seconds):"
 echo -n "  "
 # Check status every 30 seconds
-while sleep 30; do
+tries=0
+while sleep 10; do
+    ((tries++))
     echo -n "."
 
     # check notarization status
     if ! xcrun altool --notarization-info "$RequestUUID" \
                       --username "$APPLE_ACCT" \
                       --password "$APP_SPEC_PWD" > "$CMD_OUTPUT" 2>&1; then
+        echo ""
         cat "$CMD_OUTPUT" 1>&2
         exit 1
     fi
@@ -193,6 +196,14 @@ while sleep 30; do
     if ! grep -q "Status: in progress" "$CMD_OUTPUT"; then
         echo ""
         break
+    fi
+
+    if (( tries > 60 )); then
+        echo ""
+        echo "Failed after 10 minutes ($tries tries)"
+        echo "Log: $CMD_OUTPUT"
+        cat "$CMD_OUTPUT" 1>&2
+        exit 1
     fi
 
 done
