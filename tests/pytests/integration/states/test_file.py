@@ -483,27 +483,26 @@ def test_issue_60203(
 
 
 @pytest.fixture
-def min_patch_ver():
-    return "2.6"
-
-
-def _check_minimum_version(salt_call_cli, minimum_patch_ver):
-    version = salt_call_cli.run("--local", "cmd.run", "patch --version")
-    version = version.data.split()[2]
-    if _LooseVersion(version) < _LooseVersion(minimum_patch_ver):
+def _check_min_patch_version(shell):
+    min_patch_ver = "2.6"
+    ret = shell.run("patch", "--version")
+    assert ret.returncode == 0
+    version = ret.stdout.strip().split()[2]
+    if _LooseVersion(version) < _LooseVersion(min_patch_ver):
         pytest.xfail(
-            "Minimum version of patch not found,"
-            " expecting {}, found {}".format(minimum_patch_ver, version)
+            "Minimum version of patch not found, expecting {}, found {}".format(
+                min_patch_ver, version
+            )
         )
 
 
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.skip_if_binaries_missing("patch")
-def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
+@pytest.mark.usefixtures("_check_min_patch_version")
+def test_patch_single_file(salt_call_cli, patch_file_dest):
     """
     Test file.patch using a patch applied to a single file
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     name_file = patch_file_dest / "name_file.txt"
     source_file = patch_file_dest / "source_file.patch"
     name_file_contents = """
@@ -561,19 +560,18 @@ def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_directory(
     salt_call_cli,
     content,
     all_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
@@ -619,18 +617,17 @@ def test_patch_directory(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_strip_parsing(
     salt_call_cli,
     content,
     all_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test that we successfuly parse -p/--strip when included in the options
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
@@ -689,12 +686,12 @@ def test_patch_strip_parsing(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_saltenv(
     salt_call_cli,
     content,
     math_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
@@ -703,7 +700,6 @@ def test_patch_saltenv(
     # This state will fail because we don't have a patch file in that
     # environment, but that is OK, we just want to test that we're looking
     # in an environment other than base.
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
@@ -736,19 +732,18 @@ def test_patch_saltenv(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_single_file_failure(
     salt_call_cli,
     content,
     numbers_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using a patch applied to a single file. This tests a
     failed patch.
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
@@ -818,19 +813,18 @@ def test_patch_single_file_failure(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_directory_failure(
     salt_call_cli,
     content,
     all_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
@@ -899,13 +893,13 @@ def test_patch_directory_failure(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_single_file_template(
     salt_call_cli,
     context,
     content,
     numbers_patch_template,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
@@ -913,8 +907,6 @@ def test_patch_single_file_template(
     templating applied to the patch file.
     """
     # Create a new unpatched set of files
-    _check_minimum_version(salt_call_cli, min_patch_ver)
-
     os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
 
@@ -960,13 +952,13 @@ def test_patch_single_file_template(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_directory_template(
     salt_call_cli,
     context,
     content,
     all_patch_template,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
@@ -975,7 +967,6 @@ def test_patch_directory_template(
     file.
     """
     # Create a new unpatched set of files
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
@@ -1021,18 +1012,17 @@ def test_patch_directory_template(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.skip_if_binaries_missing("patch")
+@pytest.mark.usefixtures("_check_min_patch_version")
 def test_patch_test_mode(
     salt_call_cli,
     content,
     numbers_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using test=True
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
