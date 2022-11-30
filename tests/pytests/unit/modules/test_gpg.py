@@ -1072,4 +1072,4 @@ def test_gpg_receive_keys_no_user_id():
             create.return_value.recv_keys.return_value = import_result
             res = gpg.receive_keys(keys="abc", user="abc")
             assert res["res"] is False
-            assert "no user ID" in res["message"]
+            assert "no user ID" in res["message"][0]
