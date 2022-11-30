@@ -972,6 +972,8 @@ def test_patch_directory_template(
     spanning multiple files, and with jinja templating applied to the patch
     file.
     """
+    if salt.utils.platform.is_windows() and os.environ.get("PYTHONUTF8", "0") == "0":
+        pytest.skip("Test will fail if PYTHONUTF8=1 is not set on windows")
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
