@@ -14,7 +14,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
-from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 
 log = logging.getLogger(__name__)
 
@@ -282,51 +281,6 @@ def salt_cli_secondary_wrapper(salt_secondary_master, salt_secondary_minion):
     return run_command
 
 
-@SKIP_INITIAL_PHOTONOS_FAILURES
-@pytest.mark.skip_on_windows
-def test_verify_ssl_skip_verify_false(
-    salt_master, salt_call_cli, tmp_path, ssl_webserver
-):
-    """
-    test verify_ssl when its False and True when managing
-    a file with an https source and skip_verify is false.
-    """
-    web_file = ssl_webserver.url("this.txt")
-    true_content = """
-    test_verify_ssl:
-      file.managed:
-        - name: {}
-        - source: {}
-        - source_hash: {}
-    """.format(
-        tmp_path / "test_verify_ssl_true.txt", web_file, web_file + ".sha256"
-    )
-
-    false_content = true_content + "    - verify_ssl: False"
-
-    # test when verify_ssl is True
-    with salt_master.state_tree.base.temp_file(
-        "verify_ssl.sls", true_content
-    ) as sfpath:
-        ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
-        assert ret.returncode == 1
-        assert (
-            "SSL: CERTIFICATE_VERIFY_FAILED"
-            in ret.data[next(iter(ret.data))]["comment"]
-        )
-
-    # test when verify_ssl is False
-    with salt_master.state_tree.base.temp_file(
-        "verify_ssl.sls", false_content
-    ) as sfpath:
-        ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
-        assert ret.returncode == 0
-        assert ret.data[next(iter(ret.data))]["changes"] == {
-            "diff": "New file",
-            "mode": "0644",
-        }
-
-
 def test_contents_pillar_with_pillar_list(
     salt_master, salt_call_cli, pillar_tree, tmp_path
 ):
@@ -532,58 +486,6 @@ def test_issue_60426(
         assert target_path.is_file()
         # The type of new line, ie, `\n` vs `\r\n` is not important
         assert target_path.read_text() == "somegoodstuff"
-
-
-def test_issue_60203(
-    salt_master,
-    salt_call_cli,
-    tmp_path,
-    salt_minion,
-):
-    target_path = tmp_path / "issue-60203-target.txt"
-    sls_name = "issue-60203"
-    sls_contents = """
-    credentials exposed via file:
-      file.managed:
-        - name: /tmp/test.tar.gz
-        - source: 'https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz'
-        - source_hash: 'https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz.sha256'
-    """
-    sls_tempfile = salt_master.state_tree.base.temp_file(
-        "{}.sls".format(sls_name), sls_contents
-    )
-    with sls_tempfile:
-        ret = salt_call_cli.run("state.apply", sls_name)
-        assert ret.returncode == 1
-        assert ret.data
-        assert (
-            "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            in ret.data
-        )
-        assert (
-            "comment"
-            in ret.data[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]
-        )
-        assert (
-            "Unable to manage"
-            in ret.data[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]["comment"]
-        )
-        assert (
-            "/files/test.tar.gz.sha256"
-            in ret.data[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]["comment"]
-        )
-        assert (
-            "dontshowme"
-            not in ret.data[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]["comment"]
-        )
 
 
 @pytest.fixture
