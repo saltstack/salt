@@ -909,7 +909,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
         salt '*' gpg.receive_keys keys=3FAD9F1E user=username
 
     """
-    ret = {"res": True, "changes": {}, "message": []}
+    ret = {"res": True, "message": []}
 
     gpg = _create_gpg(user, gnupghome)
 
@@ -920,18 +920,31 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
         keys = keys.split(",")
 
     recv_data = gpg.recv_keys(keyserver, *keys)
-    for result in recv_data.results:
-        if "ok" in result:
-            if result["ok"] == "1":
-                ret["message"].append(
-                    "Key {} added to keychain".format(result["fingerprint"])
-                )
-            elif result["ok"] == "0":
-                ret["message"].append(
-                    "Key {} already exists in keychain".format(result["fingerprint"])
-                )
-        elif "problem" in result:
-            ret["message"].append("Unable to add key to keychain")
+    try:
+        if recv_data.results:
+            for result in recv_data.results:
+                if "ok" in result:
+                    if result["ok"] == "1":
+                        ret["message"].append(
+                            "Key {} added to keychain".format(result["fingerprint"])
+                        )
+                    elif result["ok"] == "0":
+                        ret["message"].append(
+                            "Key {} already exists in keychain".format(
+                                result["fingerprint"]
+                            )
+                        )
+                elif "problem" in result:
+                    ret["message"].append("Unable to add key to keychain")
+        elif not bool(recv_data):
+            ret["res"] = False
+            ret["message"] = [
+                f"Something went wrong during gpg call: {recv_data.stderr}"
+            ]
+    except AttributeError:
+        ret["res"] = False
+        ret["message"] = ["Invalid return from python-gpg"]
+
     return ret
 
 
