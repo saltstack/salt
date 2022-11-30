@@ -223,3 +223,19 @@ def test_gpg_absent_test_mode_no_changes(gpg_delete):
         gpg_delete.assert_not_called()
         assert ret["result"] is None
         assert bool(ret["changes"])
+
+
+def test_gpg_absent_list_keys_with_gnupghome_and_user(gpg_list_keys):
+    gnupghome = "/pls_respect_me"
+    user = "imthereaswell"
+    gpg.absent("nonexistent", gnupghome=gnupghome, user=user)
+    gpg_list_keys.assert_called_with(gnupghome=gnupghome, user=user)
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+def test_gpg_absent_delete_key_called_with_correct_kwargs(gpg_delete):
+    key = "A"
+    user = "hellothere"
+    gnupghome = "/pls_sir"
+    gpg.absent(key, user=user, gnupghome=gnupghome)
+    gpg_delete.assert_called_with(keyid=key, gnupghome=gnupghome, user=user)
