@@ -15,7 +15,7 @@ import psutil
 import pytest
 
 import salt.modules.gpg as gpg
-from tests.support.mock import MagicMock, call, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 
 pytest.importorskip("gnupg")
 
@@ -1039,3 +1039,37 @@ def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
                     gnupghome=str(gpghome.path),
                 )
                 assert ret["res"] is True
+
+
+def test_gpg_receive_keys_no_user_id():
+    with patch("salt.modules.gpg._create_gpg") as create:
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
+        ):
+            import_result = MagicMock()
+            import_result.__bool__.return_value = False
+            for var, val in {
+                "gpg": Mock(),
+                "imported": 0,
+                "results": [],
+                "fingerprints": [],
+                "count": 1,
+                "no_user_id": 0,
+                "imported_rsa": 0,
+                "unchanged": 0,
+                "n_uids": 0,
+                "n_subk": 0,
+                "n_sigs": 0,
+                "n_revoc": 0,
+                "sec_read": 0,
+                "sec_imported": 0,
+                "sec_dups": 0,
+                "not_imported": 0,
+                "stderr": "gpg: key ABCDEF0123456789: no user ID\ngpg: Total number processed: 1\n[GNUPG:] IMPORT_RES 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n",
+                "data": b"",
+            }.items():
+                setattr(import_result, var, val)
+            create.return_value.recv_keys.return_value = import_result
+            res = gpg.receive_keys(keys="abc", user="abc")
+            assert res["res"] is False
+            assert "no user ID" in res["message"]
