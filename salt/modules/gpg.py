@@ -556,7 +556,7 @@ def delete_key(
         return ret
 
     gpg = _create_gpg(user, gnupghome)
-    key = get_key(keyid, fingerprint, user)
+    key = get_key(keyid=keyid, fingerprint=fingerprint, user=user, gnupghome=gnupghome)
 
     def __delete_key(fingerprint, secret, use_passphrase):
         if use_passphrase:

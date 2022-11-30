@@ -178,7 +178,7 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    _current_keys = __salt__["gpg.list_keys"]()
+    _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)
 
     current_keys = []
     for key in _current_keys:
@@ -198,9 +198,9 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 salt.utils.dictupdate.append_dict_key_value(ret, "changes:deleted", key)
                 continue
             result = __salt__["gpg.delete_key"](
-                key,
-                user,
-                gnupghome,
+                keyid=key,
+                user=user,
+                gnupghome=gnupghome,
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
