@@ -788,6 +788,11 @@ def test_verify_ssl_https_source(file, tmp_path, ssl_webserver, verify_ssl):
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.comment
         assert not name.exists()
     else:
+        if IS_WINDOWS and not os.environ.get("GITHUB_ACTIONS_PIPELINE"):
+            pytest.xfail(
+                "This test fails when running from Jenkins but not on the GitHub "
+                "Actions Pipeline"
+            )
         assert ret.result is True
         assert ret.changes
         # mode, if present is not important for this test

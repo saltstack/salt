@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import salt.utils.files
@@ -32,6 +34,11 @@ def test_directory_symlink_dry_run(file, tmp_path):
     Ensure that symlinks are followed when file.directory is run with
     test=True
     """
+    if IS_WINDOWS and not os.environ.get("GITHUB_ACTIONS_PIPELINE"):
+        pytest.xfail(
+            "This test fails when running from Jenkins but not on the GitHub "
+            "Actions Pipeline"
+        )
     tmp_dir = tmp_path / "pgdata"
     sym_dir = tmp_path / "pg_data"
 
