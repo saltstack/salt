@@ -764,3 +764,50 @@ def test_file_managed_keep_source_false_http(
     # Now make sure that the file is not cached
     ret = modules.cp.is_cached(remote_grail_scene33.url)
     assert not ret, "File is still cached at {}".format(ret)
+
+
+@pytest.mark.parametrize("verify_ssl", [True, False])
+def test_verify_ssl_https_source(file, tmp_path, ssl_webserver, verify_ssl):
+    """
+    test verify_ssl when its False and True when managing
+    a file with an https source and skip_verify is false.
+    """
+    name = tmp_path / "test_verify_ssl_true.txt"
+    source = ssl_webserver.url("this.txt")
+    source_hash = f"{source}.sha256"
+
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        verify_ssl=verify_ssl,
+        skip_verify=False,
+    )
+    if verify_ssl is True:
+        assert ret.result is False
+        assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.comment
+        assert not name.exists()
+    else:
+        assert ret.result is True
+        assert ret.changes
+        # mode, if present is not important for this test
+        ret.changes.pop("mode", None)
+        assert ret.changes == {"diff": "New file"}
+        assert name.exists()
+
+
+def test_issue_60203(
+    file,
+    tmp_path,
+):
+    name = tmp_path / "test.tar.gz"
+    source = "https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz"
+    source_hash = (
+        "https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz.sha256"
+    )
+    ret = file.managed(str(name), source=source, source_hash=source_hash)
+    assert ret.result is False
+    assert ret.comment
+    assert "Unable to manage file" in ret.comment
+    assert "/files/test.tar.gz.sha256" in ret.comment
+    assert "dontshowme" not in ret.comment
