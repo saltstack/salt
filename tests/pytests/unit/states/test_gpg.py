@@ -73,7 +73,11 @@ def gpg_list_keys(request, keys_list):
 @pytest.fixture
 def gpg_trust(request):
     trust = Mock(spec="salt.modules.gpg.trust_key")
-    trust.return_value = getattr(request, "param", {})
+    trust.return_value = getattr(
+        request,
+        "param",
+        {"res": True, "message": ["Setting ownership trust to Marginally"]},
+    )
     with patch.dict(gpg.__salt__, {"gpg.trust_key": trust}):
         yield trust
 
@@ -81,7 +85,9 @@ def gpg_trust(request):
 @pytest.fixture()
 def gpg_receive(request):
     recv = Mock(spec="salt.modules.gpg.receive_keys")
-    recv.return_value = getattr(request, "param", {})
+    recv.return_value = getattr(
+        request, "param", {"res": True, "message": ["Key new added to keychain"]}
+    )
     with patch.dict(gpg.__salt__, {"gpg.receive_keys": recv}):
         yield recv
 
@@ -149,13 +155,6 @@ def test_gpg_present_new_key(gpg_receive, gpg_trust, expected):
 
 @pytest.mark.usefixtures("gpg_list_keys")
 @pytest.mark.parametrize(
-    "gpg_receive",
-    [
-        {"res": True, "message": ["Key new added to keychain"]},
-    ],
-    indirect=True,
-)
-@pytest.mark.parametrize(
     "gpg_trust,expected",
     [
         ({"res": True, "message": ["Setting ownership trust to Marginally"]}, True),
@@ -171,6 +170,17 @@ def test_gpg_present_new_key_and_trust(gpg_receive, gpg_trust, expected):
     assert bool(ret["changes"])
     gpg_receive.assert_called_once()
     gpg_trust.assert_called_once()
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+@pytest.mark.parametrize("key,trust", [("new", None), ("A", "marginally")])
+def test_gpg_present_test_mode_no_changes(gpg_receive, gpg_trust, key, trust):
+    with patch.dict(gpg.__opts__, {"test": True}):
+        ret = gpg.present(key, trust=trust)
+        gpg_receive.assert_not_called()
+        gpg_trust.assert_not_called()
+        assert ret["result"] is None
+        assert bool(ret["changes"])
 
 
 @pytest.mark.usefixtures("gpg_list_keys")
@@ -204,3 +214,12 @@ def test_gpg_absent_delete_key(gpg_delete, expected):
     assert ret["result"] == expected
     assert bool(ret["changes"]) == expected
     gpg_delete.assert_called_once()
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+def test_gpg_absent_test_mode_no_changes(gpg_delete):
+    with patch.dict(gpg.__opts__, {"test": True}):
+        ret = gpg.absent("A")
+        gpg_delete.assert_not_called()
+        assert ret["result"] is None
+        assert bool(ret["changes"])
