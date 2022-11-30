@@ -53,8 +53,6 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    import apt.cache
-    import apt.debfile
     from aptsources.sourceslist import SourceEntry, SourcesList
 
     HAS_APT = True
@@ -842,27 +840,6 @@ def install(
             if has_comparison
             else {}
         )
-        # Build command prefix
-        cmd_prefix.extend(["apt-get", "-q", "-y"])
-        if kwargs.get("force_yes", False):
-            cmd_prefix.append("--force-yes")
-        if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
-            cmd_prefix.extend(["-o", "DPkg::Options::=--force-confnew"])
-        else:
-            cmd_prefix.extend(["-o", "DPkg::Options::=--force-confold"])
-            cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
-        if "install_recommends" in kwargs:
-            if not kwargs["install_recommends"]:
-                cmd_prefix.append("--no-install-recommends")
-            else:
-                cmd_prefix.append("--install-recommends")
-        if "only_upgrade" in kwargs and kwargs["only_upgrade"]:
-            cmd_prefix.append("--only-upgrade")
-        if skip_verify:
-            cmd_prefix.append("--allow-unauthenticated")
-        if fromrepo:
-            cmd_prefix.extend(["-t", fromrepo])
-        cmd_prefix.append("install")
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
@@ -881,16 +858,27 @@ def install(
                 pkg_params_items.append(
                     [deb_info["name"], pkg_source, deb_info["version"]]
                 )
-        # Build command prefix
-        if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
-            cmd_prefix.extend(["dpkg", "-i", "--force-confnew"])
+    # Build command prefix
+    cmd_prefix.extend(["apt-get", "-q", "-y"])
+    if kwargs.get("force_yes", False):
+        cmd_prefix.append("--force-yes")
+    if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
+        cmd_prefix.extend(["-o", "DPkg::Options::=--force-confnew"])
+    else:
+        cmd_prefix.extend(["-o", "DPkg::Options::=--force-confold"])
+        cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
+    if "install_recommends" in kwargs:
+        if not kwargs["install_recommends"]:
+            cmd_prefix.append("--no-install-recommends")
         else:
-            cmd_prefix.extend(["dpkg", "-i", "--force-confold"])
-        if skip_verify:
-            cmd_prefix.append("--force-bad-verify")
-        if HAS_APT:
-            _resolve_deps(name, pkg_params, **kwargs)
-
+            cmd_prefix.append("--install-recommends")
+    if "only_upgrade" in kwargs and kwargs["only_upgrade"]:
+        cmd_prefix.append("--only-upgrade")
+    if skip_verify:
+        cmd_prefix.append("--allow-unauthenticated")
+    if fromrepo and pkg_type == "repository":
+        cmd_prefix.extend(["-t", fromrepo])
+    cmd_prefix.append("install")
     for pkg_item_list in pkg_params_items:
         if pkg_type == "repository":
             pkgname, version_num = pkg_item_list
@@ -3314,43 +3302,6 @@ def set_selections(path=None, selection=None, clear=False, saltenv="base"):
                     else:
                         ret[_pkg] = {"old": sel_revmap.get(_pkg), "new": _state}
     return ret
-
-
-def _resolve_deps(name, pkgs, **kwargs):
-    """
-    Installs missing dependencies and marks them as auto installed so they
-    are removed when no more manually installed packages depend on them.
-
-    .. versionadded:: 2014.7.0
-
-    :depends:   - python-apt module
-    """
-    missing_deps = []
-    for pkg_file in pkgs:
-        deb = apt.debfile.DebPackage(filename=pkg_file, cache=apt.Cache())
-        if deb.check():
-            missing_deps.extend(deb.missing_deps)
-
-    if missing_deps:
-        cmd = ["apt-get", "-q", "-y"]
-        cmd = cmd + ["-o", "DPkg::Options::=--force-confold"]
-        cmd = cmd + ["-o", "DPkg::Options::=--force-confdef"]
-        cmd.append("install")
-        cmd.extend(missing_deps)
-
-        ret = __salt__["cmd.retcode"](cmd, env=kwargs.get("env"), python_shell=False)
-
-        if ret != 0:
-            raise CommandExecutionError(
-                "Error: unable to resolve dependencies for: {}".format(name)
-            )
-        else:
-            try:
-                cmd = ["apt-mark", "auto"] + missing_deps
-                __salt__["cmd.run"](cmd, env=kwargs.get("env"), python_shell=False)
-            except MinionError as exc:
-                raise CommandExecutionError(exc)
-    return
 
 
 def owner(*paths, **kwargs):

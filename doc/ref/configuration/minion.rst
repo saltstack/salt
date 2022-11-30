@@ -2472,6 +2472,21 @@ default configuration set up at install time.
 
     snapper_states_config: root
 
+``global_state_conditions``
+---------------------------
+
+Default: ``None``
+
+If set, this parameter expects a dictionary of state module names as keys and a
+list of conditions which must be satisfied in order to run any functions in that
+state module.
+
+.. code-block:: yaml
+
+    global_state_conditions:
+      "*": ["G@global_noop:false"]
+      service: ["not G@virtual_subtype:chroot"]
+
 File Directory Settings
 =======================
 

@@ -546,6 +546,45 @@ def test_get_secret_path_metadata_no_cache(metadata_v2, cache_uses, cache_secret
                 assert cache_object == expected_cache_object
 
 
+def test_expand_pattern_lists():
+    """
+    Ensure expand_pattern_lists works as intended:
+    - Expand list-valued patterns
+    - Do not change non-list-valued tokens
+    """
+    cases = {
+        "no-tokens-to-replace": ["no-tokens-to-replace"],
+        "single-dict:{minion}": ["single-dict:{minion}"],
+        "single-list:{grains[roles]}": ["single-list:web", "single-list:database"],
+        "multiple-lists:{grains[roles]}+{grains[aux]}": [
+            "multiple-lists:web+foo",
+            "multiple-lists:web+bar",
+            "multiple-lists:database+foo",
+            "multiple-lists:database+bar",
+        ],
+        "single-list-with-dicts:{grains[id]}+{grains[roles]}+{grains[id]}": [
+            "single-list-with-dicts:{grains[id]}+web+{grains[id]}",
+            "single-list-with-dicts:{grains[id]}+database+{grains[id]}",
+        ],
+        "deeply-nested-list:{grains[deep][foo][bar][baz]}": [
+            "deeply-nested-list:hello",
+            "deeply-nested-list:world",
+        ],
+    }
+
+    pattern_vars = {
+        "id": "test-minion",
+        "roles": ["web", "database"],
+        "aux": ["foo", "bar"],
+        "deep": {"foo": {"bar": {"baz": ["hello", "world"]}}},
+    }
+
+    mappings = {"minion": "test-minion", "grains": pattern_vars}
+    for case, correct_output in cases.items():
+        output = vault.expand_pattern_lists(case, **mappings)
+        assert output == correct_output
+
+
 @pytest.mark.parametrize(
     "conf_location,called",
     [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
