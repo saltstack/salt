@@ -15,6 +15,9 @@ use_parentheses = true
 line_length = 88
 ensure_newline_before_comments=true
 skip="salt/ext,tests/kitchen,templates"
+known_third_party = [
+  "pytest"
+]
 
 [tool.towncrier]
     package = "salt"
