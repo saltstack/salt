@@ -8,6 +8,8 @@ Management of the GPG keychains
 
 import logging
 
+import salt.utils.dictupdate
+
 log = logging.getLogger(__name__)
 
 _VALID_TRUST_VALUES = [
@@ -86,23 +88,24 @@ def present(
                             trust_level=trust,
                             user=user,
                         )
-                        if "result" in result and not result["result"]:
-                            ret["result"] = result["result"]
-                            ret["comment"].append(result["comment"])
+                        if result["res"] is False:
+                            ret["result"] = result["res"]
+                            ret["comment"].extend(result["message"])
                         else:
+                            salt.utils.dictupdate.set_dict_key_value(
+                                ret, f"changes:{key}:trust", trust
+                            )
                             ret["comment"].append(
-                                "Set trust level for {} to {}".format(key, trust)
+                                f"Set trust level for {key} to {trust}"
                             )
                     else:
                         ret["comment"].append(
-                            "GPG Public Key {} already in correct trust state".format(
-                                key
-                            )
+                            f"GPG Public Key {key} already in correct trust state"
                         )
                 else:
-                    ret["comment"].append("Invalid trust level {}".format(trust))
+                    ret["comment"].append(f"Invalid trust level {trust}")
 
-            ret["comment"].append("GPG Public Key {} already in keychain ".format(key))
+            ret["comment"].append(f"GPG Public Key {key} already in keychain")
 
         else:
             result = __salt__["gpg.receive_keys"](
@@ -111,11 +114,14 @@ def present(
                 user,
                 gnupghome,
             )
-            if "result" in result and not result["result"]:
-                ret["result"] = result["result"]
-                ret["comment"].append(result["comment"])
+            if result["res"] is False:
+                ret["result"] = result["res"]
+                ret["comment"].extend(result["message"])
             else:
-                ret["comment"].append("Adding {} to GPG keychain".format(name))
+                ret["comment"].append(f"Added {key} to GPG keychain")
+                salt.utils.dictupdate.set_dict_key_value(
+                    ret, f"changes:{key}:added", True
+                )
 
             if trust:
                 if trust in _VALID_TRUST_VALUES:
@@ -124,15 +130,13 @@ def present(
                         trust_level=trust,
                         user=user,
                     )
-                    if "result" in result and not result["result"]:
-                        ret["result"] = result["result"]
-                        ret["comment"].append(result["comment"])
+                    if result["res"] is False:
+                        ret["result"] = result["res"]
+                        ret["comment"].extend(result["message"])
                     else:
-                        ret["comment"].append(
-                            "Set trust level for {} to {}".format(key, trust)
-                        )
+                        ret["comment"].append(f"Set trust level for {key} to {trust}")
                 else:
-                    ret["comment"].append("Invalid trust level {}".format(trust))
+                    ret["comment"].append(f"Invalid trust level {trust}")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -177,12 +181,13 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 user,
                 gnupghome,
             )
-            if "result" in result and not result["result"]:
-                ret["result"] = result["result"]
-                ret["comment"].append(result["comment"])
+            if result["res"] is False:
+                ret["result"] = result["res"]
+                ret["comment"].extend(result["message"])
             else:
-                ret["comment"].append("Deleting {} from GPG keychain".format(name))
+                ret["comment"].append(f"Deleted {key} from GPG keychain")
+                salt.utils.dictupdate.append_dict_key_value(ret, "changes:deleted", key)
         else:
-            ret["comment"].append("{} not found in GPG keychain".format(name))
+            ret["comment"].append(f"{key} not found in GPG keychain")
     ret["comment"] = "\n".join(ret["comment"])
     return ret
