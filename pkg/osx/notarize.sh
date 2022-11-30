@@ -173,9 +173,10 @@ echo "" > "$CMD_OUTPUT"
 
 echo "- Checking Notarization Status (every 10 seconds):"
 echo -n "  "
-# Check status every 30 seconds
+# Though it usually takes 5 minutes, notarization can take up to 30 minutes
+# Check status every 30 seconds for 40 minutes
 tries=0
-while sleep 10; do
+while sleep 30; do
     ((tries++))
     echo -n "."
 
@@ -198,9 +199,9 @@ while sleep 10; do
         break
     fi
 
-    if (( tries > 60 )); then
+    if (( tries > 80 )); then
         echo ""
-        echo "Failed after 10 minutes ($tries tries)"
+        echo "Failed after 40 minutes"
         echo "Log: $CMD_OUTPUT"
         cat "$CMD_OUTPUT" 1>&2
         exit 1
