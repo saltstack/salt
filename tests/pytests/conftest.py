@@ -8,9 +8,11 @@ import logging
 import os
 import pathlib
 import shutil
+import ssl
 import stat
 import sys
 import tempfile
+import types
 
 import attr
 import pytest
@@ -21,7 +23,7 @@ import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
-from tests.support.helpers import get_virtualenv_binary_path
+from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
 
@@ -517,6 +519,32 @@ def bridge_pytest_and_runtests():
     """
     We're basically overriding the same fixture defined in tests/conftest.py
     """
+
+
+@pytest.fixture(scope="session")
+def this_txt_file(integration_files_dir):
+    contents = "test"
+    with pytest.helpers.temp_file("this.txt", contents, integration_files_dir) as path:
+        sha256sum = salt.utils.hashutils.get_hash(str(path), form="sha256")
+        with pytest.helpers.temp_file(
+            "this.txt.sha256", sha256sum, integration_files_dir
+        ):
+            yield types.SimpleNamespace(name="this.txt", path=path, sha256=sha256sum)
+
+
+@pytest.fixture(scope="module")
+def ssl_webserver(integration_files_dir, this_txt_file):
+    """
+    spins up an https webserver.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    context.load_cert_chain(
+        str(integration_files_dir / "https" / "cert.pem"),
+        str(integration_files_dir / "https" / "key.pem"),
+    )
+
+    with Webserver(root=str(integration_files_dir), ssl_opts=context) as webserver:
+        yield webserver
 
 
 # ----- Async Test Fixtures ----------------------------------------------------------------------------------------->
