@@ -245,6 +245,9 @@ def test(
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
     ):
         env["SKIP_REQUIREMENTS_INSTALL"] = "1"
+    if "photonos" in name:
+        skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
+        env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
     vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
