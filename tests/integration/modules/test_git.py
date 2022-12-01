@@ -23,7 +23,6 @@ import salt.utils.files
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import change_cwd
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -85,7 +84,7 @@ class GitModuleTest(ModuleCase):
                         "This is a test file named {}.".format(filename).encode("utf-8")
                     )
         # Navigate to the root of the repo to init, stage, and commit
-        with change_cwd(self.repo):
+        with pytest.helpers.change_cwd(self.repo):
             # Initialize a new git repository
             subprocess.check_call(["git", "init", "--quiet", self.repo])
 
