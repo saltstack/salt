@@ -779,6 +779,23 @@ class EntropyGenerator:
         pass
 
 
+@pytest.helpers.register
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
+
+
 # Only allow star importing the functions defined in this module
 __all__ = [
     name

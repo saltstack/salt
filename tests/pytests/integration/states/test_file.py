@@ -14,7 +14,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
-from tests.support.helpers import change_cwd
 
 log = logging.getLogger(__name__)
 
@@ -1125,7 +1124,7 @@ def test_recurse_keep_symlinks_in_fileserver_root(
             for _file in range(1, 4):
                 test_tempdir.joinpath(_dir, str(_file)).touch()
 
-        with change_cwd(str(test_tempdir)):
+        with pytest.helpers.change_cwd(str(test_tempdir)):
             pathlib.Path("test").symlink_to("test3", target_is_directory=True)
 
         ret = salt_call_cli.run("state.apply", sls_name)
@@ -1177,7 +1176,7 @@ def test_recurse_keep_symlinks_outside_fileserver_root(
             for _file in range(1, 4):
                 test_tempdir.joinpath(_dir, str(_file)).touch()
 
-        with change_cwd(str(test_tempdir)):
+        with pytest.helpers.change_cwd(str(test_tempdir)):
             pathlib.Path("/tmp/test_recurse_outside").mkdir(parents=True, exist_ok=True)
             pathlib.Path("test4").symlink_to(
                 "/tmp/test_recurse_outside", target_is_directory=True

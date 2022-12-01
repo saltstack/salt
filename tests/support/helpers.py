@@ -30,7 +30,6 @@ import textwrap
 import threading
 import time
 import types
-from contextlib import contextmanager
 
 import attr
 import pytest
@@ -1832,22 +1831,6 @@ class SaltVirtualEnv(VirtualEnv):
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)
-
-
-@contextmanager
-def change_cwd(path):
-    """
-    Context manager helper to change CWD for a with code block and restore
-    it at the end
-    """
-    old_cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        # Do stuff
-        yield
-    finally:
-        # Restore Old CWD
-        os.chdir(old_cwd)
 
 
 @functools.lru_cache(maxsize=1)
