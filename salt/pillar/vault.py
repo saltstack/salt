@@ -74,23 +74,25 @@ You can also use nesting here as well.  Identical nesting keys will get merged.
 The difference between the return with and without the nesting key is shown below.
 This example takes the key value pairs returned from vault as follows:
 
-path=secret/salt
+.. code-block:: text
 
-Key             Value
----             -----
-salt-passwd     badpasswd1
+    path=secret/salt
 
-path=secret/root
+    Key             Value
+    ---             -----
+    salt-passwd     badpasswd1
 
-Key             Value
----             -----
-root-passwd     rootbadpasswd1
+    path=secret/root
 
-path=secret/minions/{minion}/pass
+    Key             Value
+    ---             -----
+    root-passwd     rootbadpasswd1
 
-Key             Value
----             -----
-minion-passwd   minionbadpasswd1
+    path=secret/minions/{minion}/pass
+
+    Key             Value
+    ---             -----
+    minion-passwd   minionbadpasswd1
 
 
 .. code-block:: yaml
