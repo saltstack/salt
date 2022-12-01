@@ -204,8 +204,12 @@ def get_vault_connection():
 
 def del_cache():
     """
-    Delete cache file
+    Delete cache
     """
+    log.debug("Deleting session cache")
+    if "vault_token" in __context__:
+        del __context__["vault_token"]
+
     log.debug("Deleting cache file")
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
 
@@ -227,6 +231,7 @@ def write_cache(connection):
         and "vault_secret_path_metadata" not in connection
     ):
         log.debug("Not caching vault single use token")
+        __context__["vault_token"] = connection
         return True
     elif (
         "vault_secret_path_metadata" in __context__
