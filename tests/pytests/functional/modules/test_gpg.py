@@ -392,7 +392,7 @@ def pubkeys_present(
     indirect=["sig"],
 )
 def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
-    res = gpg.verify(filename=str(signed_data), gnupghome=gpghome, signature=sig)
+    res = gpg.verify(filename=str(signed_data), gnupghome=str(gpghome), signature=sig)
     assert res["res"] == expected
     if not expected:
         assert "could not be verified" in res["message"]
@@ -430,7 +430,10 @@ def test_gpg_verify_signed_by_any(
 ):
     fps = [request.getfixturevalue(f"key_{x}_fp") for x in by]
     res = gpg.verify(
-        filename=str(signed_data), gnupghome=gpghome, signature=sig, signed_by_any=fps
+        filename=str(signed_data),
+        gnupghome=str(gpghome),
+        signature=sig,
+        signed_by_any=fps,
     )
     assert res["res"] == expected
 
@@ -464,6 +467,9 @@ def test_gpg_verify_signed_by_all(
 ):
     fps = [request.getfixturevalue(f"key_{x}_fp") for x in by]
     res = gpg.verify(
-        filename=str(signed_data), gnupghome=gpghome, signature=sig, signed_by_all=fps
+        filename=str(signed_data),
+        gnupghome=str(gpghome),
+        signature=sig,
+        signed_by_all=fps,
     )
     assert res["res"] == expected
