@@ -1257,10 +1257,13 @@ def verify(
             # override the previous one's information (the same is valid for signatures
             # with missing pubkeys). `keyid`, `username` and `status` are always
             # overwritten, while missing pubkeys also overwrite `fingerprint`.
-            # `trust_level` stays accurate though.
+            # This means: 1) only ever compare to fingerprint 2) filter out
+            # `signature error` status because the fingerprint cannot be trusted.
             try:
                 if any(
-                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
+                    x["status"] != "signature error"
+                    and x["trust_level"] is not None
+                    and str(x["fingerprint"]) == signer
                     for x in signatures
                 ):
                     any_signed = True
@@ -1283,7 +1286,9 @@ def verify(
             signer = str(signer)
             try:
                 if any(
-                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
+                    x["status"] != "signature error"
+                    and x["trust_level"] is not None
+                    and str(x["fingerprint"]) == signer
                     for x in signatures
                 ):
                     continue

@@ -331,6 +331,11 @@ UDJsV8u8GFP+76oGy4G4GU1NlcqWpmIAzst0G4q4ipx891Z10A==
 -----END PGP SIGNATURE-----"""
 
 
+@pytest.fixture
+def key_f_fp():
+    return "D7D3F617EBD2113059914876F7D0B975BC8E7ED1"
+
+
 # no pubkey for this one
 @pytest.fixture()
 def key_f_sig():
@@ -422,6 +427,10 @@ def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
         # whose pubkeys are absent from the keychain, but they
         # also overwrite the previous one's fingerprint (which we compare to).
         # ("af", "abcde", True),
+        # That would mean the following would be accepted, even
+        # though the `f` signature was never verified because the pubkey
+        # was missing. This needs to be filtered explicitly!
+        ("af", "f", False),
     ],
     indirect=["sig"],
 )
@@ -459,6 +468,10 @@ def test_gpg_verify_signed_by_any(
         # whose pubkeys are absent from the keychain, but they
         # also overwrite the previous one's fingerprint (which we compare to).
         # ("dfa", "da", True),
+        # That would mean the following would be accepted, even
+        # though the `f` signature was never verified because the pubkey
+        # was missing. This needs to be filtered explicitly!
+        ("abf", "af", False),
     ],
     indirect=["sig"],
 )
