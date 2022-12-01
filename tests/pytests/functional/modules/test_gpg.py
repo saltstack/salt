@@ -409,16 +409,18 @@ def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
         ("a", "bcde", False),
         (["c_fail"], "bc", False),
         (["c_fail", "b"], "bc", True),
-        # bad signatures partly overwrite the preceding good one currently
+        # Bad signatures partly overwrite the preceding good one currently.
         # https://github.com/vsajip/python-gnupg/issues/214
-        # (["b", "c_fail"], "bc", True),
+        # This is not an issue since we only rely on trust_level and fingerprint.
+        (["b", "c_fail"], "bc", True),
         (["e_exp"], "e", False),
         (["e_exp", "a"], "a", True),
         (["a", "e_exp"], "a", True),
         ("f", "abcde", False),
         ("fa", "abcde", True),
         # The above mentioned issue also affects signatures
-        # whose pubkeys are absent from the keychain
+        # whose pubkeys are absent from the keychain, but they
+        # also overwrite the previous one's fingerprint (which we compare to).
         # ("af", "abcde", True),
     ],
     indirect=["sig"],
@@ -442,15 +444,17 @@ def test_gpg_verify_signed_by_any(
         ("ad", "ad", True),
         ("ad", "ac", False),
         (["a", "c_fail"], "ac", False),
-        # bad signatures overwrite the preceding good one currently
+        # Bad signatures partly overwrite the preceding good one currently.
         # https://github.com/vsajip/python-gnupg/issues/214
-        # (["a", "b", "c_fail"], "ab", True),
+        # This is not an issue since we only rely on trust_level and fingerprint.
+        (["a", "b", "c_fail"], "ab", True),
         (["a", "b", "c_fail"], "abc", False),
         (["c_fail", "a", "b"], "ab", True),
         ("fad", "da", True),
         ("fd", "da", False),
         # The above mentioned issue also affects signatures
-        # whose pubkeys are absent from the keychain
+        # whose pubkeys are absent from the keychain, but they
+        # also overwrite the previous one's fingerprint (which we compare to).
         # ("dfa", "da", True),
     ],
     indirect=["sig"],

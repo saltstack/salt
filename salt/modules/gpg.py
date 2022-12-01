@@ -1151,8 +1151,8 @@ def verify(
 
         .. note::
 
-            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when invalid signatures
-            or ones with missing corresponding pubkeys are included,
+            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when
+            signatures are included for which the corresponding pubkeys are unknown,
             this check might fail even though it should have been deemed valid.
 
         .. versionadded:: 3006
@@ -1165,8 +1165,8 @@ def verify(
 
         .. note::
 
-            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when invalid signatures
-            or ones with missing corresponding pubkeys are included,
+            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when
+            signatures are included for which the corresponding pubkeys are unknown,
             this check might fail even though it should have been deemed valid.
 
         .. versionadded:: 3006
@@ -1245,7 +1245,6 @@ def verify(
     ret = {"res": False, "message": "", "signatures": signatures}
     # be very explicit and do not default to result = True below
     any_check = all_check = False
-    valid_status = ("signature valid", "signature good")
 
     if signed_by_any:
         if not isinstance(signed_by_any, list):
@@ -1253,17 +1252,15 @@ def verify(
         any_signed = False
         for signer in signed_by_any:
             signer = str(signer)
-            # python-gnupg intends to include bad signatures and signatures from expired keys.
-            # Also, until https://github.com/vsajip/python-gnupg/issues/214 is resolved,
+            # Until https://github.com/vsajip/python-gnupg/issues/214 is resolved,
             # bad signatures are not actually included in `sig_info`, but
-            # make the previous one invalid (the same for signatures with missing pubkeys).
-            # Better fail instead of assuming the incorrect behavior will stay
-            # by accepting invalid ones.
+            # override the previous one's information (the same is valid for signatures
+            # with missing pubkeys). `keyid`, `username` and `status` are always
+            # overwritten, while missing pubkeys also overwrite `fingerprint`.
+            # `trust_level` stays accurate though.
             try:
                 if any(
-                    x["status"] in valid_status
-                    and x["trust_level"] is not None
-                    and str(x["fingerprint"]) == signer
+                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
                     for x in signatures
                 ):
                     any_signed = True
@@ -1286,9 +1283,7 @@ def verify(
             signer = str(signer)
             try:
                 if any(
-                    x["status"] in valid_status
-                    and x["trust_level"] is not None
-                    and str(x["fingerprint"]) == signer
+                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
                     for x in signatures
                 ):
                     continue
