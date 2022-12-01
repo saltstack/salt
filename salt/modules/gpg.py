@@ -1215,21 +1215,20 @@ def verify(
     else:
         raise SaltInvocationError("filename or text must be passed.")
 
-    ret = {}
-    if verified.trust_level is not None:
-        ret["res"] = True
-        ret["username"] = verified.username
-        ret["key_id"] = verified.key_id
-        ret["trust_level"] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
-        ret["message"] = "The signature is verified."
-    else:
-        ret["res"] = False
-        ret["message"] = "The signature could not be verified."
-
     if not (signed_by_any or signed_by_all):
+        ret = {}
+        if verified.trust_level is not None:
+            ret["res"] = True
+            ret["username"] = verified.username
+            ret["key_id"] = verified.key_id
+            ret["trust_level"] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
+            ret["message"] = "The signature is verified."
+        else:
+            ret["res"] = False
+            ret["message"] = "The signature could not be verified."
+
         return ret
 
-    # verification of specific keys should start fresh
     signatures = [
         {
             "username": sig.get("username"),
@@ -1243,6 +1242,7 @@ def verify(
         for sig in verified.sig_info.values()
     ]
     ret = {"res": False, "message": "", "signatures": signatures}
+
     # be very explicit and do not default to result = True below
     any_check = all_check = False
 
