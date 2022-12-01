@@ -1149,12 +1149,6 @@ def verify(
         keys signed the data, verification will fail. Optional.
         Note that this does not take into account trust.
 
-        .. note::
-
-            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when
-            signatures are included for which the corresponding pubkeys are unknown,
-            this check might fail even though it should have been deemed valid.
-
         .. versionadded:: 3006
 
     signed_by_all
@@ -1162,12 +1156,6 @@ def verify(
         for verification to pass. If a single provided key did
         not sign the data, verification will fail. Optional.
         Note that this does not take into account trust.
-
-        .. note::
-
-            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when
-            signatures are included for which the corresponding pubkeys are unknown,
-            this check might fail even though it should have been deemed valid.
 
         .. versionadded:: 3006
 
@@ -1200,6 +1188,13 @@ def verify(
         # batch mode stops processing on the first invalid signature.
         # This ensures all signatures are evaluated for validity.
         extra_args.append("--no-batch")
+        # workaround https://github.com/vsajip/python-gnupg/issues/214
+        # Until the issue is resolved, bad signatures would not actually be
+        # included in `sig_info`, but override the previous one's information
+        # (the same would be valid for signatures with missing pubkeys).
+        # `keyid`, `username` and `status` would always be overwritten,
+        # while missing pubkeys would also overwrite `fingerprint`.
+        gpg.result_map["verify"] = FixedVerify
 
     if text:
         verified = gpg.verify(text, extra_args=extra_args)
@@ -1252,18 +1247,9 @@ def verify(
         any_signed = False
         for signer in signed_by_any:
             signer = str(signer)
-            # Until https://github.com/vsajip/python-gnupg/issues/214 is resolved,
-            # bad signatures are not actually included in `sig_info`, but
-            # override the previous one's information (the same is valid for signatures
-            # with missing pubkeys). `keyid`, `username` and `status` are always
-            # overwritten, while missing pubkeys also overwrite `fingerprint`.
-            # This means: 1) only ever compare to fingerprint 2) filter out
-            # `signature error` status because the fingerprint cannot be trusted.
             try:
                 if any(
-                    x["status"] != "signature error"
-                    and x["trust_level"] is not None
-                    and str(x["fingerprint"]) == signer
+                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
                     for x in signatures
                 ):
                     any_signed = True
@@ -1286,9 +1272,7 @@ def verify(
             signer = str(signer)
             try:
                 if any(
-                    x["status"] != "signature error"
-                    and x["trust_level"] is not None
-                    and str(x["fingerprint"]) == signer
+                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
                     for x in signatures
                 ):
                     continue
@@ -1518,3 +1502,27 @@ def decrypt(
         log.error(result.stderr)
 
     return ret
+
+
+class FixedVerify(gnupg.Verify):
+    """
+    This is a workaround for https://github.com/vsajip/python-gnupg/issues/214.
+    It ensures invalid or otherwise unverified signatures are not
+    merged into sig_info in any way.
+    """
+
+    def handle_status(self, key, value):
+        if "NEWSIG" == key:
+            self.valid = False
+            self.fingerprint = self.creation_date = self.timestamp = None
+            self.signature_id = self.key_id = None
+            self.username = None
+            self.key_id = None
+            self.key_status = None
+            self.status = None
+            self.pubkey_fingerprint = None
+            self.expire_timestamp = None
+            self.sig_timestamp = None
+            self.trust_text = None
+            self.trust_level = None
+        super().handle_status(key, value)

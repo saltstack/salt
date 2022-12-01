@@ -416,7 +416,8 @@ def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
         (["c_fail", "b"], "bc", True),
         # Bad signatures partly overwrite the preceding good one currently.
         # https://github.com/vsajip/python-gnupg/issues/214
-        # This is not an issue since we only rely on trust_level and fingerprint.
+        # The module contains a workaround for this issue though.
+        # The following would not have an issue since we only rely on trust_level and fingerprint.
         (["b", "c_fail"], "bc", True),
         (["e_exp"], "e", False),
         (["e_exp", "a"], "a", True),
@@ -426,10 +427,11 @@ def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
         # The above mentioned issue also affects signatures
         # whose pubkeys are absent from the keychain, but they
         # also overwrite the previous one's fingerprint (which we compare to).
-        # ("af", "abcde", True),
-        # That would mean the following would be accepted, even
-        # though the `f` signature was never verified because the pubkey
-        # was missing. This needs to be filtered explicitly!
+        # So the following would fail without the workaround:
+        ("af", "abcde", True),
+        # Without the workaround, the following would be accepted (= test failure),
+        # even though the `f` signature was never verified because the pubkey
+        # was missing.
         ("af", "f", False),
     ],
     indirect=["sig"],
@@ -458,7 +460,8 @@ def test_gpg_verify_signed_by_any(
         (["a", "c_fail"], "ac", False),
         # Bad signatures partly overwrite the preceding good one currently.
         # https://github.com/vsajip/python-gnupg/issues/214
-        # This is not an issue since we only rely on trust_level and fingerprint.
+        # The module contains a workaround for this issue though.
+        # The following would not have an issue since we only rely on trust_level and fingerprint.
         (["a", "b", "c_fail"], "ab", True),
         (["a", "b", "c_fail"], "abc", False),
         (["c_fail", "a", "b"], "ab", True),
@@ -467,10 +470,11 @@ def test_gpg_verify_signed_by_any(
         # The above mentioned issue also affects signatures
         # whose pubkeys are absent from the keychain, but they
         # also overwrite the previous one's fingerprint (which we compare to).
-        # ("dfa", "da", True),
-        # That would mean the following would be accepted, even
-        # though the `f` signature was never verified because the pubkey
-        # was missing. This needs to be filtered explicitly!
+        # So the following would fail without the workaround:
+        ("dfa", "da", True),
+        # Without the workaround, the following would be accepted (= test fail),
+        # even though the `f` signature was never verified because the pubkey
+        # was missing.
         ("abf", "af", False),
     ],
     indirect=["sig"],
