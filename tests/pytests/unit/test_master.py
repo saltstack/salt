@@ -3,6 +3,7 @@ import time
 import pytest
 
 import salt.master
+import salt.utils.platform
 from tests.support.mock import patch
 
 
@@ -29,7 +30,11 @@ def test_fileserver_duration():
         # one time.
         update.called_once()
         # Timeout is 1 second
-        assert 2 > end - start > 1
+        duration = end - start
+        if duration > 2 and salt.utils.platform.spawning_platform():
+            # Give spawning platforms some slack
+            duration = round(duration, 1)
+        assert 2 > duration > 1
 
 
 @pytest.mark.parametrize(
