@@ -58,8 +58,9 @@ def represent_undefined(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:null", "NULL")
 
 
-OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
-SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
+# OrderedDumper does not inherit from SafeOrderedDumper, so any applicable
+# representers added to SafeOrderedDumper must also be explicitly added to
+# OrderedDumper.
 
 # This default registration matches types that don't match any other
 # registration, overriding PyYAML's default behavior of raising an exception.
@@ -73,28 +74,18 @@ SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 # for `object` that takes priority.
 SafeOrderedDumper.add_representer(None, represent_undefined)
 
-OrderedDumper.add_representer(
-    collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
-)
-SafeOrderedDumper.add_representer(
-    collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
-)
-OrderedDumper.add_representer(
-    salt.utils.context.NamespacedDictWrapper,
-    yaml.representer.SafeRepresenter.represent_dict,
-)
-SafeOrderedDumper.add_representer(
-    salt.utils.context.NamespacedDictWrapper,
-    yaml.representer.SafeRepresenter.represent_dict,
-)
-
-# TODO: These seem wrong: the first argument should be a type, not a tag.
-OrderedDumper.add_representer(
-    "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar
-)
-SafeOrderedDumper.add_representer(
-    "tag:yaml.org,2002:timestamp", SafeOrderedDumper.represent_scalar
-)
+for D in (SafeOrderedDumper, OrderedDumper):
+    D.add_representer(OrderedDict, represent_ordereddict)
+    D.add_representer(
+        collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
+    )
+    D.add_representer(
+        salt.utils.context.NamespacedDictWrapper,
+        yaml.representer.SafeRepresenter.represent_dict,
+    )
+    # TODO: This seems wrong: the first argument should be a type, not a tag.
+    D.add_representer("tag:yaml.org,2002:timestamp", Dumper.represent_scalar)
+del D
 
 
 def get_dumper(dumper_name):
