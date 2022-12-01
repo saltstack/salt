@@ -16,6 +16,7 @@ Its output may be stored in a file or in a grain.
       icinga2.generate_ticket:
         - name: domain.tld
         - output:  "/tmp/query_id.txt"
+        - salt: SHARED_SECRET
 """
 
 
@@ -37,7 +38,7 @@ def __virtual__():
 
 def generate_ticket(name, output=None, grain=None, key=None, overwrite=True, salt=None):
     """
-    Generate an icinga2 ticket on the master.
+    Generate an icinga2 ticket on the parent.
 
     name
         The domain name for which this ticket will be generated
@@ -146,15 +147,12 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True, sal
     return ret
 
 
-def generate_cert(name, salt):
+def generate_cert(name):
     """
     Generate an icinga2 certificate and key on the client.
 
     name
         The domain name for which this certificate and key will be generated
-
-    salt:
-        The shared secret for remote node tickets
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     cert = "{}{}.crt".format(get_certs_path(), name)
@@ -174,7 +172,7 @@ def generate_cert(name, salt):
         return ret
 
     # Executing the command.
-    cert_save = __salt__["icinga2.generate_cert"](name, salt)
+    cert_save = __salt__["icinga2.generate_cert"](name)
     if not cert_save["retcode"]:
         ret["comment"] = "Certificate and key generated"
         ret["changes"]["cert"] = "Executed. Certificate saved: {}".format(cert)
@@ -182,21 +180,18 @@ def generate_cert(name, salt):
     return ret
 
 
-def save_cert(name, master, salt):
+def save_cert(name, parent):
     """
-    Save the certificate on master icinga2 node.
+    Save the certificate on parent icinga2 node.
 
     name
         The domain name for which this certificate will be saved
 
-    master
-        Icinga2 master node for which this certificate will be saved
-
-    salt:
-        The shared secret for remote node tickets
+    parent
+        Icinga2 parent node for which this certificate will be saved
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    cert = "{}trusted-master.crt".format(get_certs_path())
+    cert = "{}trusted-parent.crt".format(get_certs_path())
 
     # Checking if execution is needed.
     if os.path.isfile(cert):
@@ -204,32 +199,29 @@ def save_cert(name, master, salt):
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Certificate save for icinga2 master would be executed"
+        ret["comment"] = "Certificate save for icinga2 parent would be executed"
         return ret
 
     # Executing the command.
-    cert_save = __salt__["icinga2.save_cert"](name, master, salt)
+    cert_save = __salt__["icinga2.save_cert"](name, parent)
     if not cert_save["retcode"]:
-        ret["comment"] = "Certificate for icinga2 master saved"
+        ret["comment"] = "Certificate for icinga2 parent saved"
         ret["changes"]["cert"] = "Executed. Certificate saved: {}".format(cert)
     return ret
 
 
-def request_cert(name, master, ticket, salt, port="5665"):
+def request_cert(name, parent, ticket, port="5665"):
     """
-    Request CA certificate from master icinga2 node.
+    Request CA certificate from parent icinga2 node.
 
     name
         The domain name for which this certificate will be saved
 
-    master
-        Icinga2 master node for which this certificate will be saved
+    parent
+        Icinga2 parent node for which this certificate will be saved
 
     ticket
-        Authentication ticket generated on icinga2 master
-
-    salt:
-        The shared secret for remote node tickets
+        Authentication ticket generated on icinga2 parent
 
     port
         Icinga2 port, defaults to 5665
@@ -243,13 +235,13 @@ def request_cert(name, master, ticket, salt, port="5665"):
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Certificate request from icinga2 master would be executed"
+        ret["comment"] = "Certificate request from icinga2 parent would be executed"
         return ret
 
     # Executing the command.
-    cert_request = __salt__["icinga2.request_cert"](name, master, ticket, salt, port)
+    cert_request = __salt__["icinga2.request_cert"](name, parent, ticket, port)
     if not cert_request["retcode"]:
-        ret["comment"] = "Certificate request from icinga2 master executed"
+        ret["comment"] = "Certificate request from icinga2 parent executed"
         ret["changes"]["cert"] = "Executed. Certificate requested: {}".format(cert)
         return ret
 
@@ -260,21 +252,18 @@ def request_cert(name, master, ticket, salt, port="5665"):
     return ret
 
 
-def node_setup(name, master, ticket, salt):
+def node_setup(name, parent, ticket):
     """
     Setup the icinga2 node.
 
     name
         The domain name for which this certificate will be saved
 
-    master
-        Icinga2 master node for which this certificate will be saved
+    parent
+        Icinga2 parent node for which this certificate will be saved
 
     ticket
-        Authentication ticket generated on icinga2 master
-
-    salt:
-        The shared secret for remote node tickets
+        Authentication ticket generated on icinga2 parent
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     cert = "{}{}.crt.orig".format(get_certs_path(), name)
@@ -290,7 +279,7 @@ def node_setup(name, master, ticket, salt):
         return ret
 
     # Executing the command.
-    node_setup = __salt__["icinga2.node_setup"](name, master, ticket, salt)
+    node_setup = __salt__["icinga2.node_setup"](name, parent, ticket)
     if not node_setup["retcode"]:
         ret["comment"] = "Node setup executed."
         ret["changes"]["cert"] = "Node setup finished successfully."
