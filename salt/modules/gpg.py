@@ -1509,20 +1509,13 @@ class FixedVerify(gnupg.Verify):
     This is a workaround for https://github.com/vsajip/python-gnupg/issues/214.
     It ensures invalid or otherwise unverified signatures are not
     merged into sig_info in any way.
+
+    https://github.com/vsajip/python-gnupg/commit/ee94a7ecc1a86484c9f02337e2bbdd05fd32b383
     """
 
     def handle_status(self, key, value):
         if "NEWSIG" == key:
-            self.valid = False
-            self.fingerprint = self.creation_date = self.timestamp = None
-            self.signature_id = self.key_id = None
-            self.username = None
-            self.key_id = None
-            self.key_status = None
-            self.status = None
-            self.pubkey_fingerprint = None
-            self.expire_timestamp = None
-            self.sig_timestamp = None
-            self.trust_text = None
-            self.trust_level = None
+            self.signature_id = None
         super().handle_status(key, value)
+        if key in self.TRUST_LEVELS:
+            self.signature_id = None
