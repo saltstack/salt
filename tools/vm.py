@@ -965,8 +965,8 @@ class VM:
             env["CI"] = os.environ["CI"]
         env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
-        if env:
-            self.write_and_upload_dot_env(env)
+        env["GITHUB_ACTIONS_PIPELINE"] = "1"
+        self.write_and_upload_dot_env(env)
         if self.is_windows is False:
             sudo = True
         else:
