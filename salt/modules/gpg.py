@@ -1,6 +1,6 @@
 """
-Manage a GPG keychains, add keys, create keys, retrieve keys from keyservers.
-Sign, encrypt and sign plus encrypt text and files.
+Manage GPG keychains, add keys, create keys, retrieve keys from keyservers.
+Sign, encrypt, sign plus encrypt and verify text and files.
 
 .. versionadded:: 2015.5.0
 
@@ -501,7 +501,7 @@ def delete_key(
     use_passphrase=True,
 ):
     """
-    Get a key from the GPG keychain
+    Delete a key from the GPG keychain.
 
     keyid
         The keyid of the key to be deleted.
@@ -1100,7 +1100,14 @@ def sign(
 
 
 def verify(
-    text=None, user=None, filename=None, gnupghome=None, signature=None, trustmodel=None
+    text=None,
+    user=None,
+    filename=None,
+    gnupghome=None,
+    signature=None,
+    trustmodel=None,
+    signed_by_any=None,
+    signed_by_all=None,
 ):
     """
     Verify a message or file
@@ -1136,6 +1143,34 @@ def verify(
 
         .. versionadded:: 2019.2.0
 
+    signed_by_any
+        A list of key fingerprints from which any valid signature
+        will mark verification as passed. If none of the provided
+        keys signed the data, verification will fail. Optional.
+        Note that this does not take into account trust.
+
+        .. note::
+
+            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when invalid signatures
+            or ones with missing corresponding pubkeys are included,
+            this check might fail even though it should have been deemed valid.
+
+        .. versionadded:: 3006
+
+    signed_by_all
+        A list of key fingerprints whose signatures are required
+        for verification to pass. If a single provided key did
+        not sign the data, verification will fail. Optional.
+        Note that this does not take into account trust.
+
+        .. note::
+
+            Due to `a bug in python-gnupg <https://github.com/vsajip/python-gnupg/issues/214>`_, when invalid signatures
+            or ones with missing corresponding pubkeys are included,
+            this check might fail even though it should have been deemed valid.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -1161,6 +1196,11 @@ def verify(
     if trustmodel:
         extra_args.extend(["--trust-model", trustmodel])
 
+    if signed_by_any or signed_by_all:
+        # batch mode stops processing on the first invalid signature.
+        # This ensures all signatures are evaluated for validity.
+        extra_args.append("--no-batch")
+
     if text:
         verified = gpg.verify(text, extra_args=extra_args)
     elif filename:
@@ -1185,6 +1225,91 @@ def verify(
     else:
         ret["res"] = False
         ret["message"] = "The signature could not be verified."
+
+    if not (signed_by_any or signed_by_all):
+        return ret
+
+    # verification of specific keys should start fresh
+    signatures = [
+        {
+            "username": sig.get("username"),
+            "key_id": sig["keyid"],
+            "fingerprint": sig["fingerprint"],
+            "trust_level": VERIFY_TRUST_LEVELS[str(sig["trust_level"])]
+            if "trust_level" in sig
+            else None,
+            "status": sig["status"],
+        }
+        for sig in verified.sig_info.values()
+    ]
+    ret = {"res": False, "message": "", "signatures": signatures}
+    # be very explicit and do not default to result = True below
+    any_check = all_check = False
+    valid_status = ("signature valid", "signature good")
+
+    if signed_by_any:
+        if not isinstance(signed_by_any, list):
+            signed_by_any = [signed_by_any]
+        any_signed = False
+        for signer in signed_by_any:
+            signer = str(signer)
+            # python-gnupg intends to include bad signatures and signatures from expired keys.
+            # Also, until https://github.com/vsajip/python-gnupg/issues/214 is resolved,
+            # bad signatures are not actually included in `sig_info`, but
+            # make the previous one invalid (the same for signatures with missing pubkeys).
+            # Better fail instead of assuming the incorrect behavior will stay
+            # by accepting invalid ones.
+            try:
+                if any(
+                    x["status"] in valid_status
+                    and x["trust_level"] is not None
+                    and str(x["fingerprint"]) == signer
+                    for x in signatures
+                ):
+                    any_signed = True
+                    break
+            except (KeyError, IndexError):
+                pass
+
+        if not any_signed:
+            ret["res"] = False
+            ret[
+                "message"
+            ] = "None of the public keys listed in signed_by_any provided a valid signature"
+            return ret
+        any_check = True
+
+    if signed_by_all:
+        if not isinstance(signed_by_all, list):
+            signed_by_all = [signed_by_all]
+        for signer in signed_by_all:
+            signer = str(signer)
+            try:
+                if any(
+                    x["status"] in valid_status
+                    and x["trust_level"] is not None
+                    and str(x["fingerprint"]) == signer
+                    for x in signatures
+                ):
+                    continue
+            except (KeyError, IndexError):
+                pass
+            ret["res"] = False
+            ret[
+                "message"
+            ] = f"Public key {signer} has not provided a valid signature, but was listed in signed_by_all"
+            return ret
+        all_check = True
+
+    if bool(signed_by_any) == any_check and bool(signed_by_all) == all_check:
+        ret["res"] = True
+        ret["message"] = "All required keys have provided a signature"
+        return ret
+
+    ret["res"] = False
+    ret[
+        "message"
+    ] = "Something went wrong while checking for specific signers. This is most likely a bug"
     return ret
 
 
