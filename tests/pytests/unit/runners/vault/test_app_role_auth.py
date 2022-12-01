@@ -50,6 +50,10 @@ def configure_loader_modules():
         }
 
 
+@patch(
+    "salt.runners.vault._get_policies_cached",
+    Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
+)
 def test_generate_token():
     """
     Basic test for test_generate_token with approle (two vault calls)
