@@ -200,7 +200,11 @@ jobs:
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
         run: |
-          nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }}
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }}
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R $(id -un) .
 
       - name: Combine Coverage Reports
         if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
