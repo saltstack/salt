@@ -967,7 +967,7 @@ class VM:
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"
         self.write_and_upload_dot_env(env)
-        if self.is_windows is False:
+        if self.is_windows is False and self.config.ssh_username != "root":
             sudo = True
         else:
             sudo = False
