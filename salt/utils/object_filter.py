@@ -31,8 +31,10 @@ def write(value, data, address):
         key_item = data_child[point.point]
         del data_child[point.point]
         data_child[value] = key_item
-    else:
+    elif isinstance(data_child, (dict, list)):
         data_child[point.point] = value
+    else:
+        vars(data_child)[point.point] = value
     return data
 
 
@@ -112,7 +114,7 @@ def _object_filter(data, types, keys, unsupported, address, address_list):
                     types,
                     keys,
                     unsupported,
-                    AddressPoint(k, False, True),
+                    (*address, AddressPoint(k, False, True)),
                     address_list,
                 )
                 if keys:
