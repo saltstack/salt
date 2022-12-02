@@ -17,18 +17,20 @@ def configure_loader_modules():
     return {at: {}}
 
 
-atq_output = {
-    "jobs": [
-        {
-            "date": "2014-12-11",
-            "job": 101,
-            "queue": "A",
-            "tag": "",
-            "time": "19:48:47",
-            "user": "B",
-        }
-    ]
-}
+@pytest.fixture
+def atq_output():
+    return {
+        "jobs": [
+            {
+                "date": "2014-12-11",
+                "job": 101,
+                "queue": "A",
+                "tag": "",
+                "time": "19:48:47",
+                "user": "B",
+            }
+        ]
+    }
 
 
 @classmethod
@@ -117,7 +119,7 @@ def test_atq_list():
             }
 
 
-def test_atrm():
+def test_atrm(atq_output):
     """
     Tests for remove jobs from the queue.
     """
@@ -140,7 +142,7 @@ def test_atrm():
             assert at.atrm(101) == "'at.atrm' is not available."
 
 
-def test_jobcheck():
+def test_jobcheck(atq_output):
     """
     Tests for check the job from queue.
     """
@@ -168,7 +170,7 @@ def test_jobcheck():
         }
 
 
-def test_at():
+def test_at(atq_output):
     """
     Tests for add a job to the queue.
     """
