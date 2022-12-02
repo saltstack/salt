@@ -4768,15 +4768,15 @@ class BaseHighState:
 
         return self.state.call_high(high, orchestration_jid)
 
-    def compile_highstate(self):
+    def compile_highstate(self, context=None):
         """
         Return just the highstate or the errors
         """
         err = []
-        top = self.get_top()
+        top = self.get_top(context=context)
         err += self.verify_tops(top)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, context=context)
         err += errors
 
         if err:
