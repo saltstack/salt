@@ -1,1 +1,1 @@
-move dep of neutron to Argon. Pls move to neutronng
+Move deprecation of the neutron module to Argon. Please migrate to the neutronng module instead.
