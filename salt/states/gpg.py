@@ -32,7 +32,14 @@ TRUST_MAP = {
 
 
 def present(
-    name, keys=None, user=None, keyserver=None, gnupghome=None, trust=None, **kwargs
+    name,
+    keys=None,
+    user=None,
+    keyserver=None,
+    gnupghome=None,
+    trust=None,
+    keyring=None,
+    **kwargs,
 ):
     """
     Ensure a GPG public key is present in the GPG keychain.
@@ -57,11 +64,19 @@ def present(
         ignored by default. Valid trust levels:
         expired, unknown, not_trusted, marginally,
         fully, ultimately
+
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)
+    _current_keys = __salt__["gpg.list_keys"](
+        user=user, gnupghome=gnupghome, keyring=keyring
+    )
 
     current_keys = {}
     for key in _current_keys:
@@ -123,10 +138,11 @@ def present(
                 )
                 continue
             result = __salt__["gpg.receive_keys"](
-                keyserver,
-                key,
-                user,
-                gnupghome,
+                keyserver=keyserver,
+                keys=key,
+                user=user,
+                gnupghome=gnupghome,
+                keyring=keyring,
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
@@ -156,7 +172,15 @@ def present(
     return ret
 
 
-def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
+def absent(
+    name,
+    keys=None,
+    user=None,
+    gnupghome=None,
+    keyring=None,
+    keyring_absent_if_empty=False,
+    **kwargs,
+):
     """
     Ensure a GPG public key is absent from the keychain.
 
@@ -171,11 +195,25 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
 
     gnupghome
         Override GnuPG home directory.
+
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
+    keyring_absent_if_empty
+        Make sure to not leave behind an empty keyring file
+        if ``keyring`` was specified. Defaults to false.
+
+        .. versionadded:: 3006
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)
+    _current_keys = __salt__["gpg.list_keys"](
+        user=user, gnupghome=gnupghome, keyring=keyring
+    )
 
     current_keys = []
     for key in _current_keys:
@@ -198,6 +236,8 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 keyid=key,
                 user=user,
                 gnupghome=gnupghome,
+                keyring=keyring,
+                use_passphrase=False,
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
@@ -207,5 +247,37 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 salt.utils.dictupdate.append_dict_key_value(ret, "changes:deleted", key)
         else:
             ret["comment"].append(f"{key} not found in GPG keychain")
+
+    if __opts__["test"] or not ret["result"]:
+        return ret
+
+    _new_keys = [
+        x["keyid"]
+        for x in __salt__["gpg.list_keys"](
+            user=user, gnupghome=gnupghome, keyring=keyring
+        )
+    ]
+
+    if set(keys) & set(_new_keys):
+        remaining = set(keys) & set(_new_keys)
+        ret["result"] = False
+        ret["comment"].append(
+            "State check revealed the following keys could not be deleted: "
+            + ", ".join(remaining)
+        )
+        ret["changes"]["deleted"] = list(
+            set(ret["changes"]["deleted"]) - set(_new_keys)
+        )
+
+    elif (
+        not _new_keys
+        and keyring
+        and keyring_absent_if_empty
+        and __salt__["file.file_exists"](keyring)
+    ):
+        __salt__["file.remove"](keyring)
+        ret["comment"].append(f"Removed keyring file {keyring}")
+        ret["changes"]["removed"] = keyring
+
     ret["comment"] = "\n".join(ret["comment"])
     return ret
