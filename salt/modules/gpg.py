@@ -154,11 +154,17 @@ def _restore_ownership(func):
         userinfo = _get_user_info(user)
         run_user = _get_user_info()
 
-        if userinfo["uid"] != run_user["uid"] and os.path.exists(gnupghome):
-            # Given user is different from one who runs Salt process,
-            # need to fix ownership permissions for GnuPG home dir
-            group = __salt__["file.gid_to_group"](run_user["gid"])
-            for path in [gnupghome] + __salt__["file.find"](gnupghome):
+        if userinfo["uid"] != run_user["uid"]:
+            group = None
+            if os.path.exists(gnupghome):
+                # Given user is different from one who runs Salt process,
+                # need to fix ownership permissions for GnuPG home dir
+                group = __salt__["file.gid_to_group"](run_user["gid"])
+                for path in [gnupghome] + __salt__["file.find"](gnupghome):
+                    __salt__["file.chown"](path, run_user["name"], group)
+            if "keyring" in kwargs and os.path.exists(kwargs["keyring"]):
+                if group is None:
+                    group = __salt__["file.gid_to_group"](run_user["gid"])
                 __salt__["file.chown"](path, run_user["name"], group)
 
         # Filter special kwargs
@@ -172,38 +178,39 @@ def _restore_ownership(func):
             group = __salt__["file.gid_to_group"](userinfo["gid"])
             for path in [gnupghome] + __salt__["file.find"](gnupghome):
                 __salt__["file.chown"](path, user, group)
-
+            if "keyring" in kwargs and os.path.exists(kwargs["keyring"]):
+                __salt__["file.chown"](path, user, group)
         return ret
 
     return func_wrapper
 
 
-def _create_gpg(user=None, gnupghome=None):
+def _create_gpg(user=None, gnupghome=None, keyring=None):
     """
     Create the GPG object
     """
     if not gnupghome:
         gnupghome = _get_user_gnupghome(user)
 
-    gpg = gnupg.GPG(gnupghome=gnupghome)
+    gpg = gnupg.GPG(gnupghome=gnupghome, keyring=keyring)
 
     return gpg
 
 
-def _list_keys(user=None, gnupghome=None, secret=False):
+def _list_keys(secret=False, user=None, gnupghome=None, keyring=None):
     """
     Helper function for Listing keys
     """
-    gpg = _create_gpg(user, gnupghome)
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
     _keys = gpg.list_keys(secret)
     return _keys
 
 
-def _search_keys(text, keyserver, user=None):
+def _search_keys(text, keyserver, user=None, gnupghome=None):
     """
     Helper function for searching keys from keyserver
     """
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if keyserver:
         _keys = gpg.search_keys(text, keyserver)
     else:
@@ -211,7 +218,7 @@ def _search_keys(text, keyserver, user=None):
     return _keys
 
 
-def search_keys(text, keyserver=None, user=None):
+def search_keys(text, keyserver=None, user=None, gnupghome=None):
     """
     Search keys from keyserver
 
@@ -225,6 +232,11 @@ def search_keys(text, keyserver=None, user=None):
         Which user's keychain to access, defaults to user Salt is running as.
         Passing the user as ``salt`` will set the GnuPG home directory to the
         ``/etc/salt/gpgkeys``.
+
+    gnupghome
+        Specify the location where GPG keyring and related files are stored.
+
+        .. versionadded:: 3006
 
     CLI Example:
 
@@ -241,7 +253,7 @@ def search_keys(text, keyserver=None, user=None):
         keyserver = _DEFAULT_KEY_SERVER
 
     _keys = []
-    for _key in _search_keys(text, keyserver, user):
+    for _key in _search_keys(text, keyserver, user=user, gnupghome=gnupghome):
         tmp = {"keyid": _key["keyid"], "uids": _key["uids"]}
 
         expires = _key.get("expires", None)
@@ -262,7 +274,7 @@ def search_keys(text, keyserver=None, user=None):
     return _keys
 
 
-def list_keys(user=None, gnupghome=None):
+def list_keys(user=None, gnupghome=None, keyring=None):
     """
     List keys in GPG keychain
 
@@ -274,6 +286,12 @@ def list_keys(user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -282,7 +300,7 @@ def list_keys(user=None, gnupghome=None):
 
     """
     _keys = []
-    for _key in _list_keys(user, gnupghome):
+    for _key in _list_keys(user=user, gnupghome=gnupghome, keyring=keyring):
         tmp = {
             "keyid": _key["keyid"],
             "fingerprint": _key["fingerprint"],
@@ -313,7 +331,7 @@ def list_keys(user=None, gnupghome=None):
     return _keys
 
 
-def list_secret_keys(user=None, gnupghome=None):
+def list_secret_keys(user=None, gnupghome=None, keyring=None):
     """
     List secret keys in GPG keychain
 
@@ -325,6 +343,12 @@ def list_secret_keys(user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -333,7 +357,9 @@ def list_secret_keys(user=None, gnupghome=None):
 
     """
     _keys = []
-    for _key in _list_keys(user, gnupghome, secret=True):
+    for _key in _list_keys(
+        user=user, gnupghome=gnupghome, keyring=keyring, secret=True
+    ):
         tmp = {
             "keyid": _key["keyid"],
             "fingerprint": _key["fingerprint"],
@@ -377,6 +403,7 @@ def create_key(
     use_passphrase=False,
     user=None,
     gnupghome=None,
+    keyring=None,
 ):
     """
     Create a key in the GPG keychain
@@ -433,6 +460,12 @@ def create_key(
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -449,7 +482,7 @@ def create_key(
         "name_comment": name_comment,
     }
 
-    gpg = _create_gpg(user, gnupghome)
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if name_email:
         create_params["name_email"] = name_email
@@ -502,6 +535,7 @@ def delete_key(
     user=None,
     gnupghome=None,
     use_passphrase=True,
+    keyring=None,
 ):
     """
     Delete a key from the GPG keychain.
@@ -530,6 +564,12 @@ def delete_key(
 
         .. versionadded:: 3003
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -555,8 +595,14 @@ def delete_key(
         ret["message"] = "Required argument, fingerprint or keyid"
         return ret
 
-    gpg = _create_gpg(user, gnupghome)
-    key = get_key(keyid=keyid, fingerprint=fingerprint, user=user, gnupghome=gnupghome)
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
+    key = get_key(
+        keyid=keyid,
+        fingerprint=fingerprint,
+        user=user,
+        gnupghome=gnupghome,
+        keyring=keyring,
+    )
 
     def __delete_key(fingerprint, secret, use_passphrase):
         if secret and use_passphrase:
@@ -571,7 +617,13 @@ def delete_key(
 
     if key:
         fingerprint = key["fingerprint"]
-        skey = get_secret_key(keyid, fingerprint, user, gnupghome=gnupghome)
+        skey = get_secret_key(
+            keyid=keyid,
+            fingerprint=fingerprint,
+            user=user,
+            gnupghome=gnupghome,
+            keyring=keyring,
+        )
         if skey:
             if not delete_secret:
                 ret["res"] = False
@@ -605,7 +657,7 @@ def delete_key(
     return ret
 
 
-def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
+def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None, keyring=None):
     """
     Get a key from the GPG keychain
 
@@ -623,6 +675,12 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -635,7 +693,7 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
     """
     tmp = {}
-    for _key in _list_keys(user, gnupghome):
+    for _key in _list_keys(user=user, gnupghome=gnupghome, keyring=keyring):
         if (
             _key["fingerprint"] == fingerprint
             or _key["keyid"] == keyid
@@ -671,7 +729,9 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
         return tmp
 
 
-def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
+def get_secret_key(
+    keyid=None, fingerprint=None, user=None, gnupghome=None, keyring=None
+):
     """
     Get a key from the GPG keychain
 
@@ -689,6 +749,12 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -701,7 +767,9 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
     """
     tmp = {}
-    for _key in _list_keys(user, gnupghome, secret=True):
+    for _key in _list_keys(
+        user=user, gnupghome=gnupghome, keyring=keyring, secret=True
+    ):
         if (
             _key["fingerprint"] == fingerprint
             or _key["keyid"] == keyid
@@ -738,7 +806,7 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
 
 @_restore_ownership
-def import_key(text=None, filename=None, user=None, gnupghome=None):
+def import_key(text=None, filename=None, user=None, gnupghome=None, keyring=None):
     r"""
     Import a key from text or file
 
@@ -756,6 +824,12 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -766,10 +840,10 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
     """
     ret = {"res": True, "message": ""}
 
-    gpg = _create_gpg(user, gnupghome)
-
     if not text and not filename:
         raise SaltInvocationError("filename or text must be passed.")
+
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if filename:
         try:
@@ -801,6 +875,7 @@ def export_key(
     use_passphrase=False,
     output=None,
     bare=False,
+    keyring=None,
 ):
     """
     Export a key from the GPG keychain
@@ -838,6 +913,12 @@ def export_key(
 
         .. versionadded:: 3006.0
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -850,7 +931,7 @@ def export_key(
 
     """
     ret = {"res": True}
-    gpg = _create_gpg(user, gnupghome)
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if isinstance(keyids, str):
         keyids = keyids.split(",")
@@ -887,7 +968,7 @@ def export_key(
 
 
 @_restore_ownership
-def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
+def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None, keyring=None):
     """
     Receive key(s) from keyserver and add them to keychain
 
@@ -906,6 +987,12 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -919,7 +1006,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     """
     ret = {"res": True, "message": []}
 
-    gpg = _create_gpg(user, gnupghome)
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if not keyserver:
         keyserver = _DEFAULT_KEY_SERVER
@@ -1060,6 +1147,7 @@ def sign(
     output=None,
     use_passphrase=False,
     gnupghome=None,
+    keyring=None,
 ):
     """
     Sign message or file
@@ -1070,7 +1158,7 @@ def sign(
         ``/etc/salt/gpgkeys``.
 
     keyid
-        The keyid of the key to set the trust level for, defaults to
+        The keyid of the key to use for signing, defaults to
         first key in the secret keyring.
 
     text
@@ -1089,6 +1177,12 @@ def sign(
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -1100,13 +1194,14 @@ def sign(
         salt '*' gpg.sign filename='/path/to/important.file' use_passphrase=True
 
     """
-    gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
         gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
     else:
         gpg_passphrase = None
+
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if text:
         signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
@@ -1131,6 +1226,7 @@ def verify(
     trustmodel=None,
     signed_by_any=None,
     signed_by_all=None,
+    keyring=None,
 ):
     """
     Verify a message or file
@@ -1182,6 +1278,12 @@ def verify(
 
         .. versionadded:: 3007.0
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -1192,7 +1294,6 @@ def verify(
         salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
     """
-    gpg = _create_gpg(user, gnupghome)
     trustmodels = ("pgp", "classic", "tofu", "tofu+pgp", "direct", "always", "auto")
 
     if trustmodel and trustmodel not in trustmodels:
@@ -1202,6 +1303,7 @@ def verify(
         log.warning(msg)
         return {"res": False, "message": msg}
 
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
     extra_args = []
 
     if trustmodel:
@@ -1328,6 +1430,7 @@ def encrypt(
     always_trust=False,
     gnupghome=None,
     bare=False,
+    keyring=None,
 ):
     """
     Encrypt a message or file
@@ -1370,6 +1473,12 @@ def encrypt(
         If ``True``, return the (armored) encrypted block as a string without
         the standard comment/res dict.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -1383,14 +1492,14 @@ def encrypt(
 
     """
     ret = {"res": True, "comment": ""}
-    gpg = _create_gpg(user, gnupghome)
-
     if sign and use_passphrase:
         gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
     else:
         gpg_passphrase = None
+
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if text:
         result = gpg.encrypt(
@@ -1444,6 +1553,7 @@ def decrypt(
     use_passphrase=False,
     gnupghome=None,
     bare=False,
+    keyring=None,
 ):
     """
     Decrypt a message or file
@@ -1473,6 +1583,12 @@ def decrypt(
         If ``True``, return the (armored) decrypted block as a string without the
         standard comment/res dict.
 
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -1483,13 +1599,14 @@ def decrypt(
 
     """
     ret = {"res": True, "comment": ""}
-    gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
         gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
     else:
         gpg_passphrase = None
+
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
 
     if text:
         result = gpg.decrypt(text, passphrase=gpg_passphrase)
