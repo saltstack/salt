@@ -1144,6 +1144,7 @@ def test_endeavouros_os_grains():
     }
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
+
 @pytest.mark.skip_unless_on_linux
 def test_Parrot_OS_grains():
     """
@@ -1177,6 +1178,7 @@ def test_Parrot_OS_grains():
         "osfinger": "Parrot OS-5",
     }
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
 
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
