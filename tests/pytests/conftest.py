@@ -537,7 +537,7 @@ def ssl_webserver(integration_files_dir, this_txt_file):
     """
     spins up an https webserver.
     """
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(
         str(integration_files_dir / "https" / "cert.pem"),
         str(integration_files_dir / "https" / "key.pem"),
