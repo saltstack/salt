@@ -973,7 +973,8 @@ def _virtual(osdata):
             elif ": Microsoft" in output and "Virtual Machine" in output:
                 grains["virtual"] = "VirtualPC"
             # Manufacturer: Parallels Software International Inc.
-            elif "Parallels Software" in output:
+            # Manufacturer: Parallels International GmbH.
+            elif "Manufacturer: Parallels" in output:
                 grains["virtual"] = "Parallels"
             elif "Manufacturer: Google" in output:
                 grains["virtual"] = "kvm"
