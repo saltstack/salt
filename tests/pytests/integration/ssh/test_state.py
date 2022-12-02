@@ -10,6 +10,7 @@ pytestmark = [
 @pytest.fixture(scope="module")
 def state_tree(base_env_state_tree_root_dir):
     top_file = """
+    {%- from "map.jinja" import abc with context %}
     base:
       'localhost':
         - basic
@@ -39,12 +40,18 @@ def state_tree(base_env_state_tree_root_dir):
         yield
 
 
+@pytest.mark.parametrize(
+    "ssh_cmd", ["state.sls", "state.highstate", "state.apply", "state.show_top"]
+)
 @pytest.mark.slow_test
-def test_state_with_import(salt_ssh_cli, state_tree):
+def test_state_with_import(salt_ssh_cli, state_tree, ssh_cmd):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run("state.sls", "test")
+    if ssh_cmd == "state.sls":
+        ret = salt_ssh_cli.run(ssh_cmd, "test")
+    else:
+        ret = salt_ssh_cli.run(ssh_cmd)
     assert ret.returncode == 0
     assert ret.data
 

@@ -3775,7 +3775,7 @@ class BaseHighState:
             envs.extend([env for env in client_envs if env not in envs])
             return envs
 
-    def get_tops(self):
+    def get_tops(self, context=None):
         """
         Gather the top files
         """
@@ -3806,6 +3806,7 @@ class BaseHighState:
                         self.state.opts["renderer_blacklist"],
                         self.state.opts["renderer_whitelist"],
                         saltenv=self.opts["saltenv"],
+                        context=context,
                     )
                 ]
             else:
@@ -3831,6 +3832,7 @@ class BaseHighState:
                             self.state.opts["renderer_blacklist"],
                             self.state.opts["renderer_whitelist"],
                             saltenv=saltenv,
+                            context=context,
                         )
                     )
                 else:
@@ -3887,6 +3889,7 @@ class BaseHighState:
                                 self.state.opts["renderer_blacklist"],
                                 self.state.opts["renderer_whitelist"],
                                 saltenv,
+                                context=context,
                             )
                         )
                         done[saltenv].append(sls)
@@ -4137,12 +4140,12 @@ class BaseHighState:
 
         return errors
 
-    def get_top(self):
+    def get_top(self, context=None):
         """
         Returns the high data derived from the top file
         """
         try:
-            tops = self.get_tops()
+            tops = self.get_tops(context=context)
         except SaltRenderError as err:
             log.error("Unable to render top file: %s", err.error)
             return {}
@@ -4379,7 +4382,11 @@ class BaseHighState:
                             mod_tgt = "{}:{}".format(r_env, sls_target)
                             if mod_tgt not in mods:
                                 nstate, err = self.render_state(
-                                    sls_target, r_env, mods, matches
+                                    sls_target,
+                                    r_env,
+                                    mods,
+                                    matches,
+                                    context=context,
                                 )
                                 if nstate:
                                     self.merge_included_states(state, nstate, errors)
@@ -4777,14 +4784,14 @@ class BaseHighState:
 
         return high
 
-    def compile_low_chunks(self):
+    def compile_low_chunks(self, context=None):
         """
         Compile the highstate but don't run it, return the low chunks to
         see exactly what the highstate will execute
         """
-        top = self.get_top()
+        top = self.get_top(context=context)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, context=context)
 
         # If there is extension data reconcile it
         high, ext_errors = self.state.reconcile_extend(high)
