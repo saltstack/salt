@@ -18,6 +18,7 @@ import _pytest.skipping
 import psutil
 import pytest
 
+import salt
 import salt._logging
 import salt._logging.mixins
 import salt.config
@@ -222,6 +223,19 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
+    try:
+        assert config._onedir_check_complete
+        return
+    except AttributeError:
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
+                raise pytest.UsageError(
+                    "Apparently running the test suite against the onedir build "
+                    "of salt, however, the imported salt package is pointing to "
+                    "the respository checkout instead of the onedir package."
+                )
+        config._onedir_check_complete = True
+
     for dirname in CODE_DIR.iterdir():
         if not dirname.is_dir():
             continue
