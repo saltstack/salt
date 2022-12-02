@@ -29,7 +29,6 @@ except ImportError:
     _WHEN_SUPPORTED = False
     _RANGE_SUPPORTED = False
 
-
 __proxyenabled__ = ["*"]
 
 log = logging.getLogger(__name__)
@@ -220,7 +219,6 @@ def is_enabled(name=None):
     .. code-block:: bash
 
         salt '*' schedule.is_enabled name=job_name
-
         salt '*' schedule.is_enabled
     """
 
@@ -1225,7 +1223,7 @@ def move(name, target, **kwargs):
         if not response:
             ret["comment"] = "no servers answered the published schedule.add command"
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret["comment"] = "the following minions return False"
             ret["minions"] = errors
             return ret
@@ -1288,7 +1286,7 @@ def copy(name, target, **kwargs):
         if not response:
             ret["comment"] = "no servers answered the published schedule.add command"
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret["comment"] = "the following minions return False"
             ret["minions"] = errors
             return ret

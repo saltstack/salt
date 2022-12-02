@@ -474,13 +474,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         from salt.modules.aptpkg import _expand_repo_def
 
         os_name = __grains__["os"]
-        lsb_distrib_codename = __grains__["lsb_distrib_codename"]
+        os_codename = __grains__["oscodename"]
 
         sanitizedkwargs = _expand_repo_def(
-            os_name=os_name,
-            lsb_distrib_codename=lsb_distrib_codename,
-            repo=repo,
-            **kwargs
+            os_name=os_name, os_codename=os_codename, repo=repo, **kwargs
         )
     else:
         sanitizedkwargs = kwargs

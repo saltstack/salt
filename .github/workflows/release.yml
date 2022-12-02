@@ -38,7 +38,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.branch }}
         fetch-depth: 0
@@ -77,7 +77,7 @@ jobs:
         git diff --no-color > rm_changelog_patch.txt
 
     - name: Store Generated Changelog
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: salt-changelog
         path: |
@@ -105,7 +105,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.branch }}
 
@@ -145,7 +145,7 @@ jobs:
 
     - name: Store Generated Documentation
       if: github.event.inputs.manPages == 'true'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: salt-man-pages
         path: doc/_build/man
@@ -169,7 +169,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.branch }}
         fetch-depth: 0

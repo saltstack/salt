@@ -470,7 +470,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith("-----"):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[: pem_temp.index("-----", 5) + 5])
@@ -1912,10 +1912,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if "verify OK" in output:
-        return True
-    else:
-        return False
+    return "verify OK" in output
 
 
 def expired(certificate):

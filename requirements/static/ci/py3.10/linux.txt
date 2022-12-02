@@ -341,7 +341,9 @@ azure==4.0.0 ; sys_platform != "win32"
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==3.1.6
-    # via paramiko
+    # via
+    #   paramiko
+    #   passlib
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -424,6 +426,8 @@ docker==5.0.3
     #   pytest-salt-factories
 etcd3-py==0.1.6 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
+exceptiongroup==1.0.4
+    # via pytest
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
@@ -635,7 +639,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   junos-eznc
     #   ncclient
     #   scp
-passlib==1.7.2 ; sys_platform != "win32"
+passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.9.0
     # via yamllint
@@ -653,8 +657,6 @@ psutil==5.8.0
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-py==1.10.0
-    # via pytest
 pyasn1-modules==0.2.4
     # via google-auth
 pyasn1==0.4.8
@@ -724,7 +726,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==7.0.1 ; python_version >= "3.6"
+pytest==7.2.0 ; python_version > "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
