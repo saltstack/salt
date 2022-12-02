@@ -682,7 +682,7 @@ def highstate(test=None, **kwargs):
         context=__context__.value(),
     ) as st_:
         st_.push_active()
-        chunks = st_.compile_low_chunks()
+        chunks = st_.compile_low_chunks(context=__context__.value())
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -1070,7 +1070,7 @@ def show_top(**kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
-        top_data = st_.get_top()
+        top_data = st_.get_top(context=__context__)
         errors = []
         errors += st_.verify_tops(top_data)
         if errors:
