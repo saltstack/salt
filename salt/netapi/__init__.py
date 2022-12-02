@@ -159,7 +159,9 @@ class NetapiClient:
 
         if low.get("client") not in self.opts.get("netapi_enable_clients"):
             raise salt.exceptions.SaltInvocationError(
-                "Client disabled: '{}'".format(low.get("client"))
+                "Client disabled: '{}'. Add to 'netapi_enable_clients' master config option to enable.".format(
+                    low.get("client")
+                )
             )
 
         if not ("token" in low or "eauth" in low):
