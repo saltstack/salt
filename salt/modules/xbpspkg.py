@@ -29,7 +29,7 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is Void and xbps-install found
     """
-    if __grains__["os"] in ("Void") and _check_xbps():
+    if __grains__["os"] in ("Void",) and _check_xbps():
         return __virtualname__
     return (False, "Missing dependency: xbps-install")
 
