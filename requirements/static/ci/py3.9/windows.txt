@@ -230,10 +230,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5 ; python_version <= "3.9"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
 pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
@@ -306,7 +302,7 @@ pytz==2022.1
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==303
+pywin32==305
     # via
     #   -r requirements/windows.txt
     #   cherrypy
