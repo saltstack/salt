@@ -162,3 +162,65 @@ def test_gpg_present_test_mode_no_changes(gpg_receive, gpg_trust, key, trust):
         gpg_trust.assert_not_called()
         assert ret["result"] is None
         assert ret["changes"]
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+def test_gpg_absent_no_changes(gpg_delete):
+    ret = gpg.absent("nonexistent")
+    assert ret["result"]
+    assert not ret["changes"]
+    gpg_delete.assert_not_called()
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+@pytest.mark.parametrize(
+    "gpg_delete,expected",
+    [
+        ({"res": True, "message": ["Public key for A deleted"]}, True),
+        (
+            {
+                "res": False,
+                "message": [
+                    "Secret key exists, delete first or pass delete_secret=True."
+                ],
+            },
+            False,
+        ),
+    ],
+    indirect=["gpg_delete"],
+)
+def test_gpg_absent_delete_key(gpg_delete, expected, keys_list):
+    list_ = Mock(spec="salt.modules.gpg.list_keys")
+    list_.side_effect = (keys_list, [x for x in keys_list if x["keyid"] != "A"])
+    with patch.dict(gpg.__salt__, {"gpg.list_keys": list_}):
+        ret = gpg.absent("A")
+        assert ret["result"] == expected
+        assert bool(ret["changes"]) == expected
+        gpg_delete.assert_called_once()
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+def test_gpg_absent_test_mode_no_changes(gpg_delete):
+    with patch.dict(gpg.__opts__, {"test": True}):
+        ret = gpg.absent("A")
+        gpg_delete.assert_not_called()
+        assert ret["result"] is None
+        assert bool(ret["changes"])
+
+
+def test_gpg_absent_list_keys_with_gnupghome_and_user(gpg_list_keys):
+    gnupghome = "/pls_respect_me"
+    user = "imthereaswell"
+    gpg.absent("nonexistent", gnupghome=gnupghome, user=user)
+    gpg_list_keys.assert_called_with(gnupghome=gnupghome, user=user, keyring=None)
+
+
+@pytest.mark.usefixtures("gpg_list_keys")
+def test_gpg_absent_delete_key_called_with_correct_kwargs(gpg_delete):
+    key = "A"
+    user = "hellothere"
+    gnupghome = "/pls_sir"
+    gpg.absent(key, user=user, gnupghome=gnupghome)
+    gpg_delete.assert_called_with(
+        keyid=key, gnupghome=gnupghome, user=user, keyring=None, use_passphrase=False
+    )
