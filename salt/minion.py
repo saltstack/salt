@@ -123,7 +123,6 @@ def resolve_dns(opts, fallback=True):
         "use_master_when_local", False
     ):
         check_dns = False
-    import salt.utils.network
 
     if check_dns is True:
         try:

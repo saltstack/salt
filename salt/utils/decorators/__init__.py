@@ -13,7 +13,6 @@ from collections import defaultdict
 from functools import wraps
 
 import salt.utils.args
-import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError,

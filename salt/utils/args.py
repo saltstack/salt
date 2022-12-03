@@ -170,9 +170,6 @@ def yamlify_arg(arg):
             return arg
 
     try:
-        # Explicit late import to avoid circular import. DO NOT MOVE THIS.
-        import salt.utils.yaml
-
         original_arg = arg
         if "#" in arg:
             # Only yamlify if it parses into a non-string type, to prevent
@@ -360,9 +357,6 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.data.is_true).
     """
-    # Once is_true is moved, remove this import and fix the ref below
-    import salt.utils
-
     for arg, value in kwargs.items():
         try:
             if arg.lower() == "test" and salt.utils.data.is_true(value):
