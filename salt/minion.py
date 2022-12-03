@@ -914,9 +914,11 @@ class SMinion(MinionBase):
     """
 
     def __init__(self, opts, context=None):
-        # Late setup of the opts grains, so we can log from the grains module
-        import salt.loader
+        # Without this global declaration, the late `import` statement below
+        # causes `salt` to become a function-local variable.
+        global salt
 
+        # Late setup of the opts grains, so we can log from the grains module
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 

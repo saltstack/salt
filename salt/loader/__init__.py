@@ -1060,8 +1060,9 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     """
-    # Need to re-import salt.config, somehow it got lost when a minion is starting
-    import salt.config
+    # Without this global declaration, the late `import` statement below causes
+    # `salt` to become a function-local variable.
+    global salt
 
     # if we have no grains, lets try loading from disk (TODO: move to decorator?)
     cfn = os.path.join(opts["cachedir"], "grains.cache.p")
