@@ -2310,6 +2310,7 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     apply_sdb(opts)
 
     _validate_opts(opts)
+    import salt.loader
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
     return opts
