@@ -197,7 +197,7 @@ def test_blkid(stub_disk_blkid):
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")
 @skipIf(salt.utils.platform.is_darwin(), "Skip on Darwin")
-@skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+@pytest.mark.skip_on_freebsd
 def test_blkid_token():
     run_stdout_mock = MagicMock(return_value={"retcode": 1})
     with patch.dict(disk.__salt__, {"cmd.run_all": run_stdout_mock}):
