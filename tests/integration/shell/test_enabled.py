@@ -7,7 +7,6 @@ import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -24,7 +23,7 @@ class EnabledTest(ModuleCase):
     )
 
     @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @pytest.mark.skip_on_freebsd
     def test_shell_default_enabled(self):
         """
         ensure that python_shell defaults to True for cmd.run
@@ -46,7 +45,7 @@ class EnabledTest(ModuleCase):
         self.assertEqual(ret, disabled_ret)
 
     @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @pytest.mark.skip_on_freebsd
     def test_template_shell(self):
         """
         Test cmd.shell works correctly when using a template.
