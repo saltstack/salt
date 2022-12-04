@@ -231,7 +231,9 @@ def test(
     Run test in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    env = {}
+    env = {
+        "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
+    }
     if rerun_failures:
         env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
