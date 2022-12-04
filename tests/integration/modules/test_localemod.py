@@ -4,7 +4,7 @@ from tests.support.case import ModuleCase
 
 
 @pytest.mark.skip_on_windows(reason="minion is windows")
-@skipIf(salt.utils.platform.is_darwin(), "locale method is not supported on mac")
+@pytest.mark.skip_on_darwin(reason="locale method is not supported on mac")
 @pytest.mark.skip_on_freebsd(
     reason="locale method is supported only within login classes or environment variables"
 )
