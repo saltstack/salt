@@ -18,7 +18,7 @@ import re
 import shutil
 import stat
 import sys
-from functools import partial, wraps
+from functools import lru_cache, partial, wraps
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
@@ -276,6 +276,14 @@ def pytest_configure(config):
         "is adjusted to 192.".format(
             EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
         ),
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_initial_gh_actions_failure(skip=<boolean or callable, reason=None): Skip known test failures "
+        "under the new GH Actions setup if the environment variable SKIP_INITIAL_GH_ACTIONS_FAILURES "
+        "is equal to '1' and the 'skip' keyword argument is either `True` or it's a callable that "
+        "when called returns `True`. If `skip` is a callable, it should accept a single argument "
+        "'grains', which is the grains dictionary.",
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
@@ -561,6 +569,43 @@ def pytest_runtest_setup(item):
                 )
             )
 
+    skip_initial_gh_actions_failures_env_set = (
+        os.environ.get("SKIP_INITIAL_GH_ACTIONS_FAILURES", "0") == "1"
+    )
+    skip_initial_gh_actions_failure_marker = item.get_closest_marker(
+        "skip_initial_gh_actions_failure"
+    )
+    if (
+        skip_initial_gh_actions_failure_marker is not None
+        and skip_initial_gh_actions_failures_env_set
+    ):
+        if skip_initial_gh_actions_failure_marker.args:
+            raise pytest.UsageError(
+                "'skip_initial_gh_actions_failure' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        kwargs = skip_initial_gh_actions_failure_marker.kwargs.copy()
+        skip = kwargs.pop("skip", True)
+        if skip and not callable(skip) and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'skip_initial_gh_actions_failure' marker "
+                "requires a boolean or callable, not '{}'.".format(type(skip))
+            )
+        reason = kwargs.pop("reason", None)
+        if reason is None:
+            reason = "Test skipped because it's a know GH Actions initial failure that needs to be fixed"
+        if kwargs:
+            raise pytest.UsageError(
+                "'skip_initial_gh_actions_failure' marker does not accept any keyword arguments "
+                "except 'skip' and 'reason'."
+            )
+        if skip and callable(skip):
+            grains = _grains_for_marker()
+            skip = skip(grains)
+
+        if skip:
+            raise pytest.skip.Exception(reason, _use_item_location=True)
+
     requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
     if requires_random_entropy_marker is not None:
         if requires_random_entropy_marker.args:
@@ -568,13 +613,14 @@ def pytest_runtest_setup(item):
                 "'requires_random_entropy' marker does not accept any arguments "
                 "only keyword arguments."
             )
-        skip = requires_random_entropy_marker.kwargs.pop("skip", None)
+        kwargs = requires_random_entropy_marker.kwargs.copy()
+        skip = kwargs.pop("skip", None)
         if skip and not isinstance(skip, bool):
             raise pytest.UsageError(
                 "The 'skip' keyword argument to the 'requires_random_entropy' marker "
                 "requires a boolean not '{}'.".format(type(skip))
             )
-        minimum_entropy = requires_random_entropy_marker.kwargs.pop("minimum", None)
+        minimum_entropy = kwargs.pop("minimum", None)
         if minimum_entropy is not None:
             if not isinstance(minimum_entropy, int):
                 raise pytest.UsageError(
@@ -586,7 +632,7 @@ def pytest_runtest_setup(item):
                     "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
                     "must be an positive integer not '{}'.".format(minimum_entropy)
                 )
-        max_minutes = requires_random_entropy_marker.kwargs.pop("timeout", None)
+        max_minutes = kwargs.pop("timeout", None)
         if max_minutes is not None:
             if not isinstance(max_minutes, int):
                 raise pytest.UsageError(
@@ -598,12 +644,10 @@ def pytest_runtest_setup(item):
                     "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
                     "must be an positive integer not '{}'.".format(max_minutes)
                 )
-        if requires_random_entropy_marker.kwargs:
+        if kwargs:
             raise pytest.UsageError(
                 "Unsupported keyword arguments passed to the 'requires_random_entropy' "
-                "marker: {}".format(
-                    ", ".join(list(requires_random_entropy_marker.kwargs))
-                )
+                "marker: {}".format(", ".join(list(kwargs)))
             )
         entropy_generator = EntropyGenerator(
             minimum_entropy=minimum_entropy, max_minutes=max_minutes, skip=skip
@@ -1533,6 +1577,11 @@ def sminion():
 @pytest.fixture(scope="session")
 def grains(sminion):
     return sminion.opts["grains"].copy()
+
+
+@lru_cache(maxsize=1)
+def _grains_for_marker():
+    return create_sminion().opts["grains"]
 
 
 @pytest.fixture(scope="session", autouse=True)
