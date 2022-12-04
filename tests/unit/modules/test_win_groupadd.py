@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.win_groupadd as win_groupadd
 import salt.utils.win_functions
 from tests.support.helpers import TstSuiteLoggingHandler

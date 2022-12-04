@@ -2,9 +2,10 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-
 import types
 from datetime import datetime
+
+import pytest
 
 import salt.modules.win_system as win_system
 import salt.utils.platform
@@ -123,7 +124,7 @@ class MockWMI_BIOS:
 
 
 @skipIf(not HAS_WMI, "WMI only available on Windows")
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.skip_unless_on_windows
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.win_system

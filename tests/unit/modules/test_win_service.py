@@ -11,9 +11,10 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    WINAPI = True
     import pywintypes
     import win32serviceutil
+
+    WINAPI = True
 except ImportError:
     WINAPI = False
 

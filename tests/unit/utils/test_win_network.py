@@ -1,7 +1,8 @@
-import salt.utils.platform
+import pytest
+
 import salt.utils.win_network as win_network
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class PhysicalAddress:
@@ -39,7 +40,7 @@ class Interface:
         return self.PhysicalAddress
 
 
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.skip_unless_on_windows
 class WinNetworkTestCase(TestCase):
     def setUp(self):
         self.mock_ip_base = MagicMock(
