@@ -10,7 +10,7 @@ from tests.support.unit import skipIf
 
 @pytest.mark.windows_whitelisted
 @skipIf(salt.utils.platform.is_darwin(), "No mtab on Darwin")
-@skipIf(salt.utils.platform.is_freebsd(), "No mtab on FreeBSD")
+@pytest.mark.skip_on_freebsd
 @pytest.mark.skip_on_windows(reason="No mtab on Windows")
 @pytest.mark.destructive_test
 class DiskModuleVirtualizationTest(ModuleCase):
