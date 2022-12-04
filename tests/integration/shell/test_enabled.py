@@ -23,7 +23,7 @@ class EnabledTest(ModuleCase):
         "echo duh &> /dev/null"
     )
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_shell_default_enabled(self):
         """
@@ -33,7 +33,7 @@ class EnabledTest(ModuleCase):
         ret = self.run_function("cmd.run", [self.cmd])
         self.assertEqual(ret.strip(), enabled_ret)
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     def test_shell_disabled(self):
         """
         test shell disabled output for cmd.run
@@ -45,7 +45,7 @@ class EnabledTest(ModuleCase):
         ret = self.run_function("cmd.run", [self.cmd], python_shell=False)
         self.assertEqual(ret, disabled_ret)
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_template_shell(self):
         """
@@ -85,7 +85,7 @@ class EnabledTest(ModuleCase):
         finally:
             os.remove(state_file)
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     @pytest.mark.slow_test
     def test_template_default_disabled(self):
         """
