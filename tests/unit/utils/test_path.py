@@ -1,14 +1,11 @@
-"""
-Tests for salt.utils.path
-"""
-
-
 import ntpath
 import os
 import platform
 import posixpath
 import sys
 import tempfile
+
+import pytest
 
 import salt.utils.compat
 import salt.utils.path
@@ -38,7 +35,7 @@ class PathJoinTestCase(TestCase):
         (("c:", r"\temp", r"\foo\bar"), "c:\\temp\\foo\\bar"),
     )
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_nix_paths(self):
         if platform.system().lower() == "windows":
             self.skipTest(
@@ -48,7 +45,7 @@ class PathJoinTestCase(TestCase):
             path = salt.utils.path.join(*parts)
             self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_windows_paths(self):
         if platform.system().lower() != "windows":
             self.skipTest(
@@ -60,7 +57,7 @@ class PathJoinTestCase(TestCase):
             path = salt.utils.path.join(*parts)
             self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_windows_paths_patched_path_module(self):
         if platform.system().lower() == "windows":
             self.skipTest(

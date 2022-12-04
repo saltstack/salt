@@ -8,7 +8,6 @@ import pytest
 from saltfactories.utils import random_string
 
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -147,7 +146,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_startup_disk", ["spongebob"]),
         )
 
-    @skipIf(True, "Skip this test until mac fixes it.")
+    @pytest.mark.skip(reason="Skip this test until mac fixes it.")
     def test_get_set_restart_delay(self):
         """
         Test system.get_restart_delay
@@ -210,7 +209,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_disable_keyboard_on_lock", ["spongebob"]),
         )
 
-    @skipIf(True, "Skip this test until mac fixes it.")
+    @pytest.mark.skip(reason="Skip this test until mac fixes it.")
     def test_get_set_boot_arch(self):
         """
         Test system.get_boot_arch
