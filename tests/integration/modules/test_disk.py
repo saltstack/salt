@@ -5,11 +5,10 @@ import pytest
 
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
-@skipIf(salt.utils.platform.is_darwin(), "No mtab on Darwin")
+@pytest.mark.skip_on_darwin(reason="No mtab on Darwin")
 @pytest.mark.skip_on_freebsd
 @pytest.mark.skip_on_windows(reason="No mtab on Windows")
 @pytest.mark.destructive_test
