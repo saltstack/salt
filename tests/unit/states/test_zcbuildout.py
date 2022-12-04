@@ -34,7 +34,7 @@ class BuildoutTestCase(Base):
     # I don't have the time to invest in learning more about buildout,
     # and given we don't have support yet, and there are other priorities
     # I'm going to punt on this for now - WW
-    @skipIf(True, "Buildout is still in beta. Test needs fixing.")
+    @pytest.mark.skip(reason="Buildout is still in beta. Test needs fixing.")
     def test_quiet(self):
         c_dir = os.path.join(self.tdir, "c")
         assert False, os.listdir(self.rdir)

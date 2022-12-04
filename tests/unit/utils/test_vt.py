@@ -1,14 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.unit.utils.vt_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~
-
-    VirtualTerminal tests
-"""
-
-
 import functools
 import io
 import os
@@ -16,6 +5,8 @@ import random
 import subprocess
 import sys
 import time
+
+import pytest
 
 import salt.utils
 import salt.utils.files
@@ -95,10 +86,8 @@ class VTTestCase(TestCase):
             pass
         terminal.close()
 
-    @skipIf(
-        True,
-        "Disabled until we can find out why this kills the tests suite with an exit"
-        " code of 134",
+    @pytest.mark.skip(
+        reason="Disabled until we can find out why this kills the tests suite with an exit code of 134",
     )
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
@@ -172,7 +161,9 @@ class VTTestCase(TestCase):
                 # We're pushing the system resources, let's keep going
                 continue
 
-    @skipIf(True, "Disabled until we can figure out how to make this more reliable.")
+    @pytest.mark.skip(
+        reason="Disabled until we can figure out how to make this more reliable."
+    )
     def test_isalive_while_theres_data_to_read(self):
         expected_data = "Alive!\n"
         term = salt.utils.vt.Terminal(

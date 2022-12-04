@@ -4,6 +4,8 @@ import random
 import string
 from tempfile import NamedTemporaryFile
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_lambda as boto_lambda
@@ -876,7 +878,9 @@ class BotoLambdaEventSourceMappingTestCase(
         )
         self.assertTrue(result["deleted"])
 
-    @skipIf(True, "This appears to leak memory and crash the unit test suite")
+    @pytest.mark.skip(
+        reason="This appears to leak memory and crash the unit test suite"
+    )
     def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(
         self,
     ):
