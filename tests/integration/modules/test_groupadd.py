@@ -6,7 +6,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import runs_on
-from tests.support.unit import skipIf
 
 if not salt.utils.platform.is_windows():
     import grp
@@ -102,7 +101,7 @@ class GroupModuleTest(ModuleCase):
         self.assertFalse(self.run_function("group.add", [self._group], gid=self._gid))
 
     @pytest.mark.destructive_test
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows")
     @pytest.mark.slow_test
     def test_add_system_group(self):
         """
@@ -120,7 +119,7 @@ class GroupModuleTest(ModuleCase):
         self.assertFalse(self.run_function("group.add", [self._group]))
 
     @pytest.mark.destructive_test
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows")
     @pytest.mark.slow_test
     def test_add_system_group_gid(self):
         """
@@ -165,7 +164,7 @@ class GroupModuleTest(ModuleCase):
         self.assertEqual(group_info["gid"], self._gid)
         self.assertIn(self._user, str(group_info["members"]))
 
-    @skipIf(salt.utils.platform.is_windows(), "gid test skipped on windows")
+    @pytest.mark.skip_on_windows(reason="gid test skipped on windows")
     @pytest.mark.slow_test
     def test_chgid(self):
         """

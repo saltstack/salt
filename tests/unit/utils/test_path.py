@@ -12,7 +12,7 @@ import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class PathJoinTestCase(TestCase):
@@ -73,7 +73,7 @@ class PathJoinTestCase(TestCase):
 
         self.__unpatch_path()
 
-    @skipIf(salt.utils.platform.is_windows(), "*nix-only test")
+    @pytest.mark.skip_on_windows(reason="*nix-only test")
     def test_mixed_unicode_and_binary(self):
         """
         This tests joining paths that contain a mix of components with unicode

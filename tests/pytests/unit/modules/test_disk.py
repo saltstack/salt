@@ -195,7 +195,7 @@ def test_blkid(stub_disk_blkid):
         assert stub_disk_blkid == disk.blkid()
 
 
-@skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
 @skipIf(salt.utils.platform.is_darwin(), "Skip on Darwin")
 @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
 def test_blkid_token():
@@ -300,7 +300,7 @@ def test_resize2fs():
         mock.assert_called_once_with("resize2fs {}".format(device), python_shell=False)
 
 
-@skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
 @skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
 def test_format_():
     """
@@ -313,7 +313,7 @@ def test_format_():
         mock.assert_any_call(["mkfs", "-t", "ext4", device], ignore_retcode=True)
 
 
-@skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
 @skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
 def test_format__fat():
     """
