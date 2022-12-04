@@ -1216,6 +1216,23 @@ so setting this on the master does not affect how state YAML files are parsed.
     yaml_compatibility: Sulfur
     yaml_compatibility: SULFUR
 
+.. conf_master:: yaml_compatibility_warnings
+
+``yaml_compatibility_warnings``
+-------------------------------
+
+.. versionadded:: 3006.0
+
+Default: ``True``
+
+Boolean indicating whether to print warnings about upcoming changes to the YAML
+loader/dumper that could affect compatibility.  Set to `False` to silence the
+warnings.
+
+.. code-block:: yaml
+
+    yaml_compatibility_warnings: True
+
 .. conf_master:: req_server_niceness
 
 ``req_server_niceness``

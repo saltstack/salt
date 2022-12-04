@@ -10,6 +10,8 @@ from salt.version import SaltStackVersion
 
 __opts__ = {
     "yaml_compatibility": None,
+    # Suppress the warnings until the config file has been loaded.
+    "yaml_compatibility_warnings": False,
 }
 __salt_loader__ = None
 
@@ -73,10 +75,14 @@ def compat_ver():
     # loaded -- so __opts__["yaml_compatibility"] might not be populated yet.
     if v is None or opt != _compat_opt.get(None):
         _compat_opt.set(opt)
+        show_warnings = __opts__.get("yaml_compatibility_warnings")
+        if show_warnings is None:
+            show_warnings = True
 
-        def _warn(msg, category):
+        def _warn(msg, category, *, force_show=False):
             log.warning(msg)
-            warnings.warn(msg, category)
+            if show_warnings or force_show:
+                warnings.warn(msg, category)
 
         # Warn devs to update _current_ver after each release.
         actual_current_ver = SaltStackVersion.current_release()
@@ -91,6 +97,7 @@ def compat_ver():
                 f"{__name__}._current_ver is behind ({_current_ver}); please "
                 f"update it to the current release ({actual_current_ver})",
                 RuntimeWarning,
+                force_show=True,
             )
 
         v = _current_ver
@@ -131,11 +138,13 @@ def compat_ver():
                     FutureWarning,
                 )
         if not opt_supported:
-            # This is a bug in the user's config (or in Salt tests).
             _warn(
                 f"the value of the yaml_compatibility option is less than the "
                 f"minimum supported value {v}: {opt!r}",
                 UnsupportedValueWarning,
+                # This is a bug in the user's config (or in Salt tests), so
+                # always show the warning.
+                force_show=True,
             )
         if opt:
             _warn(

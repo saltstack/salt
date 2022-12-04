@@ -18,6 +18,11 @@ unexpected times.
     All of the behavior changes slated for Salt v3007.0 can be previewed by
     setting the ``yaml_compatibility`` option to 3007.
 
+.. versionchanged:: 3006.0
+
+    YAML compatibility warnings can be disabled by setting the
+    ``yaml_compatibility_warnings`` option to False.
+
 Spaces vs Tabs
 ==============
 

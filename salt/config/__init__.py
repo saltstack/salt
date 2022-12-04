@@ -979,6 +979,7 @@ VALID_OPTS = immutabletypes.freeze(
         # pass renderer: Set PASSWORD_STORE_DIR env for Pass
         "pass_dir": str,
         "yaml_compatibility": (type(None), str, int),
+        "yaml_compatibility_warnings": (type(None), bool),
     }
 )
 
@@ -1284,6 +1285,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "yaml_compatibility": None,
+        "yaml_compatibility_warnings": True,
     }
 )
 
@@ -1628,6 +1630,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_dir": "",
         "netapi_enable_clients": [],
         "yaml_compatibility": None,
+        "yaml_compatibility_warnings": True,
     }
 )
 
