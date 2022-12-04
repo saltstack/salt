@@ -10,6 +10,8 @@ import os
 import platform
 import sys
 
+import pytest
+
 import salt.utils.platform
 
 # salt libs
@@ -121,7 +123,7 @@ class RSAX931Test(TestCase):
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
 
-    @skipIf(not salt.utils.platform.is_windows(), "Host OS is not Windows.")
+    @pytest.mark.skip_unless_on_windows
     def test_find_libcrypto_win32(self):
         """
         Test _find_libcrypto on Windows hosts.

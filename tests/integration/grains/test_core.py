@@ -60,7 +60,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
         utils = salt.loader.utils(opts, whitelist=["reg"])
         return {salt.modules.reg: {"__opts__": opts, "__utils__": utils}}
 
-    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    @pytest.mark.skip_unless_on_windows
     @pytest.mark.slow_test
     def test_win_cpu_model(self):
         """
