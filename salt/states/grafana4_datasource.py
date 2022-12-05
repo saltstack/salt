@@ -66,6 +66,8 @@ def present(
     basic_auth_password=None,
     tls_auth=None,
     json_data=None,
+    secure_json_data=None,
+    force_recreate_secure_json_data=False,
     is_default=None,
     with_credentials=None,
     type_logo_url=None,
@@ -109,6 +111,12 @@ def present(
     json_data
         Optional - additional json data to post (eg. "timeInterval").
 
+    secure_json_data
+        Optional - additional secure json data to post (eg. "httpHeaderValue1").
+
+    force_recreate_secure_json_data
+        Optional - bool to force recreation of datasource if secure_json_data is set because we can't get secure_json_data value if the datasource exists.
+
     is_default
         Optional - set data source as default.
 
@@ -144,6 +152,7 @@ def present(
         basicAuthPassword=basic_auth_password,
         tlsAuth=tls_auth,
         jsonData=json_data,
+        secureJsonData=secure_json_data,
         isDefault=is_default,
         withCredentials=with_credentials,
         typeLogoUrl=type_logo_url,
@@ -165,18 +174,30 @@ def present(
     # Grafana may lack some null keys compared to our "data" dict:
     for key in data:
         if key not in datasource:
-            datasource[key] = None
+            # Grafana does not return the values of secureJsonData in its API call, so this states wants to re-create the datasource at each run.
+            # To avoid this we change the "datasource" dict with the value contained in our "data" dict so that the tests below do not notice any change. If force_recreate_secure_json_data is equal to True then the datasource with secureJsonData will be recreated,
+            if key == "secureJsonData" and not force_recreate_secure_json_data:
+                datasource[key] = data[key]
+            else:
+                datasource[key] = None
 
-    if data == datasource:
+    if data.items() <= datasource.items():
+        ret["result"] = True
         ret["comment"] = "Data source {} already up-to-date".format(name)
+        ret["changes"] = {}
         return ret
 
     if __opts__["test"]:
         ret["comment"] = "Datasource {} will be updated".format(name)
+        ret["changes"] = deep_diff(
+            datasource, data, ignore=["id", "orgId", "readOnly", "uid"]
+        )
         return ret
     __salt__["grafana4.update_datasource"](datasource["id"], profile=profile, **data)
     ret["result"] = True
-    ret["changes"] = deep_diff(datasource, data, ignore=["id", "orgId", "readOnly"])
+    ret["changes"] = deep_diff(
+        datasource, data, ignore=["id", "orgId", "readOnly", "uid"]
+    )
     ret["comment"] = "Data source {} updated".format(name)
     return ret
 
