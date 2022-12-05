@@ -156,7 +156,7 @@ def _restore_ownership(func):
         Wrap gpg function calls to fix permissions
         """
         user = kwargs.get("user")
-        gnupghome = kwargs.get("gnupghome", _get_user_gnupghome(user))
+        gnupghome = kwargs.get("gnupghome") or _get_user_gnupghome(user)
         keyring = kwargs.get("keyring")
 
         userinfo = _get_user_info(user)
