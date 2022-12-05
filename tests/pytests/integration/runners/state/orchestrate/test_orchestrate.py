@@ -507,7 +507,7 @@ def test_orchestrate_subset(
         - name: test
     """
     if os.environ.get("CI_RUN", "0") == "1":
-        if grains["os"] == "Fedora" and int(grains["osrelease"]) == 35:
+        if grains["os"] == "Fedora" and int(grains["osrelease"]) == 36:
             # This test is flaky on Fedora 35 - Don't really know why, because,
             # of course, this test module passes when running locally on a
             # Fedora 35 container.
