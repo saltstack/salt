@@ -2,7 +2,7 @@ import pytest
 
 import salt.utils.win_functions as win_functions
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import win32net
@@ -83,7 +83,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertListEqual(groups, ret)
 
     @pytest.mark.skip_unless_on_windows
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_unavailable_dc(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -94,7 +94,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertListEqual(groups, ret)
 
     @pytest.mark.skip_unless_on_windows
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_unknown_dc(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -105,7 +105,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertListEqual(groups, ret)
 
     @pytest.mark.skip_unless_on_windows
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_missing_permission(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -116,7 +116,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertListEqual(groups, ret)
 
     @pytest.mark.skip_unless_on_windows
-    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32 libraries")
     def test_get_user_groups_error(self):
         win_error = WinError()
         win_error.winerror = 1927

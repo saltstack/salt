@@ -1,6 +1,8 @@
 import logging
 import os
 
+import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
@@ -8,11 +10,6 @@ import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 log = logging.getLogger(__name__)
 

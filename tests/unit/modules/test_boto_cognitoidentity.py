@@ -2,13 +2,15 @@ import logging
 import random
 import string
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_cognitoidentity as boto_cognitoidentity
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -157,10 +159,10 @@ class BotoCognitoIdentityTestCaseMixin:
 
 
 # @pytest.mark.skip(reason="Skip these tests while investigating failures")
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )

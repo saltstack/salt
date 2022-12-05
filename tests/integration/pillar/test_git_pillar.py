@@ -70,9 +70,7 @@ import sys
 import pytest
 from distro import linux_distribution
 
-import salt.utils.path
-import salt.utils.platform
-from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
     GITPYTHON_VERSION,
@@ -92,7 +90,6 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep_authenticated,
 )
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, requires_system_grains
-from tests.support.unit import skipIf
 
 # Check for requisite components
 try:
@@ -104,10 +101,6 @@ try:
     HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER and LIBGIT2_VERSION >= LIBGIT2_MINVER
 except Exception:  # pylint: disable=broad-except
     HAS_PYGIT2 = False
-
-HAS_SSHD = bool(salt.utils.path.which("sshd"))
-HAS_NGINX = bool(salt.utils.path.which("nginx"))
-HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 pytestmark = [
     SKIP_INITIAL_PHOTONOS_FAILURES,
@@ -693,11 +686,13 @@ class GitPythonMixin:
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
-@skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.skipif(
+    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+)
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("sshd")
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication
@@ -709,22 +704,26 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     passphrase = PASSWORD
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
-@skipIf(not HAS_NGINX, "nginx not present")
-@skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.skipif(
+    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+)
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("nginx")
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
     """
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
-@skipIf(not HAS_NGINX, "nginx not present")
-@skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.skipif(
+    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+)
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("nginx")
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -734,13 +733,16 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     password = PASSWORD
 
 
-@skipIf(salt.utils.platform.is_aarch64(), "Test is broken on aarch64")
-@skipIf(_centos_stream_9(), "CentOS Stream 9 has RSA keys disabled by default")
-@skipIf(
-    not HAS_PYGIT2,
-    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+@pytest.mark.skip_on_aarch64(reason="Test is broken on aarch64")
+@pytest.mark.skipif(
+    _centos_stream_9(), reason="CentOS Stream 9 has RSA keys disabled by default"
 )
-@skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.skipif(
+    not HAS_PYGIT2,
+    reason="pygit2 >= {} and libgit2 >= {} required".format(
+        PYGIT2_MINVER, LIBGIT2_MINVER
+    ),
+)
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
@@ -751,6 +753,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
         "See https://github.com/saltstack/salt/issues/61704"
     ),
 )
+@pytest.mark.skip_if_binaries_missing("sshd")
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2350,14 +2353,16 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_PYGIT2,
-    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    reason="pygit2 >= {} and libgit2 >= {} required".format(
+        PYGIT2_MINVER, LIBGIT2_MINVER
+    ),
 )
-@skipIf(not HAS_NGINX, "nginx not present")
-@skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("nginx")
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2914,14 +2919,16 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_PYGIT2,
-    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    reason="pygit2 >= {} and libgit2 >= {} required".format(
+        PYGIT2_MINVER, LIBGIT2_MINVER
+    ),
 )
-@skipIf(not HAS_NGINX, "nginx not present")
-@skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("nginx")
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

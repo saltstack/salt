@@ -8,9 +8,11 @@ import struct
 import sys
 from io import BytesIO
 
+import pytest
+
 import salt.utils.msgpack
 from salt.utils.odict import OrderedDict
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import msgpack
@@ -22,7 +24,9 @@ except ImportError:
 raw = {"raw": False} if msgpack.version > (0, 5, 2) else {}
 
 
-@skipIf(not salt.utils.msgpack.HAS_MSGPACK, "msgpack module required for these tests")
+@pytest.mark.skipif(
+    not salt.utils.msgpack.HAS_MSGPACK, reason="msgpack module required for these tests"
+)
 class TestMsgpack(TestCase):
     """
     In msgpack, the following aliases exist:
@@ -259,7 +263,7 @@ class TestMsgpack(TestCase):
         self.assertEqual(unpacker.unpack(), 4)
         self.assertRaises(salt.utils.msgpack.exceptions.OutOfData, unpacker.unpack)
 
-    @skipIf(
+    @pytest.mark.skipif(
         not hasattr(sys, "getrefcount"), "sys.getrefcount() is needed to pass this test"
     )
     def _test_unpacker_hook_refcnt(self, pack_func, **kwargs):
@@ -368,7 +372,7 @@ class TestMsgpack(TestCase):
         ret = unpack_func(pack_func(b"abc"), use_list=True)
         self.assertEqual(b"abc", ret)
 
-    @skipIf(
+    @pytest.mark.skipif(
         salt.utils.msgpack.version < (0, 2, 2),
         "use_single_float was added in msgpack==0.2.2",
     )
@@ -404,7 +408,7 @@ class TestMsgpack(TestCase):
             unpacked = unpack_func(packed, object_pairs_hook=list)
         self.assertEqual(pairlist, unpacked)
 
-    @skipIf(
+    @pytest.mark.skipif(
         salt.utils.msgpack.version < (0, 6, 0),
         "getbuffer() was added to Packer in msgpack 0.6.0",
     )

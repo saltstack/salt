@@ -4,10 +4,7 @@
 import pytest
 
 import salt.modules.disk as disk
-import salt.utils.path
-import salt.utils.platform
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 
 
 @pytest.fixture
@@ -270,10 +267,7 @@ def test_fat_format():
         assert expected == args[0]
 
 
-@skipIf(
-    not salt.utils.path.which("lsblk") and not salt.utils.path.which("df"),
-    "lsblk or df not found",
-)
+@pytest.mark.skip_if_binaries_missing("lsblk", "df", check_all=True)
 def test_fstype():
     """
     unit tests for disk.fstype
