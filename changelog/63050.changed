@@ -1,0 +1,5 @@
+netapi_enable_clients option to allow enabling/disabling of clients in salt-api.
+By default all clients will now be disabled. Users of salt-api will need
+to update their master config to enable the clients that they use. Not adding
+the netapi_enable_clients option with required clients to the master config will 
+disable salt-api.

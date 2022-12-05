@@ -253,7 +253,7 @@ class TestAccount:
     hashed_password = attr.ib(repr=False)
     create_group = attr.ib(repr=False, default=False)
     group_name = attr.ib()
-    _group = attr.ib(init=False, repr=False)
+    _group = attr.ib(init=True, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -298,6 +298,10 @@ class TestAccount:
                 "account. There's no group attribute in this account instance."
             )
         return self._group
+
+    @group.setter
+    def _set_group(self, value):
+        self._group = value
 
     def __enter__(self):
         if not self.sminion.functions.user.info(self.username):
@@ -381,6 +385,7 @@ def create_account(
     hashed_password=attr.NOTHING,
     group_name=attr.NOTHING,
     create_group=False,
+    group=attr.NOTHING,
     sminion=attr.NOTHING,
 ):
     with TestAccount(
@@ -390,6 +395,7 @@ def create_account(
         hashed_password=hashed_password,
         group_name=group_name,
         create_group=create_group,
+        group=group,
     ) as account:
         yield account
 
@@ -771,6 +777,23 @@ class EntropyGenerator:
 
     def __exit__(self, *_):
         pass
+
+
+@pytest.helpers.register
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
 
 
 # Only allow star importing the functions defined in this module

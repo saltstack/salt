@@ -2956,9 +2956,14 @@ def test_clear_cache(ckey, connection):
     cbank = "vault"
     if connection:
         cbank += "/connection"
+    context = {cbank: {"token": "fake_token"}}
     with patch("salt.cache.factory", autospec=True) as factory:
-        vault.clear_cache({}, {}, ckey=ckey, connection=connection)
+        vault.clear_cache({}, context, ckey=ckey, connection=connection)
         factory.return_value.flush.assert_called_once_with(cbank, ckey)
+        if ckey:
+            assert ckey not in context[cbank]
+        else:
+            assert cbank not in context
 
 
 @pytest.mark.parametrize("connection", [True, False])

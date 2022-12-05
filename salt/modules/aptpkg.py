@@ -1947,7 +1947,7 @@ def get_repo(repo, **kwargs):
     if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
-        dist = __grains__["lsb_distrib_codename"]
+        dist = __grains__["oscodename"]
         owner_name, ppa_name = repo[4:].split("/")
         if ppa_auth:
             auth_info = "{}@".format(ppa_auth)
@@ -2029,7 +2029,7 @@ def del_repo(repo, **kwargs):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
-        dist = __grains__["lsb_distrib_codename"]
+        dist = __grains__["oscodename"]
         if not HAS_SOFTWAREPROPERTIES:
             _warn_software_properties(repo)
             owner_name, ppa_name = repo[4:].split("/")
@@ -2664,7 +2664,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                         "(e.g. saltstack/salt) not found.  Received "
                         "'{}' instead.".format(repo[4:])
                     )
-                dist = __grains__["lsb_distrib_codename"]
+                dist = __grains__["oscodename"]
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
                 kwargs["dist"] = dist
@@ -3007,7 +3007,7 @@ def file_dict(*packages, **kwargs):
     return __salt__["lowpkg.file_dict"](*packages)
 
 
-def _expand_repo_def(os_name, lsb_distrib_codename=None, **kwargs):
+def _expand_repo_def(os_name, os_codename=None, **kwargs):
     """
     Take a repository definition and expand it to the full pkg repository dict
     that can be used for comparison.  This is a helper function to make
@@ -3022,7 +3022,7 @@ def _expand_repo_def(os_name, lsb_distrib_codename=None, **kwargs):
     sanitized = {}
     repo = kwargs["repo"]
     if repo.startswith("ppa:") and os_name in ("Ubuntu", "Mint", "neon"):
-        dist = lsb_distrib_codename
+        dist = os_codename
         owner_name, ppa_name = repo[4:].split("/", 1)
         if "ppa_auth" in kwargs:
             auth_info = "{}@".format(kwargs["ppa_auth"])
@@ -3134,8 +3134,11 @@ def expand_repo_def(**kwargs):
     )
     if "os_name" not in kwargs:
         kwargs["os_name"] = __grains__["os"]
-    if "lsb_distrib_codename" not in kwargs:
-        kwargs["lsb_distrib_codename"] = __grains__.get("lsb_distrib_codename")
+    if "os_codename" not in kwargs:
+        if "lsb_distrib_codename" in kwargs:
+            kwargs["os_codename"] = kwargs["lsb_distrib_codename"]
+        else:
+            kwargs["os_codename"] = __grains__.get("oscodename")
     return _expand_repo_def(**kwargs)
 
 

@@ -1,0 +1,4 @@
+Some Linux distributions (like AlmaLinux, Astra Linux, Debian, Mendel, Linux
+Mint, Pop!_OS, Rocky Linux) report different `oscodename`, `osfullname`,
+`osfinger` grains if lsb-release is installed or not. They have been changed to
+only derive these OS grains from `/etc/os-release`.
