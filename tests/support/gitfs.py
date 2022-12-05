@@ -348,6 +348,12 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
     Stand up an nginx + uWSGI + git-http-backend webserver to
     serve up git repos for tests.
     """
+    nginx = shutil.which("nginx")
+    if nginx is None:
+        raise pytest.skip.Exception(
+            "The 'nginx' binary was not found", _use_item_location=True
+        )
+
     salt_call_cli = salt_minion.salt_call_cli()
 
     root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
@@ -371,7 +377,7 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
         )
         uwsgi_proc.start()
         nginx_proc = NginxDaemon(
-            script_name="nginx",
+            script_name=nginx,
             config_dir=config_dir,
             start_timeout=120,
             uwsgi_port=uwsgi_proc.listen_port,
