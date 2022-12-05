@@ -1,8 +1,6 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-import sys
-
 import pytest
 
 import salt.modules.disk as disk
@@ -228,9 +226,6 @@ def test_wipe():
         mock.assert_called_once_with("wipefs -a /dev/sda", python_shell=False)
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
-)
 def test_tune():
     mock = MagicMock(
         return_value=(
