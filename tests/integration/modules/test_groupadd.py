@@ -5,7 +5,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 if not salt.utils.platform.is_windows():
     import grp
@@ -14,7 +13,7 @@ if not salt.utils.platform.is_windows():
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
-@runs_on(kernel=("Linux", "Windows"))
+@pytest.mark.skip_unless_on_platforms(linux=True, windows=True)
 class GroupModuleTest(ModuleCase):
     """
     Validate the linux group system module
