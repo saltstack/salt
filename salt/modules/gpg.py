@@ -1119,11 +1119,11 @@ def trust_key(
     )
     if not key:
         ret["res"] = False
-        ret["message"] = f"KeyID {keyid} not in GPG keychain"
+        ret["message"] = f"Key {keyid or fingerprint} not in GPG keychain"
         return ret
     if not fingerprint and "fingerprint" not in key:
         ret["res"] = False
-        ret["message"] = f"Fingerprint not found for keyid {keyid}"
+        ret["message"] = f"Fingerprint not found for keyID {keyid}"
         return ret
     fingerprint = fingerprint or key["fingerprint"]
     gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
