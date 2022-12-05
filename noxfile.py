@@ -1053,6 +1053,9 @@ def _ci_test(session, transport):
                 if session.posargs[0] == "--":
                     session.posargs.pop(0)
                 chunk_cmd.extend(session.posargs)
+            else:
+                if CI_RUN and IS_DARWIN and chunk in ("functional", "integration"):
+                    chunk_cmd.extend(["-k", "mac or darwin"])
         else:
             chunk_cmd = [chunk] + session.posargs
             junit_report_filename = "test-results"
