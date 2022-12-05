@@ -290,12 +290,13 @@ class SlackClient:
         get info from groups in config, and from the named pillar
 
         :type group_conf: dict
-        :param group_conf: The dictionary containing the groups, group members,
-        and the commands those group members have access to.
+        :param group_conf:
+            The dictionary containing the groups, group members,
+            and the commands those group members have access to.
 
         :type groups_pillar_name: str
-        :param groups_pillar_name: can be used to pull group
-        configuration from the specified pillar key.
+        :param groups_pillar_name:
+            can be used to pull group configuration from the specified pillar key.
         """
         # Get groups
         # Default to returning something that'll never match
@@ -1050,10 +1051,11 @@ def start(
     :param group_pillars: A pillar key that can be used to pull group configuration.
 
     :type fire_all: bool
-    :param fire_all: If set to ``True``, all messages which are not prefixed with
-                     the trigger string will fired as events onto Salt's ref:`event bus
-                     <event-system>`. The tag for these events will be prefixed with the string
-                     specified by the ``tag`` config option (default: ``salt/engines/slack``).
+    :param fire_all:
+        If set to ``True``, all messages which are not prefixed with
+        the trigger string will fired as events onto Salt's ref:`event bus
+        <event-system>`. The tag for these events will be prefixed with the string
+        specified by the ``tag`` config option (default: ``salt/engines/slack``).
 
     :type tag: str
     :param tag: The tag to prefix all events sent to the Salt event bus.
