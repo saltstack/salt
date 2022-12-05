@@ -23,6 +23,12 @@ pytestmark = [
 ]
 
 
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
+
+
 def use_static_requirements_ids(value):
     return "USE_STATIC_REQUIREMENTS={}".format("1" if value else "0")
 
@@ -40,6 +46,7 @@ def virtualenv(virtualenv, use_static_requirements):
     return virtualenv
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a bdist_wheel package
@@ -255,6 +262,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a sdist package
@@ -359,6 +367,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test installing directly from source
