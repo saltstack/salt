@@ -496,16 +496,10 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.snapper.snapper.ListConfigs",
             MagicMock(return_value=DBUS_RET["ListConfigs"]),
         ):
-            if sys.version_info < (2, 7):
-                self.assertEqual(
-                    snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo26"]}
-                )
-            else:
-                self.assertEqual(
-                    snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo2"]}
-                )
+            self.assertEqual(
+                snapper.diff(), {"/tmp/foo2": MODULE_RET["DIFF"]["/tmp/foo2"]}
+            )
 
-    @skipIf(sys.version_info < (2, 7), "Python 2.7 required to compare diff properly")
     def test_diff_text_files(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(55, 0))

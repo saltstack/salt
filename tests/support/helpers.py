@@ -57,8 +57,6 @@ PRE_PYTEST_SKIP_REASON = (
 PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
     "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
-ON_PY35 = sys.version_info < (3, 6)
-
 SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
     "SKIP_INITIAL_PHOTONOS_FAILURES",
     eq="1",
@@ -1632,22 +1630,6 @@ class PatchedEnviron:
         self.original_environ = os.environ.copy()
         for key in self.cleanup_keys:
             os.environ.pop(key, None)
-
-        # Make sure there are no unicode characters in the self.kwargs if we're
-        # on Python 2. These are being added to `os.environ` and causing
-        # problems
-        if sys.version_info < (3,):
-            kwargs = self.kwargs.copy()
-            clean_kwargs = {}
-            for k in self.kwargs:
-                key = k
-                if isinstance(key, str):
-                    key = key.encode("utf-8")
-                if isinstance(self.kwargs[k], str):
-                    kwargs[k] = kwargs[k].encode("utf-8")
-                clean_kwargs[key] = kwargs[k]
-            self.kwargs = clean_kwargs
-
         os.environ.update(**self.kwargs)
         return self
 

@@ -346,7 +346,6 @@ class TestMsgpack(TestCase):
         for td in test_data:
             self._check(td, pack_func, unpack_func)
 
-    @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_unicode_errors(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func(b"abc\xeddef", use_bin_type=False), unicode_errors="ignore", **raw
@@ -357,7 +356,6 @@ class TestMsgpack(TestCase):
         packed = pack_func(b"abc\xeddef", use_bin_type=False)
         self.assertRaises(UnicodeDecodeError, unpack_func, packed, use_list=True, **raw)
 
-    @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_errors_pack(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func("abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"),
