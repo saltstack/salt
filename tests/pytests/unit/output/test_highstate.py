@@ -6,7 +6,6 @@ import pytest
 import salt.output.highstate as highstate
 import salt.utils.stringutils
 from tests.support.mock import patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
