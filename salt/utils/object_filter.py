@@ -1,12 +1,22 @@
+import inspect
 from collections import namedtuple
+
+from salt.exceptions import SaltException
 
 NONE = type(None)
 
 AddressPoint = namedtuple("AddressPoint", ("point", "key", "mutable"))
+IS_UNSUPPORTED = tuple(
+    value
+    for name, value in vars(inspect).items()
+    if name.startswith("is") and inspect.isfunction(value)
+)
 
 
 def write_check(address):
-    """ """
+    """
+    Check if address allows writes.
+    """
     for spot, point in enumerate(address):
         if not point.mutable:
             return False
@@ -16,10 +26,13 @@ def write_check(address):
 
 
 def write(value, data, address):
-    """ """
+    """
+    Write value to address.
+    """
+    if write_check(address) is False:
+        raise SaltException("Object filter write violation!")
     if len(address) == 0:
         return value
-    assert write_check(address)
     data_child = data
     for point in address[:-1]:
         data_child = data_child[point.point]
@@ -38,7 +51,14 @@ def write(value, data, address):
     return data
 
 
-def object_filter(data, types=None, keys=True, unsupported=True):
+def _unsupported(data):
+    for fun in IS_UNSUPPORTED:
+        if fun(data):
+            return True
+    return False
+
+
+def object_filter(data, types=None, keys=True, unsupported=False):
     """ """
     address_list = []
     _object_filter(data, types, keys, unsupported, (), address_list)
@@ -107,26 +127,29 @@ def _object_filter(data, types, keys, unsupported, address, address_list):
                     address_list,
                 )
     elif not isinstance(data, (NONE, int, float, complex, str, bytes, bool)):
-        try:
-            for k, d in vars(data).items():
-                _object_filter(
-                    d,
-                    types,
-                    keys,
-                    unsupported,
-                    (*address, AddressPoint(k, False, True)),
-                    address_list,
-                )
-                if keys:
+        if not _unsupported(data):
+            try:
+                for k, d in vars(data).items():
                     _object_filter(
-                        k,
+                        d,
                         types,
                         keys,
                         unsupported,
-                        (*address, AddressPoint(k, True, True)),
+                        (*address, AddressPoint(k, False, True)),
                         address_list,
                     )
-        except TypeError:
+                    if keys:
+                        _object_filter(
+                            k,
+                            types,
+                            keys,
+                            unsupported,
+                            (*address, AddressPoint(k, True, True)),
+                            address_list,
+                        )
+            except TypeError:
+                supported = False
+        else:
             supported = False
 
     if types is None:

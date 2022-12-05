@@ -53,7 +53,9 @@ def _redact(data, address_list, redacted_data, redacted_data_bytes):
 
 
 def redact(data, redacted_data=None):
-    """ """
+    """
+    Find sensitive data in nested structures and redact it.
+    """
     if redacted_data is None:
         redacted_data = REDACTED_DATA
         redacted_data_bytes = REDACTED_DATA_BYTES
@@ -61,14 +63,16 @@ def redact(data, redacted_data=None):
         redacted_data_bytes = tuple(bytes(data, "utf-8") for data in redacted_data)
     try:
         working_data = data
-        address_list = object_filter.object_filter(data, (str, bytes))
+        address_list = object_filter.object_filter(data, (str, bytes), True, True)
         while _redact_check(address_list, redacted_data, redacted_data_bytes):
             if working_data is data:
                 working_data = deepcopy(data)
             working_data = _redact(
                 working_data, address_list, redacted_data, redacted_data_bytes
             )
-            address_list = object_filter.object_filter(working_data, (str, bytes))
+            address_list = object_filter.object_filter(
+                working_data, (str, bytes), True, True
+            )
         return working_data
-    except RecursionError as e:
-        return f"{REDACTED}-{e}"
+    except (RecursionError, TypeError) as e:
+        return f"{REDACTED}-{type(e).__name__}"
