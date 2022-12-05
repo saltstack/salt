@@ -488,6 +488,13 @@ def test_static(salt_cli, salt_minion, salt_sub_minion):
     assert salt_minion.id in ret.stdout
 
 
+def _check_skip(grains):
+    if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 4:
+        return True
+    return False
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_salt_documentation(salt_cli, salt_minion):
     """
     Test to see if we're supporting --doc
