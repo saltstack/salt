@@ -971,7 +971,7 @@ def test__expand_repo_def():
     # Valid source
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
-        os_name="debian", lsb_distrib_codename="stretch", repo=repo, file=source_file
+        os_name="debian", os_codename="stretch", repo=repo, file=source_file
     )
 
     assert isinstance(sanitized, dict)
@@ -984,7 +984,7 @@ def test__expand_repo_def():
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
-        lsb_distrib_codename="stretch",
+        os_codename="stretch",
         repo=repo,
         file=source_file,
         architectures="amd64",
@@ -1010,7 +1010,7 @@ def test__expand_repo_def_cdrom():
     # Valid source
     repo = "# deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ bullseye main\n"
     sanitized = aptpkg._expand_repo_def(
-        os_name="debian", lsb_distrib_codename="bullseye", repo=repo, file=source_file
+        os_name="debian", os_codename="bullseye", repo=repo, file=source_file
     )
 
     assert isinstance(sanitized, dict)
@@ -1023,7 +1023,7 @@ def test__expand_repo_def_cdrom():
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
-        lsb_distrib_codename="stretch",
+        os_codename="stretch",
         repo=repo,
         file=source_file,
         architectures="amd64",
