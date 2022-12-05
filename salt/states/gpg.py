@@ -9,17 +9,9 @@ Management of the GPG keychains
 import logging
 
 import salt.utils.dictupdate
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
-
-_VALID_TRUST_VALUES = [
-    "expired",
-    "unknown",
-    "not_trusted",
-    "marginally",
-    "fully",
-    "ultimately",
-]
 
 TRUST_MAP = {
     "expired": "Expired",
@@ -93,7 +85,7 @@ def present(
     for key in keys:
         if key in current_keys.keys():
             if trust:
-                if trust in _VALID_TRUST_VALUES:
+                if trust in TRUST_MAP:
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:
                         if __opts__["test"]:
                             ret["result"] = None
@@ -104,14 +96,17 @@ def present(
                                 ret, f"changes:{key}:trust", trust
                             )
                             continue
-                        # update trust level
-                        result = __salt__["gpg.trust_key"](
-                            keyid=key,
-                            trust_level=trust,
-                            user=user,
-                            gnupghome=gnupghome,
-                            keyring=keyring,
-                        )
+                        try:
+                            # update trust level
+                            result = __salt__["gpg.trust_key"](
+                                keyid=key,
+                                trust_level=trust,
+                                user=user,
+                                gnupghome=gnupghome,
+                                keyring=keyring,
+                            )
+                        except SaltInvocationError as err:
+                            result = {"res": False, "message": str(err)}
                         if result["res"] is False:
                             ret["result"] = result["res"]
                             ret["comment"].append(result["message"])
@@ -156,14 +151,17 @@ def present(
                 )
 
             if trust:
-                if trust in _VALID_TRUST_VALUES:
-                    result = __salt__["gpg.trust_key"](
-                        keyid=key,
-                        trust_level=trust,
-                        user=user,
-                        gnupghome=gnupghome,
-                        keyring=keyring,
-                    )
+                if trust in TRUST_MAP:
+                    try:
+                        result = __salt__["gpg.trust_key"](
+                            keyid=key,
+                            trust_level=trust,
+                            user=user,
+                            gnupghome=gnupghome,
+                            keyring=keyring,
+                        )
+                    except SaltInvocationError as err:
+                        result = {"res": False, "message": str(err)}
                     if result["res"] is False:
                         ret["result"] = result["res"]
                         ret["comment"].append(result["message"])
