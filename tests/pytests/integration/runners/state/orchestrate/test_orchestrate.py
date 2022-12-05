@@ -484,6 +484,8 @@ def _check_skip(grains):
         return True
     if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 4:
         return True
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] in (20, 22):
+        return True
     return False
 
 
