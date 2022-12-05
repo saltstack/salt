@@ -19,6 +19,7 @@ import os
 import re
 import time
 
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -65,6 +66,15 @@ VERIFY_TRUST_LEVELS = {
     "2": "Marginal",
     "3": "Fully",
     "4": "Ultimate",
+}
+
+TRUST_KEYS_TRUST_LEVELS = {
+    "expired": "TRUST_EXPIRED",
+    "unknown": "TRUST_UNDEFINED",
+    "never": "TRUST_NEVER",
+    "marginally": "TRUST_MARGINAL",
+    "fully": "TRUST_FULLY",
+    "ultimately": "TRUST_ULTIMATE",
 }
 
 _DEFAULT_KEY_SERVER = "keys.openpgp.org"
@@ -1096,73 +1106,75 @@ def trust_key(
     """
     ret = {"res": True, "message": ""}
 
-    _VALID_TRUST_LEVELS = [
-        "expired",
-        "unknown",
-        "not_trusted",
-        "marginally",
-        "fully",
-        "ultimately",
-    ]
+    if not salt.utils.data.exactly_one((keyid, fingerprint)):
+        raise SaltInvocationError("Exactly one of keyid or fingerprint is required")
 
-    if fingerprint and keyid:
-        ret["res"] = False
-        ret["message"] = "Only specify one argument, fingerprint or keyid"
-        return ret
+    if trust_level not in NUM_TRUST_DICT:
+        raise SaltInvocationError(
+            "ERROR: Valid trust levels - {}".format(",".join(NUM_TRUST_DICT.keys()))
+        )
 
     if not fingerprint:
-        if keyid:
-            key = get_key(keyid, user=user, gnupghome=gnupghome, keyring=keyring)
-            if key:
-                if "fingerprint" not in key:
-                    ret["res"] = False
-                    ret["message"] = f"Fingerprint not found for keyid {keyid}"
-                    return ret
-                fingerprint = key["fingerprint"]
-            else:
+        key = get_key(keyid, user=user, gnupghome=gnupghome, keyring=keyring)
+        if key:
+            if "fingerprint" not in key:
                 ret["res"] = False
-                ret["message"] = f"KeyID {keyid} not in GPG keychain"
+                ret["message"] = f"Fingerprint not found for keyid {keyid}"
                 return ret
+            fingerprint = key["fingerprint"]
         else:
             ret["res"] = False
-            ret["message"] = "Required argument, fingerprint or keyid"
+            ret["message"] = f"KeyID {keyid} not in GPG keychain"
             return ret
 
-    if trust_level not in _VALID_TRUST_LEVELS:
-        return "ERROR: Valid trust levels - {}".format(",".join(_VALID_TRUST_LEVELS))
+    gpg = _create_gpg(user=user, gnupghome=gnupghome, keyring=keyring)
+    try:
+        res = gpg.trust_keys(fingerprint, TRUST_KEYS_TRUST_LEVELS[trust_level])
+    except AttributeError:
+        # python-gnupg < 0.4.2
+        stdin = f"{fingerprint}:{NUM_TRUST_DICT[trust_level]}\n"
+        gnupghome = gnupghome or _get_user_gnupghome(user)
+        cmd = [_gpg(), "--homedir", gnupghome, "--import-ownertrust"]
+        _user = user if user != "salt" else None
 
-    stdin = f"{fingerprint}:{NUM_TRUST_DICT[trust_level]}\n"
-    gnupghome = gnupghome or _get_user_gnupghome(user)
-    cmd = [_gpg(), "--homedir", gnupghome, "--import-ownertrust"]
-    _user = user if user != "salt" else None
-
-    if keyring:
-        if not isinstance(keyring, str):
-            raise SaltInvocationError(
-                "Please pass keyring as a string. Multiple keyrings are not allowed"
-            )
-        cmd.extend(["--no-default-keyring", "--keyring", keyring])
-
-    res = __salt__["cmd.run_all"](cmd, stdin=stdin, runas=_user, python_shell=False)
-
-    if not res["retcode"] == 0:
-        ret["res"] = False
-        ret["message"] = res["stderr"]
-    else:
-        if res["stderr"]:
-            _match = re.findall(r"\d", res["stderr"])
-            if len(_match) == 2:
-                ret["fingerprint"] = fingerprint
-                ret["message"] = "Changing ownership trust from {} to {}.".format(
-                    INV_NUM_TRUST_DICT[_match[0]], INV_NUM_TRUST_DICT[_match[1]]
+        if keyring:
+            if not isinstance(keyring, str):
+                raise SaltInvocationError(
+                    "Please pass keyring as a string. Multiple keyrings are not allowed"
                 )
-            else:
-                ret["fingerprint"] = fingerprint
-                ret["message"] = "Setting ownership trust to {}.".format(
-                    INV_NUM_TRUST_DICT[_match[0]]
-                )
-        else:
+            cmd.extend(["--no-default-keyring", "--keyring", keyring])
+
+        res = __salt__["cmd.run_all"](cmd, stdin=stdin, runas=_user, python_shell=False)
+
+        if not res["retcode"] == 0:
+            ret["res"] = False
             ret["message"] = res["stderr"]
+        else:
+            if res["stderr"]:
+                _match = re.findall(r"\d", res["stderr"])
+                if len(_match) == 2:
+                    ret["fingerprint"] = fingerprint
+                    ret["message"] = "Changing ownership trust from {} to {}.".format(
+                        INV_NUM_TRUST_DICT[_match[0]], INV_NUM_TRUST_DICT[_match[1]]
+                    )
+                else:
+                    ret["fingerprint"] = fingerprint
+                    ret["message"] = "Setting ownership trust to {}.".format(
+                        INV_NUM_TRUST_DICT[_match[0]]
+                    )
+            else:
+                ret["message"] = res["stderr"]
+    else:
+        if res.status == "ok":
+            ret["res"] = True
+            ret["fingerprint"] = fingerprint
+            ret["message"] = "Setting ownership trust to {}.".format(
+                INV_NUM_TRUST_DICT[NUM_TRUST_DICT[trust_level]]
+            )
+        else:
+            ret["res"] = False
+            ret["message"] = res.problem_reason
+
     return ret
 
 
