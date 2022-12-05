@@ -1,27 +1,25 @@
 import random
 
 import pytest
-from pytestshellutils.exceptions import FactoryTimeout
 
-from salt.utils.platform import spawning_platform
+import salt.utils.platform
 
-pytestmark = [pytest.mark.slow_test]
-
-
-def run_salt_cmd(salt_cli, *args, **kwargs):
-    timeout = salt_cli.timeout
-    if spawning_platform():
-        timeout = salt_cli.timeout * 2
-    kwargs["_timeout"] = timeout
-    try:
-        return salt_cli.run(*args, **kwargs)
-    except FactoryTimeout:
-        if spawning_platform():
-            pytest.skip("Salt command timed out, skipping on spawning platform")
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
-def test_ping(minion_swarm, salt_cli):
-    ret = run_salt_cmd(salt_cli, "test.ping", minion_tgt="*")
+@pytest.fixture(scope="module")
+def swarm_timeout():
+    timeout = 120
+    if salt.utils.platform.spawning_platform():
+        timeout *= 2
+    return timeout
+
+
+def test_ping(minion_swarm, salt_cli, swarm_timeout):
+    ret = salt_cli.run("test.ping", minion_tgt="*", _timeout=swarm_timeout)
+    assert ret.returncode == 0
     assert ret.data
     for minion in minion_swarm:
         assert minion.id in ret.data
@@ -32,7 +30,8 @@ def test_ping(minion_swarm, salt_cli):
         assert ret.data[minion.id] is True
 
 
-def test_ping_one(minion_swarm, salt_cli):
+def test_ping_one(minion_swarm, salt_cli, swarm_timeout):
     minion = random.choice(minion_swarm)
-    ret = run_salt_cmd(salt_cli, "test.ping", minion_tgt=minion.id)
+    ret = salt_cli.run("test.ping", minion_tgt=minion.id, _timeout=swarm_timeout)
+    assert ret.returncode == 0
     assert ret.data is True

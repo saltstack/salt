@@ -10,7 +10,7 @@
     <true/>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/salt/bin/start-salt-syndic.sh</string>
+        <string>/opt/salt/salt-syndic</string>
     </array>
     <key>SoftResourceLimits</key>
     <dict>

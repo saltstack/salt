@@ -954,7 +954,10 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
+        # Enable clients in the Salt API
+        "netapi_enable_clients": list,
         "disabled_requisites": (str, list),
+        "global_state_conditions": (type(None), dict),
         # Feature flag config
         "features": dict,
         "fips_mode": bool,
@@ -1273,6 +1276,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "schedule": {},
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
+        "global_state_conditions": None,
         "reactor_niceness": None,
         "fips_mode": False,
     }
@@ -1616,6 +1620,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_strict_fetch": False,
         "pass_gnupghome": "",
         "pass_dir": "",
+        "netapi_enable_clients": [],
     }
 )
 
