@@ -608,6 +608,47 @@ def test_export_key_from_keyring(gpghome, gnupg, gpg, key_a_fp, keyring, gnupg_k
     assert res["comment"].endswith("-----END PGP PUBLIC KEY BLOCK-----\n")
 
 
+@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.parametrize("use_keyid", [True, False])
+def test_trust_key(gpghome, key_a_fp, gnupg, gpg, use_keyid):
+    keyid = key_a_fp[-16:] if use_keyid else None
+    fingerprint = None if keyid else key_a_fp
+    res = gpg.trust_key(
+        fingerprint=fingerprint,
+        keyid=keyid,
+        trust_level="ultimately",
+        gnupghome=str(gpghome),
+    )
+    assert res["res"]
+    assert "fingerprint" in res
+    assert res["fingerprint"] == key_a_fp
+    key_info = gnupg.list_keys(keys=key_a_fp)
+    assert key_info
+    assert key_info[0]["trust"] == "u"
+
+
+@pytest.mark.parametrize("use_keyid", [True, False])
+def test_trust_key_keyring(
+    gpghome, key_a_fp, keyring, gnupg, gnupg_keyring, gpg, use_keyid
+):
+    assert not gnupg.list_keys(keys=key_a_fp)
+    keyid = key_a_fp[-16:] if use_keyid else None
+    fingerprint = None if keyid else key_a_fp
+    res = gpg.trust_key(
+        fingerprint=fingerprint,
+        keyid=keyid,
+        trust_level="ultimately",
+        gnupghome=str(gpghome),
+        keyring=keyring,
+    )
+    assert res["res"]
+    assert "fingerprint" in res
+    assert res["fingerprint"] == key_a_fp
+    key_info = gnupg_keyring.list_keys(keys=key_a_fp)
+    assert key_info
+    assert key_info[0]["trust"] == "u"
+
+
 @pytest.mark.usefixtures("privkeys_present")
 @pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
 @pytest.mark.requires_random_entropy()

@@ -109,6 +109,8 @@ def present(
                             keyid=key,
                             trust_level=trust,
                             user=user,
+                            gnupghome=gnupghome,
+                            keyring=keyring,
                         )
                         if result["res"] is False:
                             ret["result"] = result["res"]
@@ -159,6 +161,8 @@ def present(
                         keyid=key,
                         trust_level=trust,
                         user=user,
+                        gnupghome=gnupghome,
+                        keyring=keyring,
                     )
                     if result["res"] is False:
                         ret["result"] = result["res"]
@@ -276,7 +280,7 @@ def absent(
         and __salt__["file.file_exists"](keyring)
     ):
         __salt__["file.remove"](keyring)
-        ret["comment"].append(f"Removed keyring file {keyring}")
+        ret["comment"].append(f"Removed empty keyring file {keyring}")
         ret["changes"]["removed"] = keyring
 
     ret["comment"] = "\n".join(ret["comment"])

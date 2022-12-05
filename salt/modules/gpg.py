@@ -1047,7 +1047,14 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None, keyring=N
     return ret
 
 
-def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
+def trust_key(
+    keyid=None,
+    fingerprint=None,
+    trust_level=None,
+    user=None,
+    gnupghome=None,
+    keyring=None,
+):
     """
     Set the trust level for a key in GPG keychain
 
@@ -1066,6 +1073,17 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
         Which user's keychain to access, defaults to user Salt is running as.
         Passing the user as ``salt`` will set the GnuPG home directory to the
         ``/etc/salt/gpgkeys``.
+
+    gnupghome
+        Specify the location where GPG keyring and related files are stored.
+
+        .. versionadded:: 3006
+
+    keyring
+        Limit the operation to this specific keyring, specified as
+        a local filesystem path.
+
+        .. versionadded:: 3006
 
     CLI Example:
 
@@ -1094,7 +1112,7 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
 
     if not fingerprint:
         if keyid:
-            key = get_key(keyid, user=user)
+            key = get_key(keyid, user=user, gnupghome=gnupghome, keyring=keyring)
             if key:
                 if "fingerprint" not in key:
                     ret["res"] = False
@@ -1114,13 +1132,17 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
         return "ERROR: Valid trust levels - {}".format(",".join(_VALID_TRUST_LEVELS))
 
     stdin = f"{fingerprint}:{NUM_TRUST_DICT[trust_level]}\n"
-    cmd = [_gpg(), "--import-ownertrust"]
-    _user = user
+    gnupghome = gnupghome or _get_user_gnupghome(user)
+    cmd = [_gpg(), "--homedir", gnupghome, "--import-ownertrust"]
+    _user = user if user != "salt" else None
 
-    if user == "salt":
-        homeDir = os.path.join(__salt__["config.get"]("config_dir"), "gpgkeys")
-        cmd.extend(["--homedir", homeDir])
-        _user = "root"
+    if keyring:
+        if not isinstance(keyring, str):
+            raise SaltInvocationError(
+                "Please pass keyring as a string. Multiple keyrings are not allowed"
+            )
+        cmd.extend(["--no-default-keyring", "--keyring", keyring])
+
     res = __salt__["cmd.run_all"](cmd, stdin=stdin, runas=_user, python_shell=False)
 
     if not res["retcode"] == 0:
