@@ -3593,3 +3593,76 @@ def test_virtual_set_virtual_ec2():
 
         assert virtual_grains["virtual"] == "Nitro"
         assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+
+
+@pytest.mark.parametrize(
+    "dmidecode,expected",
+    [
+        (
+            """
+System Information
+        Manufacturer: VMware, Inc.
+        Product Name: VMware Virtual Platform
+            """,
+            "VMware",
+        ),
+        (
+            """
+System Information
+        Manufacturer: QEMU
+        Product Name: Standard PC (i440FX + PIIX, 1996)
+            """,
+            "kvm",
+        ),
+        (
+            """
+System Information
+        Manufacturer: Parallels Software International Inc.
+        Product Name: Parallels Virtual Platform
+            """,
+            "Parallels",
+        ),
+        (
+            """
+System Information
+        Manufacturer: Parallels International GmbH.
+        Product Name: Parallels ARM Virtual Machine
+            """,
+            "Parallels",
+        ),
+        (
+            """
+System Information
+        Manufacturer: Dell Inc.
+        Product Name: PowerEdge R6515
+            """,
+            "physical",
+        ),
+        ("", "physical"),
+    ],
+)
+@pytest.mark.skip_unless_on_linux
+def test_virtual_dmidecode(dmidecode, expected):
+    osdata = {}
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    def which_mock(exe=None):
+        return "/usr/sbin/dmidecode" if exe == "dmidecode" else None
+
+    def dmidecode_mock():
+        return {"retcode": 0, "stderr": "", "stdout": dmidecode}
+
+    with patch("salt.utils.path.which", side_effect=which_mock), patch(
+        "os.path.isdir", return_value=False
+    ), patch("os.path.isfile", return_value=False), patch.dict(
+        core.__salt__, {"cmd.run_all": MagicMock(side_effect=dmidecode_mock)}
+    ):
+        virtual_grains = core._virtual(osdata)
+        assert virtual_grains["virtual"] == expected
