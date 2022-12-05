@@ -316,6 +316,8 @@ def offload(name, **kwargs):
 
 def pause(name, **kwargs):
     """
+    .. versionadded:: 3006.0
+
     Manage pause parameters of network device
 
     name
