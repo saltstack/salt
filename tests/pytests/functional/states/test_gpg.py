@@ -134,10 +134,51 @@ def test_gpg_present_keyring_no_changes(
     assert not gnupg.list_keys(keys=key_a_fp)
     assert gnupg_keyring.list_keys(keys=key_a_fp)
     ret = gpg.present(
-        key_a_fp[-16:], gnupghome=str(gpghome), keyserver="nonexistent", keyring=keyring
+        key_a_fp[-16:],
+        trust="unknown",
+        gnupghome=str(gpghome),
+        keyserver="nonexistent",
+        keyring=keyring,
     )
     assert ret.result
     assert not ret.changes
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
+def test_gpg_present_trust_change(gpghome, gpg, gnupg, key_a_fp):
+    assert gnupg.list_keys(keys=key_a_fp)
+    ret = gpg.present(
+        key_a_fp[-16:],
+        gnupghome=str(gpghome),
+        trust="ultimately",
+        keyserver="nonexistent",
+    )
+    assert ret.result
+    assert ret.changes
+    assert ret.changes == {key_a_fp[-16:]: {"trust": "ultimately"}}
+    key_info = gnupg.list_keys(keys=key_a_fp)
+    assert key_info
+    assert key_info[0]["trust"] == "u"
+
+
+def test_gpg_present_keyring_trust_change(
+    gpghome, gpg, gnupg, gnupg_keyring, keyring, key_a_fp
+):
+    assert not gnupg.list_keys(keys=key_a_fp)
+    assert gnupg_keyring.list_keys(keys=key_a_fp)
+    ret = gpg.present(
+        key_a_fp[-16:],
+        gnupghome=str(gpghome),
+        trust="ultimately",
+        keyserver="nonexistent",
+        keyring=keyring,
+    )
+    assert ret.result
+    assert ret.changes
+    assert ret.changes == {key_a_fp[-16:]: {"trust": "ultimately"}}
+    key_info = gnupg_keyring.list_keys(keys=key_a_fp)
+    assert key_info
+    assert key_info[0]["trust"] == "u"
 
 
 @pytest.mark.usefixtures("_pubkeys_present")
