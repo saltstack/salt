@@ -769,10 +769,16 @@ def integration_files_dir(salt_factories):
     dirname = salt_factories.root_dir / "integration-files"
     dirname.mkdir(exist_ok=True)
     for child in (PYTESTS_DIR / "integration" / "files").iterdir():
+        destpath = dirname / child.name
         if child.is_dir():
-            shutil.copytree(str(child), str(dirname / child.name))
+            if sys.version_info >= (3, 8):
+                shutil.copytree(str(child), str(destpath), dirs_exist_ok=True)
+            else:
+                if destpath.exists():
+                    shutil.rmtree(str(destpath), ignore_errors=True)
+                shutil.copytree(str(child), str(destpath))
         else:
-            shutil.copyfile(str(child), str(dirname / child.name))
+            shutil.copyfile(str(child), str(destpath))
     return dirname
 
 
