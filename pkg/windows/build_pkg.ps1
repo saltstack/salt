@@ -17,14 +17,7 @@ param(
     # The version of Salt to be built. If this is not passed, the script will
     # attempt to get it from the git describe command on the Salt source
     # repo
-    [String] $Version,
-
-    [Parameter(Mandatory=$false)]
-    [ValidateSet("x86", "x64")]
-    [Alias("a")]
-    # The System Architecture to build. "x86" will build a 32-bit installer.
-    # "x64" will build a 64-bit installer. Default is: x64
-    $Architecture = "x64"
+    [String] $Version
 )
 
 # Script Preferences
@@ -35,43 +28,35 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
-$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-
-# Script Variables
-$NSIS_DIR       = "$( ${env:ProgramFiles(x86)} )\NSIS"
-if ( $Architecture -eq "x64" ) {
-    $ARCH           = "AMD64"
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/64"
-} else {
-    $ARCH           = "x86"
-    $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/32"
-}
-
-# Python Variables
-# TODO: These need to be moved to a Script option
-$PY_VERSION     = "3.8"
-$PY_DOT_VERSION = "3.8.14"
-$BIN_DIR        = "$SCRIPT_DIR\buildenv\bin"
-$SCRIPTS_DIR    = "$BIN_DIR\Scripts"
-$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
-
-# Build Variables
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
-$SALT_REPO_URL  = "https://github.com/saltstack/salt"
+$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $BUILD_DIR      = "$SCRIPT_DIR\buildenv"
-$BUILD_DIR_BIN  = "$BUILD_DIR\bin"
-$BUILD_DIR_SALT = "$BUILD_DIR_BIN\Lib\site-packages\salt"
-$BUILD_DIR_CONF = "$BUILD_DIR\configs"
 $INSTALLER_DIR  = "$SCRIPT_DIR\installer"
 $PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
+$SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
+$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
+$BUILD_SALT_DIR = "$BUILD_DIR\Lib\site-packages\salt"
+$BUILD_CONF_DIR = "$BUILD_DIR\configs"
+$PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
+$PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
+$NSIS_BIN       = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
+$ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
+
+if ( $ARCH -eq "64bit" ) {
+    $ARCH         = "AMD64"
+    $ARCH_X       = "x64"
+    $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/64"
+} else {
+    $ARCH         = "x86"
+    $ARCH_X       = "x86"
+    $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies/32"
+}
 
 #-------------------------------------------------------------------------------
 # Verify Salt and Version
 #-------------------------------------------------------------------------------
-
 if ( [String]::IsNullOrEmpty($Version) ) {
-    $Version = $( git describe )
-    $Version = $Version.Trim("v")
+    $Version = $( git describe ).Trim("v")
     if ( [String]::IsNullOrEmpty($Version) ) {
         Write-Host "Failed to get version from $PROJECT_DIR"
         exit 1
@@ -81,10 +66,9 @@ if ( [String]::IsNullOrEmpty($Version) ) {
 #-------------------------------------------------------------------------------
 # Start the Script
 #-------------------------------------------------------------------------------
-
 Write-Host $("=" * 80)
 Write-Host "Build NullSoft Installer for Salt" -ForegroundColor Cyan
-Write-Host "- Architecture: $Architecture"
+Write-Host "- Architecture: $ARCH"
 Write-Host "- Salt Version: $Version"
 Write-Host $("-" * 80)
 
@@ -100,7 +84,7 @@ if ( Test-Path -Path "$PYTHON_BIN" ) {
 }
 
 Write-Host "Verifying Salt Installation: " -NoNewline
-if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
+if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -108,7 +92,7 @@ if ( Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe" ) {
 }
 
 Write-Host "Verifying NSIS Installation: " -NoNewline
-if ( Test-Path -Path "$NSIS_DIR\makensis.exe" ) {
+if ( Test-Path -Path "$NSIS_BIN" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -118,10 +102,10 @@ if ( Test-Path -Path "$NSIS_DIR\makensis.exe" ) {
 #-------------------------------------------------------------------------------
 # Cleaning Build Environment
 #-------------------------------------------------------------------------------
-if ( Test-Path -Path $BUILD_DIR_CONF ) {
+if ( Test-Path -Path $BUILD_CONF_DIR) {
     Write-Host "Removing Configs Directory: " -NoNewline
-    Remove-Item -Path $BUILD_DIR_CONF -Recurse -Force
-    if ( ! (Test-Path -Path $BUILD_DIR_CONF) ) {
+    Remove-Item -Path $BUILD_CONF_DIR -Recurse -Force
+    if ( ! (Test-Path -Path $BUILD_CONF_DIR) ) {
         Write-Host "Success" -ForegroundColor Green
     } else {
         Write-Host "Failed" -ForegroundColor Red
@@ -144,9 +128,9 @@ if ( Test-Path -Path $PREREQ_DIR ) {
 # Staging the Build Environment
 #-------------------------------------------------------------------------------
 Write-Host "Copying config files from Salt: " -NoNewline
-New-Item -Path $BUILD_DIR_CONF -ItemType Directory | Out-Null
-Copy-Item -Path "$PROJECT_DIR\conf\minion" -Destination "$BUILD_DIR_CONF"
-if ( Test-Path -Path "$BUILD_DIR_CONF\minion" ) {
+New-Item -Path $BUILD_CONF_DIR -ItemType Directory | Out-Null
+Copy-Item -Path "$PROJECT_DIR\conf\minion" -Destination "$BUILD_CONF_DIR"
+if ( Test-Path -Path "$BUILD_CONF_DIR\minion" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -154,8 +138,8 @@ if ( Test-Path -Path "$BUILD_DIR_CONF\minion" ) {
 }
 
 Write-Host "Copying SSM to Bin: " -NoNewline
-Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$SCRIPTS_DIR\ssm.exe"
-if ( Test-Path -Path "$SCRIPTS_DIR\ssm.exe" ) {
+Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
+if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -163,53 +147,29 @@ if ( Test-Path -Path "$SCRIPTS_DIR\ssm.exe" ) {
 }
 
 New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
-
-if ( $Architecture -eq "x64" ) {
-    # 64-bit Prereqs
-    Write-Host "Copying VCRedist 2013 x64 to prereqs: " -NoNewline
-    Invoke-WebRequest -Uri "$SALT_DEP_URL/vcredist_x64_2013.exe" -OutFile "$PREREQ_DIR\vcredist_x64_2013.exe"
-    if ( Test-Path -Path "$PREREQ_DIR\vcredist_x64_2013.exe" ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
-
-    Write-Host "Copying Universal C Runtimes x64 to prereqs: " -NoNewline
-    Invoke-WebRequest -Uri "$SALT_DEP_URL/ucrt_x64.zip" -OutFile "$PREREQ_DIR\ucrt_x64.zip"
-    if ( Test-Path -Path "$PREREQ_DIR\ucrt_x64.zip" ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
+Write-Host "Copying VCRedist 2013 $ARCH_X to prereqs: " -NoNewline
+$file = "vcredist_$ARCH_X`_2013.exe"
+Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
+if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
+    Write-Host "Success" -ForegroundColor Green
 } else {
-    # 32-bit Prereqs
-    Write-Host "Copying VCRedist 2013 x86 to prereqs: " -NoNewline
-    Invoke-WebRequest -Uri "$SALT_DEP_URL/vcredist_x86_2013.exe" -OutFile "$PREREQ_DIR\vcredist_x86_2013.exe"
-    if ( Test-Path -Path "$PREREQ_DIR\vcredist_x86_2013.exe" ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
+    Write-Host "Failed" -ForegroundColor Red
+    exit 1
+}
 
-    Write-Host "Copying Universal C Runtimes x86 to prereqs: " -NoNewline
-    Invoke-WebRequest -Uri "$SALT_DEP_URL/ucrt_x86.zip" -OutFile "$PREREQ_DIR\ucrt_x86.zip"
-    if ( Test-Path -Path "$PREREQ_DIR\ucrt_x86.zip" ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
+Write-Host "Copying Universal C Runtimes $ARCH_X to prereqs: " -NoNewline
+$file = "ucrt_$ARCH_X.zip"
+Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
+if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
+    Write-Host "Success" -ForegroundColor Green
+} else {
+    Write-Host "Failed" -ForegroundColor Red
+    exit 1
 }
 
 #-------------------------------------------------------------------------------
 # Remove binaries not needed by Salt
 #-------------------------------------------------------------------------------
-# These binaries may conflict with an existing Python installation. These
-# binaries are needed for Tiamat builds, but not for standard Salt packages
-# which we are building here
 $binaries = @(
     "py.exe",
     "pyw.exe",
@@ -223,31 +183,6 @@ $binaries | ForEach-Object {
         # Use .net, the powershell function is asynchronous
         [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
         if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
-            Write-Host "Failed" -ForegroundColor Red
-            exit 1
-        }
-    }
-}
-Write-Host "Success" -ForegroundColor Green
-
-#-------------------------------------------------------------------------------
-# Remove Unneeded Directories from bin dir
-#-------------------------------------------------------------------------------
-$delete = @(
-    "doc",
-    "share",
-    "readme.rst"
-)
-Write-Host "Removing Unneeded Directories: " -NoNewline
-$delete | ForEach-Object {
-    if ( Test-Path -Path "$BIN_DIR\$_" ) {
-        # Use .net, the powershell function is asynchronous
-        if ( (Get-Item "$BIN_DIR\$_") -is [System.IO.DirectoryInfo] ) {
-            [System.IO.Directory]::Delete("$BIN_DIR\$_", $true)
-        } else {
-            [System.IO.File]::Delete("$BIN_DIR\$_")
-        }
-        if ( Test-Path -Path "$BIN_DIR\$_" ) {
             Write-Host "Failed" -ForegroundColor Red
             exit 1
         }
@@ -392,10 +327,10 @@ $modules = "acme",
            "zpool",
            "zypper"
 $modules | ForEach-Object {
-    Remove-Item -Path "$BUILD_DIR_SALT\modules\$_*" -Recurse
-    if ( Test-Path -Path "$BUILD_DIR_SALT\modules\$_*" ) {
+    Remove-Item -Path "$BUILD_SALT_DIR\modules\$_*" -Recurse
+    if ( Test-Path -Path "$BUILD_SALT_DIR\modules\$_*" ) {
         Write-Host "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $BUILD_DIR_SALT\modules\$_"
+        Write-Host "Failed to remove: $BUILD_SALT_DIR\modules\$_"
         exit 1
     }
 }
@@ -455,21 +390,21 @@ $states = "acme",
           "zfs",
           "zpool"
 $states | ForEach-Object {
-    Remove-Item -Path "$BUILD_DIR_SALT\states\$_*" -Recurse
-    if ( Test-Path -Path "$BUILD_DIR_SALT\states\$_*" ) {
+    Remove-Item -Path "$BUILD_SALT_DIR\states\$_*" -Recurse
+    if ( Test-Path -Path "$BUILD_SALT_DIR\states\$_*" ) {
         Write-Host "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $BUILD_DIR_SALT\states\$_"
+        Write-Host "Failed to remove: $BUILD_SALT_DIR\states\$_"
         exit 1
     }
 }
 Write-Host "Success" -ForegroundColor Green
 
 Write-Host "Removing unneeded files (.pyc, .chm): " -NoNewline
-$remove = "*.pyc",
-          "__pycache__",
+$remove = "__pycache__",
+          "*.pyc",
           "*.chm"
 $remove | ForEach-Object {
-    $found = Get-ChildItem -Path "$BUILD_DIR_BIN\$_" -Recurse
+    $found = Get-ChildItem -Path "$BUILD_DIR\$_" -Recurse
     $found | ForEach-Object {
         Remove-Item -Path "$_" -Recurse -Force
         if ( Test-Path -Path $_ ) {
@@ -486,15 +421,16 @@ Write-Host "Success" -ForegroundColor Green
 #-------------------------------------------------------------------------------
 Write-Host "Building the Installer: " -NoNewline
 $installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Setup.exe"
-Start-Process -FilePath $NSIS_DIR\makensis.exe `
+Start-Process -FilePath $NSIS_BIN `
               -ArgumentList "/DSaltVersion=$Version", `
-                            "/DPythonArchitecture=$Architecture", `
+                            "/DPythonArchitecture=$ARCH", `
                             "$INSTALLER_DIR\Salt-Minion-Setup.nsi" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
+    Write-Host "Failed to find $installer_name in installer directory"
     exit 1
 }
 
