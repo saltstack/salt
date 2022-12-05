@@ -58,6 +58,7 @@ def __virtual__():
 def present(
     name,
     users=None,
+    clean_users=False,
     theme=None,
     home_dashboard_id=None,
     timezone=None,
@@ -83,6 +84,9 @@ def present(
             users:
               foo: Viewer
               bar: Editor
+
+    clean_users
+        Optional - bool to clean users present in the org but not in `users` state attribute
 
     theme
         Optional - Selected theme for the org.
@@ -163,7 +167,7 @@ def present(
         timezone=timezone,
         defaults=prefs,
     )
-    if data != prefs:
+    if not data.items() <= prefs.items():
         if __opts__["test"]:
             ret["comment"] = "Org {} prefs will be updated".format(name)
             return ret
@@ -175,11 +179,23 @@ def present(
 
     if users:
         db_users = {}
+        users_to_delete = []
         for item in __salt__["grafana4.get_org_users"](name, profile=profile):
             db_users[item["login"]] = {
                 "userId": item["userId"],
                 "role": item["role"],
             }
+        if clean_users:
+            users_to_delete = list(set(db_users.keys()) - set(users.keys()))
+            for username in users_to_delete:
+                if __opts__["test"]:
+                    ret["comment"] = "Org {} user {} will be deleted".format(
+                        name, username
+                    )
+                    return ret
+                __salt__["grafana4.delete_org_user"](
+                    db_users[username]["userId"], profile=profile
+                )
         for username, role in users.items():
             if username in db_users:
                 if role is False:
