@@ -84,8 +84,11 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
                 "forced termination."
             ),
         },
-        "destroy_on_failure": {
-            "help": "Destroy the instance on failing to craete and connect.",
+        "no_destroy_on_failure": {
+            "help": "Do not destroy the instance on failing to create and connect.",
+        },
+        "retries": {
+            "help": "How many times to retry creating and connecting to a vm",
         },
     }
 )
@@ -95,21 +98,34 @@ def create(
     key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
     instance_type: str = None,
     no_delete: bool = False,
-    destroy_on_failure: bool = False,
+    no_destroy_on_failure: bool = False,
+    retries: int = 0,
 ):
     """
     Create VM.
     """
     if key_name is None:
         ctx.exit(1, "We need a key name to spin a VM")
-    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    created = vm.create(
-        key_name=key_name, instance_type=instance_type, no_delete=no_delete
-    )
-    if created is not True and destroy_on_failure:
+    if not retries:
+        retries = 1
+    attempts = 0
+    while True:
+        attempts += 1
+        vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+        created = vm.create(
+            key_name=key_name, instance_type=instance_type, no_delete=no_delete
+        )
+        if created is True:
+            break
+
         ctx.error(created)
-        vm.destroy()
-        ctx.exit(1)
+        if no_destroy_on_failure is False:
+            vm.destroy()
+        if attempts >= retries:
+            ctx.exit(1)
+
+        ctx.info("Retrying in 5 seconds...")
+        time.sleep(5)
 
 
 @vm.command(
