@@ -301,7 +301,7 @@ def test_resize2fs():
 
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")
-@skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+@pytest.mark.skip_if_binaries_missing("mkfs")
 def test_format_():
     """
     unit tests for disk.format_
@@ -314,7 +314,7 @@ def test_format_():
 
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")
-@skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+@pytest.mark.skip_if_binaries_missing("mkfs")
 def test_format__fat():
     """
     unit tests for disk.format_ with FAT parameter

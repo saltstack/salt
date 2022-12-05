@@ -111,6 +111,7 @@ HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 pytestmark = [
     SKIP_INITIAL_PHOTONOS_FAILURES,
+    pytest.mark.skip_on_platforms(windows=True, darwin=True),
 ]
 
 
@@ -118,10 +119,6 @@ def _rand_key_name(length):
     return "id_rsa_{}".format(
         "".join(random.choice(string.ascii_letters) for _ in range(length))
     )
-
-
-def _windows_or_mac():
-    return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
 def _centos_stream_9():
@@ -696,7 +693,6 @@ class GitPythonMixin:
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
@@ -713,7 +709,6 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     passphrase = PASSWORD
 
 
-@skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
@@ -725,7 +720,6 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
 
 
-@skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
@@ -741,7 +735,6 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 
 @skipIf(salt.utils.platform.is_aarch64(), "Test is broken on aarch64")
-@skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(_centos_stream_9(), "CentOS Stream 9 has RSA keys disabled by default")
 @skipIf(
     not HAS_PYGIT2,
@@ -2357,7 +2350,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -2922,7 +2914,6 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),

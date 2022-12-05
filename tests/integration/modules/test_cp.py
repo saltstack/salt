@@ -417,7 +417,7 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(ret, "r") as cp_:
             self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
 
-    @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
+    @pytest.mark.skip_if_binaries_missing("nginx")
     @pytest.mark.slow_test
     @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):
