@@ -2481,8 +2481,8 @@ def make_request(
     salt.utils.versions.warn_until(
         "Argon",
         "salt.utils.vault.make_request is deprecated, please use "
-        "salt.utils.vault.query or salt.utils.vault.query_raw.",
-        "To override token/url/namespace, please make use of the",
+        "salt.utils.vault.query or salt.utils.vault.query_raw."
+        "To override token/url/namespace, please make use of the"
         "provided classes directly.",
     )
 
