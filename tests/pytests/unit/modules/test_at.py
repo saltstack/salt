@@ -33,11 +33,6 @@ def atq_output():
     }
 
 
-@classmethod
-def tearDownClass(cls):
-    del cls.atq_output
-
-
 def test_atq_not_available():
     """
     Tests the at.atq not available for any type of os_family.
