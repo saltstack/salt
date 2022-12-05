@@ -18,18 +18,22 @@ import logging
 log = logging.getLogger(__name__)
 
 # Try to import range from https://github.com/ytoolshed/range
-HAS_RANGE = False
 try:
     import seco.range
 
     HAS_RANGE = True
 except ImportError:
-    log.error("Unable to load range library")
+    HAS_RANGE = False
 # pylint: enable=import-error
+
+__virtualname__ = "range"
 
 
 def __virtual__():
-    return HAS_RANGE
+    if HAS_RANGE:
+        return __virtualname__
+    else:
+        return (False, "Unable to load seco.range library")
 
 
 def targets(tgt, tgt_type="range", **kwargs):
