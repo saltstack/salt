@@ -591,7 +591,7 @@ class PipModuleTest(ModuleCase):
         shutil.which("/bin/pip3") is None, reason="Could not find /bin/pip3"
     )
     @pytest.mark.skip_on_windows(reason="test specific for linux usage of /bin/python")
-    @pytest.mark.skip(
+    @pytest.mark.skip_initial_gh_actions_failure(
         reason="This was skipped on older golden images and is failing on newer."
     )
     def test_system_pip3(self):

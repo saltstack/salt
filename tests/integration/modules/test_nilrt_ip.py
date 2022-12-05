@@ -30,7 +30,7 @@ INTERFACE_FOR_TEST = "eth1"
 
 
 pytestmark = [
-    pytest.mark.skip(
+    pytest.mark.skip_initial_gh_actions_failure(
         reason="This was skipped on older golden images and is failing on newer."
     ),
 ]
