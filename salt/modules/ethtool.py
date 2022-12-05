@@ -343,6 +343,8 @@ def _validate_params(valid_params, kwargs):
 
 def show_pause(devname):
     """
+    .. versionadded:: 3006.0
+
     Queries the specified network device for associated pause information
 
     CLI Example:
@@ -365,6 +367,8 @@ def show_pause(devname):
 
 def set_pause(devname, **kwargs):
     """
+    .. versionadded:: 3006.0
+
     Changes the pause parameters of the specified network device
 
     CLI Example:
@@ -383,13 +387,15 @@ def set_pause(devname, **kwargs):
 
 def show_features(devname):
     """
+    .. versionadded:: 3006.0
+
     Queries the specified network device for associated feature information
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' ethtool.show_feature <devname>
+        salt '*' ethtool.show_features <devname>
     """
     data = {}
 
@@ -408,6 +414,8 @@ def show_features(devname):
 
 def set_feature(devname, **kwargs):
     """
+    .. versionadded:: 3006.0
+
     Changes the feature parameters of the specified network device
 
     CLI Example:
