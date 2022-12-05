@@ -171,7 +171,8 @@
 # asynchronously, however, it still adds 5 seconds every time grains are
 # generated if an IP does not resolve. In Windows grains are regenerated each
 # time a new process is spawned. Therefore, the default for Windows is `False`.
-# All other OSes default to `True`
+# On macOS, FQDN resolution can be very slow, therefore the default for macOS is
+# `False` as well. All other OSes default to `True`
 # enable_fqdns_grains: True
 
 # The minion can take a while to start up when lspci and/or dmidecode is used

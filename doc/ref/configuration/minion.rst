@@ -1109,8 +1109,9 @@ adds 5 seconds every time grains are generated if an IP does not resolve. In Win
 grains are regenerated each time a new process is spawned. Therefore, the default for
 Windows is ``False``. In many cases this value does not make sense to include for proxy
 minions as it will be FQDN for the host running the proxy minion process, so the default
-for proxy minions is ``False```. All other OSes default to ``True``. This options was
-added `here <https://github.com/saltstack/salt/pull/55581>`_.
+for proxy minions is ``False```. On macOS, FQDN resolution can be very slow, therefore
+the default for macOS is ``False`` as well. All other OSes default to ``True``.
+This option was added `here <https://github.com/saltstack/salt/pull/55581>`_.
 
 .. code-block:: yaml
 
