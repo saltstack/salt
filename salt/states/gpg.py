@@ -1,6 +1,6 @@
 """
-Management of the GPG keychains
-===============================
+Manage GPG keychains
+====================
 
 .. versionadded:: 2016.3.0
 
