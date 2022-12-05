@@ -339,9 +339,7 @@ def test_run_ssh_pre_flight(opts, target, tmp_path):
         ] == mock_cmd.call_args_list
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="SSH_PY_SHIM not set on windows"
-)
+@pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_run_set_path(opts, target):
     """
@@ -363,9 +361,7 @@ def test_cmd_run_set_path(opts, target):
     assert re.search("\\" + target["set_path"], ret)
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="SSH_PY_SHIM not set on windows"
-)
+@pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_run_not_set_path(opts, target):
     """

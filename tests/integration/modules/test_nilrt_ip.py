@@ -14,7 +14,6 @@ import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains
-from tests.support.unit import skipIf
 
 try:
     import pyiface
@@ -31,8 +30,12 @@ INTERFACE_FOR_TEST = "eth1"
 
 
 @pytest.mark.skip_if_not_root
-@skipIf(not pyiface, "The python pyiface package is not installed")
-@skipIf(not CaseInsensitiveDict, "The python package requests is not installed")
+@pytest.mark.skipif(
+    pyiface is None, reason="The python pyiface package is not installed"
+)
+@pytest.mark.skipif(
+    CaseInsensitiveDict is None, reason="The python package requests is not installed"
+)
 @pytest.mark.destructive_test
 class NilrtIpModuleTest(ModuleCase):
     """
@@ -43,7 +46,9 @@ class NilrtIpModuleTest(ModuleCase):
     @classmethod
     def setUpClass(cls, grains):  # pylint: disable=arguments-differ
         if grains["os_family"] != "NILinuxRT":
-            pytest.skip(reason="Tests applicable only to NILinuxRT")
+            raise pytest.skip.Exception(
+                "Tests applicable only to NILinuxRT", _use_item_location=True
+            )
         cls.initialState = {}
         cls.grains = grains
 

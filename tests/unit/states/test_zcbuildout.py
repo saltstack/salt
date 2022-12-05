@@ -8,14 +8,10 @@ import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
 import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 from tests.unit.modules.test_zcbuildout import KNOWN_VIRTUALENV_BINARY_NAMES, Base
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutTestCase(Base):
     def setup_loader_modules(self):

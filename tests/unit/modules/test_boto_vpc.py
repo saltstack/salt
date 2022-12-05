@@ -20,7 +20,7 @@ from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=no-name-in-module,unused-import
 try:
@@ -135,17 +135,17 @@ def _has_required_moto():
         return True
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version() if HAS_BOTO else "None"
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}. Installed: {}".format(
+    reason="The moto version must be >= to version {}. Installed: {}".format(
         required_moto_version, _get_moto_version() if HAS_MOTO else "None"
     ),
 )
@@ -698,17 +698,17 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(describe_vpc["vpc"]["is_default"])
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}".format(required_moto_version),
+    reason="The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1071,11 +1071,11 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1139,11 +1139,11 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(igw_creation_result.get("created"))
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1200,11 +1200,11 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(ngw_creation_result.get("created"))
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1252,17 +1252,17 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(gw_exists_result["exists"])
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}".format(required_moto_version),
+    reason="The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1480,11 +1480,11 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1930,11 +1930,11 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(dhcp_disassociate_result)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -2213,17 +2213,17 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_replacing_result)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}. Installed: {}".format(
+    reason="The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto version must be >= to version {}".format(required_moto_version),
+    reason="The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated

@@ -14,7 +14,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.vt
 from tests.support.paths import CODE_DIR
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 def stdout_fileno_available():
@@ -54,9 +54,8 @@ def fixStdOutErrFileNoIfNeeded(func):
 
 
 class VTTestCase(TestCase):
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "Skip on Windows because this feature is not supported",
+    @pytest.mark.skip_on_windows(
+        reason="Skip on Windows because this feature is not supported",
     )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
@@ -262,9 +261,7 @@ class VTTestCase(TestCase):
     def generate_multibyte_stderr_unicode(block_size):
         return b"\x2E" + VTTestCase.generate_multibyte_stdout_unicode(block_size)
 
-    @skipIf(
-        salt.utils.platform.is_windows(), "Skip VT tests on windows, due to issue 54290"
-    )
+    @pytest.mark.skip_on_windows(reason="Skip VT tests on windows, due to issue 54290")
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_unicode(self):
         """
@@ -334,9 +331,7 @@ class VTTestCase(TestCase):
     def generate_multibyte_stderr_shiftjis(block_size):
         return b"\x2E" + VTTestCase.generate_multibyte_stdout_shiftjis(block_size)
 
-    @skipIf(
-        salt.utils.platform.is_windows(), "Skip VT tests on windows, due to issue 54290"
-    )
+    @pytest.mark.skip_on_windows(reason="Skip VT tests on windows, due to issue 54290")
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_shiftjis(self):
         """

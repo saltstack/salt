@@ -2,7 +2,7 @@ import pytest
 
 import salt.utils.win_pdh as win_pdh
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import pywintypes
@@ -12,7 +12,7 @@ except ImportError:
     HAS_WIN32 = False
 
 
-@skipIf(not HAS_WIN32, "Requires pywin32")
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires pywin32")
 @pytest.mark.skip_unless_on_windows
 class WinPdhTestCase(TestCase):
     @pytest.mark.slow_test
