@@ -192,6 +192,11 @@ def _create_gpg(user=None, gnupghome=None, keyring=None):
     if not gnupghome:
         gnupghome = _get_user_gnupghome(user)
 
+    if keyring and not isinstance(keyring, str):
+        raise SaltInvocationError(
+            "Please pass keyring as a string. Multiple keyrings are not allowed"
+        )
+
     gpg = gnupg.GPG(gnupghome=gnupghome, keyring=keyring)
 
     return gpg
