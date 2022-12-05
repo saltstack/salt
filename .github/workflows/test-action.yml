@@ -103,7 +103,7 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         id: spin-up-vm
         run: |
-          tools --timestamps vm create --destroy-on-failure ${{ inputs.distro-slug }}
+          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         run: |
@@ -195,7 +195,7 @@ jobs:
         env:
           TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
-          tools --timestamps vm create --destroy-on-failure ${{ inputs.distro-slug }}
+          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         run: |
