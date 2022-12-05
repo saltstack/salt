@@ -68,7 +68,6 @@ import string
 import sys
 
 import pytest
-from distro import linux_distribution
 
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.utils.gitfs import (
@@ -114,11 +113,12 @@ def _rand_key_name(length):
     )
 
 
-def _centos_stream_9():
-    (osname, osrelease, oscodename) = (
-        x.strip('"').strip("'") for x in linux_distribution()
-    )
-    return osname in ("CentOS Stream", "AlmaLinux") and osrelease == "9"
+def _check_skip(grains):
+    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        return True
+    if grains["os"] == "AlmaLinux" and grains["osmajorrelease"] == 9:
+        return True
+    return False
 
 
 class GitPythonMixin:
@@ -735,16 +735,16 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @pytest.mark.skip_on_aarch64(reason="Test is broken on aarch64")
 @pytest.mark.skipif(
-    _centos_stream_9(),
-    reason="AlmaLinux/CentOS Stream 9 has RSA keys disabled by default",
-)
-@pytest.mark.skipif(
     not HAS_PYGIT2,
     reason="pygit2 >= {} and libgit2 >= {} required".format(
         PYGIT2_MINVER, LIBGIT2_MINVER
     ),
 )
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
+@pytest.mark.skip_initial_gh_actions_failure(
+    skip=_check_skip,
+    reason="AlmaLinux/CentOS Stream 9 has RSA keys disabled by default",
+)
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @pytest.mark.skipif(
