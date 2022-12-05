@@ -296,7 +296,6 @@ class SlackClient:
         :type groups_pillar_name: str
         :param groups_pillar_name: can be used to pull group
         configuration from the specified pillar key.
-
         """
         # Get groups
         # Default to returning something that'll never match
