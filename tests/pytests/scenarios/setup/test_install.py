@@ -255,14 +255,6 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
-# On python 3.5 Windows sdist fails with encoding errors. This is resolved
-# in later versions.
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows()
-    and sys.version_info > (3,)
-    and sys.version_info < (3, 6),
-    reason="Skip on python 3.5",
-)
 def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a sdist package

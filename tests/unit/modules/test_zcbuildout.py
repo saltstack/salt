@@ -17,7 +17,7 @@ import salt.utils.platform
 from tests.support.helpers import patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
@@ -127,10 +127,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             shutil.rmtree(self.tdir)
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutTestCase(Base):
     @pytest.mark.slow_test
@@ -323,10 +320,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutOnlineTestCase(Base):
     @classmethod

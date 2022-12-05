@@ -85,8 +85,8 @@ def test_is_installed(pkgutil, pkg_name):
     assert not pkgutil.is_installed("spongebob")
 
 
-@pytest.mark.skipif(
-    True, reason="I don't know how to fix this test. Pedro(s0undt3ch), 2022-04-08"
+@pytest.mark.skip(
+    reason="I don't know how to fix this test. Pedro(s0undt3ch), 2022-04-08"
 )
 def test_install_forget(
     tmp_path,
