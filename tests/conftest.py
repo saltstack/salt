@@ -16,7 +16,6 @@ import pathlib
 import pprint
 import re
 import shutil
-import ssl
 import stat
 import sys
 from functools import partial, wraps
@@ -40,7 +39,6 @@ from salt.utils.immutabletypes import freeze
 from tests.support.helpers import (
     PRE_PYTEST_SKIP_OR_NOT,
     PRE_PYTEST_SKIP_REASON,
-    Webserver,
     get_virtualenv_binary_path,
 )
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
@@ -1535,25 +1533,6 @@ def sminion():
 @pytest.fixture(scope="session")
 def grains(sminion):
     return sminion.opts["grains"].copy()
-
-
-@pytest.fixture
-def ssl_webserver(integration_files_dir, scope="module"):
-    """
-    spins up an https webserver.
-    """
-    if sys.version_info < (3, 5, 3):
-        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-    context.load_cert_chain(
-        str(integration_files_dir / "https" / "cert.pem"),
-        str(integration_files_dir / "https" / "key.pem"),
-    )
-
-    webserver = Webserver(root=str(integration_files_dir), ssl_opts=context)
-    webserver.start()
-    yield webserver
-    webserver.stop()
 
 
 @pytest.fixture(scope="session", autouse=True)
