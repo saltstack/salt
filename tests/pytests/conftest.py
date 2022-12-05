@@ -566,7 +566,7 @@ def get_test_timeout(pyfuncitem):
     return default_timeout
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_pycollect_makeitem(collector, name, obj):
     if collector.funcnamefilter(name) and inspect.iscoroutinefunction(obj):
         return list(collector._genfunctions(name, obj))
@@ -591,7 +591,7 @@ class CoroTestFunction:
         return ret
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem):
     if not inspect.iscoroutinefunction(pyfuncitem.obj):
         return

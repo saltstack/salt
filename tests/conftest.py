@@ -224,7 +224,7 @@ def pytest_addoption(parser):
 
 
 # ----- Register Markers -------------------------------------------------------------------------------------------->
-@pytest.mark.trylast
+@pytest.hookimpl(trylast=True)
 def pytest_configure(config):
     """
     called after command line options have been parsed
