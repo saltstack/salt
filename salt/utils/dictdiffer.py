@@ -261,7 +261,7 @@ class RecursiveDictDiffer(DictDiffer):
             if not isinstance(diffs[key], dict):
                 continue
 
-            if is_nested:
+            if is_nested and include_nested:
                 keys.extend(
                     self._it_addrm(
                         key_a,
@@ -297,6 +297,23 @@ class RecursiveDictDiffer(DictDiffer):
                             include_nested=include_nested,
                         )
                     )
+            # type change from/to dict
+            elif (
+                not is_nested
+                and not isinstance(diffs[key][key_a], dict)
+                and isinstance(diffs[key][key_b], dict)
+            ):
+                keys.extend(
+                    self._it_addrm(
+                        key_a,
+                        key_b,
+                        diffs=diffs[key][key_b],
+                        is_nested=True,
+                        prefix=f"{prefix}{key}{separator}",
+                        include_nested=include_nested,
+                    )
+                )
+
         return keys
 
     def added(
