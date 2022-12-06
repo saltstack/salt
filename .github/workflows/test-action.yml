@@ -163,6 +163,7 @@ jobs:
           tools vm download-artifacts ${{ inputs.distro-slug }}
           tree -a artifacts
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.tests-chunk }}
+          echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ inputs.nox-session }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
 
       - name: Destroy VM
         if: always()
