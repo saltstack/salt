@@ -56,7 +56,7 @@ configure that policy.
 import salt.utils.data
 import salt.utils.platform
 
-__virtualname__ = "lgpo"
+__virtualname__ = "lgpo_reg"
 
 
 def __virtual__():
