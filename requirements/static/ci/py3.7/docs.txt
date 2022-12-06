@@ -339,7 +339,9 @@ backports.entry-points-selectable==1.1.0
 backports.zoneinfo==0.2.1
     # via tzlocal
 bcrypt==3.2.0
-    # via paramiko
+    # via
+    #   paramiko
+    #   passlib
 boto3==1.18.27 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -668,7 +670,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   ncclient
     #   netmiko
     #   scp
-passlib==1.7.4 ; sys_platform != "win32"
+passlib[bcrypt]==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse

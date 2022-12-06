@@ -213,26 +213,16 @@ def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_pas
 
     terminal_stdout.flush()
     terminal_stdout.seek(0)
-    if sys.version_info < (3, 6):  # pragma: no cover
-        stdout = proc._translate_newlines(
-            terminal_stdout.read(), __salt_system_encoding__
-        )
-    else:
-        stdout = proc._translate_newlines(
-            terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
-        )
+    stdout = proc._translate_newlines(
+        terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
+    )
     terminal_stdout.close()
 
     terminal_stderr.flush()
     terminal_stderr.seek(0)
-    if sys.version_info < (3, 6):  # pragma: no cover
-        stderr = proc._translate_newlines(
-            terminal_stderr.read(), __salt_system_encoding__
-        )
-    else:
-        stderr = proc._translate_newlines(
-            terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
-        )
+    stderr = proc._translate_newlines(
+        terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
+    )
     terminal_stderr.close()
     ret = ProcessResult(
         returncode=proc.returncode, stdout=stdout, stderr=stderr, cmdline=proc.args

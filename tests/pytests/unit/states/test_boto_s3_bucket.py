@@ -180,20 +180,19 @@ def global_config():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def configure_loader_modules(minion_opts):
     ctx = {}
     utils = salt.loader.utils(
-        opts,
+        minion_opts,
         whitelist=["boto", "boto3", "args", "systemd", "path", "platform", "reg"],
         context=ctx,
     )
-    serializers = salt.loader.serializers(opts)
+    serializers = salt.loader.serializers(minion_opts)
     funcs = salt.loader.minion_mods(
-        opts, context=ctx, utils=utils, whitelist=["boto_s3_bucket"]
+        minion_opts, context=ctx, utils=utils, whitelist=["boto_s3_bucket"]
     )
     salt_states = salt.loader.states(
-        opts=opts,
+        opts=minion_opts,
         functions=funcs,
         utils=utils,
         whitelist=["boto_s3_bucket"],
@@ -201,7 +200,7 @@ def configure_loader_modules():
     )
     return {
         boto_s3_bucket: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": funcs,
             "__utils__": utils,
             "__states__": salt_states,

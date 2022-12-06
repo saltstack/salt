@@ -1768,6 +1768,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Install the software
         # Check Use Scheduler Option
+        log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+        log.debug("PKG : pwd: %s", cache_path)
         if pkginfo[version_num].get("use_scheduler", False):
             # Create Scheduled Task
             __salt__["task.create_task"](
@@ -1834,6 +1836,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 python_shell=False,
                 redirect_stderr=True,
             )
+            log.debug("PKG : retcode: %s", result["retcode"])
             if not result["retcode"]:
                 ret[pkg_name] = {"install status": "success"}
                 changed.append(pkg_name)

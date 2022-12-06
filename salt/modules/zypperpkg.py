@@ -1248,6 +1248,9 @@ def mod_repo(repo, **kwargs):
         Enable or disable (True or False) repository,
         but do not remove if disabled.
 
+    name
+        This is used as the descriptive name value in the repo file.
+
     refresh
         Enable or disable (True or False) auto-refresh of the repository.
 
@@ -1363,7 +1366,16 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append("--priority={}".format(kwargs.get("priority", DEFAULT_PRIORITY)))
 
     if "humanname" in kwargs:
+        salt.utils.versions.warn_until(
+            3009,
+            "Passing 'humanname' to 'mod_repo' is deprecated, slated "
+            "for removal in {version}. Please use 'name' instead.",
+        )
         cmd_opt.append("--name='{}'".format(kwargs.get("humanname")))
+
+    if "name" in kwargs:
+        cmd_opt.append("--name")
+        cmd_opt.append(kwargs.get("name"))
 
     if kwargs.get("gpgautoimport") is True:
         global_cmd_opt.append("--gpg-auto-import-keys")
@@ -1604,7 +1616,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = Wildcard(__zypper__(root=root))(name, version)

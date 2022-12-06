@@ -5569,8 +5569,8 @@ def set_autostart(vm_, state="on", **kwargs):
     system on reboot.
 
     :param vm_: domain name
-    :param state: 'on' to auto start the pool, anything else to mark the
-                  pool not to be started when the host boots
+    :param state: 'on' to auto start the VM, 'off' to mark the VM not to be
+                  started when the host boots
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0

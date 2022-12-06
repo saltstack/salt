@@ -897,10 +897,20 @@ class Client:
         self._client = PsExecClient(server, username, password, port, encrypt)
         self._client._service = ScmrService(self.service_name, self._client.session)
 
+    def __enter__(self):
+        self.connect()
+        self.create_service()
+        return self
+
+    def __exit__(self, tb_type, tb_value, tb):
+        self.remove_service()
+        self.disconnect()
+
     def connect(self):
         return self._client.connect()
 
     def disconnect(self):
+        self._client.cleanup()  # This removes the lingering PAExec binary
         return self._client.disconnect()
 
     def create_service(self):
@@ -956,7 +966,7 @@ class Client:
 
 def run_winexe_command(cmd, args, host, username, password, port=445):
     """
-    Run a command remotly via the winexe executable
+    Run a command remotely via the winexe executable
     """
     creds = "-U '{}%{}' //{}".format(username, password, host)
     logging_creds = "-U '{}%XXX-REDACTED-XXX' //{}".format(username, host)
@@ -967,20 +977,13 @@ def run_winexe_command(cmd, args, host, username, password, port=445):
 
 def run_psexec_command(cmd, args, host, username, password, port=445):
     """
-    Run a command remotly using the psexec protocol
+    Run a command remotely using the psexec protocol
     """
     service_name = "PS-Exec-{}".format(uuid.uuid4())
-    stdout, stderr, ret_code = "", "", None
-    client = Client(
+    with Client(
         host, username, password, port=port, encrypt=False, service_name=service_name
-    )
-    client.connect()
-    try:
-        client.create_service()
+    ) as client:
         stdout, stderr, ret_code = client.run_executable(cmd, args)
-    finally:
-        client.remove_service()
-        client.disconnect()
     return stdout, stderr, ret_code
 
 
@@ -1117,7 +1120,7 @@ def validate_windows_cred(
                 "cmd.exe", "/c hostname", host, username, password, port=445
             )
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception("Exceoption while executing psexec")
+            log.exception("Exception while executing psexec")
         if ret_code == 0:
             break
         time.sleep(retry_delay)
@@ -1285,16 +1288,22 @@ def deploy_windows(
             return False
 
         salt.utils.smb.mkdirs("salttemp", conn=smb_conn)
-        salt.utils.smb.mkdirs("salt/conf/pki/minion", conn=smb_conn)
+        root_dir = "ProgramData/Salt Project/Salt"
+        salt.utils.smb.mkdirs("{}/conf/pki/minion".format(root_dir), conn=smb_conn)
+        root_dir = "ProgramData\\Salt Project\\Salt"
 
         if minion_pub:
             salt.utils.smb.put_str(
-                minion_pub, "salt\\conf\\pki\\minion\\minion.pub", conn=smb_conn
+                minion_pub,
+                "{}\\conf\\pki\\minion\\minion.pub".format(root_dir),
+                conn=smb_conn,
             )
 
         if minion_pem:
             salt.utils.smb.put_str(
-                minion_pem, "salt\\conf\\pki\\minion\\minion.pem", conn=smb_conn
+                minion_pem,
+                "{}\\conf\\pki\\minion\\minion.pem".format(root_dir),
+                conn=smb_conn,
             )
 
         if master_sign_pub_file:
@@ -1305,8 +1314,7 @@ def deploy_windows(
             try:
                 salt.utils.smb.put_file(
                     master_sign_pub_file,
-                    "salt\\conf\\pki\\minion\\master_sign.pub",
-                    "C$",
+                    "{}\\conf\\pki\\minion\\master_sign.pub".format(root_dir),
                     conn=smb_conn,
                 )
             except Exception as e:  # pylint: disable=broad-except
@@ -1359,21 +1367,24 @@ def deploy_windows(
             if minion_grains:
                 salt.utils.smb.put_str(
                     salt_config_to_yaml(minion_grains, line_break="\r\n"),
-                    "salt\\conf\\grains",
+                    "{}\\conf\\grains".format(root_dir),
                     conn=smb_conn,
                 )
             # Add special windows minion configuration
             # that must be in the minion config file
             windows_minion_conf = {
-                "ipc_mode": "tcp",
-                "root_dir": "c:\\salt",
-                "pki_dir": "/conf/pki/minion",
-                "multiprocessing": False,
+                "ipc_mode": minion_conf.pop("ipc_mode", "tcp"),
+                "pki_dir": minion_conf.pop("pki_dir", "/conf/pki/minion"),
+                "multiprocessing": minion_conf.pop("multiprocessing", True),
             }
+            if master and "master" not in minion_conf:
+                windows_minion_conf["master"] = master
+            if name and "id" not in minion_conf:
+                windows_minion_conf["id"] = name
             minion_conf = dict(minion_conf, **windows_minion_conf)
             salt.utils.smb.put_str(
                 salt_config_to_yaml(minion_conf, line_break="\r\n"),
-                "salt\\conf\\minion",
+                "{}\\conf\\minion".format(root_dir),
                 conn=smb_conn,
             )
         # Delete C:\salttmp\ and installer file
