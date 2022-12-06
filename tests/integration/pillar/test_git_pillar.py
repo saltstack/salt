@@ -118,7 +118,7 @@ def _centos_stream_9():
     (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
     )
-    return osname == "CentOS Stream" and osrelease == "9"
+    return osname in ("CentOS Stream", "AlmaLinux") and osrelease == "9"
 
 
 class GitPythonMixin:
@@ -735,7 +735,8 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @pytest.mark.skip_on_aarch64(reason="Test is broken on aarch64")
 @pytest.mark.skipif(
-    _centos_stream_9(), reason="CentOS Stream 9 has RSA keys disabled by default"
+    _centos_stream_9(),
+    reason="AlmaLinux/CentOS Stream 9 has RSA keys disabled by default",
 )
 @pytest.mark.skipif(
     not HAS_PYGIT2,
