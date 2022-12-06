@@ -32,6 +32,8 @@ Configuration of network device
 
 import logging
 
+from salt.exceptions import CommandExecutionError
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -308,5 +310,87 @@ def offload(name, **kwargs):
             ret["result"] = False
             ret["comment"] = str(error)
             return ret
+
+    return ret
+
+
+def pause(name, **kwargs):
+    """
+    .. versionadded:: 3006.0
+
+    Manage pause parameters of network device
+
+    name
+        Interface name to apply pause parameters
+
+    .. code-block:: yaml
+
+        eth0:
+          ethtool.pause:
+            - name: eth0
+            - autoneg: off
+            - rx: off
+            - tx: off
+
+    """
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Network device {} pause parameters are up to date.".format(name),
+    }
+    apply_pause = False
+
+    # Get current pause parameters
+    try:
+        old = __salt__["ethtool.show_pause"](name)
+    except CommandExecutionError:
+        ret["result"] = False
+        ret["comment"] = "Device {} pause parameters are not supported".format(name)
+        return ret
+
+    # map ethtool command input to output text
+    pause_map = {
+        "autoneg": "Autonegotiate",
+        "rx": "RX",
+        "tx": "RX",
+    }
+
+    # Process changes
+    new = {}
+    diff = []
+
+    for key, value in kwargs.items():
+        key = key.lower()
+        if key in pause_map:
+            if value != old[pause_map[key]]:
+                new.update({key: value})
+                if value is True:
+                    value = "on"
+                elif value is False:
+                    value = "off"
+                diff.append("{}: {}".format(key, value))
+
+    if not new:
+        return ret
+
+    # Dry run
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Device {} pause parameters are set to be updated:\n{}".format(
+            name, "\n".join(diff)
+        )
+        return ret
+
+    # Apply pause parameters
+    try:
+        __salt__["ethtool.set_pause"](name, **new)
+        # Prepare return output
+        ret["comment"] = "Device {} pause parameters updated.".format(name)
+        ret["changes"]["ethtool_pause"] = "\n".join(diff)
+    except CommandExecutionError as exc:
+        ret["result"] = False
+        ret["comment"] = str(exc)
+        return ret
 
     return ret

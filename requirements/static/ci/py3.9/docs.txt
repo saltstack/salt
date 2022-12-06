@@ -335,7 +335,9 @@ babel==2.9.1
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==3.2.0
-    # via paramiko
+    # via
+    #   paramiko
+    #   passlib
 boto3==1.18.27 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -657,7 +659,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   ncclient
     #   netmiko
     #   scp
-passlib==1.7.4 ; sys_platform != "win32"
+passlib[bcrypt]==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
@@ -682,8 +684,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version <= "3.9"
-    # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
 pygit2==1.6.1 ; python_version > "3.8"

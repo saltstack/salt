@@ -747,7 +747,7 @@ class SPMClient:
             raise SPMInvocationError("A path to a directory must be specified")
 
         if args[1] == ".":
-            repo_path = os.getcwdu()
+            repo_path = os.getcwd()
         else:
             repo_path = args[1]
 

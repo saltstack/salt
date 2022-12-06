@@ -1,8 +1,6 @@
 """
 Unit tests for salt.utils.templates.py
 """
-
-
 import logging
 import os
 import sys
@@ -15,7 +13,7 @@ import salt.utils.files
 import salt.utils.templates
 from tests.support.helpers import with_tempdir
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import Cheetah as _
@@ -114,36 +112,36 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "OK")
 
     ### Tests for wempy template
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3,),
-        "The wempy module is currently unsupported under Python3",
+        reason="The wempy module is currently unsupported under Python3",
     )
     def test_render_wempy_sanity(self):
         tmpl = """OK"""
         res = salt.utils.templates.render_wempy_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3,),
-        "The wempy module is currently unsupported under Python3",
+        reason="The wempy module is currently unsupported under Python3",
     )
     def test_render_wempy_evaluate(self):
         tmpl = """{{="OK"}}"""
         res = salt.utils.templates.render_wempy_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3,),
-        "The wempy module is currently unsupported under Python3",
+        reason="The wempy module is currently unsupported under Python3",
     )
     def test_render_wempy_evaluate_multi(self):
         tmpl = """{{if 1:}}OK{{pass}}"""
         res = salt.utils.templates.render_wempy_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3,),
-        "The wempy module is currently unsupported under Python3",
+        reason="The wempy module is currently unsupported under Python3",
     )
     def test_render_wempy_variable(self):
         tmpl = """{{=var}}"""
@@ -186,19 +184,19 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "<RU>OK</RU>")
 
     ### Tests for cheetah template (line-oriented and xml-friendly)
-    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
+    @pytest.mark.skipif(not HAS_CHEETAH, reason="The Cheetah Python module is missing.")
     def test_render_cheetah_sanity(self):
         tmpl = """OK"""
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
-    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
+    @pytest.mark.skipif(not HAS_CHEETAH, reason="The Cheetah Python module is missing.")
     def test_render_cheetah_evaluate(self):
         tmpl = """<%="OK"%>"""
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
-    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
+    @pytest.mark.skipif(not HAS_CHEETAH, reason="The Cheetah Python module is missing.")
     def test_render_cheetah_evaluate_xml(self):
         tmpl = """
         <% if 1: %>
@@ -209,7 +207,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
-    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
+    @pytest.mark.skipif(not HAS_CHEETAH, reason="The Cheetah Python module is missing.")
     def test_render_cheetah_evaluate_text(self):
         tmpl = """
         #if 1
@@ -221,7 +219,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
-    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
+    @pytest.mark.skipif(not HAS_CHEETAH, reason="The Cheetah Python module is missing.")
     def test_render_cheetah_variable(self):
         tmpl = """$var"""
 
@@ -426,7 +424,7 @@ class WrapRenderTestCase(TestCase):
             slspath="foo/foo",
         )
 
-    @skipIf(sys.platform == "win32", "Backslash not possible under windows")
+    @pytest.mark.skip_on_windows
     def test_generate_sls_context__backslash_in_path(self):
         """generate_sls_context - Handle backslash in path on non-windows"""
         self._test_generated_sls_context(

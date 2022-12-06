@@ -209,7 +209,7 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     ret = {}
@@ -504,7 +504,7 @@ def install(
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == "file":
         if reinstall:

@@ -323,6 +323,32 @@ def test_user_create():
         assert ret
 
 
+def test_user_create_exception():
+    """
+    Test mongodb.user_create
+    """
+    user_create_mock = MagicMock(side_effect=pymongo.errors.PyMongoError)
+
+    pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", user_create_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_create("test_user", "test_password")
+        assert not ret
+
+
 def test_user_remove():
     """
     Test mongodb.user_remove
@@ -347,6 +373,32 @@ def test_user_remove():
     with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
         ret = mongodb.user_remove("test_user")
         assert ret
+
+
+def test_user_remove_exception():
+    """
+    Test mongodb.user_remove
+    """
+    user_remove_mock = MagicMock(autospec=True, side_effect=pymongo.errors.PyMongoError)
+
+    pymongo_database_mock = MagicMock(autospec=True, return_value=MockPyMongoDatabase())
+    mongodb_client_mock = MagicMock(autospec=True, return_value=MockMongoConnect())
+    config_option_mock = MagicMock(
+        autospec=True, side_effect=["user", "password", "localhost", "27017"]
+    )
+
+    patch_pymongo_database = patch("pymongo.database.Database", pymongo_database_mock)
+    patch_mongo_client = patch("pymongo.MongoClient", mongodb_client_mock)
+    patch_pymongo_command = patch.object(
+        MockPyMongoDatabase, "command", user_remove_mock
+    )
+    patch_salt_dict = patch.dict(
+        mongodb.__salt__, {"config.option": config_option_mock}
+    )
+
+    with patch_mongo_client, patch_pymongo_database, patch_salt_dict, patch_pymongo_command:
+        ret = mongodb.user_remove("test_user")
+        assert not ret
 
 
 def test_user_roles_exists():
