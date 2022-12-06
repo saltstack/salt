@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
+import pytest
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
-import salt.utils.platform
 import salt.utils.win_dotnet as win_dotnet
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
+
+pytestmark = [
+    pytest.mark.skip_unless_on_windows,
+]
 
 
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinDotNetTestCase(TestCase):
     """
     Test cases for salt.utils.win_dotnet

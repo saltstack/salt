@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for 'module.aptkernelpkg'
     :platform: Linux
@@ -7,28 +6,27 @@
 """
 # pylint: disable=invalid-name,no-member
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
+
+import pytest
 
 try:
     # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch
+    import salt.modules.kernelpkg_linux_apt as kernelpkg
+    from salt.exceptions import CommandExecutionError
 
     # Import Salt Libs
     from tests.support.kernelpkg import KernelPkgTestCase
-    import salt.modules.kernelpkg_linux_apt as kernelpkg
-    from salt.exceptions import CommandExecutionError
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.mock import MagicMock, patch
+    from tests.support.unit import TestCase
 
     HAS_MODULES = True
 except ImportError:
     HAS_MODULES = False
 
 
-@skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
 class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.kernelpkg_linux_apt
@@ -41,10 +39,10 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         version = re.match(r"^(\d+\.\d+\.\d+)-(\d+)", cls.KERNEL_LIST[-1])
-        cls.LATEST = "{0}.{1}".format(version.group(1), version.group(2))
+        cls.LATEST = "{}.{}".format(version.group(1), version.group(2))
 
         for kernel in cls.KERNEL_LIST:
-            pkg = "{0}-{1}".format(
+            pkg = "{}-{}".format(
                 kernelpkg._package_prefix(), kernel
             )  # pylint: disable=protected-access
             cls.PACKAGE_DICT[pkg] = pkg
@@ -68,7 +66,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         Test - Return return the latest installed kernel version
         """
         PACKAGE_LIST = [
-            "{0}-{1}".format(kernelpkg._package_prefix(), kernel)
+            "{}-{}".format(kernelpkg._package_prefix(), kernel)
             for kernel in self.KERNEL_LIST
         ]  # pylint: disable=protected-access
 
@@ -94,7 +92,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
             ):
                 result = self._kernelpkg.remove(release=self.KERNEL_LIST[0])
                 self.assertIn("removed", result)
-                target = "{0}-{1}".format(
+                target = "{}-{}".format(
                     self._kernelpkg._package_prefix(), self.KERNEL_LIST[0]
                 )  # pylint: disable=protected-access
                 self.assertListEqual(result["removed"], [target])

@@ -1,27 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import time
 from collections import namedtuple
 
-import salt.modules.ps as ps
+import pytest
 
-# Import Salt libs
+import salt.modules.ps as ps
 import salt.utils.data
 import salt.utils.psutil_compat as psutil
-
-# Import 3rd-party libs
-# pylint: disable=import-error,unused-import
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from tests.support.mock import MagicMock, Mock, call, patch
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 HAS_PSUTIL_VERSION = False
 
@@ -72,7 +61,7 @@ def _get_proc_pid(proc):
     return proc.pid
 
 
-class DummyProcess(object):
+class DummyProcess:
     """
     Dummy class to emulate psutil.Process. This ensures that _any_ string
     values used for any of the options passed in are converted to str types on
@@ -132,7 +121,7 @@ class PsTestCase(TestCase):
             self.mocked_proc.name = "test_mock_proc"
             self.mocked_proc.pid = 9999999999
 
-    @skipIf(not ps.PSUTIL2, "Only run for psutil 2.x")
+    @pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
     def test__get_proc_cmdline(self):
         cmdline = ["echo", "питон"]
         ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
@@ -191,8 +180,9 @@ class PsTestCase(TestCase):
                 {"idle": 4, "nice": 2, "system": 3, "user": 1}, ps.cpu_times()
             )
 
-    @skipIf(
-        HAS_PSUTIL_VERSION is False, "psutil 0.6.0 or greater is required for this test"
+    @pytest.mark.skipif(
+        HAS_PSUTIL_VERSION is False,
+        reason="psutil 0.6.0 or greater is required for this test",
     )
     def test_virtual_memory(self):
         with patch(
@@ -210,8 +200,9 @@ class PsTestCase(TestCase):
                 ps.virtual_memory(),
             )
 
-    @skipIf(
-        HAS_PSUTIL_VERSION is False, "psutil 0.6.0 or greater is required for this test"
+    @pytest.mark.skipif(
+        HAS_PSUTIL_VERSION is False,
+        reason="psutil 0.6.0 or greater is required for this test",
     )
     def test_swap_memory(self):
         with patch(
@@ -351,7 +342,7 @@ class PsTestCase(TestCase):
                 assert len(result) == 1
 
     ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
-    # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
+    # @pytest.mark.skipif(not HAS_UTMP, reason="The utmp module must be installed to run test_get_users_utmp()")
     # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
     # def test_get_users_utmp(self):
     #     pass

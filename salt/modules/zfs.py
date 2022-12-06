@@ -18,8 +18,8 @@ import logging
 import salt.modules.cmdmod
 import salt.utils.args
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.versions
-from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 
 __virtualname__ = "zfs"
@@ -71,7 +71,11 @@ def exists(name, **kwargs):
 
     ## Check if 'name' of 'type' exists
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="list", opts=opts, target=name,),
+        __utils__["zfs.zfs_command"](
+            command="list",
+            opts=opts,
+            target=name,
+        ),
         python_shell=False,
         ignore_retcode=True,
     )
@@ -188,7 +192,11 @@ def destroy(name, **kwargs):
 
     ## Destroy filesystem/volume/snapshot/...
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="destroy", flags=flags, target=name,),
+        __utils__["zfs.zfs_command"](
+            command="destroy",
+            flags=flags,
+            target=name,
+        ),
         python_shell=False,
     )
 
@@ -251,7 +259,11 @@ def rename(name, new_name, **kwargs):
 
     ## Rename filesystem/volume/snapshot/...
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="rename", flags=flags, target=target,),
+        __utils__["zfs.zfs_command"](
+            command="rename",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -335,7 +347,10 @@ def list_(name=None, **kwargs):
     ## parse zfs list
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zfs_command"](
-            command="list", flags=flags, opts=opts, target=name,
+            command="list",
+            flags=flags,
+            opts=opts,
+            target=name,
         ),
         python_shell=False,
     )
@@ -374,7 +389,10 @@ def list_mount():
     """
     ## List mounted filesystem
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="mount",), python_shell=False,
+        __utils__["zfs.zfs_command"](
+            command="mount",
+        ),
+        python_shell=False,
     )
 
     if res["retcode"] == 0:
@@ -429,7 +447,10 @@ def mount(name=None, **kwargs):
     ## Mount filesystem
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zfs_command"](
-            command="mount", flags=flags, opts=opts, target=name,
+            command="mount",
+            flags=flags,
+            opts=opts,
+            target=name,
         ),
         python_shell=False,
     )
@@ -480,7 +501,11 @@ def unmount(name, **kwargs):
 
     ## Unmount filesystem
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="unmount", flags=flags, target=name,),
+        __utils__["zfs.zfs_command"](
+            command="unmount",
+            flags=flags,
+            target=name,
+        ),
         python_shell=False,
     )
 
@@ -523,7 +548,10 @@ def inherit(prop, name, **kwargs):
     ## Inherit property
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zfs_command"](
-            command="inherit", flags=flags, property_name=prop, target=name,
+            command="inherit",
+            flags=flags,
+            property_name=prop,
+            target=name,
         ),
         python_shell=False,
     )
@@ -575,7 +603,11 @@ def diff(name_a, name_b=None, **kwargs):
 
     ## Diff filesystem/snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="diff", flags=flags, target=target,),
+        __utils__["zfs.zfs_command"](
+            command="diff",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -645,12 +677,17 @@ def rollback(name, **kwargs):
             flags.append("-f")
         else:
             log.warning(
-                "zfs.rollback - force=True can only be used with recursive_all=True or recursive=True"
+                "zfs.rollback - force=True can only be used with recursive_all=True or"
+                " recursive=True"
             )
 
     ## Rollback to snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="rollback", flags=flags, target=name,),
+        __utils__["zfs.zfs_command"](
+            command="rollback",
+            flags=flags,
+            target=name,
+        ),
         python_shell=False,
     )
 
@@ -752,7 +789,10 @@ def promote(name):
     """
     ## Promote clone
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="promote", target=name,),
+        __utils__["zfs.zfs_command"](
+            command="promote",
+            target=name,
+        ),
         python_shell=False,
     )
 
@@ -799,7 +839,10 @@ def bookmark(snapshot, bookmark):
 
     ## Bookmark snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="bookmark", target=target,),
+        __utils__["zfs.zfs_command"](
+            command="bookmark",
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -838,7 +881,11 @@ def holds(snapshot, **kwargs):
 
     ## Lookup holds
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="holds", flags=flags, target=target,),
+        __utils__["zfs.zfs_command"](
+            command="holds",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -846,7 +893,12 @@ def holds(snapshot, **kwargs):
     if res["retcode"] == 0:
         for hold in res["stdout"].splitlines():
             hold_data = OrderedDict(
-                list(zip(["name", "tag", "timestamp"], hold.split("\t"),))
+                list(
+                    zip(
+                        ["name", "tag", "timestamp"],
+                        hold.split("\t"),
+                    )
+                )
             )
             ret[hold_data["tag"].strip()] = hold_data["timestamp"]
 
@@ -904,7 +956,11 @@ def hold(tag, *snapshot, **kwargs):
 
     ## hold snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="hold", flags=flags, target=target,),
+        __utils__["zfs.zfs_command"](
+            command="hold",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -961,7 +1017,11 @@ def release(tag, *snapshot, **kwargs):
 
     ## release snapshot
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zfs_command"](command="release", flags=flags, target=target,),
+        __utils__["zfs.zfs_command"](
+            command="release",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -1094,6 +1154,11 @@ def get(*dataset, **kwargs):
     type : string
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.
+
+        .. versionchanged:: 3004
+
+        type is ignored on Solaris 10 and 11 since not a valid parameter on those platforms
+
     source : string
         comma-separated list of sources to display. Must be one of the following:
         local, default, inherited, temporary, and none. The default value is all sources.
@@ -1135,8 +1200,11 @@ def get(*dataset, **kwargs):
     fields.insert(0, "name")
     fields.insert(1, "property")
     opts["-o"] = ",".join(fields)
-    if kwargs.get("type", False):
-        opts["-t"] = kwargs.get("type")
+
+    if not salt.utils.platform.is_sunos():
+        if kwargs.get("type", False):
+            opts["-t"] = kwargs.get("type")
+
     if kwargs.get("source", False):
         opts["-s"] = kwargs.get("source")
 
@@ -1163,11 +1231,14 @@ def get(*dataset, **kwargs):
             if "value" in ds_data:
                 if kwargs.get("parsable", True):
                     ds_data["value"] = __utils__["zfs.from_auto"](
-                        ds_data["property"], ds_data["value"],
+                        ds_data["property"],
+                        ds_data["value"],
                     )
                 else:
                     ds_data["value"] = __utils__["zfs.to_auto"](
-                        ds_data["property"], ds_data["value"], convert_to_human=True,
+                        ds_data["property"],
+                        ds_data["value"],
+                        convert_to_human=True,
                     )
 
             if ds_data["name"] not in ret:

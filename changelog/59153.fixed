@@ -1,2 +1,0 @@
-Fix issue where passed smb port was being passed to the smb connection when
-deploying Windows with salt-cloud

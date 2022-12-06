@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to a mongodb server
 
@@ -92,19 +91,13 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
-# Import third party libs
 try:
     import pymongo
 
@@ -130,7 +123,7 @@ def _remove_dots(src):
     Remove the dots from the given data structure
     """
     output = {}
-    for key, val in six.iteritems(src):
+    for key, val in src.items():
         if isinstance(val, dict):
             val = _remove_dots(val)
         output[key.replace(".", "-")] = val
@@ -177,24 +170,23 @@ def _get_conn(ret):
     if uri and PYMONGO_VERSION > _LooseVersion("2.3"):
         if uri and host:
             raise salt.exceptions.SaltConfigurationError(
-                "Mongo returner expects either uri or host configuration. Both were provided"
+                "Mongo returner expects either uri or host configuration. Both were"
+                " provided"
             )
         pymongo.uri_parser.parse_uri(uri)
         conn = pymongo.MongoClient(uri)
         mdb = conn.get_database()
     else:
         if PYMONGO_VERSION > _LooseVersion("2.3"):
-            conn = pymongo.MongoClient(host, port)
+            conn = pymongo.MongoClient(host, port, username=user, password=password)
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(
                     "pymongo <= 2.3 does not support uri format"
                 )
-            conn = pymongo.Connection(host, port)
+            conn = pymongo.Connection(host, port, username=user, password=password)
 
         mdb = conn[db_]
-        if user and password:
-            mdb.authenticate(user, password)
 
     if indexes:
         if PYMONGO_VERSION > _LooseVersion("2.3"):

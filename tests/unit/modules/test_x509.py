@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -15,25 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Salt Testing Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import os
 import tempfile
 
+import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from salt.modules import x509
+from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-
+from tests.support.unit import TestCase
 
 try:
     import M2Crypto  # pylint: disable=unused-import
@@ -99,10 +92,9 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 }
 
 
-@skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {x509: {}}
+        return {x509: {"__opts__": {"fips_mode": False}}}
 
     @patch("salt.modules.x509.log", MagicMock())
     def test_private_func__parse_subject(self):
@@ -111,7 +103,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
 
-        class FakeSubject(object):
+        class FakeSubject:
             """
             Class for faking x509'th subject.
             """
@@ -131,7 +123,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.trace.call_args[0][2], TypeError)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_get_pem_entry(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -141,7 +135,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_get_private_key_size(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -151,7 +147,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.get_private_key_size(ca_key)
         self.assertEqual(ret, 1024)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_key(self):
         """
         Test that x509.create_key returns a private key
@@ -160,7 +158,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.create_private_key(text=True, passphrase="super_secret_passphrase")
         self.assertIn("BEGIN RSA PRIVATE KEY", ret)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -172,7 +172,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.create_certificate(**ca_kwargs)
         self.assertIn("BEGIN CERTIFICATE", ret)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_after(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values["x509_args_ca"].copy()
@@ -211,7 +213,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # information in it.
         self.assertIn(not_after_str, not_after_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_before(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -249,7 +253,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # information in it.
         self.assertIn(not_before_str, not_before_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_before_wrong_date(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -261,7 +267,10 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_before_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = "not_before: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        msg = (
+            "not_before: this is an intentionally wrong format is not in required"
+            " format %Y-%m-%d %H:%M:%S"
+        )
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
             ca_key = default_values["ca_key"]
             cert_kwargs = default_values["x509_args_cert"].copy()
@@ -270,7 +279,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             cert_kwargs["not_before"] = not_before_str
             x509.create_certificate(**cert_kwargs)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_after_wrong_date(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -282,7 +293,10 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_after_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = "not_after: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        msg = (
+            "not_after: this is an intentionally wrong format is not in required format"
+            " %Y-%m-%d %H:%M:%S"
+        )
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
             ca_key = default_values["ca_key"]
             cert_kwargs = default_values["x509_args_cert"].copy()
@@ -291,7 +305,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             cert_kwargs["not_after"] = not_after_str
             x509.create_certificate(**cert_kwargs)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_before_and_not_after(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -341,7 +357,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(not_before_str, not_before_from_cert)
         self.assertIn(not_after_str, not_after_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_crl(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -374,7 +392,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # Ensure that a CRL was actually created
         self.assertIn("BEGIN X509 CRL", crl)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_revoke_certificate_with_crl(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -436,3 +456,68 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # Ensure that the correct server cert serial is amongst
         # the revoked certificates
         self.assertIn(serial_number, crl)
+
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
+    def test_read_certificate(self):
+        """
+        :return:
+        """
+        cet = dedent(
+            """
+                -----BEGIN CERTIFICATE-----
+        MIICdDCCAd2gAwIBAgIUH6g+PC0bGKSY4LMq7PISP09M5B4wDQYJKoZIhvcNAQEL
+        BQAwTDELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0FyaXpvbmExEzARBgNVBAcMClNj
+        b3R0c2RhbGUxFjAUBgNVBAoMDVN1cGVyIFdpZGdpdHMwHhcNMjEwMzIzMDExNDE2
+        WhcNMjIwMzIzMDExNDE2WjBMMQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQXJpem9u
+        YTETMBEGA1UEBwwKU2NvdHRzZGFsZTEWMBQGA1UECgwNU3VwZXIgV2lkZ2l0czCB
+        nzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAvtFFZP47UkzyAmVWtBnVHuXwe7iK
+        yu19c3qx59KPVAMHkMKgCew4S2KBMDHySBVnspiEz1peP1ywozcP1tIeWHG6aY/7
+        j2ewzl5bJ4HZPDBnEOYzGsC/NM8YY3qFlrteda/awvwoF99MkpVlrcLBMJzjt/c8
+        HjuBb0zTlnm4r7ECAwEAAaNTMFEwHQYDVR0OBBYEFJwdb0PKsvu3dU0j3kx3uP4B
+        NGpfMB8GA1UdIwQYMBaAFJwdb0PKsvu3dU0j3kx3uP4BNGpfMA8GA1UdEwEB/wQF
+        MAMBAf8wDQYJKoZIhvcNAQELBQADgYEAZblVv70rSk6+7ti3mYxVo48VLf3hG5R/
+        rMd434WYTeDOWlvl5GSklrBc4ToBW5GsJe/+JaFbUFo9YB+a0K0xjyNZ5CWWiaxg
+        3lwqTx6vwK1ucS18B+nt2qqyq9hL0UvpSB7gH4KeCwCMDIfRMsrPi32jg1RyKftD
+        B+O0S5LeuJw=
+        -----END CERTIFICATE-----
+        """
+        )
+        ret = x509.read_certificate(cet)
+        assert "MD5 Finger Print" in ret
+
+
+class X509FipsTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {x509: {"__opts__": {"fips_mode": True}}}
+
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
+    def test_read_certificate(self):
+        """
+        :return:
+        """
+        cet = dedent(
+            """
+                -----BEGIN CERTIFICATE-----
+        MIICdDCCAd2gAwIBAgIUH6g+PC0bGKSY4LMq7PISP09M5B4wDQYJKoZIhvcNAQEL
+        BQAwTDELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0FyaXpvbmExEzARBgNVBAcMClNj
+        b3R0c2RhbGUxFjAUBgNVBAoMDVN1cGVyIFdpZGdpdHMwHhcNMjEwMzIzMDExNDE2
+        WhcNMjIwMzIzMDExNDE2WjBMMQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQXJpem9u
+        YTETMBEGA1UEBwwKU2NvdHRzZGFsZTEWMBQGA1UECgwNU3VwZXIgV2lkZ2l0czCB
+        nzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAvtFFZP47UkzyAmVWtBnVHuXwe7iK
+        yu19c3qx59KPVAMHkMKgCew4S2KBMDHySBVnspiEz1peP1ywozcP1tIeWHG6aY/7
+        j2ewzl5bJ4HZPDBnEOYzGsC/NM8YY3qFlrteda/awvwoF99MkpVlrcLBMJzjt/c8
+        HjuBb0zTlnm4r7ECAwEAAaNTMFEwHQYDVR0OBBYEFJwdb0PKsvu3dU0j3kx3uP4B
+        NGpfMB8GA1UdIwQYMBaAFJwdb0PKsvu3dU0j3kx3uP4BNGpfMA8GA1UdEwEB/wQF
+        MAMBAf8wDQYJKoZIhvcNAQELBQADgYEAZblVv70rSk6+7ti3mYxVo48VLf3hG5R/
+        rMd434WYTeDOWlvl5GSklrBc4ToBW5GsJe/+JaFbUFo9YB+a0K0xjyNZ5CWWiaxg
+        3lwqTx6vwK1ucS18B+nt2qqyq9hL0UvpSB7gH4KeCwCMDIfRMsrPi32jg1RyKftD
+        B+O0S5LeuJw=
+        -----END CERTIFICATE-----
+        """
+        )
+        ret = x509.read_certificate(cet)
+        assert "MD5 Finger Print" not in ret

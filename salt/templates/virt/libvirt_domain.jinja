@@ -285,7 +285,7 @@
       autoport='{{ yesno(not graphics.port and not graphics.tls_port) }}'>
       <listen type='{{ graphics.listen.type }}'{{ opt_attribute(graphics.listen, "address") }}/>
     </graphics>
-  {%- if graphics.type == "spice" %}
+  {%- if graphics.type == "spice" and hypervisor in ["qemu", "kvm"] %}
     <channel type='spicevmc'>
       <target type='virtio' name='com.redhat.spice.0'/>
     </channel>

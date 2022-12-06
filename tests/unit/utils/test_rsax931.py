@@ -1,10 +1,6 @@
-# coding: utf-8
 """
 Test the RSA ANSI X9.31 signer and verifier
 """
-
-# python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import ctypes.util
@@ -13,6 +9,8 @@ import glob
 import os
 import platform
 import sys
+
+import pytest
 
 import salt.utils.platform
 
@@ -26,7 +24,7 @@ from salt.utils.rsax931 import (
 from tests.support.mock import patch
 
 # salt testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class RSAX931Test(TestCase):
@@ -125,7 +123,7 @@ class RSAX931Test(TestCase):
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
 
-    @skipIf(not salt.utils.platform.is_windows(), "Host OS is not Windows.")
+    @pytest.mark.skip_unless_on_windows
     def test_find_libcrypto_win32(self):
         """
         Test _find_libcrypto on Windows hosts.
@@ -133,10 +131,7 @@ class RSAX931Test(TestCase):
         lib_path = _find_libcrypto()
         self.assertEqual(lib_path, "libeay32")
 
-    @skipIf(
-        not getattr(sys, "frozen", False) and not salt.utils.platform.is_smartos(),
-        "Host OS is not SmartOS.",
-    )
+    @pytest.mark.skip_unless_on_smartos
     def test_find_libcrypto_smartos(self):
         """
         Test _find_libcrypto on a SmartOS host.
@@ -148,7 +143,7 @@ class RSAX931Test(TestCase):
             )
         )
 
-    @skipIf(not salt.utils.platform.is_sunos(), "Host OS is not Solaris-like.")
+    @pytest.mark.skip_unless_on_sunos
     def test_find_libcrypto_sunos(self):
         """
         Test _find_libcrypto on a Solaris-like host.
@@ -161,7 +156,7 @@ class RSAX931Test(TestCase):
                 break
         self.assertTrue(passed)
 
-    @skipIf(not salt.utils.platform.is_aix(), "Host OS is not IBM AIX.")
+    @pytest.mark.skip_unless_on_aix
     def test_find_libcrypto_aix(self):
         """
         Test _find_libcrypto on an IBM AIX host.
@@ -174,49 +169,89 @@ class RSAX931Test(TestCase):
                 fnmatch.fnmatch(lib_path, "/opt/freeware/lib/libcrypto.so*")
             )
 
-    @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
+    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
     @patch.object(platform, "mac_ver", lambda: ("10.14.2", (), ""))
     @patch.object(glob, "glob", lambda _: [])
-    def test_find_libcrypto_with_system_and_not_catalina(self):
+    @patch.object(sys, "platform", "macosx")
+    def test_find_libcrypto_with_system_before_catalina(self):
         """
-        Test _find_libcrypto on a Catalina-like macOS host, simulate
-        not finding any other libcryptos and just defaulting to system.
+        Test _find_libcrypto on a pre-Catalina macOS host by simulating not
+        finding any other libcryptos and verifying that it defaults to system.
         """
         lib_path = _find_libcrypto()
-        passed = False
-        for i in (
-            "/opt/salt/lib/libcrypto.dylib",
-            "/usr/local/opt/openssl/lib/libcrypto.dylib",
-            "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
-            "/opt/local/lib/libcrypto.dylib",
-            "/usr/lib/libcrypto.*.dylib",
-        ):
-            if fnmatch.fnmatch(lib_path, i):
-                passed = True
-                break
-        self.assertFalse(passed)
         self.assertEqual(lib_path, "/usr/lib/libcrypto.dylib")
 
-    @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
+    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
     @patch.object(platform, "mac_ver", lambda: ("10.15.2", (), ""))
+    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_darwin_catalina(self):
         """
-        Test _find_libcrypto on a Darwin-like  macOS host where there isn't a
-        lacation returned by ctypes.util.find_library()
+        Test _find_libcrypto on a macOS Catalina host where there are no custom
+        libcryptos and defaulting to the versioned system libraries.
         """
-        lib_path = _find_libcrypto()
-        passed = False
-        for i in (
-            "/opt/salt/lib/libcrypto.dylib",
-            "/usr/local/opt/openssl/lib/libcrypto.dylib",
-            "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
-            "/opt/local/lib/libcrypto.dylib",
-            "/usr/lib/libcrypto.*.dylib",
-        ):
-            if fnmatch.fnmatch(lib_path, i):
-                passed = True
-                break
-        self.assertTrue(passed)
+        available = [
+            "/usr/lib/libcrypto.0.9.7.dylib",
+            "/usr/lib/libcrypto.0.9.8.dylib",
+            "/usr/lib/libcrypto.35.dylib",
+            "/usr/lib/libcrypto.41.dylib",
+            "/usr/lib/libcrypto.42.dylib",
+            "/usr/lib/libcrypto.44.dylib",
+            "/usr/lib/libcrypto.dylib",
+        ]
+
+        def test_glob(pattern):
+            return [lib for lib in available if fnmatch.fnmatch(lib, pattern)]
+
+        with patch.object(glob, "glob", test_glob):
+            lib_path = _find_libcrypto()
+        self.assertEqual("/usr/lib/libcrypto.44.dylib", lib_path)
+
+    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
+    @patch.object(platform, "mac_ver", lambda: ("11.2.2", (), ""))
+    @patch.object(sys, "platform", "macosx")
+    def test_find_libcrypto_darwin_bigsur_packaged(self):
+        """
+        Test _find_libcrypto on a Darwin-like macOS host where there isn't a
+        lacation returned by ctypes.util.find_library() and the libcrypto
+        installation comes from a package manager (ports, brew, salt).
+        """
+        managed_paths = {
+            "salt": "/opt/salt/lib/libcrypto.dylib",
+            "brew": "/test/homebrew/prefix/opt/openssl/lib/libcrypto.dylib",
+            "port": "/opt/local/lib/libcrypto.dylib",
+        }
+
+        saved_getenv = os.getenv
+
+        def mock_getenv(env):
+            def test_getenv(var, default=None):
+                return env.get(var, saved_getenv(var, default))
+
+            return test_getenv
+
+        def mock_glob(expected_lib):
+            def test_glob(pattern):
+                if fnmatch.fnmatch(expected_lib, pattern):
+                    return [expected_lib]
+                return []
+
+            return test_glob
+
+        for package_manager, expected_lib in managed_paths.items():
+            if package_manager == "brew":
+                env = {"HOMEBREW_PREFIX": "/test/homebrew/prefix"}
+            else:
+                env = {"HOMEBREW_PREFIX": ""}
+            with patch.object(os, "getenv", mock_getenv(env)):
+                with patch.object(glob, "glob", mock_glob(expected_lib)):
+                    lib_path = _find_libcrypto()
+
+            self.assertEqual(expected_lib, lib_path)
+
+        # On Big Sur, there's nothing else to fall back on.
+        with patch.object(glob, "glob", lambda _: []):
+            with self.assertRaises(OSError):
+                lib_path = _find_libcrypto()
 
     @patch.object(ctypes.util, "find_library", lambda a: None)
     @patch.object(glob, "glob", lambda a: [])

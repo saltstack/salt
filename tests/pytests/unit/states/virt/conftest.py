@@ -1,5 +1,5 @@
 import pytest
-import salt.states.virt as virt
+
 from tests.support.mock import MagicMock
 
 
@@ -21,11 +21,9 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
             return self.msg
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {virt: {"libvirt": LibvirtMock()}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def libvirt_mock():
+    return LibvirtMock()
 
 
 @pytest.fixture(params=[True, False], ids=["test", "notest"])

@@ -1,3 +1,0 @@
-Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
-metadata for a package by extracting library requirement information from the
-binary ELF files in the package.

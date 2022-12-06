@@ -1,0 +1,1 @@
+Fix cron.present duplicating entries when changing timespec to special.

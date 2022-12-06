@@ -1,2 +1,0 @@
-Allow "extra_filerefs" as sanitized kwargs for SSH client.
-Fix regression on "cmd.run" when passing tuples as cmd.

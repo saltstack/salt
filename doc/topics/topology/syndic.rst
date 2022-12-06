@@ -21,6 +21,15 @@ node and the local ``salt-master`` daemon.  This gives the Master node control
 over the Minion nodes attached to the ``salt-master`` daemon running on the
 Syndic node.
 
+.. warning::
+
+    Salt does not officially support Syndic and :ref:`external auth or
+    publisher_acl<acl-eauth>`. It's possible that it might work under certain
+    circumstances, but comprehensive support is lacking. See `issue #62618 on
+    GitHub <https://github.com/saltstack/salt/issues/62618>`_ for more
+    information. Currently Syndic is only expected to work when running Salt as
+    root, though work is scheduled to fix this in Salt 3006 (Sulfur).
+
 Configuring the Syndic
 ======================
 
@@ -175,7 +184,7 @@ lists of expected minions before giving up. This value defaults to ``5`` seconds
 The ``syndic_wait`` setting is necessary because the higher-level master does not
 have a way of knowing which minions are below the syndics. The higher-level master
 has its own list of expected minions and the masters below them have their own lists
-as well, so the Salt client does not how long to wait for all returns. The
+as well, so the Salt client does not know how long to wait for all returns. The
 ``syndic_wait`` option allows time for all minions to return to the Salt client.
 
 .. note::

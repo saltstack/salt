@@ -1,0 +1,1 @@
+Fix the "zpool.present" state when enabling zpool features that are already active.

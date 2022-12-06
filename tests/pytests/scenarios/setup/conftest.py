@@ -3,6 +3,7 @@ import pathlib
 import shutil
 
 import pytest
+
 from tests.support.helpers import VirtualEnv
 from tests.support.runtests import RUNTIME_VARS
 
@@ -24,11 +25,11 @@ def setup_tests_path(tmp_path_factory):
 
 @pytest.fixture
 def virtualenv(setup_tests_path, pip_temp_dir):
-    venv_dir = str(setup_tests_path / ".venv")
+    venv_dir = setup_tests_path / ".venv"
     try:
         yield VirtualEnv(venv_dir=venv_dir, env={"TMPDIR": str(pip_temp_dir)})
     finally:
-        shutil.rmtree(venv_dir, ignore_errors=True)
+        shutil.rmtree(str(venv_dir), ignore_errors=True)
 
 
 @pytest.fixture

@@ -3,12 +3,9 @@ Integration tests for timezone module
 
 Linux and Solaris are supported
 """
-
-
 import pytest
-import salt.utils.platform
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 try:
     import tzlocal  # pylint: disable=unused-import
@@ -50,7 +47,7 @@ class TimezoneSolarisModuleTest(ModuleCase):
         self.assertIn(ret, timescale)
 
 
-@skipIf(not salt.utils.platform.is_windows(), "windows test only")
+@pytest.mark.skip_unless_on_windows
 class TimezoneWindowsModuleTest(ModuleCase):
     def setUp(self):
         self.pre = self.run_function("timezone.get_zone")

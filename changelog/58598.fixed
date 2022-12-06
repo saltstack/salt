@@ -1,2 +1,0 @@
-Adds support for Powershell 7. It is specified by passing shell="pwsh". Only
-valid if Powershell 7 is installed on the system.

@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
-
-# Import Python Libs
-from __future__ import absolute_import
-
 import imp
 import os
-import sys
+
+import pytest
 
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from zypp_plugin import BogusIO
@@ -22,10 +16,7 @@ try:
 except ImportError:
     HAS_ZYPP_PLUGIN = False
 
-if sys.version_info >= (3,):
-    BUILTINS_OPEN = "builtins.open"
-else:
-    BUILTINS_OPEN = "__builtin__.open"
+BUILTINS_OPEN = "builtins.open"
 
 ZYPPNOTIFY_FILE = os.path.sep.join(
     os.path.dirname(__file__).split(os.path.sep)[:-2]
@@ -33,15 +24,15 @@ ZYPPNOTIFY_FILE = os.path.sep.join(
 )
 
 
-@skipIf(not HAS_ZYPP_PLUGIN, "zypp_plugin is missing.")
+@pytest.mark.skipif(not HAS_ZYPP_PLUGIN, reason="zypp_plugin is missing.")
 class ZyppPluginsTestCase(TestCase):
     """
     Test shipped libzypp plugins.
     """
 
-    @skipIf(
+    @pytest.mark.skipif(
         not os.path.exists(ZYPPNOTIFY_FILE),
-        "Required file '{}' does not exist.".format(ZYPPNOTIFY_FILE),
+        reason="Required file '{}' does not exist.".format(ZYPPNOTIFY_FILE),
     )
     def test_drift_detector(self):
         """

@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Tests for salt.utils.path
-"""
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import ntpath
 import os
 import platform
@@ -13,18 +5,14 @@ import posixpath
 import sys
 import tempfile
 
-# Import Salt libs
+import pytest
+
 import salt.utils.compat
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
-
-# Import 3rd-party libs
-from salt.ext import six
 from tests.support.mock import patch
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class PathJoinTestCase(TestCase):
@@ -47,7 +35,7 @@ class PathJoinTestCase(TestCase):
         (("c:", r"\temp", r"\foo\bar"), "c:\\temp\\foo\\bar"),
     )
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_nix_paths(self):
         if platform.system().lower() == "windows":
             self.skipTest(
@@ -55,11 +43,9 @@ class PathJoinTestCase(TestCase):
             )
         for idx, (parts, expected) in enumerate(self.NIX_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual(
-                "{0}: {1}".format(idx, path), "{0}: {1}".format(idx, expected)
-            )
+            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_windows_paths(self):
         if platform.system().lower() != "windows":
             self.skipTest(
@@ -69,11 +55,9 @@ class PathJoinTestCase(TestCase):
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual(
-                "{0}: {1}".format(idx, path), "{0}: {1}".format(idx, expected)
-            )
+            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_windows_paths_patched_path_module(self):
         if platform.system().lower() == "windows":
             self.skipTest(
@@ -85,13 +69,11 @@ class PathJoinTestCase(TestCase):
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual(
-                "{0}: {1}".format(idx, path), "{0}: {1}".format(idx, expected)
-            )
+            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
         self.__unpatch_path()
 
-    @skipIf(salt.utils.platform.is_windows(), "*nix-only test")
+    @pytest.mark.skip_on_windows(reason="*nix-only test")
     def test_mixed_unicode_and_binary(self):
         """
         This tests joining paths that contain a mix of components with unicode
@@ -117,7 +99,7 @@ class PathJoinTestCase(TestCase):
 
         code = """'''Salt unittest loaded NT module'''"""
         module = imp.new_module("nt")
-        six.exec_(code, module.__dict__)
+        exec(code, module.__dict__)
         sys.modules["nt"] = module
 
         sys.builtin_module_names = modules
@@ -303,8 +285,10 @@ class TestWhich(TestCase):
                             os.environ,
                             {
                                 "PATH": os.sep + "bin",
-                                "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;"
-                                ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY",
+                                "PATHEXT": (
+                                    ".COM;.EXE;.BAT;.CMD;.VBS;"
+                                    ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY"
+                                ),
                             },
                         ):
 

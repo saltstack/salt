@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
-import salt.utils.azurearm as azurearm
+import pytest
 
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+import salt.utils.azurearm as azurearm
+from tests.support.unit import TestCase
 
 # Azure libs
 # pylint: disable=import-error
@@ -34,7 +28,9 @@ MOCK_CREDENTIALS = {
 }
 
 
-@skipIf(HAS_LIBS is False, "The azure.mgmt.network module must be installed.")
+@pytest.mark.skipif(
+    HAS_LIBS is False, reason="The azure.mgmt.network module must be installed."
+)
 class AzureRmUtilsTestCase(TestCase):
     def test_create_object_model_vnet(self):
         module_name = "network"

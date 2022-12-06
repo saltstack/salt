@@ -14,7 +14,6 @@ import shlex
 import time
 import unicodedata
 
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
@@ -74,8 +73,6 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
     if not encoding:
         raise ValueError("encoding cannot be empty")
 
-    # This shouldn't be six.string_types because if we're on PY2 and we already
-    # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
 
@@ -226,31 +223,36 @@ def contains_whitespace(text):
     return any(x.isspace() for x in text)
 
 
-def human_to_bytes(size):
+@jinja_filter("human_to_bytes")
+def human_to_bytes(size, default_unit="B", handle_metric=False):
     """
-    Given a human-readable byte string (e.g. 2G, 30M),
+    Given a human-readable byte string (e.g. 2G, 30MB, 64KiB),
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
     .. versionadded:: 2018.3.0
+    .. versionchanged:: 3005
     """
-    sbytes = size[:-1]
-    unit = size[-1]
-    if sbytes.isdigit():
-        sbytes = int(sbytes)
-        if unit == "P":
-            sbytes *= 1125899906842624
-        elif unit == "T":
-            sbytes *= 1099511627776
-        elif unit == "G":
-            sbytes *= 1073741824
-        elif unit == "M":
-            sbytes *= 1048576
-        else:
-            sbytes = 0
-    else:
-        sbytes = 0
-    return sbytes
+    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(size).strip())
+    value = m.group("value")
+    # default unit
+    unit = m.group("unit").lower() or default_unit.lower()
+    try:
+        value = int(value)
+    except ValueError:
+        try:
+            value = float(value)
+        except ValueError:
+            return 0
+    # flag for base ten
+    dec = False
+    if re.match(r"[kmgtpezy]b$", unit):
+        dec = True if handle_metric else False
+    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
+        return 0
+    p = "bkmgtpezy".index(unit[0])
+    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
+    return int(value)
 
 
 def build_whitespace_split_regex(text):

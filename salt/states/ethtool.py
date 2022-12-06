@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configuration of network device
 
@@ -30,13 +29,10 @@ Configuration of network device
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
-from salt.ext import six
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -91,9 +87,7 @@ def coalesce(name, **kwargs):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Network device {0} coalescing settings are up to date.".format(
-            name
-        ),
+        "comment": "Network device {} coalescing settings are up to date.".format(name),
     }
     apply_coalescing = False
     if "test" not in kwargs:
@@ -104,7 +98,7 @@ def coalesce(name, **kwargs):
         old = __salt__["ethtool.show_coalesce"](name)
         if not isinstance(old, dict):
             ret["result"] = False
-            ret["comment"] = "Device {0} coalescing settings are not supported".format(
+            ret["comment"] = "Device {} coalescing settings are not supported".format(
                 name
             )
             return ret
@@ -116,7 +110,7 @@ def coalesce(name, **kwargs):
         for key, value in kwargs.items():
             if key in old and value != old[key]:
                 new.update({key: value})
-                diff.append("{0}: {1}".format(key, value))
+                diff.append("{}: {}".format(key, value))
 
         # Dry run
         if kwargs["test"]:
@@ -124,21 +118,22 @@ def coalesce(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret["comment"] = (
-                    "Device {0} coalescing settings are set to be "
-                    "updated:\n{1}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Device {} coalescing settings are set to be updated:\n{}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
 
         # Prepare return output
         if new:
             apply_coalescing = True
-            ret["comment"] = "Device {0} coalescing settings updated.".format(name)
+            ret["comment"] = "Device {} coalescing settings updated.".format(name)
             ret["changes"]["ethtool_coalesce"] = "\n".join(diff)
 
     except AttributeError as error:
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
         return ret
 
     # Apply coalescing settings
@@ -147,7 +142,7 @@ def coalesce(name, **kwargs):
             __salt__["ethtool.set_coalesce"](name, **new)
         except AttributeError as error:
             ret["result"] = False
-            ret["comment"] = six.text_type(error)
+            ret["comment"] = str(error)
             return ret
 
     return ret
@@ -177,7 +172,7 @@ def ring(name, **kwargs):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Network device {0} ring parameters are up to date.".format(name),
+        "comment": "Network device {} ring parameters are up to date.".format(name),
     }
     apply_ring = False
     if "test" not in kwargs:
@@ -188,7 +183,7 @@ def ring(name, **kwargs):
         old = __salt__["ethtool.show_ring"](name)
         if not isinstance(old, dict):
             ret["result"] = False
-            ret["comment"] = "Device {0} ring parameters are not supported".format(name)
+            ret["comment"] = "Device {} ring parameters are not supported".format(name)
             return ret
 
         new = {}
@@ -198,11 +193,11 @@ def ring(name, **kwargs):
         for key, value in kwargs.items():
             if key in old:
                 if value == "max":
-                    value = old["{0}_max".format(key)]
+                    value = old["{}_max".format(key)]
 
                 if value != old[key]:
                     new.update({key: value})
-                    diff.append("{0}: {1}".format(key, value))
+                    diff.append("{}: {}".format(key, value))
 
         # Dry run
         if kwargs["test"]:
@@ -210,21 +205,22 @@ def ring(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret["comment"] = (
-                    "Device {0} ring parameters are set to be "
-                    "updated:\n{1}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Device {} ring parameters are set to be updated:\n{}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
 
         # Prepare return output
         if new:
             apply_ring = True
-            ret["comment"] = "Device {0} ring parameters updated.".format(name)
+            ret["comment"] = "Device {} ring parameters updated.".format(name)
             ret["changes"]["ethtool_ring"] = "\n".join(diff)
 
     except AttributeError as error:
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
         return ret
 
     # Apply ring parameters
@@ -233,7 +229,7 @@ def ring(name, **kwargs):
             __salt__["ethtool.set_ring"](name, **new)
         except AttributeError as error:
             ret["result"] = False
-            ret["comment"] = six.text_type(error)
+            ret["comment"] = str(error)
             return ret
 
     return ret
@@ -258,7 +254,7 @@ def offload(name, **kwargs):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Network device {0} offload settings are up to date.".format(name),
+        "comment": "Network device {} offload settings are up to date.".format(name),
     }
     apply_offload = False
     if "test" not in kwargs:
@@ -269,9 +265,7 @@ def offload(name, **kwargs):
         old = __salt__["ethtool.show_offload"](name)
         if not isinstance(old, dict):
             ret["result"] = False
-            ret["comment"] = "Device {0} offload settings are not supported".format(
-                name
-            )
+            ret["comment"] = "Device {} offload settings are not supported".format(name)
             return ret
 
         new = {}
@@ -282,7 +276,7 @@ def offload(name, **kwargs):
             value = value and "on" or "off"
             if key in old and value != old[key]:
                 new.update({key: value})
-                diff.append("{0}: {1}".format(key, value))
+                diff.append("{}: {}".format(key, value))
 
         # Dry run
         if kwargs["test"]:
@@ -290,21 +284,22 @@ def offload(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret["comment"] = (
-                    "Device {0} offload settings are set to be "
-                    "updated:\n{1}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Device {} offload settings are set to be updated:\n{}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
 
         # Prepare return output
         if new:
             apply_offload = True
-            ret["comment"] = "Device {0} offload settings updated.".format(name)
+            ret["comment"] = "Device {} offload settings updated.".format(name)
             ret["changes"]["ethtool_offload"] = "\n".join(diff)
 
     except AttributeError as error:
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
         return ret
 
     # Apply offload settings
@@ -313,7 +308,89 @@ def offload(name, **kwargs):
             __salt__["ethtool.set_offload"](name, **new)
         except AttributeError as error:
             ret["result"] = False
-            ret["comment"] = six.text_type(error)
+            ret["comment"] = str(error)
             return ret
+
+    return ret
+
+
+def pause(name, **kwargs):
+    """
+    .. versionadded:: 3006.0
+
+    Manage pause parameters of network device
+
+    name
+        Interface name to apply pause parameters
+
+    .. code-block:: yaml
+
+        eth0:
+          ethtool.pause:
+            - name: eth0
+            - autoneg: off
+            - rx: off
+            - tx: off
+
+    """
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Network device {} pause parameters are up to date.".format(name),
+    }
+    apply_pause = False
+
+    # Get current pause parameters
+    try:
+        old = __salt__["ethtool.show_pause"](name)
+    except CommandExecutionError:
+        ret["result"] = False
+        ret["comment"] = "Device {} pause parameters are not supported".format(name)
+        return ret
+
+    # map ethtool command input to output text
+    pause_map = {
+        "autoneg": "Autonegotiate",
+        "rx": "RX",
+        "tx": "RX",
+    }
+
+    # Process changes
+    new = {}
+    diff = []
+
+    for key, value in kwargs.items():
+        key = key.lower()
+        if key in pause_map:
+            if value != old[pause_map[key]]:
+                new.update({key: value})
+                if value is True:
+                    value = "on"
+                elif value is False:
+                    value = "off"
+                diff.append("{}: {}".format(key, value))
+
+    if not new:
+        return ret
+
+    # Dry run
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Device {} pause parameters are set to be updated:\n{}".format(
+            name, "\n".join(diff)
+        )
+        return ret
+
+    # Apply pause parameters
+    try:
+        __salt__["ethtool.set_pause"](name, **new)
+        # Prepare return output
+        ret["comment"] = "Device {} pause parameters updated.".format(name)
+        ret["changes"]["ethtool_pause"] = "\n".join(diff)
+    except CommandExecutionError as exc:
+        ret["result"] = False
+        ret["comment"] = str(exc)
+        return ret
 
     return ret

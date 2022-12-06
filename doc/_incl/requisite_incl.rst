@@ -6,4 +6,4 @@ following the :ref:`installation` and the
 
     There are many ways to :ref:`salt-community` including our
     `mailing list <https://groups.google.com/forum/#!forum/salt-users>`_
-    and our `IRC channel <https://webchat.freenode.net/#salt>`_ #salt.
+    and our `IRC channel <https://web.libera.chat/#salt>`_ #salt.

@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the boto_sns state
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 
-# Import Salt Testing libs
+import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
-# Import 3rd-party libs
 try:
     import boto
 
@@ -22,9 +16,9 @@ except ImportError:
     NO_BOTO_MODULE = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_BOTO_MODULE,
-    "Please install the boto library before running boto integration tests.",
+    reason="Please install the boto library before running boto integration tests.",
 )
 class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
@@ -32,7 +26,8 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
             boto.connect_iam()
         except boto.exception.NoAuthHandlerFound:
             self.skipTest(
-                "Please setup boto AWS credentials before running boto integration tests."
+                "Please setup boto AWS credentials before running boto integration"
+                " tests."
             )
         # The name of the topic you want to create.
         # Constraints: Topic names must be made up of only uppercase and
@@ -50,7 +45,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {0} created.".format(self.topic_name), ret
+            "AWS SNS topic {} created.".format(self.topic_name), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {"old": None, "new": {"topic": self.topic_name, "subscriptions": []}}
@@ -92,15 +87,13 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
             },
         )
         self.assertInSaltComment(
-            "AWS SNS subscription https:https://www.example.com/sns/endpoint set on topic {0}.".format(
-                self.topic_name
-            ),
+            "AWS SNS subscription https:https://www.example.com/sns/endpoint set on"
+            " topic {}.".format(self.topic_name),
             ret,
         )
         self.assertInSaltComment(
-            "AWS SNS subscription https:https://www.example.com/sns/endpoint-2 set on topic {0}.".format(
-                self.topic_name
-            ),
+            "AWS SNS subscription https:https://www.example.com/sns/endpoint-2 set on"
+            " topic {}.".format(self.topic_name),
             ret,
         )
         self.assertSubscriptionInTopic(
@@ -138,12 +131,11 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {0} present.".format(self.topic_name), ret
+            "AWS SNS topic {} present.".format(self.topic_name), ret
         )
         self.assertInSaltComment(
-            "AWS SNS subscription https:https://www.example.com/sns/endpoint already set on topic {0}.".format(
-                self.topic_name
-            ),
+            "AWS SNS subscription https:https://www.example.com/sns/endpoint already"
+            " set on topic {}.".format(self.topic_name),
             ret,
         )
         self.assertSaltStateChangesEqual(ret, {})
@@ -176,9 +168,8 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
             },
         )
         self.assertInSaltComment(
-            "AWS SNS subscription https:https://www.example.com/sns/endpoint set on topic {0}.".format(
-                self.topic_name
-            ),
+            "AWS SNS subscription https:https://www.example.com/sns/endpoint set on"
+            " topic {}.".format(self.topic_name),
             ret,
         )
 
@@ -224,9 +215,8 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
             },
         )
         self.assertInSaltComment(
-            "AWS SNS subscription https:https://www.example.com/sns/endpoint-2 set on topic {0}.".format(
-                self.topic_name
-            ),
+            "AWS SNS subscription https:https://www.example.com/sns/endpoint-2 set on"
+            " topic {}.".format(self.topic_name),
             ret,
         )
 
@@ -244,7 +234,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {0} is set to be created.".format(self.topic_name), ret
+            "AWS SNS topic {} is set to be created.".format(self.topic_name), ret
         )
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function("boto_sns.exists", name=self.topic_name)
@@ -266,9 +256,8 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            "AWS SNS subscription https:https://www.example.com/sns/endpoint to be set on topic {0}.".format(
-                self.topic_name
-            ),
+            "AWS SNS subscription https:https://www.example.com/sns/endpoint to be set"
+            " on topic {}.".format(self.topic_name),
             ret,
         )
         ret = self.run_function(
@@ -281,7 +270,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {0} does not exist.".format(self.topic_name), ret
+            "AWS SNS topic {} does not exist.".format(self.topic_name), ret
         )
         self.assertSaltStateChangesEqual(ret, {})
 
@@ -291,7 +280,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {0} does not exist.".format(self.topic_name), ret
+            "AWS SNS topic {} does not exist.".format(self.topic_name), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {"new": None, "old": {"topic": self.topic_name}}
@@ -303,7 +292,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertInSaltReturn(self.topic_name, ret, "name")
         self.assertInSaltComment(
-            "AWS SNS topic {0} is set to be removed.".format(self.topic_name), ret
+            "AWS SNS topic {} is set to be removed.".format(self.topic_name), ret
         )
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function("boto_sns.exists", name=self.topic_name)
@@ -320,7 +309,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
             except AssertionError:
                 continue
         raise self.failureException(
-            "Subscription {0} not found in topic {1} subscriptions: {2}".format(
+            "Subscription {} not found in topic {} subscriptions: {}".format(
                 subscription, topic_name, ret
             )
         )

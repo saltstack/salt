@@ -135,8 +135,7 @@ def _get_options(ret):
 #
 _STYLES = {
     "_table": "border-collapse:collapse;width:100%;",
-    "_td": "vertical-align:top;"
-    "font-family:Helvetica,Arial,sans-serif;font-size:9pt;",
+    "_td": "vertical-align:top;font-family:Helvetica,Arial,sans-serif;font-size:9pt;",
     "unchanged": "color:blue;",
     "changed": "color:green",
     "failed": "color:red;",

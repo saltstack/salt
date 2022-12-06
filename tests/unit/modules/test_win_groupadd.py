@@ -2,24 +2,20 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
+import pytest
 
-# Import Salt Libs
 import salt.modules.win_groupadd as win_groupadd
 import salt.utils.win_functions
-
-# Import Salt Testing Libs
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-# Import Other Libs
 # pylint: disable=unused-import
 try:
-    import win32com
     import pythoncom
     import pywintypes
+    import win32com
 
     PYWINTYPES_ERROR = pywintypes.com_error(
         -1234, "Exception occurred.", (0, None, "C", None, 0, -2147352567), None
@@ -56,9 +52,10 @@ class MockGroupObj:
         """
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_WIN_LIBS,
-    "win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed",
+    reason="win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are"
+    " installed",
 )
 class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -261,7 +258,10 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", self.sam_mock):
             with TstSuiteLoggingHandler() as handler:
                 self.assertFalse(win_groupadd.adduser("foo", "username"))
-                expected = "ERROR:Failed to add HOST\\username to group foo. An unknown directory object was requested"
+                expected = (
+                    "ERROR:Failed to add HOST\\username to group foo. An unknown"
+                    " directory object was requested"
+                )
                 self.assertIn(expected, handler.messages)
 
     def test_adduser_group_does_not_exist(self):

@@ -1,1 +1,0 @@
-The GCE cloud driver only works with apache-libcloud>=2.5.0, prior versions have authentication issues

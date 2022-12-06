@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Read Pillar data from a mongodb collection
 
@@ -13,19 +12,39 @@ Salt Master Mongo Configuration
 ===============================
 
 The module shares the same base mongo connection variables as
-:py:mod:`salt.returners.mongo_return`. These variables go in your master
+:py:mod:`salt.returners.mongo_future_return`. These variables go in your master
 config file.
 
-   * ``mongo.db`` - The mongo database to connect to. Defaults to ``'salt'``.
-   * ``mongo.host`` - The mongo host to connect to. Supports replica sets by
-     specifying all hosts in the set, comma-delimited. Defaults to ``'salt'``.
-   * ``mongo.port`` - The port that the mongo database is running on. Defaults
-     to ``27017``.
-   * ``mongo.user`` - The username for connecting to mongo. Only required if
-     you are using mongo authentication. Defaults to ``''``.
-   * ``mongo.password`` - The password for connecting to mongo. Only required
-     if you are using mongo authentication. Defaults to ``''``.
+.. code-block:: yaml
 
+    mongo.db: <database name>
+    mongo.host: <server ip address>
+    mongo.user: <MongoDB username>
+    mongo.password: <MongoDB user password>
+    mongo.port: 27017
+
+Or single URI:
+
+.. code-block:: yaml
+
+    mongo.uri: URI
+
+where uri is in the format:
+
+.. code-block:: text
+
+    mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+Example:
+
+.. code-block:: text
+
+    mongodb://db1.example.net:27017/mydatabase
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test&connectTimeoutMS=300000
+
+More information on URI format can be found in
+https://docs.mongodb.com/manual/reference/connection-string/
 
 Configuring the Mongo ext_pillar
 ================================
@@ -54,14 +73,11 @@ dict in your SLS templates.
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
-# Import third party libs
-from salt.ext import six
+import salt.exceptions
 
 try:
     import pymongo
@@ -69,15 +85,6 @@ try:
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
-
-
-__opts__ = {
-    "mongo.db": "salt",
-    "mongo.host": "salt",
-    "mongo.password": "",
-    "mongo.port": 27017,
-    "mongo.user": "",
-}
 
 
 def __virtual__():
@@ -122,27 +129,40 @@ def ext_pillar(
           careful with other fields in the document as they must be string
           serializable. Defaults to ``None``.
     """
-    host = __opts__["mongo.host"]
-    port = __opts__["mongo.port"]
-    log.info("connecting to %s:%s for mongo ext_pillar", host, port)
-    conn = pymongo.MongoClient(host, port)
 
-    log.debug("using database '%s'", __opts__["mongo.db"])
-    mdb = conn[__opts__["mongo.db"]]
-
+    uri = __opts__.get("mongo.uri")
+    host = __opts__.get("mongo.host")
+    port = __opts__.get("mongo.port")
     user = __opts__.get("mongo.user")
     password = __opts__.get("mongo.password")
+    db = __opts__.get("mongo.db")
 
-    if user and password:
-        log.debug("authenticating as '%s'", user)
-        mdb.authenticate(user, password)
+    if uri:
+        if uri and host:
+            raise salt.exceptions.SaltConfigurationError(
+                "Mongo ext_pillar expects either uri or host configuration. Both were"
+                " provided"
+            )
+        pymongo.uri_parser.parse_uri(uri)
+        conn = pymongo.MongoClient(uri)
+        log.info("connecting to %s for mongo ext_pillar", uri)
+        mdb = conn.get_database()
+
+    else:
+        log.info("connecting to %s:%s for mongo ext_pillar", host, port)
+        conn = pymongo.MongoClient(
+            host=host, port=port, username=user, password=password
+        )
+
+        log.debug("using database '%s'", db)
+        mdb = conn[db]
 
     # Do the regex string replacement on the minion id
     if re_pattern:
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        "ext_pillar.mongo: looking up pillar def for {'%s': '%s'} " "in mongo",
+        "ext_pillar.mongo: looking up pillar def for {'%s': '%s'} in mongo",
         id_field,
         minion_id,
     )
@@ -157,7 +177,7 @@ def ext_pillar(
             # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
             # and whatnot will still cause problems.
-            result["_id"] = six.text_type(result["_id"])
+            result["_id"] = str(result["_id"])
         return result
     else:
         # If we can't find the minion the database it's not necessarily an

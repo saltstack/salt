@@ -32,17 +32,23 @@ def _find_libcrypto():
         # look in salts pkg install location.
         lib = glob.glob("/opt/salt/lib/libcrypto.dylib")
         # Find library symlinks in Homebrew locations.
-        lib = lib or glob.glob("/usr/local/opt/openssl/lib/libcrypto.dylib")
-        lib = lib or glob.glob("/usr/local/opt/openssl@*/lib/libcrypto.dylib")
+        brew_prefix = os.getenv("HOMEBREW_PREFIX", "/usr/local")
+        lib = lib or glob.glob(
+            os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib")
+        )
+        lib = lib or glob.glob(
+            os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib")
+        )
         # look in macports.
         lib = lib or glob.glob("/opt/local/lib/libcrypto.dylib")
         # check if 10.15, regular libcrypto.dylib is just a false pointer.
         if platform.mac_ver()[0].split(".")[:2] == ["10", "15"]:
             lib = lib or glob.glob("/usr/lib/libcrypto.*.dylib")
             lib = list(reversed(sorted(lib)))
-        # last but not least all the other macOS versions should work here.
-        # including Big Sur.
-        lib = lib[0] if lib else "/usr/lib/libcrypto.dylib"
+        elif int(platform.mac_ver()[0].split(".")[0]) < 11:
+            # Fall back on system libcrypto (only works before Big Sur)
+            lib = lib or ["/usr/lib/libcrypto.dylib"]
+        lib = lib[0] if lib else None
     elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
         lib = lib[0] if lib else None

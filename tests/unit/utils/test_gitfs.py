@@ -2,11 +2,11 @@
 These only test the provider selection and verification logic, they do not init
 any remotes.
 """
-
-
 import os
 import shutil
 from time import time
+
+import pytest
 
 import salt.fileserver.gitfs
 import salt.utils.files
@@ -16,7 +16,7 @@ import tests.support.paths
 from salt.exceptions import FileserverConfigError
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     HAS_PYGIT2 = (
@@ -29,6 +29,15 @@ except AttributeError:
 
 if HAS_PYGIT2:
     import pygit2
+
+
+def _clear_instance_map():
+    try:
+        del salt.utils.gitfs.GitFS.instance_map[
+            salt.ext.tornado.ioloop.IOLoop.current()
+        ]
+    except KeyError:
+        pass
 
 
 class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -83,6 +92,12 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
             per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
             git_providers=git_providers,
         )
+
+    @classmethod
+    def setUpClass(cls):
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        _clear_instance_map()
 
     def tearDown(self):
         # Providers are preserved with GitFS's instance_map
@@ -189,10 +204,9 @@ class TestGitFSProvider(TestCase):
                             )
 
 
-@skipIf(not HAS_PYGIT2, "This host lacks proper pygit2 support")
-@skipIf(
-    salt.utils.platform.is_windows(),
-    "Skip Pygit2 on windows, due to pygit2 access error on windows",
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
 class TestPygit2(TestCase):
     def _prepare_remote_repository(self, path):

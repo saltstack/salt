@@ -1,2 +1,0 @@
-Converts the given "grant" to upper case before compare to "ALL".
-This fixes a problem granting "all privileges" to a MySQL user.

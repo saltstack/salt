@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##
 # Copyright 2017 Pure Storage Inc
 #
@@ -51,17 +49,12 @@ Installation Prerequisites
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import platform
 from datetime import datetime
 
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
 
 # Import 3rd party modules
 try:
@@ -111,7 +104,7 @@ def _get_system():
     2) From environment (PUREFA_IP and PUREFA_API)
     3) From the pillar (PUREFA_IP and PUREFA_API)
 
-  """
+    """
     agent = {
         "base": USER_AGENT_BASE,
         "class": __name__,
@@ -241,7 +234,7 @@ def snap_create(name, suffix=None):
     """
     array = _get_system()
     if suffix is None:
-        suffix = "snap-" + six.text_type(
+        suffix = "snap-" + str(
             (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
         )
         suffix = suffix.replace(".", "")
@@ -630,7 +623,7 @@ def volume_detach(name, host):
             return False
 
 
-def host_create(name, iqn=None, wwn=None):
+def host_create(name, iqn=None, wwn=None, nqn=None):
     """
 
     Add a host on a Pure Storage FlashArray.
@@ -645,6 +638,9 @@ def host_create(name, iqn=None, wwn=None):
         name of host (truncated to 63 characters)
     iqn : string
         iSCSI IQN of host
+    nqn : string
+        NVMeF NQN of host
+        .. versionadded:: 3006.0
     wwn : string
         Fibre Channel WWN of host
 
@@ -652,7 +648,7 @@ def host_create(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>' nqn='<Valid NQN>'
 
     """
     array = _get_system()
@@ -663,6 +659,12 @@ def host_create(name, iqn=None, wwn=None):
             array.create_host(name)
         except purestorage.PureError:
             return False
+        if nqn:
+            try:
+                array.set_host(name, addnqnlist=[nqn])
+            except purestorage.PureError:
+                array.delete_host(name)
+                return False
         if iqn is not None:
             try:
                 array.set_host(name, addiqnlist=[iqn])
@@ -681,7 +683,7 @@ def host_create(name, iqn=None, wwn=None):
     return True
 
 
-def host_update(name, iqn=None, wwn=None):
+def host_update(name, iqn=None, wwn=None, nqn=None):
     """
 
     Update a hosts port definitions on a Pure Storage FlashArray.
@@ -694,6 +696,9 @@ def host_update(name, iqn=None, wwn=None):
 
     name : string
         name of host
+    nqn : string
+        Additional NVMeF NQN of host
+        .. versionadded:: 3006.0
     iqn : string
         Additional iSCSI IQN of host
     wwn : string
@@ -703,11 +708,16 @@ def host_update(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>' nqn='<Valid NQN>'
 
     """
     array = _get_system()
     if _get_host(name, array) is not None:
+        if nqn:
+            try:
+                array.set_host(name, addnqnlist=[nqn])
+            except purestorage.PureError:
+                return False
         if iqn is not None:
             try:
                 array.set_host(name, addiqnlist=[iqn])

@@ -58,7 +58,7 @@ def _parse_btrfs_info(data):
     for line in [line for line in data.split("\n") if line][:-1]:
         if line.startswith("Label:"):
             line = re.sub(r"Label:\s+", "", line)
-            label, uuid_ = [tkn.strip() for tkn in line.split("uuid:")]
+            label, uuid_ = (tkn.strip() for tkn in line.split("uuid:"))
             ret["label"] = label != "none" and label or None
             ret["uuid"] = uuid_
             continue
@@ -1222,6 +1222,9 @@ def subvolume_snapshot(source, dest=None, name=None, read_only=False):
     cmd = ["btrfs", "subvolume", "snapshot"]
     if read_only:
         cmd.append("-r")
+
+    cmd.append(source)
+
     if dest and not name:
         cmd.append(dest)
     if dest and name:

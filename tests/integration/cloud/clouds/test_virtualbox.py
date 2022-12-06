@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 # This code assumes vboxapi.py from VirtualBox distribution
 # being in PYTHONPATH, or installed system-wide
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import socket
 
-from salt.config import cloud_providers_config, vm_profiles_config
+import pytest
 
-# Import Salt Libs
-from salt.ext import six
-from salt.ext.six.moves import range
+from salt.config import cloud_providers_config, vm_profiles_config
 from salt.utils.virtualbox import (
     HAS_LIBS,
     XPCOM_ATTRIBUTES,
@@ -41,9 +35,7 @@ from tests.integration.cloud.helpers.virtualbox import (
     VirtualboxTestCase,
 )
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +64,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         @rtype: dict
         """
         output = self.run_cloud(
-            "-d {0} --assume-yes --log-level=debug".format(machine_name)
+            "-d {} --assume-yes --log-level=debug".format(machine_name)
         )
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
@@ -80,7 +72,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         """
         Sets up the test requirements
         """
-        super(VirtualboxProviderTest, self).setUp()
+        super().setUp()
 
         # check if appropriate cloud provider and profile files are present
         profile_str = "virtualbox-config"
@@ -109,7 +101,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         profile = profiles.get(PROFILE_NAME)
         if not profile:
             self.skipTest(
-                "Profile {0} was not found. Check {1}.conf files "
+                "Profile {} was not found. Check {}.conf files "
                 "in tests/integration/files/conf/cloud.profiles.d/ to run these tests.".format(
                     PROFILE_NAME, PROVIDER_NAME
                 )
@@ -118,9 +110,9 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         if base_box_name != BASE_BOX_NAME:
             self.skipTest(
-                "Profile {0} does not have a base box to clone from. Check {1}.conf files "
-                "in tests/integration/files/conf/cloud.profiles.d/ to run these tests."
-                'And add a "clone_from: {2}" to the profile'.format(
+                "Profile {} does not have a base box to clone from. Check {}.conf files"
+                " in tests/integration/files/conf/cloud.profiles.d/ to run these"
+                ' tests.And add a "clone_from: {}" to the profile'.format(
                     PROFILE_NAME, PROVIDER_NAME, BASE_BOX_NAME
                 )
             )
@@ -138,7 +130,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         Simply create a machine and make sure it was created
         """
         machines = self.run_cloud(
-            "-p {0} {1} --log-level=debug".format(PROFILE_NAME, INSTANCE_NAME)
+            "-p {} {} --log-level=debug".format(PROFILE_NAME, INSTANCE_NAME)
         )
         self.assertIn(INSTANCE_NAME, machines.keys())
 
@@ -151,11 +143,8 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         expected_attributes = MINIMAL_MACHINE_ATTRIBUTES
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in six.iteritems(machines):
-            if six.PY3:
-                self.assertCountEqual(expected_attributes, machine.keys())
-            else:
-                self.assertItemsEqual(expected_attributes, machine.keys())
+        for name, machine in machines.items():
+            self.assertCountEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
 
@@ -168,7 +157,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in six.iteritems(machines):
+        for name, machine in machines.items():
             self.assertGreaterEqual(
                 len(machine.keys()), expected_minimal_attribute_count
             )
@@ -185,11 +174,8 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in six.iteritems(machines):
-            if six.PY3:
-                self.assertCountEqual(expected_attributes, machine.keys())
-            else:
-                self.assertItemsEqual(expected_attributes, machine.keys())
+        for name, machine in machines.items():
+            self.assertCountEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
 
@@ -220,9 +206,11 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
             vb_destroy_machine(INSTANCE_NAME)
 
 
-@skipIf(
+@pytest.mark.skipif(
     HAS_LIBS and vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-    "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME),
+    reason="Bootable VM '{}' not found. Cannot run tests.".format(
+        BOOTABLE_BASE_BOX_NAME
+    ),
 )
 class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     """
@@ -243,7 +231,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             try:
                 socket.inet_pton(socket.AF_INET6, ip_str)
             except Exception:  # pylint: disable=broad-except
-                self.fail("{0} is not a valid IP address".format(ip_str))
+                self.fail("{} is not a valid IP address".format(ip_str))
 
     def setUp(self):
         """
@@ -276,7 +264,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         profile = profiles.get(DEPLOY_PROFILE_NAME)
         if not profile:
             self.skipTest(
-                "Profile {0} was not found. Check {1}.conf files "
+                "Profile {} was not found. Check {}.conf files "
                 "in tests/integration/files/conf/cloud.profiles.d/ to run these tests.".format(
                     DEPLOY_PROFILE_NAME, PROVIDER_NAME
                 )
@@ -285,9 +273,9 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
         if base_box_name != BOOTABLE_BASE_BOX_NAME:
             self.skipTest(
-                "Profile {0} does not have a base box to clone from. Check {1}.conf files "
-                "in tests/integration/files/conf/cloud.profiles.d/ to run these tests."
-                'And add a "clone_from: {2}" to the profile'.format(
+                "Profile {} does not have a base box to clone from. Check {}.conf files"
+                " in tests/integration/files/conf/cloud.profiles.d/ to run these"
+                ' tests.And add a "clone_from: {}" to the profile'.format(
                     PROFILE_NAME, PROVIDER_NAME, BOOTABLE_BASE_BOX_NAME
                 )
             )
@@ -307,7 +295,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
     def test_deploy(self):
         machines = self.run_cloud(
-            "-p {0} {1} --log-level=debug".format(DEPLOY_PROFILE_NAME, INSTANCE_NAME)
+            "-p {} {} --log-level=debug".format(DEPLOY_PROFILE_NAME, INSTANCE_NAME)
         )
         self.assertIn(INSTANCE_NAME, machines.keys())
         machine = machines[INSTANCE_NAME]
@@ -356,7 +344,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             self.assertIsIpAddress(ip_address)
 
 
-@skipIf(HAS_LIBS is False, "The 'vboxapi' library is not available")
+@pytest.mark.skipif(HAS_LIBS is False, reason="The 'vboxapi' library is not available")
 class BaseVirtualboxTests(TestCase):
     def test_get_manager(self):
         self.assertIsNotNone(vb_get_box())
@@ -394,9 +382,11 @@ class CloneVirtualboxTests(VirtualboxTestCase):
         self.assertMachineDoesNotExist(vb_name)
 
 
-@skipIf(
+@pytest.mark.skipif(
     HAS_LIBS and vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-    "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME),
+    reason="Bootable VM '{}' not found. Cannot run tests.".format(
+        BOOTABLE_BASE_BOX_NAME
+    ),
 )
 class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):
@@ -411,16 +401,16 @@ class BootVirtualboxTests(VirtualboxTestCase):
 class XpcomConversionTests(TestCase):
     @classmethod
     def _mock_xpcom_object(cls, interface_name=None, attributes=None):
-        class XPCOM(object):
+        class XPCOM:
             def __str__(self):
-                return "<XPCOM component '<unknown>' (implementing {0})>".format(
+                return "<XPCOM component '<unknown>' (implementing {})>".format(
                     interface_name
                 )
 
         o = XPCOM()
 
         if attributes and isinstance(attributes, dict):
-            for key, value in six.iteritems(attributes):
+            for key, value in attributes.items():
                 setattr(o, key, value)
         return o
 
@@ -458,9 +448,9 @@ class XpcomConversionTests(TestCase):
         expected_extras = {
             "extra": "extra",
         }
-        expected_machine = dict(
-            [(attribute, attribute) for attribute in XPCOM_ATTRIBUTES[interface]]
-        )
+        expected_machine = {
+            attribute: attribute for attribute in XPCOM_ATTRIBUTES[interface]
+        }
         expected_machine.update(expected_extras)
 
         imachine = XpcomConversionTests._mock_xpcom_object(

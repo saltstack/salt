@@ -4,11 +4,12 @@ tests.integration.modules.pw_user
 """
 
 import pytest
+from saltfactories.utils import random_string
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
 
 
-@runs_on(kernel="FreeBSD")
+@pytest.mark.skip_unless_on_freebsd
 class PwUserModuleTest(ModuleCase):
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root

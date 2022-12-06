@@ -1,1 +1,0 @@
-Adding a new option to pass client_flags to MySQL connections, for example passing the option to support multiple statements in queries.
