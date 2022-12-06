@@ -97,20 +97,52 @@ def state_tree(integration_files_dir):
     """
     dirname = integration_files_dir / "state-tree"
     dirname.mkdir(exist_ok=True)
+    (dirname / "testfile").write_text("This is a test file")
     return dirname
 
 
 @pytest.fixture(scope="package")
-def pillar_tree(integration_files_dir):
+def sls_contents():
+    return """
+    add_file:
+      file.managed:
+        - name: {path}
+        - source: salt://testfile
+        - makedirs: true
+        - require:
+          - cmd: echo
+    delete_file:
+      file.absent:
+        - name: {path}
+        - require:
+          - file: add_file
+    echo:
+      cmd.run:
+        - name: \"echo 'This is a test!'\"
     """
-    Fixture which returns the salt pillar tree root directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = integration_files_dir / "pillar-tree"
-    dirname.mkdir(exist_ok=True)
-    return dirname
 
 
-@pytest.fixture
-def salt_cli(salt_master):
-    return salt_master.salt_cli()
+@pytest.fixture(scope="package")
+def file_add_delete_sls(testfile_path, state_tree):
+    sls_name = "file_add"
+    sls_contents = """
+    add_file:
+      file.managed:
+        - name: {path}
+        - source: salt://testfile
+        - makedirs: true
+        - require:
+          - cmd: echo
+    delete_file:
+      file.absent:
+        - name: {path}
+        - require:
+          - file: add_file
+    echo:
+      cmd.run:
+        - name: \"echo 'This is a test!'\"
+    """.format(
+        path=testfile_path
+    )
+    with pytest.helpers.temp_file("{}.sls".format(sls_name), sls_contents, state_tree):
+        yield sls_name
