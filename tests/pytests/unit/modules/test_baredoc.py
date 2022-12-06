@@ -1,15 +1,15 @@
 import pytest
 
 import salt.modules.baredoc as baredoc
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import SALT_CODE_DIR
 
 
 @pytest.fixture
 def configure_loader_modules():
     return {
         baredoc: {
-            "__opts__": {"extension_modules": RUNTIME_VARS.SALT_CODE_DIR},
-            "__grains__": {"saltpath": RUNTIME_VARS.SALT_CODE_DIR},
+            "__opts__": {"extension_modules": SALT_CODE_DIR},
+            "__grains__": {"saltpath": SALT_CODE_DIR},
         }
     }
 
