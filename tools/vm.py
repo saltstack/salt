@@ -249,6 +249,7 @@ def test(
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
     env = {
         "PRINT_TEST_PLAN_ONLY": "0",
+        "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
     if rerun_failures:
