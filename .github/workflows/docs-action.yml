@@ -12,7 +12,7 @@ jobs:
   Salt:
     name: Build Salt Documentation
     runs-on: ubuntu-latest
-    if: ${{ fromJSON(inputs.changed-files)['docs'] == 'true' }}
+    if: ${{ github.event_name == 'push' || fromJSON(inputs.changed-files)['docs'] == 'true' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -72,7 +72,7 @@ jobs:
   Manpages:
     name: Build Salt man Pages
     runs-on: ubuntu-latest
-    if: ${{ fromJSON(inputs.changed-files)['docs'] == 'true' }}
+    if: ${{ github.event_name == 'push' || fromJSON(inputs.changed-files)['docs'] == 'true' }}
 
     container:
       image: python:3.8.6-slim-buster
