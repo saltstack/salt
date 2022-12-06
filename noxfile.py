@@ -49,6 +49,11 @@ if PRINT_TEST_SELECTION is None:
     PRINT_TEST_SELECTION = CI_RUN
 else:
     PRINT_TEST_SELECTION = PRINT_TEST_SELECTION == "1"
+PRINT_TEST_PLAN_ONLY = os.environ.get("PRINT_TEST_PLAN_ONLY")
+if PRINT_TEST_PLAN_ONLY is None:
+    PRINT_TEST_PLAN_ONLY = PRINT_TEST_SELECTION
+else:
+    PRINT_TEST_PLAN_ONLY = PRINT_TEST_PLAN_ONLY == "1"
 PRINT_SYSTEM_INFO = os.environ.get("PRINT_SYSTEM_INFO")
 if PRINT_SYSTEM_INFO is None:
     PRINT_SYSTEM_INFO = CI_RUN
@@ -963,11 +968,14 @@ def pytest_tornado(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-def _pytest(session, coverage, cmd_args):
+def _pytest(session, coverage, cmd_args, env=None):
     # Create required artifacts directories
     _create_ci_directories()
 
-    env = {"CI_RUN": "1" if CI_RUN else "0"}
+    if env is None:
+        env = {}
+
+    env["CI_RUN"] = "1" if CI_RUN else "0"
 
     args = [
         "--rootdir",
@@ -996,6 +1004,8 @@ def _pytest(session, coverage, cmd_args):
         session.run(
             "python", "-m", "pytest", *(args + ["--collect-only", "-qqq"]), env=env
         )
+        if PRINT_TEST_PLAN_ONLY:
+            return
 
     if coverage is True:
         _run_with_coverage(
