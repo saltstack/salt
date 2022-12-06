@@ -5,7 +5,6 @@ import pytest
 import salt.modules.kmod as kmod
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 
 
 @pytest.fixture
@@ -46,7 +45,9 @@ def test_lsmod():
         assert expected == kmod.lsmod()
 
 
-@skipIf(not os.path.isfile("/etc/modules"), "/etc/modules not present")
+@pytest.mark.skipif(
+    not os.path.isfile("/etc/modules"), reason="/etc/modules not present"
+)
 def test_mod_list():
     """
     Tests return a list of the loaded module names

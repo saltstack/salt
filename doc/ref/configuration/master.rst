@@ -315,9 +315,26 @@ Default: ``24``
 Set the number of hours to keep old job information. Note that setting this option
 to ``0`` disables the cache cleaner.
 
+.. deprecated:: 3006
+    Replaced by :conf_master:`keep_jobs_seconds`
+
 .. code-block:: yaml
 
     keep_jobs: 24
+
+.. conf_master:: keep_jobs_seconds
+
+``keep_jobs_seconds``
+---------------------
+
+Default: ``86400``
+
+Set the number of seconds to keep old job information. Note that setting this option
+to ``0`` disables the cache cleaner.
+
+.. code-block:: yaml
+
+    keep_jobs_seconds: 86400
 
 .. conf_master:: gather_job_timeout
 
@@ -532,9 +549,9 @@ jobs dir.
     directory, which is ``/var/cache/salt/master/jobs/`` by default, will be
     smaller, but the JID directories will still be present.
 
-    Note that the :conf_master:`keep_jobs` option can be set to a lower value,
-    such as ``1``, to limit the number of hours jobs are stored in the job
-    cache. (The default is 24 hours.)
+    Note that the :conf_master:`keep_jobs_seconds` option can be set to a lower
+    value, such as ``3600``, to limit the number of seconds jobs are stored in
+    the job cache. (The default is 86400 seconds.)
 
     Please see the :ref:`Managing the Job Cache <managing_the_job_cache>`
     documentation for more information.
@@ -5099,6 +5116,41 @@ Used by ``salt-api`` for the master requests timeout.
 
     rest_timeout: 300
 
+.. conf_master:: netapi_disable_clients
+
+``netapi_enable_clients``
+--------------------------
+
+.. versionadded:: 3006.0
+
+Default: ``[]``
+
+Used by ``salt-api`` to enable access to the listed clients. Unless a
+client is addded to this list, requests will be rejected before
+authentication is attempted or processing of the low state occurs.
+
+This can be used to only expose the required functionality via
+``salt-api``.
+
+Configuration with all possible clients enabled:
+
+.. code-block:: yaml
+
+    netapi_enable_clients:
+      - local
+      - local_async
+      - local_batch
+      - local_subset
+      - runner
+      - runner_async
+      - ssh
+      - wheel
+      - wheel_async
+
+.. note::
+
+    Enabling all clients is not recommended - only enable the
+    clients that provide the functionality required.
 
 .. _syndic-server-settings:
 

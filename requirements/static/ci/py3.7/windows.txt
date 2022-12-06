@@ -23,6 +23,8 @@ attrs==20.3.0
     #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
+bcrypt==4.0.1
+    # via passlib
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -205,6 +207,8 @@ ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==19.2
     # via pytest
+passlib[bcrypt]==1.7.4
+    # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
 pathspec==0.9.0
@@ -264,7 +268,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc22 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories

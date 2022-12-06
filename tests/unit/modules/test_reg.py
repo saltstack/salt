@@ -7,7 +7,7 @@ import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import win32api
@@ -23,7 +23,7 @@ UNICODE_VALUE = (
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
-@skipIf(not HAS_WIN32, "Tests require win32 libraries")
+@pytest.mark.skipif(not HAS_WIN32, reason="Tests require win32 libraries")
 class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.reg

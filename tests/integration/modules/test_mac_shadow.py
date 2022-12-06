@@ -8,15 +8,14 @@ import pytest
 from saltfactories.utils import random_string
 
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 TEST_USER = random_string("RS-", lowercase=False)
 NO_USER = random_string("RS-", lowercase=False)
 
 
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_binaries_missing("dscl", "pwpolicy")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacShadowModuleTest(ModuleCase):
     """
     Validate the mac_shadow module
