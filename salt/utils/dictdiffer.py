@@ -270,6 +270,7 @@ class RecursiveDictDiffer(DictDiffer):
                         prefix=f"{prefix}{key}{separator}",
                         is_nested=is_nested,
                         include_nested=include_nested,
+                        separator=separator,
                     )
                 )
             elif "old" not in diffs[key]:
@@ -281,6 +282,7 @@ class RecursiveDictDiffer(DictDiffer):
                         prefix=f"{prefix}{key}{separator}",
                         is_nested=is_nested,
                         include_nested=include_nested,
+                        separator=separator,
                     )
                 )
             elif diffs[key][key_a] == self.NONE_VALUE:
@@ -295,6 +297,7 @@ class RecursiveDictDiffer(DictDiffer):
                             is_nested=True,
                             prefix=f"{prefix}{key}{separator}",
                             include_nested=include_nested,
+                            separator=separator,
                         )
                     )
             # type change from/to dict
@@ -311,6 +314,7 @@ class RecursiveDictDiffer(DictDiffer):
                         is_nested=True,
                         prefix=f"{prefix}{key}{separator}",
                         include_nested=include_nested,
+                        separator=separator,
                     )
                 )
 
