@@ -192,11 +192,22 @@ jobs:
             echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
           fi
 
+      - name: Show System Info & Test Plan
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "1"
+          PRINT_TEST_PLAN_ONLY: "1"
+          PRINT_SYSTEM_INFO: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }}
+
       - name: Run Tests
         id: run-tests
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"

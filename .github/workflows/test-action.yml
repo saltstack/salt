@@ -209,10 +209,15 @@ jobs:
         run: |
           tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
+      - name: Show System Info & Test Plan
+        run: |
+          tools --timestamps --no-output-timeout-secs=18000 vm testplan --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
+
       - name: Run Tests
         id: run-tests
         run: |
-          tools --timestamps --no-output-timeout-secs=18000 vm test --print-tests-selection --skip-requirements-install \
+          tools --timestamps --no-output-timeout-secs=18000 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Combine Coverage Reports
