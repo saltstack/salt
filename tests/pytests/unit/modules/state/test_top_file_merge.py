@@ -1,4 +1,3 @@
-import sys
 import textwrap
 
 import pytest
@@ -8,12 +7,6 @@ import salt.state
 import salt.utils.files
 import salt.utils.json
 from tests.support.mock import MagicMock, patch
-
-pytestmark = [
-    pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="Dictionaries are not ordered under Py3.5"
-    ),
-]
 
 
 @pytest.fixture

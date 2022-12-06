@@ -5,12 +5,11 @@ integration tests for mac_softwareupdate
 import pytest
 
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_binaries_missing("softwareupdate")
+@pytest.mark.skip_unless_on_darwin
 class MacSoftwareUpdateModuleTest(ModuleCase):
     """
     Validate the mac_softwareupdate module

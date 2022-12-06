@@ -13,7 +13,6 @@ from salt.ext.tornado.testing import AsyncHTTPTestCase
 from salt.netapi.rest_tornado import saltnado
 from tests.support.helpers import TstSuiteLoggingHandler, patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.unit import skipIf
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -170,7 +169,9 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
                         "#49572: regression: set_result on completed event"
                     )
 
-    @skipIf(True, "Undetermined race condition in test. Temporarily disabled.")
+    @pytest.mark.skip(
+        reason="Undetermined race condition in test. Temporarily disabled."
+    )
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         """
         Test a basic API of /
@@ -220,7 +221,9 @@ class TestWebhookSaltAPIHandler(SaltnadoIntegrationTestsBase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "Skipping until we can devote more resources to debugging this test.")
+    @pytest.mark.skip(
+        reason="Skipping until we can devote more resources to debugging this test."
+    )
     def test_post(self):
         self._future_resolved = threading.Event()
         try:

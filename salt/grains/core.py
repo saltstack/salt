@@ -3086,6 +3086,7 @@ def _hw_data(osdata):
     Provides
         biosversion
         biosvendor
+        boardname
         productname
         manufacturer
         serialnumber
@@ -3105,6 +3106,7 @@ def _hw_data(osdata):
         sysfs_firmware_info = {
             "biosversion": "bios_version",
             "biosvendor": "bios_vendor",
+            "boardname": "board_name",
             "productname": "product_name",
             "manufacturer": "sys_vendor",
             "biosreleasedate": "bios_date",

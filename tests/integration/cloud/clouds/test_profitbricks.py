@@ -1,10 +1,9 @@
 """
     :codeauthor: Ethan Devenport <ethand@stackpointcloud.com>
 """
-
+import pytest
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 try:
     # pylint: disable=unused-import
@@ -15,7 +14,9 @@ except ImportError:
     HAS_PROFITBRICKS = False
 
 
-@skipIf(HAS_PROFITBRICKS is False, "salt-cloud requires >= profitbricks 4.1.0")
+@pytest.mark.skipif(
+    HAS_PROFITBRICKS is False, reason="salt-cloud requires >= profitbricks 4.1.0"
+)
 class ProfitBricksTest(CloudTest):
     """
     Integration tests for the ProfitBricks cloud provider
