@@ -110,7 +110,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
         # Using the name parameter in the definition
         set_reg_pol_value:
-          lgpo_reg.present:
+          lgpo_reg.value_present:
             - key: SOFTWARE\MyKey
             - name: MyValue
             - v_type: REG_SZ
@@ -120,7 +120,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
         # Using the name as the parameter and modifying the User policy
         MyValue:
-          lgpo_reg.present:
+          lgpo_reg.value_present:
             - key: SOFTWARE\MyKey
             - v_type: REG_SZ
             - v_data: "some string data"
@@ -187,7 +187,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
         # Using the name parameter in the definition
         set_reg_pol_value:
-          lgpo_reg.disabled:
+          lgpo_reg.value_disabled:
             - key: SOFTWARE\MyKey
             - name: MyValue
             - policy_class: Machine
@@ -195,7 +195,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
         # Using the name as the parameter and modifying the User policy
         MyValue:
-          lgpo_reg.disabled:
+          lgpo_reg.value_disabled:
             - key: SOFTWARE\MyKey
             - policy_class: User
     """
@@ -254,7 +254,7 @@ def value_absent(name, key, policy_class="Machine"):
 
         # Using the name parameter in the definition
         set_reg_pol_value:
-          lgpo_reg.absent:
+          lgpo_reg.value_absent:
             - key: SOFTWARE\MyKey
             - name: MyValue
             - policy_class: Machine
@@ -262,7 +262,7 @@ def value_absent(name, key, policy_class="Machine"):
 
         # Using the name as the parameter and modifying the User policy
         MyValue:
-          lgpo_reg.absent:
+          lgpo_reg.value_absent:
             - key: SOFTWARE\MyKey
             - policy_class: User
     """
