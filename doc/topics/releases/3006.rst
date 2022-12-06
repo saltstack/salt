@@ -66,3 +66,47 @@ For example:
     lib-bar:
       pip.installed:
         - bin_env: /usr/bin/python3
+
+
+Improved Vault integration
+--------------------------
+This release features a much deeper integration with Hashicorp Vault.
+
+Previously, the Salt master only issued tokens to minions, whose policies could be
+templated with grain values. In addition to allowing secure templating of those
+policies with pillar values, the Salt master can now be configured to issue AppRoles
+to minions and manage their metadata using a similar templating approach.
+Since this metadata can be taken advantage of in templated policies on the Vault side,
+the need for many boilerplate policies is significantly reduced:
+
+.. code-block:: vaultpolicy
+
+  path "salt/data/minions/{{identity.entity.metadata.minion-id}}" {
+      capabilities = ["create", "read", "write", "delete", "patch"]
+  }
+
+  path "salt/data/roles/{{identity.entity.metadata.role}}" {
+      capabilities = ["read"]
+  }
+
+To take full advantage of this new flexibility, the Vault external pillar
+can now also be templated with pillar values:
+
+.. code-block:: yaml
+
+  ext_pillar:
+    - vault: path=salt/minions/{minion}
+    - vault: path=salt/roles/{pillar[role]}
+
+Although existing configurations will keep working without intervention after upgrading
+the Salt master, it is strongly recommended to adjust the ``peer_run`` configuration to
+include the new issuance endpoints in order to reduce unnecessary overhead:
+
+.. code-block:: yaml
+
+  peer_run:
+    .*:
+      - vault.get_config
+      - vault.generate_new_token
+
+Please see the :ref:`Vault execution module docs <vault-setup>` for details.
