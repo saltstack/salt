@@ -292,6 +292,14 @@ def pytest_configure(config):
         "when called returns `True`. If `skip` is a callable, it should accept a single argument "
         "'grains', which is the grains dictionary.",
     )
+    config.addinivalue_line(
+        "markers",
+        "skip_initial_onedir_failure(skip=<boolean or callable, reason=None): Skip known test failures "
+        "under the new onedir builds if the environment variable SKIP_INITIAL_ONEDIR_FAILURES "
+        "is equal to '1' and the 'skip' keyword argument is either `True` or it's a callable that "
+        "when called returns `True`. If `skip` is a callable, it should accept a single argument "
+        "'grains', which is the grains dictionary.",
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
@@ -617,6 +625,43 @@ def pytest_runtest_setup(item):
         if kwargs:
             raise pytest.UsageError(
                 "'skip_initial_gh_actions_failure' marker does not accept any keyword arguments "
+                "except 'skip' and 'reason'."
+            )
+        if skip and callable(skip):
+            grains = _grains_for_marker()
+            skip = skip(grains)
+
+        if skip:
+            raise pytest.skip.Exception(reason, _use_item_location=True)
+
+    skip_initial_onedir_failures_env_set = (
+        os.environ.get("SKIP_INITIAL_ONEDIR_FAILURES", "0") == "1"
+    )
+    skip_initial_onedir_failure_marker = item.get_closest_marker(
+        "skip_initial_onedir_failure"
+    )
+    if (
+        skip_initial_onedir_failure_marker is not None
+        and skip_initial_onedir_failures_env_set
+    ):
+        if skip_initial_onedir_failure_marker.args:
+            raise pytest.UsageError(
+                "'skip_initial_onedir_failure' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        kwargs = skip_initial_onedir_failure_marker.kwargs.copy()
+        skip = kwargs.pop("skip", True)
+        if skip and not callable(skip) and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'skip_initial_onedir_failure' marker "
+                "requires a boolean or callable, not '{}'.".format(type(skip))
+            )
+        reason = kwargs.pop("reason", None)
+        if reason is None:
+            reason = "Test skipped because it's a know GH Actions initial failure that needs to be fixed"
+        if kwargs:
+            raise pytest.UsageError(
+                "'skip_initial_onedir_failure' marker does not accept any keyword arguments "
                 "except 'skip' and 'reason'."
             )
         if skip and callable(skip):
