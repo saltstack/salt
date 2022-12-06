@@ -161,6 +161,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0
     # via -r requirements/windows.txt
+looseversion==1.0.2
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
