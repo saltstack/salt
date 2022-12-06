@@ -5,10 +5,11 @@
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)
@@ -18,8 +19,8 @@ CHANGE_USER = random_string("RS-", lowercase=False)
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
+@pytest.mark.skip_unless_on_darwin
 class MacUserModuleTest(ModuleCase):
     """
     Integration tests for the mac_user module
@@ -122,9 +123,11 @@ class MacUserModuleTest(ModuleCase):
             self.assertEqual(fullname_info["fullname"], "Foo Bar")
 
             # Test mac_user.chgroups
+            pre_info = self.run_function("user.info", [CHANGE_USER])["groups"]
+            expected = pre_info + ["wheel"]
             self.run_function("user.chgroups", [CHANGE_USER, "wheel"])
             groups_info = self.run_function("user.info", [CHANGE_USER])
-            self.assertEqual(groups_info["groups"], ["wheel"])
+            self.assertEqual(groups_info["groups"], expected)
 
         except AssertionError:
             self.run_function("user.delete", [CHANGE_USER])

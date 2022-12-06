@@ -503,7 +503,8 @@ def image_present(name):
         # docker image was imported
         ret["result"] = True
         ret["comment"] = "image {} ({}) is present".format(
-            name, __salt__["imgadm.docker_to_uuid"](name),
+            name,
+            __salt__["imgadm.docker_to_uuid"](name),
         )
     elif name in __salt__["imgadm.list"]():
         # image was already imported

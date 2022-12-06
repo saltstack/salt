@@ -85,6 +85,9 @@ def get_path():
         )["vdata"]
     ).split(";")
 
+    # If the final element happens to be an empty value, normalize_dir treats this
+    # as a valid path and inserts a period (.) so clean the list before that happens
+    ret = ret[:-1] if ret[-1] == "" else ret
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
 
@@ -147,6 +150,10 @@ def add(path, index=None, **kwargs):
         salt.utils.args.invalid_kwargs(kwargs)
 
     path = _normalize_dir(path)
+    # Due to path normalization causing issues with empty strings,
+    # back out here as we don't allow Path entries to be empty
+    if path == ".":
+        return False
     path_str = salt.utils.stringutils.to_str(path)
     system_path = get_path()
 
@@ -255,7 +262,6 @@ def add(path, index=None, **kwargs):
                 # Insert the path at the desired index.
                 dirs.insert(pos, path)
                 return True
-        return False
 
     if _check_path(local_path, path_str, index):
         _update_local_path(local_path)

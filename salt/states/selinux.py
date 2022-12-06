@@ -143,7 +143,7 @@ def boolean(name, value, persist=False):
         return ret
     rvalue = _refine_value(value)
     if rvalue is None:
-        ret["comment"] = "{} is not a valid value for the " "boolean".format(value)
+        ret["comment"] = "{} is not a valid value for the boolean".format(value)
         ret["result"] = False
         return ret
     state = bools[name]["State"] == rvalue
@@ -218,7 +218,7 @@ def module(name, module_state="Enabled", version="any", **opts):
         return ret
     rmodule_state = _refine_module_state(module_state)
     if rmodule_state == "unknown":
-        ret["comment"] = "{} is not a valid state for the " "{} module.".format(
+        ret["comment"] = "{} is not a valid state for the {} module.".format(
             module_state, module
         )
         ret["result"] = False
@@ -464,8 +464,10 @@ def fcontext_policy_applied(name, recursive=False):
         ret.update(
             {
                 "result": True,
-                "comment": 'SElinux policies are already applied for filespec "{}"'.format(
-                    name
+                "comment": (
+                    'SElinux policies are already applied for filespec "{}"'.format(
+                        name
+                    )
                 ),
             }
         )
@@ -505,7 +507,10 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     old_state = __salt__["selinux.port_get_policy"](
-        name=name, sel_type=sel_type, protocol=protocol, port=port,
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port,
     )
     if old_state:
         ret.update(
@@ -533,7 +538,10 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
-                name=name, sel_type=sel_type, protocol=protocol, port=port,
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port,
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret
@@ -560,7 +568,10 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     old_state = __salt__["selinux.port_get_policy"](
-        name=name, sel_type=sel_type, protocol=protocol, port=port,
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port,
     )
     if not old_state:
         ret.update(
@@ -577,14 +588,19 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
         ret.update({"result": None})
     else:
         delete_ret = __salt__["selinux.port_delete_policy"](
-            name=name, protocol=protocol, port=port,
+            name=name,
+            protocol=protocol,
+            port=port,
         )
         if delete_ret["retcode"] != 0:
             ret.update({"comment": "Error deleting policy: {}".format(delete_ret)})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
-                name=name, sel_type=sel_type, protocol=protocol, port=port,
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port,
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret

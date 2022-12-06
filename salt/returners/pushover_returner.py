@@ -230,13 +230,7 @@ def returner(ret):
                 "Priority 2 requires pushover.expire and pushover.retry options."
             )
 
-    message = (
-        "id: {}\r\n"
-        "function: {}\r\n"
-        "function args: {}\r\n"
-        "jid: {}\r\n"
-        "return: {}\r\n"
-    ).format(
+    message = "id: {}\r\nfunction: {}\r\nfunction args: {}\r\njid: {}\r\nreturn: {}\r\n".format(
         ret.get("id"),
         ret.get("fun"),
         ret.get("fun_args"),

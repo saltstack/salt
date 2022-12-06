@@ -39,7 +39,10 @@ def __virtual__():
 
 
 def _fallback(*args, **kw):
-    return 'The "openstack-config" command needs to be installed for this function to work.  Typically this is included in the "openstack-utils" package.'
+    return (
+        'The "openstack-config" command needs to be installed for this function to'
+        ' work.  Typically this is included in the "openstack-utils" package.'
+    )
 
 
 @salt.utils.decorators.path.which("openstack-config")

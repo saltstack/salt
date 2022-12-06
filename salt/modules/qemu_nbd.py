@@ -27,7 +27,8 @@ def __virtual__():
         return "qemu_nbd"
     return (
         False,
-        "The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in the path.",
+        "The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in"
+        " the path.",
     )
 
 
@@ -55,7 +56,8 @@ def connect(image):
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__["cmd.run"](
-                    "qemu-nbd -c {} {}".format(nbd, image), python_shell=False,
+                    "qemu-nbd -c {} {}".format(nbd, image),
+                    python_shell=False,
                 )
                 if not __salt__["cmd.retcode"]("{} {}".format(fdisk, nbd)):
                     break
@@ -76,7 +78,8 @@ def mount(nbd, root=None):
         salt '*' qemu_nbd.mount /dev/nbd0
     """
     __salt__["cmd.run"](
-        "partprobe {}".format(nbd), python_shell=False,
+        "partprobe {}".format(nbd),
+        python_shell=False,
     )
     ret = {}
     if root is None:

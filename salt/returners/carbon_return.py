@@ -190,7 +190,7 @@ def _walk(path, value, metrics, timestamp, skip):
         to a float. Defaults to `False`.
     """
     log.trace(
-        "Carbon return walking path: %s, value: %s, metrics: %s, " "timestamp: %s",
+        "Carbon return walking path: %s, value: %s, metrics: %s, timestamp: %s",
         path,
         value,
         metrics,

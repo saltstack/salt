@@ -121,7 +121,10 @@ def task_present(
 
         if old_script != new_script:
             ret["changes"]["TICKscript diff"] = "\n".join(
-                difflib.unified_diff(old_script.splitlines(), new_script.splitlines(),)
+                difflib.unified_diff(
+                    old_script.splitlines(),
+                    new_script.splitlines(),
+                )
             )
             comments.append("Task script updated")
 

@@ -31,7 +31,8 @@ def sdb_get(uri, opts, utils=None, strict=False):
     if (indx == -1) or not uri[(indx + 1) :]:
         if strict:
             raise SaltInvocationError(
-                "SDB uri must have a profile name as a first part of the uri before the /"
+                "SDB uri must have a profile name as a first part of the uri before"
+                " the /"
             )
         else:
             return uri

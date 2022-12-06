@@ -4,12 +4,12 @@ Custom YAML loading in Salt
 
 
 import re
-import warnings
 
-import salt.utils.stringutils
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
+
+import salt.utils.stringutils
 
 try:
     yaml.Loader = yaml.CLoader
@@ -19,15 +19,6 @@ except Exception:  # pylint: disable=broad-except
 
 
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
-
-
-class DuplicateKeyWarning(RuntimeWarning):
-    """
-    Warned when duplicate keys exist
-    """
-
-
-warnings.simplefilter("always", category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388
@@ -198,9 +189,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                     raise ConstructorError(
                         "while constructing a mapping",
                         node.start_mark,
-                        "expected a mapping or list of mappings for merging, but found {}".format(
-                            value_node.id
-                        ),
+                        "expected a mapping or list of mappings for merging, but"
+                        " found {}".format(value_node.id),
                         value_node.start_mark,
                     )
             elif key_node.tag == "tag:yaml.org,2002:value":

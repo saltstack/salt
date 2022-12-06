@@ -358,7 +358,7 @@ certifi==2020.6.20
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.5
+cffi==1.12.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.8/darwin.txt
@@ -667,7 +667,7 @@ paramiko==2.7.1
     #   ncclient
     #   netmiko
     #   scp
-passlib==1.7.2 ; sys_platform != "win32"
+passlib==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse

@@ -13,10 +13,11 @@ import datetime
 import logging
 
 import yaml
-from salt.serializers import DeserializationError, SerializationError
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
+
+from salt.serializers import DeserializationError, SerializationError
+from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 
@@ -29,7 +30,7 @@ BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 BaseDumper = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
 
 ERROR_MAP = {
-    ("found character '\\t' " "that cannot start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 

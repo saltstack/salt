@@ -4,10 +4,12 @@ import stat
 import sys
 import tempfile
 
+import pytest
+
 import salt.utils.files
 import salt.utils.find
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class TestFind(TestCase):
@@ -193,14 +195,14 @@ class TestFind(TestCase):
         option = salt.utils.find.TypeOption("type", "s")
         self.assertEqual(option.match("", "", [stat.S_IFSOCK]), True)
 
-    @skipIf(sys.platform.startswith("win"), "pwd not available on Windows")
+    @pytest.mark.skip_on_windows(reason="pwd not available on Windows")
     def test_owner_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.OwnerOption, "owner", "notexist")
 
         option = salt.utils.find.OwnerOption("owner", "root")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
-    @skipIf(sys.platform.startswith("win"), "pwd not available on Windows")
+    @pytest.mark.skip_on_windows(reason="pwd not available on Windows")
     def test_owner_option_match(self):
         option = salt.utils.find.OwnerOption("owner", "root")
         self.assertEqual(option.match("", "", [0] * 5), True)
@@ -208,7 +210,7 @@ class TestFind(TestCase):
         option = salt.utils.find.OwnerOption("owner", "500")
         self.assertEqual(option.match("", "", [500] * 5), True)
 
-    @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
+    @pytest.mark.skip_on_windows(reason="grp not available on Windows")
     def test_group_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.GroupOption, "group", "notexist")
 
@@ -219,7 +221,7 @@ class TestFind(TestCase):
         option = salt.utils.find.GroupOption("group", group_name)
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
-    @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
+    @pytest.mark.skip_on_windows(reason="grp not available on Windows")
     def test_group_option_match(self):
         if sys.platform.startswith(("darwin", "freebsd", "openbsd")):
             group_name = "wheel"
@@ -255,7 +257,7 @@ class TestFind(TestCase):
         self.assertEqual(option.match("", "", [1] * 9), False)
 
         option = salt.utils.find.MtimeOption("mtime", "-1s")
-        self.assertEqual(option.match("", "", [10 ** 10] * 9), True)
+        self.assertEqual(option.match("", "", [10**10] * 9), True)
 
 
 class TestGrepOption(TestCase):
@@ -290,7 +292,7 @@ class TestGrepOption(TestCase):
             option.match(self.tmpdir, "hello.txt", os.stat(hello_file)), None
         )
 
-    @skipIf(sys.platform.startswith("win"), "No /dev/null on Windows")
+    @pytest.mark.skip_on_windows(reason="No /dev/null on Windows")
     def test_grep_option_match_dev_null(self):
         option = salt.utils.find.GrepOption("grep", "foo")
         self.assertEqual(option.match("dev", "null", os.stat("/dev/null")), None)
@@ -370,15 +372,15 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption("print", "size name")
         self.assertEqual(option.execute("test_name", [0] * 9), [0, "test_name"])
 
-    @skipIf(sys.platform.startswith("win"), "pwd not available on Windows")
+    @pytest.mark.skip_on_windows(reason="pwd not available on Windows")
     def test_print_user(self):
         option = salt.utils.find.PrintOption("print", "user")
         self.assertEqual(option.execute("", [0] * 10), "root")
 
         option = salt.utils.find.PrintOption("print", "user")
-        self.assertEqual(option.execute("", [2 ** 31] * 10), 2 ** 31)
+        self.assertEqual(option.execute("", [2**31] * 10), 2**31)
 
-    @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
+    @pytest.mark.skip_on_windows(reason="grp not available on Windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption("print", "group")
         if sys.platform.startswith(("darwin", "freebsd", "openbsd")):
@@ -391,7 +393,7 @@ class TestPrintOption(TestCase):
         # option = salt.utils.find.PrintOption('print', 'group')
         # self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
-    @skipIf(sys.platform.startswith("win"), "no /dev/null on windows")
+    @pytest.mark.skip_on_windows(reason="no /dev/null on windows")
     def test_print_md5(self):
         option = salt.utils.find.PrintOption("print", "md5")
         self.assertEqual(option.execute("/dev/null", os.stat("/dev/null")), "")
@@ -406,7 +408,7 @@ class TestFinder(TestCase):
         shutil.rmtree(self.tmpdir)
         super().tearDown()
 
-    @skipIf(sys.platform.startswith("win"), "No /dev/null on Windows")
+    @pytest.mark.skip_on_windows(reason="No /dev/null on Windows")
     def test_init(self):
         finder = salt.utils.find.Finder({})
         self.assertEqual(str(finder.actions[0].__class__)[-13:-2], "PrintOption")

@@ -11,6 +11,10 @@ import textwrap
 
 import attr
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.bases import Daemon
+from saltfactories.daemons.sshd import Sshd as _Sshd
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -18,9 +22,6 @@ import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.utils.immutabletypes import freeze
-from saltfactories.bases import Daemon
-from saltfactories.daemons.sshd import Sshd as _Sshd
-from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
 from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import LoaderModuleMockMixin
@@ -67,13 +68,21 @@ _OPTS = freeze(
 )
 
 
+@attr.s
 class Sshd(_Sshd):
+    display_name = attr.ib()
+
+    def get_display_name(self):
+        return self.display_name
+
     def apply_pre_start_states(self, salt_call_cli, testclass, username):
+        # pylint: disable=access-member-before-definition
         if self.listen_port in self.check_ports:
             self.check_ports.remove(self.listen_port)
         if self.listen_port in self.listen_ports:
             self.listen_ports.remove(self.listen_port)
-        self.listen_port = get_unused_localhost_port()
+        # pylint: enable=access-member-before-definition
+        self.listen_port = ports.get_unused_localhost_port()
         self.check_ports.append(self.listen_port)
         self.listen_ports.append(self.listen_port)
         url = "ssh://{username}@127.0.0.1:{port}/~/repo.git".format(
@@ -109,9 +118,9 @@ class Sshd(_Sshd):
             },
             _timeout=240,
         )
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.fail("Failed to apply the 'git_pillar.ssh' state")
-        if next(iter(ret.json.values()))["result"] is not True:
+        if next(iter(ret.data.values()))["result"] is not True:
             pytest.fail("Failed to apply the 'git_pillar.ssh' state")
 
     def set_known_host(self, salt_call_cli, username):
@@ -125,9 +134,9 @@ class Sshd(_Sshd):
             hash_known_hosts=False,
             fingerprint_hash_type="md5",
         )
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.fail("Failed to run 'ssh.set_known_host'")
-        if "error" in ret.json:
+        if "error" in ret.data:
             pytest.fail("Failed to run 'ssh.set_known_host'")
 
 
@@ -135,13 +144,19 @@ class Sshd(_Sshd):
 class UwsgiDaemon(Daemon):
 
     config_dir = attr.ib()
-    listen_port = attr.ib(default=attr.Factory(get_unused_localhost_port))
+    listen_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port))
+    display_name = attr.ib()
 
     def __attrs_post_init__(self):
+        # pylint: disable=access-member-before-definition
         if self.check_ports is None:
             self.check_ports = []
+        # pylint: enable=access-member-before-definition
         self.check_ports.append(self.listen_port)
         super().__attrs_post_init__()
+
+    def get_display_name(self):
+        return self.display_name
 
     def get_base_script_args(self):
         """
@@ -154,7 +169,7 @@ class UwsgiDaemon(Daemon):
             self.check_ports.remove(self.listen_port)
         if self.listen_port in self.listen_ports:
             self.listen_ports.remove(self.listen_port)
-        self.listen_port = get_unused_localhost_port()
+        self.listen_port = ports.get_unused_localhost_port()
         self.check_ports.append(self.listen_port)
         self.listen_ports.append(self.listen_port)
 
@@ -178,15 +193,20 @@ class UwsgiDaemon(Daemon):
         if salt.utils.platform.is_freebsd():
             git_core = "/usr/local/libexec/git-core"
         else:
-            git_core = "/usr/libexec/git-core"
-        if not os.path.exists(git_core):
-            git_core = "/usr/lib/git-core"
-
-        if not os.path.exists(git_core):
-            pytest.fail(
-                "{} not found. Either git is not installed, or the test "
-                "class needs to be updated.".format(git_core)
+            known_paths = (
+                "/usr/libexec/git-core",
+                "/usr/lib/git-core",
+                "/usr/share/git-core",
             )
+            for path in known_paths:
+                if os.path.exists(path):
+                    git_core = path
+                    break
+            else:
+                pytest.fail(
+                    "'git-core' not found. Either git is not installed, or the test "
+                    f"class needs to be updated. Tried: {', '.join(known_paths)}"
+                )
 
         pillar["git_pillar"]["git-http-backend"] = os.path.join(
             git_core, "git-http-backend"
@@ -195,9 +215,9 @@ class UwsgiDaemon(Daemon):
         ret = salt_call_cli.run(
             "state.apply", mods="git_pillar.http.uwsgi", pillar=pillar, _timeout=120
         )
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.fail("Failed to apply the 'git_pillar.http.uwsgi' state")
-        if next(iter(ret.json.values()))["result"] is not True:
+        if next(iter(ret.data.values()))["result"] is not True:
             pytest.fail("Failed to apply the 'git_pillar.http.uwsgi' state")
 
 
@@ -206,13 +226,19 @@ class NginxDaemon(Daemon):
 
     config_dir = attr.ib()
     uwsgi_port = attr.ib()
-    listen_port = attr.ib(default=attr.Factory(get_unused_localhost_port))
+    listen_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port))
+    display_name = attr.ib()
 
     def __attrs_post_init__(self):
+        # pylint: disable=access-member-before-definition
         if self.check_ports is None:
             self.check_ports = []
+        # pylint: enable=access-member-before-definition
         self.check_ports.append(self.listen_port)
         super().__attrs_post_init__()
+
+    def get_display_name(self):
+        return self.display_name
 
     def get_base_script_args(self):
         """
@@ -225,7 +251,7 @@ class NginxDaemon(Daemon):
             self.check_ports.remove(self.listen_port)
         if self.listen_port in self.listen_ports:
             self.listen_ports.remove(self.listen_port)
-        self.listen_port = get_unused_localhost_port()
+        self.listen_port = ports.get_unused_localhost_port()
         self.check_ports.append(self.listen_port)
         self.listen_ports.append(self.listen_port)
 
@@ -258,9 +284,9 @@ class NginxDaemon(Daemon):
         ret = salt_call_cli.run(
             "state.apply", mods="git_pillar.http.nginx", pillar=pillar
         )
-        if ret.exitcode != 0:
+        if ret.returncode != 0:
             pytest.fail("Failed to apply the 'git_pillar.http.nginx' state")
-        if next(iter(ret.json.values()))["result"] is not True:
+        if next(iter(ret.data.values()))["result"] is not True:
             pytest.fail("Failed to apply the 'git_pillar.http.nginx' state")
 
 
@@ -322,6 +348,12 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
     Stand up an nginx + uWSGI + git-http-backend webserver to
     serve up git repos for tests.
     """
+    nginx = shutil.which("nginx")
+    if nginx is None:
+        raise pytest.skip.Exception(
+            "The 'nginx' binary was not found", _use_item_location=True
+        )
+
     salt_call_cli = salt_minion.salt_call_cli()
 
     root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
@@ -345,7 +377,7 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
         )
         uwsgi_proc.start()
         nginx_proc = NginxDaemon(
-            script_name="nginx",
+            script_name=nginx,
             config_dir=config_dir,
             start_timeout=120,
             uwsgi_port=uwsgi_proc.listen_port,
@@ -375,10 +407,12 @@ def webserver_pillar_tests_prep_authenticated(request, webserver_pillar_tests_pr
         password=request.cls.password,
         port=request.cls.nginx_port,
     )
-    url_extra_repo = "http://{username}:{password}@127.0.0.1:{port}/extra_repo.git".format(
-        username=request.cls.username,
-        password=request.cls.password,
-        port=request.cls.nginx_port,
+    url_extra_repo = (
+        "http://{username}:{password}@127.0.0.1:{port}/extra_repo.git".format(
+            username=request.cls.username,
+            password=request.cls.password,
+            port=request.cls.nginx_port,
+        )
     )
     request.cls.ext_opts["url"] = url
     request.cls.ext_opts["url_extra_repo"] = url_extra_repo
@@ -435,7 +469,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 ext_pillar_conf.format(
                     cachedir=cachedir,
                     extmods=os.path.join(cachedir, "extmods"),
-                    **self.ext_opts
+                    **self.ext_opts,
                 )
             )
         )
@@ -476,7 +510,11 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 git_opts=self.git_opts,
             )
             self.run_function(
-                "git.push", [self.admin_repo], remote="origin", ref=branch, user=user,
+                "git.push",
+                [self.admin_repo],
+                remote="origin",
+                ref=branch,
+                user=user,
             )
 
         with salt.utils.files.fopen(

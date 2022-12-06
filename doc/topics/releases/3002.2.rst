@@ -17,7 +17,7 @@ Fixed
 - Removing use of undefined varilable in utils/slack.py. (#58753)
 - Restored the ability to specify the amount of extents for a Logical
   Volume as a percentage. (#58759)
-- Ensuring that the version check function is run a second time in all the user related functions incase the user being managed is the connection user and the password has been updated. (#58773)
+- Ensuring that the version check function is run a second time in all the user related functions in case the user being managed is the connection user and the password has been updated. (#58773)
 - Allow bytes in gpg renderer (#58794)
 - Fix issue where win_wua module fails to load when BITS is set to Manual (#58848)
 - Ensure that elasticsearch.index_exists is available before loading the elasticsearch returner. (#58851)

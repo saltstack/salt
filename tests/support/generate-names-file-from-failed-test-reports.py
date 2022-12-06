@@ -33,7 +33,10 @@ def main():
     )
     parser.add_argument(
         "output_file",
-        help="Path to the file containing the failed tests listing to be fed to --names-files",
+        help=(
+            "Path to the file containing the failed tests listing to be fed to"
+            " --names-files"
+        ),
     )
     options = parser.parse_args()
     total_xml_reports = 0

@@ -3,10 +3,9 @@ Integration tests for Ruby Gem module
 """
 
 import pytest
-import salt.utils.path
+
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 def check_status():
@@ -19,7 +18,7 @@ def check_status():
         return False
 
 
-@skipIf(not salt.utils.path.which("gem"), "Gem is not available")
+@pytest.mark.skip_if_binaries_missing("gem")
 @pytest.mark.windows_whitelisted
 @pytest.mark.destructive_test
 class GemModuleTest(ModuleCase):

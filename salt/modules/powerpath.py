@@ -39,13 +39,15 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (
             False,
-            "The powerpath execution module cannot be loaded: unable to detect kernel grain.",
+            "The powerpath execution module cannot be loaded: unable to detect kernel"
+            " grain.",
         )
 
     if not has_powerpath():
         return (
             False,
-            "The powerpath execution module cannot be loaded: the emcpreg binary is not available.",
+            "The powerpath execution module cannot be loaded: the emcpreg binary is not"
+            " available.",
         )
 
     if kernel_grain == "Linux":

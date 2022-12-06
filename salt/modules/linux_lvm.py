@@ -22,7 +22,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The linux_lvm execution module cannot be loaded: the lvm binary is not in the path.",
+        "The linux_lvm execution module cannot be loaded: the lvm binary is not in the"
+        " path.",
     )
 
 

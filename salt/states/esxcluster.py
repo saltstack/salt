@@ -41,6 +41,7 @@ Module was developed against.
 
 import logging
 import sys
+from functools import wraps
 
 import salt.exceptions
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, LicenseSchema
@@ -82,11 +83,34 @@ def __virtual__():
 
         return (
             False,
-            "State module did not load: Incompatible versions of Python and pyVmomi present. See Issue #29537.",
+            "State module did not load: Incompatible versions of Python and pyVmomi"
+            " present. See Issue #29537.",
         )
     return True
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxcluster' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def mod_init(low):
     """
     Retrieves and adapt the login credentials from the proxy connection module
@@ -111,6 +135,7 @@ def _get_vsan_datastore(si, cluster_name):
     return vsan_datastores[0]
 
 
+@_deprecation_message
 def cluster_configured(name, cluster_config):
     """
     Configures a cluster. Creates a new cluster, if it doesn't exist on the
@@ -306,6 +331,7 @@ def cluster_configured(name, cluster_config):
         return ret
 
 
+@_deprecation_message
 def vsan_datastore_configured(name, datastore_name):
     """
     Configures the cluster's VSAN datastore
@@ -390,6 +416,7 @@ def vsan_datastore_configured(name, datastore_name):
         return ret
 
 
+@_deprecation_message
 def licenses_configured(name, licenses=None):
     """
     Configures licenses on the cluster entity
@@ -505,9 +532,8 @@ def licenses_configured(name, licenses=None):
             if existing_license["capacity"] <= existing_license["used"]:
                 # License is already fully used
                 comments.append(
-                    "Cannot assign license '{}' to cluster '{}'. No free capacity available.".format(
-                        license_name, display_name
-                    )
+                    "Cannot assign license '{}' to cluster '{}'. No free capacity"
+                    " available.".format(license_name, display_name)
                 )
                 log.error(comments[-1])
                 has_errors = True

@@ -9,6 +9,7 @@ import salt.minion
 import salt.utils.event
 import salt.utils.jid
 import salt.utils.verify
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +141,7 @@ def store_job(opts, load, event=None, mminion=None):
         mminion.returners[fstr](load)
     except Exception:  # pylint: disable=broad-except
         log.critical(
-            "The specified '%s' returner threw a stack trace", job_cache, exc_info=True,
+            "The specified '%s' returner threw a stack trace", job_cache, exc_info=True
         )
 
     if opts.get("job_cache_store_endtime") and updateetfstr in mminion.returners:
@@ -177,6 +178,26 @@ def get_retcode(ret):
     elif isinstance(ret, bool) and not ret:
         return 1
     return retcode
+
+
+def get_keep_jobs_seconds(opts):
+    """
+    Temporary function until 'keep_jobs' is fully deprecated,
+    this will prefer 'keep_jobs_seconds', and only use
+    'keep_jobs' as the configuration value if 'keep_jobs_seconds'
+    is unmodified, and 'keep_jobs' is modified (in which case it
+    will emit a deprecation warning).
+    """
+    keep_jobs_seconds = opts.get("keep_jobs_seconds", 86400)
+    keep_jobs = opts.get("keep_jobs", 24)
+    if keep_jobs_seconds == 86400 and keep_jobs != 24:
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'keep_jobs' option has been deprecated and replaced with "
+            "'keep_jobs_seconds'.",
+        )
+        keep_jobs_seconds = keep_jobs * 3600
+    return keep_jobs_seconds
 
 
 # vim:set et sts=4 ts=4 tw=80:

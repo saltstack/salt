@@ -29,7 +29,8 @@ def __virtual__():
     """
     return (
         bool(salt.utils.path.which_bin(["dmidecode", "smbios"])),
-        "The smbios execution module failed to load: neither dmidecode nor smbios in the path.",
+        "The smbios execution module failed to load: neither dmidecode nor smbios in"
+        " the path.",
     )
 
 
@@ -277,7 +278,7 @@ def _dmi_isclean(key, val):
     """
     Clean out well-known bogus values
     """
-    if val is None or not val or re.match("none", val, flags=re.IGNORECASE):
+    if not val or re.match("none", val, flags=re.IGNORECASE):
         # log.debug('DMI {0} value {1} seems invalid or empty'.format(key, val))
         return False
     elif "uuid" in key:
@@ -317,7 +318,8 @@ def _dmi_isclean(key, val):
         return not re.search(
             r"to be filled", val, flags=re.IGNORECASE
         ) and not re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         )

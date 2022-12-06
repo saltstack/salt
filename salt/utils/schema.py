@@ -1225,7 +1225,8 @@ class DictItem(BaseSchemaItem):
             and not self.additional_properties
         ):
             raise RuntimeError(
-                "One of properties, pattern_properties or additional_properties must be passed"
+                "One of properties, pattern_properties or additional_properties must be"
+                " passed"
             )
         if self.properties is not None:
             if not isinstance(self.properties, (Schema, dict)):
@@ -1368,8 +1369,9 @@ class OneOfItem(SchemaItem):
             raise RuntimeError("The passed items must not be empty")
         if not isinstance(self.items, (list, tuple)):
             raise RuntimeError(
-                "The passed items must be passed as a list/tuple not "
-                "'{}'".format(type(self.items))
+                "The passed items must be passed as a list/tuple not '{}'".format(
+                    type(self.items)
+                )
             )
         for idx, item in enumerate(self.items):
             if not isinstance(item, (Schema, SchemaItem)):

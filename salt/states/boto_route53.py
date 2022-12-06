@@ -479,7 +479,7 @@ def hosted_zone_present(
     if private_zone:
         if not salt.utils.data.exactly_one((vpc_name, vpc_id)):
             raise SaltInvocationError(
-                "Either vpc_name or vpc_id is required when creating a " "private zone."
+                "Either vpc_name or vpc_id is required when creating a private zone."
             )
         vpcs = __salt__["boto_vpc.describe_vpcs"](
             vpc_id=vpc_id,
@@ -526,8 +526,11 @@ def hosted_zone_present(
             create = True
         else:
             if private_zone:
-                for v, d in deets.get("VPCs", {}).items():
-                    if d["VPCId"] == vpc_id and d["VPCRegion"] == vpc_region:
+                vpcs = deets.get("VPCs", [])
+                if isinstance(vpcs, dict):
+                    vpcs = vpcs.values()
+                for vpc in vpcs:
+                    if vpc["VPCId"] == vpc_id and vpc["VPCRegion"] == vpc_region:
                         create = False
                         break
                     else:

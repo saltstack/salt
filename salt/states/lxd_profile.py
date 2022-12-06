@@ -156,9 +156,11 @@ def present(
     # Description change
     #
     if str(profile.description) != str(description):
-        ret["changes"]["description"] = (
-            'Description changed, from "{}" to "{}".'
-        ).format(profile.description, description)
+        ret["changes"][
+            "description"
+        ] = 'Description changed, from "{}" to "{}".'.format(
+            profile.description, description
+        )
 
         profile.description = description
 

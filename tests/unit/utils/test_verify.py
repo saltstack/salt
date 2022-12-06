@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.verify import (
@@ -30,7 +31,7 @@ from salt.utils.verify import (
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 if sys.platform.startswith("win"):
     import win32file
@@ -104,7 +105,7 @@ class TestVerify(TestCase):
             # If there's a different error catch, write it to sys.stderr
             sys.stderr.write(writer.output)
 
-    @skipIf(salt.utils.platform.is_windows(), "No verify_env Windows")
+    @pytest.mark.skip_on_windows(reason="No verify_env Windows")
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         var_dir = os.path.join(root_dir, "var", "log", "salt")
@@ -292,22 +293,22 @@ class TestVerifyLog(TestCase):
         )
         assert filtered == ["/tmp/foo"], filtered
 
-    @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @pytest.mark.skip_on_windows(reason="Not applicable on Windows")
     def test_verify_log_files_udp_scheme(self):
         verify_log_files(["udp://foo"], getpass.getuser())
         self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "udp:")))
 
-    @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @pytest.mark.skip_on_windows(reason="Not applicable on Windows")
     def test_verify_log_files_tcp_scheme(self):
         verify_log_files(["udp://foo"], getpass.getuser())
         self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "tcp:")))
 
-    @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @pytest.mark.skip_on_windows(reason="Not applicable on Windows")
     def test_verify_log_files_file_scheme(self):
         verify_log_files(["file://{}"], getpass.getuser())
         self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "file:")))
 
-    @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @pytest.mark.skip_on_windows(reason="Not applicable on Windows")
     def test_verify_log_files(self):
         path = os.path.join(self.tmpdir, "foo", "bar.log")
         self.assertFalse(os.path.exists(path))

@@ -4,6 +4,8 @@ import random
 import string
 from tempfile import NamedTemporaryFile
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_lambda as boto_lambda
@@ -12,13 +14,13 @@ from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
+    from botocore.exceptions import ClientError
 
     HAS_BOTO = True
 except ImportError:
@@ -95,14 +97,12 @@ def _has_required_boto():
         return True
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    (
-        "The boto3 module must be greater than or equal to version {}, "
-        "and botocore must be greater than or equal to {}".format(
-            required_boto3_version, required_botocore_version
-        )
+    reason="The boto3 module must be greater than or equal to version {}, "
+    "and botocore must be greater than or equal to {}".format(
+        required_boto3_version, required_botocore_version
     ),
 )
 class BotoLambdaTestCaseBase(TestCase, LoaderModuleMockMixin):
@@ -264,7 +264,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         ):
             with self.assertRaisesRegex(
                 SaltInvocationError,
-                "Either ZipFile must be specified, or S3Bucket and S3Key must be provided.",
+                "Either ZipFile must be specified, or S3Bucket and S3Key must be"
+                " provided.",
             ):
                 lambda_creation_result = boto_lambda.create_function(
                     FunctionName="testfunction",
@@ -286,7 +287,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         ):
             with self.assertRaisesRegex(
                 SaltInvocationError,
-                "Either ZipFile must be specified, or S3Bucket and S3Key must be provided.",
+                "Either ZipFile must be specified, or S3Bucket and S3Key must be"
+                " provided.",
             ):
                 with TempZipFile() as zipfile:
                     lambda_creation_result = boto_lambda.create_function(
@@ -500,10 +502,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         ):
             with self.assertRaisesRegex(
                 SaltInvocationError,
-                (
-                    "Either ZipFile must be specified, or S3Bucket "
-                    "and S3Key must be provided."
-                ),
+                "Either ZipFile must be specified, or S3Bucket "
+                "and S3Key must be provided.",
             ):
                 result = boto_lambda.update_function_code(
                     FunctionName="testfunction", **conn_parameters
@@ -590,11 +590,12 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
     """
@@ -766,11 +767,12 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoLambdaEventSourceMappingTestCase(
     BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
@@ -876,7 +878,9 @@ class BotoLambdaEventSourceMappingTestCase(
         )
         self.assertTrue(result["deleted"])
 
-    @skipIf(True, "This appears to leak memory and crash the unit test suite")
+    @pytest.mark.skip(
+        reason="This appears to leak memory and crash the unit test suite"
+    )
     def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(
         self,
     ):
@@ -901,10 +905,8 @@ class BotoLambdaEventSourceMappingTestCase(
         """
         with self.assertRaisesRegex(
             SaltInvocationError,
-            (
-                "Either UUID must be specified, or EventSourceArn "
-                "and FunctionName must be provided."
-            ),
+            "Either UUID must be specified, or EventSourceArn "
+            "and FunctionName must be provided.",
         ):
             result = boto_lambda.delete_event_source_mapping(**conn_parameters)
 

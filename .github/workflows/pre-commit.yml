@@ -2,8 +2,14 @@ name: Pre-Commit
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Pre-Commit:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Run Pre-Commit Against Salt
 
     runs-on: ubuntu-latest
@@ -20,7 +26,7 @@ jobs:
         apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Pre-Commit
       env:
@@ -47,7 +53,7 @@ jobs:
     - name: Check ALL Files On Branch
       if: github.event_name != 'pull_request'
       env:
-        SKIP: lint-salt,lint-tests,pyupgrade,remove-import-headers,rstcheck
+        SKIP: lint-salt,lint-tests,remove-import-headers,rstcheck
       run: |
         pre-commit run --show-diff-on-failure --color=always --all-files
 

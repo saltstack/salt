@@ -6,6 +6,7 @@ Functions for working with files
 import codecs
 import contextlib
 import errno
+import io
 import logging
 import os
 import re
@@ -55,8 +56,12 @@ def __clean_tmp(tmp):
     """
     try:
         rm_rf(tmp)
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error(
+            "Exception while removing temp directory: %s",
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
 
 
 def guess_archive_type(name):
@@ -377,6 +382,13 @@ def fopen(*args, **kwargs):
 
     if not binary and not kwargs.get("newline", None):
         kwargs["newline"] = ""
+
+    # Workaround callers with bad buffering setting for binary files
+    if kwargs.get("buffering") == 1 and "b" in kwargs.get("mode", ""):
+        log.debug(
+            "Line buffering (buffering=1) isn't supported in binary mode, the default buffer size will be used"
+        )
+        kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
@@ -751,7 +763,7 @@ def human_size_to_bytes(human_size):
     match = re.match(r"^(\d+)([KMGTP])?$", human_size_str)
     if not match:
         raise ValueError(
-            "Size must be all digits, with an optional unit type " "(K, M, G, T, or P)"
+            "Size must be all digits, with an optional unit type (K, M, G, T, or P)"
         )
     size_num = int(match.group(1))
     unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
@@ -783,6 +795,20 @@ def backup_minion(path, bkroot):
     if not salt.utils.platform.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
         os.chmod(bkpath, fstat.st_mode)
+
+
+def case_insensitive_filesystem(path=None):
+    """
+    Detect case insensitivity on a system.
+
+    Returns:
+        bool: Flag to indicate case insensitivity
+
+    .. versionadded:: 3004
+
+    """
+    with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
+        return os.path.exists(tmp_file.name.lower())
 
 
 def get_encoding(path):

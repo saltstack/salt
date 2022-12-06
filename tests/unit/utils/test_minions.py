@@ -1,8 +1,6 @@
-import sys
-
 import salt.utils.minions
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 NODEGROUPS = {
     "group1": "L@host1,host2,host3",
@@ -346,9 +344,6 @@ class CkMinionsTestCase(TestCase):
         self.assertTrue(ret)
 
 
-@skipIf(
-    sys.version_info < (2, 7), "Python 2.7 needed for dictionary equality assertions"
-)
 class TargetParseTestCase(TestCase):
     def test_parse_grains_target(self):
         """
@@ -462,7 +457,9 @@ class NodegroupCompTest(TestCase):
         Test a case where one nodegroup contains a second nodegroup
         """
         referenced_nodegroups = {
-            "group1": "L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com",
+            "group1": (
+                "L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com"
+            ),
             "group2": "G@os:Debian and N@group1",
         }
 

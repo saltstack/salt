@@ -2,8 +2,14 @@ name: Lint
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Salt:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Lint Salt's Source Code
     runs-on: ubuntu-latest
 
@@ -19,7 +25,7 @@ jobs:
         apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Nox
       env:
@@ -66,6 +72,9 @@ jobs:
         nox --forcecolor -e lint-salt
 
   Tests:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Lint Salt's Test Suite
     runs-on: ubuntu-latest
 
@@ -81,7 +90,7 @@ jobs:
         apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Nox
       env:

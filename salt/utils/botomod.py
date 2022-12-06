@@ -30,7 +30,7 @@ import logging
 import sys
 from functools import partial
 
-import salt.loader_context
+import salt.loader.context
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -54,7 +54,7 @@ log = logging.getLogger(__name__)
 
 __salt__ = None
 __virtualname__ = "boto"
-__salt_loader__ = salt.loader_context.LoaderContext()
+__salt_loader__ = salt.loader.context.LoaderContext()
 __context__ = __salt_loader__.named_context("__context__", {})
 
 
@@ -187,7 +187,7 @@ def get_connection(
             region, aws_access_key_id=keyid, aws_secret_access_key=key
         )
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError(
             "No authentication credentials found when "

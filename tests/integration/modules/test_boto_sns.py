@@ -1,12 +1,11 @@
 """
 Validate the boto_sns module
 """
-
-
 import re
 
+import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 try:
     import boto
@@ -16,9 +15,9 @@ except ImportError:
     NO_BOTO_MODULE = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_BOTO_MODULE,
-    "Please install the boto library before running boto integration tests.",
+    reason="Please install the boto library before running boto integration tests.",
 )
 class BotoSNSTest(ModuleCase):
     def setUp(self):
@@ -26,7 +25,8 @@ class BotoSNSTest(ModuleCase):
             boto.connect_iam()
         except boto.exception.NoAuthHandlerFound:
             self.skipTest(
-                "Please setup boto AWS credentials before running boto integration tests."
+                "Please setup boto AWS credentials before running boto integration"
+                " tests."
             )
         # The name of the topic you want to create.
         # Constraints: Topic names must be made up of only uppercase and

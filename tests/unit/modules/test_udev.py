@@ -25,14 +25,16 @@ class UdevTestCase(TestCase, LoaderModuleMockMixin):
         """
         cmd_out = {
             "retcode": 0,
-            "stdout": "P: /devices/virtual/vc/vcsa7\n"
-            "N: vcsa7\n"
-            "E: DEVNAME=/dev/vcsa7\n"
-            "E: DEVPATH=/devices/virtual/vc/vcsa7\n"
-            "E: MAJOR=7\n"
-            "E: MINOR=135\n"
-            "E: SUBSYSTEM=vc\n"
-            "\n",
+            "stdout": (
+                "P: /devices/virtual/vc/vcsa7\n"
+                "N: vcsa7\n"
+                "E: DEVNAME=/dev/vcsa7\n"
+                "E: DEVPATH=/devices/virtual/vc/vcsa7\n"
+                "E: MAJOR=7\n"
+                "E: MINOR=135\n"
+                "E: SUBSYSTEM=vc\n"
+                "\n"
+            ),
             "stderr": "",
         }
 

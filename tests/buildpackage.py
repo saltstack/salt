@@ -81,20 +81,24 @@ def _init():
     path_group.add_option(
         "--source-dir",
         default="/testing",
-        help="Source directory. Must be a git checkout. " "(default: %default)",
+        help="Source directory. Must be a git checkout. (default: %default)",
     )
     path_group.add_option(
         "--build-dir",
         default="/tmp/salt-buildpackage",
-        help="Build root, will be removed if it exists "
-        "prior to running script. (default: %default)",
+        help=(
+            "Build root, will be removed if it exists "
+            "prior to running script. (default: %default)"
+        ),
     )
     path_group.add_option(
         "--artifact-dir",
         default="/tmp/salt-packages",
-        help="Location where build artifacts should be "
-        "placed for Jenkins to retrieve them "
-        "(default: %default)",
+        help=(
+            "Location where build artifacts should be "
+            "placed for Jenkins to retrieve them "
+            "(default: %default)"
+        ),
     )
     parser.add_option_group(path_group)
 
@@ -105,7 +109,7 @@ def _init():
         "--spec",
         dest="spec_file",
         default="/tmp/salt.spec",
-        help="Spec file to use as a template to build RPM. " "(default: %default)",
+        help="Spec file to use as a template to build RPM. (default: %default)",
     )
     parser.add_option_group(rpm_group)
 
@@ -135,8 +139,9 @@ def _init():
     except OSError as exc:
         if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append(
-                "Unable to remove pre-existing destination "
-                "directory {}: {}".format(opts.build_dir, exc)
+                "Unable to remove pre-existing destination directory {}: {}".format(
+                    opts.build_dir, exc
+                )
             )
     finally:
         try:
@@ -152,8 +157,9 @@ def _init():
     except OSError as exc:
         if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append(
-                "Unable to remove pre-existing artifact directory "
-                "{}: {}".format(opts.artifact_dir, exc)
+                "Unable to remove pre-existing artifact directory {}: {}".format(
+                    opts.artifact_dir, exc
+                )
             )
     finally:
         try:

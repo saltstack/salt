@@ -67,7 +67,7 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
             [x for x in ret["stdout"].strip().split() if re.search(r"^\d.\d*", x)]
         )
     virtualenv_version_info = tuple(
-        [int(i) for i in re.sub(r"(rc|\+ds).*$", "", version).split(".")]
+        int(i) for i in re.sub(r"(rc|\+ds).*$", "", version).split(".")
     )
     return virtualenv_version_info
 
@@ -185,13 +185,15 @@ def create(
         # is actually passing a True or False value. Stop Him!
         if upgrade is not None:
             raise CommandExecutionError(
-                "The `upgrade`(`--upgrade`) option is not supported "
-                "by '{}'".format(venv_bin)
+                "The `upgrade`(`--upgrade`) option is not supported by '{}'".format(
+                    venv_bin
+                )
             )
         elif symlinks is not None:
             raise CommandExecutionError(
-                "The `symlinks`(`--symlinks`) option is not supported "
-                "by '{}'".format(venv_bin)
+                "The `symlinks`(`--symlinks`) option is not supported by '{}'".format(
+                    venv_bin
+                )
             )
         # <---- Stop the user if pyvenv only options are used ----------------
 
@@ -222,8 +224,9 @@ def create(
         if never_download is True:
             if (1, 10) <= virtualenv_version_info < (14, 0, 0):
                 log.info(
-                    "--never-download was deprecated in 1.10.0, but reimplemented in 14.0.0. "
-                    "If this feature is needed, please install a supported virtualenv version."
+                    "--never-download was deprecated in 1.10.0, but reimplemented in"
+                    " 14.0.0. If this feature is needed, please install a supported"
+                    " virtualenv version."
                 )
             else:
                 cmd.append("--never-download")
@@ -237,8 +240,9 @@ def create(
         # is actually passing a True or False value. Stop Him!
         if python is not None and python.strip() != "":
             raise CommandExecutionError(
-                "The `python`(`--python`) option is not supported "
-                "by '{}'".format(venv_bin)
+                "The `python`(`--python`) option is not supported by '{}'".format(
+                    venv_bin
+                )
             )
         elif extra_search_dir is not None and extra_search_dir.strip() != "":
             raise CommandExecutionError(
@@ -252,8 +256,9 @@ def create(
             )
         elif prompt is not None and prompt.strip() != "":
             raise CommandExecutionError(
-                "The `prompt`(`--prompt`) option is not supported "
-                "by '{}'".format(venv_bin)
+                "The `prompt`(`--prompt`) option is not supported by '{}'".format(
+                    venv_bin
+                )
             )
         # <---- Stop the user if virtualenv only options are being used ------
 
@@ -290,7 +295,7 @@ def create(
     # Install setuptools
     if (pip or distribute) and not os.path.exists(venv_setuptools):
         _install_script(
-            "https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py",
+            "https://bootstrap.pypa.io/ez_setup.py",
             path,
             venv_python,
             user,
@@ -344,7 +349,7 @@ def get_site_packages(venv):
 
     ret = __salt__["cmd.exec_code_all"](
         bin_path,
-        "from distutils import sysconfig; " "print(sysconfig.get_python_lib())",
+        "from distutils import sysconfig; print(sysconfig.get_python_lib())",
     )
 
     if ret["retcode"] != 0:
@@ -456,8 +461,9 @@ def get_resource_content(venv, package=None, resource=None):
 
     ret = __salt__["cmd.exec_code_all"](
         bin_path,
-        "import pkg_resources; "
-        "print(pkg_resources.resource_string('{}', '{}'))".format(package, resource),
+        "import pkg_resources; print(pkg_resources.resource_string('{}', '{}'))".format(
+            package, resource
+        ),
     )
 
     if ret["retcode"] != 0:

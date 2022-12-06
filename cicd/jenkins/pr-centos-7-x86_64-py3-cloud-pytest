@@ -1,7 +1,6 @@
 @Library('salt@master-1.11') _
 
 runTestSuite(
-    ami_image_id: 'ami-05764f27cdf8f99e0',
     concurrent_builds: 0,  // Don't cancel builds still running. Wait until they end.
     distro_name: 'centos',
     distro_version: '7',

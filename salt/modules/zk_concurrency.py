@@ -14,21 +14,25 @@ import logging
 import sys
 
 try:
-    import kazoo.client
-
-    from kazoo.retry import ForceRetryError
-    import kazoo.recipe.lock
-    import kazoo.recipe.barrier
-    import kazoo.recipe.party
-    from kazoo.exceptions import CancelledError
-    from kazoo.exceptions import NoNodeError
     from socket import gethostname
+
+    import kazoo.client
+    import kazoo.recipe.barrier
+    import kazoo.recipe.lock
+    import kazoo.recipe.party
+    from kazoo.exceptions import CancelledError, NoNodeError
+    from kazoo.retry import ForceRetryError
 
     # TODO: use the kazoo one, waiting for pull req:
     # https://github.com/python-zk/kazoo/pull/206
     class _Semaphore(kazoo.recipe.lock.Semaphore):
         def __init__(
-            self, client, path, identifier=None, max_leases=1, ephemeral_lease=True,
+            self,
+            client,
+            path,
+            identifier=None,
+            max_leases=1,
+            ephemeral_lease=True,
         ):
             identifier = identifier or gethostname()
             kazoo.recipe.lock.Semaphore.__init__(

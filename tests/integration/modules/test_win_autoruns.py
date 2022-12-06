@@ -1,10 +1,9 @@
 import pytest
-import salt.utils.platform
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
-@skipIf(not salt.utils.platform.is_windows(), "windows tests only")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class AutoRunsModuleTest(ModuleCase):
     """

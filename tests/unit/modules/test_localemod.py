@@ -1,21 +1,15 @@
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
+from tests.support.unit import TestCase
 
 
-@skipIf(not pytest, False)
 class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.localemod
@@ -152,9 +146,10 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                 localemod.log.error.call_args[0][0]
                 % localemod.log.error.call_args[0][1]
             )
-            assert msg == (
-                'Odd locale parameter "Fatal error right in front of screen" detected in dbus locale output.'
-                " This should not happen. You should probably investigate what caused this."
+            assert (
+                msg == 'Odd locale parameter "Fatal error right in front of screen"'
+                " detected in dbus locale output. This should not happen. You should"
+                " probably investigate what caused this."
             )
 
     @patch("salt.utils.path.which", MagicMock(return_value=None))

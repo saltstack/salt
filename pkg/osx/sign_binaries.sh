@@ -1,23 +1,24 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Binary Signing Script for the macOS installer
+# Title: Binary Signing Script for macOS
 # Author: Shane Lee
 # Date: December 2020
 #
-# Description: This signs all binaries built by the `build_env.sh` script as
-#              well as those created by installing salt. It assumes a python
-#              environment in /opt/salt with salt installed
+# Description: This signs all binaries built by the `build_python.sh` and the
+#              `installing_salt.sh` scripts.
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#       or
+#     - Xcode
 #
 # Usage:
-#     This script ignores any parameters passed to it
+#     This script does not require any parameters.
 #
 #     Example:
 #
-#         sudo ./sign_binaries
+#         ./sign_binaries
 #
 # Environment Setup:
 #
@@ -28,7 +29,7 @@
 #         security import "developerID_application.p12" -k ~/Library/Keychains/login.keychain
 #
 #         NOTE: The .p12 certificate is required as the .cer certificate is
-#               is missing the private key. This can be created by exporting the
+#               missing the private key. This can be created by exporting the
 #               certificate from the machine it was created on
 #
 #     Define Environment Variables:
@@ -39,72 +40,156 @@
 #         export DEV_APP_CERT="Developer ID Application: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "#########################################################################"
-echo "Signing Binaries"
 
-################################################################################
-# Make sure the script is launched with sudo
-################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
-fi
+#-------------------------------------------------------------------------------
+# Variables
+#-------------------------------------------------------------------------------
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+BUILD_DIR="$SCRIPT_DIR/build"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CMD_OUTPUT=$(mktemp -t cmd.log)
 
-################################################################################
-# Set to Exit on all Errors
-################################################################################
-trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
-
-quit_on_error() {
-    echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit -1
+#-------------------------------------------------------------------------------
+# Functions
+#-------------------------------------------------------------------------------
+# _usage
+#
+#   Prints out help text
+_usage() {
+     echo ""
+     echo "Script to sign binaries in preparation for packaging:"
+     echo ""
+     echo "usage: ${0}"
+     echo "             [-h|--help] [-v|--version]"
+     echo ""
+     echo "  -h, --help      this message"
+     echo ""
+     echo "  To sign binaries:"
+     echo "      example: $0"
 }
 
-################################################################################
-# Environment Variables
-################################################################################
-echo "**** Setting Variables"
-INSTALL_DIR=/opt/salt
+# _msg
+#
+#   Prints the message with a dash... no new line
+_msg() {
+    printf -- "- %s: " "$1"
+}
 
-################################################################################
+# _success
+#
+#   Prints a green Success
+_success() {
+    printf '\e[32m%s\e[0m\n' "Success"
+}
+
+# _failure
+#
+#   Prints a red Failure and exits
+_failure() {
+    printf '\e[31m%s\e[0m\n' "Failure"
+    echo "output >>>>>>"
+    cat "$CMD_OUTPUT" 1>&2
+    echo "<<<<<< output"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Get Parameters
+#-------------------------------------------------------------------------------
+while true; do
+    if [[ -z "$1" ]]; then break; fi
+    case "$1" in
+        -h | --help )
+            _usage
+            exit 0
+            ;;
+        -*)
+            echo "Invalid Option: $1"
+            echo ""
+            _usage
+            exit 1
+            ;;
+        * )
+            shift
+            ;;
+    esac
+done
+
+#-------------------------------------------------------------------------------
+# Delete temporary files on exit
+#-------------------------------------------------------------------------------
+function finish {
+    rm "$CMD_OUTPUT"
+}
+trap finish EXIT
+
+#-------------------------------------------------------------------------------
+# Script Start
+#-------------------------------------------------------------------------------
+printf "=%.0s" {1..80}; printf "\n"
+echo "Sign Binaries"
+printf -- "-%.0s" {1..80}; printf "\n"
+
+#-------------------------------------------------------------------------------
 # Sign python binaries in `bin` and `lib`
-################################################################################
-echo "**** Signing binaries that have entitlements (/opt/salt/bin)"
-find ${INSTALL_DIR}/bin \
+#-------------------------------------------------------------------------------
+_msg "Signing binaries with entitlements"
+if find "$BUILD_DIR" \
     -type f \
     -perm -u=x \
+    -follow \
+    ! -name "*.so" \
+    ! -name "*.dylib" \
+    ! -name "*.py" \
+    ! -name "*.sh" \
+    ! -name "*.bat" \
+    ! -name "*.pl" \
+    ! -name "*.crt" \
+    ! -name "*.key" \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --entitlements ./entitlements.plist \
-                   --sign "$DEV_APP_CERT" "{}" \;
+                   --force \
+                   --entitlements "$SCRIPT_DIR/entitlements.plist" \
+                   --sign "$DEV_APP_CERT" "{}" \; > "$CMD_OUTPUT" 2>&1; then
+    _success
+else
+    _failure
+fi
 
-echo "**** Signing binaries (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
-    -type f \
-    -perm -u=x \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-echo "**** Signing dynamic libraries (*dylib) (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
+_msg "Signing dynamic libraries (*dylib)"
+if find "$BUILD_DIR" \
     -type f \
     -name "*dylib" \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
+                   --force \
+                   --sign "$DEV_APP_CERT" "{}" \; > "$CMD_OUTPUT" 2>&1; then
+    _success
+else
+    _failure
+fi
 
-echo "**** Signing shared libraries (*.so) (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
+_msg "Signing shared libraries (*.so)"
+if find "$BUILD_DIR" \
     -type f \
     -name "*.so" \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
+                   --force \
+                   --sign "$DEV_APP_CERT" "{}" \;  > "$CMD_OUTPUT" 2>&1; then
+    _success
+else
+    _failure
+fi
 
-echo "**** Signing Binaries Completed Successfully"
-echo "#########################################################################"
+#-------------------------------------------------------------------------------
+# Script Complete
+#-------------------------------------------------------------------------------
+printf -- "-%.0s" {1..80}; printf "\n"
+echo "Sign Binaries Complete"
+printf "=%.0s" {1..80}; printf "\n"

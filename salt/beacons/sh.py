@@ -17,7 +17,12 @@ def __virtual__():
     """
     Only load if strace is installed
     """
-    return __virtualname__ if salt.utils.path.which("strace") else False
+    if salt.utils.path.which("strace"):
+        return __virtualname__
+    else:
+        err_msg = "strace is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def _get_shells():
@@ -42,7 +47,7 @@ def validate(config):
     """
     # Configuration for sh beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for sh beacon must be a list.")
+        return False, "Configuration for sh beacon must be a list."
     return True, "Valid beacon configuration"
 
 

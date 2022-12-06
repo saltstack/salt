@@ -25,7 +25,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-PATH = "PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:" "/usr/local/bin:/usr/local/sbin"
+PATH = "PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/usr/local/bin:/usr/local/sbin"
 
 
 def _validate(wrapped):
@@ -403,8 +403,9 @@ def copy_to(
         if path:
             lxcattach += " -P {}".format(pipes.quote(path))
         copy_cmd = (
-            'cat "{0}" | {4} --clear-env --set-var {1} -n {2} -- '
-            'tee "{3}"'.format(local_file, PATH, name, dest, lxcattach)
+            'cat "{0}" | {4} --clear-env --set-var {1} -n {2} -- tee "{3}"'.format(
+                local_file, PATH, name, dest, lxcattach
+            )
         )
     elif exec_driver == "nsenter":
         pid = __salt__["{}.pid".format(container_type)](name)

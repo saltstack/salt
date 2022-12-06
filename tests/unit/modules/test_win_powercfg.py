@@ -42,7 +42,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     "powercfg /getactivescheme", python_shell=False
                 )
                 mock_retcode.assert_called_once_with(
-                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e SUB_VIDEO VIDEOIDLE 0",
+                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e"
+                    " SUB_VIDEO VIDEOIDLE 0",
                     python_shell=False,
                 )
 
@@ -65,7 +66,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     "powercfg /getactivescheme", python_shell=False
                 )
                 mock_retcode.assert_called_once_with(
-                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e SUB_DISK DISKIDLE 0",
+                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e"
+                    " SUB_DISK DISKIDLE 0",
                     python_shell=False,
                 )
 
@@ -88,7 +90,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     "powercfg /getactivescheme", python_shell=False
                 )
                 mock_retcode.assert_called_once_with(
-                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP STANDBYIDLE 0",
+                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e"
+                    " SUB_SLEEP STANDBYIDLE 0",
                     python_shell=False,
                 )
 
@@ -111,7 +114,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     "powercfg /getactivescheme", python_shell=False
                 )
                 mock_retcode.assert_called_once_with(
-                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP HIBERNATEIDLE 0",
+                    "powercfg /setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e"
+                    " SUB_SLEEP HIBERNATEIDLE 0",
                     python_shell=False,
                 )
 
@@ -130,7 +134,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             calls = [
                 call("powercfg /getactivescheme", python_shell=False),
                 call(
-                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_VIDEO VIDEOIDLE",
+                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_VIDEO"
+                    " VIDEOIDLE",
                     python_shell=False,
                 ),
             ]
@@ -153,7 +158,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             calls = [
                 call("powercfg /getactivescheme", python_shell=False),
                 call(
-                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_DISK DISKIDLE",
+                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_DISK"
+                    " DISKIDLE",
                     python_shell=False,
                 ),
             ]
@@ -176,7 +182,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             calls = [
                 call("powercfg /getactivescheme", python_shell=False),
                 call(
-                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP STANDBYIDLE",
+                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP"
+                    " STANDBYIDLE",
                     python_shell=False,
                 ),
             ]
@@ -199,7 +206,8 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             calls = [
                 call("powercfg /getactivescheme", python_shell=False),
                 call(
-                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP HIBERNATEIDLE",
+                    "powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP"
+                    " HIBERNATEIDLE",
                     python_shell=False,
                 ),
             ]

@@ -14,7 +14,8 @@ def __virtual__():
         return "layman"
     return (
         False,
-        "layman execution module cannot be loaded: only available on Gentoo with layman installed.",
+        "layman execution module cannot be loaded: only available on Gentoo with layman"
+        " installed.",
     )
 
 

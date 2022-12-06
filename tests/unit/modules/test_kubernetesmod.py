@@ -2,17 +2,17 @@
     :codeauthor: Jochen Breuer <jbreuer@suse.de>
 """
 # pylint: disable=no-value-for-parameter
-
-
 import os
 from contextlib import contextmanager
+
+import pytest
 
 import salt.utils.files
 import salt.utils.platform
 from salt.modules import kubernetesmod as kubernetes
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 @contextmanager
@@ -26,9 +26,9 @@ def mock_kubernetes_library():
         yield mock_kubernetes_lib
 
 
-@skipIf(
+@pytest.mark.skipif(
     not kubernetes.HAS_LIBS,
-    "Kubernetes client lib is not installed. " "Skipping test_kubernetes.py",
+    reason="Kubernetes client lib is not installed. Skipping test_kubernetes.py",
 )
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -218,7 +218,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn()
                 self.assertEqual(
-                    self.settings("kubernetes.kubeconfig"), config["kubeconfig"],
+                    self.settings("kubernetes.kubeconfig"),
+                    config["kubeconfig"],
                 )
 
     def test_setup_kubeconfig_data_overwrite(self):
@@ -301,5 +302,6 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             2: 2,
         }
         self.assertEqual(
-            {"unicode": "1", "2": "2"}, func(data),
+            {"unicode": "1", "2": "2"},
+            func(data),
         )

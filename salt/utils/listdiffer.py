@@ -94,7 +94,7 @@ class ListDictDiffer:
             return recursive_list
         else:
             raise ValueError(
-                "The given type for recursive list matching " "is not supported."
+                "The given type for recursive list matching is not supported."
             )
 
     @property
@@ -162,8 +162,7 @@ class ListDictDiffer:
                     [
                         changes,
                         # Tabulate comment deeper, show the key attribute and the value
-                        "\tidentified by {} {}:"
-                        "\n\twill be removed\n".format(
+                        "\tidentified by {} {}:\n\twill be removed\n".format(
                             self._key, item.past_dict[self._key]
                         ),
                     ]
@@ -174,8 +173,7 @@ class ListDictDiffer:
                     [
                         changes,
                         # Tabulate comment deeper, show the key attribute and the value
-                        "\tidentified by {} {}:"
-                        "\n\twill be added\n".format(
+                        "\tidentified by {} {}:\n\twill be added\n".format(
                             self._key, item.current_dict[self._key]
                         ),
                     ]
@@ -193,8 +191,7 @@ class ListDictDiffer:
         for item in self._get_recursive_difference(type="intersect"):
             if item.diffs:
                 changes.append(
-                    "{tab}{0}={1} (updated):\n{tab}{tab}{2}"
-                    "".format(
+                    "{tab}{0}={1} (updated):\n{tab}{tab}{2}".format(
                         self._key,
                         item.past_dict[self._key],
                         item.changes_str.replace("\n", "\n{0}{0}".format(tab_string)),

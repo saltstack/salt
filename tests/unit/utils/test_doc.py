@@ -23,9 +23,12 @@ class DocUtilsTestCase(TestCase):
         ret = salt.utils.doc.parse_docstring(test_keystone_str)
         expected_dict = {
             "deps": ["keystoneclient"],
-            "full": "Management of Keystone users\n                                "
-            "============================\n\n                                "
-            ":depends:   - keystoneclient Python module\n                                "
-            ":configuration: See :py:mod:`salt.modules.keystone` for setup instructions.\n",
+            "full": (
+                "Management of Keystone users\n                               "
+                " ============================\n\n                               "
+                " :depends:   - keystoneclient Python module\n                         "
+                "       :configuration: See :py:mod:`salt.modules.keystone` for setup"
+                " instructions.\n"
+            ),
         }
         self.assertDictEqual(ret, expected_dict)

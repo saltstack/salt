@@ -36,14 +36,14 @@ from tests.unit.modules.nxos.nxos_n95k import N95KPlatform
 
 class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
-    """ Test cases for salt.modules.nxos_upgrade """
+    """Test cases for salt.modules.nxos_upgrade"""
 
     platform_list = None
 
     @staticmethod
     def assert_platform_upgrade(condition, platform):
 
-        """ Assert platform upgrade condition and display appropriate chassis & images upon assertion failure """
+        """Assert platform upgrade condition and display appropriate chassis & images upon assertion failure"""
 
         assert bool(condition), "{}: Upgrade {} -> {}".format(
             platform.chassis, platform.cimage, platform.nimage
@@ -51,7 +51,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
 
-        """ Define list of platforms for Unit Test """
+        """Define list of platforms for Unit Test"""
 
         self.platform_list = [
             N3KPlatform(cimage="nxos.7.0.3.F3.3.bin", nimage="nxos.9.2.1.255.bin"),
@@ -82,7 +82,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
     @staticmethod
     def test_check_upgrade_impact_input_validation():
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - input validation """
+        """UT: nxos_upgrade module:check_upgrade_impact method - input validation"""
 
         result = nxos_upgrade.check_upgrade_impact("dummy-platform-image.bin", issu=1)
         assert "Input Error" in result
@@ -90,14 +90,14 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
     @staticmethod
     def test_upgrade_input_validation():
 
-        """ UT: nxos_upgrade module:upgrade method - input validation """
+        """UT: nxos_upgrade module:upgrade method - input validation"""
 
         result = nxos_upgrade.upgrade("dummy-platform-image.bin", issu=1)
         assert "Input Error" in result
 
     def test_check_upgrade_impact_backend_processing_error_500(self):
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - error HTTP code 500 """
+        """UT: nxos_upgrade module:check_upgrade_impact method - error HTTP code 500"""
 
         for platform in self.platform_list:
             if platform.backend_processing_error_500:
@@ -117,7 +117,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_upgrade_impact_internal_server_error_400_invalid_command(self):
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - invalid command error HTTP code 400 """
+        """UT: nxos_upgrade module:check_upgrade_impact method - invalid command error HTTP code 400"""
 
         for platform in self.platform_list:
             if platform.bad_request_client_error_400_invalid_command_dict:
@@ -135,7 +135,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_upgrade_impact_internal_server_error_400_in_progress(self):
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - in-progress error HTTP code 400 """
+        """UT: nxos_upgrade module:check_upgrade_impact method - in-progress error HTTP code 400"""
 
         for platform in self.platform_list:
             if platform.bad_request_client_error_400_in_progress_dict:
@@ -153,7 +153,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_upgrade_impact_internal_server_error_500(self):
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - internal server error HTTP code 500 """
+        """UT: nxos_upgrade module:check_upgrade_impact method - internal server error HTTP code 500"""
 
         for platform in self.platform_list:
             if platform.internal_server_error_500:
@@ -177,7 +177,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_upgrade_impact_non_disruptive_success(self):
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - non-disruptive success """
+        """UT: nxos_upgrade module:check_upgrade_impact method - non-disruptive success"""
 
         for platform in self.platform_list:
             if platform.install_all_non_disruptive_success:
@@ -198,7 +198,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_upgrade_impact_disruptive_success(self):
 
-        """ UT: nxos_upgrade module:check_upgrade_impact method - disruptive success """
+        """UT: nxos_upgrade module:check_upgrade_impact method - disruptive success"""
 
         for platform in self.platform_list:
             if platform.install_all_disruptive_success:
@@ -226,7 +226,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_show_install_all_impact_no_module_data(self):
 
-        """ UT: nxos_upgrade module: upgrade method - no module data """
+        """UT: nxos_upgrade module: upgrade method - no module data"""
 
         for platform in self.platform_list:
             if platform.show_install_all_impact_no_module_data:
@@ -246,7 +246,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_invalid_command(self):
 
-        """ UT: nxos_upgrade module:upgrade method - invalid command """
+        """UT: nxos_upgrade module:upgrade method - invalid command"""
 
         for platform in self.platform_list:
             if platform.invalid_command:
@@ -260,7 +260,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_install_in_progress(self):
 
-        """ UT: nxos_upgrade module:upgrade method - in-progress """
+        """UT: nxos_upgrade module:upgrade method - in-progress"""
 
         for platform in self.platform_list:
             if platform.show_install_all_impact_in_progress:
@@ -278,7 +278,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_install_in_progress_terminal_dont_ask(self):
 
-        """ UT: nxos_upgrade module:upgrade method - in-progress (terminal don't-ask) """
+        """UT: nxos_upgrade module:upgrade method - in-progress (terminal don't-ask)"""
 
         for platform in self.platform_list:
             if platform.invalid_command:
@@ -299,7 +299,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_install_in_progress_sans_terminal_dont_ask(self):
 
-        """ UT: nxos_upgrade module:upgrade method - in-progress (sans terminal don't-ask) """
+        """UT: nxos_upgrade module:upgrade method - in-progress (sans terminal don't-ask)"""
 
         for platform in self.platform_list:
             if platform.invalid_command:
@@ -317,7 +317,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_internal_server_error_500(self):
 
-        """ UT: nxos_upgrade module:upgrade method - internal server error 500 """
+        """UT: nxos_upgrade module:upgrade method - internal server error 500"""
 
         for platform in self.platform_list:
             if platform.backend_processing_error_500:
@@ -338,7 +338,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_install_all_disruptive(self):
 
-        """ UT: nxos_upgrade module:upgrade method - install all disruptive """
+        """UT: nxos_upgrade module:upgrade method - install all disruptive"""
 
         for platform in self.platform_list:
             if platform.show_install_all_impact:
@@ -368,7 +368,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_install_all_non_disruptive(self):
 
-        """ UT: nxos_upgrade module:upgrade method - install all non-disruptive """
+        """UT: nxos_upgrade module:upgrade method - install all non-disruptive"""
 
         for platform in self.platform_list:
             if platform.show_install_all_impact_non_disruptive:
@@ -391,7 +391,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_CommandExecutionError_Exception(self):
 
-        """ UT: nxos_upgrade module:upgrade method - raise CommandExecutionError exception #1 """
+        """UT: nxos_upgrade module:upgrade method - raise CommandExecutionError exception #1"""
 
         for platform in self.platform_list:
             if platform.invalid_command:
@@ -419,7 +419,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_CommandExecutionError_Exception2(self):
 
-        """ UT: nxos_upgrade module:upgrade method - raise CommandExecutionError exception #2 """
+        """UT: nxos_upgrade module:upgrade method - raise CommandExecutionError exception #2"""
 
         for platform in self.platform_list:
             if platform.invalid_command:
@@ -455,7 +455,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_NxosError_Exception(self):
 
-        """ UT: nxos_upgrade module:upgrade method - raise NxosError exception """
+        """UT: nxos_upgrade module:upgrade method - raise NxosError exception"""
 
         for platform in self.platform_list:
             if platform.internal_server_error_500:
@@ -486,7 +486,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_upgrade_NxosError_Exception2(self):
 
-        """ UT: nxos_upgrade module:upgrade method - raise NxosError exception #2 """
+        """UT: nxos_upgrade module:upgrade method - raise NxosError exception #2"""
 
         for platform in self.platform_list:
             if platform.internal_server_error_500:

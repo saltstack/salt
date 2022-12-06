@@ -7,6 +7,7 @@ import io
 import sys
 
 import yaml  # pylint: disable=blacklisted-import
+
 from salt.utils.decorators.jinja import jinja_filter
 
 
@@ -46,8 +47,9 @@ def yaml_encode(data):
     ynode = yrepr.represent_data(data)
     if not isinstance(ynode, yaml.ScalarNode):
         raise TypeError(
-            "yaml_encode() only works with YAML scalar data;"
-            " failed for {}".format(type(data))
+            "yaml_encode() only works with YAML scalar data; failed for {}".format(
+                type(data)
+            )
         )
 
     tag = ynode.tag.rsplit(":", 1)[-1]

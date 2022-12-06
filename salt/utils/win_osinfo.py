@@ -7,14 +7,18 @@ import ctypes
 
 HAS_WIN32 = True
 try:
-    from ctypes.wintypes import BYTE, WORD, DWORD, WCHAR
+    from ctypes.wintypes import BYTE, DWORD, WCHAR, WORD
+
     import win32net
     import win32netcon
 except (ImportError, ValueError):
     HAS_WIN32 = False
 
 if HAS_WIN32:
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True,)
+    kernel32 = ctypes.WinDLL(
+        "kernel32",
+        use_last_error=True,
+    )
 
 
 # Although utils are often directly imported, it is also possible to use the

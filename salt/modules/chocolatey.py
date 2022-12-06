@@ -10,9 +10,10 @@ import os
 import re
 import tempfile
 
+from requests.structures import CaseInsensitiveDict
+
 import salt.utils.data
 import salt.utils.platform
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -44,8 +45,7 @@ def __virtual__():
     if __grains__["osrelease"] in ("XP", "2003Server"):
         return (
             False,
-            "Cannot load module chocolatey: Chocolatey requires "
-            "Windows Vista or later",
+            "Cannot load module chocolatey: Chocolatey requires Windows Vista or later",
         )
 
     return __virtualname__
@@ -248,7 +248,7 @@ def bootstrap(force=False, source=None):
                 log.debug("Downloading PowerShell...")
                 __salt__["cp.get_url"](path=url, dest=dest)
             except MinionError:
-                err = "Failed to download PowerShell KB for {}" "".format(
+                err = "Failed to download PowerShell KB for {}".format(
                     __grains__["osrelease"]
                 )
                 if source:
@@ -335,7 +335,7 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation " "script: {}".format(script)
+            "Failed to find Chocolatey installation script: {}".format(script)
         )
 
     # Run the Chocolatey bootstrap
@@ -1126,7 +1126,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     return packages
 
 
-def add_source(name, source_location, username=None, password=None):
+def add_source(name, source_location, username=None, password=None, priority=None):
     """
     Instructs Chocolatey to add a source.
 
@@ -1144,11 +1144,18 @@ def add_source(name, source_location, username=None, password=None):
         Provide password for chocolatey sources that need authentication
         credentials.
 
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> priority=100
         salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
 
     """
@@ -1165,6 +1172,8 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(["--user", username])
     if password:
         cmd.extend(["--password", password])
+    if priority:
+        cmd.extend(["--priority", priority])
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:

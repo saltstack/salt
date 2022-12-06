@@ -414,7 +414,8 @@ def _make_regex(pem_type):
     return re.compile(
         r"\s*(?P<pem_header>-----BEGIN {0}-----)\s+"
         r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
-        r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
+        r"(?:(?P<dek_info>DEK-Info:"
+        r" (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
         r"-----END {0}-----)\s*".format(pem_type),
         re.DOTALL,
@@ -469,7 +470,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith("-----"):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[: pem_temp.index("-----", 5) + 5])
@@ -486,7 +487,7 @@ def get_pem_entry(text, pem_type=None):
 
     errmsg = "PEM text not valid:\n{}".format(text)
     if pem_type:
-        errmsg = "PEM does not contain a single entry of type {}:\n" "{}".format(
+        errmsg = "PEM does not contain a single entry of type {}:\n{}".format(
             pem_type, text
         )
 
@@ -1634,13 +1635,6 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
 
     if "signing_private_key_passphrase" not in kwargs:
         kwargs["signing_private_key_passphrase"] = None
-    if "testrun" in kwargs and kwargs["testrun"] is True:
-        cert_props = read_certificate(cert)
-        cert_props["Issuer Public Key"] = get_public_key(
-            kwargs["signing_private_key"],
-            passphrase=kwargs["signing_private_key_passphrase"],
-        )
-        return cert_props
 
     if not verify_private_key(
         private_key=kwargs["signing_private_key"],
@@ -1648,8 +1642,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         public_key=signing_cert,
     ):
         raise salt.exceptions.SaltInvocationError(
-            "signing_private_key: {} "
-            "does no match signing_cert: {}".format(
+            "signing_private_key: {} does no match signing_cert: {}".format(
                 kwargs["signing_private_key"], kwargs.get("signing_cert", "")
             )
         )
@@ -1666,6 +1659,14 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         raise salt.exceptions.SaltInvocationError(
             "failed to verify certificate signature"
         )
+
+    if "testrun" in kwargs and kwargs["testrun"] is True:
+        cert_props = read_certificate(cert)
+        cert_props["Issuer Public Key"] = get_public_key(
+            kwargs["signing_private_key"],
+            passphrase=kwargs["signing_private_key_passphrase"],
+        )
+        return cert_props
 
     if "copypath" in kwargs:
         if "prepend_cn" in kwargs and kwargs["prepend_cn"] is True:
@@ -1911,10 +1912,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if "verify OK" in output:
-        return True
-    else:
-        return False
+    return "verify OK" in output
 
 
 def expired(certificate):

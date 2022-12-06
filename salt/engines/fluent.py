@@ -40,7 +40,7 @@ import logging
 import salt.utils.event
 
 try:
-    from fluent import sender, event
+    from fluent import event, sender
 except ImportError:
     sender = None
 
@@ -78,7 +78,6 @@ def start(host="localhost", port=24224, app="engine"):
     else:
         event_bus = salt.utils.event.get_event(
             "minion",
-            transport=__opts__["transport"],
             opts=__opts__,
             sock_dir=__opts__["sock_dir"],
             listen=True,

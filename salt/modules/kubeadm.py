@@ -1,4 +1,5 @@
 """
+Module for kubeadm
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
@@ -980,9 +981,11 @@ def init(
     apiserver_cert_extra_sans=None,
     cert_dir=None,
     certificate_key=None,
+    control_plane_endpoint=None,
     config=None,
     cri_socket=None,
     experimental_upload_certs=False,
+    upload_certs=False,
     feature_gates=None,
     ignore_preflight_errors=None,
     image_repository=None,
@@ -1024,11 +1027,17 @@ def init(
     config
        Path to a kubeadm configuration file
 
+    control_plane_endpoint
+       Specify a stable IP address or DNS name for the control plane
+
     cri_socket
        Path to the CRI socket to connect
 
     experimental_upload_certs
-       Upload control-plane certificate to the kubeadm-certs Secret
+       Upload control-plane certificate to the kubeadm-certs Secret. ( kubeadm version =< 1.16 )
+
+    upload_certs
+       Upload control-plane certificate to the kubeadm-certs Secret. ( kubeadm version > 1.16 )
 
     feature_gates
        A set of key=value pairs that describe feature gates for
@@ -1092,6 +1101,8 @@ def init(
 
     if experimental_upload_certs:
         cmd.append("--experimental-upload-certs")
+    if upload_certs:
+        cmd.append("--upload-certs")
     if skip_certificate_key_print:
         cmd.append("--skip-certificate-key-print")
     if skip_token_print:
@@ -1104,6 +1115,7 @@ def init(
         ("cert-dir", cert_dir),
         ("certificate-key", certificate_key),
         ("config", config),
+        ("control-plane-endpoint", control_plane_endpoint),
         ("cri-socket", cri_socket),
         ("feature-gates", feature_gates),
         ("ignore-preflight-errors", ignore_preflight_errors),
@@ -1173,6 +1185,7 @@ def join(
     discovery_token_ca_cert_hash=None,
     discovery_token_unsafe_skip_ca_verification=False,
     experimental_control_plane=False,
+    control_plane=False,
     ignore_preflight_errors=None,
     node_name=None,
     skip_phases=None,
@@ -1223,7 +1236,10 @@ def join(
        'discovery-token-ca-cert-hash' pinning
 
     experimental_control_plane
-       Create a new control plane instance on this node
+       Create a new control plane instance on this node (kubeadm version =< 1.16)
+
+    control_plane
+       Create a new control plane instance on this node (kubeadm version > 1.16)
 
     ignore_preflight_errors
        A list of checks whose errors will be shown as warnings
@@ -1260,6 +1276,8 @@ def join(
         cmd.append("--discovery-token-unsafe-skip-ca-verification")
     if experimental_control_plane:
         cmd.append("--experimental-control-plane")
+    if control_plane:
+        cmd.append("--control-plane")
 
     parameters = [
         ("apiserver-advertise-address", apiserver_advertise_address),

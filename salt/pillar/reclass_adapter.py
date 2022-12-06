@@ -121,7 +121,7 @@ def ext_pillar(minion_id, pillar, **kwargs):
     except KeyError as e:
         if "id" in str(e):
             raise SaltInvocationError(
-                "ext_pillar.reclass: __opts__ does not " "define minion ID"
+                "ext_pillar.reclass: __opts__ does not define minion ID"
             )
         else:
             raise

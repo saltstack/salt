@@ -3,12 +3,14 @@ import random
 import string
 from copy import deepcopy
 
+import pytest
+
 import salt.loader
 import salt.modules.boto_s3_bucket as boto_s3_bucket
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
@@ -110,7 +112,9 @@ if _has_required_boto():
         "get_bucket_notification_configuration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {
@@ -147,11 +151,12 @@ if _has_required_boto():
     }
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None

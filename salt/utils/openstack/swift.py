@@ -77,7 +77,8 @@ class SaltSwift:
         """
         if not HAS_SWIFT:
             log.error(
-                "Error:: unable to find swiftclient. Try installing it from the appropriate repository."
+                "Error:: unable to find swiftclient. Try installing it from the"
+                " appropriate repository."
             )
             return None
 

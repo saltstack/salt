@@ -1,4 +1,5 @@
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.saltutil
@@ -10,7 +11,8 @@ from tests.support.mock import patch
 def opts(salt_master_factory):
     config_overrides = {"master_uri": "tcp://127.0.0.1:11111"}
     factory = salt_master_factory.salt_minion_daemon(
-        "get-tops-minion", overrides=config_overrides,
+        "get-tops-minion",
+        overrides=config_overrides,
     )
     yield factory.config.copy()
 

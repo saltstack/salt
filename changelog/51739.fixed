@@ -1,0 +1,1 @@
+Passes the value of the force parameter from file.copy to its call to file.remove so that files with the read-only attribute are handled.

@@ -2,16 +2,16 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-import sys
+import pytest
 
 import salt.states.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not sys.platform.startswith("linux"), "Test for Linux only")
+@pytest.mark.skip_unless_on_linux
 class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.states.linux_acl
@@ -68,9 +68,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
             # Update - test=True
             with patch.dict(linux_acl.__opts__, {"test": True}):
-                comt = (
-                    "Updated permissions will be applied for {}: r-x -> {}"
-                    "".format(acl_name, perms)
+                comt = "Updated permissions will be applied for {}: r-x -> {}".format(
+                    acl_name, perms
                 )
                 ret = {
                     "name": name,
@@ -207,8 +206,9 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                 # Update - test=True
                 with patch.dict(linux_acl.__opts__, {"test": True}):
                     comt = (
-                        "Updated permissions will be applied for {}: rwx -> {}"
-                        "".format(acl_name, perms)
+                        "Updated permissions will be applied for {}: rwx -> {}".format(
+                            acl_name, perms
+                        )
                     )
                     ret = {
                         "name": name,

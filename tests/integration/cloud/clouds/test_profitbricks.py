@@ -1,10 +1,9 @@
 """
     :codeauthor: Ethan Devenport <ethand@stackpointcloud.com>
 """
-
+import pytest
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 try:
     # pylint: disable=unused-import
@@ -15,7 +14,9 @@ except ImportError:
     HAS_PROFITBRICKS = False
 
 
-@skipIf(HAS_PROFITBRICKS is False, "salt-cloud requires >= profitbricks 4.1.0")
+@pytest.mark.skipif(
+    HAS_PROFITBRICKS is False, reason="salt-cloud requires >= profitbricks 4.1.0"
+)
 class ProfitBricksTest(CloudTest):
     """
     Integration tests for the ProfitBricks cloud provider
@@ -33,8 +34,9 @@ class ProfitBricksTest(CloudTest):
         # If they are 'foo' and 'bar' it is the same as not being set
 
         self.skipTest(
-            "Conf items are missing that must be provided to run these tests:  username, password"
-            "\nCheck tests/integration/files/conf/cloud.providers.d/{}.conf".format(
+            "Conf items are missing that must be provided to run these tests: "
+            " username, password\nCheck"
+            " tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                 self.PROVIDER
             )
         )

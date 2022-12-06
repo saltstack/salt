@@ -38,7 +38,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         otherwise returns ``False``.
         """
         with patch.dict(smf.__salt__, {"cmd.run": MagicMock(return_value="A")}):
-            with patch.object(smf, "get_all", return_value=("A")):
+            with patch.object(smf, "get_all", return_value="A"):
                 self.assertTrue(smf.available("A"))
 
     def test_missing(self):
@@ -48,7 +48,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         returns ``False``.
         """
         with patch.dict(smf.__salt__, {"cmd.run": MagicMock(return_value="A")}):
-            with patch.object(smf, "get_all", return_value=("A")):
+            with patch.object(smf, "get_all", return_value="A"):
                 self.assertFalse(smf.missing("A"))
 
     def test_get_all(self):

@@ -39,7 +39,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The haproxyconn execution module cannot be loaded: haproxyctl module not available",
+        "The haproxyconn execution module cannot be loaded: haproxyctl module not"
+        " available",
     )
 
 

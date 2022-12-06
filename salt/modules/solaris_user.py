@@ -121,7 +121,7 @@ def add(
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     """
     if salt.utils.data.is_true(kwargs.pop("system", False)):
-        log.warning("solaris_user module does not support the 'system' " "argument")
+        log.warning("solaris_user module does not support the 'system' argument")
     if kwargs:
         log.warning("Invalid kwargs passed to user.add")
 
@@ -178,7 +178,7 @@ def delete(name, remove=False, force=False):
     """
     if salt.utils.data.is_true(force):
         log.warning(
-            "userdel does not support force-deleting user while user is " "logged in"
+            "userdel does not support force-deleting user while user is logged in"
         )
     cmd = ["userdel"]
     if remove:
@@ -443,7 +443,7 @@ def list_users():
 
         salt '*' user.list_users
     """
-    return sorted([user.pw_name for user in pwd.getpwall()])
+    return sorted(user.pw_name for user in pwd.getpwall())
 
 
 def rename(name, new_name):

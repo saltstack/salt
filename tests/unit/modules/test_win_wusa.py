@@ -2,16 +2,16 @@
 Test the win_wusa execution module
 """
 
+import pytest
 
 import salt.modules.win_wusa as win_wusa
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.skip_unless_on_windows
 class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
     """
     test the functions in the win_wusa execution module
@@ -44,7 +44,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             "pid": 1,
             "retcode": 0,
             "stderr": "",
-            "stdout": '[{"HotFixID": "KB123456"}, ' '{"HotFixID": "KB123457"}]',
+            "stdout": '[{"HotFixID": "KB123456"}, {"HotFixID": "KB123457"}]',
         }
         mock_all = MagicMock(return_value=ret)
         with patch.dict(win_wusa.__salt__, {"cmd.run_all": mock_all}):
@@ -112,9 +112,8 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
         self.assertEqual(
-            "{} correctly installed but server reboot is needed to complete installation. Additional info follows:\n\n{}".format(
-                name, retcode
-            ),
+            "{} correctly installed but server reboot is needed to complete"
+            " installation. Additional info follows:\n\n{}".format(name, retcode),
             excinfo.exception.strerror,
         )
 

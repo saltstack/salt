@@ -1,7 +1,7 @@
 """
-.. versionadded:: 2017.7
-
 Management of Zabbix Valuemap object over Zabbix API.
+
+.. versionadded:: 2017.7
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """
@@ -55,7 +55,8 @@ def present(name, params, **kwargs):
     params["name"] = name
     input_params = __salt__["zabbix.substitute_params"](params, **kwargs)
     log.info(
-        "Zabbix Value map: input params: %s", str(json.dumps(input_params, indent=4)),
+        "Zabbix Value map: input params: %s",
+        str(json.dumps(input_params, indent=4)),
     )
 
     search = {"output": "extend", "selectMappings": "extend", "filter": {"name": name}}
@@ -97,10 +98,14 @@ def present(name, params, **kwargs):
                 ret["comment"] = 'Zabbix Value map "{}" would be fixed.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{}" differs '
-                        "in following parameters: {}".format(name, diff_params),
-                        "new": 'Zabbix Value map "{}" would correspond to definition.'.format(
-                            name
+                        "old": (
+                            'Zabbix Value map "{}" differs '
+                            "in following parameters: {}".format(name, diff_params)
+                        ),
+                        "new": (
+                            'Zabbix Value map "{}" would correspond to definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -117,8 +122,10 @@ def present(name, params, **kwargs):
                     ret["comment"] = 'Zabbix Value map "{}" updated.'.format(name)
                     ret["changes"] = {
                         name: {
-                            "old": 'Zabbix Value map "{}" differed '
-                            "in following parameters: {}".format(name, diff_params),
+                            "old": (
+                                'Zabbix Value map "{}" differed '
+                                "in following parameters: {}".format(name, diff_params)
+                            ),
                             "new": 'Zabbix Value map "{}" fixed.'.format(name),
                         }
                     }
@@ -138,8 +145,10 @@ def present(name, params, **kwargs):
             ret["changes"] = {
                 name: {
                     "old": 'Zabbix Value map "{}" does not exist.'.format(name),
-                    "new": 'Zabbix Value map "{}" would be created '
-                    "according definition.".format(name),
+                    "new": (
+                        'Zabbix Value map "{}" would be created '
+                        "according definition.".format(name)
+                    ),
                 }
             }
         else:
@@ -148,7 +157,8 @@ def present(name, params, **kwargs):
                 "valuemap.create", input_params, **kwargs
             )
             log.info(
-                "Zabbix Value map: valuemap.create result: %s", str(valuemap_create),
+                "Zabbix Value map: valuemap.create result: %s",
+                str(valuemap_create),
             )
 
             if valuemap_create:
@@ -157,8 +167,10 @@ def present(name, params, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Value map "{}" did not exist.'.format(name),
-                        "new": 'Zabbix Value map "{}" created according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Value map "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }

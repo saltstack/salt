@@ -6,26 +6,27 @@
 """
 # pylint: disable=invalid-name,no-member
 
-
 import re
+
+import pytest
 
 try:
     # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch
+    import salt.modules.kernelpkg_linux_apt as kernelpkg
+    from salt.exceptions import CommandExecutionError
 
     # Import Salt Libs
     from tests.support.kernelpkg import KernelPkgTestCase
-    import salt.modules.kernelpkg_linux_apt as kernelpkg
-    from salt.exceptions import CommandExecutionError
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.mock import MagicMock, patch
+    from tests.support.unit import TestCase
 
     HAS_MODULES = True
 except ImportError:
     HAS_MODULES = False
 
 
-@skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
 class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.kernelpkg_linux_apt

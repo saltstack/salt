@@ -1,19 +1,19 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.twilio_notify as twilio_notify
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 HAS_LIBS = False
 try:
     import twilio
 
     # Grab version, ensure elements are ints
-    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    twilio_version = tuple(int(x) for x in twilio.__version_info__)
     if twilio_version > (5,):
         TWILIO_5 = False
     else:
@@ -88,7 +88,7 @@ class MockTwilioRestClient:
             self.messages = MockMessages()
 
 
-@skipIf(not HAS_LIBS, "twilio.rest is not available")
+@pytest.mark.skipif(not HAS_LIBS, reason="twilio.rest is not available")
 class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.twilio_notify

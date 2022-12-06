@@ -1,0 +1,1 @@
+Remove Azure deprecation messages from functions that always run w/ salt-cloud

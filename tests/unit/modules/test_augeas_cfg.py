@@ -1,28 +1,30 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.augeas_cfg as augeas_cfg
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Make sure augeas python interface is installed
 if augeas_cfg.HAS_AUGEAS:
     from augeas import Augeas as _Augeas
 
 
-@skipIf(augeas_cfg.HAS_AUGEAS is False, "python-augeas is required for this test case")
+@pytest.mark.skipif(
+    augeas_cfg.HAS_AUGEAS is False,
+    reason="python-augeas is required for this test case",
+)
 class AugeasCfgTestCase(TestCase):
     """
     Test cases for salt.modules.augeas_cfg
     """
 
     # 'execute' function tests: 3
-    @skipIf(
-        True,
-        "Disabled pending https://github.com/hercules-team/python-augeas/issues/30",
+    @pytest.mark.skip(
+        "Disabled pending https://github.com/hercules-team/python-augeas/issues/30"
     )
     def test_execute(self):
         """

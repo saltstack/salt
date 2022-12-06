@@ -193,8 +193,10 @@ def get_config_resolver_class(cid=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
-        cookie, h, cid
+    payload = (
+        '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
+            cookie, h, cid
+        )
     )
     r = __utils__["http.query"](
         DETAILS["url"],

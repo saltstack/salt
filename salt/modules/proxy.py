@@ -68,7 +68,7 @@ def _get_proxy_windows(types=None):
     if servers and "=" in servers:
         split = servers.split(";")
         for s in split:
-            if len(s) == 0:
+            if not s:
                 continue
 
             if ":" in s:
@@ -422,7 +422,8 @@ def set_proxy_bypass(domains, network_service="Ethernet"):
     """
     servers_str = " ".join(domains)
     cmd = "networksetup -setproxybypassdomains {} {}".format(
-        network_service, servers_str,
+        network_service,
+        servers_str,
     )
     out = __salt__["cmd.run"](cmd)
 

@@ -464,7 +464,8 @@ def _init_nxapi(opts):
             conn_args["host"],
         )
         log.error(
-            "-- Verify that nxapi settings on the NX-OS device and proxy minion config file match"
+            "-- Verify that nxapi settings on the NX-OS device and proxy minion config"
+            " file match"
         )
         log.error("-- Exception Generated: %s", ex)
         raise

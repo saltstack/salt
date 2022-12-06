@@ -152,10 +152,11 @@ def profile_add(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__["cmd.run_all"](
             'usermod -P "{profiles}" {login}'.format(
-                login=user, profiles=",".join(set(profile_get(user) + valid_profiles)),
+                login=user,
+                profiles=",".join(set(profile_get(user) + valid_profiles)),
             )
         )
         if res["retcode"] > 0:
@@ -208,7 +209,7 @@ def profile_rm(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__["cmd.run_all"](
             'usermod -P "{profiles}" {login}'.format(
                 login=user,
@@ -350,10 +351,11 @@ def role_add(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__["cmd.run_all"](
             'usermod -R "{roles}" {login}'.format(
-                login=user, roles=",".join(set(role_get(user) + valid_roles)),
+                login=user,
+                roles=",".join(set(role_get(user) + valid_roles)),
             )
         )
         if res["retcode"] > 0:
@@ -406,7 +408,7 @@ def role_rm(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__["cmd.run_all"](
             'usermod -R "{roles}" {login}'.format(
                 login=user,
@@ -548,10 +550,11 @@ def auth_add(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__["cmd.run_all"](
             'usermod -A "{auths}" {login}'.format(
-                login=user, auths=",".join(set(auth_get(user, False) + valid_auths)),
+                login=user,
+                auths=",".join(set(auth_get(user, False) + valid_auths)),
             )
         )
         if res["retcode"] > 0:
@@ -604,7 +607,7 @@ def auth_rm(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__["cmd.run_all"](
             'usermod -A "{auths}" {login}'.format(
                 login=user,

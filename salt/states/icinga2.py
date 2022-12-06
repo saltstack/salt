@@ -87,10 +87,9 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
                 return ret
             elif __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Ticket generation would be executed, storing result in grain: {}:{}".format(
-                    grain, key
+                ret["comment"] = (
+                    "Ticket generation would be executed, storing result in grain:"
+                    " {}:{}".format(grain, key)
                 )
                 return ret
         else:

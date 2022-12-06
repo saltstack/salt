@@ -1,8 +1,3 @@
-"""
-Tests for salt.utils.path
-"""
-
-
 import ntpath
 import os
 import platform
@@ -10,12 +5,14 @@ import posixpath
 import sys
 import tempfile
 
+import pytest
+
 import salt.utils.compat
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class PathJoinTestCase(TestCase):
@@ -38,7 +35,7 @@ class PathJoinTestCase(TestCase):
         (("c:", r"\temp", r"\foo\bar"), "c:\\temp\\foo\\bar"),
     )
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_nix_paths(self):
         if platform.system().lower() == "windows":
             self.skipTest(
@@ -48,7 +45,7 @@ class PathJoinTestCase(TestCase):
             path = salt.utils.path.join(*parts)
             self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_windows_paths(self):
         if platform.system().lower() != "windows":
             self.skipTest(
@@ -60,7 +57,7 @@ class PathJoinTestCase(TestCase):
             path = salt.utils.path.join(*parts)
             self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
     def test_windows_paths_patched_path_module(self):
         if platform.system().lower() == "windows":
             self.skipTest(
@@ -76,7 +73,7 @@ class PathJoinTestCase(TestCase):
 
         self.__unpatch_path()
 
-    @skipIf(salt.utils.platform.is_windows(), "*nix-only test")
+    @pytest.mark.skip_on_windows(reason="*nix-only test")
     def test_mixed_unicode_and_binary(self):
         """
         This tests joining paths that contain a mix of components with unicode
@@ -288,8 +285,10 @@ class TestWhich(TestCase):
                             os.environ,
                             {
                                 "PATH": os.sep + "bin",
-                                "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;"
-                                ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY",
+                                "PATHEXT": (
+                                    ".COM;.EXE;.BAT;.CMD;.VBS;"
+                                    ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY"
+                                ),
                             },
                         ):
 

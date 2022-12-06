@@ -28,11 +28,9 @@ else:
 
     # Import functions not in __all__
     # pylint: disable=unused-import,3rd-party-module-not-gated
-    from psutil import disk_partitions
-    from psutil import disk_usage
+    from psutil import disk_partitions, disk_usage
 
     # pylint: enable=unused-import,3rd-party-module-not-gated
-
     # Alias new module functions
     def boot_time():
         return psutil.BOOT_TIME
@@ -46,7 +44,7 @@ else:
         users = psutil.get_users
     except AttributeError:
         users = lambda: (_ for _ in ()).throw(
-            NotImplementedError("Your " "psutil version is too old")
+            NotImplementedError("Your psutil version is too old")
         )
 
     # Deprecated in 1.0.1, but not mentioned in blog post

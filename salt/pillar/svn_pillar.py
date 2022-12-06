@@ -172,7 +172,7 @@ def ext_pillar(minion_id, pillar, repo_string):  # pylint: disable=W0613
         DELIM = "="
         if DELIM not in extraopt:
             log.error(
-                "Incorrectly formatted extra parameter. " "Missing '%s': %s",
+                "Incorrectly formatted extra parameter. Missing '%s': %s",
                 DELIM,
                 extraopt,
             )

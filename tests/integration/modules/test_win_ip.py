@@ -1,11 +1,11 @@
 import re
 
-import salt.utils.platform
+import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
-@skipIf(not salt.utils.platform.is_windows(), "windows test only")
+@pytest.mark.skip_unless_on_windows
 class WinIPTest(ModuleCase):
     """
     Tests for salt.modules.win_ip

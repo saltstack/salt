@@ -83,9 +83,9 @@ except ImportError:
     HAS_CLC = False
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
-    from requests.packages.urllib3 import (
+    from requests.packages.urllib3 import (  # pylint: disable=no-name-in-module
         disable_warnings,
-    )  # pylint: disable=no-name-in-module
+    )
 
     disable_warnings()
 except Exception:  # pylint: disable=broad-except
@@ -119,7 +119,12 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("token", "token_pass", "user", "password",),
+        (
+            "token",
+            "token_pass",
+            "user",
+            "password",
+        ),
     )
 
 
@@ -331,32 +336,68 @@ def create(vm_):
         __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
     group = config.get_cloud_config_value(
-        "group", vm_, __opts__, search_global=False, default=None,
+        "group",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     name = vm_["name"]
     description = config.get_cloud_config_value(
-        "description", vm_, __opts__, search_global=False, default=None,
+        "description",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     ram = config.get_cloud_config_value(
-        "ram", vm_, __opts__, search_global=False, default=None,
+        "ram",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     backup_level = config.get_cloud_config_value(
-        "backup_level", vm_, __opts__, search_global=False, default=None,
+        "backup_level",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     template = config.get_cloud_config_value(
-        "template", vm_, __opts__, search_global=False, default=None,
+        "template",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     password = config.get_cloud_config_value(
-        "password", vm_, __opts__, search_global=False, default=None,
+        "password",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     cpu = config.get_cloud_config_value(
-        "cpu", vm_, __opts__, search_global=False, default=None,
+        "cpu",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     network = config.get_cloud_config_value(
-        "network", vm_, __opts__, search_global=False, default=None,
+        "network",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     location = config.get_cloud_config_value(
-        "location", vm_, __opts__, search_global=False, default=None,
+        "location",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
     if len(name) > 6:
         name = name[0:6]

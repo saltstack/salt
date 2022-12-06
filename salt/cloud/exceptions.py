@@ -24,8 +24,9 @@ class SaltCloudSystemExit(SaltCloudException):
 
     def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
-        self.message = "{} [WARNING: salt.cloud.exceptions is deprecated. Please migrate to salt.exceptions!]".format(
-            message
+        self.message = (
+            "{} [WARNING: salt.cloud.exceptions is deprecated. Please migrate to"
+            " salt.exceptions!]".format(message)
         )
         self.exit_code = exit_code
 

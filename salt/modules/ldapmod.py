@@ -153,7 +153,7 @@ def search(
     _ldap = _connect(**kwargs)
     start = time.time()
     log.debug(
-        "Running LDAP search with filter:%s, dn:%s, scope:%s, " "attrs:%s",
+        "Running LDAP search with filter:%s, dn:%s, scope:%s, attrs:%s",
         filter,
         dn,
         scope,

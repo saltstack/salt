@@ -95,8 +95,9 @@ def _run_all(cmd):
 
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to run command '{}' with the context '{}', "
-            "reason: {}".format(cmd, kwargs, exc)
+            "Unable to run command '{}' with the context '{}', reason: {}".format(
+                cmd, kwargs, exc
+            )
         )
 
     ret = {}

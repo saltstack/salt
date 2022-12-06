@@ -72,9 +72,10 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
         diff = __salt__["infoblox.diff_objects"](data, obj)
         if not diff:
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "supplied fields already updated (note: removing fields might not update)"
+            ret["comment"] = (
+                "supplied fields already updated (note: removing fields might not"
+                " update)"
+            )
             return ret
 
         if diff:
@@ -110,10 +111,9 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
                                     addr["ipv4addr"] = ip
                                     found_matches += 1
                             if found_matches > 1:
-                                ret[
-                                    "comment"
-                                ] = "infoblox record cant updated because ipaddress {} matches multiple func:nextavailableip".format(
-                                    ip
+                                ret["comment"] = (
+                                    "infoblox record cant updated because ipaddress {}"
+                                    " matches multiple func:nextavailableip".format(ip)
                                 )
                                 ret["result"] = False
                                 return ret
@@ -122,9 +122,10 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
                 obj["_ref"], data=data, **api_opts
             )
             ret["result"] = True
-            ret[
-                "comment"
-            ] = "infoblox record fields updated (note: removing fields might not update)"
+            ret["comment"] = (
+                "infoblox record fields updated (note: removing fields might not"
+                " update)"
+            )
             # ret['changes'] = {'diff': diff }
             return ret
 

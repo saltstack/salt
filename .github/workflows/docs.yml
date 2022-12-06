@@ -2,8 +2,14 @@ name: Docs
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   Salt:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Build Salt Documentation
     runs-on: ubuntu-latest
 
@@ -19,7 +25,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -53,12 +59,15 @@ jobs:
         nox --forcecolor -e 'docs-html(compress=False, clean=True)'
 
     - name: Store Generated Documentation
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: salt-html-docs
         path: doc/_build/html
 
   Manpages:
+    permissions:
+      contents: read  # for dorny/paths-filter to fetch a list of changed files
+      pull-requests: read  # for dorny/paths-filter to read pull requests
     name: Build Salt man Pages
     runs-on: ubuntu-latest
 
@@ -74,7 +83,7 @@ jobs:
         apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
         apt-get install -y git/buster-backports
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - id: changed-files
       name: Get Changed Files
@@ -110,7 +119,7 @@ jobs:
 
     - name: Store Generated Documentation
       if: github.event_name == 'push' || steps.changed-files.outputs.docs == 'true'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: salt-man-pages
         path: doc/_build/man

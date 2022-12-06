@@ -18,6 +18,8 @@ def __virtual__():
         return (False, "Module linux_ip: Windows systems are not supported.")
     if __grains__["os_family"] == "RedHat":
         return (False, "Module linux_ip: RedHat systems are not supported.")
+    if __grains__["os_family"] == "Suse":
+        return (False, "Module linux_ip: SUSE systems are not supported.")
     if __grains__["os_family"] == "Debian":
         return (False, "Module linux_ip: Debian systems are not supported.")
     if __grains__["os_family"] == "NILinuxRT":
@@ -170,7 +172,10 @@ def _hex_to_octets(addr):
     Convert hex fields from /proc/net/route to octects
     """
     return "{}:{}:{}:{}".format(
-        int(addr[6:8], 16), int(addr[4:6], 16), int(addr[2:4], 16), int(addr[0:2], 16),
+        int(addr[6:8], 16),
+        int(addr[4:6], 16),
+        int(addr[2:4], 16),
+        int(addr[0:2], 16),
     )
 
 

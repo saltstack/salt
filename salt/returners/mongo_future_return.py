@@ -170,24 +170,23 @@ def _get_conn(ret):
     if uri and PYMONGO_VERSION > _LooseVersion("2.3"):
         if uri and host:
             raise salt.exceptions.SaltConfigurationError(
-                "Mongo returner expects either uri or host configuration. Both were provided"
+                "Mongo returner expects either uri or host configuration. Both were"
+                " provided"
             )
         pymongo.uri_parser.parse_uri(uri)
         conn = pymongo.MongoClient(uri)
         mdb = conn.get_database()
     else:
         if PYMONGO_VERSION > _LooseVersion("2.3"):
-            conn = pymongo.MongoClient(host, port)
+            conn = pymongo.MongoClient(host, port, username=user, password=password)
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(
                     "pymongo <= 2.3 does not support uri format"
                 )
-            conn = pymongo.Connection(host, port)
+            conn = pymongo.Connection(host, port, username=user, password=password)
 
         mdb = conn[db_]
-        if user and password:
-            mdb.authenticate(user, password)
 
     if indexes:
         if PYMONGO_VERSION > _LooseVersion("2.3"):
