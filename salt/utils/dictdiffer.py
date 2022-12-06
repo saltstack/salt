@@ -232,76 +232,122 @@ class RecursiveDictDiffer(DictDiffer):
                     new_value = "'{}'".format(diff_dict[p]["new"])
                 elif isinstance(diff_dict[p]["new"], list):
                     new_value = "'{}'".format(", ".join(diff_dict[p]["new"]))
-                changes_strings.append(
-                    "{} from {} to {}".format(p, old_value, new_value)
-                )
+                changes_strings.append(f"{p} from {old_value} to {new_value}")
             else:
                 sub_changes = cls._get_changes(diff_dict[p])
                 if sub_changes:
-                    changes_strings.append("{}:".format(p))
-                    changes_strings.extend(["  {}".format(c) for c in sub_changes])
+                    changes_strings.append(f"{p}:")
+                    changes_strings.extend([f"  {c}" for c in sub_changes])
         return changes_strings
 
-    def added(self):
+    def _it_addrm(
+        self,
+        key_a,
+        key_b,
+        include_nested=False,
+        diffs=None,
+        prefix="",
+        is_nested=False,
+        separator=".",
+    ):
+        keys = []
+        if diffs is None:
+            diffs = self.diffs
+
+        for key in diffs.keys():
+            if is_nested:
+                keys.append(f"{prefix}{key}")
+
+            if not isinstance(diffs[key], dict):
+                continue
+
+            if is_nested:
+                keys.extend(
+                    self._it_addrm(
+                        key_a,
+                        key_b,
+                        diffs=diffs[key],
+                        prefix=f"{prefix}{key}{separator}",
+                        is_nested=is_nested,
+                        include_nested=include_nested,
+                    )
+                )
+            elif "old" not in diffs[key]:
+                keys.extend(
+                    self._it_addrm(
+                        key_a,
+                        key_b,
+                        diffs=diffs[key],
+                        prefix=f"{prefix}{key}{separator}",
+                        is_nested=is_nested,
+                        include_nested=include_nested,
+                    )
+                )
+            elif diffs[key][key_a] == self.NONE_VALUE:
+                keys.append(f"{prefix}{key}")
+
+                if isinstance(diffs[key][key_b], dict) and include_nested:
+                    keys.extend(
+                        self._it_addrm(
+                            key_a,
+                            key_b,
+                            diffs=diffs[key][key_b],
+                            is_nested=True,
+                            prefix=f"{prefix}{key}{separator}",
+                            include_nested=include_nested,
+                        )
+                    )
+        return keys
+
+    def added(
+        self, include_nested=False, separator="."
+    ):  # pylint: disable=arguments-differ
         """
         Returns all keys that have been added.
 
-        If the keys are in child dictionaries they will be represented with
-        . notation
+        include_nested
+            If an added key contains a dictionary, include its
+            keys in dot notation as well. Defaults to false.
+
+            .. versionadded:: 3006
+
+        separator
+            Separator used to indicate nested keys. Defaults to ``.``.
+
+            .. versionadded:: 3006
         """
+        return sorted(self._it_addrm("old", "new", include_nested, separator=separator))
 
-        def _added(diffs, prefix):
-            keys = []
-            for key in diffs.keys():
-                if isinstance(diffs[key], dict) and "old" not in diffs[key]:
-                    keys.extend(_added(diffs[key], prefix="{}{}.".format(prefix, key)))
-                elif diffs[key]["old"] == self.NONE_VALUE:
-                    if isinstance(diffs[key]["new"], dict):
-                        keys.extend(
-                            _added(
-                                diffs[key]["new"], prefix="{}{}.".format(prefix, key)
-                            )
-                        )
-                    else:
-                        keys.append("{}{}".format(prefix, key))
-            return keys
-
-        return sorted(_added(self._diffs, prefix=""))
-
-    def removed(self):
+    def removed(
+        self, include_nested=False, separator="."
+    ):  # pylint: disable=arguments-differ
         """
         Returns all keys that have been removed.
 
-        If the keys are in child dictionaries they will be represented with
-        . notation
+        include_nested
+            If an added key contains a dictionary, include its
+            keys in dot notation as well. Defaults to false.
+
+            .. versionadded:: 3006
+
+        separator
+            Separator used to indicate nested keys. Defaults to ``.``.
+
+            .. versionadded:: 3006
         """
+        return sorted(self._it_addrm("new", "old", include_nested, separator=separator))
 
-        def _removed(diffs, prefix):
-            keys = []
-            for key in diffs.keys():
-                if isinstance(diffs[key], dict) and "old" not in diffs[key]:
-                    keys.extend(
-                        _removed(diffs[key], prefix="{}{}.".format(prefix, key))
-                    )
-                elif diffs[key]["new"] == self.NONE_VALUE:
-                    keys.append("{}{}".format(prefix, key))
-                elif isinstance(diffs[key]["new"], dict):
-                    keys.extend(
-                        _removed(diffs[key]["new"], prefix="{}{}.".format(prefix, key))
-                    )
-            return keys
-
-        return sorted(_removed(self._diffs, prefix=""))
-
-    def changed(self):
+    def changed(self, separator="."):  # pylint: disable=arguments-differ
         """
         Returns all keys that have been changed.
 
-        If the keys are in child dictionaries they will be represented with
-        . notation
+        separator
+            Separator used to indicate nested keys. Defaults to ``.``.
+
+            .. versionadded:: 3006
         """
 
-        def _changed(diffs, prefix):
+        def _changed(diffs, prefix, separator):
             keys = []
             for key in diffs.keys():
                 if not isinstance(diffs[key], dict):
@@ -309,7 +355,11 @@ class RecursiveDictDiffer(DictDiffer):
 
                 if isinstance(diffs[key], dict) and "old" not in diffs[key]:
                     keys.extend(
-                        _changed(diffs[key], prefix="{}{}.".format(prefix, key))
+                        _changed(
+                            diffs[key],
+                            prefix=f"{prefix}{key}{separator}",
+                            separator=separator,
+                        )
                     )
                     continue
                 if self.ignore_unset_values:
@@ -323,14 +373,19 @@ class RecursiveDictDiffer(DictDiffer):
                             keys.extend(
                                 _changed(
                                     diffs[key]["new"],
-                                    prefix="{}{}.".format(prefix, key),
+                                    prefix=f"{prefix}{key}{separator}",
+                                    separator=separator,
                                 )
                             )
                         else:
-                            keys.append("{}{}".format(prefix, key))
+                            keys.append(f"{prefix}{key}")
                     elif isinstance(diffs[key], dict):
                         keys.extend(
-                            _changed(diffs[key], prefix="{}{}.".format(prefix, key))
+                            _changed(
+                                diffs[key],
+                                prefix=f"{prefix}{key}{separator}",
+                                separator=separator,
+                            )
                         )
                 else:
                     if "old" in diffs[key] and "new" in diffs[key]:
@@ -338,33 +393,40 @@ class RecursiveDictDiffer(DictDiffer):
                             keys.extend(
                                 _changed(
                                     diffs[key]["new"],
-                                    prefix="{}{}.".format(prefix, key),
+                                    prefix=f"{prefix}{key}{separator}",
+                                    separator=separator,
                                 )
                             )
                         else:
-                            keys.append("{}{}".format(prefix, key))
+                            keys.append(f"{prefix}{key}")
                     elif isinstance(diffs[key], dict):
                         keys.extend(
-                            _changed(diffs[key], prefix="{}{}.".format(prefix, key))
+                            _changed(
+                                diffs[key],
+                                prefix=f"{prefix}{key}{separator}",
+                                separator=separator,
+                            )
                         )
 
             return keys
 
-        return sorted(_changed(self._diffs, prefix=""))
+        return sorted(_changed(self._diffs, prefix="", separator=separator))
 
-    def unchanged(self):
+    def unchanged(self, separator="."):  # pylint: disable=arguments-differ
         """
         Returns all keys that have been unchanged.
 
-        If the keys are in child dictionaries they will be represented with
-        . notation
+        separator
+            Separator used to indicate nested keys. Defaults to ``.``.
+
+            .. versionadded:: 3006
         """
 
-        def _unchanged(current_dict, diffs, prefix):
+        def _unchanged(current_dict, diffs, prefix, separator):
             keys = []
             for key in current_dict.keys():
                 if key not in diffs:
-                    keys.append("{}{}".format(prefix, key))
+                    keys.append(f"{prefix}{key}")
                 elif isinstance(current_dict[key], dict):
                     if "new" in diffs[key]:
                         # There is a diff
@@ -374,13 +436,16 @@ class RecursiveDictDiffer(DictDiffer):
                             _unchanged(
                                 current_dict[key],
                                 diffs[key],
-                                prefix="{}{}.".format(prefix, key),
+                                prefix=f"{prefix}{key}{separator}",
+                                separator=separator,
                             )
                         )
 
             return keys
 
-        return sorted(_unchanged(self.current_dict, self._diffs, prefix=""))
+        return sorted(
+            _unchanged(self.current_dict, self._diffs, prefix="", separator=separator)
+        )
 
     @property
     def diffs(self):
