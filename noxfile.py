@@ -38,9 +38,11 @@ COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
 
 # Global Path Definitions
 REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
-SITECUSTOMIZE_DIR = str(REPO_ROOT / "tests" / "support" / "coverage")
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 COVERAGE_OUTPUT_DIR = ARTIFACTS_DIR / "coverage"
+COVERAGE_FILE = os.environ.get("COVERAGE_FILE")
+if COVERAGE_FILE is None:
+    COVERAGE_FILE = str(COVERAGE_OUTPUT_DIR / ".coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
@@ -132,11 +134,14 @@ def _get_session_python_version_info(session):
             "python",
             "-c",
             'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
+            stderr=None,
             silent=True,
             log=False,
         )
         version_info = tuple(
-            int(part) for part in session_py_version.split(".") if part.isdigit()
+            int(part)
+            for part in session_py_version.strip().split(".")
+            if part.isdigit()
         )
         session._runner._real_python_version_info = version_info
     return version_info
@@ -305,7 +310,7 @@ def _install_requirements(
     return True
 
 
-def _run_with_coverage(session, *test_cmd, env=None):
+def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
@@ -313,34 +318,61 @@ def _run_with_coverage(session, *test_cmd, env=None):
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
-    session.run("coverage", "erase")
-    python_path_env_var = os.environ.get("PYTHONPATH") or None
-    if python_path_env_var is None:
-        python_path_env_var = SITECUSTOMIZE_DIR
-    else:
-        python_path_entries = python_path_env_var.split(os.pathsep)
-        if SITECUSTOMIZE_DIR in python_path_entries:
-            python_path_entries.remove(SITECUSTOMIZE_DIR)
-        python_path_entries.insert(0, SITECUSTOMIZE_DIR)
-        python_path_env_var = os.pathsep.join(python_path_entries)
 
-    coverage_base_env = {
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage")
-    }
+
+def _run_with_coverage(session, *test_cmd, env=None):
+    _install_coverage_requirement(session)
+    session.run("coverage", "erase")
+
     if env is None:
         env = {}
 
-    env.update(
-        {
-            # The updated python path so that sitecustomize is importable
-            "PYTHONPATH": python_path_env_var,
-            # Instruct sub processes to also run under coverage
-            "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
-        },
-        **coverage_base_env,
+    coverage_base_env = {}
+
+    sitecustomize_dir = session.run(
+        "salt-factories", "--coverage", silent=True, log=True, stderr=None
     )
+    if sitecustomize_dir is not None:
+        sitecustomize_dir = pathlib.Path(sitecustomize_dir.strip()).resolve()
+        if not sitecustomize_dir.exists():
+            session.error(
+                f"The path to 'sitecustomize.py', '{str(sitecustomize_dir)}', does not exist."
+            )
+
+    if sitecustomize_dir:
+        try:
+            session.log(
+                "Discovered salt-factories coverage 'sitecustomize.py' path: "
+                f"{sitecustomize_dir.relative_to(REPO_ROOT)}"
+            )
+        except ValueError:
+            session.log(
+                "Discovered salt-factories coverage 'sitecustomize.py' path: "
+                f"{sitecustomize_dir}"
+            )
+        python_path_env_var = os.environ.get("PYTHONPATH") or None
+        if python_path_env_var is None:
+            python_path_env_var = str(sitecustomize_dir)
+        else:
+            python_path_entries = python_path_env_var.split(os.pathsep)
+            if str(sitecustomize_dir) in python_path_entries:
+                python_path_entries.remove(str(sitecustomize_dir))
+            python_path_entries.insert(0, str(sitecustomize_dir))
+            python_path_env_var = os.pathsep.join(python_path_entries)
+
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        coverage_base_env["COVERAGE_FILE"] = COVERAGE_FILE
+
+        env.update(
+            {
+                # The updated python path so that sitecustomize is importable
+                "PYTHONPATH": python_path_env_var,
+                # Instruct sub processes to also run under coverage
+                "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
+            },
+            **coverage_base_env,
+        )
 
     try:
         session.run(*test_cmd, env=env)
@@ -383,7 +415,7 @@ def _report_coverage(session):
     env = {
         # The full path to the .coverage data file. Makes sure we always write
         # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage"),
+        "COVERAGE_FILE": COVERAGE_FILE,
     }
 
     report_section = None
