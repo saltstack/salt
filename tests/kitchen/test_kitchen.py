@@ -7,15 +7,15 @@ the KitchenTestCase.
 
 import os
 
-import salt.utils.path
 import setup
 from salt.modules import cmdmod as cmd
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
+import pytest
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-@skipIf(not salt.utils.path.which("bundle"), "Bundler is not installed")
+@pytest.mark.skip_if_binaries_missing("bundle")
 class KitchenTestCase(TestCase):
     """
     Test kitchen environments

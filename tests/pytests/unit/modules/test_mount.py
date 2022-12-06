@@ -5,7 +5,6 @@
 import logging
 import os
 import shutil
-import sys
 import textwrap
 
 import pytest
@@ -409,10 +408,6 @@ def test_set_filesystems():
                 )
 
 
-@pytest.mark.skipif(
-    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
-    reason="run on Python 3.6 or greater where OrderedDict is default",
-)
 @pytest.mark.skip_on_windows(
     reason="Not supported on Windows, does not handle tabs well"
 )

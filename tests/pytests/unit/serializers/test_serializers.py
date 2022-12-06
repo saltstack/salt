@@ -17,7 +17,6 @@ import salt.utils.platform
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import ON_PY35
 
 SKIP_MESSAGE = "{} is unavailable, have prerequisites been met?"
 
@@ -109,7 +108,6 @@ def test_compare_sls_vs_yaml():
 
 @pytest.mark.skipif(yaml.available is False, reason=SKIP_MESSAGE.format("yaml"))
 @pytest.mark.skipif(yamlex.available is False, reason=SKIP_MESSAGE.format("sls"))
-@pytest.mark.skipif(ON_PY35 is True, reason="This test is unreliable under Py3.5")
 def test_compare_sls_vs_yaml_with_jinja():
     tpl = "{{ data }}"
     env = jinja2.Environment()

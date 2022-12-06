@@ -2,13 +2,14 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import pytest
 
 import salt.modules.win_groupadd as win_groupadd
 import salt.utils.win_functions
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=unused-import
 try:
@@ -51,9 +52,9 @@ class MockGroupObj:
         """
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_WIN_LIBS,
-    "win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are"
+    reason="win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are"
     " installed",
 )
 class WinGroupTestCase(TestCase, LoaderModuleMockMixin):

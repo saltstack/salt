@@ -1537,6 +1537,7 @@ def symlink(
     win_inheritance=None,
     atomic=False,
     disallow_copy_and_unlink=False,
+    inherit_user_and_group=False,
     **kwargs
 ):
     """
@@ -1581,11 +1582,13 @@ def symlink(
 
     user
         The user to own the file, this defaults to the user salt is running as
-        on the minion
+        on the minion unless the link already exists and
+        ``inherit_user_and_group`` is set
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion. On Windows, this is ignored
+        is running as on the minion unless the link already exists and
+        ``inherit_user_and_group`` is set. On Windows, this is ignored
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
@@ -1631,6 +1634,15 @@ def symlink(
         unlink" approach, which is required for moving across filesystems.
 
         .. versionadded:: 3006.0
+
+    inherit_user_and_group
+        If set to ``True``, the link already exists, and either ``user`` or
+        ``group`` are not set, this parameter will inform Salt to pull the user
+        and group information from the existing link and use it where ``user``
+        or ``group`` is not set. The ``user`` and ``group`` parameters will
+        override this behavior.
+
+        .. versionadded:: 3006.0
     """
     name = os.path.expanduser(name)
 
@@ -1642,6 +1654,18 @@ def symlink(
     mode = salt.utils.files.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
+
+    if (
+        inherit_user_and_group
+        and (user is None or group is None)
+        and __salt__["file.is_link"](name)
+    ):
+        cur_user, cur_group = _get_symlink_ownership(name)
+        if user is None:
+            user = cur_user
+        if group is None:
+            group = cur_group
+
     if user is None:
         user = __opts__["user"]
 
@@ -3916,9 +3940,15 @@ def directory(
     if tchanges:
         ret["changes"].update(tchanges)
 
-    # Don't run through the reset of the function if there are no changes to be
-    # made
-    if __opts__["test"] or not ret["changes"]:
+    if __opts__["test"]:
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        return ret
+
+    # Don't run through the rest of the function if there are no changes to be
+    # made, except on windows since _check_directory_win just basically checks
+    # ownership and permissions
+    if not salt.utils.platform.is_windows() and not ret["changes"]:
         ret["result"] = tresult
         ret["comment"] = tcomment
         return ret
