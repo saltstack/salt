@@ -30,7 +30,7 @@ def _get_rvm_location(runas=None):
     for path in [which_result, "/usr/share/rvm/bin/rvm", "/usr/local/rvm/bin/rvm"]:
         if path and os.path.exists(path):
             return [path]
-    return [None]
+    raise FileNotFoundError("rvm binary not found")
 
 
 def _rvm(command, runas=None, cwd=None, env=None):
@@ -66,7 +66,7 @@ def is_installed(runas=None):
     """
     try:
         return __salt__["cmd.has_exec"](_get_rvm_location(runas)[0])
-    except IndexError:
+    except (IndexError, FileNotFoundError):
         return False
 
 
