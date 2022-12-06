@@ -210,16 +210,12 @@ def test_owner(modules):
     """
     test finding the package owning a file
     """
-    func = "pkg.owner"
     ret = modules.pkg.owner("/bin/ls")
     assert len(ret) != 0
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
-@pytest.mark.skipif(
-    not salt.utils.platform.is_freebsd(),
-    reason="test for new package manager for FreeBSD",
-)
+@pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
 def test_which(modules):
     """
@@ -260,8 +256,7 @@ def test_install_remove(modules, test_pkg, refresh_db):
 
 
 @pytest.mark.destructive_test
-@pytest.mark.skipif(
-    salt.utils.platform.is_photonos(),
+@pytest.mark.skip_on_photonos(
     reason="package hold/unhold unsupported on Photon OS",
 )
 @pytest.mark.requires_salt_modules(
@@ -455,10 +450,8 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg, refresh_db)
 
 
 @pytest.mark.destructive_test
-@pytest.mark.skipif(
-    salt.utils.platform.is_darwin() is True,
-    reason="The jenkins user is equivalent to root on mac, causing the test to be"
-    " unrunnable",
+@pytest.mark.skip_on_darwin(
+    reason="The jenkins user is equivalent to root on mac, causing the test to be unrunnable"
 )
 @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
 @pytest.mark.slow_test

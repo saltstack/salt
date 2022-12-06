@@ -28,7 +28,7 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.14
+gitpython==3.1.29
     # via -r requirements/windows.txt
 idna==2.8
     # via requests
@@ -49,7 +49,9 @@ jaraco.text==3.5.0
     # via jaraco.collections
 jinja2==3.0.3
     # via -r requirements/base.txt
-libnacl==1.7.2
+jmespath==1.0.1
+    # via -r requirements/base.txt
+libnacl==1.8.0
     # via -r requirements/windows.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
@@ -71,17 +73,17 @@ msgpack==1.0.2
 portend==2.6
     # via cherrypy
 psutil==5.8.0
-    # via -r requirements/windows.txt
+    # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
-pycparser==2.20
+pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
     #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5
+pymssql==2.2.7
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
@@ -95,14 +97,13 @@ pythonnet==2.5.2
     # via -r requirements/windows.txt
 pytz==2022.1
     # via tempora
-pywin32==303
+pywin32==305
     # via
     #   -r requirements/windows.txt
-    #   cherrypy
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
@@ -115,7 +116,6 @@ six==1.15.0
     #   cheroot
     #   pyopenssl
     #   python-dateutil
-    #   tempora
 smmap==4.0.0
     # via gitdb
 tempora==4.1.1
@@ -123,7 +123,9 @@ tempora==4.1.1
 timelib==0.2.5
     # via -r requirements/windows.txt
 urllib3==1.26.6
-    # via requests
+    # via
+    #   -r requirements/windows.txt
+    #   requests
 wheel==0.36.2
     # via -r requirements/windows.txt
 wmi==1.5.1

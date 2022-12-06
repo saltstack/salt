@@ -330,7 +330,9 @@ azure==4.0.0 ; sys_platform != "win32"
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==3.1.6
-    # via paramiko
+    # via
+    #   paramiko
+    #   passlib
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -621,7 +623,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   junos-eznc
     #   ncclient
     #   scp
-passlib==1.7.2 ; sys_platform != "win32"
+passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.9.0
     # via yamllint
@@ -652,8 +654,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version >= "3.10"
-    # via -r requirements/static/ci/common.in
 pygit2==1.8.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
@@ -683,7 +683,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc22 ; sys_platform != "win32" and python_version >= "3.7"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories

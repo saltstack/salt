@@ -23,12 +23,7 @@ from salt.utils.stringutils import to_bytes as bts
 from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
+from tests.support.unit import TestCase
 
 
 def patch_if(condition, *args, **kwargs):
@@ -44,7 +39,6 @@ def patch_if(condition, *args, **kwargs):
     return inner
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SSHThinTestCase(TestCase):
     """
     TestCase for SaltSSH-related parts.
@@ -1347,9 +1341,7 @@ class SSHThinTestCase(TestCase):
                 assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     @pytest.mark.slow_test
-    @skipIf(
-        salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
-    )
+    @pytest.mark.skip_on_windows(reason="salt-ssh does not deploy to/from windows")
     def test_thin_dir(self):
         """
         Test the thin dir to make sure salt-call can run

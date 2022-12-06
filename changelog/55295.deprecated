@@ -1,0 +1,2 @@
+renamed `keep_jobs`, specifying job cache TTL in hours, to `keep_jobs_seconds`, specifying TTL in seconds.
+`keep_jobs` will be removed in the Argon release

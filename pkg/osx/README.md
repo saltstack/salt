@@ -5,7 +5,7 @@ Salt runs well on the macOS, but does have some limitations.
 
 In this directory you will find scripts and collateral to build a macOS
 .pkg-style package that uses a custom-built Python.  This process has been
-tested on macOS Lion (10.7) and later.
+tested on macOS Catalina (10.15) and later.
 
 This approach enables Salt users to potentially add items to their Salt install
 via 'pip install' without interfering with the rest of their system's Python
@@ -20,7 +20,7 @@ To build a native package you will need the following installed:
 - git
 
 The native package will install program files into ``/opt/salt``. Configuration
-files will be installed to ``/etc/salt``, but will have '.dist' appended to
+files will be installed to ``etc/salt``, but will have '.dist' appended to
 them.
 
 Launchd plists will be placed in /Library/LaunchDaemons. By default, salt-minion

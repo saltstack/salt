@@ -74,7 +74,11 @@ syndic_user: salt
 #verify_env: True
 
 # Set the number of hours to keep old job information in the job cache:
+# This option is deprecated by the keep_jobs_seconds option.
 #keep_jobs: 24
+
+# Set the number of seconds to keep old job information in the job cache:
+#keep_jobs_seconds: 86400
 
 # The number of seconds to wait when the client is requesting information
 # about running jobs.

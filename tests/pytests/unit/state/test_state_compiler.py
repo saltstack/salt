@@ -698,7 +698,7 @@ def test_verify_retry_parsing(minion_opts):
             assert set(expected_result).issubset(set(state_obj.call(low_data)))
 
 
-def test_render_requisite_require_disabled(tmp_path, minion_opts):
+def test_render_requisite_require_disabled(minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -728,7 +728,6 @@ def test_render_requisite_require_disabled(tmp_path, minion_opts):
             },
         }
 
-        minion_opts["cachedir"] = str(tmp_path)
         minion_opts["disabled_requisites"] = ["require"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
@@ -738,7 +737,7 @@ def test_render_requisite_require_disabled(tmp_path, minion_opts):
         assert run_num == 0
 
 
-def test_render_requisite_require_in_disabled(tmp_path, minion_opts):
+def test_render_requisite_require_in_disabled(minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
     exception when a requisite cannot be resolved
@@ -773,7 +772,6 @@ def test_render_requisite_require_in_disabled(tmp_path, minion_opts):
             ),
         }
 
-        minion_opts["cachedir"] = str(tmp_path)
         minion_opts["disabled_requisites"] = ["require_in"]
         state_obj = salt.state.State(minion_opts)
         ret = state_obj.call_high(high_data)
