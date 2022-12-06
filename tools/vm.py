@@ -248,16 +248,79 @@ def test(
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
     env = {
+        "PRINT_TEST_PLAN_ONLY": "0",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
     if rerun_failures:
         env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
         env["PRINT_TEST_SELECTION"] = "1"
+    else:
+        env["PRINT_TEST_SELECTION"] = "0"
     if skip_code_coverage:
         env["SKIP_CODE_COVERAGE"] = "1"
     else:
         env["SKIP_CODE_COVERAGE"] = "0"
+    if (
+        skip_requirements_install
+        or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
+    ):
+        env["SKIP_REQUIREMENTS_INSTALL"] = "1"
+    if "photonos" in name:
+        skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
+        env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+    vm.run_nox(
+        nox_session=nox_session,
+        session_args=nox_session_args,
+        env=env,
+    )
+
+
+@vm.command(
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+        "nox_session": {
+            "flags": [
+                "-e",
+                "--nox-session",
+            ],
+            "help": "The nox session name to run in the VM",
+        },
+        "nox_session_args": {
+            "help": "Extra CLI arguments to pass to pytest",
+            "nargs": "*",
+            "metavar": "NOX_SESSION_ARGS",
+        },
+        "skip_requirements_install": {
+            "help": "Skip requirements installation",
+            "action": "store_true",
+            "flags": [
+                "--sri",
+                "--skip-requirements-install",
+            ],
+        },
+    }
+)
+def testplan(
+    ctx: Context,
+    name: str,
+    nox_session_args: list[str] = None,
+    nox_session: str = "ci-test-3",
+    skip_requirements_install: bool = False,
+):
+    """
+    Run test in the VM.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    env = {
+        "PRINT_TEST_SELECTION": "1",
+        "PRINT_TEST_PLAN_ONLY": "1",
+        "SKIP_CODE_COVERAGE": "1",
+        "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
+    }
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
