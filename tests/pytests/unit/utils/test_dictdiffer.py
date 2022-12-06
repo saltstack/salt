@@ -18,6 +18,7 @@ def differ(request):
         (({"a": "a"}, {"a": "a", "b": None}, False), ["b"]),
         (({"a": {}}, {"a": {"b": "b"}}, False), ["a.b"]),
         (({"a": {}}, {"a": {"b": None}}, False), ["a.b"]),
+        (({"a": "a"}, {"a": "a", "b": {"c": "c"}}, False), ["b"]),
     ],
     indirect=["differ"],
 )
@@ -87,6 +88,7 @@ def test_changed_without_ignore_unset_values(differ, expected):
         (({"a": "a", "b": {}}, {"a": "a"}, False), ["b"]),
         (({"a": "a", "b": {"c": "c"}}, {"a": "a"}, False), ["b"]),
         (({"a": "z", "b": {"c": "c"}}, {"a": "a"}, False), ["b"]),
+        (({"a": {}, "b": {"c": "c"}}, {"a": {"z": {"y": "y"}}}, False), ["b"]),
     ],
     indirect=["differ"],
 )
