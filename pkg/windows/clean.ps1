@@ -42,15 +42,9 @@ Write-Host $("-" * 80)
 # Make sure we're not in a virtual environment
 #-------------------------------------------------------------------------------
 if ( $env:VIRTUAL_ENV ) {
-    Write-Host "Deactivating virtual environment: "
-    & deactivate
-    Write-Host $env:VIRTUAL_ENV
-    if ( $env:VIRTUAL_ENV ) {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    } else {
-        Write-Host "Success" -ForegroundColor Green
-    }
+    # I've tried deactivating from the script, but it doesn't work
+    Write-Host "Please deactive the virtual environment"
+    exit
 }
 
 #-------------------------------------------------------------------------------
