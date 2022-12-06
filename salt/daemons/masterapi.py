@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.gzip_util
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.mine
 import salt.utils.minions
 import salt.utils.path
@@ -137,7 +138,7 @@ def clean_pub_auth(opts):
                     if not os.path.isfile(auth_file_path):
                         continue
                     if time.time() - os.path.getmtime(auth_file_path) > (
-                        opts["keep_jobs"] * 3600
+                        salt.utils.job.get_keep_jobs_seconds(opts)
                     ):
                         os.remove(auth_file_path)
     except OSError:

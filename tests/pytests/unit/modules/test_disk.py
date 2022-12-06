@@ -1,15 +1,10 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-import sys
-
 import pytest
 
 import salt.modules.disk as disk
-import salt.utils.path
-import salt.utils.platform
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 
 
 @pytest.fixture
@@ -197,9 +192,9 @@ def test_blkid(stub_disk_blkid):
         assert stub_disk_blkid == disk.blkid()
 
 
-@skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
-@skipIf(salt.utils.platform.is_darwin(), "Skip on Darwin")
-@skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_on_darwin(reason="Skip on Darwin")
+@pytest.mark.skip_on_freebsd
 def test_blkid_token():
     run_stdout_mock = MagicMock(return_value={"retcode": 1})
     with patch.dict(disk.__salt__, {"cmd.run_all": run_stdout_mock}):
@@ -228,9 +223,6 @@ def test_wipe():
         mock.assert_called_once_with("wipefs -a /dev/sda", python_shell=False)
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
-)
 def test_tune():
     mock = MagicMock(
         return_value=(
@@ -275,10 +267,7 @@ def test_fat_format():
         assert expected == args[0]
 
 
-@skipIf(
-    not salt.utils.path.which("lsblk") and not salt.utils.path.which("df"),
-    "lsblk or df not found",
-)
+@pytest.mark.skip_if_binaries_missing("lsblk", "df", check_all=True)
 def test_fstype():
     """
     unit tests for disk.fstype
@@ -305,8 +294,8 @@ def test_resize2fs():
         mock.assert_called_once_with("resize2fs {}".format(device), python_shell=False)
 
 
-@skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
-@skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_if_binaries_missing("mkfs")
 def test_format_():
     """
     unit tests for disk.format_
@@ -318,8 +307,8 @@ def test_format_():
         mock.assert_any_call(["mkfs", "-t", "ext4", device], ignore_retcode=True)
 
 
-@skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
-@skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_if_binaries_missing("mkfs")
 def test_format__fat():
     """
     unit tests for disk.format_ with FAT parameter
