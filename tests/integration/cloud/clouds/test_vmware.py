@@ -105,7 +105,7 @@ class VMWareTest(CloudTest):
         self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
 
         # create the instance
-        log_format = "[%(levelname)-8s] %(jid)s %(message)s"
+        log_format = "%(message)s"
         handler = TstSuiteLoggingHandler(format=log_format, level=logging.INFO)
         with handler:
             ret_val = self.run_cloud(
