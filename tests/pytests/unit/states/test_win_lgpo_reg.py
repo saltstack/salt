@@ -67,6 +67,10 @@ def reg_pol():
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
+def test_virtual_name():
+    assert lgpo_reg.__virtual__() == "lgpo_reg"
+
+
 def test_value_present(empty_reg_pol):
     """
     Test value.present
