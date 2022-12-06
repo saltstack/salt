@@ -85,8 +85,6 @@ pycparser==2.21
     #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5
-    # via -r requirements/windows.txt
 pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
@@ -101,7 +99,7 @@ pythonnet==2.5.2
     # via -r requirements/windows.txt
 pytz==2022.1
     # via tempora
-pywin32==303
+pywin32==305
     # via
     #   -r requirements/windows.txt
     #   cherrypy

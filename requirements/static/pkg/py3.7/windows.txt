@@ -87,8 +87,6 @@ pycparser==2.21
     #   pythonnet
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5
-    # via -r requirements/windows.txt
 pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
