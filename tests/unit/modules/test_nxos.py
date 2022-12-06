@@ -2,6 +2,8 @@
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
 
+import pytest
+
 import salt.modules.cp as cp_module
 import salt.modules.file as file_module
 import salt.modules.nxos as nxos_module
@@ -10,7 +12,7 @@ import salt.utils.pycrypto
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, create_autospec, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.unit.modules.nxos.nxos_config import (
     config_input_file,
     config_result,
@@ -105,9 +107,9 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             result = nxos_module.check_password(username, password, encrypted=False)
             self.assertFalse(result)
 
-    @skipIf(
+    @pytest.mark.skipif(
         "sha256" not in salt.utils.pycrypto.methods,
-        "compatible crypt method for fake data not available",
+        reason="compatible crypt method for fake data not available",
     )
     def test_check_password_password_encrypted_false(self):
 

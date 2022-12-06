@@ -16,7 +16,6 @@ import types
 import warnings
 from contextlib import contextmanager
 
-import _pytest._version
 import attr
 import pytest
 from saltfactories.utils import random_string
@@ -27,9 +26,6 @@ import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
 
 log = logging.getLogger(__name__)
 
@@ -700,10 +696,6 @@ class EntropyGenerator:
         if self.current_entropy >= self.minimum_entropy:
             return
 
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
-
         rngd = shutil.which("rngd")
         openssl = shutil.which("openssl")
         timeout = time.time() + max_time
@@ -718,7 +710,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
                 self.current_entropy = int(kernel_entropy_file.read_text().strip())
@@ -736,7 +728,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
 
                 target_file = tempfile.NamedTemporaryFile(
@@ -768,7 +760,7 @@ class EntropyGenerator:
                 )
             )
             if self.skip:
-                raise pytest.skip.Exception(message, **exc_kwargs)
+                raise pytest.skip.Exception(message, _use_item_location=True)
             raise pytest.fail(message)
 
     def __enter__(self):

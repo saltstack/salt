@@ -1,18 +1,16 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
-
-import sys
+import pytest
 
 import salt.modules.pam as pam
 from tests.support.mock import mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 MOCK_FILE = "ok ok ignore "
 
 
-@skipIf(sys.platform.startswith("openbsd"), "OpenBSD does not use PAM")
+@pytest.mark.skip_on_openbsd(reason="OpenBSD does not use PAM")
 class PamTestCase(TestCase):
     """
     Test cases for salt.modules.pam

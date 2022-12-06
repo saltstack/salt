@@ -10,7 +10,6 @@ from saltfactories.utils import random_string
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)
@@ -20,8 +19,8 @@ CHANGE_USER = random_string("RS-", lowercase=False)
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
+@pytest.mark.skip_unless_on_darwin
 class MacUserModuleTest(ModuleCase):
     """
     Integration tests for the mac_user module
