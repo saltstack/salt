@@ -102,7 +102,6 @@ class VMWareTest(CloudTest):
         """
         # salt-cloud -p my-instant-clone IC3
         profile_name = "vmware-test-instant-clone"
-        snaps_before = self.run_cloud(f"-f list_snapshots cloud-tests-template-base")
         self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
 
         # create the instance
@@ -112,7 +111,6 @@ class VMWareTest(CloudTest):
             ret_val = self.run_cloud(
                 "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
             )
-            snaps_after = self.run_cloud(f"-f list_snapshots cloud-tests-template-base")
             # This sometimes times out before it get's an IP, so we check the logs
             if ret_val == []:
                 check_log = "Successfully completed Instantclone task"
@@ -120,9 +118,5 @@ class VMWareTest(CloudTest):
             else:
                 i_clone_str = "Instant Clone created successfully"
                 self.assertIn(i_clone_str, str(ret_val))
-
-        s_ret_str = "Removed all snapshots"
-        ret_val = self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
-        self.assertIn(s_ret_str, str(ret_val))
 
         self.assertDestroyInstance()
