@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+DH_VERBOSE = 1
+
+%:
+	dh $@
+
+# dh_auto_clean tries to invoke distutils causing failures.
+override_dh_auto_clean:
+	rm -rf build
+	rm -rf debian/salt-common
+	rm -rf debian/salt-minion
+	rm -rf debian/salt-master
+	rm -rf debian/salt-syndic
+	rm -rf debian/salt-ssh
+
+override_dh_auto_build:
+	mkdir build
+	python3 -m virtualenv --python=python3 build/venv
+	build/venv/bin/pip3 install relenv
+	build/venv/bin/relenv fetch
+	build/venv/bin/relenv toolchain fetch
+	build/venv/bin/relenv create build/salt
+	RELENV_PIP_DIR=yes build/salt/bin/pip3 install /salt
+
+# dh_auto_install tries to invoke distutils causing failures.
+override_dh_auto_install:
+
+
+override_dh_install:
+	mkdir -p debian/salt-common/usr/opt/saltstack
+	cp -R build/salt debian/salt-common/usr/opt/saltstack/
+	dh_install
