@@ -324,7 +324,6 @@ def _wait_for_stdout(expected, func, *args, timeout=120, **kwargs):
     start = time.time()
     while time.time() < start + timeout:
         ret = func(*args, **kwargs)
-        print(ret)
         if ret and ret.stdout and expected in ret.stdout:
             break
         time.sleep(1)
