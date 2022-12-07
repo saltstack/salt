@@ -69,7 +69,7 @@ def host_docker_network_ip_address(network):
 @pytest.fixture(scope="session")
 def salt_factories_config(salt_factories_config, host_docker_network_ip_address):
     """
-    Return a dictionary with the keyworkd arguments for FactoriesManager
+    Return a dictionary with the keyword arguments for FactoriesManager
     """
     config = salt_factories_config.copy()
     config["log_server_host"] = host_docker_network_ip_address
