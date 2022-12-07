@@ -373,6 +373,13 @@ def test_grains_targeting_minion_id_running(salt_cli, salt_minion, salt_sub_mini
     assert ret.data[salt_sub_minion.id] is True
 
 
+def _check_skip(grains):
+    if grains["os"] == "Windows":
+        return True
+    return False
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_cli):
     """
     Tests return of minion using grains targeting on a disconnected minion.
