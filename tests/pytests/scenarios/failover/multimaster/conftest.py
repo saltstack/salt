@@ -28,13 +28,13 @@ def salt_mm_failover_master_1(request, salt_factories):
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
 @pytest.fixture(scope="package")
 def mm_failover_master_1_salt_cli(salt_mm_failover_master_1):
-    return salt_mm_failover_master_1.salt_cli(timeout=120)
+    return salt_mm_failover_master_1.salt_cli(timeout=180)
 
 
 @pytest.fixture(scope="package")
@@ -70,13 +70,13 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
             os.path.join(salt_mm_failover_master_1.config["pki_dir"], keyfile),
             os.path.join(factory.config["pki_dir"], keyfile),
         )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
 @pytest.fixture(scope="package")
 def mm_failover_master_2_salt_cli(salt_mm_failover_master_2):
-    return salt_mm_failover_master_2.salt_cli(timeout=120)
+    return salt_mm_failover_master_2.salt_cli(timeout=180)
 
 
 @pytest.fixture(scope="package")
@@ -96,7 +96,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 10,
+        "master_alive_interval": 5,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 1,
@@ -112,7 +112,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
         os.path.join(factory.config["pki_dir"], "master_sign.pub"),
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
@@ -134,7 +134,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 10,
+        "master_alive_interval": 5,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 1,
@@ -150,7 +150,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
         os.path.join(factory.config["pki_dir"], "master_sign.pub"),
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
