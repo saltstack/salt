@@ -42,7 +42,7 @@ def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
         "mm-failover-pki-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        # extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
