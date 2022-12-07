@@ -9,7 +9,7 @@ import pytest
 import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import Mock, PropertyMock, patch
+from tests.support.mock import Mock, patch
 
 
 @pytest.fixture
@@ -61,9 +61,9 @@ def serializer():
 
 @pytest.fixture(params=[1])
 def runs(request):
-    runs = PropertyMock()
+    runs = Mock()
     runs.side_effect = request.param * [True] + [False]
-    with patch("salt.engines.script.ScriptEngine.RUNNING", runs):
+    with patch("salt.engines.script._running", runs):
         yield
 
 
