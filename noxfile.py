@@ -368,12 +368,12 @@ def _run_with_coverage(session, *test_cmd, env=None):
 
     if sitecustomize_dir:
         try:
-            session.log(
+            session.debug(
                 "Discovered salt-factories coverage 'sitecustomize.py' path: "
                 f"{sitecustomize_dir.relative_to(REPO_ROOT)}"
             )
         except ValueError:
-            session.log(
+            session.debug(
                 "Discovered salt-factories coverage 'sitecustomize.py' path: "
                 f"{sitecustomize_dir}"
             )
