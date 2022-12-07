@@ -26,7 +26,7 @@ def salt_mm_failover_master_1(request, salt_factories):
         "mm-failover-master-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        # extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     with factory.started(start_timeout=180):
         yield factory
@@ -61,7 +61,7 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
         "mm-failover-master-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        # extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
 
     # Both masters will share the same signing key pair
@@ -105,7 +105,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         "mm-failover-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        # extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
@@ -143,7 +143,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         "mm-failover-minion-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        # extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
