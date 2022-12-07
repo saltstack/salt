@@ -368,15 +368,15 @@ def _run_with_coverage(session, *test_cmd, env=None):
 
     if sitecustomize_dir:
         try:
-            session.log(
-                "Discovered salt-factories coverage 'sitecustomize.py' path: "
-                f"{sitecustomize_dir.relative_to(REPO_ROOT)}"
-            )
+            relative_sitecustomize_dir = sitecustomize_dir.relative_to(REPO_ROOT)
         except ValueError:
-            session.log(
-                "Discovered salt-factories coverage 'sitecustomize.py' path: "
-                f"{sitecustomize_dir}"
-            )
+            relative_sitecustomize_dir = sitecustomize_dir
+        log_msg = f"Discovered salt-factories coverage 'sitecustomize.py' path: {relative_sitecustomize_dir}"
+        try:
+            session.debug(log_msg)
+        except AttributeError:
+            # Older nox
+            session.log(log_msg)
         python_path_env_var = os.environ.get("PYTHONPATH") or None
         if python_path_env_var is None:
             python_path_env_var = str(sitecustomize_dir)
