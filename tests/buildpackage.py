@@ -211,7 +211,8 @@ def _run_command(args):
 
 def _make_sdist(opts, python_bin="python"):
     os.chdir(opts.source_dir)
-    stdout, stderr, rcode = _run_command([python_bin, "setup.py", "sdist"])
+    ## DGM stdout, stderr, rcode = _run_command([python_bin, "setup.py", "sdist"])
+    stdout, stderr, rcode = _run_command([python_bin, "-m", "build", "--sdist"])
     if rcode == 0:
         # Find the sdist with the most recently-modified metadata
         sdist_path = max(
