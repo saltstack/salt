@@ -1,0 +1,1 @@
+Fixed x509.read_certificate error when reading a Microsoft CA issued certificate
