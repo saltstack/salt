@@ -16,10 +16,8 @@ import stat
 import sys
 import tempfile
 
-import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.user
 import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.file import (
@@ -521,7 +519,7 @@ def user_to_uid(user):
         salt '*' file.user_to_uid myusername
     """
     if user is None:
-        user = salt.utils.user.get_user()
+        user = __utils__["user.get_user"]()
 
     return salt.utils.win_dacl.get_sid_string(user)
 
@@ -874,7 +872,7 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     ret["mtime"] = pstat.st_mtime
     ret["ctime"] = pstat.st_ctime
     ret["size"] = pstat.st_size
-    ret["mode"] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
+    ret["mode"] = __utils__["files.normalize_mode"](oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret["sum"] = get_sum(path, hash_type)
     ret["type"] = "file"
@@ -1506,7 +1504,7 @@ def is_link(path):
         )
 
     try:
-        return salt.utils.path.islink(path)
+        return __utils__["path.islink"](path)
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
