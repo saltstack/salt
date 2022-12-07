@@ -5,15 +5,10 @@ import time
 
 import pytest
 
-import salt.utils.platform
-
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
-    pytest.mark.skipif(
-        salt.utils.platform.is_freebsd(),
-        reason="Processes are not properly killed on FreeBSD",
-    ),
+    pytest.mark.skip_on_freebsd(reason="Processes are not properly killed on FreeBSD"),
 ]
 
 log = logging.getLogger(__name__)
@@ -39,7 +34,7 @@ def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 15,
+        "master_alive_interval": 5,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
     }
@@ -207,7 +202,7 @@ def test_minions_alive_with_no_master(
     ]
     events = event_listener.wait_for_events(
         event_patterns,
-        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 4,
+        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 8,
         after_time=start_time,
     )
 
