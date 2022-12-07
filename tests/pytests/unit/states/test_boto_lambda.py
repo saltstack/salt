@@ -73,21 +73,20 @@ def global_config():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains"] = salt.loader.grains(opts)
+def configure_loader_modules(minion_opts):
+    minion_opts["grains"] = salt.loader.grains(minion_opts)
     ctx = {}
     utils = salt.loader.utils(
-        opts,
+        minion_opts,
         whitelist=["boto", "boto3", "args", "systemd", "path", "platform", "reg"],
         context=ctx,
     )
-    serializers = salt.loader.serializers(opts)
+    serializers = salt.loader.serializers(minion_opts)
     funcs = salt.loader.minion_mods(
-        opts, context=ctx, utils=utils, whitelist=["boto_lambda"]
+        minion_opts, context=ctx, utils=utils, whitelist=["boto_lambda"]
     )
     salt_states = salt.loader.states(
-        opts=opts,
+        opts=minion_opts,
         functions=funcs,
         utils=utils,
         whitelist=["boto_lambda"],
@@ -95,7 +94,7 @@ def configure_loader_modules():
     )
     return {
         boto_lambda: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": funcs,
             "__utils__": utils,
             "__states__": salt_states,

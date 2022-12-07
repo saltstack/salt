@@ -85,8 +85,6 @@ pycparser==2.21
     #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5
-    # via -r requirements/windows.txt
 pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
@@ -101,14 +99,14 @@ pythonnet==2.5.2
     # via -r requirements/windows.txt
 pytz==2022.1
     # via tempora
-pywin32==303
+pywin32==305
     # via
     #   -r requirements/windows.txt
     #   cherrypy
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==19.0.0 ; python_version < "3.9"
+pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
