@@ -2181,6 +2181,8 @@ def tidied(
                     todelete.append(path)
             except FileNotFoundError:
                 continue
+            except PermissionError:
+                log.warning("Unable to read %s due to permissions error.", path)
 
     # Now delete the stuff
     if todelete:
