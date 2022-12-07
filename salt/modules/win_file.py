@@ -19,8 +19,8 @@ import tempfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.win_dacl
 import salt.utils.user
+import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.file import (
     __clean_tmp,
