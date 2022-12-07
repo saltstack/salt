@@ -1,4 +1,5 @@
 import pathlib
+
 import pytest
 
 import salt.modules.win_lgpo_reg as lgpo_reg
