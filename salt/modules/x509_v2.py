@@ -195,8 +195,8 @@ def __virtual__():
     if not __opts__.get("x509_v2"):
         return (
             False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2` "
-            "in the minion configuration",
+            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
+            "in the minion configuration until Salt 3008 (Argon).",
         )
     return __virtualname__
 
