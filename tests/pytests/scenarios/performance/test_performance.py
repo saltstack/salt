@@ -37,17 +37,17 @@ class ContainerMinion(SaltMinion):
 # ---------------------- Previous Version Setup ----------------------
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_version():
     return str(SaltVersionsInfo.previous_release().info[0])
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_master_id():
     return random_string("master-performance-prev-", uppercase=False)
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_master(
     request,
     salt_factories,
@@ -99,22 +99,22 @@ def prev_master(
         yield factory
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_salt_cli(prev_master):
     return prev_master.salt_cli()
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_salt_key_cli(prev_master):
     return prev_master.salt_key_cli()
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_salt_run_cli(prev_master):
     return prev_master.salt_run_cli()
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_minion_id():
     return random_string(
         "minion-performance-prev-",
@@ -122,7 +122,7 @@ def prev_minion_id():
     )
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def prev_minion(
     prev_minion_id,
     prev_master,
@@ -179,12 +179,12 @@ def _install_local_salt(factory):
     factory.run("pip install /saltcode")
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_master_id():
     return random_string("master-performance-", uppercase=False)
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_master(
     request,
     salt_factories,
@@ -242,22 +242,22 @@ def curr_master(
         yield factory
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_salt_cli(curr_master):
     return curr_master.salt_cli()
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_salt_run_cli(curr_master):
     return curr_master.salt_run_cli()
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_salt_key_cli(curr_master):
     return curr_master.salt_key_cli()
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_minion_id():
     return random_string(
         "minion-performance-curr-",
@@ -265,7 +265,7 @@ def curr_minion_id():
     )
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
 def curr_minion(
     curr_minion_id,
     curr_master,
@@ -331,7 +331,7 @@ def _wait_for_stdout(expected, func, *args, timeout=120, **kwargs):
         pytest.skip("Skipping test, one or more daemons failed to start")
 
 
-# @pytest.mark.flaky(max_runs=4)
+@pytest.mark.flaky(max_runs=4)
 def test_performance(
     prev_salt_cli,
     prev_minion,
@@ -390,26 +390,46 @@ def test_performance(
     # Let's now apply the states
     applies = os.environ.get("SALT_PERFORMANCE_TEST_APPLIES", 3)
 
-    prev_duration = 0
+    def _gather_durations(ret, minion_id):
+        """
+        Get the total duration for the state run.
+
+        We skip if anything fails here.  We aren't testing state success, just performance.
+        """
+        if isinstance(ret.data, dict) and isinstance(
+            ret.data.get(minion_id, None), dict
+        ):
+            duration = 0
+            for _, state_ret in ret.data[minion_id].items():
+                try:
+                    duration += state_ret["duration"]
+                except KeyError:
+                    break
+            else:
+                return duration
+            pytest.skip("Something went wrong with the states, skipping.")
+
     for _ in range(applies):
         prev_state_ret = prev_master.run(
             *prev_salt_cli.cmdline(
                 "state.apply", f"{subdir}.{prev_sls}", minion_tgt=prev_minion.id
             )
         )
-        assert prev_state_ret.data
-        for _, ret in prev_state_ret.data[prev_minion.id].items():
-            prev_duration += ret["duration"]
+        prev_duration = _gather_durations(prev_state_ret, prev_minion.id)
 
-    curr_duration = 0
     for _ in range(applies):
         curr_state_ret = curr_master.run(
             *curr_salt_cli.cmdline(
                 "state.apply", f"{subdir}.{curr_sls}", minion_tgt=curr_minion.id
             )
         )
-        assert curr_state_ret.data
-        for _, ret in curr_state_ret.data[curr_minion.id].items():
-            curr_duration += ret["duration"]
+        curr_duration = _gather_durations(curr_state_ret, curr_minion.id)
 
-    assert curr_duration <= 1.05 * prev_duration
+    # We account for network slowness, etc... here.
+    # There is a hard balance here as far as a threshold.
+    # We need to make sure there are no drastic slowdowns,
+    # but also take into account system and network nuances.
+    # In theory we could set a hard cap for the duration,
+    # something like 500 ms and only run the current version,
+    # but we will see if this ever becomes too flaky
+    assert curr_duration <= 1.25 * prev_duration
