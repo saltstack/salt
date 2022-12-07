@@ -350,11 +350,12 @@ def test_performance(
     curr_sls,
 ):
     # Copy all of the needed files to both master file roots directories
+    subdir = random_string("performance-")
     shutil.copytree(
-        state_tree, curr_master.config["file_roots"]["base"][0], dirs_exist_ok=True
+        state_tree, os.path.join(curr_master.config["file_roots"]["base"][0], subdir)
     )
     shutil.copytree(
-        state_tree, prev_master.config["file_roots"]["base"][0], dirs_exist_ok=True
+        state_tree, os.path.join(prev_master.config["file_roots"]["base"][0], subdir)
     )
 
     # Wait for the old master and minion to start
@@ -370,7 +371,7 @@ def test_performance(
     _wait_for_stdout(
         "Salt: {}".format(prev_version),
         prev_master.run,
-        *prev_salt_cli.cmdline("test.versions", minion_tgt=prev_minion.id)
+        *prev_salt_cli.cmdline("test.versions", minion_tgt=prev_minion.id),
     )
 
     # Wait for the new master and minion to start
@@ -384,7 +385,7 @@ def test_performance(
     _wait_for_stdout(
         "Salt: {}".format("3005"),
         curr_master.run,
-        *curr_salt_cli.cmdline("test.versions", minion_tgt=curr_minion.id)
+        *curr_salt_cli.cmdline("test.versions", minion_tgt=curr_minion.id),
     )
 
     # Let's now apply the states
@@ -393,7 +394,9 @@ def test_performance(
     prev_duration = 0
     for _ in range(applies):
         prev_state_ret = prev_master.run(
-            *prev_salt_cli.cmdline("state.apply", prev_sls, minion_tgt=prev_minion.id)
+            *prev_salt_cli.cmdline(
+                "state.apply", f"{subdir}.{prev_sls}", minion_tgt=prev_minion.id
+            )
         )
         assert prev_state_ret.data
         for _, ret in prev_state_ret.data[prev_minion.id].items():
@@ -402,7 +405,9 @@ def test_performance(
     curr_duration = 0
     for _ in range(applies):
         curr_state_ret = curr_master.run(
-            *curr_salt_cli.cmdline("state.apply", curr_sls, minion_tgt=curr_minion.id)
+            *curr_salt_cli.cmdline(
+                "state.apply", f"{subdir}.{curr_sls}", minion_tgt=curr_minion.id
+            )
         )
         assert curr_state_ret.data
         for _, ret in curr_state_ret.data[curr_minion.id].items():
