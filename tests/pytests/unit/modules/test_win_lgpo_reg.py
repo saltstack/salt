@@ -3,7 +3,9 @@ import pathlib
 import pytest
 
 import salt.modules.win_lgpo_reg as lgpo_reg
+import salt.modules.win_file as win_file
 import salt.utils.files
+import salt.utils.win_dacl
 import salt.utils.win_lgpo_reg
 import salt.utils.win_reg
 from salt.exceptions import SaltInvocationError
@@ -13,6 +15,18 @@ pytestmark = [
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
 ]
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        win_file: {
+            "__utils__": {
+                "dacl.set_perms": salt.utils.win_dacl.set_perms,
+                "dacl.set_permissions": salt.utils.win_dacl.set_permissions,
+            },
+        },
+    }
 
 
 @pytest.fixture
