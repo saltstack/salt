@@ -6,7 +6,11 @@ MarkupSafe
 requests>=1.0.0
 distro>=1.0.1
 psutil>=5.0.0
-looseversion
 
 # We need contextvars for salt-ssh
 contextvars
+
+# since removal of distutils support
+setuptools
+looseversion
+packaging

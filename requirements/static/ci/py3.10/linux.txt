@@ -633,6 +633,7 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via
+    #   -r requirements/base.txt
     #   ansible-core
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"

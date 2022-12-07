@@ -4,7 +4,9 @@
   - unit.test_virtualname
   - unit.utils.test_doc
 
-setup.py:
+# DGM this needs to be changed to using python -m build
+# setup.py:
+build:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 

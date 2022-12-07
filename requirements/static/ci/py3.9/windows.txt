@@ -196,7 +196,9 @@ multidict==6.0.2
 ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==19.2
-    # via pytest
+    # via
+    #   -r requirements/base.txt
+    #   pytest
 passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16

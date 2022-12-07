@@ -6,8 +6,9 @@
     salt.utils.versions
     ~~~~~~~~~~~~~~~~~~~
 
-    Version parsing based on distutils.version which works under python 3
-    because on python 3 you can no longer compare strings against integers.
+    Version parsing based on packaging.version and PyPI looseversion which
+    works under python 3 because on python 3 you can no longer compare
+    strings against integers.
 """
 
 
@@ -18,9 +19,15 @@ import numbers
 import sys
 import warnings
 
+# basically distutils.version.Looseversion with deps handled, uses setuptools
+## DGM from looseversion import LooseVersion as _LooseVersion
+from looseversion import LooseVersion as _LooseVersion
+
 # pylint: disable=blacklisted-module
-from distutils.version import LooseVersion as _LooseVersion
-from distutils.version import StrictVersion as _StrictVersion
+## DGM from distutils.version import LooseVersion as _LooseVersion
+## DGM from distutils.version import StrictVersion as _StrictVersion
+from packaging.version import InvalidVersion
+from packaging.version import Version as pkg_version
 
 # pylint: enable=blacklisted-module
 import salt.version
@@ -28,14 +35,56 @@ import salt.version
 log = logging.getLogger(__name__)
 
 
-class StrictVersion(_StrictVersion):
+class StrictVersion(pkg_version):
+    def __init__(self, vstring):
+        try:
+            super().__init__(vstring)
+        except InvalidVersion:
+            raise ValueError(f"invalid version number '{vstring}'")
+
     def parse(self, vstring):
-        _StrictVersion.parse(self, vstring)
+        try:
+            self.__init__(vstring)
+
+        except InvalidVersion:
+            raise ValueError(f"invalid version number '{vstring}'")
+            ## raise ValueError("invalid version number '%s'" % vstring)
 
     def _cmp(self, other):
         if isinstance(other, str):
-            other = StrictVersion(other)
-        return _StrictVersion._cmp(self, other)
+            other = pkg_version(other)
+        elif not isinstance(other, pkg_version):
+            return NotImplemented
+
+        if self.release != other.release:
+            # numeric versions don't match
+            # prerelease stuff doesn't matter
+            if self.release < other.release:
+                return -1
+            else:
+                return 1
+
+        # have to compare prerelease
+        # case 1: neither has prerelease; they're equal
+        # case 2: self has prerelease, other doesn't; other is greater
+        # case 3: self doesn't have prerelease, other does: self is greater
+        # case 4: both have prerelease: must compare them!
+
+        if not self.is_prerelease and not other.is_prerelease:
+            return 0
+        elif self.is_prerelease and not other.is_prerelease:
+            return -1
+        elif not self.is_prerelease and other.is_prerelease:
+            return 1
+        elif self.is_prerelease and other.is_prerelease:
+            if self.pre == other.pre:
+                return 0
+            elif self.pre < other.pre:
+                return -1
+            else:
+                return 1
+        else:
+            assert False, "never get here"
 
 
 class LooseVersion(_LooseVersion):
