@@ -8,8 +8,11 @@ import shutil
 import pytest
 from saltfactories.utils import random_string
 
+# pylint: disable=unused-import
 from tests.support.pytest.vault import (
+    vault_container_version,
     vault_delete_secret,
+    vault_environ,
     vault_list_secrets,
     vault_write_secret,
 )

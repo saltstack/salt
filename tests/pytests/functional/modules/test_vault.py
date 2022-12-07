@@ -2,9 +2,12 @@ import logging
 
 import pytest
 
+# pylint: disable=unused-import
 from tests.support.pytest.vault import (
+    vault_container_version,
     vault_delete_policy,
     vault_delete_secret,
+    vault_environ,
     vault_list_policies,
     vault_list_secrets,
     vault_read_policy,

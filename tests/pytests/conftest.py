@@ -25,9 +25,6 @@ import salt.utils.platform
 from salt.serializers import yaml
 from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
-
-# pylint: disable=unused-import
-from tests.support.pytest.vault import vault_container_version, vault_environ
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -178,25 +175,9 @@ def salt_master_factory(
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "auth": {
-            "method": "token",
-            "token": "testsecret",
-        },
-        "issue": {
-            "token": {
-                "params": {
-                    "uses": 0,
-                }
-            }
-        },
-        "policies": {
-            "assign": [
-                "salt_minion",
-            ]
-        },
-        "server": {
-            "url": f"http://127.0.0.1:{vault_port}",
-        },
+        "url": "http://127.0.0.1:{}".format(vault_port),
+        "auth": {"method": "token", "token": "testsecret", "uses": 0},
+        "policies": ["testpolicy"],
     }
 
     # Config settings to test `event_return`
@@ -585,7 +566,7 @@ def get_test_timeout(pyfuncitem):
     return default_timeout
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_pycollect_makeitem(collector, name, obj):
     if collector.funcnamefilter(name) and inspect.iscoroutinefunction(obj):
         return list(collector._genfunctions(name, obj))
@@ -610,7 +591,7 @@ class CoroTestFunction:
         return ret
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem):
     if not inspect.iscoroutinefunction(pyfuncitem.obj):
         return

@@ -11,7 +11,14 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.files
-from tests.support.pytest.vault import vault_delete_secret, vault_write_secret
+
+# pylint: disable=unused-import
+from tests.support.pytest.vault import (
+    vault_container_version,
+    vault_delete_secret,
+    vault_environ,
+    vault_write_secret,
+)
 
 log = logging.getLogger(__name__)
 

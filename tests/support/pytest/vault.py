@@ -232,18 +232,18 @@ def vault_list(path):
     return json.loads(ret.stdout)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def vault_environ(vault_port):
-    with PatchedEnviron(VAULT_ADDR="http://127.0.0.1:{}".format(vault_port)):
+    with PatchedEnviron(VAULT_ADDR=f"http://127.0.0.1:{vault_port}"):
         yield
 
 
 def vault_container_version_id(value):
-    return "vault=={}".format(value)
+    return f"vault=={value}"
 
 
 @pytest.fixture(
-    scope="session",
+    scope="module",
     params=["0.9.6", "1.3.1", "latest"],
     ids=vault_container_version_id,
 )
@@ -258,7 +258,7 @@ def vault_container_version(request, salt_factories, vault_port, vault_environ):
 
     factory = salt_factories.get_container(
         "vault",
-        "ghcr.io/saltstack/salt-ci-containers/vault:{}".format(vault_version),
+        f"ghcr.io/saltstack/salt-ci-containers/vault:{vault_version}",
         check_ports=[vault_port],
         container_run_kwargs={
             "ports": {"8200/tcp": vault_port},
