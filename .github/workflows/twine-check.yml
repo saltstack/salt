@@ -24,10 +24,11 @@ jobs:
       run: |
         pip install --upgrade pip setuptools wheel
         pip install twine>=3.4.1
+        pip install build
 
     - name: Create Source Tarball
       run: |
-        python3 setup.py sdist
+        python3 -m build --sdist
 
     - name: Twine check
       run: |

@@ -44,6 +44,7 @@ jobs:
           salt:
             - added|modified:
               - setup.py
+              - setup.cfg
               - noxfile.py
               - salt/**/*.py
               - tasks/**/*.py
