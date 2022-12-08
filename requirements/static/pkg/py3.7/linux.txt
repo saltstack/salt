@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.7/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
+build==0.9.0
+    # via -r requirements/base.txt
 certifi==2022.5.18.1
     # via requests
 cffi==1.14.6
@@ -25,7 +27,10 @@ idna==2.8
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4 ; python_version < "3.10"
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   build
+    #   pep517
 jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.4.0
@@ -56,7 +61,11 @@ more-itertools==5.0.0
 msgpack==1.0.2
     # via -r requirements/base.txt
 packaging==21.3
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   build
+pep517==0.13.0
+    # via build
 portend==2.4
     # via cherrypy
 psutil==5.8.0
@@ -96,6 +105,10 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
+tomli==2.0.1
+    # via
+    #   build
+    #   pep517
 typing-extensions==3.10.0.0
     # via importlib-metadata
 urllib3==1.26.6
@@ -103,7 +116,9 @@ urllib3==1.26.6
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0
-    # via importlib-metadata
+    # via
+    #   importlib-metadata
+    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

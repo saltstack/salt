@@ -6,7 +6,7 @@
 
 # DGM this needs to be changed to using python -m build
 # setup.py:
-build:
+setup.cfg:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 

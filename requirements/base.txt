@@ -12,5 +12,6 @@ contextvars
 
 # since removal of distutils support
 setuptools
+build
 looseversion
 packaging

@@ -32,6 +32,8 @@ botocore==1.29.21
     #   boto3
     #   moto
     #   s3transfer
+build==0.9.0
+    # via -r requirements/base.txt
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
@@ -65,7 +67,9 @@ click==7.1.2
 clustershell==1.8.3
     # via -r requirements/static/ci/common.in
 colorama==0.4.1
-    # via pytest
+    # via
+    #   build
+    #   pytest
 contextvars==2.4
     # via -r requirements/base.txt
 cryptography==3.4.7
@@ -157,6 +161,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0
     # via -r requirements/windows.txt
+looseversion==1.0.2
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
@@ -191,7 +197,10 @@ multidict==6.0.2
 ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==19.2
-    # via pytest
+    # via
+    #   -r requirements/base.txt
+    #   build
+    #   pytest
 passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
@@ -200,6 +209,8 @@ pathspec==0.10.2
     # via yamllint
 pathtools==0.1.2
     # via watchdog
+pep517==0.13.0
+    # via build
 platformdirs==2.5.4
     # via virtualenv
 pluggy==0.13.0
@@ -378,7 +389,10 @@ timelib==0.2.5
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
-    # via pytest
+    # via
+    #   build
+    #   pep517
+    #   pytest
 typing-extensions==4.4.0
     # via
     #   pytest-shell-utilities

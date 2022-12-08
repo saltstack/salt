@@ -349,6 +349,8 @@ botocore==1.29.25
     #   boto3
     #   moto
     #   s3transfer
+build==0.9.0
+    # via -r requirements/base.txt
 cachetools==4.2.2
     # via
     #   google-auth
@@ -618,6 +620,7 @@ packaging==22.0
     # via
     #   -r requirements/base.txt
     #   ansible-core
+    #   build
     #   docker
     #   sphinx
 paramiko==2.12.0 ; sys_platform != "win32" and sys_platform != "darwin"
@@ -626,6 +629,8 @@ passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.10.2
     # via yamllint
+pep517==0.13.0
+    # via build
 platformdirs==2.6.0
     # via virtualenv
 portend==3.1.0

@@ -349,6 +349,8 @@ botocore==1.21.27
     #   boto3
     #   moto
     #   s3transfer
+build==0.9.0
+    # via -r requirements/base.txt
 cachetools==4.2.2
     # via
     #   google-auth
@@ -653,6 +655,7 @@ packaging==20.9
     # via
     #   -r requirements/base.txt
     #   ansible-core
+    #   build
     #   sphinx
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -668,6 +671,8 @@ passlib[bcrypt]==1.7.4
     #   ciscoconfparse
 pathspec==0.9.0
     # via yamllint
+pep517==0.13.0
+    # via build
 platformdirs==2.2.0
     # via virtualenv
 portend==2.4
@@ -880,6 +885,10 @@ timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
+tomli==2.0.1
+    # via
+    #   build
+    #   pep517
 tornado==6.1
     # via python-telegram-bot
 transitions==0.8.8

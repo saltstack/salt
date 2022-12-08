@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.9/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
+build==0.9.0
+    # via -r requirements/base.txt
 certifi==2022.5.18.1
     # via requests
 cffi==1.14.6
@@ -56,7 +58,11 @@ more-itertools==5.0.0
 msgpack==1.0.2
     # via -r requirements/base.txt
 packaging==21.3
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   build
+pep517==0.13.0
+    # via build
 portend==2.4
     # via cherrypy
 psutil==5.8.0
@@ -98,6 +104,10 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
+tomli==2.0.1
+    # via
+    #   build
+    #   pep517
 urllib3==1.26.6
     # via requests
 zc.lockfile==1.4

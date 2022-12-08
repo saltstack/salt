@@ -348,6 +348,8 @@ botocore==1.21.46
     #   boto3
     #   moto
     #   s3transfer
+build==0.9.0
+    # via -r requirements/base.txt
 cachetools==4.2.2
     # via google-auth
 cassandra-driver==3.25.0
@@ -457,10 +459,12 @@ importlib-metadata==4.8.1 ; python_version < "3.10"
     # via
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
+    #   build
     #   click
     #   jsonschema
     #   mako
     #   moto
+    #   pep517
     #   pluggy
     #   pytest
     #   virtualenv
@@ -665,6 +669,7 @@ oscrypto==1.2.1
 packaging==21.0
     # via
     #   -r requirements/base.txt
+    #   build
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -678,6 +683,8 @@ passlib[bcrypt]==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
+pep517==0.13.0
+    # via build
 platformdirs==2.3.0
     # via virtualenv
 pluggy==1.0.0
@@ -902,7 +909,10 @@ timelib==0.2.5
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
-    # via pytest
+    # via
+    #   build
+    #   pep517
+    #   pytest
 transitions==0.8.9
     # via junos-eznc
 typing-extensions==3.10.0.0
@@ -949,7 +959,9 @@ yarl==1.7.2
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0
-    # via importlib-metadata
+    # via
+    #   importlib-metadata
+    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
