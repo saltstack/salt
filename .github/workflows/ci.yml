@@ -4,6 +4,9 @@ on:
   - push
   - pull_request
 
+env:
+  COLUMNS: 160
+
 permissions:
   contents: read
 
@@ -16,14 +19,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  get-changed-files:
+  jobs-selection:
     name: Get Changed Files
     runs-on: ubuntu-latest
     permissions:
       contents: read  # for dorny/paths-filter to fetch a list of changed files
       pull-requests: read  # for dorny/paths-filter to read pull requests
     outputs:
-      changed-files: ${{ toJSON(steps.changed-files.outputs) }}
+      jobs: ${{ steps.process-changed-files.outputs.jobs }}
+      changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
     steps:
       - uses: actions/checkout@v3
       - name: Get Changed Files
@@ -55,259 +59,332 @@ jobs:
               - added|modified:
                 - .pylintrc
 
+      - name: Write Changed Files To A Local File
+        run:
+          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
+
+      - name: Check Local Changed Files Contents
+        run:
+          cat changed-files.json
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Python Tools Scripts
+        env:
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+        run: |
+          python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
+
+      - name: Process Changed Files
+        id: process-changed-files
+        run:
+          tools ci process-changed-files ${{ github.event_name }} changed-files.json
+
+      - name: Check Collected Jobs
+        run:
+          echo '${{ steps.process-changed-files.outputs.jobs }}' | jq -C '.'
+
+      - name: Check Collected Changed Files
+        run:
+          echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-changed-files
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
   pre-commit:
     name: Pre-Commit
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
     uses: ./.github/workflows/pre-commit-action.yml
     needs:
-      - get-changed-files
+      - jobs-selection
     with:
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   docs:
     name: Build Docs
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
     uses: ./.github/workflows/docs-action.yml
     needs:
-      - get-changed-files
+      - jobs-selection
     with:
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   lint:
     name: Lint
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
-      - get-changed-files
+      - jobs-selection
     with:
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   windows-2016:
     name: Windows 2016
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2016
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   windows-2019:
     name: Windows 2019
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   windows-2022:
     name: Windows 2022
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2022
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   macos-12:
     name: MacOS 12
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   almalinux-8:
     name: Alma Linux 8
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-8
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   almalinux-9:
     name: Alma Linux 9
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-9
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   amazonlinux-2:
     name: Amazon Linux 2
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: amazonlinux-2
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   archlinux-lts:
     name: Arch Linux LTS
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: archlinux-lts
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   centos-7:
     name: CentOS 7
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centos-7
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   centosstream-8:
     name: CentOS Stream 8
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-8
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   centosstream-9:
     name: CentOS Stream 9
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-9
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   debian-10:
     name: Debian 10
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-10
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   debian-11:
     name: Debian 11
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   debian-11-arm64:
     name: Debian 11 ARM64
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11-arm64
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   fedora-36:
     name: Fedora 36
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: fedora-36
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   opensuse-15:
     name: Opensuse 15
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: opensuse-15
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   photon-3:
     name: Photon OS 3
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-3
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   photon-4:
     name: Photon OS 4
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   ubuntu-1804:
     name: Ubuntu 18.04
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-18.04
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   ubuntu-2004:
     name: Ubuntu 20.04
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   ubuntu-2204:
     name: Ubuntu 22.04
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
+    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - get-changed-files
+      - jobs-selection
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
       nox-session: ci-test
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
 
   set-pipeline-exit-status:
