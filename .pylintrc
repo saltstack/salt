@@ -695,7 +695,8 @@ allowed-3rd-party-modules=msgpack,
                           base64,
                           tempfile,
                           fnmatch,
-                          ptscripts
+                          ptscripts,
+                          packaging
 
 [EXCEPTIONS]
 
