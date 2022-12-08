@@ -12,7 +12,7 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON, change_cwd
+from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -284,7 +284,7 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
     """
     config_dir = tmp_path / "log_file_incorrect"
     config_dir.mkdir()
-    with change_cwd(str(config_dir)):
+    with pytest.helpers.change_cwd(str(config_dir)):
         minion_config = copy.deepcopy(salt_minion.config)
         minion_config["log_file"] = "file:///dev/doesnotexist"
         with salt.utils.files.fopen(str(config_dir / "minion"), "w") as fh_:

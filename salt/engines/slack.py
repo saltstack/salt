@@ -892,7 +892,7 @@ class SlackClient:
             log.debug("Command %s will run via runner_functions", cmd)
             # pylint is tripping
             # pylint: disable=missing-whitespace-after-comma
-            job_id_dict = runner.asynchronous(cmd, {"args": args, "kwargs": kwargs})
+            job_id_dict = runner.asynchronous(cmd, {"arg": args, "kwarg": kwargs})
             job_id = job_id_dict["jid"]
 
         # Default to trying to run as a client module.
@@ -926,6 +926,14 @@ def start(
     """
     Listen to slack events and forward them to salt, new version
     """
+
+    salt.utils.versions.warn_until(
+        "Argon",
+        "This 'slack' engine will be deprecated and "
+        "will be replace by the slack_bolt engine. This new "
+        "engine will use the new Bolt library from Slack and requires "
+        "a Slack app and a Slack bot account.",
+    )
 
     if (not token) or (not token.startswith("xoxb")):
         time.sleep(2)  # don't respawn too quickly
