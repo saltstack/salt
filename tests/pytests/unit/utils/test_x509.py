@@ -22,7 +22,7 @@ pytestmark = [
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
 
-@pytest.fixture()
+@pytest.fixture
 def single_pem():
     return """\
 -----BEGIN RSA PRIVATE KEY-----
@@ -55,7 +55,7 @@ bQdPnxzSwrf6edD2AmIT9L8IwiCYiplC+JvqSlqDP2pxIQbilmw=
     """
 
 
-@pytest.fixture()
+@pytest.fixture
 def multi_pem():
     return """\
 -----BEGIN CERTIFICATE-----
@@ -103,7 +103,7 @@ LN1w5sybsYwIw6QN
 
 def test_split_pems_single(single_pem):
     res = x509.split_pems(single_pem)
-    assert 1 == len(res)
+    assert len(res) == 1
     assert res[0].startswith(b"-----BEGIN RSA PRIVATE KEY-----\n")
     assert res[0].endswith(b"-----END RSA PRIVATE KEY-----\n")
     assert len(res[0].splitlines()) == 27
@@ -111,7 +111,7 @@ def test_split_pems_single(single_pem):
 
 def test_split_pems_multi(multi_pem):
     res = x509.split_pems(multi_pem)
-    assert 2 == len(res)
+    assert len(res) == 2
     for x in res:
         assert x.startswith(b"-----BEGIN CERTIFICATE-----\n")
         assert x.endswith(b"-----END CERTIFICATE-----\n")
@@ -126,7 +126,7 @@ def test_split_pems_garbage_between(single_pem):
         + single_pem
     )
     res = x509.split_pems(garbage_pem)
-    assert 2 == len(res)
+    assert len(res) == 2
     for x in res:
         assert x.startswith(b"-----BEGIN RSA PRIVATE KEY-----\n")
         assert x.endswith(b"-----END RSA PRIVATE KEY-----\n")
@@ -134,12 +134,12 @@ def test_split_pems_garbage_between(single_pem):
 
 
 class TestCreateExtension:
-    @pytest.fixture()
+    @pytest.fixture
     def aki(self):
         with patch("cryptography.x509.AuthorityKeyIdentifier", autospec=True) as ext:
             yield ext
 
-    @pytest.fixture()
+    @pytest.fixture
     def ca_crt(self):
         ca = Mock(spec=cx509.Certificate)
         return ca
@@ -286,7 +286,7 @@ class TestCreateExtension:
                 "subjectKeyIdentifier", val, subject_pubkey="testpub"
             )
             assert crit is False
-            if "hash" == val:
+            if val == "hash":
                 ext.from_public_key.assert_called_once_with("testpub")
             else:
                 ext.from_public_key.assert_not_called()
@@ -720,7 +720,7 @@ class TestCreateExtension:
     ):
         with patch(f"cryptography.x509.{tgt}", autospec=True) as ext:
             res, crit = x509._create_extension(extname, val)
-            if "FreshestCRL" == tgt:
+            if tgt == "FreshestCRL":
                 assert crit is False
             else:
                 assert crit == critical
@@ -1191,7 +1191,7 @@ class TestCreateExtension:
 def test_parse_general_names(inpt, cls, parsed):
     expected = cls(parsed)
     res = x509._parse_general_names([inpt])
-    if "dirName" == inpt[0]:
+    if inpt[0] == "dirName":
         assert res[0].value == expected
     else:
         assert res[0] == expected

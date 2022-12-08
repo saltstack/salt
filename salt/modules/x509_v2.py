@@ -490,9 +490,9 @@ def create_certificate(
             "sha256, sha384, sha512, sha512_224, sha512_256, sha3_224, sha3_256, "
             "sha3_384, sha3_512"
         )
-    if "der" == encoding and append_certs:
+    if encoding == "der" and append_certs:
         raise SaltInvocationError("Cannot encode a certificate chain in DER")
-    if "pkcs12" == encoding and "private_key" not in kwargs:
+    if encoding == "pkcs12" and "private_key" not in kwargs:
         # The creation will work, but it will be listed in additional certs, not
         # as the main certificate. This might confuse other parts of the code.
         raise SaltInvocationError(
@@ -512,7 +512,7 @@ def create_certificate(
         x509util.merge_signing_policy(_get_signing_policy(signing_policy), kwargs)
         cert, private_key_loaded = _create_certificate_local(**kwargs)
 
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         return encode_certificate(
             cert,
             append_certs=append_certs,
@@ -645,13 +645,13 @@ def encode_certificate(
             f"Invalid value '{encoding}' for encoding. Valid: "
             "der, pem, pkcs7_der, pkcs7_pem, pkcs12"
         )
-    if "der" == encoding and append_certs:
+    if encoding == "der" and append_certs:
         raise SaltInvocationError("Cannot encode a certificate chain in DER")
-    if "pkcs12" != encoding and private_key:
+    if encoding != "pkcs12" and private_key:
         raise SaltInvocationError(
             "Embedding private keys is only supported for pkcs12 encoding"
         )
-    if "pkcs12" == encoding and not private_key:
+    if encoding == "pkcs12" and not private_key:
         # The creation will work, but it will be listed in additional certs, not
         # as the main certificate. This might confuse other parts of the code.
         raise SaltInvocationError(
@@ -672,7 +672,7 @@ def encode_certificate(
         for append_cert in append_certs:
             # this can only happen for PEM, checked in the beginning
             crt_bytes += b"\n" + append_cert.public_bytes(crt_encoding)
-    elif "pkcs12" == encoding:
+    elif encoding == "pkcs12":
         private_key = x509util.load_privkey(
             private_key, passphrase=private_key_passphrase
         )
@@ -707,7 +707,7 @@ def encode_certificate(
             crt_bytes = serialization.pkcs7.serialize_certificates(
                 [cert] + append_certs,
                 encoding=getattr(
-                    serialization.Encoding, "PEM" if "pkcs7_pem" == encoding else "DER"
+                    serialization.Encoding, "PEM" if encoding == "pkcs7_pem" else "DER"
                 ),
             )
         except AttributeError as err:
@@ -914,7 +914,7 @@ def encode_crl(crl, encoding="pem"):
     crl_encoding = getattr(serialization.Encoding, encoding.upper())
     crl_bytes = crl.public_bytes(crl_encoding)
 
-    if "pem" == encoding:
+    if encoding == "pem":
         return crl_bytes.decode()
     return base64.b64encode(crl_bytes).decode()
 
@@ -1019,7 +1019,7 @@ def encode_csr(csr, encoding="pem"):
     csr_encoding = getattr(serialization.Encoding, encoding.upper())
     csr_bytes = csr.public_bytes(csr_encoding)
 
-    if "pem" == encoding:
+    if encoding == "pem":
         return csr_bytes.decode()
     return base64.b64encode(csr_bytes).decode()
 
@@ -1107,7 +1107,7 @@ def encode_private_key(
     else:
         if isinstance(passphrase, str):
             passphrase = passphrase.encode()
-        if "pkcs12" == encoding and pkcs12_encryption_compat:
+        if encoding == "pkcs12" and pkcs12_encryption_compat:
             cipher = (
                 serialization.PrivateFormat.PKCS12.encryption_builder()
                 .kdf_rounds(50000)
@@ -1132,7 +1132,7 @@ def encode_private_key(
             name=None, key=private_key, cert=None, cas=None, encryption_algorithm=cipher
         )
 
-    if "pem" == encoding:
+    if encoding == "pem":
         return pk_bytes.decode()
     return base64.b64encode(pk_bytes).decode()
 
@@ -1833,13 +1833,13 @@ def _valid_pem(pem, pem_type=None):
 
 
 def _generate_pk(algo="rsa", keysize=None):
-    if "rsa" == algo:
+    if algo == "rsa":
         return x509util.generate_rsa_privkey(keysize=keysize or 2048)
-    if "ec" == algo:
+    if algo == "ec":
         return x509util.generate_ec_privkey(keysize=keysize or 256)
-    if "ed25519" == algo:
+    if algo == "ed25519":
         return x509util.generate_ed25519_privkey()
-    if "ed448" == algo:
+    if algo == "ed448":
         return x509util.generate_ed448_privkey()
     raise SaltInvocationError(
         f"Invalid algorithm specified for generating private key: {algo}. Valid: "
@@ -1888,7 +1888,7 @@ def _get_name_hash(name, digest="sha1"):
     hsh = hashes.Hash(x509util.get_hashing_algorithm(digest))
     hsh.update(name.public_bytes())
     res = hsh.finalize()[:4]
-    if "little" == sys.byteorder:
+    if sys.byteorder == "little":
         res = res[::-1]
     return res
 

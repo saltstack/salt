@@ -1,5 +1,5 @@
 """
-Tests for the Vault module
+Tests for the x509_v2 module
 """
 
 import base64
@@ -404,7 +404,7 @@ A62orBDc+8x+AehfwYSm11dz5/P6aL3QZf+tzr05vbVn
 -----END ENCRYPTED PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_args(ca_minion_id, x509_data):
     return {
         "ca_server": ca_minion_id,
@@ -414,7 +414,7 @@ def cert_args(ca_minion_id, x509_data):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_args_exts():
     return {
         "basicConstraints": "critical, CA:TRUE, pathlen:1",
@@ -449,7 +449,7 @@ def test_sign_remote_certificate(x509_salt_call_cli, cert_args, ca_key, rsa_priv
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -461,7 +461,7 @@ def test_sign_remote_certificate_match(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_matching_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_matching_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -473,7 +473,7 @@ def test_sign_remote_certificate_compound_match(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_compound_match_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_compound_match_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -486,7 +486,7 @@ def test_sign_remote_certificate_enc(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -498,7 +498,7 @@ def test_sign_remote_certificate_ca_enc(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -511,7 +511,7 @@ def test_sign_remote_certificate_pubkey(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -524,7 +524,7 @@ def test_sign_remote_certificate_csr(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -559,7 +559,7 @@ def test_sign_remote_certificate_no_subject_override(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -580,7 +580,7 @@ def test_sign_remote_certificate_no_name_attribute_override(
     ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
     assert ret.data
     cert = _get_cert(ret.data)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -656,23 +656,23 @@ def _get_cert(cert, encoding="pem", passphrase=None):
     except Exception:  # pylint: disable=broad-except
         pass
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return cx509.load_pem_x509_certificate(cert)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return cx509.load_der_x509_certificate(cert)
-    if "pkcs7_pem" == encoding:
+    if encoding == "pkcs7_pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return pkcs7.load_pem_pkcs7_certificates(cert)
-    if "pkcs7_der" == encoding:
+    if encoding == "pkcs7_der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return pkcs7.load_der_pkcs7_certificates(cert)
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         if passphrase is not None and not isinstance(passphrase, bytes):

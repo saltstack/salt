@@ -931,11 +931,11 @@ def verify_signature(cert, pubkey):
     since it does not imply the certificate chain is valid.
     """
     key_type = get_key_type(pubkey)
-    if KEY_TYPE.RSA == key_type:
+    if key_type == KEY_TYPE.RSA:
         try:
             # SignatureAlgorithmOID is not present in older versions,
             # otherwise cx509.SignatureAlgorithmOID.RSASSA_PSS could be used
-            if "1.2.840.113549.1.1.10" == cert.signature_algorithm_oid.dotted_string:
+            if cert.signature_algorithm_oid.dotted_string == "1.2.840.113549.1.1.10":
                 pubkey.verify(
                     cert.signature,
                     cert.tbs_certificate_bytes,
@@ -954,7 +954,7 @@ def verify_signature(cert, pubkey):
             return True
         except InvalidSignature:
             return False
-    if KEY_TYPE.EC == key_type:
+    if key_type == KEY_TYPE.EC:
         try:
             pubkey.verify(
                 cert.signature,
@@ -977,7 +977,7 @@ def verify_signature(cert, pubkey):
 
 def isfile(path):
     """
-    A wrapper around os.path.isfile that ignores ValueError exception,s which
+    A wrapper around os.path.isfile that ignores ValueError exceptions which
     can be raised if the input to isfile is too long.
     """
     try:
@@ -1036,7 +1036,7 @@ def load_file_or_bytes(fob):
 
 
 def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
-    if "basicConstraints" == name:
+    if name == "basicConstraints":
         try:
             critical = val.get("critical", False)
         except AttributeError:
@@ -1063,7 +1063,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         except (TypeError, ValueError) as err:
             raise SaltInvocationError(err) from err
 
-    if "keyUsage" == name:
+    if name == "keyUsage":
         critical = "critical" in val
         args = {
             "digital_signature": "digitalSignature" in val,
@@ -1081,7 +1081,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         except ValueError as err:
             raise SaltInvocationError(err) from err
 
-    if "extendedKeyUsage" == name:
+    if name == "extendedKeyUsage":
         critical = "critical" in val
         if isinstance(val, str):
             val, critical = _deserialize_openssl_confstring(val)
@@ -1090,17 +1090,17 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             val = [val]
         usages = []
         for usage in val:
-            if "critical" == usage:
+            if usage == "critical":
                 continue
             usages.append(EXTENDED_KEY_USAGE_OID.get(usage) or _get_oid(str(usage)))
         return cx509.ExtendedKeyUsage(usages), critical
 
-    if "subjectKeyIdentifier" == name:
+    if name == "subjectKeyIdentifier":
         if "critical" in val:
             raise SaltInvocationError(
                 "subjectKeyIdentifier must be marked as non-critical"
             )
-        if "hash" == val:
+        if val == "hash":
             if not subject_pubkey:
                 raise RuntimeError(
                     "Cannot calculate digest for subjectKeyIdentifier: missing pubkey"
@@ -1124,7 +1124,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         # this must be marked as non-critical
         return cx509.SubjectKeyIdentifier(val), False
 
-    if "authorityKeyIdentifier" == name:
+    if name == "authorityKeyIdentifier":
         if "critical" in val:
             raise SaltInvocationError(
                 "authorityKeyIdentifier must be marked as non-critical"
@@ -1165,7 +1165,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
                 except Exception:  # pylint: disable=broad-except
                     pass
 
-            if "always" == val["keyid"] and args["key_identifier"] is None:
+            if val["keyid"] == "always" and args["key_identifier"] is None:
                 raise CommandExecutionError(
                     "Could not retrieve authorityKeyIdentifier keyid, but it was set to always"
                 )
@@ -1181,7 +1181,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
                 args["authority_cert_issuer"] = args[
                     "authority_cert_serial_number"
                 ] = None
-                if "always" == val["issuer"]:
+                if val["issuer"] == "always":
                     raise CommandExecutionError(
                         "Could not add authority_cert_issuer and "
                         "authority_cert_serial_number, but was set to always."
@@ -1208,7 +1208,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             val, critical = _deserialize_openssl_confstring(val, multiple=True)
             val = tuple(val)
         parsed = []
-        if any(("issuer", "copy") == x for x in val):
+        if any(x == ("issuer", "copy") for x in val):
             if not ca_crt:
                 raise RuntimeError("Need CA certificate to copy to issuerAltName")
             try:
@@ -1229,17 +1229,17 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
                     "internal API that the issuer:copy functionality relies on"
                 ) from err
         parsed.extend(_parse_general_names(val))
-        if "certificateIssuer" == name:
+        if name == "certificateIssuer":
             return cx509.CertificateIssuer(parsed), critical
         return cx509.IssuerAlternativeName(parsed), critical
 
-    if "authorityInfoAccess" == name:
+    if name == "authorityInfoAccess":
         if isinstance(val, str):
             val = (
-                x.strip().split(";") for x in val.split(",") if "critical" != x.strip()
+                x.strip().split(";") for x in val.split(",") if x.strip() != "critical"
             )
         elif isinstance(val, dict):
-            val = ((k, v) for k, v in val.items() if "critical" != k)
+            val = ((k, v) for k, v in val.items() if k != "critical")
         elif isinstance(val, list):
             val = ((k, v) for x in val for k, v in x.items() if x != "critical")
 
@@ -1253,7 +1253,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             parsed.append(cx509.AccessDescription(oid, general_name))
         return cx509.AuthorityInformationAccess(parsed), False  # always noncritical
 
-    if "subjectAltName" == name:
+    if name == "subjectAltName":
         # subjectAltName must be marked as critical if subject is empty
         critical = "critical" in val
         if isinstance(val, list):
@@ -1323,11 +1323,11 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
                 )
             except (ValueError, TypeError) as err:
                 raise SaltInvocationError(err) from err
-        if "freshestCRL" == name:
+        if name == "freshestCRL":
             return cx509.FreshestCRL(parsed), False  # must be non-critical
         return cx509.CRLDistributionPoints(parsed), critical
 
-    if "issuingDistributionPoint" == name:
+    if name == "issuingDistributionPoint":
         if not isinstance(val, dict):
             raise SaltInvocationError("issuingDistributionPoint must be a dictionary")
         critical = val.get("critical", False)
@@ -1368,14 +1368,14 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         except (ValueError, TypeError) as err:
             raise SaltInvocationError(err) from err
 
-    if "certificatePolicies" == name:
+    if name == "certificatePolicies":
         if isinstance(val, str):
             try:
                 critical = val.startswith("critical")
                 policy_identifiers = (
                     _get_oid(x.strip())
                     for x in val.split(",")
-                    if "critical" != x.strip()
+                    if x.strip() != "critical"
                 )
                 policy_information = [
                     cx509.PolicyInformation(policy_identifier=p, policy_qualifiers=None)
@@ -1390,7 +1390,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         critical = val.get("critical", False)
         parsed = []
         for polid, qualifiers in val.items():
-            if "critical" == polid:
+            if polid == "critical":
                 continue
             parsed_qualifiers = []
             for qual in qualifiers:
@@ -1420,7 +1420,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             )
         return cx509.CertificatePolicies(parsed), critical
 
-    if "policyConstraints" == name:
+    if name == "policyConstraints":
         critical = "critical" in val
         if isinstance(val, str):
             val, critical = _deserialize_openssl_confstring(val)
@@ -1439,7 +1439,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         except (TypeError, ValueError) as err:
             raise SaltInvocationError(err) from err
 
-    if "inhibitAnyPolicy" == name:
+    if name == "inhibitAnyPolicy":
         critical = "critical" in val if not isinstance(val, int) else False
         if isinstance(val, str):
             val, critical = _deserialize_openssl_confstring(val)
@@ -1456,7 +1456,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
         except (TypeError, ValueError) as err:
             raise SaltInvocationError(err) from err
 
-    if "nameConstraints" == name:
+    if name == "nameConstraints":
         critical = "critical" in val
         if isinstance(val, dict):
             parsed = {}
@@ -1476,10 +1476,10 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             items = tuple(x.strip().split(";") for x in val.split(","))
             val = {
                 "permitted": [
-                    x[1].split(":", maxsplit=1) for x in items if "permitted" == x[0]
+                    x[1].split(":", maxsplit=1) for x in items if x[0] == "permitted"
                 ],
                 "excluded": [
-                    x[1].split(":", maxsplit=1) for x in items if "excluded" == x[0]
+                    x[1].split(":", maxsplit=1) for x in items if x[0] == "excluded"
                 ],
             }
         args = {
@@ -1494,26 +1494,26 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             raise SaltInvocationError("nameConstraints needs at least one definition")
         return cx509.NameConstraints(**args), critical
 
-    if "noCheck" == name:
+    if name == "noCheck":
         return cx509.OCSPNoCheck(), "critical" in str(val)
 
-    if "tlsfeature" == name:
+    if name == "tlsfeature":
         if isinstance(val, str):
             val = [x.strip() for x in val.split(",")]
         critical = "critical" in val
         try:
-            types = [getattr(cx509.TLSFeatureType, x) for x in val if "critical" != x]
+            types = [getattr(cx509.TLSFeatureType, x) for x in val if x != "critical"]
         except ValueError as err:
             raise SaltInvocationError(err) from err
         return cx509.TLSFeature(types), critical
 
-    if "nsComment" == name:
+    if name == "nsComment":
         raise SaltInvocationError("nsComment is currently not implemented.")
 
-    if "nsCertType" == name:
+    if name == "nsCertType":
         raise SaltInvocationError("nsCertType is currently not implemented.")
 
-    if "cRLNumber" == name:
+    if name == "cRLNumber":
         try:
             return cx509.CRLNumber(int(val)), False
         except ValueError as err:
@@ -1521,7 +1521,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
                 "cRLNumber must be an integer and must be marked as non-critical"
             ) from err
 
-    if "deltaCRLIndicator" == name:
+    if name == "deltaCRLIndicator":
         critical = "critical" in str(val)
         val = re.findall(r"[\d]+", str(val))
         if len(val) != 1:
@@ -1530,21 +1530,21 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
             )
         return cx509.DeltaCRLIndicator(int(val[0])), critical
 
-    if "CRLReason" == name:
+    if name == "CRLReason":
         critical = False
         if isinstance(val, str):
             val, critical = _deserialize_openssl_confstring(val)
         else:
             if "critical" in val:
                 critical = True
-                val = [x for x in val if "critical" != x]
+                val = [x for x in val if x != "critical"]
 
         try:
             return cx509.CRLReason(cx509.ReasonFlags(next(iter(val)))), critical
         except ValueError as err:
             raise SaltInvocationError(str(err)) from err
 
-    if "invalidityDate" == name:
+    if name == "invalidityDate":
         if not isinstance(val, str):
             raise SaltInvocationError("invalidityDate must be a string")
         critical = val.startswith("critical")
@@ -1617,11 +1617,11 @@ def _parse_general_names(val):
     parsed = []
     for typ, v in val:
         typ = typ.lower()
-        if "dirname" == typ:
+        if typ == "dirname":
             v = _get_dn(v)
-        elif "rid" == typ:
+        elif typ == "rid":
             v = _get_oid(v)
-        elif "ip" == typ:
+        elif typ == "ip":
             try:
                 v = ipaddress.ip_address(v)
             except ValueError:
@@ -1631,7 +1631,7 @@ def _parse_general_names(val):
                     raise CommandExecutionError(
                         f"Provided value {v} does not seem to be an IP address or network range."
                     ) from err
-        elif "email" == typ:
+        elif typ == "email":
             splits = v.rsplit("@", maxsplit=1)
             if len(splits) > 1:
                 user, domain = splits
@@ -1639,16 +1639,16 @@ def _parse_general_names(val):
                 v = "@".join((user, domain))
             else:
                 v = idna_encode(splits[0], allow_leading_dot=True)
-        elif "uri" == typ:
+        elif typ == "uri":
             url = urlparse(v)
             if url.netloc:
                 domain = idna_encode(url.netloc)
                 v = urlunparse(
                     (url.scheme, domain, url.path, url.params, url.query, url.fragment)
                 )
-        elif "dns" == typ:
+        elif typ == "dns":
             v = idna_encode(v, allow_leading_dot=True)
-        elif "othername" == typ:
+        elif typ == "othername":
             raise SaltInvocationError("otherName is currently not implemented")
         if typ in valid_types:
             try:
@@ -1920,7 +1920,7 @@ def render_extension(ext):
             policies = []
             for policy in ext.value._policies:
                 polid = policy.policy_identifier._name
-                if "Unknown OID" == polid:
+                if polid == "Unknown OID":
                     polid = policy.policy_identifier.dotted_string
                 qualifiers = []
                 for notice in policy.policy_qualifiers or []:

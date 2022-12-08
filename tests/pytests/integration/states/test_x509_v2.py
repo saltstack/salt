@@ -1,5 +1,5 @@
 """
-Tests for the Vault module
+Tests for the x509_v2 module
 """
 
 import base64
@@ -184,7 +184,7 @@ def x509_master_config(ca_minion_id):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def privkey_new(x509_salt_master, tmp_path, ca_minion_id, x509_salt_call_cli):
     state = f"""\
 Private key:
@@ -216,7 +216,7 @@ Certificate:
         yield
 
 
-@pytest.fixture()
+@pytest.fixture
 def privkey_new_pkcs12(x509_salt_master, tmp_path, ca_minion_id, x509_salt_call_cli):
     state = f"""\
 Private key:
@@ -470,7 +470,7 @@ A62orBDc+8x+AehfwYSm11dz5/P6aL3QZf+tzr05vbVn
 -----END ENCRYPTED PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_args(ca_minion_id, tmp_path, x509_data):
     return {
         "name": str(tmp_path / "cert_managed"),
@@ -481,7 +481,7 @@ def cert_args(ca_minion_id, tmp_path, x509_data):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_args_exts():
     return {
         "basicConstraints": "critical, CA:TRUE, pathlen:1",
@@ -510,7 +510,7 @@ def existing_cert(x509_salt_call_cli, cert_args, ca_key, rsa_privkey, request):
     )
     assert ret.returncode == 0
     cert = _get_cert(cert_args["name"])
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
     yield cert_args["name"]
@@ -534,7 +534,7 @@ def test_certificate_managed_remote(
     )
     assert ret.returncode == 0
     cert = _get_cert(cert_args["name"])
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
 
@@ -603,7 +603,7 @@ def test_certificate_managed_remote_renew(x509_salt_call_cli, cert_args):
     )
     assert ret.returncode == 0
     cert_new = _get_cert(cert_args["name"])
-    assert cert_cur.serial_number != cert_new.serial_number
+    assert cert_new.serial_number != cert_cur.serial_number
 
 
 @pytest.mark.usefixtures("privkey_new")
@@ -658,23 +658,23 @@ def _get_cert(cert, encoding="pem", passphrase=None):
     except Exception:  # pylint: disable=broad-except
         pass
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return cx509.load_pem_x509_certificate(cert)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return cx509.load_der_x509_certificate(cert)
-    if "pkcs7_pem" == encoding:
+    if encoding == "pkcs7_pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return pkcs7.load_pem_pkcs7_certificates(cert)
-    if "pkcs7_der" == encoding:
+    if encoding == "pkcs7_der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return pkcs7.load_der_pkcs7_certificates(cert)
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         if passphrase is not None and not isinstance(passphrase, bytes):
@@ -692,15 +692,15 @@ def _get_privkey(pk, encoding="pem", passphrase=None):
     if passphrase is not None:
         passphrase = passphrase.encode()
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(pk, bytes):
             pk = pk.encode()
         return load_pem_private_key(pk, passphrase)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(pk, bytes):
             pk = base64.b64decode(pk)
         return load_der_private_key(pk, passphrase)
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         if not isinstance(pk, bytes):
             pk = base64.b64decode(pk)
         return pkcs12.load_pkcs12(pk, passphrase).key

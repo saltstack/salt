@@ -1,5 +1,4 @@
 import base64
-import shutil
 from pathlib import Path
 
 import pytest
@@ -51,15 +50,12 @@ def minion_config_overrides():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def x509(loaders, states, tmp_path):
-    try:
-        yield states.x509
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+    yield states.x509
 
 
-@pytest.fixture()
+@pytest.fixture
 def ca_cert():
     return """\
 -----BEGIN CERTIFICATE-----
@@ -85,7 +81,7 @@ LN1w5sybsYwIw6QN
 """
 
 
-@pytest.fixture()
+@pytest.fixture
 def ca_key():
     return """\
 -----BEGIN RSA PRIVATE KEY-----
@@ -117,7 +113,7 @@ HdI7Pfaf/l0HozAw/Al+LXbpmSBdfmz0U/EGAKRqXMW5+vQ7XHXD
 -----END RSA PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ca_key_enc():
     return """\
 -----BEGIN ENCRYPTED PRIVATE KEY-----
@@ -152,7 +148,7 @@ A62orBDc+8x+AehfwYSm11dz5/P6aL3QZf+tzr05vbVn
 -----END ENCRYPTED PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def rsa_privkey():
     return """\
 -----BEGIN RSA PRIVATE KEY-----
@@ -184,7 +180,7 @@ DYRTDIS9eg2LF4B64hZvkCLTmP4rLJWdRnWrLosIC4rD1uWgGayC
 -----END RSA PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def rsa_privkey_enc():
     return """\
 -----BEGIN ENCRYPTED PRIVATE KEY-----
@@ -219,7 +215,7 @@ ahZPgPpP2p2uAz1+9MHpVPo2EIrvibm5T89DznwuaEfe
 -----END ENCRYPTED PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def rsa_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -233,7 +229,7 @@ ye1mdbD5KVBgJ9MArc2tJ3rmB0lxjEbAhTEHrNnIkDOJCKE8TaQOW4RyVWlIvSEL
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr():
     return """\
 -----BEGIN CERTIFICATE REQUEST-----
@@ -253,7 +249,7 @@ q1HXd62bA8k27ukX7w8qWsk6fOTwPh5F3883L5jVqcRsL9pqb4RUugTh/aReVlKW
 -----END CERTIFICATE REQUEST-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr_invalid_version():
     return """\
 -----BEGIN CERTIFICATE REQUEST-----
@@ -273,7 +269,7 @@ BldjvVnQN7bCjM2TQTMSbd00lD+071hLm6ceDQdoewbipNKyhBnQd4hFYJgDPQR7
 -----END CERTIFICATE REQUEST-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ec_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -283,7 +279,7 @@ ldlNqU8U1Lz3ckCGI3TdGZ6nPaL3IT/UNH6C+J86RWSLY18hFHXoeKBD
 -----END PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ec_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -292,7 +288,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvuZnhksFYiq0UNzYtXH2tPFhuXSv
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed25519_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -300,7 +296,7 @@ MC4CAQAwBQYDK2VwBCIEIFKFjPIOBze2eo9x/EiCL0ni5GacaKIRZdfREBfuEdE9
 -----END PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed25519_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -308,7 +304,7 @@ MCowBQYDK2VwAyEAK+1yspaj/3Mb2K7H6y2d0Y+udSF+7sBozMY4aKUBR0I=
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed448_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -317,7 +313,7 @@ Y2QKHSRG0M1ZUFr/EYH9F9mTgnAwmyp7oA==
 -----END PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed448_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -326,7 +322,7 @@ vHv0+Ke3LRlEzGbwroKtP66opn4A
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_exts():
     return """
 -----BEGIN CERTIFICATE-----
@@ -356,7 +352,7 @@ IiC+2Um3mhImnIoeRxH/cXTABsOrSE+QzIv7Z3orIUxyMqtm
 -----END CERTIFICATE-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr_exts():
     return """\
 -----BEGIN CERTIFICATE REQUEST-----
@@ -384,7 +380,7 @@ O68=
 -----END CERTIFICATE REQUEST-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_args(tmp_path, ca_cert, ca_key):
     return {
         "name": f"{tmp_path}/cert",
@@ -394,7 +390,7 @@ def cert_args(tmp_path, ca_cert, ca_key):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_args_exts():
     return {
         "basicConstraints": "critical, CA:TRUE, pathlen:1",
@@ -415,7 +411,7 @@ def cert_args_exts():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_args(tmp_path, ca_cert, ca_key):
     return {
         "name": f"{tmp_path}/crl",
@@ -425,7 +421,7 @@ def crl_args(tmp_path, ca_cert, ca_key):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_args_exts():
     return {
         "authorityKeyIdentifier": "keyid:always",
@@ -440,7 +436,7 @@ def crl_args_exts():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_revoked():
     return [
         {
@@ -515,7 +511,7 @@ def crl_revoked():
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr_args(tmp_path, rsa_privkey):
     return {
         "name": f"{tmp_path}/csr",
@@ -524,7 +520,7 @@ def csr_args(tmp_path, rsa_privkey):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr_args_exts():
     return {
         "basicConstraints": "critical, CA:TRUE, pathlen:1",
@@ -541,7 +537,7 @@ def csr_args_exts():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def pk_args(tmp_path):
     return {
         "name": f"{tmp_path}/private_key",
@@ -820,7 +816,7 @@ def test_certificate_managed_with_extensions(
     cert_args.update(cert_args_exts)
     ret = x509.certificate_managed(**cert_args)
     cert = _assert_cert_created_basic(ret, cert_args["name"], rsa_privkey, ca_key)
-    assert len(cert_args_exts) == len(cert.extensions)
+    assert len(cert.extensions) == len(cert_args_exts)
 
 
 def test_certificate_managed_with_signing_policy(x509, cert_args, rsa_privkey, ca_key):
@@ -833,7 +829,7 @@ def test_certificate_managed_with_signing_policy(x509, cert_args, rsa_privkey, c
     assert ret.changes
     assert ret.changes.get("created")
     cert = _get_cert(cert_args["name"])
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _belongs_to(cert, rsa_privkey)
     assert _signed_by(cert, ca_key)
 
@@ -858,8 +854,8 @@ def test_certificate_managed_with_distinguished_name_kwargs(
     assert ret.changes.get("created") == cert_args["name"]
     cert = _get_cert(cert_args["name"])
     assert (
-        "CN=salt.test,OU=SaltStack Test,O=SaltStack,L=Some Town,ST=Some State,C=US"
-        == cert.subject.rfc4514_string()
+        cert.subject.rfc4514_string()
+        == "CN=salt.test,OU=SaltStack Test,O=SaltStack,L=Some Town,ST=Some State,C=US"
     )
     assert _belongs_to(cert, rsa_privkey)
     assert _signed_by(cert, ca_key)
@@ -874,7 +870,7 @@ def test_certificate_managed_without_subject(x509, cert_args, rsa_privkey, ca_ke
     assert ret.changes
     assert ret.changes.get("created") == cert_args["name"]
     cert = _get_cert(cert_args["name"])
-    assert "" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == ""
     assert _belongs_to(cert, rsa_privkey)
     assert _signed_by(cert, ca_key)
 
@@ -1029,7 +1025,7 @@ def test_certificate_managed_days_remaining(x509, cert_args, days, expected):
     """
     cert_args["days_remaining"] = days
     ret = x509.certificate_managed(**cert_args)
-    assert bool(ret.changes) == expected
+    assert bool(ret.changes) is expected
 
 
 @pytest.mark.usefixtures("existing_cert")
@@ -1155,7 +1151,7 @@ def test_certificate_managed_encoding_change(
     cert_new = _assert_cert_basic(
         ret, cert_args["name"], rsa_privkey, ca_key, encoding=encoding
     )
-    assert cert.serial_number == cert_new.serial_number
+    assert cert_new.serial_number == cert.serial_number
 
 
 @pytest.mark.usefixtures("existing_cert_chain")
@@ -1205,12 +1201,12 @@ def test_certificate_managed_chain_change(
     )
     if cert_args["encoding"].startswith("pkcs7"):
         cert = cert[0]
-    elif "pkcs12" == cert_args["encoding"]:
+    elif cert_args["encoding"] == "pkcs12":
         if CRYPTOGRAPHY_VERSION[0] == 36:
             # it seems (serial number) parsing of pkcs12 certificates is broken (?) in that release
             return
         cert = cert.cert.certificate
-    assert cert.serial_number == cert_new.serial_number
+    assert cert_new.serial_number == cert.serial_number
 
 
 @pytest.mark.usefixtures("existing_cert")
@@ -1224,7 +1220,7 @@ def test_certificate_managed_additional_certs_change(
     cert = _get_cert(cert_args["name"])
     ret = x509.certificate_managed(**cert_args)
     cert_new = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
-    assert cert.serial_number == cert_new.serial_number
+    assert cert_new.serial_number == cert.serial_number
 
 
 def test_certificate_managed_wrong_ca_key(
@@ -1255,7 +1251,7 @@ def test_pkcs12_friendlyname_change(x509, cert_args, ca_cert, ca_key, rsa_privke
     _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key, encoding="pkcs12")
     cert_new = _get_cert(cert_args["name"], encoding="pkcs12")
     assert (
-        cert.cert.certificate.serial_number == cert_new.cert.certificate.serial_number
+        cert_new.cert.certificate.serial_number == cert.cert.certificate.serial_number
     )
     assert cert_new.cert.friendly_name == b"bar"
 
@@ -1311,7 +1307,7 @@ def test_certificate_managed_mode(x509, cert_args, rsa_privkey, ca_key, mode, mo
     cert_args["mode"] = mode
     ret = x509.certificate_managed(**cert_args)
     _assert_cert_created_basic(ret, cert_args["name"], rsa_privkey, ca_key)
-    assert mode == modules.file.get_mode(cert_args["name"])
+    assert modules.file.get_mode(cert_args["name"]) == mode
 
 
 def test_certificate_managed_file_managed_create_false(
@@ -1336,7 +1332,7 @@ def test_certificate_managed_mode_change_only(
     """
     This serves as a proxy for all file.managed args
     """
-    assert "0644" == modules.file.get_mode(cert_args["name"])
+    assert modules.file.get_mode(cert_args["name"]) == "0644"
     cert_args["mode"] = "0640"
     cert_args.pop("serial_number", None)
     cert = _get_cert(cert_args["name"])
@@ -1344,9 +1340,9 @@ def test_certificate_managed_mode_change_only(
     assert ret.result is True
     assert ret.filtered["sub_state_run"][0]["changes"]
     assert "mode" in ret.filtered["sub_state_run"][0]["changes"]
-    assert "0640" == modules.file.get_mode(cert_args["name"])
+    assert modules.file.get_mode(cert_args["name"]) == "0640"
     cert_new = _get_cert(cert_args["name"])
-    assert cert.serial_number == cert_new.serial_number
+    assert cert_new.serial_number == cert.serial_number
 
 
 @pytest.mark.usefixtures("existing_cert")
@@ -1458,7 +1454,7 @@ def test_certificate_managed_pkcs12_embedded_pk_kept(
     _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key, encoding="pkcs12")
     assert list(ret.changes) == ["expiration"]
     new_pk = _get_cert(cert_args["name"], encoding="pkcs12").key
-    assert cur_pk.public_key().public_numbers() == new_pk.public_key().public_numbers()
+    assert new_pk.public_key().public_numbers() == cur_pk.public_key().public_numbers()
 
 
 def test_crl_managed_empty(x509, crl_args, ca_key):
@@ -1480,7 +1476,7 @@ def test_crl_managed_with_revocations(x509, crl_args, crl_revoked, ca_key):
     ret = x509.crl_managed(**crl_args)
     crl = _assert_crl_basic(ret, ca_key)
     assert len(crl) == len(crl_args["revoked"])
-    assert 2 == len((next(iter(crl))).extensions)
+    assert len((next(iter(crl))).extensions) == 2
 
 
 def test_crl_managed_der(x509, crl_args, ca_key):
@@ -1543,7 +1539,7 @@ def test_crl_managed_existing_renew(x509, crl_args, ca_key):
     crl_args["days_remaining"] = 300
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
-    assert {"expiration"} == set(ret.changes)
+    assert set(ret.changes) == {"expiration"}
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1562,7 +1558,7 @@ def test_crl_managed_existing_revocations_changed(x509, crl_args, crl_revoked, c
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
     assert "revocations" in ret.changes
-    assert 2 == len(ret.changes["revocations"]["changed"])
+    assert len(ret.changes["revocations"]["changed"]) == 2
 
 
 @pytest.mark.usefixtures("existing_crl_rev")
@@ -1571,7 +1567,7 @@ def test_crl_managed_existing_revocations_removed(x509, crl_args, crl_revoked, c
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
     assert "revocations" in ret.changes
-    assert 1 == len(ret.changes["revocations"]["removed"])
+    assert len(ret.changes["revocations"]["removed"]) == 1
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1582,7 +1578,7 @@ def test_crl_managed_existing_signing_key_change(
     crl_args["signing_cert"] = cert_exts
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, rsa_privkey)
-    assert {"issuer_name", "public_key"} == set(ret.changes)
+    assert set(ret.changes) == {"issuer_name", "public_key"}
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1590,7 +1586,7 @@ def test_crl_managed_existing_digest_change(x509, crl_args, ca_key):
     crl_args["digest"] = "sha512"
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
-    assert {"digest"} == set(ret.changes)
+    assert set(ret.changes) == {"digest"}
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1622,7 +1618,7 @@ def test_crl_managed_exts_added(x509, crl_args, crl_args_exts, ca_key):
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
     assert "extensions" in ret.changes
-    assert len(crl_args_exts) == len(ret.changes["extensions"]["added"])
+    assert len(ret.changes["extensions"]["added"]) == len(crl_args_exts)
 
 
 @pytest.mark.usefixtures("existing_crl_exts")
@@ -1631,7 +1627,7 @@ def test_crl_managed_existing_exts_changed(x509, crl_args, ca_key):
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
     assert "extensions" in ret.changes
-    assert 1 == len(ret.changes["extensions"]["changed"])
+    assert len(ret.changes["extensions"]["changed"]) == 1
 
 
 @pytest.mark.usefixtures("existing_crl_exts")
@@ -1640,7 +1636,7 @@ def test_crl_managed_existing_exts_removed(x509, crl_args, ca_key):
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
     assert "extensions" in ret.changes
-    assert 1 == len(ret.changes["extensions"]["removed"])
+    assert len(ret.changes["extensions"]["removed"]) == 1
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1651,11 +1647,11 @@ def test_crl_managed_existing_crl_crlnumber_auto(x509, crl_args, crl_revoked, ca
     # the dict is manipulated by the state function, it contains 1 now
     crl_args["extensions"]["cRLNumber"] = "auto"
     cur = _get_crl(crl_args["name"])
-    assert 1 == cur.extensions[0].value.crl_number
+    assert cur.extensions[0].value.crl_number == 1
     crl_args["revoked"] = crl_revoked
     ret = x509.crl_managed(**crl_args)
     new = _assert_crl_basic(ret, ca_key)
-    assert 2 == new.extensions[0].value.crl_number
+    assert new.extensions[0].value.crl_number == 2
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1666,11 +1662,11 @@ def test_crl_managed_existing_crl_crlnumber_auto_no_change(x509, crl_args):
     # the dict is manipulated by the state function, it contains 1 now
     crl_args["extensions"]["cRLNumber"] = "auto"
     cur = _get_crl(crl_args["name"])
-    assert 1 == cur.extensions[0].value.crl_number
+    assert cur.extensions[0].value.crl_number == 1
     ret = x509.crl_managed(**crl_args)
     _assert_not_changed(ret)
     new = _get_crl(crl_args["name"])
-    assert cur.extensions[0].value.crl_number == new.extensions[0].value.crl_number
+    assert new.extensions[0].value.crl_number == cur.extensions[0].value.crl_number
 
 
 @pytest.mark.usefixtures("existing_crl")
@@ -1682,12 +1678,12 @@ def test_crl_managed_existing_encoding_change_only(x509, crl_args, ca_key):
     crl_args["extensions"]["cRLNumber"] = "auto"
     crl_args["encoding"] = "der"
     cur = _get_crl(crl_args["name"])
-    assert 1 == cur.extensions[0].value.crl_number
+    assert cur.extensions[0].value.crl_number == 1
     ret = x509.crl_managed(**crl_args)
     assert ret.result
     assert ret.changes
     new = _get_crl(crl_args["name"], encoding="der")
-    assert 1 == new.extensions[0].value.crl_number
+    assert new.extensions[0].value.crl_number == 1
 
 
 @pytest.mark.parametrize("mode", ["0400", "0640", "0644"])
@@ -1698,7 +1694,7 @@ def test_crl_managed_mode(x509, crl_args, ca_key, mode, modules):
     crl_args["mode"] = mode
     ret = x509.crl_managed(**crl_args)
     _assert_crl_basic(ret, ca_key)
-    assert mode == modules.file.get_mode(crl_args["name"])
+    assert modules.file.get_mode(crl_args["name"]) == mode
 
 
 def test_crl_managed_file_managed_create_false(x509, crl_args):
@@ -1722,18 +1718,18 @@ def test_crl_managed_mode_change_only(x509, crl_args, ca_key, modules):
     """
     This serves as a proxy for all file.managed args
     """
-    assert "0644" == modules.file.get_mode(crl_args["name"])
+    assert modules.file.get_mode(crl_args["name"]) == "0644"
     crl_args["mode"] = "0640"
     crl = _get_crl(crl_args["name"])
     ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     assert ret.filtered["sub_state_run"][0]["changes"]
     assert "mode" in ret.filtered["sub_state_run"][0]["changes"]
-    assert "0640" == modules.file.get_mode(crl_args["name"])
+    assert modules.file.get_mode(crl_args["name"]) == "0640"
     crl_new = _get_crl(crl_args["name"])
     assert (
-        crl.extensions.get_extension_for_class(cx509.CRLNumber).value
-        == crl_new.extensions.get_extension_for_class(cx509.CRLNumber).value
+        crl_new.extensions.get_extension_for_class(cx509.CRLNumber).value
+        == crl.extensions.get_extension_for_class(cx509.CRLNumber).value
     )
 
 
@@ -1851,7 +1847,7 @@ def test_csr_managed_with_extensions(x509, csr_args, csr_args_exts, rsa_privkey)
     csr_args.update(csr_args_exts)
     ret = x509.csr_managed(**csr_args)
     csr = _assert_csr_basic(ret, rsa_privkey)
-    assert len(csr_args_exts) == len(csr.extensions)
+    assert len(csr.extensions) == len(csr_args_exts)
 
 
 def test_csr_managed_with_subject(x509, csr_args, rsa_privkey):
@@ -1992,7 +1988,7 @@ def test_csr_managed_mode(x509, csr_args, rsa_privkey, mode, modules):
     csr_args["mode"] = mode
     ret = x509.csr_managed(**csr_args)
     _assert_csr_basic(ret, rsa_privkey)
-    assert mode == modules.file.get_mode(csr_args["name"])
+    assert modules.file.get_mode(csr_args["name"]) == mode
 
 
 def test_csr_managed_file_managed_create_false(x509, csr_args):
@@ -2012,14 +2008,14 @@ def test_csr_managed_mode_change_only(x509, csr_args, ca_key, modules):
     """
     This serves as a proxy for all file.managed args
     """
-    assert "0644" == modules.file.get_mode(csr_args["name"])
+    assert modules.file.get_mode(csr_args["name"]) == "0644"
     csr_args["mode"] = "0640"
     ret = x509.csr_managed(**csr_args)
     assert ret.result is True
     assert not ret.changes
     assert ret.filtered["sub_state_run"][0]["changes"]
     assert "mode" in ret.filtered["sub_state_run"][0]["changes"]
-    assert "0640" == modules.file.get_mode(csr_args["name"])
+    assert modules.file.get_mode(csr_args["name"]) == "0640"
 
 
 @pytest.mark.usefixtures("existing_csr")
@@ -2131,7 +2127,7 @@ def test_csr_managed_file_managed_error(x509, csr_args, encoding):
 def test_private_key_managed(x509, pk_args, algo, encoding, passphrase):
     if (
         algo in ["ed25519", "ed448"]
-        and "pkcs12" == encoding
+        and encoding == "pkcs12"
         and CRYPTOGRAPHY_VERSION[0] < 37
     ):
         pytest.skip(
@@ -2224,7 +2220,7 @@ def test_private_key_managed_encoding_change(x509, pk_args, encoding):
     pk_args["encoding"] = encoding
     ret = x509.private_key_managed(**pk_args)
     new = _assert_pk_basic(ret, "rsa", encoding=encoding)
-    assert cur.public_key().public_numbers() == new.public_key().public_numbers()
+    assert new.public_key().public_numbers() == cur.public_key().public_numbers()
 
 
 @pytest.mark.usefixtures("existing_pk")
@@ -2233,7 +2229,7 @@ def test_private_key_managed_passphrase_introduced(x509, pk_args):
     cur = _get_privkey(pk_args["name"])
     ret = x509.private_key_managed(**pk_args)
     new = _assert_pk_basic(ret, "rsa", passphrase="hunter1")
-    assert cur.public_key().public_numbers() == new.public_key().public_numbers()
+    assert new.public_key().public_numbers() == cur.public_key().public_numbers()
 
 
 @pytest.mark.usefixtures("existing_pk")
@@ -2287,7 +2283,7 @@ def test_private_key_managed_mode(x509, pk_args, mode, encoding, modules):
     pk_args["encoding"] = encoding
     ret = x509.private_key_managed(**pk_args)
     _assert_pk_basic(ret, "rsa", encoding=encoding)
-    assert (mode or "0400") == modules.file.get_mode(pk_args["name"])
+    assert modules.file.get_mode(pk_args["name"]) == (mode or "0400")
 
 
 def test_private_key_managed_file_managed_create_false(x509, pk_args):
@@ -2382,16 +2378,16 @@ def test_private_key_managed_mode_change_only(x509, pk_args, modules):
     """
     This serves as a proxy for all file.managed args
     """
-    assert "0400" == modules.file.get_mode(pk_args["name"])
+    assert modules.file.get_mode(pk_args["name"]) == "0400"
     pk_args["mode"] = "0600"
     cur = _get_privkey(pk_args["name"])
     ret = x509.private_key_managed(**pk_args)
     assert ret.result is True
     assert ret.filtered["sub_state_run"][0]["changes"]
     assert "mode" in ret.filtered["sub_state_run"][0]["changes"]
-    assert "0600" == modules.file.get_mode(pk_args["name"])
+    assert modules.file.get_mode(pk_args["name"]) == "0600"
     new = _get_privkey(pk_args["name"])
-    assert cur.public_key().public_numbers() == new.public_key().public_numbers()
+    assert new.public_key().public_numbers() == cur.public_key().public_numbers()
 
 
 @pytest.mark.parametrize("encoding", ["pem", "der"])
@@ -2463,7 +2459,7 @@ def _assert_cert_created_basic(
     cert = _get_cert(name, encoding=encoding, passphrase=passphrase)
     if encoding.startswith("pkcs7"):
         cert = cert[0]
-    elif "pkcs12" == encoding:
+    elif encoding == "pkcs12":
         # pkcs12 embeds the private key inside the container
         assert _belongs_to(cert.key.public_key(), privkey)
         if get_pkcs12:
@@ -2471,7 +2467,7 @@ def _assert_cert_created_basic(
         cert = cert.cert.certificate
     if subject is None:
         subject = "CN=success"
-    assert subject == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == subject
     assert _belongs_to(cert, privkey)
     assert _signed_by(cert, ca_key)
     return cert
@@ -2485,7 +2481,7 @@ def _assert_cert_basic(
     cert = _get_cert(name, encoding=encoding, passphrase=passphrase)
     if encoding.startswith("pkcs7"):
         cert = cert[0]
-    elif "pkcs12" == encoding:
+    elif encoding == "pkcs12":
         assert _belongs_to(cert.key.public_key(), privkey)
         if get_pkcs12:
             return cert
@@ -2503,23 +2499,23 @@ def _get_cert(cert, encoding="pem", passphrase=None):
     except Exception:  # pylint: disable=broad-except
         pass
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return cx509.load_pem_x509_certificate(cert)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return cx509.load_der_x509_certificate(cert)
-    if "pkcs7_pem" == encoding:
+    if encoding == "pkcs7_pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return pkcs7.load_pem_pkcs7_certificates(cert)
-    if "pkcs7_der" == encoding:
+    if encoding == "pkcs7_der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return pkcs7.load_der_pkcs7_certificates(cert)
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         if passphrase is not None and not isinstance(passphrase, bytes):
@@ -2560,13 +2556,13 @@ def _assert_pk_basic(ret, algo, encoding="pem", passphrase=None):
     assert ret.result
     assert ret.changes
     pk = _get_privkey(ret.name, encoding=encoding, passphrase=passphrase)
-    if "rsa" == algo:
+    if algo == "rsa":
         assert isinstance(pk, rsa.RSAPrivateKey)
-    if "ec" == algo:
+    if algo == "ec":
         assert isinstance(pk, ec.EllipticCurvePrivateKey)
-    if "ed25519" == algo:
+    if algo == "ed25519":
         assert isinstance(pk, ed25519.Ed25519PrivateKey)
-    if "ed448" == algo:
+    if algo == "ed448":
         assert isinstance(pk, ed448.Ed448PrivateKey)
     return pk
 
@@ -2585,11 +2581,11 @@ def _get_crl(crl, encoding="pem"):
     except Exception:  # pylint: disable=broad-except
         pass
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(crl, bytes):
             crl = crl.encode()
         return cx509.load_pem_x509_crl(crl)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(crl, bytes):
             crl = base64.b64decode(crl)
         return cx509.load_der_x509_crl(crl)
@@ -2603,11 +2599,11 @@ def _get_csr(csr, encoding="pem"):
     except Exception:  # pylint: disable=broad-except
         pass
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(csr, bytes):
             csr = csr.encode()
         return cx509.load_pem_x509_csr(csr)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(csr, bytes):
             csr = base64.b64decode(csr)
         return cx509.load_der_x509_csr(csr)
@@ -2623,15 +2619,15 @@ def _get_privkey(pk, encoding="pem", passphrase=None):
     if passphrase is not None:
         passphrase = passphrase.encode()
 
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(pk, bytes):
             pk = pk.encode()
         return load_pem_private_key(pk, passphrase)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(pk, bytes):
             pk = base64.b64decode(pk)
         return load_der_private_key(pk, passphrase)
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         if not isinstance(pk, bytes):
             pk = base64.b64decode(pk)
         return pkcs12.load_pkcs12(pk, passphrase).key

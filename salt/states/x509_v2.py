@@ -446,9 +446,9 @@ def certificate_managed(
                 else:
                     raise
             else:
-                if current_encoding != encoding:
+                if encoding != current_encoding:
                     changes["encoding"] = encoding
-                elif "pkcs12" == encoding and current_extra.cert.friendly_name != (
+                elif encoding == "pkcs12" and current_extra.cert.friendly_name != (
                     salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
                     if pkcs12_friendlyname
                     else None
@@ -551,7 +551,7 @@ def certificate_managed(
                 "pkcs12_friendlyname",
             }:
                 # do not reissue if only metaparameters changed
-                if "pkcs12" == encoding:
+                if encoding == "pkcs12":
                     cert = __salt__["x509.encode_certificate"](
                         current,
                         append_certs=append_certs,
@@ -603,7 +603,7 @@ def certificate_managed(
                 )
 
         if not changes or encoding in ["pem", "pkcs7_pem"]:
-            replace = encoding in ["pem", "pkcs7_pem"] and changes
+            replace = bool(encoding in ["pem", "pkcs7_pem"] and changes)
             contents = cert if replace else None
             file_managed_ret = _file_managed(
                 name, contents=contents, replace=replace, **file_args
@@ -814,7 +814,7 @@ def crl_managed(
                         name,
                     )
 
-                if current_encoding != encoding:
+                if encoding != current_encoding:
                     changes["encoding"] = encoding
                 if days_remaining and (
                     current.next_update
@@ -902,7 +902,7 @@ def crl_managed(
                     extensions=extensions,
                 )
             ret["comment"] = f"The certificate revocation list has been {verb}d"
-            if "der" == encoding:
+            if encoding == "der":
                 # file.managed does not support binary contents, so create
                 # an empty file first (makedirs). This will not work with check_cmd!
                 file_managed_ret = _file_managed(name, replace=False, **file_args)
@@ -913,7 +913,7 @@ def crl_managed(
                     real_name, base64.b64decode(crl), file_args.get("backup", "")
                 )
 
-        if not changes or "pem" == encoding:
+        if not changes or encoding == "pem":
             replace = bool((encoding == "pem") and changes)
             contents = crl if replace else None
             file_managed_ret = _file_managed(
@@ -1048,7 +1048,7 @@ def csr_managed(
                         name,
                     )
 
-                if current_encoding != encoding:
+                if encoding != current_encoding:
                     changes["encoding"] = encoding
 
                 builder, privkey = x509util.build_csr(
@@ -1102,7 +1102,7 @@ def csr_managed(
                     **csr_args,
                 )
             ret["comment"] = f"The certificate signing request has been {verb}d"
-            if "der" == encoding:
+            if encoding == "der":
                 # file.managed does not support binary contents, so create
                 # an empty file first (makedirs). This will not work with check_cmd!
                 file_managed_ret = _file_managed(name, replace=False, **file_args)
@@ -1112,7 +1112,7 @@ def csr_managed(
                 _safe_atomic_write(
                     real_name, base64.b64decode(csr), file_args.get("backup", "")
                 )
-        if not changes or "pem" == encoding:
+        if not changes or encoding == "pem":
             replace = bool((encoding == "pem") and changes)
             contents = csr if replace else None
             file_managed_ret = _file_managed(
@@ -1320,16 +1320,16 @@ def private_key_managed(
             key_type = x509util.get_key_type(current)
             check_keysize = keysize
             if check_keysize is None:
-                if "rsa" == algo:
+                if algo == "rsa":
                     check_keysize = 2048
-                elif "ec" == algo:
+                elif algo == "ec":
                     check_keysize = 256
             if any(
                 (
-                    ("rsa" == algo and not x509util.KEY_TYPE.RSA == key_type),
-                    ("ec" == algo and not x509util.KEY_TYPE.EC == key_type),
-                    ("ed25519" == algo and not x509util.KEY_TYPE.ED25519 == key_type),
-                    ("ed448" == algo and not x509util.KEY_TYPE.ED448 == key_type),
+                    (algo == "rsa" and not key_type == x509util.KEY_TYPE.RSA),
+                    (algo == "ec" and not key_type == x509util.KEY_TYPE.EC),
+                    (algo == "ed25519" and not key_type == x509util.KEY_TYPE.ED25519),
+                    (algo == "ed448" and not key_type == x509util.KEY_TYPE.ED448),
                 )
             ):
                 changes["algo"] = algo
@@ -1339,7 +1339,7 @@ def private_key_managed(
                 and current.key_size != check_keysize
             ):
                 changes["keysize"] = keysize
-            if current_encoding != encoding:
+            if encoding != current_encoding:
                 changes["encoding"] = encoding
         elif file_exists and new:
             changes["replaced"] = name
@@ -1383,7 +1383,7 @@ def private_key_managed(
                     pkcs12_encryption_compat=pkcs12_encryption_compat,
                 )
             ret["comment"] = f"The private key has been {verb}d"
-            if "pem" != encoding:
+            if encoding != "pem":
                 # file.managed does not support binary contents, so create
                 # an empty file first (makedirs). This will not work with check_cmd!
                 file_managed_ret = _file_managed(name, replace=False, **file_args)
@@ -1394,7 +1394,7 @@ def private_key_managed(
                     real_name, base64.b64decode(pk), file_args.get("backup", "")
                 )
 
-        if not changes or "pem" == encoding:
+        if not changes or encoding == "pem":
             replace = bool((encoding == "pem") and changes)
             contents = pk if replace else None
             file_managed_ret = _file_managed(
@@ -1508,7 +1508,7 @@ def _compare_cert(current, builder, signing_cert, serial_number, not_before, not
         changes["serial_number"] = serial_number
 
     if not x509util.match_pubkey(
-        current.public_key(), _getattr_safe(builder, "_public_key")
+        _getattr_safe(builder, "_public_key"), current.public_key()
     ):
         changes["private_key"] = True
 
@@ -1644,7 +1644,7 @@ def _compare_ca_chain(current, new):
     if not len(current) == len(new):
         return False
     for i, new_cert in enumerate(new):
-        if current[i].fingerprint(hashes.SHA256()) != new_cert.fingerprint(
+        if new_cert.fingerprint(hashes.SHA256()) != current[i].fingerprint(
             hashes.SHA256()
         ):
             return False
