@@ -44,14 +44,14 @@ jobs:
           pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Check Changed Files On PR
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] == 'true'
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo']
         env:
           SKIP: lint-salt,lint-tests
         run: |
           pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(inputs.changed-files)['repo_files'], ' ') }}
 
       - name: Check Docs On Deleted Files
-        if: fromJSON(inputs.changed-files)['deleted'] == 'true'
+        if: fromJSON(inputs.changed-files)['deleted']
         env:
           PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
