@@ -353,6 +353,19 @@ repos:
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-3.6-requirements
+        name: Linux CI Py3.6 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.6/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.7-requirements
         name: Linux CI Py3.7 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/linux-crypto\.txt))$
@@ -1204,6 +1217,17 @@ repos:
   # <---- Changelog --------------------------------------------------------------------------------------------------
 
   # ----- Invoke ---------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-invoke-3.6-requirements
+        name: Linux CI Py3.6 Invoke Requirements
+        files: ^requirements/static/ci/(invoke\.in|py3.6/(invoke|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/invoke.in
+
       - id: pip-tools-compile
         alias: compile-ci-invoke-3.7-requirements
         name: Linux CI Py3.7 Invoke Requirements
