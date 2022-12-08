@@ -72,6 +72,23 @@ def __virtual__():
     return __virtualname__
 
 
+def _format_changes(changes, key, v_name):
+    """
+    Reformat the changes dictionary to group new and old together.
+    """
+    new_changes = {"new": {}, "old": {}}
+    for item in changes:
+        if changes[item]["new"]:
+            new_changes["new"][item] = changes[item]["new"]
+            new_changes["new"]["key"] = key
+            new_changes["new"]["name"] = v_name
+        if changes[item]["old"]:
+            new_changes["old"][item] = changes[item]["old"]
+            new_changes["old"]["key"] = key
+            new_changes["old"]["name"] = v_name
+    return new_changes
+
+
 def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
@@ -133,6 +150,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
     )
     if old.get("data", "") == v_data and old.get("type", "") == v_type:
         ret["comment"] = "Registry.pol value already present"
+        ret["result"] = True
         return ret
 
     if __opts__["test"]:
@@ -156,7 +174,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
     if changes:
         ret["comment"] = "Registry.pol value has been set"
-        ret["changes"] = changes
+        ret["changes"] = _format_changes(changes, key, name)
         ret["result"] = True
 
     return ret
@@ -206,6 +224,7 @@ def value_disabled(name, key, policy_class="Machine"):
     )
     if old.get("data", "") == "**del.{}".format(name):
         ret["comment"] = "Registry.pol value already disabled"
+        ret["result"] = True
         return ret
 
     if __opts__["test"]:
@@ -223,7 +242,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     if changes:
         ret["comment"] = "Registry.pol value enabled"
-        ret["changes"] = changes
+        ret["changes"] = _format_changes(changes, key, name)
         ret["result"] = True
 
     return ret
@@ -273,6 +292,7 @@ def value_absent(name, key, policy_class="Machine"):
     )
     if not old:
         ret["comment"] = "Registry.pol value already absent"
+        ret["result"] = True
         return ret
 
     if __opts__["test"]:
@@ -293,7 +313,7 @@ def value_absent(name, key, policy_class="Machine"):
 
     if changes:
         ret["comment"] = "Registry.pol value deleted"
-        ret["changes"] = changes
+        ret["changes"] = _format_changes(changes, key, name)
         ret["result"] = True
 
     return ret
