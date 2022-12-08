@@ -3,6 +3,7 @@ unit tests for the script engine
 """
 
 import contextlib
+import logging
 import signal
 import sys
 
@@ -11,6 +12,8 @@ import pytest
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import Mock, patch
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -130,31 +133,43 @@ def timeout():
 @pytest.mark.usefixtures("proc", "serializer", "event_send", "raw_event", "timeout")
 class TestStart:
     def test_start(self, event, raw_event, event_send, timeout):
-        raw_event.return_value = [event]
-        with timeout():
-            script.start("cmd", interval=10)
+        raw_event.side_effect = ([event],)
+        try:
+            with timeout():
+                script.start("cmd", interval=1.5)
+        except StopIteration:
+            log.warning("Timeout failure")
         event_send.assert_called_once_with(tag=event["tag"], data=event["data"])
 
     def test_multiple(self, event, new_event, raw_event, event_send, timeout):
-        raw_event.return_value = [event, new_event]
-        with timeout():
-            script.start("cmd", interval=2)
+        raw_event.side_effect = ([event, new_event],)
+        try:
+            with timeout():
+                script.start("cmd", interval=1.5)
+        except StopIteration:
+            log.warning("Timeout failure")
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_any_call(tag=new_event["tag"], data=new_event["data"])
 
     def test_onchange_no_change_no_output(self, event, raw_event, event_send, timeout):
-        raw_event.return_value = [event]
-        with timeout():
-            script.start("cmd", onchange=True, interval=0.01)
+        raw_event.side_effect = 110 * ([event],)
+        try:
+            with timeout():
+                script.start("cmd", onchange=True, interval=0.01)
+        except StopIteration:
+            log.warning("Timeout failure")
         event_send.assert_called_once_with(tag=event["tag"], data=event["data"])
 
     def test_start_onchange_no_change_multiple(
         self, event, new_tag, raw_event, event_send, timeout
     ):
-        raw_event.return_value = [event, new_tag]
-        with timeout():
-            script.start("cmd", onchange=True, interval=0.01)
+        raw_event.side_effect = 110 * ([event, new_tag],)
+        try:
+            with timeout():
+                script.start("cmd", onchange=True, interval=0.01)
+        except StopIteration:
+            log.warning("Timeout failure")
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_any_call(tag=new_tag["tag"], data=new_tag["data"])
@@ -162,9 +177,12 @@ class TestStart:
     def test_start_onchange_with_change(
         self, event, new_event, raw_event, event_send, timeout
     ):
-        raw_event.side_effect = 50 * [[event]] + 50 * [[new_event]]
-        with timeout():
-            script.start("cmd", onchange=True, interval=0.01)
+        raw_event.side_effect = 50 * [[event]] + 60 * [[new_event]]
+        try:
+            with timeout():
+                script.start("cmd", onchange=True, interval=0.01)
+        except StopIteration:
+            log.warning("Timeout failure")
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_called_with(tag=new_event["tag"], data=new_event["data"])
@@ -172,8 +190,11 @@ class TestStart:
     def test_start_onchange_new_tag(
         self, event, new_tag, raw_event, event_send, timeout
     ):
-        raw_event.side_effect = 50 * [[event]] + 50 * [[new_tag]]
-        with timeout():
-            script.start("cmd", onchange=True, interval=0.01)
+        raw_event.side_effect = 50 * [[event]] + 60 * [[new_tag]]
+        try:
+            with timeout():
+                script.start("cmd", onchange=True, interval=0.01)
+        except StopIteration:
+            log.warning("Timeout failure")
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_called_with(tag=new_tag["tag"], data=new_tag["data"])
