@@ -839,6 +839,10 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
+slack-bolt==1.15.5
+    # via -r requirements/static/ci/linux.in
+slack-sdk==3.19.5
+    # via slack-bolt
 smmap==4.0.0
     # via gitdb
 sqlparse==0.4.2

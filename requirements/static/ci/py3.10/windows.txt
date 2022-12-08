@@ -250,7 +250,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.6
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc22 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.7.0
     # via pytest-salt-factories
