@@ -293,3 +293,19 @@ def test_onchanges_requisite_with_duration(state, state_tree):
             "duration"
             in ret['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']
         )
+
+
+def test_onchanges_any_recursive_error_issues_50811(state, state_tree):
+    """
+    test that onchanges_any does not causes a recursive error
+    """
+    sls_contents = """
+    command-test:
+      cmd.run:
+        - name: ls
+        - onchanges_any:
+          - file: /tmp/an-unfollowed-file
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+    assert ret["command-test"].result is False

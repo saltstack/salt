@@ -186,22 +186,6 @@ def send(
         salt-call event.send myco/mytag foo=Foo bar=Bar
         salt-call event.send 'myco/mytag' '{foo: Foo, bar: Bar}'
 
-    A convenient way to allow Jenkins to execute ``salt-call`` is via sudo. The
-    following rule in sudoers will allow the ``jenkins`` user to run only the
-    following command.
-
-    ``/etc/sudoers`` (allow preserving the environment):
-
-    .. code-block:: text
-
-        jenkins ALL=(ALL) NOPASSWD:SETENV: /usr/bin/salt-call event.send*
-
-    Call Jenkins via sudo (preserve the environment):
-
-    .. code-block:: bash
-
-        sudo -E salt-call event.send myco/jenkins/build/success with_env=[BUILD_ID, BUILD_URL, GIT_BRANCH, GIT_COMMIT]
-
     """
     data_dict = {}
 

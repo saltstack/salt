@@ -11,7 +11,6 @@ import re
 import pytest
 from jinja2 import DictLoader, Environment, exceptions
 
-import salt.config
 import salt.loader
 
 # dateutils is needed so that the strftime jinja filter is loaded
@@ -36,9 +35,8 @@ except ImportError:
 
 
 @pytest.fixture
-def minion_opts(tmp_path):
-    _opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    _opts.update(
+def minion_opts(tmp_path, minion_opts):
+    minion_opts.update(
         {
             "cachedir": str(tmp_path / "jinja-template-cache"),
             "file_buffer_size": 1048576,
@@ -54,7 +52,7 @@ def minion_opts(tmp_path):
             ),
         }
     )
-    return _opts
+    return minion_opts
 
 
 @pytest.fixture()
@@ -726,6 +724,48 @@ def test_ipv6(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "fe80::, ::"
+
+
+def test_ipwrap(minion_opts, local_salt):
+    """
+    Test the `ipwrap` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ '192.168.0.1' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "192.168.0.1"
+
+    rendered = render_jinja_tmpl(
+        "{{ 'random' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "random"
+
+    # returns the standard format value
+    rendered = render_jinja_tmpl(
+        "{{ 'FE80:0:0::0' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ['fe80::', '::'] | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], [::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ['fe80::', 'ham', 'spam', '2001:db8::1', 'eggs', '::'] | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], ham, spam, [2001:db8::1], eggs, [::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ('fe80::', 'ham', 'spam', '2001:db8::1', 'eggs', '::') | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], ham, spam, [2001:db8::1], eggs, [::]"
 
 
 def test_network_hosts(minion_opts, local_salt):

@@ -14,8 +14,8 @@ from tests.support.mock import Mock, patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    return {script: {"__opts__": {}}}
+def configure_loader_modules(master_opts):
+    return {script: {"__opts__": master_opts}}
 
 
 def test__get_serializer():
@@ -62,7 +62,7 @@ def serializer():
 def event_send():
     event = Mock()
     with patch("salt.utils.event.get_master_event") as get_master:
-        get_master.fire_event = event
+        get_master.return_value.fire_event = event
         with patch.dict(script.__salt__, {"event.send": event}):
             yield event
 

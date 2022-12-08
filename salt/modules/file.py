@@ -3525,9 +3525,13 @@ def touch(name, atime=None, mtime=None):
     simply update the atime and mtime if it already does.
 
     atime:
-        Access time in Unix epoch time
+        Access time in Unix epoch time. Set it to 0 to set atime of the
+        file with Unix date of birth. If this parameter isn't set, atime
+        will be set with current time.
     mtime:
-        Last modification in Unix epoch time
+        Last modification in Unix epoch time. Set it to 0 to set mtime of
+        the file with Unix date of birth. If this parameter isn't set,
+        mtime will be set with current time.
 
     CLI Example:
 
@@ -3537,20 +3541,20 @@ def touch(name, atime=None, mtime=None):
     """
     name = os.path.expanduser(name)
 
-    if atime and atime.isdigit():
+    if atime and str(atime).isdigit():
         atime = int(atime)
-    if mtime and mtime.isdigit():
+    if mtime and str(mtime).isdigit():
         mtime = int(mtime)
     try:
         if not os.path.exists(name):
             with salt.utils.files.fopen(name, "a"):
                 pass
 
-        if not atime and not mtime:
+        if atime is None and mtime is None:
             times = None
-        elif not mtime and atime:
+        elif mtime is None and atime is not None:
             times = (atime, time.time())
-        elif not atime and mtime:
+        elif atime is None and mtime is not None:
             times = (time.time(), mtime)
         else:
             times = (atime, mtime)
@@ -7156,6 +7160,8 @@ def grep(path, pattern, *opts):
         This function's return value is slated for refinement in future
         versions of Salt
 
+        Windows does not support the ``grep`` functionality.
+
     path
         Path to the file to be searched
 
@@ -7414,9 +7420,19 @@ def join(*args):
     return os.path.join(*args)
 
 
-def move(src, dst):
+def move(src, dst, disallow_copy_and_unlink=False):
     """
     Move a file or directory
+
+    disallow_copy_and_unlink
+        If ``True``, the operation is offloaded to the ``file.rename`` execution
+        module function. This will use ``os.rename`` underneath, which will fail
+        in the event that ``src`` and ``dst`` are on different filesystems. If
+        ``False`` (the default), ``shutil.move`` will be used in order to fall
+        back on a "copy then unlink" approach, which is required for moving
+        across filesystems.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -7424,6 +7440,9 @@ def move(src, dst):
 
         salt '*' file.move /path/to/src /path/to/dst
     """
+    if disallow_copy_and_unlink:
+        return rename(src, dst)
+
     src = os.path.expanduser(src)
     dst = os.path.expanduser(dst)
 

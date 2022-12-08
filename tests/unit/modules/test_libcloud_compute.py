@@ -1,15 +1,15 @@
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
-
-
 import logging
+
+import pytest
 
 import salt.modules.libcloud_compute as libcloud_compute
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 REQUIRED_LIBCLOUD_VERSION = "2.0.0"
 try:
@@ -198,7 +198,7 @@ else:
     MockComputeDriver = object
 
 
-@skipIf(not HAS_LIBCLOUD, "No libcloud installed")
+@pytest.mark.skipif(not HAS_LIBCLOUD, reason="No libcloud installed")
 @patch(
     "salt.modules.libcloud_compute._get_driver",
     MagicMock(return_value=MockComputeDriver()),

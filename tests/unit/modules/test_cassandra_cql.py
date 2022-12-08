@@ -2,15 +2,15 @@
     tests.unit.returners.cassandra_cql_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-
 import ssl
+
+import pytest
 
 import salt.modules.cassandra_cql as cassandra_cql
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import cassandra  # pylint: disable=unused-import,wrong-import-position
@@ -20,9 +20,9 @@ except ImportError:
     HAS_CASSANDRA = False
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_CASSANDRA,
-    "Please install the cassandra datastax driver to run cassandra_cql module unit"
+    reason="Please install the cassandra datastax driver to run cassandra_cql module unit"
     " tests.",
 )
 class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):

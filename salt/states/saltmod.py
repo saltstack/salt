@@ -32,6 +32,8 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
+import salt.utils.versions
+from salt.features import features
 
 log = logging.getLogger(__name__)
 
@@ -802,7 +804,14 @@ def runner(name, **kwargs):
         "executed" if success else "failed",
     )
 
-    ret["__orchestration__"] = True
+    if features.get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 
@@ -1044,7 +1053,14 @@ def wheel(name, **kwargs):
         "executed" if success else "failed",
     )
 
-    ret["__orchestration__"] = True
+    if features.get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 

@@ -4,6 +4,8 @@ The setup script for salt
 """
 
 # pylint: disable=file-perms,resource-leakage
+import setuptools  # isort:skip
+
 import contextlib
 import distutils.dist
 import glob

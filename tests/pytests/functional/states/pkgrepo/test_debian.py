@@ -622,7 +622,7 @@ class Repo:
         """
         if (
             self.grains["osfullname"] == "Ubuntu"
-            and self.grains["lsb_distrib_release"] == "22.04"
+            and self.grains["osrelease"] == "22.04"
         ):
             return True
         return False
@@ -659,7 +659,7 @@ class Repo:
                 )
             repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
                 self.fullname,
-                self.grains["lsb_distrib_release"],
+                self.grains["osrelease"],
                 self.grains["oscodename"],
                 arch=self.grains["osarch"],
                 opts=opts,
@@ -669,7 +669,7 @@ class Repo:
     @key_url.default
     def _default_key_url(self):
         key_url = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
-            self.fullname, self.grains["lsb_distrib_release"], self.grains["osarch"]
+            self.fullname, self.grains["osrelease"], self.grains["osarch"]
         )
 
         if self.alt_repo:
