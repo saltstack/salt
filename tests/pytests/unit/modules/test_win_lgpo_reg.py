@@ -2,8 +2,8 @@ import pathlib
 
 import pytest
 
-import salt.modules.win_lgpo_reg as lgpo_reg
 import salt.modules.win_file as win_file
+import salt.modules.win_lgpo_reg as lgpo_reg
 import salt.utils.files
 import salt.utils.win_dacl
 import salt.utils.win_lgpo_reg
