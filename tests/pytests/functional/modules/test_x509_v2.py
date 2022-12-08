@@ -54,15 +54,12 @@ def minion_config_overrides():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def x509(loaders, modules):
-    try:
-        yield modules.x509
-    finally:
-        pass
+    yield modules.x509
 
 
-@pytest.fixture()
+@pytest.fixture
 def ca_cert():
     return """\
 -----BEGIN CERTIFICATE-----
@@ -88,7 +85,7 @@ LN1w5sybsYwIw6QN
 """
 
 
-@pytest.fixture()
+@pytest.fixture
 def ca_key():
     return """\
 -----BEGIN RSA PRIVATE KEY-----
@@ -120,7 +117,7 @@ HdI7Pfaf/l0HozAw/Al+LXbpmSBdfmz0U/EGAKRqXMW5+vQ7XHXD
 -----END RSA PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ca_key_enc():
     return """\
 -----BEGIN ENCRYPTED PRIVATE KEY-----
@@ -155,7 +152,7 @@ A62orBDc+8x+AehfwYSm11dz5/P6aL3QZf+tzr05vbVn
 -----END ENCRYPTED PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def rsa_privkey():
     return """\
 -----BEGIN RSA PRIVATE KEY-----
@@ -187,7 +184,7 @@ DYRTDIS9eg2LF4B64hZvkCLTmP4rLJWdRnWrLosIC4rD1uWgGayC
 -----END RSA PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def rsa_privkey_enc():
     return """\
 -----BEGIN ENCRYPTED PRIVATE KEY-----
@@ -222,7 +219,7 @@ ahZPgPpP2p2uAz1+9MHpVPo2EIrvibm5T89DznwuaEfe
 -----END ENCRYPTED PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def rsa_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -236,7 +233,7 @@ ye1mdbD5KVBgJ9MArc2tJ3rmB0lxjEbAhTEHrNnIkDOJCKE8TaQOW4RyVWlIvSEL
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr():
     return """\
 -----BEGIN CERTIFICATE REQUEST-----
@@ -256,7 +253,7 @@ q1HXd62bA8k27ukX7w8qWsk6fOTwPh5F3883L5jVqcRsL9pqb4RUugTh/aReVlKW
 -----END CERTIFICATE REQUEST-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ec_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -266,7 +263,7 @@ ldlNqU8U1Lz3ckCGI3TdGZ6nPaL3IT/UNH6C+J86RWSLY18hFHXoeKBD
 -----END PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ec_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -275,7 +272,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvuZnhksFYiq0UNzYtXH2tPFhuXSv
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed25519_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -283,7 +280,7 @@ MC4CAQAwBQYDK2VwBCIEIFKFjPIOBze2eo9x/EiCL0ni5GacaKIRZdfREBfuEdE9
 -----END PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed25519_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -291,7 +288,7 @@ MCowBQYDK2VwAyEAK+1yspaj/3Mb2K7H6y2d0Y+udSF+7sBozMY4aKUBR0I=
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed448_privkey():
     return """\
 -----BEGIN PRIVATE KEY-----
@@ -300,7 +297,7 @@ Y2QKHSRG0M1ZUFr/EYH9F9mTgnAwmyp7oA==
 -----END PRIVATE KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def ed448_pubkey():
     return """\
 -----BEGIN PUBLIC KEY-----
@@ -309,7 +306,7 @@ vHv0+Ke3LRlEzGbwroKtP66opn4A
 -----END PUBLIC KEY-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_exts():
     return """
 -----BEGIN CERTIFICATE-----
@@ -339,7 +336,7 @@ IiC+2Um3mhImnIoeRxH/cXTABsOrSE+QzIv7Z3orIUxyMqtm
 -----END CERTIFICATE-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr_exts():
     return """\
 -----BEGIN CERTIFICATE REQUEST-----
@@ -367,7 +364,7 @@ O68=
 -----END CERTIFICATE REQUEST-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def cert_exts_read():
     return {
         "extensions": {
@@ -460,7 +457,7 @@ def cert_exts_read():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def csr_exts_read():
     return {
         "extensions": {
@@ -526,7 +523,7 @@ def csr_exts_read():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl():
     return """\
 -----BEGIN X509 CRL-----
@@ -542,7 +539,7 @@ zfEPMyxWSMAqcsjSQ+MuF3KCdtaWAk7xTYpBafvRK4pC
 -----END X509 CRL-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_all():
     return """\
 -----BEGIN X509 CRL-----
@@ -566,7 +563,7 @@ WcBGtev/8VsUijyjsM072C6Ut5TwNyrrthb952+eKlmxLNgT0o5hVYxjXhtwLQsL
 -----END X509 CRL-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_args(tmp_path, ca_cert, ca_key):
     return {
         "signing_private_key": ca_key,
@@ -575,7 +572,7 @@ def crl_args(tmp_path, ca_cert, ca_key):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_args_exts():
     return {
         "authorityKeyIdentifier": "keyid:always",
@@ -590,7 +587,7 @@ def crl_args_exts():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def crl_revoked():
     return [
         {
@@ -671,7 +668,7 @@ def test_create_certificate_self_signed(x509, algo, request):
     res = x509.create_certificate(signing_private_key=privkey, CN="success")
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])
@@ -685,7 +682,7 @@ def test_create_certificate_from_privkey(x509, ca_key, ca_cert, algo, request):
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 def test_create_certificate_from_encrypted_privkey(
@@ -700,7 +697,7 @@ def test_create_certificate_from_encrypted_privkey(
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 def test_create_certificate_from_encrypted_privkey_with_encrypted_privkey(
@@ -716,7 +713,7 @@ def test_create_certificate_from_encrypted_privkey_with_encrypted_privkey(
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])
@@ -730,7 +727,7 @@ def test_create_certificate_from_pubkey(x509, ca_key, ca_cert, algo, request):
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 def test_create_certificate_from_csr(x509, ca_key, ca_cert, csr):
@@ -739,7 +736,7 @@ def test_create_certificate_from_csr(x509, ca_key, ca_cert, csr):
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 def test_create_certificate_from_mismatching_private_key(
@@ -864,7 +861,7 @@ def test_create_certificate_with_distinguished_name(
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=Homer,L=Springfield,C=US" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=Homer,L=Springfield,C=US"
 
 
 def test_create_certificate_with_signing_policy(x509, ca_cert, ca_key, rsa_privkey):
@@ -878,10 +875,10 @@ def test_create_certificate_with_signing_policy(x509, ca_cert, ca_key, rsa_privk
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     for x in [cx509.BasicConstraints, cx509.KeyUsage, cx509.SubjectKeyIdentifier]:
         ext = cert.extensions.get_extension_for_class(x)
-        if cx509.BasicConstraints == x:
+        if x == cx509.BasicConstraints:
             assert not ext.value.ca
 
 
@@ -901,7 +898,7 @@ def test_create_certificate_with_signing_policy_no_subject_override(
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=from_signing_policy" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
 
 
 @pytest.mark.parametrize(
@@ -1073,7 +1070,7 @@ def test_create_certificate_as_der(x509, ca_cert, ca_key, rsa_privkey):
         private_key=rsa_privkey,
     )
     cert = _get_cert(res, "der")
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
 
 
 @pytest.mark.skipif(
@@ -1090,7 +1087,7 @@ def test_create_certificate_as_pkcs7(x509, ca_cert, ca_key, rsa_privkey, typ):
         private_key=rsa_privkey,
     )
     cert = _get_cert(res, f"pkcs7_{typ}")
-    assert "CN=success" == cert[0].subject.rfc4514_string()
+    assert cert[0].subject.rfc4514_string() == "CN=success"
 
 
 @pytest.mark.skipif(
@@ -1107,8 +1104,8 @@ def test_create_certificate_as_pkcs12(x509, ca_cert, ca_key, rsa_privkey):
         private_key=rsa_privkey,
     )
     cert = _get_cert(res, "pkcs12")
-    assert "CN=success" == cert.cert.certificate.subject.rfc4514_string()
-    assert b"foo" == cert.cert.friendly_name
+    assert cert.cert.certificate.subject.rfc4514_string() == "CN=success"
+    assert cert.cert.friendly_name == b"foo"
 
 
 @pytest.mark.skipif(
@@ -1128,8 +1125,8 @@ def test_create_certificate_as_encrypted_pkcs12(x509, ca_cert, ca_key, rsa_privk
         private_key=rsa_privkey_enc,
     )
     cert = _get_cert(res, "pkcs12", "hunter3")
-    assert "CN=success" == cert.cert.certificate.subject.rfc4514_string()
-    assert b"foo" == cert.cert.friendly_name
+    assert cert.cert.certificate.subject.rfc4514_string() == "CN=success"
+    assert cert.cert.friendly_name == b"foo"
 
 
 def test_create_certificate_append_certs_pem(x509, ca_cert, ca_key, rsa_privkey):
@@ -1141,7 +1138,7 @@ def test_create_certificate_append_certs_pem(x509, ca_cert, ca_key, rsa_privkey)
         private_key=rsa_privkey,
     )
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
     assert res.endswith(ca_cert)
 
 
@@ -1160,7 +1157,7 @@ def test_create_certificate_append_certs_pkcs7(x509, ca_cert, ca_key, rsa_privke
         private_key=rsa_privkey,
     )
     cert = _get_cert(res, f"pkcs7_{typ}")
-    assert "CN=success" == cert[0].subject.rfc4514_string()
+    assert cert[0].subject.rfc4514_string() == "CN=success"
     assert cert[1].serial_number == _get_cert(ca_cert).serial_number
 
 
@@ -1178,7 +1175,7 @@ def test_create_certificate_append_certs_pkcs12(x509, ca_cert, ca_key, rsa_privk
         private_key=rsa_privkey,
     )
     cert = _get_cert(res, "pkcs12")
-    assert "CN=success" == cert.cert.certificate.subject.rfc4514_string()
+    assert cert.cert.certificate.subject.rfc4514_string() == "CN=success"
     assert (
         cert.additional_certs[0].certificate.serial_number
         == _get_cert(ca_cert).serial_number
@@ -1199,7 +1196,7 @@ def test_create_certificate_copypath(
     )
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
-    assert "CN=success" == cert.subject.rfc4514_string()
+    assert cert.subject.rfc4514_string() == "CN=success"
     prefix = ""
     if prepend_cn:
         prefix = "success-"
@@ -1459,7 +1456,7 @@ def test_get_pem_entry_newline_fix(x509, ca_cert):
     assert res == ca_cert.encode()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fresh_cert(x509, ca_key):
     return x509.create_certificate(signing_private_key=ca_key, days_valid=1, CN="fresh")
 
@@ -1485,12 +1482,16 @@ def test_expired(x509, ca_key, fresh_cert, tmp_path):
 
 
 def test_will_expire(x509, fresh_cert):
-    assert {"check_days": 0, "cn": "fresh", "will_expire": False} == x509.will_expire(
-        fresh_cert, 0
-    )
-    assert {"check_days": 2, "cn": "fresh", "will_expire": True} == x509.will_expire(
-        fresh_cert, 2
-    )
+    assert x509.will_expire(fresh_cert, 0) == {
+        "check_days": 0,
+        "cn": "fresh",
+        "will_expire": False,
+    }
+    assert x509.will_expire(fresh_cert, 2) == {
+        "check_days": 2,
+        "cn": "fresh",
+        "will_expire": True,
+    }
 
 
 def test_write_pem(x509, fresh_cert, tmp_path):
@@ -1519,23 +1520,23 @@ def test_read_certificates(x509, cert_exts, cert_exts_read, tmp_path):
 
 
 def _get_cert(cert, encoding="pem", passphrase=None):
-    if "pem" == encoding:
+    if encoding == "pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return cx509.load_pem_x509_certificate(cert)
-    if "der" == encoding:
+    if encoding == "der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return cx509.load_der_x509_certificate(cert)
-    if "pkcs7_pem" == encoding:
+    if encoding == "pkcs7_pem":
         if not isinstance(cert, bytes):
             cert = cert.encode()
         return pkcs7.load_pem_pkcs7_certificates(cert)
-    if "pkcs7_der" == encoding:
+    if encoding == "pkcs7_der":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         return pkcs7.load_der_pkcs7_certificates(cert)
-    if "pkcs12" == encoding:
+    if encoding == "pkcs12":
         if not isinstance(cert, bytes):
             cert = base64.b64decode(cert)
         if passphrase is not None and not isinstance(passphrase, bytes):
