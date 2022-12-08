@@ -2,11 +2,12 @@
 unit tests for the script engine
 """
 
-import copy
+import contextlib
+import signal
+import sys
 
 import pytest
 
-import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import Mock, patch
@@ -14,9 +15,7 @@ from tests.support.mock import Mock, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    opts = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
-    opts["id"] = "test"
-    return {script: {"__opts__": opts}}
+    return {script: {"__opts__": {}}}
 
 
 def test__get_serializer():
@@ -59,14 +58,6 @@ def serializer():
         yield serializer
 
 
-@pytest.fixture(params=[1])
-def runs(request):
-    runs = Mock()
-    runs.side_effect = request.param * [True] + [False]
-    with patch("salt.engines.script._running", runs):
-        yield
-
-
 @pytest.fixture()
 def event_send():
     event = Mock()
@@ -93,12 +84,6 @@ def proc():
 
 
 @pytest.fixture()
-def sleep():
-    with patch("time.sleep"):
-        yield
-
-
-@pytest.fixture()
 def event():
     return {"tag": "test", "data": {"foo": "bar", "id": "test"}}
 
@@ -113,49 +98,82 @@ def new_event():
     return {"tag": "test", "data": {"foo": "baz", "id": "test"}}
 
 
-@pytest.mark.usefixtures(
-    "proc", "serializer", "runs", "sleep", "event_send", "raw_event"
-)
+@pytest.fixture
+def timeout():
+    """
+    This fixture was proposed by waynew to allow testing
+    an otherwise infinite loop.
+    Once https://github.com/saltstack/salt/pull/62910 is merged,
+    this can be migrated.
+    """
+    if sys.platform.startswith("win"):
+        pytest.skip("SIGALRM is not available on Windows.")
+
+    def handler(num, frame):
+        raise TimeoutError()
+
+    @contextlib.contextmanager
+    def _timeout(t=1):
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(t)
+
+        try:
+            yield _timeout
+        except TimeoutError:
+            pass
+        finally:
+            signal.alarm(0)
+
+    return _timeout
+
+
+@pytest.mark.usefixtures("proc", "serializer", "event_send", "raw_event", "timeout")
 class TestStart:
-    def test_start(self, event, raw_event, event_send):
+    def test_start(self, event, raw_event, event_send, timeout):
         raw_event.return_value = [event]
-        script.start("cmd")
+        with timeout():
+            script.start("cmd", interval=10)
         event_send.assert_called_once_with(tag=event["tag"], data=event["data"])
 
-    def test_start_multiple(self, event, new_event, raw_event, event_send):
+    def test_multiple(self, event, new_event, raw_event, event_send, timeout):
         raw_event.return_value = [event, new_event]
-        script.start("cmd")
+        with timeout():
+            script.start("cmd", interval=2)
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_any_call(tag=new_event["tag"], data=new_event["data"])
 
-    @pytest.mark.parametrize("runs", [10], indirect=True)
-    def test_start_onchange_no_change(self, event, raw_event, event_send):
-        raw_event.side_effect = 10 * [[event]]
-        script.start("cmd", onchange=True)
+    def test_onchange_no_change_no_output(self, event, raw_event, event_send, timeout):
+        raw_event.return_value = [event]
+        with timeout():
+            script.start("cmd", onchange=True, interval=0.01)
         event_send.assert_called_once_with(tag=event["tag"], data=event["data"])
 
-    @pytest.mark.parametrize("runs", [10], indirect=True)
     def test_start_onchange_no_change_multiple(
-        self, event, new_tag, raw_event, event_send
+        self, event, new_tag, raw_event, event_send, timeout
     ):
-        raw_event.side_effect = 10 * [[event, new_tag]]
-        script.start("cmd", onchange=True)
+        raw_event.return_value = [event, new_tag]
+        with timeout():
+            script.start("cmd", onchange=True, interval=0.01)
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_any_call(tag=new_tag["tag"], data=new_tag["data"])
 
-    @pytest.mark.parametrize("runs", [8], indirect=True)
-    def test_start_onchange_with_change(self, event, new_event, raw_event, event_send):
-        raw_event.side_effect = 3 * [[event]] + 5 * [[new_event]]
-        script.start("cmd", onchange=True)
+    def test_start_onchange_with_change(
+        self, event, new_event, raw_event, event_send, timeout
+    ):
+        raw_event.side_effect = 50 * [[event]] + 50 * [[new_event]]
+        with timeout():
+            script.start("cmd", onchange=True, interval=0.01)
         assert event_send.call_count == 2
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_called_with(tag=new_event["tag"], data=new_event["data"])
 
-    @pytest.mark.parametrize("runs", [10], indirect=True)
-    def test_start_onchange_new_tag(self, event, new_tag, raw_event, event_send):
-        raw_event.side_effect = 5 * [[event]] + 5 * [[new_tag]]
-        script.start("cmd", onchange=True)
+    def test_start_onchange_new_tag(
+        self, event, new_tag, raw_event, event_send, timeout
+    ):
+        raw_event.side_effect = 50 * [[event]] + 50 * [[new_tag]]
+        with timeout():
+            script.start("cmd", onchange=True, interval=0.01)
         event_send.assert_any_call(tag=event["tag"], data=event["data"])
         event_send.assert_called_with(tag=new_tag["tag"], data=new_tag["data"])
