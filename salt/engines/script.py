@@ -24,7 +24,7 @@ interval
     How often in seconds to execute the command
 
 onchange
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Only fire an event if the tag-specific output changes. Defaults to False.
 """
