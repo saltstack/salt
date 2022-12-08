@@ -561,7 +561,7 @@ def get_kb_package_name(kb, image=None):
     """
     Get the actual package name on the system based on the KB name
 
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Args:
         kb (str): The name of the KB to remove. Can also be just the KB number
@@ -597,7 +597,7 @@ def remove_kb(kb, image=None, restart=False):
     packages to get the full package name of the KB. It then calls the
     ``dism.remove_package`` function to remove the package.
 
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Args:
         kb (str): The name of the KB to remove. Can also be just the KB number

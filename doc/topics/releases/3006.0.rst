@@ -1,15 +1,15 @@
-.. _release-3006:
+.. _release-3006.0:
 
-=========================================
-Salt 3006 release notes - Codename Sulfur
-=========================================
+===========================================
+Salt 3006.0 release notes - Codename Sulfur
+===========================================
 
-Salt 3006 is currently under development.
+Salt 3006.0 is currently under development.
 
 
 Onedir packaging
 ----------------
-Going forward from the 3006 release, the Salt Project will only provide onedir
+Going forward from the 3006.0 release, the Salt Project will only provide onedir
 packages to install or upgrade Salt. The classic, non-onedir packages will not
 be provided for supported operating systems. See
 `Upgrade to onedir <https://docs.saltproject.io/salt/install-guide/en/latest/topics/upgrade-to-onedir.html>`_

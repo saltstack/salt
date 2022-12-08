@@ -7431,7 +7431,7 @@ def copy_(
         process. For existing files and directories it's not enforced.
 
     dir_mode
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories
