@@ -2140,13 +2140,10 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
-    def publish(self, clear_load):
+    def _check_publisher_acl(self, *, clear_load):
         """
-        This method sends out publications to the minions, it can only be used
-        by the LocalClient.
+        Check to see if a clear_load is invalid against the publisher_acl settings.
         """
-        extra = clear_load.get("kwargs", {})
-
         publisher_acl = salt.acl.PublisherACL(self.opts["publisher_acl_blacklist"])
 
         if publisher_acl.user_is_blacklisted(
@@ -2165,6 +2162,18 @@ class ClearFuncs(TransportMethods):
                     "message": "Authorization error occurred.",
                 }
             }
+
+    def publish(self, clear_load):
+        """
+        This method sends out publications to the minions, it can only be used
+        by the LocalClient.
+        """
+        extra = clear_load.get("kwargs", {})
+
+        publisher_acl_error = self._check_publisher_acl(clear_load=clear_load)
+        # TODO: walrus operator - if publisher_acl_error := self._check... -W. Werner, 2022-12-08
+        if publisher_acl_error:
+            return publisher_acl_error
 
         # Retrieve the minions list
         delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
