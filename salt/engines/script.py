@@ -110,8 +110,7 @@ def start(cmd, output="json", interval=1, onchange=False):
     if onchange:
         events = {}
 
-    while _running():
-
+    while True:
         try:
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -150,8 +149,3 @@ def start(cmd, output="json", interval=1, onchange=False):
                 proc.terminate()
 
         time.sleep(interval)
-
-
-# helper to test the start function
-def _running():
-    return True
