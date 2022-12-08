@@ -3378,6 +3378,39 @@ class Syndic(Minion):
             self.forward_events.stop()
             self.forward_events = None
 
+    def _send_req_sync(self, load, timeout):
+        if self.opts["minion_sign_messages"]:
+            log.trace("Signing event to be published onto the bus.")
+            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            sig = salt.crypt.sign_message(
+                minion_privkey_path, salt.serializers.msgpack.serialize(load)
+            )
+            load["sig"] = sig
+
+        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
+            log.warning("Sending this load %r", load)
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
+            return ret
+
+    @salt.ext.tornado.gen.coroutine
+    def _send_req_async(self, load, timeout):
+        if self.opts["minion_sign_messages"]:
+            log.trace("Signing event to be published onto the bus.")
+            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            sig = salt.crypt.sign_message(
+                minion_privkey_path, salt.serializers.msgpack.serialize(load)
+            )
+            load["sig"] = sig
+
+        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
+            log.warning("Sending this load %r", load)
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
+            raise salt.ext.tornado.gen.Return(ret)
+
 
 # TODO: need a way of knowing if the syndic connection is busted
 class SyndicManager(MinionBase):
