@@ -150,6 +150,7 @@ done
 if [ -z "$VERSION" ]; then
     VERSION=$(git describe)
 fi
+VERSION=${VERSION#"v"}
 
 #-------------------------------------------------------------------------------
 # Quit on error
