@@ -344,8 +344,6 @@ botocore==1.20.67
     #   boto3
     #   moto
     #   s3transfer
-build==0.9.0
-    # via -r requirements/base.txt
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.24.0
@@ -647,7 +645,6 @@ oscrypto==1.2.0
 packaging==19.2
     # via
     #   -r requirements/base.txt
-    #   build
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -665,8 +662,6 @@ pathspec==0.9.0
     # via yamllint
 pathtools==0.1.2
     # via watchdog
-pep517==0.13.0
-    # via build
 platformdirs==2.2.0
     # via virtualenv
 pluggy==0.13.0
@@ -882,10 +877,7 @@ timelib==0.2.5
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
-    # via
-    #   build
-    #   pep517
-    #   pytest
+    # via pytest
 transitions==0.8.1
     # via junos-eznc
 typing-extensions==4.2.0

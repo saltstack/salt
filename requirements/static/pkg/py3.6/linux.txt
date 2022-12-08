@@ -6,8 +6,6 @@
 #
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
     # via -r requirements/static/pkg/linux.in
-build==0.9.0
-    # via -r requirements/base.txt
 certifi==2022.12.7
     # via requests
 cffi==1.15.1
@@ -31,9 +29,7 @@ immutables==0.19
 importlib-metadata==4.8.3 ; python_version < "3.10"
     # via
     #   -r requirements/static/pkg/linux.in
-    #   build
     #   cheroot
-    #   pep517
 importlib-resources==5.4.0
     # via jaraco.text
 jaraco.classes==3.2.1
@@ -68,11 +64,7 @@ more-itertools==8.14.0
 msgpack==1.0.4
     # via -r requirements/base.txt
 packaging==21.3
-    # via
-    #   -r requirements/base.txt
-    #   build
-pep517==0.13.0
-    # via build
+    # via -r requirements/base.txt
 portend==3.0.0
     # via cherrypy
 psutil==5.9.4
@@ -109,10 +101,6 @@ tempora==4.1.2
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
-tomli==1.2.3
-    # via
-    #   build
-    #   pep517
 typing-extensions==4.1.1
     # via
     #   immutables
@@ -125,7 +113,6 @@ zipp==3.6.0
     # via
     #   importlib-metadata
     #   importlib-resources
-    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

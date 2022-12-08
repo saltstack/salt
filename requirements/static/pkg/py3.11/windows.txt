@@ -6,8 +6,6 @@
 #
 autocommand==2.2.2
     # via jaraco.text
-build==0.9.0
-    # via -r requirements/base.txt
 certifi==2022.12.7
     # via
     #   -r requirements/windows.txt
@@ -25,8 +23,6 @@ cherrypy==18.8.0
     # via -r requirements/windows.txt
 clr-loader==0.2.4
     # via pythonnet
-colorama==0.4.6
-    # via build
 contextvars==2.4
     # via -r requirements/base.txt
 cryptography==38.0.4
@@ -87,11 +83,7 @@ more-itertools==9.0.0
 msgpack==1.0.4
     # via -r requirements/base.txt
 packaging==22.0
-    # via
-    #   -r requirements/base.txt
-    #   build
-pep517==0.13.0
-    # via build
+    # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
 psutil==5.9.4

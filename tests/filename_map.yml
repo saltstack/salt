@@ -6,9 +6,12 @@
 
 # DGM this needs to be changed to using python -m build
 # setup.py:
+#  - pytests.scenarios.setup.test_man
+#  - pytests.scenarios.setup.test_install
+
 setup.cfg:
-  - pytests.scenarios.setup.test_man
-  - pytests.scenarios.setup.test_install
+  - pytests.scenarios.setup.test_man_setuptools
+  - pytests.scenarios.setup.test_install_setuptools
 
 salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_jid_logging

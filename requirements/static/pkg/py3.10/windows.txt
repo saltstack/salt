@@ -4,8 +4,6 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.10/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
-build==0.9.0
-    # via -r requirements/base.txt
 certifi==2022.5.18.1
     # via
     #   -r requirements/windows.txt
@@ -20,8 +18,6 @@ cheroot==8.5.2
     # via cherrypy
 cherrypy==18.6.1
     # via -r requirements/windows.txt
-colorama==0.4.6
-    # via build
 contextvars==2.4
     # via -r requirements/base.txt
 cryptography==3.4.7
@@ -77,11 +73,7 @@ more-itertools==8.2.0
 msgpack==1.0.2
     # via -r requirements/base.txt
 packaging==22.0
-    # via
-    #   -r requirements/base.txt
-    #   build
-pep517==0.13.0
-    # via build
+    # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
 psutil==5.8.0
@@ -134,10 +126,6 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/windows.txt
-tomli==2.0.1
-    # via
-    #   build
-    #   pep517
 urllib3==1.26.6
     # via
     #   -r requirements/windows.txt

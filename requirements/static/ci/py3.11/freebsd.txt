@@ -344,8 +344,6 @@ botocore==1.29.26
     #   boto3
     #   moto
     #   s3transfer
-build==0.9.0
-    # via -r requirements/base.txt
 cachetools==5.2.0
     # via google-auth
 cassandra-driver==3.25.0
@@ -614,7 +612,6 @@ oscrypto==1.3.0
 packaging==22.0
     # via
     #   -r requirements/base.txt
-    #   build
     #   docker
     #   pytest
 paramiko==2.12.0 ; sys_platform != "win32" and sys_platform != "darwin"
@@ -623,8 +620,6 @@ passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.10.2
     # via yamllint
-pep517==0.13.0
-    # via build
 platformdirs==2.6.0
     # via virtualenv
 pluggy==1.0.0

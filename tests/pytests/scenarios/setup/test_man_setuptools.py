@@ -54,12 +54,23 @@ def test_man_pages(virtualenv, src_dir):
 
     with virtualenv as venv:
         rootdir = str(venv.venv_dir / "installed")
+        # DGM this needs to be changed to using python -m build
+        ## venv.run(
+        ##     venv.venv_python,
+        ##     "setup.py",
+        ##     "install",
+        ##     "--root={}".format(rootdir),
+        ##     cwd=src_dir,
+        ## )
         venv.run(
             venv.venv_python,
-            "setup.py",
+            "-m",
+            "pip",
             "install",
-            "--root={}".format(rootdir),
-            cwd=src_dir,
+            "-e",
+            "src_dir",
+            "-t",
+            "rootdir",
         )
 
         manpage_fns = set(manpages)

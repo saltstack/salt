@@ -8,8 +8,6 @@ apache-libcloud==3.6.1
     # via -r requirements/darwin.txt
 autocommand==2.2.2
     # via jaraco.text
-build==0.9.0
-    # via -r requirements/base.txt
 certifi==2022.12.7
     # via requests
 cffi==1.15.1
@@ -78,11 +76,7 @@ more-itertools==9.0.0
 msgpack==1.0.4
     # via -r requirements/base.txt
 packaging==22.0
-    # via
-    #   -r requirements/base.txt
-    #   build
-pep517==0.13.0
-    # via build
+    # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
 psutil==5.9.4
