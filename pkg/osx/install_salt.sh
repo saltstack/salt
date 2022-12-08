@@ -33,7 +33,7 @@ _usage() {
      echo "Script to install Salt into the Python environment:"
      echo ""
      echo "usage: ${0}"
-     echo "             [-h|--help] [-v|--version]"
+     echo "             [-h|--help]"
      echo ""
      echo "  -h, --help      this message"
      echo ""
