@@ -14,7 +14,7 @@
 #     - Xcode
 #
 # Usage:
-#     This script can be passed 2 parameters
+#     This script can be passed the following parameter:
 #         $1 : <version> : the version name to give the package. Defaults to the
 #                          git repo version
 #
@@ -53,6 +53,9 @@ if [ "$1" == "" ]; then
 else
     VERSION=$1
 fi
+
+# Strip the v from the beginning
+VERSION=${VERSION#"v"}
 
 CPU_ARCH="$(uname -m)"
 SRC_DIR="$(git rev-parse --show-toplevel)"
