@@ -2167,7 +2167,7 @@ def tidied(
                     filename = path
 
                 # Verify against given criteria, collect all elements that should be removed
-                if age_size_only and age_size_only in ["age", "size"]:
+                if age_size_only and age_size_only in {"age", "size"}:
                     if age_size_only == "age":
                         compare_age_size = myage.days >= age
                     else:
