@@ -1,7 +1,7 @@
 """
 An engine that reads messages from Slack and can act on them
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 
 :depends: `slack_bolt <https://pypi.org/project/slack_bolt/>`_ Python module
 
