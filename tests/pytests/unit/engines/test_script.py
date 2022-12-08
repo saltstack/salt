@@ -61,7 +61,7 @@ def serializer():
 @pytest.fixture()
 def event_send():
     event = Mock()
-    with patch("salt.utils.event.get_master_event") as get_master:
+    with patch("salt.utils.event.get_master_event", autospec=True) as get_master:
         get_master.return_value.fire_event = event
         with patch.dict(script.__salt__, {"event.send": event}):
             yield event
@@ -69,13 +69,13 @@ def event_send():
 
 @pytest.fixture()
 def raw_event():
-    with patch("salt.engines.script._read_stdout") as stdout:
+    with patch("salt.engines.script._read_stdout", autospec=True) as stdout:
         yield stdout
 
 
 @pytest.fixture()
 def proc():
-    with patch("salt.engines.script.subprocess.Popen") as popen:
+    with patch("subprocess.Popen", autospec=True) as popen:
         proc = Mock()
         proc.wait.return_value = False
         proc.pid = 1337
