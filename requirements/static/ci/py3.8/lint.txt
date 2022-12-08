@@ -451,7 +451,7 @@ idna==3.2
     #   yarl
 immutables==0.16
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 ipaddress==1.0.23
     # via kubernetes
@@ -703,7 +703,7 @@ pylint==2.4.4
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.0.2 ; python_version > "3.5"
+pymysql==1.0.2
     # via -r requirements/static/ci/linux.in
 pynacl==1.4.0
     # via paramiko
@@ -738,7 +738,7 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.7 ; python_version > "3.5"
+python-telegram-bot==13.7
     # via -r requirements/static/ci/linux.in
 pytz==2022.1
     # via
