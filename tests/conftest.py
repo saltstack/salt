@@ -1362,7 +1362,10 @@ def from_filenames_collection_modifyitems(config, items):
         if not properly_slashed_path.exists():
             errors.append("{}: Does not exist".format(properly_slashed_path))
             continue
-        if properly_slashed_path.is_absolute():
+        if (
+            properly_slashed_path.name == "testrun-changed-files.txt"
+            or properly_slashed_path.is_absolute()
+        ):
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
             contents = properly_slashed_path.read_text()
