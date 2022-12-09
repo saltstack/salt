@@ -1104,8 +1104,8 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        ## DGM paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
-        paths = ["noxfile.py", "salt/", "tasks/"]
+        # TBD replace paths entries when implement pyproject.toml
+        paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
     _lint(session, ".pylintrc", flags, paths)
 
 

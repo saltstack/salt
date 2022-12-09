@@ -69,14 +69,13 @@ warnings.filterwarnings(
     append=True,
 )
 
-## DGM kill this since if get it, I missed
-## DGM # Filter the setuptools UserWarning until we stop relying on distutils
-## DGM warnings.filterwarnings(
-## DGM     "ignore",
-## DGM     message="Setuptools is replacing distutils.",
-## DGM     category=UserWarning,
-## DGM     module="_distutils_hack",
-## DGM )
+# Filter the setuptools UserWarning until we stop relying on distutils
+warnings.filterwarnings(
+    "ignore",
+    message="Setuptools is replacing distutils.",
+    category=UserWarning,
+    module="_distutils_hack",
+)
 
 
 def __define_global_system_encoding_variable__():

@@ -12,6 +12,7 @@ import glob
 import os
 import platform
 import sys
+import warnings
 from ctypes.util import find_library
 from datetime import datetime
 
@@ -1375,6 +1376,8 @@ class SaltDistribution(distutils.dist.Distribution):
 
 # <---- Custom Distribution Class ------------------------------------------------------------------------------------
 
-
 if __name__ == "__main__":
+    warnings.warn(
+        "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
+    )
     setup(distclass=SaltDistribution)
