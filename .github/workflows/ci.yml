@@ -46,18 +46,22 @@ jobs:
             docs:
               - doc/**
             salt:
-              - added|modified:
+              - added|modified: &salt_added_modified
                 - setup.py
                 - noxfile.py
                 - salt/**/*.py
                 - tasks/**/*.py
                 - tools/**/*.py
             tests:
-              - added|modified:
+              - added|modified: &tests_added_modified
                 - tests/**/*.py
             pylintrc:
               - added|modified:
                 - .pylintrc
+            testrun:
+              - added|modified:
+                - *salt_added_modified
+                - *tests_added_modified
 
       - name: Write Changed Files To A Local File
         run:
