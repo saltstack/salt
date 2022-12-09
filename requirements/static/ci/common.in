@@ -7,7 +7,8 @@ boto3>=1.16.0,<1.17.0; python_version < '3.6'
 boto3>=1.17.67; python_version >= '3.6'
 boto>=2.46.0
 cassandra-driver>=2.0
-certifi
+certifi>=2022.12.7; python_version >= "3.6"
+certifi<=2021.10.8; python_version <= "3.5"
 cffi>=1.12.2
 cherrypy>=17.4.1
 clustershell
@@ -15,7 +16,8 @@ croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
 docker
 etcd3-py==0.1.6 ; python_version >= '3.6'
-gitpython>=2.1.15
+gitpython>3.1.20 ; python_version >= "3.7"
+gitpython>=2.1.15 ; python_version <= "3.6"
 jmespath
 jsonschema
 junos-eznc==2.4.0; sys_platform != 'win32' and python_version <= '3.9'

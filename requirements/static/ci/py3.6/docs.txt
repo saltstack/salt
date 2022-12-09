@@ -359,7 +359,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -436,9 +436,9 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.7
+gitdb==4.0.9
     # via gitpython
-gitpython==3.1.18
+gitpython==3.1.18 ; python_version <= "3.6"
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
@@ -820,7 +820,7 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
-smmap==4.0.0
+smmap==5.0.0
     # via gitdb
 snowballstemmer==2.1.0
     # via sphinx

@@ -348,7 +348,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.24.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -436,7 +436,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.12
+gitpython==3.1.29 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
@@ -883,6 +883,7 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
+    #   gitpython
     #   importlib-metadata
     #   pytest-shell-utilities
     #   pytest-system-statistics

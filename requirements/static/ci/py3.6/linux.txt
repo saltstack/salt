@@ -363,7 +363,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -444,9 +444,9 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
     # via cassandra-driver
-gitdb==4.0.5
+gitdb==4.0.9
     # via gitpython
-gitpython==3.1.12
+gitpython==3.1.18 ; python_version <= "3.6"
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
@@ -876,7 +876,7 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
-smmap==3.0.4
+smmap==5.0.0
     # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
@@ -904,6 +904,7 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
+    #   gitpython
     #   importlib-metadata
     #   pytest-shell-utilities
     #   pytest-system-statistics
