@@ -38,6 +38,7 @@ jobs:
     outputs:
       jobs: ${{ steps.process-changed-files.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      testrun: ${{ steps.define-testrun.outputs.testrun }}
     steps:
       - uses: actions/checkout@v3
       - name: Get Changed Files
@@ -106,11 +107,32 @@ jobs:
         run:
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
+      - name: Define Testrun
+        id: define-testrun
+        run:
+          tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Test Run
+        run:
+          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
+
+      - name: Check Contents of generated testrun-changed-files.txt
+        if: ${{ github.event_name == 'pull_request' }}
+        run:
+          cat testrun-changed-files.txt
+
+      - name: Upload testrun-changed-files.txt
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: testrun-changed-files.txt
+          path: testrun-changed-files.txt
+
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-changed-files
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-jobs-selection
 
       - name: Upload Exit Status
         if: always()
@@ -147,6 +169,8 @@ jobs:
     with:
       changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
 
+
+
   windows-2016:
     name: Windows 2016
     if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
@@ -156,7 +180,7 @@ jobs:
     with:
       distro-slug: windows-2016
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   windows-2019:
     name: Windows 2019
@@ -167,7 +191,7 @@ jobs:
     with:
       distro-slug: windows-2019
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   windows-2022:
     name: Windows 2022
@@ -178,7 +202,7 @@ jobs:
     with:
       distro-slug: windows-2022
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   macos-12:
     name: MacOS 12
@@ -189,7 +213,7 @@ jobs:
     with:
       distro-slug: macos-12
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   almalinux-8:
     name: Alma Linux 8
@@ -200,7 +224,7 @@ jobs:
     with:
       distro-slug: almalinux-8
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   almalinux-9:
     name: Alma Linux 9
@@ -211,7 +235,7 @@ jobs:
     with:
       distro-slug: almalinux-9
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -222,7 +246,7 @@ jobs:
     with:
       distro-slug: amazonlinux-2
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -233,7 +257,7 @@ jobs:
     with:
       distro-slug: archlinux-lts
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   centos-7:
     name: CentOS 7
@@ -244,7 +268,7 @@ jobs:
     with:
       distro-slug: centos-7
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   centosstream-8:
     name: CentOS Stream 8
@@ -255,7 +279,7 @@ jobs:
     with:
       distro-slug: centosstream-8
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   centosstream-9:
     name: CentOS Stream 9
@@ -266,7 +290,7 @@ jobs:
     with:
       distro-slug: centosstream-9
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   debian-10:
     name: Debian 10
@@ -277,7 +301,7 @@ jobs:
     with:
       distro-slug: debian-10
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   debian-11:
     name: Debian 11
@@ -288,7 +312,7 @@ jobs:
     with:
       distro-slug: debian-11
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   debian-11-arm64:
     name: Debian 11 ARM64
@@ -299,7 +323,7 @@ jobs:
     with:
       distro-slug: debian-11-arm64
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   fedora-36:
     name: Fedora 36
@@ -310,7 +334,7 @@ jobs:
     with:
       distro-slug: fedora-36
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   opensuse-15:
     name: Opensuse 15
@@ -321,7 +345,7 @@ jobs:
     with:
       distro-slug: opensuse-15
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   photon-3:
     name: Photon OS 3
@@ -332,7 +356,7 @@ jobs:
     with:
       distro-slug: photonos-3
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   photon-4:
     name: Photon OS 4
@@ -343,7 +367,7 @@ jobs:
     with:
       distro-slug: photonos-4
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   ubuntu-1804:
     name: Ubuntu 18.04
@@ -354,7 +378,7 @@ jobs:
     with:
       distro-slug: ubuntu-18.04
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -365,7 +389,7 @@ jobs:
     with:
       distro-slug: ubuntu-20.04
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -376,7 +400,7 @@ jobs:
     with:
       distro-slug: ubuntu-20.04-arm64
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -387,7 +411,7 @@ jobs:
     with:
       distro-slug: ubuntu-22.04
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -398,7 +422,7 @@ jobs:
     with:
       distro-slug: ubuntu-22.04-arm64
       nox-session: ci-test
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      testrun: ${{ needs.jobs-selection.outputs.testrun }}
 
 
   set-pipeline-exit-status:

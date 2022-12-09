@@ -11,10 +11,10 @@ on:
         required: true
         type: string
         description: The nox session to run
-      changed-files:
+      testrun:
         required: true
         type: string
-        description: JSON string containing information about changed files
+        description: JSON string containing information about what and how to run the test suite
       python-version:
         required: false
         type: string
@@ -192,6 +192,12 @@ jobs:
             echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
           fi
 
+      - name: Download testrun-changed-files.txt
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: testrun-changed-files.txt
+
       - name: Show System Info & Test Plan
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
@@ -200,10 +206,11 @@ jobs:
           PRINT_SYSTEM_INFO: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
-          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }}
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
 
-      - name: Run Tests
-        id: run-tests
+      - name: Run Slow/Changed Tests
+        id: run-slow-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -212,7 +219,36 @@ jobs:
           RERUN_FAILURES: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
-          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }}
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --run-slow --from-filenames=testrun-changed-files.txt
+
+      - name: Run Fast Tests
+        id: run-fast-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin"
+
+      - name: Run Full Tests
+        id: run-full-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            --run-slow -k "mac or darwin"
 
       - name: Fix file ownership
         run: |
