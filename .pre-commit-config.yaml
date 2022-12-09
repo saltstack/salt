@@ -150,6 +150,18 @@ repos:
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
+        alias: compile-pkg-windows-3.7-zmq-requirements
+        name: Windows Packaging Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.7/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
+
+      - id: pip-tools-compile
         alias: compile-pkg-windows-3.8-zmq-requirements
         name: Windows Packaging Py3.8 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
@@ -520,6 +532,22 @@ repos:
           - requirements/static/ci/crypto.in
 
       - id: pip-tools-compile
+        alias: compile-ci-windows-3.7-zmq-requirements
+        name: Windows CI Py3.7 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.7/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/windows.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/windows.txt
+          - requirements/static/ci/windows.in
+
+      - id: pip-tools-compile
         alias: compile-ci-windows-3.8-zmq-requirements
         name: Windows CI Py3.8 ZeroMQ Requirements
         files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
@@ -566,19 +594,6 @@ repos:
           - --include=requirements/static/ci/common.in
           - --pip-args=--constraint=requirements/static/pkg/py{py_version}/windows.txt
           - requirements/static/ci/windows.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-windows-crypto-3.6-requirements
-        name: Windows CI Py3.6 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.6/windows-crypto\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.6
-          - --platform=windows
-          - --out-prefix=windows
-          - --pip-args=--constraint=requirements/static/ci/py{py_version}/windows.txt
-          - requirements/static/ci/crypto.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-crypto-3.7-requirements

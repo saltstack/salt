@@ -55,9 +55,13 @@ on_saltstack = "SALT_ON_SALTSTACK" in os.environ
 project = "Salt"
 # This is the default branch on GitHub for the Salt project
 repo_primary_branch = "master"
+major_version = str(salt.version.__saltstack_version__.major)
+latest_release = major_version
+if salt.version.__saltstack_version__.can_have_dot_zero(major_version):
+    latest_release = ".".join([str(x) for x in salt.version.__saltstack_version__.info])
 latest_release = (
     # Use next unreleased version if LATEST_RELEASE is undefined env var
-    os.environ.get("LATEST_RELEASE", str(salt.version.__saltstack_version__.major))
+    os.environ.get("LATEST_RELEASE", latest_release)
 )  # latest release (3003)
 previous_release = os.environ.get(
     "PREVIOUS_RELEASE", "previous_release"
