@@ -668,7 +668,6 @@ def test_eauth_user_should_be_able_to_target_valid_minions_with_valid_command(
     assert sorted(results) == expected_minions, res.stdout
 
 
-@pytest.mark.xfail(reason="on earlier versions, this actually worked when it shouldn't")
 def test_eauth_user_should_not_be_able_to_target_invalid_minions(
     eauth_blocked_minions, docker_master
 ):

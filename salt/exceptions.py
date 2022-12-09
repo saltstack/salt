@@ -344,6 +344,13 @@ class EauthAuthenticationError(SaltException):
     """
 
 
+class EauthAuthorizationError(SaltException):
+    """
+    Thrown when eauth user was authenticated, but they were not authorized
+    to perform the requested action.
+    """
+
+
 class TokenAuthenticationError(SaltException):
     """
     Thrown when token authentication fails

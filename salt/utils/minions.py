@@ -691,6 +691,10 @@ class CkMinions:
                 mlist.append(fn_)
         return {"minions": mlist, "missing": []}
 
+    def syndic_minions(self):
+        syndic_cache_path = os.path.join(self.opts["cachedir"], "syndics")
+        return [f for f in os.listdir(syndic_cache_path)]
+
     def check_minions(
         self, expr, tgt_type="glob", delimiter=DEFAULT_TARGET_DELIM, greedy=True
     ):
@@ -734,6 +738,55 @@ class CkMinions:
             )
             _res = {"minions": [], "missing": []}
         return _res
+
+    def check_syndic_auth_list(self, *, minions, funs, args, auth_list):
+        """
+        Check an auth list against a list of targeted minions, functions, and args.
+        """
+        if not isinstance(funs, list):
+            funs = [funs]
+            args = [args]
+
+        # Take the auth list and get all the minion names inside it
+        allowed_minions = set()
+
+        auth_dictionary = {}
+
+        # Make a set, so we are guaranteed to have only one of each minion
+        # Also iterate through the entire auth_list and create a dictionary
+        # so it's easy to look up what functions are permitted
+        for auth_list_entry in auth_list:
+            if isinstance(auth_list_entry, str):
+                for fun in funs:
+                    # represents toplevel auth entry is a function.
+                    # so this fn is permitted by all minions
+                    if self.match_check(auth_list_entry, fun):
+                        return True
+                continue
+            if isinstance(auth_list_entry, dict):
+                if len(auth_list_entry) != 1:
+                    log.info("Malformed ACL: %s", auth_list_entry)
+                    continue
+            allowed_minions.update(set(auth_list_entry.keys()))
+            for key in auth_list_entry:
+                for match in minions:
+                    if match in auth_dictionary:
+                        auth_dictionary[match].extend(auth_list_entry[key])
+                    else:
+                        auth_dictionary[match] = auth_list_entry[key]
+
+        try:
+            for minion in minions:
+                results = []
+                for num, fun in enumerate(auth_dictionary[minion]):
+                    results.append(self.match_check(fun, funs))
+                if not any(results):
+                    return False
+            return True
+
+        except TypeError:
+            return False
+        return False
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         """

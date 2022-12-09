@@ -3269,7 +3269,22 @@ class Syndic(Minion):
         data["to"] = int(data.get("to", self.opts["timeout"])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get("master_id", 0) != self.opts.get("master_id", 1):
-            self.syndic_cmd(data)
+            if "cmd" in data:
+                self.forward_to_localclient(data)
+            else:
+                self.syndic_cmd(data)
+
+    def forward_to_localclient(self, data):
+        """
+        Take an arbitrary payload and send it to the Syndic Master via the LocalClient bus.
+        """
+
+        def timeout_handler(*args):
+            log.warning("Unable to forward pub data: %s %r", args[1], data)
+            return True
+
+        with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
+            self.local.arbitrary_pub_async(tgt=data["tgt"], payload=data)
 
     def syndic_cmd(self, data):
         """
@@ -3388,7 +3403,6 @@ class Syndic(Minion):
             load["sig"] = sig
 
         with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            log.warning("Sending this load %r", load)
             ret = yield channel.send(
                 load, timeout=timeout, tries=self.opts["return_retry_tries"]
             )
@@ -3405,7 +3419,6 @@ class Syndic(Minion):
             load["sig"] = sig
 
         with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            log.warning("Sending this load %r", load)
             ret = yield channel.send(
                 load, timeout=timeout, tries=self.opts["return_retry_tries"]
             )
@@ -3674,6 +3687,8 @@ class SyndicManager(MinionBase):
         # TODO: cleanup: Move down into event class
         mtag, data = self.local.event.unpack(raw)
         log.trace("Got event %s", mtag)  # pylint: disable=no-member
+        if "tgt_match_return" in mtag:
+            data["syndic_id"] = self.opts["id"]
 
         tag_parts = mtag.split("/")
         if (

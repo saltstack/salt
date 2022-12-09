@@ -1950,6 +1950,7 @@ class ClearFuncs(TransportMethods):
         "mk_token",
         "wheel",
         "runner",
+        "_list_valid_minions",
     )
 
     # The ClearFuncs object encapsulates the functions that can be executed in
@@ -1978,6 +1979,27 @@ class ClearFuncs(TransportMethods):
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.channels = []
+
+    def _list_valid_minions(self, clear_load):
+        delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
+        _res = self.ckminions.check_minions(
+            clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
+        )
+        tgt_minions = _res["minions"]
+        valid_minions = set()
+        for v in clear_load["valid_tgt"]:
+            _res = self.ckminions.check_minions(
+                v, clear_load.get("valid_tgt_type", "glob"), delimiter
+            )
+            valid_minions.update(_res["minions"])
+        event_ret = {
+            "valid_minions": list(valid_minions),
+            "tgt_minions": list(tgt_minions),
+        }
+        self.event.fire_event(
+            event_ret, tagify([clear_load.get("jid"), "tgt_match_return"])
+        )
+        return None
 
     def runner(self, clear_load):
         """
@@ -2163,51 +2185,10 @@ class ClearFuncs(TransportMethods):
                 }
             }
 
-    def publish(self, clear_load):
-        """
-        This method sends out publications to the minions, it can only be used
-        by the LocalClient.
-        """
-        extra = clear_load.get("kwargs", {})
-
-        publisher_acl_error = self._check_publisher_acl(clear_load=clear_load)
-        # TODO: walrus operator - if publisher_acl_error := self._check... -W. Werner, 2022-12-08
-        if publisher_acl_error:
-            return publisher_acl_error
-
-        # Retrieve the minions list
-        delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
-        _res = self.ckminions.check_minions(
-            clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
-        )
-        minions = _res.get("minions", list())
-        missing = _res.get("missing", list())
-        ssh_minions = _res.get("ssh_minions", False)
-
-        # Check for external auth calls and authenticate
-        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
-        if auth_type == "user":
-            auth_check = self.loadauth.check_authentication(
-                clear_load, auth_type, key=key
-            )
-        else:
-            auth_check = self.loadauth.check_authentication(extra, auth_type)
-
-        # Setup authorization list variable and error information
-        auth_list = auth_check.get("auth_list", [])
-        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
-
-        if auth_check.get("error"):
-            # Authentication error occurred: do not continue.
-            log.warning(err_msg)
-            return {
-                "error": {
-                    "name": "AuthenticationError",
-                    "message": "Authentication error occurred.",
-                }
-            }
-
-        # All Token, Eauth, and non-root users must pass the authorization check
+    def _check_auth(
+        self, *, auth_check, auth_type, auth_list, clear_load, minions, err_msg, extra
+    ):
+        error = None
         if auth_type != "user" or (auth_type == "user" and auth_list):
             # Authorize the request
             authorized = self.ckminions.auth_check(
@@ -2234,8 +2215,16 @@ class ClearFuncs(TransportMethods):
                         extra["eauth"],
                         extra["username"],
                     )
-                log.warning(err_msg)
-                return {
+                # If we're a Master of Masters we don't need to log the error
+                # here... they may still be OK! But let's debug log it
+                # anyway...
+                if self.opts.get("order_masters"):
+                    log.debug(
+                        "order_masters was set. Would have warned about %r", err_msg
+                    )
+                else:
+                    log.warning(err_msg)
+                error = {
                     "error": {
                         "name": "AuthorizationError",
                         "message": "Authorization error occurred.",
@@ -2250,25 +2239,104 @@ class ClearFuncs(TransportMethods):
             elif auth_type == "eauth":
                 # The username we are attempting to auth with
                 clear_load["user"] = self.loadauth.load_name(extra)
+        return clear_load, error
 
-        # If we order masters (via a syndic), don't short circuit if no minions
-        # are found
-        if not self.opts.get("order_masters"):
-            # Check for no minions
-            if not minions:
-                return {
-                    "enc": "clear",
-                    "load": {
-                        "jid": None,
-                        "minions": minions,
-                        "error": (
-                            "Master could not resolve minions for target {}".format(
-                                clear_load["tgt"]
-                            )
-                        ),
-                    },
+    def publish(self, clear_load):
+        """
+        This method sends out publications to the minions, it can only be used
+        by the LocalClient.
+        """
+        extra = clear_load.get("kwargs", {})
+        jid = None
+
+        publisher_acl_error = self._check_publisher_acl(clear_load=clear_load)
+        # TODO: walrus operator - if publisher_acl_error := self._check... -W. Werner, 2022-12-08
+        if publisher_acl_error:
+            return publisher_acl_error
+
+        # Retrieve the minions list
+        delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
+        _res = self.ckminions.check_minions(
+            clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
+        )
+        minions = _res.get("minions", list())
+        missing = _res.get("missing", list())
+        ssh_minions = _res.get("ssh_minions", False)
+
+        # Check for external auth calls and authenticate
+        # not using err_name or sensitive_load_keys
+        auth_type, _, key, _ = self._prep_auth_info(extra)
+        if auth_type == "user":
+            auth_check = self.loadauth.check_authentication(
+                clear_load, auth_type, key=key
+            )
+        else:
+            auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # Setup authorization list variable and error information
+        auth_list = auth_check.get("auth_list", [])
+        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
+
+        if auth_check.get("error"):
+            # Authentication error occurred: do not continue.
+            log.warning(err_msg)
+            return {
+                "error": {
+                    "name": "AuthenticationError",
+                    "message": "Authentication error occurred.",
                 }
-        jid = self._prep_jid(clear_load, extra)
+            }
+
+        clear_load, auth_error = self._check_auth(
+            auth_check=auth_check,
+            auth_type=auth_type,
+            auth_list=auth_list,
+            clear_load=clear_load,
+            minions=minions,
+            err_msg=err_msg,
+            extra=extra,
+        )
+        if auth_error:
+            if self.opts.get("order_masters"):
+                minions = []
+            else:
+                return auth_error
+        if self.opts.get("order_masters"):
+            try:
+                minions, syndics, jid = self._collect_syndics(
+                    clear_load=clear_load,
+                    minions=minions,
+                    auth_list=auth_list,
+                    auth_type=auth_type,
+                    extra=extra,
+                )
+            except salt.exceptions.EauthAuthorizationError:
+                return {
+                    "error": {
+                        "name": "AuthorizationError",
+                        "message": "Authorization error occurred.",
+                    }
+                }
+
+        if not minions:
+            # We can't publish a job to minions that aren't there. Bail out!
+            # TODO: this doesn't work for eauth -W. Werner, 2022-12-08
+            ret = {
+                "enc": "clear",
+                "load": {
+                    "jid": None,
+                    "minions": minions,
+                    "error": (
+                        "Master could not resolve minions for target {}".format(
+                            clear_load["tgt"]
+                        )
+                    ),
+                },
+            }
+            if self.opts.get("order_masters"):
+                ret["load"]["syndics"] = syndics
+            return ret
+        jid = jid or self._prep_jid(clear_load, extra)
         if jid is None:
             return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
@@ -2277,10 +2345,119 @@ class ClearFuncs(TransportMethods):
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
         self._send_pub(payload)
 
-        return {
+        ret = {
             "enc": "clear",
             "load": {"jid": clear_load["jid"], "minions": minions, "missing": missing},
         }
+        if self.opts["order_masters"]:
+            ret["syndics"] = syndics
+        return ret
+
+    def _collect_syndics(self, *, clear_load, extra, minions, auth_list, auth_type):
+        jid = self._prep_jid(clear_load, extra)
+        valid_tgts = []
+        valid_tgt_type = clear_load["tgt_type"]
+        for list_ in auth_list:
+            valid_tgts.extend(list_)
+        if auth_type == "user" and not valid_tgts:
+            # If auth type is user and we don't have an acl (auth_list) then they can target any minion, probably
+            valid_tgts = ["*"]
+            valid_tgt_type = "glob"
+
+        syndic_request = {
+            "cmd": "_list_valid_minions",
+            "tgt": clear_load["tgt"],
+            "tgt_type": clear_load["tgt_type"],
+            "valid_tgt": valid_tgts,
+            "valid_tgt_type": valid_tgt_type,
+            "jid": jid,
+        }
+
+        log.debug("Sending request for valid minions")
+        event_watcher = salt.utils.event.get_event(
+            "master",
+            self.opts["sock_dir"],
+            opts=self.opts,
+            listen=True,
+        )
+        tgt_minions = set()
+        valid_minions = set()
+        syndics = set(self.ckminions.syndic_minions())
+        missing_syndics = syndics.copy()
+        with event_watcher as event_bus:
+            self._send_pub(syndic_request)
+            timeout = time.time() + clear_load.get(
+                "to", 5
+            )  # 'to' is the provided timeout. Default to 5s
+            while time.time() < timeout:
+                ret = event_bus.get_event(full=True, auto_reconnect=True)
+                if ret and ret.get("tag", "").endswith(f"/{jid}/tgt_match_return"):
+                    data = ret["data"]
+                    valid_minions.update(data.get("valid_minions", []))
+                    tgt_minions.update(data.get("tgt_minions", []))
+                    syndic_id = data.get("syndic_id")
+                    if syndic_id:
+                        missing_syndics.discard(syndic_id)
+                if not missing_syndics:
+                    # Found all the syndics before the timeout!
+                    break
+            else:
+                if not look_anyway:
+                    log.debug(
+                        "Failed to get _list_valid_minions from these syndics: %r",
+                        missing_syndics,
+                    )
+
+        minions.extend(tgt_minions)
+
+        if minions and tgt_minions.issubset(valid_minions):
+            if auth_type != "user" or (auth_type == "user" and auth_list):
+                if (
+                    self.ckminions.check_syndic_auth_list(
+                        minions=minions,
+                        auth_list=auth_list,
+                        funs=clear_load["fun"],
+                        args=clear_load["arg"],
+                    )
+                    is False
+                ):
+                    # We're using user auth, and auth_list (access control
+                    # list) is set.  Or we're using external auth. In the
+                    # future, these should be the same thing (i.e. we're
+                    # authenticated either via user or eauth, and then we
+                    # have an access control list to determine what we're
+                    # able to do from there.
+                    log.warning(
+                        "User %r attempted to run %r against %r but was denied.",
+                        clear_load.get("kwargs", {}).get(
+                            "username", clear_load["user"]
+                        ),
+                        clear_load["fun"],
+                        clear_load["tgt"],
+                    )
+                    raise salt.exceptions.EauthAuthorizationError(
+                        "User not authorized to run job against requested minions"
+                    )
+            # otherwise, just carry on
+        else:
+            # We have no minions, or we've tried targeting minions we don't
+            # have access to!
+            log.warning(
+                "User %r attempted to run %r against %r but was denied.",
+                clear_load["user"],
+                clear_load["fun"],
+                clear_load["tgt"],
+            )
+            raise salt.exceptions.EauthAuthorizationError(
+                "User not authorized to run job against requested minions"
+            )
+        log.debug(
+            "_collect_syndics got minions=%r syndics=%r for jid %r",
+            minions,
+            syndics,
+            jid,
+        )
+        return minions, syndics, jid
 
     def _prep_auth_info(self, clear_load):
         sensitive_load_keys = []

@@ -299,7 +299,7 @@ class LocalClient:
             tgt_type=tgt_type,
             timeout=timeout,
             listen=listen,
-            **kwargs
+            **kwargs,
         )
 
         if "jid" in pub_data:
@@ -365,7 +365,7 @@ class LocalClient:
         jid="",
         kwarg=None,
         listen=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Asynchronously send a command to connected minions
@@ -393,7 +393,7 @@ class LocalClient:
                 jid=jid,
                 timeout=self._get_timeout(timeout),
                 listen=listen,
-                **kwargs
+                **kwargs,
             )
         except SaltClientError:
             # Re-raise error with specific message
@@ -429,7 +429,7 @@ class LocalClient:
         kwarg=None,
         listen=True,
         io_loop=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Asynchronously send a command to connected minions
@@ -458,7 +458,7 @@ class LocalClient:
                 timeout=self._get_timeout(timeout),
                 io_loop=io_loop,
                 listen=listen,
-                **kwargs
+                **kwargs,
             )
         except SaltClientError:
             # Re-raise error with specific message
@@ -511,7 +511,7 @@ class LocalClient:
         cli=False,
         progress=False,
         full_return=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute a command on a random subset of the targeted systems
@@ -553,7 +553,7 @@ class LocalClient:
             kwarg=kwarg,
             progress=progress,
             full_return=full_return,
-            **kwargs
+            **kwargs,
         )
 
     def cmd_batch(
@@ -565,7 +565,7 @@ class LocalClient:
         ret="",
         kwarg=None,
         batch="10%",
-        **kwargs
+        **kwargs,
     ):
         """
         Iteratively execute a command on subsets of minions at a time
@@ -641,7 +641,7 @@ class LocalClient:
         jid="",
         full_return=False,
         kwarg=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Synchronously execute a command on targeted minions
@@ -759,7 +759,7 @@ class LocalClient:
                 jid,
                 kwarg=kwarg,
                 listen=True,
-                **kwargs
+                **kwargs,
             )
 
             if not pub_data:
@@ -772,7 +772,8 @@ class LocalClient:
                 self._get_timeout(timeout),
                 tgt,
                 tgt_type,
-                **kwargs
+                syndics=pub_data.get("syndics"),
+                **kwargs,
             ):
 
                 if fn_ret:
@@ -797,7 +798,7 @@ class LocalClient:
         verbose=False,
         kwarg=None,
         progress=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Used by the :command:`salt` CLI. This method returns minion returns as
@@ -821,7 +822,7 @@ class LocalClient:
                 timeout,
                 kwarg=kwarg,
                 listen=True,
-                **kwargs
+                **kwargs,
             )
 
             if not self.pub_data:
@@ -836,7 +837,8 @@ class LocalClient:
                         tgt_type,
                         verbose,
                         progress,
-                        **kwargs
+                        syndics=self.pub_data.get("syndics"),
+                        **kwargs,
                     ):
 
                         if not fn_ret:
@@ -867,7 +869,7 @@ class LocalClient:
         tgt_type="glob",
         ret="",
         kwarg=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Yields the individual minion returns as they come in
@@ -902,7 +904,7 @@ class LocalClient:
                 timeout,
                 kwarg=kwarg,
                 listen=True,
-                **kwargs
+                **kwargs,
             )
 
             if not pub_data:
@@ -916,7 +918,8 @@ class LocalClient:
                     timeout=self._get_timeout(timeout),
                     tgt=tgt,
                     tgt_type=tgt_type,
-                    **kwargs
+                    syndics=pub_data.get("syndics"),
+                    **kwargs,
                 ):
                     if not fn_ret:
                         continue
@@ -937,7 +940,7 @@ class LocalClient:
         kwarg=None,
         show_jid=False,
         verbose=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Yields the individual minion returns as they come in, or None
@@ -973,7 +976,7 @@ class LocalClient:
                 timeout,
                 kwarg=kwarg,
                 listen=True,
-                **kwargs
+                **kwargs,
             )
 
             if not pub_data:
@@ -986,7 +989,8 @@ class LocalClient:
                     tgt=tgt,
                     tgt_type=tgt_type,
                     block=False,
-                    **kwargs
+                    syndics=pub_data.get("syndics"),
+                    **kwargs,
                 ):
                     if fn_ret and any([show_jid, verbose]):
                         for minion in fn_ret:
@@ -1008,7 +1012,7 @@ class LocalClient:
         ret="",
         verbose=False,
         kwarg=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute a salt command and return
@@ -1025,7 +1029,7 @@ class LocalClient:
                 timeout,
                 kwarg=kwarg,
                 listen=True,
-                **kwargs
+                **kwargs,
             )
 
             if not pub_data:
@@ -1047,7 +1051,7 @@ class LocalClient:
         tgt_type="glob",
         verbose=False,
         show_jid=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Starts a watcher looking at the return data for a specified JID
@@ -1124,7 +1128,7 @@ class LocalClient:
         tgt_type="glob",
         expect_minions=False,
         block=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Watch the event system and return job data as it comes in
@@ -1136,6 +1140,13 @@ class LocalClient:
                 minions = {minions}
             elif isinstance(minions, (list, tuple)):
                 minions = set(list(minions))
+        expected_syndics = set()
+        if self.opts["order_masters"]:
+            if not isinstance(kwargs["syndics"], set):
+                if isinstance(kwargs["syndics"], str):
+                    expected_syndics = {kwargs["syndics"]}
+                elif isinstance(kwargs["syndics"], (list, tuple)):
+                    expected_syndics = set(list(kwargs["syndics"]))
 
         if timeout is None:
             timeout = self.opts["timeout"]
@@ -1149,6 +1160,7 @@ class LocalClient:
 
         found = set()
         missing = set()
+        found_syndics = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
             if not self.returns_for_job(jid):
@@ -1191,6 +1203,8 @@ class LocalClient:
                 # if we got None, then there were no events
                 if raw is None:
                     break
+                if "syndic_id" in raw.get("data", {}):
+                    found_syndics.add(raw["data"]["syndic_id"])
                 if "minions" in raw.get("data", {}):
                     minions.update(raw["data"]["minions"])
                     if "missing" in raw.get("data", {}):
@@ -1216,28 +1230,10 @@ class LocalClient:
                     yield ret
 
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
-            if (
-                len(found.intersection(minions)) >= len(minions)
-                and not self.opts["order_masters"]
-            ):
+            if found.union(found_syndics) == minions.union(expected_syndics):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions %s", jid, found)
                 break
-            elif (
-                len(found.intersection(minions)) >= len(minions)
-                and self.opts["order_masters"]
-            ):
-                if (
-                    len(found) >= len(minions)
-                    and len(minions) > 0
-                    and time.time() > gather_syndic_wait
-                ):
-                    # There were some minions to find and we found them
-                    # However, this does not imply that *all* masters have yet responded with expected minion lists.
-                    # Therefore, continue to wait up to the syndic_wait period (calculated in gather_syndic_wait) to see
-                    # if additional lower-level masters deliver their lists of expected
-                    # minions.
-                    break
             # If we get here we may not have gathered the minion list yet. Keep waiting
             # for all lower-level masters to respond with their minion lists
 
@@ -1622,7 +1618,7 @@ class LocalClient:
         progress=False,
         show_timeout=False,
         show_jid=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Get the returns for the command line interface via the event system
@@ -1652,7 +1648,7 @@ class LocalClient:
             expect_minions=(
                 kwargs.pop("expect_minions", False) or verbose or show_timeout
             ),
-            **kwargs
+            **kwargs,
         ):
             log.debug("return event: %s", ret)
             return_count = return_count + 1
@@ -1847,7 +1843,7 @@ class LocalClient:
         jid="",
         timeout=5,
         listen=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Take the required arguments and publish the given command.
@@ -1935,7 +1931,82 @@ class LocalClient:
             if not payload:
                 return payload
 
-        return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+        ret = {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+        if "syndics" in payload:
+            ret["syndics"] = payload["syndics"]
+        return ret
+
+    @salt.ext.tornado.gen.coroutine
+    def arbitrary_pub_async(
+        self,
+        tgt,
+        payload,
+        tgt_type="glob",
+        timeout=5,
+        io_loop=None,
+        listen=True,
+        cmd=None,
+        **kwargs,
+    ):
+        """
+        Publish an arbitrary payload. Maybe this is what events do?
+        """
+        if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
+            os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+        ):
+            log.error(
+                "Unable to connect to the salt master publisher at %s",
+                self.opts["sock_dir"],
+            )
+            raise SaltClientError
+        payload_kwargs, payload = payload, None
+
+        master_uri = (
+            "tcp://"
+            + salt.utils.zeromq.ip_bracket(self.opts["interface"])
+            + ":"
+            + str(self.opts["ret_port"])
+        )
+
+        with salt.channel.client.AsyncReqChannel.factory(
+            self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
+        ) as channel:
+            try:
+                # Ensure that the event subscriber is connected.
+                # If not, we won't get a response, so error out
+                if listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+                payload = yield channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError:
+                raise SaltReqTimeoutError(
+                    "Salt request timed out. The master is not responding. You "
+                    "may need to run your command with `--async` in order to "
+                    "bypass the congested event bus. With `--async`, the CLI tool "
+                    "will print the job id (jid) and exit immediately without "
+                    "listening for responses. You can then use "
+                    "`salt-run jobs.lookup_jid` to look up the results of the job "
+                    "in the job cache later."
+                )
+
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    raise salt.ext.tornado.gen.Return(payload)
+                self.key = key
+                payload_kwargs["key"] = self.key
+                payload = yield channel.send(payload_kwargs)
+
+            error = payload.pop("error", None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get("name", "")
+                    err_msg = error.get("message", "")
+                    if err_name == "AuthenticationError":
+                        raise AuthenticationError(err_msg)
+                    elif err_name == "AuthorizationError":
+                        raise AuthorizationError(err_msg)
 
     @salt.ext.tornado.gen.coroutine
     def pub_async(
@@ -1949,7 +2020,7 @@ class LocalClient:
         timeout=5,
         io_loop=None,
         listen=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Take the required arguments and publish the given command.

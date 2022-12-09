@@ -128,9 +128,12 @@ class TransportMethodsTest(TestCase):
             "_prep_pub",
             "_send_pub",
             "_send_ssh_pub",
+            "_check_auth",
             "get_method",
             "destroy",
             "connect",
+            "_check_publisher_acl",
+            "_collect_syndics",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:
