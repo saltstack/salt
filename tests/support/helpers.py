@@ -1661,7 +1661,12 @@ class VirtualEnv:
             env = self.environ.copy().update(env)
         else:
             env = self.environ
+        print(
+            f"DGM helper run args '{args}', env '{env}', kwargs '{kwargs}', check '{check}'"
+        )
         proc = subprocess.run(args, check=False, env=env, **kwargs)
+        print(f"DGM helper proc.returncode '{proc.returncode}', cmdline '{proc.args}'")
+
         ret = ProcessResult(
             returncode=proc.returncode,
             stdout=proc.stdout,
