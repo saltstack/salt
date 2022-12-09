@@ -88,7 +88,7 @@ allowed functions:
     on their minion ID, while target hosts can be matched by any of
     the :ref:`available matchers <targeting-compound>`.
 
-    Note that globbing and regex matching on pillar values is not supported.
+    Note that globbing and regex matching on pillar values is not supported. You can only match exact values.
 
 
 Peer Runner Communication
