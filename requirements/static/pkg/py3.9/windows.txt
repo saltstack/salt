@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.9/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/windows.txt
     #   requests
