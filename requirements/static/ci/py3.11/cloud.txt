@@ -662,6 +662,8 @@ pyopenssl==22.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
+pyparsing==3.0.9
+    # via -r requirements/base.txt
 pypsexec==0.3.0
     # via -r requirements/static/ci/cloud.in
 pyrsistent==0.19.2

@@ -68,7 +68,9 @@ pycryptodomex==3.9.8
 pyopenssl==19.1.0
     # via -r requirements/static/pkg/linux.in
 pyparsing==3.0.9
-    # via packaging
+    # via
+    #   -r requirements/base.txt
+    #   packaging
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
 python-gnupg==0.4.8

@@ -245,7 +245,9 @@ pyopenssl==20.0.1
     #   -r requirements/windows.txt
     #   etcd3-py
 pyparsing==2.4.5
-    # via packaging
+    # via
+    #   -r requirements/base.txt
+    #   packaging
 pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0

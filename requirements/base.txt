@@ -13,4 +13,5 @@ contextvars
 # since removal of distutils support
 setuptools
 looseversion
+pyparsing!=3.0.5,>=2.0.2
 packaging

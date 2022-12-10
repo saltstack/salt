@@ -722,6 +722,7 @@ pyopenssl==20.0.1
     #   etcd3-py
 pyparsing==2.4.7
     # via
+    #   -r requirements/base.txt
     #   junos-eznc
     #   packaging
 pyrsistent==0.18.0
