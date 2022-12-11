@@ -240,7 +240,6 @@ def absent(
                 user=user,
                 gnupghome=gnupghome,
                 keyring=keyring,
-                use_passphrase=False,
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
