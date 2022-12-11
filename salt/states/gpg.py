@@ -61,7 +61,7 @@ def present(
         Limit the operation to this specific keyring, specified as
         a local filesystem path.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3007.0
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
@@ -83,7 +83,7 @@ def present(
         keys = [keys]
 
     for key in keys:
-        if key in current_keys.keys():
+        if key in current_keys:
             if trust:
                 if trust in TRUST_MAP:
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:
@@ -203,13 +203,13 @@ def absent(
         Limit the operation to this specific keyring, specified as
         a local filesystem path.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3007.0
 
     keyring_absent_if_empty
         Make sure to not leave behind an empty keyring file
         if ``keyring`` was specified. Defaults to false.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3007.0
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
