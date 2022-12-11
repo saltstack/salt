@@ -181,6 +181,13 @@ def test_gpg_present_keyring_trust_change(
     assert key_info[0]["trust"] == "u"
 
 
+def test_gpg_absent_no_changes(gpghome, gpg, gnupg, key_a_fp):
+    assert not gnupg.list_keys(keys=key_a_fp)
+    ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome))
+    assert ret.result
+    assert not ret.changes
+
+
 @pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_absent(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
@@ -190,24 +197,6 @@ def test_gpg_absent(gpghome, gpg, gnupg, key_a_fp):
     assert ret.changes
     assert "deleted" in ret.changes
     assert ret.changes["deleted"]
-
-
-def test_gpg_absent_no_changes(gpghome, gpg, gnupg, key_a_fp):
-    assert not gnupg.list_keys(keys=key_a_fp)
-    ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome))
-    assert ret.result
-    assert not ret.changes
-
-
-@pytest.mark.usefixtures("_pubkeys_present")
-def test_gpg_absent_test_mode_no_changes(gpghome, gpg, gnupg, key_a_fp):
-    assert gnupg.list_keys(keys=key_a_fp)
-    ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome), test=True)
-    assert ret.result is None
-    assert ret.changes
-    assert "deleted" in ret.changes
-    assert ret.changes["deleted"]
-    assert gnupg.list_keys(keys=key_a_fp)
 
 
 @pytest.mark.usefixtures("_pubkeys_present")
@@ -235,3 +224,14 @@ def test_gpg_absent_from_keyring_delete_keyring(
     assert "removed" in ret.changes
     assert ret.changes["removed"] == keyring
     assert not Path(keyring).exists()
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
+def test_gpg_absent_test_mode_no_changes(gpghome, gpg, gnupg, key_a_fp):
+    assert gnupg.list_keys(keys=key_a_fp)
+    ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome), test=True)
+    assert ret.result is None
+    assert ret.changes
+    assert "deleted" in ret.changes
+    assert ret.changes["deleted"]
+    assert gnupg.list_keys(keys=key_a_fp)
