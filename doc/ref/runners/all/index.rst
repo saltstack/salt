@@ -30,6 +30,7 @@ runner modules
     launchd
     lxc
     manage
+    match
     mattermost
     mine
     nacl
