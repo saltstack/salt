@@ -559,12 +559,10 @@ def delete_key(
     key = get_key(keyid=keyid, fingerprint=fingerprint, user=user, gnupghome=gnupghome)
 
     def __delete_key(fingerprint, secret, use_passphrase):
-        if use_passphrase:
+        if secret and use_passphrase:
             gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
             if not gpg_passphrase:
-                ret["res"] = False
-                ret["message"] = "gpg_passphrase not available in pillar."
-                return ret
+                return "gpg_passphrase not available in pillar."
             else:
                 out = gpg.delete_keys(fingerprint, secret, passphrase=gpg_passphrase)
         else:
@@ -573,7 +571,7 @@ def delete_key(
 
     if key:
         fingerprint = key["fingerprint"]
-        skey = get_secret_key(keyid, fingerprint, user)
+        skey = get_secret_key(keyid, fingerprint, user, gnupghome=gnupghome)
         if skey:
             if not delete_secret:
                 ret["res"] = False
@@ -582,19 +580,29 @@ def delete_key(
                 ] = "Secret key exists, delete first or pass delete_secret=True."
                 return ret
             else:
-                if str(__delete_key(fingerprint, True, use_passphrase)) == "ok":
+                out = __delete_key(fingerprint, True, use_passphrase)
+                if str(out) == "ok":
                     # Delete the secret key
-                    ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
+                    ret["message"] = f"Secret key for {fingerprint} deleted\n"
+                else:
+                    ret["res"] = False
+                    ret[
+                        "message"
+                    ] = f"Failed to delete secret key for {fingerprint}: {out}"
+                    return ret
 
         # Delete the public key
-        if str(__delete_key(fingerprint, False, use_passphrase)) == "ok":
-            ret["message"] += "Public key for {} deleted".format(fingerprint)
-        ret["res"] = True
-        return ret
+        out = __delete_key(fingerprint, False, use_passphrase)
+        if str(out) == "ok":
+            ret["res"] = True
+            ret["message"] += f"Public key for {fingerprint} deleted"
+        else:
+            ret["res"] = False
+            ret["message"] += f"Failed to delete public key for {fingerprint}: {out}"
     else:
         ret["res"] = False
         ret["message"] = "Key not available in keychain."
-        return ret
+    return ret
 
 
 def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
