@@ -29,8 +29,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  jobs-selection:
-    name: Get Changed Files
+  prepare-ci:
+    name: Prepare CI
     runs-on: ubuntu-latest
     permissions:
       contents: read  # for dorny/paths-filter to fetch a list of changed files
@@ -132,7 +132,7 @@ jobs:
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-jobs-selection
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-prepare-ci
 
       - name: Upload Exit Status
         if: always()
@@ -144,285 +144,285 @@ jobs:
 
   pre-commit:
     name: Pre-Commit
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     uses: ./.github/workflows/pre-commit-action.yml
     needs:
-      - jobs-selection
+      - prepare-ci
     with:
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
   docs:
     name: Build Docs
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     uses: ./.github/workflows/docs-action.yml
     needs:
-      - jobs-selection
+      - prepare-ci
     with:
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
-      - jobs-selection
+      - prepare-ci
     with:
-      changed-files: ${{ needs.jobs-selection.outputs.changed-files }}
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
 
 
   windows-2016:
     name: Windows 2016
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2016
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   windows-2019:
     name: Windows 2019
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   windows-2022:
     name: Windows 2022
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2022
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   macos-12:
     name: MacOS 12
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   almalinux-8:
     name: Alma Linux 8
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-8
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   almalinux-9:
     name: Alma Linux 9
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-9
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   amazonlinux-2:
     name: Amazon Linux 2
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: amazonlinux-2
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   archlinux-lts:
     name: Arch Linux LTS
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: archlinux-lts
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   centos-7:
     name: CentOS 7
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centos-7
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   centosstream-8:
     name: CentOS Stream 8
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-8
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   centosstream-9:
     name: CentOS Stream 9
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-9
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   debian-10:
     name: Debian 10
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-10
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   debian-11:
     name: Debian 11
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   debian-11-arm64:
     name: Debian 11 ARM64
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11-arm64
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   fedora-36:
     name: Fedora 36
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: fedora-36
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   opensuse-15:
     name: Opensuse 15
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: opensuse-15
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   photon-3:
     name: Photon OS 3
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-3
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   photon-4:
     name: Photon OS 4
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   ubuntu-1804:
     name: Ubuntu 18.04
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-18.04
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   ubuntu-2004:
     name: Ubuntu 20.04
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   ubuntu-2204:
     name: Ubuntu 22.04
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
-    if: ${{ fromJSON(needs.jobs-selection.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
-      - jobs-selection
+      - prepare-ci
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
       nox-session: ci-test
-      testrun: ${{ needs.jobs-selection.outputs.testrun }}
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
 
 
   set-pipeline-exit-status:
