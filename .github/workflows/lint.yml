@@ -43,11 +43,10 @@ jobs:
         filters: |
           salt:
             - added|modified:
+              - setup.py
               - noxfile.py
               - salt/**/*.py
               - tasks/**/*.py
-              ## DGM - setup.py
-              ## DGM - setup.cfg
           rcfile:
             - added|modified:
               - .pylintrc

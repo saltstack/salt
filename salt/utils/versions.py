@@ -19,20 +19,28 @@ import numbers
 import sys
 import warnings
 
-# basically distutils.version.Looseversion with deps handled, uses setuptools
-## DGM from looseversion import LooseVersion as _LooseVersion
-from looseversion import LooseVersion as _LooseVersion
-
-# pylint: disable=blacklisted-module
-## DGM from distutils.version import LooseVersion as _LooseVersion
-## DGM from distutils.version import StrictVersion as _StrictVersion
-from packaging.version import InvalidVersion
-from packaging.version import Version as pkg_version
-
 # pylint: enable=blacklisted-module
 import salt.version
 
 log = logging.getLogger(__name__)
+
+# basically distutils.version.Looseversion with deps handled, uses setuptools
+## DGM from looseversion import LooseVersion as _LooseVersion
+try:
+    from looseversion import LooseVersion as _LooseVersion
+except ImportError:
+    log.debug("unable to import LooseVersion from looseversion")
+    raise ImportError()
+
+# pylint: disable=blacklisted-module
+## DGM from distutils.version import LooseVersion as _LooseVersion
+## DGM from distutils.version import StrictVersion as _StrictVersion
+try:
+    from packaging.version import InvalidVersion
+    from packaging.version import Version as pkg_version
+except ImportError:
+    log.debug("unable to import from packaging.version")
+    raise ImportError()
 
 
 class StrictVersion(pkg_version):
@@ -85,6 +93,12 @@ class StrictVersion(pkg_version):
                 return 1
         else:
             assert False, "never get here"
+
+    def version(self):
+        return self.release
+
+    def prerelease(self):
+        return self.pre
 
 
 class LooseVersion(_LooseVersion):
