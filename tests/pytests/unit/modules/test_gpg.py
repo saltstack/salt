@@ -1024,10 +1024,3 @@ def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
                     gnupghome=str(gpghome.path),
                 )
                 assert ret["res"] is True
-
-
-def test_gpg_verify_supports_gnupghome():
-    with patch("salt.modules.gpg._create_gpg") as create:
-        create.return_value.verify.return_value.trust_level = None
-        gpg.verify(text="abc", gnupghome="/pls_respect_me")
-        create.assert_called_with(None, "/pls_respect_me")
