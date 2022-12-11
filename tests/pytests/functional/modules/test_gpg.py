@@ -18,7 +18,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
     root.mkdir(mode=0o0700)
@@ -56,7 +56,7 @@ def gpghome(tmp_path):
                 pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def gpg(loaders, modules, gpghome):
     try:
         yield modules.gpg
@@ -64,7 +64,7 @@ def gpg(loaders, modules, gpghome):
         pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def signed_data(tmp_path):
     signed_data = "What do you have if you have NaCl and NiCd? A salt and battery.\n"
     data = tmp_path / "signed_data"
@@ -74,12 +74,12 @@ def signed_data(tmp_path):
     data.unlink()
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_a_fp():
     return "EF03765F59EE904930C8A781553A82A058C0C795"
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_a_pub():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -97,7 +97,7 @@ pDEmK8EhJDvV/9o0lnhm/9w=
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_a_priv():
     return """\
 -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -122,7 +122,7 @@ wSEkO9X/2jSWeGb/3A==
 -----END PGP PRIVATE KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_a_sig():
     return """\
 -----BEGIN PGP SIGNATURE-----
@@ -135,12 +135,12 @@ cOm6/gNVIVm3Uoe9mKXESRvpMYmNUp2UM7ZzzBstK/ViVR82UA==
 -----END PGP SIGNATURE-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_b_fp():
     return "118B4FAB78038CB2DF7B69E20F6C422647465C93"
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_b_pub():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -158,7 +158,7 @@ COflOxnEyLVHXnX8wUIzZwo=
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_b_priv():
     return """\
 -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -183,7 +183,7 @@ GcTItUdedfzBQjNnCg==
 -----END PGP PRIVATE KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_b_sig():
     return """\
 -----BEGIN PGP SIGNATURE-----
@@ -196,12 +196,12 @@ kwj5A/9Fj7JFdzu5CGvB7MGYPPUm7cBh231QuSLndlSFvv3ZBrvU9906fstzjQRB
 -----END PGP SIGNATURE-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_c_fp():
     return "96F136AC4C92D78DAF33105E35C03186001C6E31"
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_c_pub():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -220,7 +220,7 @@ y9KvnTFP2+oeDX2Z/m4SoWw=
 
 
 # the signature was made on different data
-@pytest.fixture()
+@pytest.fixture
 def key_c_fail_sig():
     return """\
 -----BEGIN PGP SIGNATURE-----
@@ -233,12 +233,12 @@ KQE7MX8ePBchpSyhmvXzEezyw2FJp+YVOUKhDsc1vbNWTxGYJw==
 -----END PGP SIGNATURE-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_d_fp():
     return "0B33DC666FA1211311850D4F5F3CAF4AE7BF949D"
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_d_pub():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -256,7 +256,7 @@ Mq2tZaSibjzjqQ32LiNJi3c=
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_d_sig():
     return """\
 -----BEGIN PGP SIGNATURE-----
@@ -269,13 +269,13 @@ FUXLma7dvOw13LLY2RjtgaVbePTO+H+uCrAa4/O0YEIAE2C2fA==
 -----END PGP SIGNATURE-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_e_fp():
     return "2401C402776328D78D6B4C5D67D35BC98502D9B9"
 
 
 # expires 2022-12-01
-@pytest.fixture()
+@pytest.fixture
 def key_e_pub():
     return """\
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -293,7 +293,7 @@ J7xvL0cNSsHha4hUIrekvzM+SNwYkzs=
 -----END PGP PUBLIC KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_e_priv():
     return """\
 -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -318,7 +318,7 @@ Rw1KweFriFQit6S/Mz5I3BiTOw==
 -----END PGP PRIVATE KEY BLOCK-----"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def key_e_exp_sig():
     return """\
 -----BEGIN PGP SIGNATURE-----
@@ -337,7 +337,7 @@ def key_f_fp():
 
 
 # no pubkey for this one
-@pytest.fixture()
+@pytest.fixture
 def key_f_sig():
     return """\
 -----BEGIN PGP SIGNATURE-----
@@ -350,7 +350,7 @@ kBGl+/D1MBJLt6q8GZWHMWIHOX4GN28A/PEemaKg3dZHEtPM3w==
 -----END PGP SIGNATURE-----"""
 
 
-@pytest.fixture(params=[["key_a_sig"]])
+@pytest.fixture(params=["a"])
 def sig(request, tmp_path):
     sigs = "\n".join(request.getfixturevalue(f"key_{x}_sig") for x in request.param)
     sig = tmp_path / "sig.asc"
@@ -364,22 +364,10 @@ def gnupg(gpghome):
     return gnupglib.GPG(gnupghome=str(gpghome))
 
 
-@pytest.fixture(autouse=True)
-def pubkeys_present(
-    key_a_pub,
-    key_a_fp,
-    key_b_pub,
-    key_b_fp,
-    key_c_pub,
-    key_c_fp,
-    key_d_pub,
-    key_d_fp,
-    key_e_pub,
-    key_e_fp,
-    gnupg,
-):
-    pubkeys = [key_a_pub, key_b_pub, key_c_pub, key_d_pub, key_e_pub]
-    fingerprints = [key_a_fp, key_b_fp, key_c_fp, key_d_fp, key_e_fp]
+@pytest.fixture(params=["abcde"])
+def pubkeys_present(gnupg, request):
+    pubkeys = [request.getfixturevalue(f"key_{x}_pub") for x in request.param]
+    fingerprints = [request.getfixturevalue(f"key_{x}_fp") for x in request.param]
     gnupg.import_keys("\n".join(pubkeys))
     present_keys = gnupg.list_keys()
     for fp in fingerprints:
@@ -396,13 +384,16 @@ def pubkeys_present(
     ],
     indirect=["sig"],
 )
-def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
+@pytest.mark.usefixtures("pubkeys_present")
+def test_gpg_verify(gpg, gpghome, signed_data, sig, expected, key_a_fp):
     res = gpg.verify(filename=str(signed_data), gnupghome=str(gpghome), signature=sig)
-    assert res["res"] == expected
+    assert res["res"] is expected
     if not expected:
         assert "could not be verified" in res["message"]
     else:
         assert "is verified" in res["message"]
+        assert "key_id" in res
+        assert res["key_id"] == key_a_fp[-16:]
 
 
 @pytest.mark.parametrize(
@@ -436,6 +427,7 @@ def test_gpg_verify(gpg, pubkeys_present, gpghome, signed_data, sig, expected):
     ],
     indirect=["sig"],
 )
+@pytest.mark.usefixtures("pubkeys_present")
 def test_gpg_verify_signed_by_any(
     gpg, gpghome, signed_data, sig, by, expected, request
 ):
@@ -446,7 +438,7 @@ def test_gpg_verify_signed_by_any(
         signature=sig,
         signed_by_any=fps,
     )
-    assert res["res"] == expected
+    assert res["res"] is expected
 
 
 @pytest.mark.parametrize(
@@ -479,6 +471,7 @@ def test_gpg_verify_signed_by_any(
     ],
     indirect=["sig"],
 )
+@pytest.mark.usefixtures("pubkeys_present")
 def test_gpg_verify_signed_by_all(
     gpg, gpghome, signed_data, sig, by, expected, request
 ):
@@ -489,4 +482,4 @@ def test_gpg_verify_signed_by_all(
         signature=sig,
         signed_by_all=fps,
     )
-    assert res["res"] == expected
+    assert res["res"] is expected
