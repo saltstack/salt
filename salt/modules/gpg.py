@@ -573,7 +573,8 @@ def delete_key(
 
     use_passphrase
         Whether to use a passphrase with the signing key. Passphrase is retrieved
-        from Pillar value ``gpg_passphrase``.
+        from Pillar value ``gpg_passphrase``. Note that this defaults to True here,
+        contrary to the rest of the module functions that provide this parameter.
 
         .. versionadded:: 3003
 
@@ -1329,7 +1330,6 @@ def verify(
 
         salt '*' gpg.verify text='Hello there.  How are you?'
         salt '*' gpg.verify filename='/path/to/important.file'
-        salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
         salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
     """
