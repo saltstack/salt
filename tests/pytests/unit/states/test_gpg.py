@@ -76,7 +76,7 @@ def gpg_trust(request):
     trust.return_value = getattr(
         request,
         "param",
-        {"res": True, "message": ["Setting ownership trust to Marginally"]},
+        {"res": True, "message": "Setting ownership trust to Marginally"},
     )
     with patch.dict(gpg.__salt__, {"gpg.trust_key": trust}):
         yield trust
@@ -96,7 +96,7 @@ def gpg_receive(request):
 def gpg_delete(request):
     delete = Mock(spec="salt.modules.gpg.delete_key")
     delete.return_value = getattr(
-        request, "param", {"res": True, "message": ["Public key for A deleted"]}
+        request, "param", {"res": True, "message": "Public key for A deleted"}
     )
     with patch.dict(gpg.__salt__, {"gpg.delete_key": delete}):
         yield delete
@@ -115,8 +115,8 @@ def test_gpg_present_no_changes(gpg_receive, gpg_trust):
 @pytest.mark.parametrize(
     "gpg_trust,expected",
     [
-        ({"res": True, "message": ["Setting ownership trust to Marginally"]}, True),
-        ({"res": False, "message": ["KeyID A not in GPG keychain"]}, False),
+        ({"res": True, "message": "Setting ownership trust to Marginally"}, True),
+        ({"res": False, "message": "KeyID A not in GPG keychain"}, False),
     ],
     indirect=["gpg_trust"],
 )
@@ -157,8 +157,8 @@ def test_gpg_present_new_key(gpg_receive, gpg_trust, expected):
 @pytest.mark.parametrize(
     "gpg_trust,expected",
     [
-        ({"res": True, "message": ["Setting ownership trust to Marginally"]}, True),
-        ({"res": False, "message": ["KeyID A not in GPG keychain"]}, False),
+        ({"res": True, "message": "Setting ownership trust to Marginally"}, True),
+        ({"res": False, "message": "KeyID A not in GPG keychain"}, False),
     ],
     indirect=["gpg_trust"],
 )
@@ -195,13 +195,11 @@ def test_gpg_absent_no_changes(gpg_delete):
 @pytest.mark.parametrize(
     "gpg_delete,expected",
     [
-        ({"res": True, "message": ["Public key for A deleted"]}, True),
+        ({"res": True, "message": "Public key for A deleted"}, True),
         (
             {
                 "res": False,
-                "message": [
-                    "Secret key exists, delete first or pass delete_secret=True."
-                ],
+                "message": "Secret key exists, delete first or pass delete_secret=True.",
             },
             False,
         ),
