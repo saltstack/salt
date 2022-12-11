@@ -153,6 +153,7 @@ def present(
             if trust:
                 if trust in TRUST_MAP:
                     try:
+                        # update trust level
                         result = __salt__["gpg.trust_key"](
                             keyid=key,
                             trust_level=trust,
